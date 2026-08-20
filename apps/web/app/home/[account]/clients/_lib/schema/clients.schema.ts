@@ -133,6 +133,8 @@ export const UpdateClientSchema = z
       .enum(['landlord', 'tenant', 'investor', 'solicitor', 'agent'])
       .nullable()
       .optional(),
+    aml_completed: z.boolean().optional(),
+    aml_notes: optionalNullableString,
   })
   .superRefine((data, ctx) => {
     if (data.client_type === 'individual' && data.first_name !== undefined) {
@@ -275,6 +277,8 @@ export const UpdateContactSchema = z
     emails: ContactEmailAddressesSchema.optional(),
     phone: optionalNullableString,
     role: optionalNullableString,
+    amlCompleted: z.boolean().optional(),
+    amlNotes: optionalNullableString,
   })
   .superRefine((data, ctx) => {
     const name = composeContactFullName({

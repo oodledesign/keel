@@ -31,6 +31,7 @@ import {
 } from '~/home/(user)/_lib/pipeline-constants';
 import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { InstructionCareCompliancePanel } from '~/home/[account]/pipeline/_components/instruction-care-compliance-panel';
 import { WipAttachmentsStrip } from '~/home/[account]/pipeline/_components/wip-attachments-strip';
 import {
   ClientCombobox,
@@ -68,6 +69,7 @@ type Props = {
   listings?: Array<{ id: string; name: string }>;
   commercial?: boolean;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
+  onCareLogAdded?: (instructionId: string, createdAt: string) => void;
 };
 
 const NONE_LISTING = '__none__';
@@ -85,6 +87,7 @@ export function EditDealDialog({
   listings = [],
   commercial = false,
   onRequestCreateDisposal,
+  onCareLogAdded,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [isPending, startTransition] = useTransition();
@@ -719,6 +722,16 @@ export function EditDealDialog({
                 />
               </div>
             </div>
+          ) : null}
+
+          {commercial && deal ? (
+            <InstructionCareCompliancePanel
+              instructionId={deal.id}
+              accountSlug={accountSlug}
+              onCareLogAdded={(createdAt) =>
+                onCareLogAdded?.(deal.id, createdAt)
+              }
+            />
           ) : null}
 
           {error && <p className="text-sm text-rose-400">{error}</p>}

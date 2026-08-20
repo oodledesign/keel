@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   Check,
+  ChevronDown,
   ChevronsUpDown,
   Mail,
   MoreHorizontal,
@@ -15,6 +16,12 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@kit/ui/collapsible';
 import {
   Command,
   CommandEmpty,
@@ -33,6 +40,8 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
 import {
@@ -73,6 +82,9 @@ type Contact = {
   role: string | null;
   is_primary: boolean;
   picture_url: string | null;
+  aml_completed?: boolean | null;
+  aml_completed_at?: string | null;
+  aml_notes?: string | null;
 };
 
 type ContactEmailAddress = {
@@ -663,6 +675,13 @@ function EditContactForm({
   });
   const [phone, setPhone] = useState(contact.phone ?? '');
   const [role, setRole] = useState(contact.role ?? '');
+  const [amlCompleted, setAmlCompleted] = useState(
+    Boolean(contact.aml_completed),
+  );
+  const [amlNotes, setAmlNotes] = useState(contact.aml_notes ?? '');
+  const [amlOpen, setAmlOpen] = useState(
+    Boolean(contact.aml_completed || contact.aml_notes),
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -691,6 +710,8 @@ function EditContactForm({
           })),
         phone: phone.trim() || null,
         role: role.trim() || null,
+        amlCompleted,
+        amlNotes: amlNotes.trim() || null,
       });
       toast.success('Contact updated');
       onSaved();
@@ -753,6 +774,57 @@ function EditContactForm({
           className="h-8 text-sm"
         />
       </div>
+      <Collapsible open={amlOpen} onOpenChange={setAmlOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2.5 py-1.5 text-left text-xs text-[var(--workspace-shell-text-muted)]"
+          >
+            <span>
+              AML
+              {amlCompleted ? (
+                <span className="ml-1.5 text-[var(--workspace-shell-text)]">
+                  Completed
+                </span>
+              ) : null}
+            </span>
+            <ChevronDown
+              className={cn(
+                'h-3.5 w-3.5 transition-transform',
+                amlOpen && 'rotate-180',
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2 space-y-2 rounded-md border border-[color:var(--workspace-shell-border)] p-2.5">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`aml_completed_${contact.id}`}
+              checked={amlCompleted}
+              onCheckedChange={(checked) => setAmlCompleted(checked === true)}
+            />
+            <Label
+              htmlFor={`aml_completed_${contact.id}`}
+              className="text-xs font-normal"
+            >
+              AML completed
+            </Label>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`aml_notes_${contact.id}`} className="text-xs">
+              AML notes
+            </Label>
+            <Textarea
+              id={`aml_notes_${contact.id}`}
+              value={amlNotes}
+              onChange={(e) => setAmlNotes(e.target.value)}
+              placeholder="Optional notes from AML checks"
+              rows={2}
+              className="text-sm"
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
       <div className="flex gap-2 pt-1">
         <Button type="submit" size="sm" disabled={saving}>
           {saving ? 'Saving…' : 'Save changes'}

@@ -2,9 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Building2, Check, ChevronsUpDown, User } from 'lucide-react';
+import {
+  Building2,
+  Check,
+  ChevronDown,
+  ChevronsUpDown,
+  User,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@kit/ui/collapsible';
 import {
   Command,
   CommandEmpty,
@@ -24,6 +36,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
@@ -62,6 +75,9 @@ type Client = {
   country: string | null;
   picture_url: string | null;
   commercial_role?: CommercialClientRole | null;
+  aml_completed?: boolean | null;
+  aml_completed_at?: string | null;
+  aml_notes?: string | null;
 };
 
 export type CreateInitialValues = {
@@ -139,6 +155,13 @@ export function ClientForm({
   const [commercialRole, setCommercialRole] = useState<
     CommercialClientRole | ''
   >(client?.commercial_role ?? '');
+  const [amlCompleted, setAmlCompleted] = useState(
+    Boolean(client?.aml_completed),
+  );
+  const [amlNotes, setAmlNotes] = useState(client?.aml_notes ?? '');
+  const [amlOpen, setAmlOpen] = useState(
+    Boolean(client?.aml_completed || client?.aml_notes),
+  );
 
   const [contactMode, setContactMode] = useState<PrimaryContactMode>('new');
   const [contactFirstName, setContactFirstName] = useState('');
@@ -294,6 +317,8 @@ export function ClientForm({
           commercial_role: showCommercialRole
             ? commercialRole || null
             : undefined,
+          aml_completed: amlCompleted,
+          aml_notes: amlNotes.trim() || null,
         });
         toast.success('Client updated');
         onSaved();
@@ -739,6 +764,66 @@ export function ClientForm({
           readOnly={isReadOnly}
         />
       </div>
+
+      {mode === 'edit' ? (
+        <Collapsible open={amlOpen} onOpenChange={setAmlOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-left text-sm text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]"
+            >
+              <span>
+                AML
+                {amlCompleted ? (
+                  <span className="ml-2 text-xs text-[var(--workspace-shell-text)]">
+                    Completed
+                  </span>
+                ) : null}
+              </span>
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 transition-transform',
+                  amlOpen && 'rotate-180',
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 space-y-3 rounded-md border border-[color:var(--workspace-shell-border)] p-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="aml_completed"
+                checked={amlCompleted}
+                disabled={isReadOnly}
+                onCheckedChange={(checked) => setAmlCompleted(checked === true)}
+              />
+              <Label htmlFor="aml_completed" className="font-normal">
+                AML completed
+              </Label>
+            </div>
+            {amlCompleted && client?.aml_completed_at ? (
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Marked complete{' '}
+                {new Date(client.aml_completed_at).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </p>
+            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="aml_notes">AML notes</Label>
+              <Textarea
+                id="aml_notes"
+                value={amlNotes}
+                onChange={(e) => setAmlNotes(e.target.value)}
+                placeholder="Optional notes from AML checks"
+                rows={3}
+                readOnly={isReadOnly}
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 pt-2">
         {!isReadOnly && (

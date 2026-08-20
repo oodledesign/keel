@@ -691,6 +691,25 @@ class ClientsService {
     if (input.commercial_role !== undefined) {
       payload.commercial_role = input.commercial_role;
     }
+    if (input.aml_completed !== undefined) {
+      payload.aml_completed = input.aml_completed;
+      if (input.aml_completed) {
+        const alreadyComplete = Boolean(
+          (current as { aml_completed?: boolean | null }).aml_completed,
+        );
+        if (!alreadyComplete) {
+          payload.aml_completed_at = new Date().toISOString();
+        }
+      } else {
+        payload.aml_completed_at = null;
+      }
+    }
+    if (input.aml_notes !== undefined) {
+      payload.aml_notes =
+        typeof input.aml_notes === 'string'
+          ? input.aml_notes.trim() || null
+          : null;
+    }
 
     const { data, error } = await this.adminDb
       .from('clients')
@@ -1209,6 +1228,9 @@ class ClientsService {
           email?: string | null;
           phone?: string | null;
           picture_url?: string | null;
+          aml_completed?: boolean | null;
+          aml_completed_at?: string | null;
+          aml_notes?: string | null;
         } | null;
       }>,
     ) =>
@@ -1232,6 +1254,10 @@ class ClientsService {
             role: (row.role as string | null) ?? null,
             is_primary: Boolean(row.is_primary),
             picture_url: (contact.picture_url as string | null) ?? null,
+            aml_completed: Boolean(contact.aml_completed),
+            aml_completed_at:
+              (contact.aml_completed_at as string | null) ?? null,
+            aml_notes: (contact.aml_notes as string | null) ?? null,
           };
         })
         .filter(Boolean);
@@ -1239,7 +1265,7 @@ class ClientsService {
     const { data, error } = await this.adminDb
       .from('client_contacts')
       .select(
-        'role, is_primary, created_at, contacts ( id, full_name, first_name, last_name, email, phone, picture_url )',
+        'role, is_primary, created_at, contacts ( id, full_name, first_name, last_name, email, phone, picture_url, aml_completed, aml_completed_at, aml_notes )',
       )
       .eq('client_id', params.clientId)
       .order('is_primary', { ascending: false })
@@ -1631,6 +1657,28 @@ class ClientsService {
         ? this.normalizeContactEmailAddresses(input)
         : undefined;
     if (input.phone !== undefined) contactPayload.phone = input.phone;
+    if (input.amlCompleted !== undefined) {
+      contactPayload.aml_completed = input.amlCompleted;
+      if (input.amlCompleted) {
+        const { data: existingContact } = await this.adminDb
+          .from('contacts')
+          .select('aml_completed')
+          .eq('id', input.contactId)
+          .eq('account_id', input.accountId)
+          .maybeSingle();
+        if (!existingContact?.aml_completed) {
+          contactPayload.aml_completed_at = new Date().toISOString();
+        }
+      } else {
+        contactPayload.aml_completed_at = null;
+      }
+    }
+    if (input.amlNotes !== undefined) {
+      contactPayload.aml_notes =
+        typeof input.amlNotes === 'string'
+          ? input.amlNotes.trim() || null
+          : null;
+    }
 
     const { error: contactError } = await this.adminDb
       .from('contacts')

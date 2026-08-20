@@ -122,6 +122,7 @@ export function createRequirementsService(client: SupabaseClient) {
     async listRequirements(
       accountId: string,
       stage?: RequirementStatus,
+      search?: string,
     ): Promise<CommercialRequirement[]> {
       let query = client
         .from('commercial_requirements')
@@ -130,6 +131,18 @@ export function createRequirementsService(client: SupabaseClient) {
         .order('updated_at', { ascending: false });
 
       if (stage) query = query.eq('stage', stage);
+
+      const searchTerm = search?.trim();
+      if (searchTerm) {
+        const likePattern = `%${searchTerm.replace(/[%_\\]/g, '\\$&')}%`;
+        const quotedLike = `"${likePattern.replace(/"/g, '')}"`;
+        query = query.or(
+          [
+            `contact_name.ilike.${quotedLike}`,
+            `company_name.ilike.${quotedLike}`,
+          ].join(','),
+        );
+      }
 
       const { data, error } = await query;
       if (error) {
