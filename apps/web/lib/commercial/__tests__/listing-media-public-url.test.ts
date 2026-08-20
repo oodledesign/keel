@@ -37,13 +37,16 @@ describe('buildCommercialListingMediaPublicUrl', () => {
 });
 
 describe('withRightmoveMediaCacheBust', () => {
-  it('keeps brochure pathname ending in .pdf', () => {
+  it('embeds bust before extension so brochure URLs still end in .pdf', () => {
     const busted = withRightmoveMediaCacheBust(
       'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.pdf',
       1787230000,
     );
-    expect(new URL(busted).pathname.endsWith('.pdf')).toBe(true);
-    expect(new URL(busted).searchParams.get('v')).toBe('1787230000');
+    expect(busted).toBe(
+      'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.v1787230000.pdf',
+    );
+    expect(busted.endsWith('.pdf')).toBe(true);
+    expect(new URL(busted).search).toBe('');
     expect(busted.length).toBeLessThanOrEqual(RIGHTMOVE_MEDIA_URL_MAX_LENGTH);
   });
 });

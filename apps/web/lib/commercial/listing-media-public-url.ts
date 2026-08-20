@@ -64,22 +64,33 @@ export function buildCommercialListingMediaPublicUrl(input: {
 
 /**
  * Rightmove caches media by source URL. If a first fetch 404s, later PUTs with
- * the same URL may never re-download. Append a short bust query (pathname still
- * ends in .pdf/.jpg for brochure/photo rules).
+ * the same URL may never re-download.
+ *
+ * Important: brochure URLs must *literally* end with `.pdf` (query strings
+ * fail validation). Embed the bust in the filename before the extension.
  */
 export function withRightmoveMediaCacheBust(
   url: string,
   version: string | number,
 ): string {
-  const bust = String(version).trim();
+  const bust = String(version).trim().replace(/[^a-zA-Z0-9_-]/g, '');
   if (!bust) return url;
   try {
     const parsed = new URL(url);
-    parsed.searchParams.set('v', bust);
+    parsed.search = '';
+    const path = parsed.pathname;
+    const lastSlash = path.lastIndexOf('/');
+    const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+    const file = lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
+    const dot = file.lastIndexOf('.');
+    if (dot <= 0) {
+      parsed.pathname = `${dir}${file}.v${bust}`;
+    } else {
+      parsed.pathname = `${dir}${file.slice(0, dot)}.v${bust}${file.slice(dot)}`;
+    }
     return parsed.toString();
   } catch {
-    const join = url.includes('?') ? '&' : '?';
-    return `${url}${join}v=${encodeURIComponent(bust)}`;
+    return url;
   }
 }
 
