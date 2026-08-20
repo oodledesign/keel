@@ -4,6 +4,7 @@ import {
   RIGHTMOVE_MEDIA_URL_MAX_LENGTH,
   buildCommercialListingMediaPublicUrl,
   commercialListingMediaFileName,
+  withRightmoveMediaCacheBust,
 } from '../listing-media-public-url';
 
 describe('commercialListingMediaFileName', () => {
@@ -32,5 +33,17 @@ describe('buildCommercialListingMediaPublicUrl', () => {
     );
     expect(url.length).toBeLessThanOrEqual(RIGHTMOVE_MEDIA_URL_MAX_LENGTH);
     expect(url.endsWith('.pdf')).toBe(true);
+  });
+});
+
+describe('withRightmoveMediaCacheBust', () => {
+  it('keeps brochure pathname ending in .pdf', () => {
+    const busted = withRightmoveMediaCacheBust(
+      'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.pdf',
+      1787230000,
+    );
+    expect(new URL(busted).pathname.endsWith('.pdf')).toBe(true);
+    expect(new URL(busted).searchParams.get('v')).toBe('1787230000');
+    expect(busted.length).toBeLessThanOrEqual(RIGHTMOVE_MEDIA_URL_MAX_LENGTH);
   });
 });

@@ -50,6 +50,7 @@ import { Trans } from '@kit/ui/trans';
 
 import { InviteMembersSchema } from '../../schema/invite-members.schema';
 import { createInvitationsAction } from '../../server/actions/team-invitations-server-actions';
+import { InviteOptionsHelp } from './invite-options-help';
 import { MembershipRoleSelector } from './membership-role-selector';
 import { RolesDataProvider } from './roles-data-provider';
 
@@ -187,6 +188,10 @@ export function InviteMembersDialogContainer({
               />
             )}
           </p>
+        </If>
+
+        <If condition={!isLoadingPolicies && !policiesError}>
+          <InviteOptionsHelp showSeatKind={showSeatKind} />
         </If>
 
         <If
@@ -385,15 +390,29 @@ function InviteMembersForm({
                                   );
                                 }}
                               >
-                                <SelectTrigger className="bg-background w-[8.5rem]">
+                                <SelectTrigger className="bg-background w-[9.5rem]">
                                   <SelectValue placeholder="Seat type" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="min-w-[16rem]">
                                   <SelectItem value="billable">
-                                    Billable — negotiator / editor
+                                    <div className="flex flex-col items-start gap-0.5 py-0.5 text-left">
+                                      <span>
+                                        <Trans i18nKey="teams:seatKindBillableLabel" />
+                                      </span>
+                                      <span className="text-muted-foreground text-xs font-normal whitespace-normal">
+                                        <Trans i18nKey="teams:seatKindBillableDescription" />
+                                      </span>
+                                    </div>
                                   </SelectItem>
                                   <SelectItem value="support">
-                                    Support — view and notes
+                                    <div className="flex flex-col items-start gap-0.5 py-0.5 text-left">
+                                      <span>
+                                        <Trans i18nKey="teams:seatKindSupportLabel" />
+                                      </span>
+                                      <span className="text-muted-foreground text-xs font-normal whitespace-normal">
+                                        <Trans i18nKey="teams:seatKindSupportDescription" />
+                                      </span>
+                                    </div>
                                   </SelectItem>
                                 </SelectContent>
                               </Select>

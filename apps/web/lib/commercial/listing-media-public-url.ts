@@ -62,6 +62,27 @@ export function buildCommercialListingMediaPublicUrl(input: {
   return `${base}${buildCommercialListingMediaPublicPath(input)}`;
 }
 
+/**
+ * Rightmove caches media by source URL. If a first fetch 404s, later PUTs with
+ * the same URL may never re-download. Append a short bust query (pathname still
+ * ends in .pdf/.jpg for brochure/photo rules).
+ */
+export function withRightmoveMediaCacheBust(
+  url: string,
+  version: string | number,
+): string {
+  const bust = String(version).trim();
+  if (!bust) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set('v', bust);
+    return parsed.toString();
+  } catch {
+    const join = url.includes('?') ? '&' : '?';
+    return `${url}${join}v=${encodeURIComponent(bust)}`;
+  }
+}
+
 export function resolveSiteUrlForPublicMedia(): string | null {
   // Prefer the authenticated app host — marketing www does not serve these routes.
   const candidates = [

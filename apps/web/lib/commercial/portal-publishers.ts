@@ -17,6 +17,7 @@ import {
   RIGHTMOVE_MEDIA_URL_MAX_LENGTH,
   buildCommercialListingMediaPublicUrl,
   resolveSiteUrlForPublicMedia,
+  withRightmoveMediaCacheBust,
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
@@ -208,6 +209,8 @@ async function loadPublicMediaForRightmove(
   const siteUrl = resolveSiteUrlForPublicMedia();
   const client = db();
   const rows = data ?? [];
+  // Bust Rightmove's media URL cache on every publish attempt.
+  const cacheBust = Math.floor(Date.now() / 1000);
 
   // Prefer short public proxy URLs (≤250 chars, brochure ends with .pdf).
   // Fall back to signed / external URLs only when they already fit Rightmove's limit.
@@ -253,13 +256,16 @@ async function loadPublicMediaForRightmove(
 
     let url: string | null = null;
     if (siteUrl && mediaId) {
-      const proxyUrl = buildCommercialListingMediaPublicUrl({
-        siteUrl,
-        mediaId,
-        mediaType,
-        fileName,
-        mimeType,
-      });
+      const proxyUrl = withRightmoveMediaCacheBust(
+        buildCommercialListingMediaPublicUrl({
+          siteUrl,
+          mediaId,
+          mediaType,
+          fileName,
+          mimeType,
+        }),
+        cacheBust,
+      );
       if (proxyUrl.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH) {
         url = proxyUrl;
       }
@@ -278,7 +284,10 @@ async function loadPublicMediaForRightmove(
         resolved.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH &&
         /^https?:\/\//i.test(resolved)
       ) {
-        url = resolved;
+        const busted = withRightmoveMediaCacheBust(resolved, cacheBust);
+        if (busted.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH) {
+          url = busted;
+        }
       }
     }
 
@@ -595,6 +604,10 @@ export async function publishToRightmove(
         traceId: result.traceId,
         spaceCount: units.length,
         mediaCount: media.filter((m) => m.url).length,
+        mediaSampleUrls: media
+          .filter((m) => m.url)
+          .slice(0, 4)
+          .map((m) => m.url),
         listingName: listing.name,
         accountBranchId: resolved.accountBranchId,
         accountBranchName: resolved.accountBranchName,

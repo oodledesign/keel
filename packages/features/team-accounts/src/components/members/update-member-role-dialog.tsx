@@ -28,6 +28,7 @@ import { Trans } from '@kit/ui/trans';
 
 import { RoleSchema } from '../../schema/update-member-role.schema';
 import { updateMemberRoleAction } from '../../server/actions/team-members-server-actions';
+import { InviteOptionsHelp } from './invite-options-help';
 import { MembershipRoleSelector } from './membership-role-selector';
 import { RolesDataProvider } from './roles-data-provider';
 
@@ -61,6 +62,8 @@ export function UpdateMemberRoleDialog({
             <Trans i18nKey={'teams:updateMemberRoleModalDescription'} />
           </DialogDescription>
         </DialogHeader>
+
+        <InviteOptionsHelp />
 
         <RolesDataProvider maxRoleHierarchy={userRoleHierarchy}>
           {(data) => (

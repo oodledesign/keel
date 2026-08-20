@@ -85,12 +85,30 @@
     "messages": "Messages"
   },
   "roles": {
-    "owner": { "label": "Owner" },
-    "admin": { "label": "Admin" },
-    "staff": { "label": "Team" },
-    "contractor": { "label": "Contractor" },
-    "client": { "label": "Client" },
-    "member": { "label": "Member" }
+    "owner": {
+      "label": "Owner",
+      "description": "Full control of the workspace, including deleting it."
+    },
+    "admin": {
+      "label": "Admin",
+      "description": "Manage billing, members, invites, and settings."
+    },
+    "staff": {
+      "label": "Team",
+      "description": "Day-to-day work; limited admin (settings and invites)."
+    },
+    "contractor": {
+      "label": "Contractor",
+      "description": "Limited access for external collaborators."
+    },
+    "client": {
+      "label": "Client",
+      "description": "Client portal access only."
+    },
+    "member": {
+      "label": "Member",
+      "description": "Standard team access."
+    }
   },
   "otp": {
     "requestVerificationCode": "Request Verification Code",

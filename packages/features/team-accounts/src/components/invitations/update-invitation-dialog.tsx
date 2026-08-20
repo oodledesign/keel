@@ -27,6 +27,7 @@ import { Trans } from '@kit/ui/trans';
 
 import { RoleSchema } from '../../schema/update-member-role.schema';
 import { updateInvitationAction } from '../../server/actions/team-invitations-server-actions';
+import { InviteOptionsHelp } from '../members/invite-options-help';
 import { MembershipRoleSelector } from '../members/membership-role-selector';
 import { RolesDataProvider } from '../members/roles-data-provider';
 
@@ -57,6 +58,8 @@ export function UpdateInvitationDialog({
             <Trans i18nKey={'teams:updateMemberRoleModalDescription'} />
           </DialogDescription>
         </DialogHeader>
+
+        <InviteOptionsHelp />
 
         <UpdateInvitationForm
           invitationId={invitationId}

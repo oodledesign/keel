@@ -17,6 +17,7 @@ export function MembershipRoleSelector({
   onChange,
   triggerClassName,
   contentClassName,
+  showDescriptions = true,
 }: {
   roles: Role[];
   value: Role;
@@ -24,6 +25,8 @@ export function MembershipRoleSelector({
   onChange: (role: Role) => unknown;
   triggerClassName?: string;
   contentClassName?: string;
+  /** Show a short permission blurb under each role in the menu. */
+  showDescriptions?: boolean;
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
@@ -36,7 +39,10 @@ export function MembershipRoleSelector({
 
       <SelectContent
         position="popper"
-        className={cn('min-w-[8.5rem]', contentClassName)}
+        className={cn(
+          showDescriptions ? 'min-w-[16rem]' : 'min-w-[8.5rem]',
+          contentClassName,
+        )}
       >
         {roles.map((role) => {
           return (
@@ -45,9 +51,26 @@ export function MembershipRoleSelector({
               data-test={`role-option-${role}`}
               disabled={currentUserRole === role}
               value={role}
-              className="capitalize"
+              className={cn(!showDescriptions && 'capitalize')}
             >
-              <Trans i18nKey={`common:roles.${role}.label`} defaults={role} />
+              {showDescriptions ? (
+                <div className="flex flex-col items-start gap-0.5 py-0.5 text-left">
+                  <span className="capitalize">
+                    <Trans
+                      i18nKey={`common:roles.${role}.label`}
+                      defaults={role}
+                    />
+                  </span>
+                  <span className="text-muted-foreground text-xs font-normal whitespace-normal">
+                    <Trans
+                      i18nKey={`common:roles.${role}.description`}
+                      defaults=""
+                    />
+                  </span>
+                </div>
+              ) : (
+                <Trans i18nKey={`common:roles.${role}.label`} defaults={role} />
+              )}
             </SelectItem>
           );
         })}
