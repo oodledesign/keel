@@ -83,6 +83,7 @@ const MARKETING_ROUTE_PREFIXES = [
   '/apps',
   '/features',
   '/pricing',
+  '/early-access',
   '/faq',
   '/contact',
   '/blog',

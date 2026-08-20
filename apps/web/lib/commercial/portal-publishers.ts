@@ -284,9 +284,13 @@ async function loadPublicMediaForRightmove(
         resolved.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH &&
         /^https?:\/\//i.test(resolved)
       ) {
-        const busted = withRightmoveMediaCacheBust(resolved, cacheBust);
-        if (busted.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH) {
-          url = busted;
+        // Only cache-bust clean URLs — signed URLs carry auth tokens in the
+        // query string which withRightmoveMediaCacheBust would strip.
+        const candidate = resolved.includes('?')
+          ? resolved
+          : withRightmoveMediaCacheBust(resolved, cacheBust);
+        if (candidate.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH) {
+          url = candidate;
         }
       }
     }
@@ -560,6 +564,7 @@ export async function publishToRightmove(
     });
   }
 
+  let mediaSampleUrls: Array<string | null> | undefined;
   try {
     const env = getRightmoveEnv();
     const [listing, units, media] = await Promise.all([
@@ -567,6 +572,11 @@ export async function publishToRightmove(
       loadUnitsForRightmove(accountId, listingId),
       loadPublicMediaForRightmove(accountId, listingId),
     ]);
+
+    mediaSampleUrls = media
+      .filter((m) => m.url)
+      .slice(0, 4)
+      .map((m) => m.url);
 
     const mapped = mapListingToRightmovePayload({
       listing,
@@ -604,10 +614,7 @@ export async function publishToRightmove(
         traceId: result.traceId,
         spaceCount: units.length,
         mediaCount: media.filter((m) => m.url).length,
-        mediaSampleUrls: media
-          .filter((m) => m.url)
-          .slice(0, 4)
-          .map((m) => m.url),
+        mediaSampleUrls,
         listingName: listing.name,
         accountBranchId: resolved.accountBranchId,
         accountBranchName: resolved.accountBranchName,
@@ -636,6 +643,7 @@ export async function publishToRightmove(
         agentId: resolved.agentId,
         branchRef: resolved.branchRef,
         accountBranchId: resolved.accountBranchId,
+        ...(mediaSampleUrls ? { mediaSampleUrls } : {}),
         ...(err instanceof RightmoveApiError
           ? {
               httpStatus: err.status,

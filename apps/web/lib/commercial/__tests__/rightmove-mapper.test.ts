@@ -152,6 +152,42 @@ describe('mapListingMediaToRightmove', () => {
     ]);
     expect(media?.brochures).toBeUndefined();
   });
+
+  it('rejects brochure URLs with query strings or dotted cache-bust stems', () => {
+    const media = mapListingMediaToRightmove([
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure.pdf',
+        url: 'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.pdf?v=1',
+        sortOrder: 0,
+        isCover: false,
+      },
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure.pdf',
+        url: 'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.v1.pdf',
+        sortOrder: 1,
+        isCover: false,
+      },
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure.pdf',
+        url: 'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure-v1.pdf',
+        sortOrder: 2,
+        isCover: false,
+      },
+    ]);
+    expect(media?.brochures).toEqual([
+      {
+        url: 'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure-v1.pdf',
+        order: 2,
+        description: 'brochure.pdf',
+      },
+    ]);
+  });
 });
 
 describe('mapListingToRightmovePayload', () => {

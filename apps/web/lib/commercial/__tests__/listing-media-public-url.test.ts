@@ -37,16 +37,22 @@ describe('buildCommercialListingMediaPublicUrl', () => {
 });
 
 describe('withRightmoveMediaCacheBust', () => {
-  it('embeds bust before extension so brochure URLs still end in .pdf', () => {
+  it('embeds hyphenated bust so brochure URLs still end in .pdf', () => {
     const busted = withRightmoveMediaCacheBust(
       'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.pdf',
       1787230000,
     );
     expect(busted).toBe(
-      'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.v1787230000.pdf',
+      'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure-v1787230000.pdf',
     );
     expect(busted.endsWith('.pdf')).toBe(true);
     expect(new URL(busted).search).toBe('');
     expect(busted.length).toBeLessThanOrEqual(RIGHTMOVE_MEDIA_URL_MAX_LENGTH);
+  });
+
+  it('leaves signed URLs with query strings unchanged', () => {
+    const signed =
+      'https://example.supabase.co/storage/v1/object/sign/path/file.jpg?token=abc';
+    expect(withRightmoveMediaCacheBust(signed, 1787230000)).toBe(signed);
   });
 });

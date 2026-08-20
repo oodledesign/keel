@@ -509,12 +509,22 @@ function mediaAsset(
   };
 }
 
-function pathEndsWithPdf(url: string): boolean {
+/**
+ * Rightmove validates the full URL string (not just pathname): it must end
+ * with `.pdf` and the final path segment must look like `name.pdf` (a single
+ * extension). Query/hash and dotted stems like `brochure.v1.pdf` fail.
+ */
+function isRightmoveBrochureUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed.toLowerCase().endsWith('.pdf')) return false;
   try {
-    const pathname = new URL(url).pathname.toLowerCase();
-    return pathname.endsWith('.pdf');
+    const parsed = new URL(trimmed);
+    if (parsed.search || parsed.hash) return false;
+    const file = parsed.pathname.split('/').pop() ?? '';
+    // One extension only: stem may contain hyphens but not extra dots.
+    return /^[A-Za-z0-9_-]+\.pdf$/i.test(file);
   } catch {
-    return /\.pdf(?:$|[?#])/i.test(url);
+    return false;
   }
 }
 
@@ -549,8 +559,8 @@ export function mapListingMediaToRightmove(
       continue;
     }
     if (item.mediaType === 'brochure') {
-      // Rightmove: brochure URLs must have a .pdf extension.
-      if (!pathEndsWithPdf(url)) continue;
+      // Rightmove: brochure URLs must literally end with `.pdf`.
+      if (!isRightmoveBrochureUrl(url)) continue;
       const asset = mediaAsset(url, order, label);
       if (asset) brochures.push(asset);
       continue;

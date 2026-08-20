@@ -67,26 +67,31 @@ export function buildCommercialListingMediaPublicUrl(input: {
  * the same URL may never re-download.
  *
  * Important: brochure URLs must *literally* end with `.pdf` (query strings
- * fail validation). Embed the bust in the filename before the extension.
+ * fail validation). Use a hyphenated stem (`brochure-v123.pdf`) — dotted stems
+ * like `brochure.v123.pdf` are rejected by Rightmove's extension check.
  */
 export function withRightmoveMediaCacheBust(
   url: string,
   version: string | number,
 ): string {
-  const bust = String(version).trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  const bust = String(version)
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, '');
   if (!bust) return url;
   try {
     const parsed = new URL(url);
-    parsed.search = '';
+    // Signed / CDN URLs need their query string (auth tokens). Busting would
+    // strip it — skip those and only rewrite clean pathname URLs.
+    if (parsed.search || parsed.hash) return url;
     const path = parsed.pathname;
     const lastSlash = path.lastIndexOf('/');
     const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
     const file = lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
     const dot = file.lastIndexOf('.');
     if (dot <= 0) {
-      parsed.pathname = `${dir}${file}.v${bust}`;
+      parsed.pathname = `${dir}${file}-v${bust}`;
     } else {
-      parsed.pathname = `${dir}${file.slice(0, dot)}.v${bust}${file.slice(dot)}`;
+      parsed.pathname = `${dir}${file.slice(0, dot)}-v${bust}${file.slice(dot)}`;
     }
     return parsed.toString();
   } catch {
