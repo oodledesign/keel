@@ -19,7 +19,7 @@ type MediaRow = {
   mime_type: string | null;
   file_name: string | null;
   is_private: boolean | null;
-  updated_at: string | null;
+  created_at: string | null;
 };
 
 function isUuid(value: string): boolean {
@@ -35,18 +35,22 @@ async function loadPublicMedia(id: string): Promise<MediaRow | null> {
   const { data, error } = await admin
     .from('commercial_listing_media')
     .select(
-      'id, storage_path, external_url, mime_type, file_name, is_private, updated_at',
+      'id, storage_path, external_url, mime_type, file_name, is_private, created_at',
     )
     .eq('id', id)
     .eq('is_private', false)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error('[listing-media] lookup failed', id, error.message);
+    return null;
+  }
+  if (!data) return null;
   return data as MediaRow;
 }
 
 function etagFor(row: MediaRow): string {
-  const stamp = row.updated_at ?? row.storage_path ?? row.id;
+  const stamp = row.created_at ?? row.storage_path ?? row.id;
   return `"${Buffer.from(stamp).toString('base64url')}"`;
 }
 

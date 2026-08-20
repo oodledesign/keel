@@ -210,8 +210,10 @@ export function trialLabel(plan: BillingPlanPrice): string {
   if (plan.monthlyPriceGbp === 0) {
     return 'Free forever — no card, no trial clock.';
   }
-  const days = plan.trialDays ?? BILLING_TRIAL_DAYS;
-  return `${days}-day free trial — no credit card required.`;
+  if (plan.trialDays == null) {
+    return 'No free trial — billed from day one at checkout.';
+  }
+  return `${plan.trialDays}-day free trial — no credit card required.`;
 }
 
 export const PRICING_LAST_VERIFIED = '4 July 2026';

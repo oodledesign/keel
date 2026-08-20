@@ -4,6 +4,7 @@
  * requires brochure URLs to end with a `.pdf` extension — Supabase signed
  * URLs fail both constraints.
  */
+import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import {
   extensionFromMime,
   extensionFromUrlOrName,
@@ -62,7 +63,9 @@ export function buildCommercialListingMediaPublicUrl(input: {
 }
 
 export function resolveSiteUrlForPublicMedia(): string | null {
+  // Prefer the authenticated app host — marketing www does not serve these routes.
   const candidates = [
+    getAppSiteOrigin(),
     process.env.NEXT_PUBLIC_APP_SITE_URL,
     process.env.NEXT_PUBLIC_SITE_URL,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,

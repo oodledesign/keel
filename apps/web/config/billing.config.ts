@@ -264,7 +264,7 @@ export default createBillingSchema({
           name: 'Commercial Property Monthly',
           paymentType: 'recurring',
           interval: 'month',
-          trialDays: TRIAL_DAYS,
+          // Commercial (incl. founding/promo deals) bills immediately — no trial.
           lineItems: [
             {
               id: OZER_STRIPE_PRICES.commercial_property_monthly,
