@@ -2,6 +2,7 @@ import 'server-only';
 
 import type {
   DisposalType,
+  ListingLetType,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
 import {
@@ -50,6 +51,8 @@ export type RightmoveMapperListing = {
   measurementStandard: string | null;
   useClass: string | null;
   availableFrom: string | null;
+  letType: ListingLetType | null;
+  letContractLengthMonths: number | null;
   epcRating: number | null;
   breeamRating: string | null;
   summary: string | null;
@@ -60,6 +63,8 @@ export type RightmoveMapperListing = {
   ratesPayablePerSqft: number | null;
   conditionDescription: string | null;
   fittedSpace: boolean | null;
+  parkingAvailable: boolean;
+  parkingSpaces: number | null;
 };
 
 export type RightmoveMapperUnit = {
@@ -925,9 +930,27 @@ export function mapListingToRightmovePayload(input: {
     ...(availableDate(listing.availableFrom)
       ? { availableDate: availableDate(listing.availableFrom) }
       : {}),
+    ...(disposalIncludesToLet(listing.disposalType) && listing.letType
+      ? { letType: listing.letType }
+      : {}),
+    ...(disposalIncludesToLet(listing.disposalType) &&
+    listing.letContractLengthMonths != null &&
+    Number.isFinite(listing.letContractLengthMonths) &&
+    listing.letContractLengthMonths >= 0
+      ? {
+          letContractLength: Math.round(listing.letContractLengthMonths),
+        }
+      : {}),
     ...(serviceCharge != null ? { serviceCharge } : {}),
     ...(businessRates != null ? { businessRates } : {}),
     ...(condition ? { condition } : {}),
+    ...(listing.parkingAvailable ? { amenities: ['PARKING'] } : {}),
+    ...(listing.parkingAvailable &&
+    listing.parkingSpaces != null &&
+    Number.isFinite(listing.parkingSpaces) &&
+    listing.parkingSpaces >= 0
+      ? { parkingSpaces: Math.round(listing.parkingSpaces) }
+      : {}),
     ...(epcRating != null || breeamRating != null
       ? {
           environment: {

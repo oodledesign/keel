@@ -129,7 +129,7 @@ export async function syncAgentsSocietyFeedToAccount(input: {
 
   const { data: listings, error: listingError } = await admin
     .from('commercial_listings')
-    .select('id, external_id')
+    .select('id, external_id, account_branch_id')
     .eq('account_id', input.accountId)
     .not('external_id', 'is', null);
 
@@ -188,6 +188,7 @@ export async function syncAgentsSocietyFeedToAccount(input: {
   for (const listing of (listings ?? []) as Array<{
     id: string;
     external_id: string | null;
+    account_branch_id: string | null;
   }>) {
     const externalId = listing.external_id?.trim();
     if (!externalId) continue;
@@ -201,16 +202,17 @@ export async function syncAgentsSocietyFeedToAccount(input: {
     if (property.branch) {
       const branchId = branchByName.get(property.branch.trim().toLowerCase());
       if (branchId) {
-        const { error } = await admin
-          .from('commercial_listings')
-          .update({
-            account_branch_id: branchId,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', listing.id)
-          .eq('account_id', input.accountId);
-        if (error) throw new Error(error.message);
-        branchesAssigned += 1;
+        // System sync — do not bump updated_at (cards / "Updated last" sort).
+        if (listing.account_branch_id !== branchId) {
+          const { error } = await admin
+            .from('commercial_listings')
+            .update({ account_branch_id: branchId })
+            .eq('id', listing.id)
+            .eq('account_id', input.accountId);
+          if (error) throw new Error(error.message);
+          listing.account_branch_id = branchId;
+          branchesAssigned += 1;
+        }
       } else {
         unknownBranches.add(property.branch.trim());
       }

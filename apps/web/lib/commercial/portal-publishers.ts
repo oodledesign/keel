@@ -1,11 +1,12 @@
 import 'server-only';
 
-import { createRequire } from 'node:module';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { createRequire } from 'node:module';
 
 import type {
   DisposalType,
+  ListingLetType,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
 import { recordListingEvent } from '~/lib/commercial/listing-events';
@@ -67,9 +68,7 @@ let portalPublishersClientOverride: SupabaseClient | null = null;
  * Use a service-role (or other) client instead of the request-scoped server
  * client. Pass `null` to clear. Intended for one-off scripts only.
  */
-export function setPortalPublishersClient(
-  client: SupabaseClient | null,
-): void {
+export function setPortalPublishersClient(client: SupabaseClient | null): void {
   portalPublishersClientOverride = client;
 }
 
@@ -132,7 +131,8 @@ async function loadListingForRightmove(
       measurement_standard, use_class, available_from, epc_rating,
       breeam_rating, summary, description, key_points, reference_number,
       service_charge_per_sqft, rates_payable_per_sqft, condition_description,
-      fitted_space
+      fitted_space, parking_available, parking_spaces,
+      let_type, let_contract_length_months
     `,
     )
     .eq('id', listingId)
@@ -177,6 +177,8 @@ async function loadListingForRightmove(
     measurementStandard: (data.measurement_standard as string | null) ?? null,
     useClass: (data.use_class as string | null) ?? null,
     availableFrom: (data.available_from as string | null) ?? null,
+    letType: (data.let_type as ListingLetType | null) ?? null,
+    letContractLengthMonths: asOptionalNumber(data.let_contract_length_months),
     epcRating: asOptionalNumber(data.epc_rating),
     breeamRating: (data.breeam_rating as string | null) ?? null,
     summary: (data.summary as string | null) ?? null,
@@ -186,8 +188,9 @@ async function loadListingForRightmove(
     serviceChargePerSqft: asOptionalNumber(data.service_charge_per_sqft),
     ratesPayablePerSqft: asOptionalNumber(data.rates_payable_per_sqft),
     conditionDescription: (data.condition_description as string | null) ?? null,
-    fittedSpace:
-      data.fitted_space == null ? null : Boolean(data.fitted_space),
+    fittedSpace: data.fitted_space == null ? null : Boolean(data.fitted_space),
+    parkingAvailable: Boolean(data.parking_available),
+    parkingSpaces: asOptionalNumber(data.parking_spaces),
   };
 }
 

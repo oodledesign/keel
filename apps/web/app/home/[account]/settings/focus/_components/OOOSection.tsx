@@ -297,7 +297,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                           Only applies when a return date is set in holiday mode
                         </FormDescription>
                         {field.value && !values.holiday_mode_until ? (
-                          <p className="text-sm text-amber-200">
+                          <p className="text-sm text-amber-800 dark:text-amber-200">
                             Set a return date in Holiday mode above
                           </p>
                         ) : null}
@@ -328,7 +328,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                     </div>
                     <Badge
                       variant="outline"
-                      className="border-sky-500/40 text-sky-100"
+                      className="border-sky-500/40 text-sky-900 dark:text-sky-100"
                     >
                       Trigger: {triggerReason}
                     </Badge>

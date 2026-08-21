@@ -141,6 +141,23 @@ export const TERMS_OF_ENGAGEMENT_LABELS: Record<TermsOfEngagement, string> = {
   pending: 'Pending',
 };
 
+/** Rightmove ADF `letType` values (lettings only). */
+export const LISTING_LET_TYPES = [
+  'SHORT',
+  'LONG',
+  'FLEXIBLE',
+  'NOT_SPECIFIED',
+] as const;
+
+export type ListingLetType = (typeof LISTING_LET_TYPES)[number];
+
+export const LISTING_LET_TYPE_LABELS: Record<ListingLetType, string> = {
+  SHORT: 'Short',
+  LONG: 'Long',
+  FLEXIBLE: 'Flexible',
+  NOT_SPECIFIED: 'Not specified',
+};
+
 /** Roles for people/companies on a disposal or commercial property asset. */
 export const LISTING_PARTY_ROLES = [
   'landlord',

@@ -57,6 +57,7 @@ import {
 } from '../_lib/server/server-actions';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingPageSearch } from './listing-page-search';
 import { ListingSectorPills } from './listing-sector-pills';
 
 type NavKey =
@@ -336,6 +337,7 @@ export function ListingDetailShell({
             address={address}
             headerActions={headerActions}
           />
+          <ListingPageSearch listingBasePath={base} className="max-w-lg" />
         </>
       ) : null}
 
@@ -348,8 +350,8 @@ export function ListingDetailShell({
         )}
       >
         {showStickyTitle ? (
-          <div className="flex items-start justify-between gap-3 pt-1">
-            <div className="min-w-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-lg font-semibold text-[var(--workspace-shell-text)]">
                   {listing.name}
@@ -363,7 +365,13 @@ export function ListingDetailShell({
                 </p>
               ) : null}
             </div>
-            {headerActions}
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:max-w-md sm:items-end">
+              <ListingPageSearch
+                listingBasePath={base}
+                className="w-full sm:w-72"
+              />
+              {headerActions}
+            </div>
           </div>
         ) : null}
 

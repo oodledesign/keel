@@ -111,7 +111,11 @@ export function buildFocusFormDefaults(
     timezone: settings.timezone,
     holiday_mode_enabled: settings.holiday_mode_enabled,
     holiday_mode_label: settings.holiday_mode_label,
-    holiday_mode_until: settings.holiday_mode_until,
+    holiday_mode_until: (() => {
+      if (!settings.holiday_mode_until) return null;
+      const parsed = new Date(settings.holiday_mode_until);
+      return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    })(),
     ooo_enabled: settings.ooo_enabled,
     ooo_trigger: settings.ooo_trigger,
     ooo_message: settings.ooo_message,
@@ -172,7 +176,14 @@ export function formatTimezoneLabel(timeZone: string): string {
 export function parseHolidayUntilDate(value: string | null): Date | undefined {
   if (!value) return undefined;
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  // Stored as end-of-day UTC; read UTC calendar day so BST/other offsets
+  // don't shift the selected day forward in the date picker.
+  return new Date(
+    parsed.getUTCFullYear(),
+    parsed.getUTCMonth(),
+    parsed.getUTCDate(),
+  );
 }
 
 export function holidayUntilToIso(date: Date): string {

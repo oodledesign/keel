@@ -66,13 +66,13 @@ export function FocusStatusBadge({
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
         state.currentStatusVariant === 'active' &&
-          'border-emerald-500/30 bg-emerald-500/10 text-emerald-100',
+          'border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100',
         state.currentStatusVariant === 'muted' &&
           'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 text-[var(--workspace-shell-text-muted)]',
         state.currentStatusVariant === 'holiday' &&
-          'border-amber-500/30 bg-amber-500/10 text-amber-100',
+          'border-amber-500/40 bg-amber-500/15 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100',
         state.currentStatusVariant === 'ooo' &&
-          'border-sky-500/30 bg-sky-500/10 text-sky-100',
+          'border-sky-500/40 bg-sky-500/15 text-sky-950 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100',
         compact && 'px-2 py-1',
       )}
     >

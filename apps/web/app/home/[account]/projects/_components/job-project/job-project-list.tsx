@@ -39,7 +39,8 @@ import type {
   JobBoardTask,
   PhaseListItem,
 } from '../../_lib/schema/project-phases.schema';
-import { deleteJobTask, updateJobTask } from '../../_lib/server/server-actions';
+import { createJobTask, deleteJobTask, updateJobTask } from '../../_lib/server/server-actions';
+import { AddProjectTaskForm } from './add-project-task-form';
 import {
   PRIORITY_DOT,
   TASK_STATUS_LABELS,
@@ -292,6 +293,8 @@ function PhaseGroup({
 }) {
   const phaseKey = phase?.id ?? UNPHASED_KEY;
   const [open, setOpen] = useState(defaultOpen ?? true);
+  const [addingTask, setAddingTask] = useState(false);
+  const [, startTransition] = useTransition();
 
   const handleTaskUpdated = useCallback(
     (updated: JobBoardTask) => {
@@ -313,6 +316,44 @@ function PhaseGroup({
       );
     },
     [onTasksChange, phaseKey, tasks],
+  );
+
+  const handleAddTask = useCallback(
+    (title: string, subtaskTitles: string[]) => {
+      setAddingTask(true);
+      startTransition(async () => {
+        try {
+          const task = await createJobTask({
+            accountId,
+            accountSlug,
+            jobId,
+            phaseId: phase?.id ?? null,
+            title,
+            priority: 'medium',
+            subtaskTitles,
+          });
+          onTasksChange(phaseKey, [
+            ...tasks,
+            task as JobBoardTask,
+            ...((task as JobBoardTask).subtasks ?? []),
+          ]);
+        } catch (err) {
+          toast.error(getErrorMessage(err));
+        } finally {
+          setAddingTask(false);
+        }
+      });
+    },
+    [
+      accountId,
+      accountSlug,
+      jobId,
+      onTasksChange,
+      phase?.id,
+      phaseKey,
+      startTransition,
+      tasks,
+    ],
   );
 
   return (
@@ -346,7 +387,7 @@ function PhaseGroup({
           {open ? 'Hide' : 'Show'}
         </span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="px-4 pb-2">
+      <CollapsibleContent className="px-4 pb-3">
         <div className="hidden border-b border-[color:var(--workspace-shell-border)] pb-2 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase sm:grid sm:grid-cols-[1fr_140px_120px_100px_36px] sm:gap-3">
           <span>Task</span>
           <span>Status</span>
@@ -374,6 +415,14 @@ function PhaseGroup({
             />
           ))
         )}
+        {canEditJobs ? (
+          <div className="mt-2 border-t border-[color:var(--workspace-shell-border)]/80 pt-2">
+            <AddProjectTaskForm
+              disabled={addingTask}
+              onSubmit={handleAddTask}
+            />
+          </div>
+        ) : null}
       </CollapsibleContent>
     </Collapsible>
   );
@@ -404,15 +453,16 @@ export function JobProjectList({
     [board, onBoardChange],
   );
 
-  if (board.phases.length === 0) {
+  const unphased = board.tasksByPhase[UNPHASED_KEY] ?? [];
+  const showUnphased = unphased.length > 0 || board.phases.length === 0;
+
+  if (board.phases.length === 0 && !canEditJobs) {
     return (
       <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-        Add phases to group tasks in the list view.
+        No tasks yet.
       </p>
     );
   }
-
-  const unphased = board.tasksByPhase[UNPHASED_KEY] ?? [];
 
   return (
     <div className="space-y-3">
@@ -429,7 +479,7 @@ export function JobProjectList({
           defaultOpen={index === 0}
         />
       ))}
-      {unphased.length > 0 && (
+      {showUnphased ? (
         <PhaseGroup
           phase={null}
           tasks={unphased}
@@ -438,8 +488,9 @@ export function JobProjectList({
           jobId={jobId}
           canEditJobs={canEditJobs}
           onTasksChange={handleTasksChange}
+          defaultOpen={board.phases.length === 0}
         />
-      )}
+      ) : null}
     </div>
   );
 }

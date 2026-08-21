@@ -1062,7 +1062,7 @@ class ProjectPhasesService {
       .from('tasks')
       .insert({
         title: input.title.trim(),
-        status: 'todo',
+        status: input.status ?? 'todo',
         priority: input.priority ?? 'medium',
         due_date: dueDateYmd,
         user_id: assigneeUserId,

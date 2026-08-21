@@ -38,6 +38,8 @@ function baseListing(
     measurementStandard: 'gia',
     useClass: null,
     availableFrom: null,
+    letType: null,
+    letContractLengthMonths: null,
     epcRating: null,
     breeamRating: null,
     summary: 'Industrial unit to let',
@@ -48,6 +50,8 @@ function baseListing(
     ratesPayablePerSqft: null,
     conditionDescription: null,
     fittedSpace: null,
+    parkingAvailable: false,
+    parkingSpaces: null,
     ...overrides,
   };
 }
@@ -310,6 +314,60 @@ describe('mapListingToRightmovePayload', () => {
     expect(payload.building.serviceCharge).toBe(7992);
     expect(payload.building.businessRates).toBe(14652);
     expect(payload.building.condition).toBe('FULL_FIT_OUT');
+  });
+
+  it('maps parking toggle and space count for Rightmove ADF', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        parkingAvailable: true,
+        parkingSpaces: 24,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.amenities).toEqual(['PARKING']);
+    expect(payload.building.parkingSpaces).toBe(24);
+  });
+
+  it('omits parking fields when parking is not available', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        parkingAvailable: false,
+        parkingSpaces: 10,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.amenities).toBeUndefined();
+    expect(payload.building.parkingSpaces).toBeUndefined();
+  });
+
+  it('maps let type and contract length for lettings', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'to_let',
+        letType: 'LONG',
+        letContractLengthMonths: 60,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.letType).toBe('LONG');
+    expect(payload.building.letContractLength).toBe(60);
+  });
+
+  it('omits let terms for sale-only disposals', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'for_sale',
+        letType: 'LONG',
+        letContractLengthMonths: 60,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.letType).toBeUndefined();
+    expect(payload.building.letContractLength).toBeUndefined();
   });
 
   it('maps unit rent, description, charges and status onto spaces', () => {

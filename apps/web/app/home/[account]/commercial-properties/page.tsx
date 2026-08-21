@@ -28,9 +28,19 @@ async function CommercialPropertiesPage({ params }: PageProps) {
   );
 
   const accountId = workspace.account.id as string;
-  const properties = await createCommercialPropertiesService(
-    getSupabaseServerClient(),
-  ).listProperties({ accountId });
+  let properties: Awaited<
+    ReturnType<
+      ReturnType<typeof createCommercialPropertiesService>['listProperties']
+    >
+  > = [];
+
+  try {
+    properties = await createCommercialPropertiesService(
+      getSupabaseServerClient(),
+    ).listProperties({ accountId });
+  } catch (error) {
+    console.error('[commercial-properties] list failed:', error);
+  }
 
   return (
     <>

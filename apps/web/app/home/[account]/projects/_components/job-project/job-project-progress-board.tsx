@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
@@ -9,7 +9,8 @@ import type {
   JobBoardResult,
   JobBoardTask,
 } from '../../_lib/schema/project-phases.schema';
-import { updateJobTask } from '../../_lib/server/server-actions';
+import { createJobTask, updateJobTask } from '../../_lib/server/server-actions';
+import { AddProjectTaskForm } from './add-project-task-form';
 import { JobProjectTaskSheet } from './job-project-task-sheet';
 import {
   PRIORITY_DOT,
@@ -221,11 +222,14 @@ export function JobProjectProgressBoard({
   const [, startTransition] = useTransition();
   const [selectedTask, setSelectedTask] = useState<JobBoardTask | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const [addingTask, setAddingTask] = useState(false);
   const allTasks = useMemo(() => flattenBoardTasks(board), [board]);
   const tasks = useMemo(
     () => allTasks.filter((task) => !task.parent_task_id),
     [allTasks],
   );
+
+  const defaultPhaseId = board.phases[0]?.id ?? null;
 
   const memberLookup = useMemo(() => {
     const map: MemberLookup = new Map();
@@ -291,6 +295,48 @@ export function JobProjectProgressBoard({
     });
   }
 
+  const handleAddTask = useCallback(
+    (status: ProgressStatus, title: string, subtaskTitles: string[]) => {
+      setAddingTask(true);
+      startTransition(async () => {
+        try {
+          const task = await createJobTask({
+            accountId,
+            accountSlug,
+            jobId,
+            phaseId: defaultPhaseId,
+            title,
+            status,
+            priority: 'medium',
+            subtaskTitles,
+          });
+          const created = task as JobBoardTask;
+          const key = created.phase_id ?? UNPHASED_KEY;
+          const next = { ...board.tasksByPhase };
+          next[key] = [
+            ...(next[key] ?? []),
+            created,
+            ...(created.subtasks ?? []),
+          ];
+          onBoardChange({ ...board, tasksByPhase: next });
+        } catch (err) {
+          toast.error(getErrorMessage(err));
+        } finally {
+          setAddingTask(false);
+        }
+      });
+    },
+    [
+      accountId,
+      accountSlug,
+      board,
+      defaultPhaseId,
+      jobId,
+      onBoardChange,
+      startTransition,
+    ],
+  );
+
   function openTask(task: JobBoardTask) {
     setSelectedTask(task);
     setTaskSheetOpen(true);
@@ -312,10 +358,10 @@ export function JobProjectProgressBoard({
     setSelectedTask(updated);
   }
 
-  if (tasks.length === 0) {
+  if (tasks.length === 0 && !canEditJobs) {
     return (
       <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-        No tasks yet. Switch to Phase board to organise work into phases.
+        No tasks yet.
       </p>
     );
   }
@@ -351,7 +397,9 @@ export function JobProjectProgressBoard({
               <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
                 {columnTasks.length === 0 ? (
                   <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-                    Drop tasks here by changing status
+                    {canEditJobs
+                      ? 'No tasks yet'
+                      : 'Drop tasks here by changing status'}
                   </div>
                 ) : (
                   columnTasks.map((task) => (
@@ -375,6 +423,17 @@ export function JobProjectProgressBoard({
                   ))
                 )}
               </div>
+
+              {canEditJobs ? (
+                <div className="border-t border-[color:var(--workspace-shell-border)]/80 p-2">
+                  <AddProjectTaskForm
+                    disabled={addingTask}
+                    onSubmit={(title, subtaskTitles) =>
+                      handleAddTask(col.key, title, subtaskTitles)
+                    }
+                  />
+                </div>
+              ) : null}
             </div>
           );
         })}

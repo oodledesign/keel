@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { format } from 'date-fns';
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -17,6 +16,7 @@ import {
   setGmailVacationOff,
   setGmailVacationOn,
 } from '~/lib/gmail/vacation-responder';
+import { formatHolidayReturnDate } from '~/lib/workspace-focus';
 
 import {
   type GmailVacationStatus,
@@ -52,6 +52,20 @@ function formatTimeForClient(value: string | null | undefined): string {
   return value.slice(0, 5);
 }
 
+/** Postgres timestamptz often returns `+00:00`; Zod `.datetime()` only accepts `Z`. */
+function normalizeHolidayUntilIso(value: string | null): string | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+function holidayUntilMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+}
+
 function mapRowToSettings(
   row: WorkspaceFocusSettingsRow,
 ): WorkspaceFocusSettings {
@@ -68,7 +82,7 @@ function mapRowToSettings(
     timezone: row.timezone,
     holiday_mode_enabled: row.holiday_mode_enabled,
     holiday_mode_label: row.holiday_mode_label,
-    holiday_mode_until: row.holiday_mode_until,
+    holiday_mode_until: normalizeHolidayUntilIso(row.holiday_mode_until),
     ooo_enabled: row.ooo_enabled,
     ooo_trigger: row.ooo_trigger,
     ooo_message: row.ooo_message,
@@ -114,7 +128,12 @@ async function revalidateFocusSettingsPage(accountId: string) {
 export async function upsertWorkspaceFocusSettings(
   accountId: string,
   data: z.infer<typeof WorkspaceFocusSettingsSchema>,
-): Promise<{ success: boolean; error?: string; gmailSyncError?: string }> {
+): Promise<{
+  success: boolean;
+  error?: string;
+  gmailSyncError?: string;
+  gmailSynced?: boolean;
+}> {
   const parsed = WorkspaceFocusSettingsSchema.safeParse(data);
 
   if (!parsed.success) {
@@ -134,15 +153,25 @@ export async function upsertWorkspaceFocusSettings(
 
   const { data: existing } = await client
     .from('workspace_focus_settings')
-    .select('holiday_mode_enabled')
+    .select(
+      'holiday_mode_enabled, holiday_mode_until, holiday_mode_label, ooo_holiday_message, ooo_message, ooo_include_return_date, ooo_sender_name',
+    )
     .eq('account_id', accountId)
     .eq('user_id', userId)
     .maybeSingle();
 
-  const previousHolidayEnabled = Boolean(
-    (existing as { holiday_mode_enabled?: boolean } | null)
-      ?.holiday_mode_enabled,
-  );
+  const previous = existing as {
+    holiday_mode_enabled?: boolean;
+    holiday_mode_until?: string | null;
+    holiday_mode_label?: string;
+    ooo_holiday_message?: string | null;
+    ooo_message?: string;
+    ooo_include_return_date?: boolean;
+    ooo_sender_name?: string | null;
+  } | null;
+
+  const previousHolidayEnabled = Boolean(previous?.holiday_mode_enabled);
+  const holidayModeUntil = normalizeHolidayUntilIso(settings.holiday_mode_until);
 
   const { error } = await client.from('workspace_focus_settings').upsert(
     {
@@ -155,7 +184,7 @@ export async function upsertWorkspaceFocusSettings(
       timezone: settings.timezone,
       holiday_mode_enabled: settings.holiday_mode_enabled,
       holiday_mode_label: settings.holiday_mode_label,
-      holiday_mode_until: settings.holiday_mode_until,
+      holiday_mode_until: holidayModeUntil,
       ooo_enabled: settings.ooo_enabled,
       ooo_trigger: settings.ooo_trigger,
       ooo_message: settings.ooo_message,
@@ -174,7 +203,21 @@ export async function upsertWorkspaceFocusSettings(
 
   await revalidateFocusSettingsPage(accountId);
 
-  if (previousHolidayEnabled !== settings.holiday_mode_enabled) {
+  const shouldSyncGmail =
+    previousHolidayEnabled !== settings.holiday_mode_enabled ||
+    (settings.holiday_mode_enabled &&
+      (holidayUntilMs(previous?.holiday_mode_until) !==
+        holidayUntilMs(holidayModeUntil) ||
+        (previous?.holiday_mode_label ?? '') !== settings.holiday_mode_label ||
+        (previous?.ooo_holiday_message ?? '') !==
+          (settings.ooo_holiday_message ?? '') ||
+        (previous?.ooo_message ?? '') !== settings.ooo_message ||
+        Boolean(previous?.ooo_include_return_date) !==
+          settings.ooo_include_return_date ||
+        (previous?.ooo_sender_name ?? '') !==
+          (settings.ooo_sender_name ?? '')));
+
+  if (shouldSyncGmail) {
     const gmailSync = await syncHolidayModeToGmail(accountId, userId);
 
     if (!gmailSync.success) {
@@ -183,6 +226,8 @@ export async function upsertWorkspaceFocusSettings(
         gmailSyncError: gmailSync.error ?? 'Gmail sync failed',
       };
     }
+
+    return { success: true, gmailSynced: true };
   }
 
   return { success: true };
@@ -290,10 +335,7 @@ function buildHolidayGmailMessage(
     "I'm currently away and will reply when I'm back.";
 
   if (settings.ooo_include_return_date && settings.holiday_mode_until) {
-    const returnDate = format(
-      new Date(settings.holiday_mode_until),
-      'EEEE, MMMM d, yyyy',
-    );
+    const returnDate = formatHolidayReturnDate(settings.holiday_mode_until);
     return `${base}\n\nI'll be back on ${returnDate}.`;
   }
 

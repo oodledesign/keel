@@ -292,11 +292,20 @@ export function computeOOOActive(
 }
 
 export function formatHolidayReturnDate(until: string): string {
+  const parsed = new Date(until);
+  // End-of-day UTC — format the UTC calendar day so local offsets don't
+  // roll the label into the next day (e.g. 23:59Z → next morning in BST).
+  const calendarDay = new Date(
+    parsed.getUTCFullYear(),
+    parsed.getUTCMonth(),
+    parsed.getUTCDate(),
+  );
+
   return new Intl.DateTimeFormat('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-  }).format(new Date(until));
+  }).format(calendarDay);
 }
 
 export function computeEffectiveOOOMessage(

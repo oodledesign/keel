@@ -355,8 +355,19 @@ function GmailVacationSyncPanel({
 
   if (state === 'in_sync') {
     return (
-      <div className="rounded-xl border border-emerald-600/25 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-900 dark:text-emerald-100">
-        ✓ Gmail vacation responder is in sync
+      <div className="rounded-xl border border-emerald-600/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
+        <p className="font-medium">✓ Gmail vacation responder is in sync</p>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-3 border-emerald-700/30 text-emerald-950 hover:bg-emerald-500/10 dark:border-emerald-400/30 dark:text-emerald-100"
+          disabled={pending}
+          onClick={onSyncToGmail}
+        >
+          {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Push latest to Gmail
+        </Button>
       </div>
     );
   }

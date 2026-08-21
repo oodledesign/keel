@@ -10,6 +10,7 @@ import { getLogger } from '@kit/shared/logger';
 
 import type {
   DisposalType,
+  ListingLetType,
   ListingPartyRole,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
@@ -142,6 +143,8 @@ export type CommercialListing = {
   measurementStandard: string | null;
   useClass: string | null;
   availableFrom: string | null;
+  letType: ListingLetType | null;
+  letContractLengthMonths: number | null;
   epcBand: string | null;
   epcRating: number | null;
   possession: string | null;
@@ -161,6 +164,8 @@ export type CommercialListing = {
   locationCopy: string | null;
   keyPoints: string[];
   amenities: string[];
+  parkingAvailable: boolean;
+  parkingSpaces: number | null;
   marketingSections: Array<{
     id: string;
     kind: 'promo' | 'specifications' | 'viewings' | 'terms' | 'custom';
@@ -475,6 +480,8 @@ function mapListing(row: ListingRow): CommercialListing {
     measurementStandard: (row.measurement_standard as string | null) ?? null,
     useClass: (row.use_class as string | null) ?? null,
     availableFrom: (row.available_from as string | null) ?? null,
+    letType: (row.let_type as ListingLetType | null) ?? null,
+    letContractLengthMonths: num(row.let_contract_length_months),
     epcBand: (row.epc_band as string | null) ?? null,
     epcRating: num(row.epc_rating),
     possession: (row.possession as string | null) ?? null,
@@ -494,6 +501,8 @@ function mapListing(row: ListingRow): CommercialListing {
     locationCopy: (row.location_copy as string | null) ?? null,
     keyPoints: mapKeyPoints(row.key_points),
     amenities: mapAmenities(row.amenities),
+    parkingAvailable: Boolean(row.parking_available),
+    parkingSpaces: num(row.parking_spaces),
     marketingSections: mapMarketingSections(row.marketing_sections),
     websiteUrl: (row.website_url as string | null) ?? null,
     onMarketAt: (row.on_market_at as string | null) ?? null,
@@ -708,6 +717,10 @@ function writeColumns(input: Partial<CreateListingInput>) {
     ...(input.availableFrom !== undefined && {
       available_from: input.availableFrom,
     }),
+    ...(input.letType !== undefined && { let_type: input.letType }),
+    ...(input.letContractLengthMonths !== undefined && {
+      let_contract_length_months: input.letContractLengthMonths,
+    }),
     ...(input.epcBand !== undefined && { epc_band: input.epcBand }),
     ...(input.epcRating !== undefined && { epc_rating: input.epcRating }),
     ...(input.possession !== undefined && { possession: input.possession }),
@@ -754,6 +767,12 @@ function writeColumns(input: Partial<CreateListingInput>) {
     }),
     ...(input.amenities !== undefined && {
       amenities: input.amenities ?? [],
+    }),
+    ...(input.parkingAvailable !== undefined && {
+      parking_available: input.parkingAvailable,
+    }),
+    ...(input.parkingSpaces !== undefined && {
+      parking_spaces: input.parkingSpaces,
     }),
     ...(input.marketingSections !== undefined && {
       marketing_sections: input.marketingSections ?? [],
@@ -1311,6 +1330,8 @@ export function createListingsService(client: SupabaseClient) {
           measurement_standard: input.measurementStandard ?? 'gia',
           use_class: input.useClass ?? null,
           available_from: input.availableFrom ?? null,
+          let_type: input.letType ?? null,
+          let_contract_length_months: input.letContractLengthMonths ?? null,
           epc_band: input.epcBand ?? null,
           epc_rating: input.epcRating ?? null,
           possession: input.possession ?? null,
@@ -1330,6 +1351,8 @@ export function createListingsService(client: SupabaseClient) {
           location_copy: input.locationCopy ?? null,
           key_points: input.keyPoints ?? [],
           amenities: input.amenities ?? [],
+          parking_available: input.parkingAvailable ?? false,
+          parking_spaces: input.parkingSpaces ?? null,
           marketing_sections: input.marketingSections ?? [],
           website_url: input.websiteUrl?.trim()
             ? input.websiteUrl.trim()
@@ -1514,7 +1537,6 @@ export function createListingsService(client: SupabaseClient) {
           .update({
             latitude: geo.latitude,
             longitude: geo.longitude,
-            updated_at: new Date().toISOString(),
           })
           .eq('id', listing.id)
           .eq('account_id', accountId);
@@ -1601,6 +1623,8 @@ export function createListingsService(client: SupabaseClient) {
         measurementStandard: source.measurementStandard,
         useClass: source.useClass,
         availableFrom: source.availableFrom,
+        letType: source.letType,
+        letContractLengthMonths: source.letContractLengthMonths,
         epcBand: source.epcBand,
         epcRating: source.epcRating,
         possession: source.possession,
@@ -1621,6 +1645,8 @@ export function createListingsService(client: SupabaseClient) {
         locationCopy: source.locationCopy,
         keyPoints: source.keyPoints,
         amenities: source.amenities,
+        parkingAvailable: source.parkingAvailable,
+        parkingSpaces: source.parkingSpaces,
         marketingSections: source.marketingSections,
         websiteUrl: null,
         notes: source.notes,

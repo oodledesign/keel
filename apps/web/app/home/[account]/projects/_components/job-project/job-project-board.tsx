@@ -818,7 +818,7 @@ export function JobProjectBoard({
               onOpenTask={openTask}
             />
           ))}
-          {unphasedTasks.length > 0 && (
+          {unphasedTasks.length > 0 || canEditJobs ? (
             <PhaseColumn
               phase={null}
               tasks={unphasedTasks}
@@ -831,7 +831,7 @@ export function JobProjectBoard({
               addingTask={addingTask}
               onOpenTask={openTask}
             />
-          )}
+          ) : null}
         </div>
 
         <DragOverlay dropAnimation={null}>

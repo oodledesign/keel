@@ -106,6 +106,7 @@ export const CreateJobTaskSchema = z.object({
   ...accountJobSlugFields,
   phaseId: z.string().uuid().nullable(),
   title: z.string().min(1).max(500),
+  status: taskStatus.optional().default('todo'),
   priority: taskPriority.optional().default('medium'),
   assigneeUserId: z.string().uuid().optional(),
   dueDate: optionalNullableDate,

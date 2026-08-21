@@ -137,7 +137,6 @@ export async function ingestKatoListingEnrichment(
           .from('commercial_listing_units')
           .update({
             fitted_space: unit.fittedSpace,
-            updated_at: new Date().toISOString(),
           })
           .eq('id', existing.id)
           .eq('account_id', input.accountId)
@@ -204,7 +203,6 @@ export async function ingestKatoListingEnrichment(
       .update({
         epc_band: row.epcBand,
         epc_rating: row.epcRating,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', listing.id)
       .eq('account_id', input.accountId)
@@ -255,9 +253,7 @@ export async function ingestKatoListingEnrichment(
       continue;
     }
 
-    const patch: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
+    const patch: Record<string, unknown> = {};
     const notes: string[] = [];
 
     if (row.hideRentFromMarketing && !listing.hide_rent_from_marketing) {
@@ -394,7 +390,7 @@ export async function ingestKatoListingEnrichment(
       notes.push(row.fittedSpace ? 'fitted' : 'unfitted');
     }
 
-    if (Object.keys(patch).length <= 1) continue;
+    if (Object.keys(patch).length === 0) continue;
 
     const { error } = await client
       .from('commercial_listings')

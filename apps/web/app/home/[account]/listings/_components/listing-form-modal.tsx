@@ -35,8 +35,12 @@ import {
   DISPOSAL_TYPES,
   DISPOSAL_TYPE_LABELS,
   type DisposalType,
+  LISTING_LET_TYPES,
+  LISTING_LET_TYPE_LABELS,
+  type ListingLetType,
   LISTING_STATUSES,
   type ListingStatus,
+  disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 import type { AddressSuggestion } from '~/lib/commercial/address-suggest.types';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
@@ -73,6 +77,8 @@ const emptyForm = {
   measurementStandard: 'gia',
   useClass: '',
   availableFrom: '',
+  letType: '' as '' | ListingLetType,
+  letContractLengthMonths: '',
   epcBand: '',
   epcRating: '',
   possession: '',
@@ -223,6 +229,11 @@ function ListingFormFields({
           measurementStandard: listing.measurementStandard ?? 'gia',
           useClass: listing.useClass ?? '',
           availableFrom: listing.availableFrom ?? '',
+          letType: listing.letType ?? '',
+          letContractLengthMonths:
+            listing.letContractLengthMonths != null
+              ? String(listing.letContractLengthMonths)
+              : '',
           epcBand: listing.epcBand ?? '',
           epcRating: listing.epcRating != null ? String(listing.epcRating) : '',
           possession: listing.possession ?? '',
@@ -314,6 +325,14 @@ function ListingFormFields({
           measurementStandard: form.measurementStandard || null,
           useClass: form.useClass.trim() || null,
           availableFrom: form.availableFrom.trim() || null,
+          letType: disposalIncludesToLet(form.disposalType)
+            ? form.letType || null
+            : null,
+          letContractLengthMonths: disposalIncludesToLet(form.disposalType)
+            ? form.letContractLengthMonths
+              ? parseInt(form.letContractLengthMonths, 10)
+              : null
+            : null,
           epcBand: form.epcBand.trim() || null,
           epcRating: form.epcRating ? parseInt(form.epcRating, 10) : null,
           possession: form.possession.trim() || null,
@@ -917,6 +936,50 @@ function ListingFormFields({
             />
           </div>
         </div>
+
+        {disposalIncludesToLet(form.disposalType) ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Let type
+              </Label>
+              <Select
+                value={form.letType || 'unset'}
+                onValueChange={(v) =>
+                  field('letType', v === 'unset' ? '' : (v as ListingLetType))
+                }
+              >
+                <SelectTrigger className={inputClass}>
+                  <SelectValue placeholder="Ask agent (unset)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unset">Ask agent (unset)</SelectItem>
+                  {LISTING_LET_TYPES.map((letType) => (
+                    <SelectItem key={letType} value={letType}>
+                      {LISTING_LET_TYPE_LABELS[letType]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Let contract length (months)
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={form.letContractLengthMonths}
+                onChange={(e) =>
+                  field('letContractLengthMonths', e.target.value)
+                }
+                placeholder="e.g. 60"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">

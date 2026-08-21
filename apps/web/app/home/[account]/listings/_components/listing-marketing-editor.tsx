@@ -124,6 +124,9 @@ export function ListingMarketingEditor({
     summary: initial.summary ?? '',
     keyPoints: toKeyPointItems(initial.keyPoints),
     amenities: initial.amenities,
+    parkingAvailable: initial.parkingAvailable,
+    parkingSpaces:
+      initial.parkingSpaces != null ? String(initial.parkingSpaces) : '',
     description: initial.description ?? '',
     locationCopy: initial.locationCopy ?? '',
     sections: initial.marketingSections,
@@ -141,6 +144,8 @@ export function ListingMarketingEditor({
     summary,
     keyPoints,
     amenities,
+    parkingAvailable,
+    parkingSpaces,
     description,
     locationCopy,
     sections,
@@ -172,6 +177,8 @@ export function ListingMarketingEditor({
     summary?: string | null;
     keyPoints?: string[];
     amenities?: string[];
+    parkingAvailable?: boolean;
+    parkingSpaces?: number | null;
     description?: string | null;
     locationCopy?: string | null;
     marketingSections?: MarketingSection[];
@@ -191,6 +198,9 @@ export function ListingMarketingEditor({
           summary: updated.summary ?? '',
           keyPoints: toKeyPointItems(updated.keyPoints),
           amenities: updated.amenities,
+          parkingAvailable: updated.parkingAvailable,
+          parkingSpaces:
+            updated.parkingSpaces != null ? String(updated.parkingSpaces) : '',
           description: updated.description ?? '',
           locationCopy: updated.locationCopy ?? '',
           sections: updated.marketingSections,
@@ -475,6 +485,52 @@ export function ListingMarketingEditor({
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                    Parking
+                  </p>
+                  <p className="text-xs text-[var(--workspace-shell-text)]/50">
+                    Sent to Rightmove as amenity PARKING
+                    {parkingAvailable ? ' (+ optional space count)' : ''}.
+                  </p>
+                </div>
+                <Switch
+                  checked={parkingAvailable}
+                  disabled={pending}
+                  onCheckedChange={(checked) =>
+                    setForm((current) => ({
+                      ...current,
+                      parkingAvailable: checked,
+                      parkingSpaces: checked ? current.parkingSpaces : '',
+                    }))
+                  }
+                />
+              </div>
+              {parkingAvailable ? (
+                <div className="mt-3 max-w-[180px] space-y-1.5">
+                  <Label htmlFor="parking-spaces">Number of spaces</Label>
+                  <Input
+                    id="parking-spaces"
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    placeholder="Optional"
+                    value={parkingSpaces}
+                    disabled={pending}
+                    onChange={(e) =>
+                      setForm((current) => ({
+                        ...current,
+                        parkingSpaces: e.target.value,
+                      }))
+                    }
+                    className="bg-[var(--workspace-shell-panel)]"
+                  />
+                </div>
+              ) : null}
+            </div>
+
             <div className="flex flex-wrap gap-2">
               {suggestedAmenities.map((label) => {
                 const selected = amenities.includes(label);
@@ -576,7 +632,24 @@ export function ListingMarketingEditor({
                 type="button"
                 disabled={pending}
                 className={workspaceBtnPrimaryMd}
-                onClick={() => saveMarketing({ amenities })}
+                onClick={() => {
+                  const trimmed = parkingSpaces.trim();
+                  const spaces =
+                    trimmed === '' ? null : Number.parseInt(trimmed, 10);
+                  if (
+                    parkingAvailable &&
+                    trimmed !== '' &&
+                    (!Number.isFinite(spaces) || (spaces ?? 0) < 0)
+                  ) {
+                    toast.error('Parking spaces must be a whole number ≥ 0');
+                    return;
+                  }
+                  saveMarketing({
+                    amenities,
+                    parkingAvailable,
+                    parkingSpaces: parkingAvailable ? spaces : null,
+                  });
+                }}
               >
                 {pending ? 'Saving…' : 'Save amenities'}
               </Button>
@@ -784,31 +857,6 @@ export function ListingMarketingEditor({
             publications,
           })}
         />
-
-        <Card className={workspacePanelCard}>
-          <CardHeader>
-            <CardTitle className="text-sm text-[var(--workspace-shell-text)]">
-              Jump to…
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {[
-              ['summary-key-points', 'Summary & key points'],
-              ['amenities', 'Amenities & specifications'],
-              ['marketing-text', 'Marketing text'],
-              ['accommodation', 'Accommodation'],
-              ['agent-contacts', 'Agent contacts'],
-            ].map(([id, label]) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                className="block rounded-md px-2 py-1.5 text-sm text-[var(--workspace-shell-text)]/70 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-              >
-                {label}
-              </a>
-            ))}
-          </CardContent>
-        </Card>
 
         <Card
           id="publish-options"

@@ -4,6 +4,7 @@ import {
   BREEAM_RATINGS,
   DISPOSAL_TYPES,
   LISTING_CONTROLLED_BY,
+  LISTING_LET_TYPES,
   LISTING_PARTY_ROLES,
   LISTING_SIZE_ACCURACIES,
   LISTING_SIZE_BREAKDOWNS,
@@ -79,6 +80,8 @@ export const CreateListingSchema = z.object({
   measurementStandard: z.string().optional().nullable(),
   useClass: z.string().optional().nullable(),
   availableFrom: z.string().optional().nullable(),
+  letType: z.enum(LISTING_LET_TYPES).optional().nullable(),
+  letContractLengthMonths: z.number().int().min(0).max(1200).optional().nullable(),
   epcBand: z.string().optional().nullable(),
   epcRating: z.number().int().optional().nullable(),
   possession: z.string().trim().max(200).optional().nullable(),
@@ -105,6 +108,8 @@ export const CreateListingSchema = z.object({
     .max(50)
     .optional()
     .nullable(),
+  parkingAvailable: z.boolean().optional(),
+  parkingSpaces: z.number().int().min(0).max(100_000).optional().nullable(),
   marketingSections: z
     .array(
       z.object({
@@ -264,7 +269,6 @@ export const MARKETING_SECTION_KIND_LABELS: Record<
 export const SUGGESTED_LISTING_AMENITIES = [
   'ESG Credentials',
   'Travel Times',
-  'Parking',
   'Staff Amenities',
   'All Retail',
   'Air Conditioning',

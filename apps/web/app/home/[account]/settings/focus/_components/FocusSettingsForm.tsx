@@ -20,7 +20,10 @@ import {
   upsertWorkspaceFocusSettings,
 } from '~/home/[account]/settings/focus/actions';
 
-import { buildFocusFormDefaults } from '../_lib/focus-form';
+import {
+  type FocusFormValues,
+  buildFocusFormDefaults,
+} from '../_lib/focus-form';
 import { HolidayModeSection } from './HolidayModeSection';
 import { OOOSection } from './OOOSection';
 import { WorkHoursSection } from './WorkHoursSection';
@@ -49,9 +52,8 @@ export function FocusSettingsForm({
 
   const { isDirty } = form.formState;
 
-  function handleSubmit() {
+  function handleSubmit(values: FocusFormValues) {
     startTransition(async () => {
-      const values = form.getValues();
       const result = await upsertWorkspaceFocusSettings(accountId, values);
 
       if (!result.success) {
@@ -86,15 +88,28 @@ export function FocusSettingsForm({
         return;
       }
 
-      toast.success('Focus settings saved');
+      toast.success(
+        result.gmailSynced
+          ? 'Focus settings saved and Gmail vacation updated'
+          : 'Focus settings saved',
+      );
     });
+  }
+
+  function handleInvalidSubmit() {
+    const firstError = Object.values(form.formState.errors)[0];
+    const message =
+      typeof firstError?.message === 'string'
+        ? firstError.message
+        : 'Please fix the highlighted fields before saving';
+    toast.error(message);
   }
 
   return (
     <Form {...form}>
       <form
         className="space-y-6 pb-24"
-        onSubmit={form.handleSubmit(handleSubmit)}
+        onSubmit={form.handleSubmit(handleSubmit, handleInvalidSubmit)}
       >
         <div className="space-y-1">
           <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
@@ -119,7 +134,9 @@ export function FocusSettingsForm({
         <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-4 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] backdrop-blur">
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {isDirty ? (
-              <span className="text-amber-200">Unsaved changes</span>
+              <span className="font-medium text-amber-800 dark:text-amber-200">
+                Unsaved changes
+              </span>
             ) : (
               <span>All changes saved</span>
             )}
