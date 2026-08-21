@@ -2,17 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import type { Driver } from 'driver.js';
-import { Check, ListChecks, Minimize2, X } from 'lucide-react';
+import { Check, ListChecks, X } from 'lucide-react';
 
-import { Button } from '@kit/ui/button';
-import { Checkbox } from '@kit/ui/checkbox';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import '~/components/product-tour/product-tour.css';
+import { useOptionalPlatformSupportMessenger } from '~/components/workspace-shell/platform-support-messenger-context';
 import pathsConfig from '~/config/paths.config';
 import {
   type SopAssistTourStep,
@@ -23,9 +22,16 @@ import type {
   SopRunRow,
   SopRunStepRow,
 } from '~/lib/sops/shared';
-import { resolveSopTargetRoute } from '~/lib/sops/shared';
+import {
+  listingIdFromPathname,
+  resolveSopTargetRoute,
+  sopRunListingId,
+} from '~/lib/sops/shared';
 
-import { toggleSopRunStepAction } from '../_lib/server/sops-actions';
+import {
+  bindSopRunListingAction,
+  toggleSopRunStepAction,
+} from '../_lib/server/sops-actions';
 import {
   isSopTrackerHidden,
   setSopTrackerVisible,
@@ -50,19 +56,33 @@ export function SopTrackerWidget({
   enableAssistTour = true,
 }: SopTrackerWidgetProps) {
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
+  const pathname = usePathname();
+  const messenger = useOptionalPlatformSupportMessenger();
   const [hidden, setHidden] = useState(() =>
     isSopTrackerHidden(accountId, run.id),
   );
   const [completedFlash, setCompletedFlash] = useState(false);
   const [steps, setSteps] = useState(initialSteps);
-  const [pending, startTransition] = useTransition();
+  const [listingId, setListingId] = useState<string | null>(
+    () => sopRunListingId(run) ?? listingIdFromPathname(pathname),
+  );
+  const [, startTransition] = useTransition();
   const driverRef = useRef<Driver | null>(null);
   const lastHighlightRef = useRef<string | null>(null);
 
   useEffect(() => {
     setSteps(initialSteps);
   }, [initialSteps]);
+
+  useEffect(() => {
+    const fromRun = sopRunListingId(run);
+    if (fromRun) {
+      setListingId(fromRun);
+      return;
+    }
+    const fromPath = listingIdFromPathname(pathname);
+    if (fromPath) setListingId(fromPath);
+  }, [run, pathname]);
 
   const playbookById = useMemo(() => {
     const map = new Map<string, SopPlaybookStepRow>();
@@ -100,6 +120,13 @@ export function SopTrackerWidget({
     };
   }
 
+  function stepNeedsListing(step: SopRunStepRow) {
+    const pb = step.playbook_step_id
+      ? playbookById.get(step.playbook_step_id)
+      : undefined;
+    return Boolean(pb?.target_route?.includes('[id]'));
+  }
+
   async function highlightStep(step: SopRunStepRow) {
     if (!enableAssistTour) return;
     const pb = step.playbook_step_id
@@ -127,8 +154,21 @@ export function SopTrackerWidget({
     const pb = step.playbook_step_id
       ? playbookById.get(step.playbook_step_id)
       : undefined;
+
+    if (stepNeedsListing(step) && !listingId) {
+      toast.message('Create the disposal first', {
+        description:
+          'Open “Start the disposal record”, save the new disposal, then continue.',
+      });
+      const first = steps.find((s) => !stepNeedsListing(s)) ?? steps[0];
+      if (first && first.id !== step.id) {
+        await navigateToStep(first);
+      }
+      return;
+    }
+
     const target =
-      resolveSopTargetRoute(pb?.target_route, accountSlug) ??
+      resolveSopTargetRoute(pb?.target_route, accountSlug, { listingId }) ??
       pathsConfig.app.accountListings.replace('[account]', accountSlug);
 
     const url = new URL(target, window.location.origin);
@@ -161,13 +201,13 @@ export function SopTrackerWidget({
 
     const timer = window.setTimeout(() => {
       void highlightStep(targetStep);
-    }, 400);
+    }, 450);
 
     return () => {
       window.clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- highlight on assist entry only
-  }, [run.id, hidden, enableAssistTour, steps]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- highlight on assist entry / step change
+  }, [run.id, hidden, enableAssistTour, steps, pathname, listingId]);
 
   function toggleStep(
     step: SopRunStepRow,
@@ -208,7 +248,7 @@ export function SopTrackerWidget({
             .filter((s) => !s.is_complete);
           const next = remaining[0];
           if (next) {
-            await highlightStep(next);
+            await navigateToStep(next);
           }
         }
 
@@ -222,6 +262,41 @@ export function SopTrackerWidget({
     });
   }
 
+  // When a new disposal is created during assist, listings-list dispatches this.
+  useEffect(() => {
+    function onListingBound(event: Event) {
+      const detail = (event as CustomEvent<{ listingId?: string }>).detail;
+      if (!detail?.listingId) return;
+      setListingId(detail.listingId);
+
+      const createStep = steps.find((s) => {
+        const pb = s.playbook_step_id
+          ? playbookById.get(s.playbook_step_id)
+          : undefined;
+        return !pb?.target_route?.includes('[id]');
+      });
+
+      if (createStep && !createStep.is_complete) {
+        void toggleStep(createStep, true, { fromTour: true });
+      }
+    }
+
+    window.addEventListener('sop-assist-listing-bound', onListingBound);
+    return () => {
+      window.removeEventListener('sop-assist-listing-bound', onListingBound);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, playbookById]);
+
+  function openGuides() {
+    setSopTrackerVisible(accountId, run.id, true);
+    setHidden(false);
+    messenger?.openMessenger({
+      view: 'guides',
+      accountId,
+    });
+  }
+
   if (hidden && !completedFlash) {
     return null;
   }
@@ -232,122 +307,76 @@ export function SopTrackerWidget({
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]">
           <p className="flex items-center gap-2 font-medium text-[var(--workspace-shell-text)]">
             <Check className="h-4 w-4 text-[var(--ozer-accent)]" />
-            SOP complete
+            Guide complete
           </p>
-          <p className="text-muted-foreground mt-1 text-xs">{run.title}</p>
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+            {run.title}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed right-4 bottom-[5.25rem] z-[65] hidden flex-col items-end gap-2 lg:flex">
-      {expanded ? (
-        <div
-          className={cn(
-            'w-[min(100vw-2rem,22rem)] overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]',
-          )}
-        >
-          <div className="flex items-start justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[var(--workspace-shell-text)]">
-                {run.title}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                {completed} of {total} steps complete
-              </p>
-            </div>
-            <div className="flex shrink-0 gap-1">
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => setExpanded(false)}
-                aria-label="Minimise checklist"
-              >
-                <Minimize2 className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => {
-                  setSopTrackerVisible(accountId, run.id, false);
-                  setHidden(true);
-                  destroyTour();
-                }}
-                aria-label="Close checklist"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="max-h-[min(60vh,24rem)] space-y-1 overflow-y-auto p-3">
-            {steps.map((step) => (
-              <div
-                key={step.id}
-                className={cn(
-                  'flex items-start gap-3 rounded-xl px-2 py-2',
-                  step.is_complete && 'bg-[var(--ozer-accent-subtle)]/50',
-                )}
-              >
-                <Checkbox
-                  checked={step.is_complete}
-                  disabled={pending}
-                  onCheckedChange={(checked) => {
-                    void toggleStep(step, checked === true);
-                  }}
-                  className="mt-0.5"
-                />
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={() => {
-                    void navigateToStep(step);
-                  }}
-                >
-                  <p
-                    className={cn(
-                      'text-sm font-medium text-[var(--workspace-shell-text)]',
-                      step.is_complete && 'line-through opacity-70',
-                    )}
-                  >
-                    {step.title}
-                  </p>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
+    <div className="fixed right-4 bottom-[5.25rem] z-[65] hidden items-center gap-2 lg:flex">
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={openGuides}
         className={cn(
-          'relative flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--ozer-accent)] shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] transition-colors hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]',
+          'group flex max-w-[14rem] items-center gap-2 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1.5 pr-3 pl-1.5 text-left shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] transition-colors hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]',
         )}
-        aria-label={expanded ? 'Collapse SOP checklist' : 'Open SOP checklist'}
-        aria-expanded={expanded}
-        title="SOP checklist"
+        aria-label={`Open guide: ${run.title}`}
+        title="Open guide checklist"
       >
-        <span
-          className="absolute inset-0 rounded-full opacity-90"
-          style={{
-            background: ring,
-            mask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
-            WebkitMask:
-              'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
-          }}
-        />
-        <ListChecks className="relative h-5 w-5" />
-        {completed < total ? (
-          <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-[var(--ozer-accent)]" />
-        ) : null}
+        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--ozer-accent)]">
+          <span
+            className="absolute inset-0 rounded-full opacity-90"
+            style={{
+              background: ring,
+              mask: 'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
+              WebkitMask:
+                'radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))',
+            }}
+          />
+          <ListChecks className="relative h-4 w-4" />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-semibold text-[var(--workspace-shell-text)]">
+            {run.title}
+          </span>
+          <span className="block text-[11px] text-[var(--workspace-shell-text-muted)]">
+            {completed}/{total} · Open guides
+          </span>
+        </span>
+      </button>
+      <button
+        type="button"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:text-[var(--workspace-shell-text)]"
+        aria-label="Hide guide chip"
+        title="Hide for this session — reopen from Help → Guides"
+        onClick={() => {
+          setSopTrackerVisible(accountId, run.id, false);
+          setHidden(true);
+          destroyTour();
+        }}
+      >
+        <X className="h-3.5 w-3.5" />
       </button>
     </div>
+  );
+}
+
+/** Called from disposal create flow during an active assist run. */
+export async function bindListingToActiveSopAssist(input: {
+  accountId: string;
+  accountSlug: string;
+  runId: string;
+  listingId: string;
+}) {
+  await bindSopRunListingAction(input);
+  window.dispatchEvent(
+    new CustomEvent('sop-assist-listing-bound', {
+      detail: { listingId: input.listingId },
+    }),
   );
 }

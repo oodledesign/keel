@@ -18,7 +18,9 @@ export {
   SOP_ADDING_A_DISPOSAL_TITLE,
   defaultPeriodLabel,
   defaultRunTitle,
+  listingIdFromPathname,
   resolveSopTargetRoute,
+  sopRunListingId,
 } from './shared';
 
 export function getSopsDb(client?: SupabaseClient) {

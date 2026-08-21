@@ -59,7 +59,6 @@ import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
   LISTING_STATUSES,
-  LISTING_STATUS_FILTER_ACTIVE_CLASS,
   LISTING_STATUS_LABELS,
   type ListingStatus,
 } from '~/lib/commercial/commercial-constants';
@@ -68,9 +67,20 @@ import {
   workspaceCardHover,
   workspaceIconChip,
   workspacePanelCard,
+  workspaceSelectContentClass,
+  workspaceSelectItemClass,
 } from '~/lib/workspace-ui';
 
-import type { CommercialListing } from '../_lib/server/listings.service';
+import {
+  type DisposalStatusFilter,
+  disposalStatusQueryParams,
+  listingMatchesDisposalStatus,
+  parseDisposalStatusFilter,
+} from '../_lib/disposal-list-filters';
+import type {
+  CommercialListing,
+  ListingMemberOption,
+} from '../_lib/server/listings.service';
 import {
   backfillListingLocations,
   countSuggestedMatches,
@@ -82,6 +92,7 @@ import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingSectorPills } from './listing-sector-pills';
 import { ListingsMapView } from './listings-map-view';
+import { bindListingToActiveSopAssist } from '../../sops/_components/sop-tracker-widget';
 
 const PAGE_SIZE = 20;
 const MAP_PAGE_SIZE = 100;
@@ -92,12 +103,17 @@ interface ListingsListProps {
   initialListings: CommercialListing[];
   initialTotal: number;
   offices: Array<{ id: string; name: string }>;
+  members: ListingMemberOption[];
   initialOfficeId: string | null;
+  initialStatusFilter: StatusFilter;
+  initialAgentUserId: string | null;
+  initialNeedsLocation: boolean;
   unassignedCount: number;
 }
 
 type ViewMode = 'cards' | 'table' | 'map';
 type ListingSort = 'updated' | 'name' | 'on_market' | 'matches';
+type StatusFilter = DisposalStatusFilter;
 
 const LISTING_SORT_OPTIONS: Array<{ value: ListingSort; label: string }> = [
   { value: 'updated', label: 'Updated last' },
@@ -105,6 +121,15 @@ const LISTING_SORT_OPTIONS: Array<{ value: ListingSort; label: string }> = [
   { value: 'on_market', label: 'On market date' },
   { value: 'matches', label: 'Most matches' },
 ];
+
+const statusQueryParams = disposalStatusQueryParams;
+
+function listingMatchesStatus(
+  listing: CommercialListing,
+  filter: StatusFilter,
+) {
+  return listingMatchesDisposalStatus(listing.status, filter);
+}
 
 function mergeListings(
   current: CommercialListing[],
@@ -196,7 +221,11 @@ export function ListingsList({
   initialListings,
   initialTotal,
   offices,
+  members,
   initialOfficeId,
+  initialStatusFilter,
+  initialAgentUserId,
+  initialNeedsLocation,
   unassignedCount,
 }: ListingsListProps) {
   const router = useRouter();
@@ -210,16 +239,26 @@ export function ListingsList({
     offices.some((office) => office.id === officeFromUrl)
       ? officeFromUrl
       : (initialOfficeId ?? null);
+  const statusFromUrl = searchParams.get('status');
+  const statusFilter = statusFromUrl
+    ? parseDisposalStatusFilter(statusFromUrl)
+    : initialStatusFilter;
+  const agentFromUrl = searchParams.get('agent');
+  const agentUserId =
+    agentFromUrl && members.some((member) => member.userId === agentFromUrl)
+      ? agentFromUrl
+      : searchParams.has('agent')
+        ? null
+        : initialAgentUserId;
+  const needsLocationOnly = searchParams.has('needsLocation')
+    ? searchParams.get('needsLocation') === '1'
+    : initialNeedsLocation;
   const [pageListings, setPageListings] = useState(initialListings);
   const [cachedListings, setCachedListings] = useState(initialListings);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ListingStatus | 'all'>(
-    'all',
-  );
-  const [needsLocationOnly, setNeedsLocationOnly] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [sortMode, setSortMode] = useState<ListingSort>('updated');
   const [modalOpen, setModalOpen] = useState(false);
@@ -237,6 +276,9 @@ export function ListingsList({
   );
   const unassignedVisibleCount = unassignedOverride ?? unassignedCount;
   const suggestedMatchIdsRef = useRef(new Set<string>());
+  const listFilterKeyRef = useRef(
+    `${initialStatusFilter}:${initialAgentUserId ?? ''}`,
+  );
 
   useEffect(() => {
     setPageListings(initialListings);
@@ -289,21 +331,79 @@ export function ListingsList({
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  const setOfficeFilter = useCallback(
-    (nextOfficeId: string | null) => {
+  const updateListFilters = useCallback(
+    (patch: {
+      office?: string | null;
+      status?: StatusFilter;
+      agent?: string | null;
+      needsLocation?: boolean;
+    }) => {
       const url = new URL(window.location.href);
-      if (nextOfficeId) {
-        url.searchParams.set('office', nextOfficeId);
-      } else {
-        url.searchParams.delete('office');
+
+      if (patch.office !== undefined) {
+        if (patch.office) url.searchParams.set('office', patch.office);
+        else url.searchParams.delete('office');
       }
-      // Drop scoped cache immediately so map/search don't show the previous office.
-      setCachedListings([]);
-      setPageListings([]);
-      setPage(1);
+
+      if (patch.status !== undefined) {
+        if (patch.status === 'active') url.searchParams.delete('status');
+        else url.searchParams.set('status', patch.status);
+      }
+
+      if (patch.agent !== undefined) {
+        if (patch.agent) url.searchParams.set('agent', patch.agent);
+        else url.searchParams.delete('agent');
+      }
+
+      if (patch.needsLocation !== undefined) {
+        if (patch.needsLocation) url.searchParams.set('needsLocation', '1');
+        else url.searchParams.delete('needsLocation');
+      }
+
+      // Drop scoped cache immediately so map/search don't show the previous filter.
+      if (
+        patch.office !== undefined ||
+        patch.status !== undefined ||
+        patch.agent !== undefined
+      ) {
+        setCachedListings([]);
+        setPageListings([]);
+        setPage(1);
+      }
+
       router.replace(url.pathname + url.search, { scroll: false });
     },
     [router],
+  );
+
+  const setOfficeFilter = useCallback(
+    (nextOfficeId: string | null) => {
+      updateListFilters({ office: nextOfficeId });
+    },
+    [updateListFilters],
+  );
+
+  const setStatusFilter = useCallback(
+    (nextStatus: StatusFilter) => {
+      updateListFilters({ status: nextStatus });
+    },
+    [updateListFilters],
+  );
+
+  const setAgentUserId = useCallback(
+    (nextAgentUserId: string | null) => {
+      updateListFilters({ agent: nextAgentUserId });
+    },
+    [updateListFilters],
+  );
+
+  const setNeedsLocationOnly = useCallback(
+    (next: boolean | ((current: boolean) => boolean)) => {
+      const value =
+        typeof next === 'function' ? next(needsLocationOnly) : next;
+      updateListFilters({ needsLocation: value });
+    },
+    [needsLocationOnly, updateListFilters],
   );
 
   const clearCreateQuery = useCallback(() => {
@@ -318,25 +418,30 @@ export function ListingsList({
       pageNum: number,
       opts?: {
         search?: string;
-        status?: ListingStatus | 'all';
+        status?: StatusFilter;
         accountBranchId?: string | null;
+        actingAgentUserId?: string | null;
       },
     ) => {
       setLoadingPage(true);
       try {
-        const status =
-          (opts?.status ?? statusFilter) === 'all'
-            ? undefined
-            : ((opts?.status ?? statusFilter) as ListingStatus);
+        const filter = opts?.status ?? statusFilter;
+        const { status, statuses } = statusQueryParams(filter);
         const accountBranchId =
           opts?.accountBranchId !== undefined ? opts.accountBranchId : officeId;
+        const actingAgentUserId =
+          opts?.actingAgentUserId !== undefined
+            ? opts.actingAgentUserId
+            : agentUserId;
         const result = await listListings({
           accountId,
           page: pageNum,
           pageSize: PAGE_SIZE,
           search: opts?.search?.trim() || undefined,
           status,
+          statuses,
           accountBranchId: accountBranchId ?? undefined,
+          actingAgentUserId: actingAgentUserId ?? undefined,
         });
         const list = Array.isArray(result?.data) ? result.data : [];
         const count = typeof result?.total === 'number' ? result.total : 0;
@@ -349,15 +454,25 @@ export function ListingsList({
         setLoadingPage(false);
       }
     },
-    [accountId, officeId, statusFilter],
+    [accountId, agentUserId, officeId, statusFilter],
   );
 
   useEffect(() => {
     if (searchDebounced.trim()) return;
 
+    const filterKey = `${statusFilter}:${agentUserId ?? ''}`;
+    if (listFilterKeyRef.current !== filterKey) {
+      listFilterKeyRef.current = filterKey;
+      if (page !== 1) {
+        setPage(1);
+        return;
+      }
+    }
+
     const isDefaultFirstPage =
       page === 1 &&
-      statusFilter === 'all' &&
+      statusFilter === initialStatusFilter &&
+      (agentUserId ?? null) === (initialAgentUserId ?? null) &&
       officeId === (initialOfficeId ?? null) &&
       initialListings.length > 0;
     if (isDefaultFirstPage) return;
@@ -367,8 +482,11 @@ export function ListingsList({
     page,
     searchDebounced,
     statusFilter,
+    agentUserId,
     officeId,
     initialOfficeId,
+    initialStatusFilter,
+    initialAgentUserId,
     fetchPage,
     initialListings.length,
   ]);
@@ -388,7 +506,7 @@ export function ListingsList({
       try {
         let nextPage = 1;
         let serverTotal = 0;
-        const status = statusFilter === 'all' ? undefined : statusFilter;
+        const { status, statuses } = statusQueryParams(statusFilter);
 
         while (!cancelled) {
           const result = await listListings({
@@ -397,7 +515,9 @@ export function ListingsList({
             page: nextPage,
             pageSize: PAGE_SIZE,
             status,
+            statuses,
             accountBranchId: officeId ?? undefined,
+            actingAgentUserId: agentUserId ?? undefined,
           });
           const list = Array.isArray(result?.data) ? result.data : [];
           serverTotal =
@@ -428,11 +548,7 @@ export function ListingsList({
     return () => {
       cancelled = true;
     };
-  }, [accountId, searchDebounced, statusFilter, officeId]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [statusFilter]);
+  }, [accountId, searchDebounced, statusFilter, officeId, agentUserId]);
 
   useEffect(() => {
     if (!showOfficeFilter || !officeId) return;
@@ -440,9 +556,11 @@ export function ListingsList({
     let cancelled = false;
     void (async () => {
       try {
+        const { status, statuses } = statusQueryParams(statusFilter);
         const count = await countUnassignedListings({
           accountId,
-          status: statusFilter === 'all' ? undefined : statusFilter,
+          status,
+          statuses,
         });
         if (!cancelled && typeof count === 'number') {
           setUnassignedOverride(count);
@@ -473,7 +591,7 @@ export function ListingsList({
       try {
         let nextPage = 1;
         let serverTotal = 0;
-        const status = statusFilter === 'all' ? undefined : statusFilter;
+        const { status, statuses } = statusQueryParams(statusFilter);
 
         while (!cancelled) {
           const result = await listListings({
@@ -481,7 +599,9 @@ export function ListingsList({
             page: nextPage,
             pageSize: MAP_PAGE_SIZE,
             status,
+            statuses,
             accountBranchId: officeId ?? undefined,
+            actingAgentUserId: agentUserId ?? undefined,
           });
           const list = Array.isArray(result?.data) ? result.data : [];
           serverTotal =
@@ -489,7 +609,8 @@ export function ListingsList({
 
           if (!cancelled && list.length > 0) {
             setCachedListings((current) =>
-              nextPage === 1 && (statusFilter !== 'all' || officeId)
+              nextPage === 1 &&
+              (statusFilter !== 'active' || officeId || agentUserId)
                 ? list
                 : mergeListings(current, list),
             );
@@ -523,6 +644,7 @@ export function ListingsList({
     sortMode,
     statusFilter,
     officeId,
+    agentUserId,
     searchDebounced,
   ]);
 
@@ -532,6 +654,15 @@ export function ListingsList({
     (listing: CommercialListing) =>
       !officeId || listing.accountBranchId === officeId,
     [officeId],
+  );
+
+  const matchesAgent = useCallback(
+    (listing: CommercialListing) =>
+      !agentUserId ||
+      (listing.actingAgents ?? []).some(
+        (agent) => agent.userId === agentUserId,
+      ),
+    [agentUserId],
   );
 
   const visibleListings = useMemo(() => {
@@ -546,8 +677,8 @@ export function ListingsList({
         sortListings(
           cachedListings.filter((l) => {
             if (!matchesOffice(l)) return false;
-            if (statusFilter !== 'all' && l.status !== statusFilter)
-              return false;
+            if (!matchesAgent(l)) return false;
+            if (!listingMatchesStatus(l, statusFilter)) return false;
             if (!q) return true;
             const haystack = [
               l.name,
@@ -574,7 +705,8 @@ export function ListingsList({
     return sortListings(
       cachedListings.filter((l) => {
         if (!matchesOffice(l)) return false;
-        if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+        if (!matchesAgent(l)) return false;
+        if (!listingMatchesStatus(l, statusFilter)) return false;
         const haystack = [
           l.name,
           l.addressLine1,
@@ -595,6 +727,7 @@ export function ListingsList({
   }, [
     cachedListings,
     isSearching,
+    matchesAgent,
     matchesOffice,
     needsLocationOnly,
     pageListings,
@@ -656,9 +789,35 @@ export function ListingsList({
         return [saved, ...prev];
       });
       setTotal((prev) => (wasNew ? prev + 1 : prev));
+
+      if (wasNew) {
+        const assistRunId = searchParams.get('sopAssist');
+        if (assistRunId) {
+          void bindListingToActiveSopAssist({
+            accountId,
+            accountSlug,
+            runId: assistRunId,
+            listingId: saved.id,
+          })
+            .then(() => {
+              const mediaPath = pathsConfig.app.accountListingDetail
+                .replace('[account]', accountSlug)
+                .replace('[id]', saved.id);
+              router.push(
+                `${mediaPath}/media?sopAssist=${assistRunId}`,
+              );
+            })
+            .catch((err: unknown) => {
+              console.error(err);
+              router.refresh();
+            });
+          return;
+        }
+      }
+
       router.refresh();
     },
-    [router],
+    [accountId, accountSlug, router, searchParams],
   );
 
   const confirmDelete = useCallback(() => {
@@ -769,107 +928,174 @@ export function ListingsList({
         />
       </div>
 
-      {showOfficeFilter ? (
-        <div className="space-y-2">
-          <div
-            className="flex flex-wrap items-center gap-2"
-            role="group"
-            aria-label="Filter by office"
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {showOfficeFilter ? (
+            <Select
+              value={officeId ?? 'all'}
+              onValueChange={(value) =>
+                setOfficeFilter(value === 'all' ? null : value)
+              }
+            >
+              <SelectTrigger
+                className="h-8 w-[200px] border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                aria-label="Filter by office"
+                data-test="office-filter"
+              >
+                <SelectValue placeholder="Office" />
+              </SelectTrigger>
+              <SelectContent className={workspaceSelectContentClass}>
+                <SelectItem
+                  value="all"
+                  className={workspaceSelectItemClass}
+                  data-test="office-filter-all"
+                >
+                  All offices
+                </SelectItem>
+                {offices.map((office) => (
+                  <SelectItem
+                    key={office.id}
+                    value={office.id}
+                    className={workspaceSelectItemClass}
+                    data-test={`office-filter-${office.id}`}
+                  >
+                    {office.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as StatusFilter)}
           >
-            <FilterChip
-              active={!officeId}
-              onClick={() => setOfficeFilter(null)}
-              label="All offices"
-              dataTest="office-filter-all"
-            />
-            {offices.map((office) => (
-              <FilterChip
-                key={office.id}
-                active={officeId === office.id}
-                onClick={() => setOfficeFilter(office.id)}
-                label={office.name}
-                dataTest={`office-filter-${office.id}`}
-              />
-            ))}
-          </div>
-          {officeId && unassignedVisibleCount > 0 ? (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {unassignedVisibleCount === 1
-                ? '1 disposal has no office assigned and only appears under All offices.'
-                : `${unassignedVisibleCount} disposals have no office assigned and only appear under All offices.`}
-            </p>
+            <SelectTrigger
+              className="h-8 w-[180px] border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+              aria-label="Filter by status"
+              data-test="status-filter"
+            >
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className={workspaceSelectContentClass}>
+              <SelectItem value="active" className={workspaceSelectItemClass}>
+                Active
+              </SelectItem>
+              {LISTING_STATUSES.map((status) => (
+                <SelectItem
+                  key={status}
+                  value={status}
+                  className={workspaceSelectItemClass}
+                >
+                  {LISTING_STATUS_LABELS[status]}
+                </SelectItem>
+              ))}
+              <SelectItem value="all" className={workspaceSelectItemClass}>
+                All statuses
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {members.length > 0 ? (
+            <Select
+              value={agentUserId ?? 'all'}
+              onValueChange={(value) =>
+                setAgentUserId(value === 'all' ? null : value)
+              }
+            >
+              <SelectTrigger
+                className="h-8 w-[220px] border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                aria-label="Filter by team member"
+                data-test="agent-filter"
+              >
+                <SelectValue placeholder="Team member" />
+              </SelectTrigger>
+              <SelectContent className={workspaceSelectContentClass}>
+                <SelectItem value="all" className={workspaceSelectItemClass}>
+                  All team members
+                </SelectItem>
+                {members.map((member) => (
+                  <SelectItem
+                    key={member.userId}
+                    value={member.userId}
+                    className={workspaceSelectItemClass}
+                  >
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+
+          <FilterChip
+            active={needsLocationOnly}
+            onClick={() => setNeedsLocationOnly((v) => !v)}
+            label={
+              needsLocationCount > 0
+                ? `Needs location (${needsLocationCount})`
+                : 'Needs location'
+            }
+          />
+          {needsLocationOnly && needsLocationCount > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={backfillingLocations}
+              className="h-8 border-[color:var(--workspace-shell-border)]"
+              onClick={() => {
+                void (async () => {
+                  setBackfillingLocations(true);
+                  try {
+                    const result = await backfillListingLocations({
+                      accountId,
+                      limit: 40,
+                    });
+                    const { status, statuses } =
+                      statusQueryParams(statusFilter);
+                    // Refresh caches so new coords appear.
+                    const pageResult = await listListings({
+                      accountId,
+                      page: 1,
+                      pageSize: MAP_PAGE_SIZE,
+                      status,
+                      statuses,
+                      accountBranchId: officeId ?? undefined,
+                      actingAgentUserId: agentUserId ?? undefined,
+                    });
+                    const list = Array.isArray(pageResult?.data)
+                      ? pageResult.data
+                      : [];
+                    setCachedListings((current) =>
+                      mergeListings(current, list),
+                    );
+                    setPageListings((current) =>
+                      mergeListings(current, list),
+                    );
+                    if (
+                      typeof result?.updated === 'number' &&
+                      result.updated > 0
+                    ) {
+                      router.refresh();
+                    }
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setBackfillingLocations(false);
+                  }
+                })();
+              }}
+            >
+              {backfillingLocations ? 'Geocoding…' : 'Backfill locations'}
+            </Button>
           ) : null}
         </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <FilterChip
-          active={statusFilter === 'all'}
-          onClick={() => setStatusFilter('all')}
-          label="All"
-        />
-        {LISTING_STATUSES.map((status) => (
-          <FilterChip
-            key={status}
-            active={statusFilter === status}
-            onClick={() => setStatusFilter(status)}
-            label={LISTING_STATUS_LABELS[status]}
-            activeClassName={LISTING_STATUS_FILTER_ACTIVE_CLASS[status]}
-          />
-        ))}
-        <FilterChip
-          active={needsLocationOnly}
-          onClick={() => setNeedsLocationOnly((v) => !v)}
-          label={
-            needsLocationCount > 0
-              ? `Needs location (${needsLocationCount})`
-              : 'Needs location'
-          }
-        />
-        {needsLocationOnly && needsLocationCount > 0 ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={backfillingLocations}
-            className="h-8 border-[color:var(--workspace-shell-border)]"
-            onClick={() => {
-              void (async () => {
-                setBackfillingLocations(true);
-                try {
-                  const result = await backfillListingLocations({
-                    accountId,
-                    limit: 40,
-                  });
-                  // Refresh caches so new coords appear.
-                  const pageResult = await listListings({
-                    accountId,
-                    page: 1,
-                    pageSize: MAP_PAGE_SIZE,
-                    status: statusFilter === 'all' ? undefined : statusFilter,
-                    accountBranchId: officeId ?? undefined,
-                  });
-                  const list = Array.isArray(pageResult?.data)
-                    ? pageResult.data
-                    : [];
-                  setCachedListings((current) => mergeListings(current, list));
-                  setPageListings((current) => mergeListings(current, list));
-                  if (
-                    typeof result?.updated === 'number' &&
-                    result.updated > 0
-                  ) {
-                    router.refresh();
-                  }
-                } catch (err) {
-                  console.error(err);
-                } finally {
-                  setBackfillingLocations(false);
-                }
-              })();
-            }}
-          >
-            {backfillingLocations ? 'Geocoding…' : 'Backfill locations'}
-          </Button>
+        {officeId && unassignedVisibleCount > 0 ? (
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            {unassignedVisibleCount === 1
+              ? '1 disposal has no office assigned and only appears under All offices.'
+              : `${unassignedVisibleCount} disposals have no office assigned and only appear under All offices.`}
+          </p>
         ) : null}
       </div>
 
@@ -893,23 +1119,39 @@ export function ListingsList({
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
             <p className="font-medium text-[var(--workspace-shell-text)]">
-              {searchQuery.trim() || statusFilter !== 'all' || officeId
+              {searchQuery.trim() ||
+              statusFilter !== 'active' ||
+              officeId ||
+              agentUserId ||
+              needsLocationOnly
                 ? 'No matching disposals'
-                : 'No disposals yet'}
+                : 'No active disposals'}
             </p>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-              {searchQuery.trim() || statusFilter !== 'all' || officeId
+              {searchQuery.trim() ||
+              statusFilter !== 'active' ||
+              officeId ||
+              agentUserId ||
+              needsLocationOnly
                 ? 'Try a different search or clear the filters.'
                 : 'Add a disposal instruction to get started.'}
             </p>
-            {searchQuery.trim() || statusFilter !== 'all' || officeId ? (
+            {searchQuery.trim() ||
+            statusFilter !== 'active' ||
+            officeId ||
+            agentUserId ||
+            needsLocationOnly ? (
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => {
                   setSearchQuery('');
-                  setStatusFilter('all');
-                  setOfficeFilter(null);
+                  updateListFilters({
+                    office: null,
+                    status: 'active',
+                    agent: null,
+                    needsLocation: false,
+                  });
                 }}
               >
                 Clear filters

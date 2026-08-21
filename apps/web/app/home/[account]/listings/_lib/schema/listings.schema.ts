@@ -14,9 +14,13 @@ import {
 export const ListListingsSchema = z.object({
   accountId: z.string().uuid(),
   status: z.enum(LISTING_STATUSES).optional(),
+  /** When set, filter to any of these statuses (takes precedence over `status`). */
+  statuses: z.array(z.enum(LISTING_STATUSES)).min(1).max(20).optional(),
   search: z.string().trim().max(200).optional(),
   /** Filter to a workspace office (`account_branches.id`). Omit for all offices. */
   accountBranchId: z.string().uuid().optional(),
+  /** Filter to disposals where this user is an acting agent. */
+  actingAgentUserId: z.string().uuid().optional(),
   page: z.number().int().min(1).optional(),
   pageSize: z.number().int().min(1).max(100).optional(),
 });
@@ -24,6 +28,7 @@ export const ListListingsSchema = z.object({
 export const CountUnassignedListingsSchema = z.object({
   accountId: z.string().uuid(),
   status: z.enum(LISTING_STATUSES).optional(),
+  statuses: z.array(z.enum(LISTING_STATUSES)).min(1).max(20).optional(),
 });
 
 export const CountSuggestedMatchesSchema = z.object({
@@ -81,7 +86,13 @@ export const CreateListingSchema = z.object({
   useClass: z.string().optional().nullable(),
   availableFrom: z.string().optional().nullable(),
   letType: z.enum(LISTING_LET_TYPES).optional().nullable(),
-  letContractLengthMonths: z.number().int().min(0).max(1200).optional().nullable(),
+  letContractLengthMonths: z
+    .number()
+    .int()
+    .min(0)
+    .max(1200)
+    .optional()
+    .nullable(),
   epcBand: z.string().optional().nullable(),
   epcRating: z.number().int().optional().nullable(),
   possession: z.string().trim().max(200).optional().nullable(),

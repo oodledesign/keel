@@ -12,7 +12,12 @@ import { loadDisposalsPageData } from './_lib/server/disposals-page.loader';
 
 interface ListingsPageProps {
   params: Promise<{ account: string }>;
-  searchParams: Promise<{ office?: string }>;
+  searchParams: Promise<{
+    office?: string;
+    status?: string;
+    agent?: string;
+    needsLocation?: string;
+  }>;
 }
 
 export const generateMetadata = async () => {
@@ -43,11 +48,21 @@ function DisposalsListSkeleton() {
 async function DisposalsListBody({
   accountSlug,
   officeParam,
+  statusParam,
+  agentParam,
+  needsLocationParam,
 }: {
   accountSlug: string;
   officeParam: string | null;
+  statusParam: string | null;
+  agentParam: string | null;
+  needsLocationParam: boolean;
 }) {
-  const data = await loadDisposalsPageData(accountSlug, officeParam);
+  const data = await loadDisposalsPageData(accountSlug, {
+    office: officeParam,
+    status: statusParam,
+    agent: agentParam,
+  });
 
   return (
     <ListingsList
@@ -56,7 +71,11 @@ async function DisposalsListBody({
       initialListings={data.listings}
       initialTotal={data.total}
       offices={data.offices}
+      members={data.members}
       initialOfficeId={data.initialOfficeId}
+      initialStatusFilter={data.initialStatusFilter}
+      initialAgentUserId={data.initialAgentUserId}
+      initialNeedsLocation={needsLocationParam}
       unassignedCount={data.unassignedCount}
     />
   );
@@ -64,7 +83,12 @@ async function DisposalsListBody({
 
 async function ListingsPage({ params, searchParams }: ListingsPageProps) {
   const { account: slug } = await params;
-  const { office: officeParam } = await searchParams;
+  const {
+    office: officeParam,
+    status: statusParam,
+    agent: agentParam,
+    needsLocation: needsLocationParam,
+  } = await searchParams;
 
   return (
     <>
@@ -74,6 +98,9 @@ async function ListingsPage({ params, searchParams }: ListingsPageProps) {
           <DisposalsListBody
             accountSlug={slug}
             officeParam={officeParam ?? null}
+            statusParam={statusParam ?? null}
+            agentParam={agentParam ?? null}
+            needsLocationParam={needsLocationParam === '1'}
           />
         </Suspense>
       </PageBody>

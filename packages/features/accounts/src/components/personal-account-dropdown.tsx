@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Home,
   LogOut,
+  Plane,
   Settings,
   Shield,
 } from 'lucide-react';
@@ -104,6 +105,7 @@ export function PersonalAccountDropdown({
   menuClassName,
   menuExtras,
   onSupportClick,
+  onOutOfOfficeClick,
 }: {
   user: JWTUserData;
 
@@ -135,6 +137,9 @@ export function PersonalAccountDropdown({
 
   /** When set, Support opens the in-app messenger instead of navigating. */
   onSupportClick?: () => void;
+
+  /** When set, shows Out of office and opens the quick settings dialog. */
+  onOutOfOfficeClick?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const { data: personalAccountData } = usePersonalAccountData(
@@ -259,6 +264,17 @@ export function PersonalAccountDropdown({
               href={paths.personalAccountSettings}
               icon={Settings}
               label={<Trans i18nKey={'common:personalSettings'} />}
+            />
+          ) : null}
+
+          {onOutOfOfficeClick ? (
+            <MenuActionItem
+              icon={Plane}
+              label="Out of office"
+              onSelect={() => {
+                setOpen(false);
+                onOutOfOfficeClick();
+              }}
             />
           ) : null}
 

@@ -1101,8 +1101,10 @@ export function createListingsService(client: SupabaseClient) {
     async listListingsPage(input: {
       accountId: string;
       status?: ListingStatus;
+      statuses?: ListingStatus[];
       search?: string | null;
       accountBranchId?: string | null;
+      actingAgentUserId?: string | null;
       page?: number;
       pageSize?: number;
       /** Suggested fits are expensive; default off for list/SSR. */
@@ -1121,8 +1123,40 @@ export function createListingsService(client: SupabaseClient) {
         .order('created_at', { ascending: false })
         .range(from, to);
 
-      if (input.status) {
+      if (input.statuses && input.statuses.length > 0) {
+        query = query.in('status', input.statuses);
+      } else if (input.status) {
         query = query.eq('status', input.status);
+      }
+
+      if (input.actingAgentUserId) {
+        const { data: agentRows, error: agentError } = await fromTable(
+          client,
+          'commercial_listing_agents',
+        )
+          .select('listing_id')
+          .eq('account_id', input.accountId)
+          .eq('user_id', input.actingAgentUserId);
+
+        if (agentError) {
+          console.error(
+            '[listings] listListingsPage agent filter:',
+            agentError.message,
+          );
+          return { data: [], total: 0 };
+        }
+
+        const listingIds = [
+          ...new Set(
+            ((agentRows ?? []) as Array<{ listing_id: string }>).map(
+              (row) => row.listing_id,
+            ),
+          ),
+        ];
+        if (listingIds.length === 0) {
+          return { data: [], total: 0 };
+        }
+        query = query.in('id', listingIds);
       }
 
       if (input.accountBranchId) {
@@ -1209,6 +1243,7 @@ export function createListingsService(client: SupabaseClient) {
     async countUnassignedListings(input: {
       accountId: string;
       status?: ListingStatus;
+      statuses?: ListingStatus[];
     }): Promise<number> {
       let query = client
         .from('commercial_listings')
@@ -1216,7 +1251,9 @@ export function createListingsService(client: SupabaseClient) {
         .eq('account_id', input.accountId)
         .is('account_branch_id', null);
 
-      if (input.status) {
+      if (input.statuses && input.statuses.length > 0) {
+        query = query.in('status', input.statuses);
+      } else if (input.status) {
         query = query.eq('status', input.status);
       }
 

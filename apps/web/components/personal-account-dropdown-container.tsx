@@ -7,6 +7,7 @@ import { JWTUserData } from '@kit/supabase/types';
 
 import { AiCreditsMenuMeter } from '~/components/ai/ai-credits-menu-meter';
 import { useOptionalPlatformSupportMessenger } from '~/components/workspace-shell/platform-support-messenger-context';
+import { useOptionalWorkspaceOooDialog } from '~/components/workspace-shell/workspace-ooo-dialog-context';
 import pathsConfig from '~/config/paths.config';
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 
@@ -42,6 +43,7 @@ export function ProfileAccountDropdownContainer(props: {
   const user = useUser(props.user);
   const userData = user.data;
   const messenger = useOptionalPlatformSupportMessenger();
+  const oooDialog = useOptionalWorkspaceOooDialog();
 
   if (!userData) {
     return null;
@@ -68,6 +70,11 @@ export function ProfileAccountDropdownContainer(props: {
               messenger.openNewConversation(
                 props.account?.id ?? props.billingAccountId ?? null,
               )
+          : undefined
+      }
+      onOutOfOfficeClick={
+        oooDialog
+          ? () => oooDialog.openOooDialog(props.billingAccountId ?? null)
           : undefined
       }
       menuExtras={

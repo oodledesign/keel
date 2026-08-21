@@ -166,6 +166,25 @@ async function SidebarLayout({
     .filter((row) => Boolean(row.slug))
     .map((row) => ({ slug: String(row.slug), name: row.label }));
 
+  const oooWorkspaces = Array.from(
+    new Map(
+      [
+        {
+          id: accountId,
+          slug: account,
+          name: data.account.name?.trim() || account,
+        },
+        ...accounts
+          .filter((row) => Boolean(row.slug))
+          .map((row) => ({
+            id: row.id,
+            slug: String(row.slug),
+            name: row.label,
+          })),
+      ].map((workspace) => [workspace.id, workspace]),
+    ).values(),
+  );
+
   const shellProps = {
     account,
     accountId,
@@ -181,6 +200,7 @@ async function SidebarLayout({
     completedTours,
     onboardingCompleted,
     workspaceOptions,
+    oooWorkspaces,
   };
 
   return (
@@ -260,6 +280,7 @@ function TeamWorkspaceSidebarShell({
   completedTours,
   onboardingCompleted,
   workspaceOptions,
+  oooWorkspaces,
   children,
 }: {
   account: string;
@@ -289,6 +310,7 @@ function TeamWorkspaceSidebarShell({
   completedTours: CompletedProductTours;
   onboardingCompleted: boolean;
   workspaceOptions: Array<{ slug: string; name: string }>;
+  oooWorkspaces: Array<{ id: string; slug: string; name: string }>;
   children: React.ReactNode;
 }) {
   const mobileNavSections = flattenTeamNavSections(
@@ -312,6 +334,8 @@ function TeamWorkspaceSidebarShell({
       <WorkspaceFocusProviderShell
         settingsByAccountId={focusSettingsByAccountId}
         supportDefaultAccountId={accountId}
+        oooWorkspaces={oooWorkspaces}
+        oooDefaultAccountId={accountId}
       >
         <SidebarProvider defaultOpen={layoutState.open}>
           <Page
@@ -511,6 +535,25 @@ function HeaderLayoutShell({
       <WorkspaceFocusProviderShell
         settingsByAccountId={adornments.focusSettingsByAccountId}
         supportDefaultAccountId={accountId}
+        oooWorkspaces={Array.from(
+          new Map(
+            [
+              {
+                id: accountId,
+                slug: account,
+                name: data.account.name?.trim() || account,
+              },
+              ...accounts
+                .filter((row) => Boolean(row.slug))
+                .map((row) => ({
+                  id: row.id,
+                  slug: String(row.slug),
+                  name: row.label,
+                })),
+            ].map((workspace) => [workspace.id, workspace]),
+          ).values(),
+        )}
+        oooDefaultAccountId={accountId}
       >
         <Page style={'header'}>
           <PageNavigation>

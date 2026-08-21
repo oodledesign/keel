@@ -7,6 +7,19 @@ export type SopAssistTourStep = {
   description: string;
 };
 
+async function waitForElement(
+  selector: string,
+  attempts = 12,
+  delayMs = 150,
+): Promise<Element | null> {
+  for (let i = 0; i < attempts; i += 1) {
+    const target = document.querySelector(selector);
+    if (target) return target;
+    await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+  }
+  return null;
+}
+
 /**
  * Thin driver.js helper matching ProductTour styling for dynamic SOP steps.
  * Skips highlight when element is missing or selector is unset.
@@ -19,7 +32,7 @@ export async function highlightSopAssistStep(params: {
     return null;
   }
 
-  const target = document.querySelector(params.step.element);
+  const target = await waitForElement(params.step.element);
   if (!target) {
     return null;
   }

@@ -13,8 +13,10 @@ import { PlatformSupportMessenger } from '~/components/workspace-shell/platform-
 export type PlatformSupportMessengerView =
   | 'home'
   | 'messages'
+  | 'guides'
   | 'new'
-  | 'thread';
+  | 'thread'
+  | 'ask';
 
 export type OpenPlatformSupportMessengerOptions = {
   view?: Exclude<PlatformSupportMessengerView, 'thread'>;

@@ -14,12 +14,15 @@ import {
   BookOpen,
   Home,
   LifeBuoy,
+  ListChecks,
   Loader2,
   MessageCircle,
   Paperclip,
   Send,
   X,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -49,7 +52,10 @@ import {
   formatPlatformTicketNumber,
 } from '~/lib/support/platform-support.types';
 
-type View = 'home' | 'messages' | 'new' | 'thread' | 'ask';
+import { GuidesView } from './guides-view';
+import type { PlatformSupportMessengerView } from './platform-support-messenger-context';
+
+type View = PlatformSupportMessengerView;
 
 type DocsChatSource = {
   title: string;
@@ -221,9 +227,7 @@ export function PlatformSupportMessenger({
                 type="button"
                 className="mb-2 inline-flex items-center gap-1 text-xs text-[var(--ozer-text-on-dark)]/80 hover:text-[var(--ozer-text-on-dark)]"
                 onClick={() => {
-                  if (view === 'new') {
-                    setView('home');
-                  } else if (view === 'ask') {
+                  if (view === 'new' || view === 'ask') {
                     setView('home');
                   } else {
                     setView('messages');
@@ -241,15 +245,22 @@ export function PlatformSupportMessenger({
                 ? `Hi ${firstName}`
                 : view === 'messages'
                   ? 'Messages'
-                  : view === 'new'
-                    ? 'New conversation'
-                    : view === 'ask'
-                      ? 'Ask docs'
-                      : (thread?.subject ?? 'Conversation')}
+                  : view === 'guides'
+                    ? 'Guides'
+                    : view === 'new'
+                      ? 'New conversation'
+                      : view === 'ask'
+                        ? 'Ask docs'
+                        : (thread?.subject ?? 'Conversation')}
             </p>
             {view === 'home' ? (
               <p className="mt-1 text-sm text-[var(--ozer-text-on-dark)]/75">
                 Chat with Ozer support
+              </p>
+            ) : null}
+            {view === 'guides' ? (
+              <p className="mt-1 text-sm text-[var(--ozer-text-on-dark)]/75">
+                Walkthroughs and your guide history
               </p>
             ) : null}
             {view === 'ask' ? (
@@ -281,6 +292,7 @@ export function PlatformSupportMessenger({
             loading={loadingBootstrap}
             recentTickets={recentTickets}
             onAskDocs={() => setView('ask')}
+            onGuides={() => setView('guides')}
             onStart={() => setView('new')}
             onOpenTicket={(id) => void openTicket(id)}
             onSeeAll={() => setView('messages')}
@@ -299,6 +311,8 @@ export function PlatformSupportMessenger({
             onStart={() => setView('new')}
           />
         ) : null}
+
+        {view === 'guides' ? <GuidesView accountId={defaultAccountId} /> : null}
 
         {view === 'new' ? (
           <NewConversationView
@@ -347,8 +361,8 @@ export function PlatformSupportMessenger({
         ) : null}
       </div>
 
-      {(view === 'home' || view === 'messages') && (
-        <nav className="grid shrink-0 grid-cols-2 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+      {(view === 'home' || view === 'messages' || view === 'guides') && (
+        <nav className="grid shrink-0 grid-cols-3 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <TabButton
             active={view === 'home'}
             icon={<Home className="h-4 w-4" />}
@@ -360,6 +374,12 @@ export function PlatformSupportMessenger({
             icon={<MessageCircle className="h-4 w-4" />}
             label="Messages"
             onClick={() => setView('messages')}
+          />
+          <TabButton
+            active={view === 'guides'}
+            icon={<ListChecks className="h-4 w-4" />}
+            label="Guides"
+            onClick={() => setView('guides')}
           />
         </nav>
       )}
@@ -394,6 +414,7 @@ function HomeView(props: {
   loading: boolean;
   recentTickets: PlatformSupportMessengerTicketSummary[];
   onAskDocs: () => void;
+  onGuides: () => void;
   onStart: () => void;
   onOpenTicket: (id: string) => void;
   onSeeAll: () => void;
@@ -415,6 +436,24 @@ function HomeView(props: {
         </div>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-plum-900)]/10 text-[var(--ozer-plum-900)]">
           <BookOpen className="h-5 w-5" />
+        </span>
+      </button>
+
+      <button
+        type="button"
+        onClick={props.onGuides}
+        className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-4 text-left shadow-sm transition-colors hover:bg-[var(--workspace-shell-canvas)]"
+      >
+        <div>
+          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Guides
+          </p>
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+            Active walkthroughs and your guide history.
+          </p>
+        </div>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-plum-900)]/10 text-[var(--ozer-plum-900)]">
+          <ListChecks className="h-5 w-5" />
         </span>
       </button>
 
@@ -474,18 +513,206 @@ function HomeView(props: {
   );
 }
 
+function DocsChatMarkdown({ content }: { content: string }) {
+  return (
+    <div className="docs-chat-md space-y-2 text-sm leading-relaxed [&_:first-child]:mt-0 [&_:last-child]:mb-0">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              {children}
+            </h3>
+          ),
+          p: ({ children }) => (
+            <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]">
+              {children}
+            </p>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold text-[var(--workspace-shell-text)]">
+              {children}
+            </strong>
+          ),
+          em: ({ children }) => <em className="italic">{children}</em>,
+          ul: ({ children }) => (
+            <ul className="list-disc space-y-1 pl-4">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal space-y-1 pl-4">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="text-sm leading-relaxed text-[var(--workspace-shell-text)]">
+              {children}
+            </li>
+          ),
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+            >
+              {children}
+            </a>
+          ),
+          code: ({ className, children }) => {
+            const isBlock = Boolean(className?.includes('language-'));
+            if (isBlock) {
+              return (
+                <code className="block overflow-x-auto rounded-lg bg-[var(--workspace-shell-canvas)] px-2.5 py-2 font-mono text-[12px] text-[var(--workspace-shell-text)]">
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <code className="rounded bg-[var(--workspace-shell-canvas)] px-1 py-0.5 font-mono text-[12px] text-[var(--workspace-shell-text)]">
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children }) => (
+            <pre className="overflow-x-auto rounded-lg bg-[var(--workspace-shell-canvas)] p-0">
+              {children}
+            </pre>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+/** Progressive reveal so answers feel streamed even when the API returns all at once. */
+function useRevealMarkdown(full: string, enabled: boolean) {
+  const [shown, setShown] = useState(enabled ? '' : full);
+  const [done, setDone] = useState(!enabled);
+
+  useEffect(() => {
+    if (!enabled) {
+      setShown(full);
+      setDone(true);
+      return;
+    }
+
+    setShown('');
+    setDone(false);
+    if (!full) {
+      setDone(true);
+      return;
+    }
+
+    // Reveal by paragraph / line blocks so markdown markers stay intact.
+    const blocks = full.split(/(\n{2,})/);
+    let blockIndex = 0;
+    let acc = '';
+
+    const timer = setInterval(() => {
+      if (blockIndex >= blocks.length) {
+        clearInterval(timer);
+        setShown(full);
+        setDone(true);
+        return;
+      }
+      acc += blocks[blockIndex] ?? '';
+      blockIndex += 1;
+      // Keep consuming separator tokens in the same tick.
+      while (
+        blockIndex < blocks.length &&
+        /^\n+$/.test(blocks[blockIndex] ?? '')
+      ) {
+        acc += blocks[blockIndex] ?? '';
+        blockIndex += 1;
+      }
+      setShown(acc);
+      if (blockIndex >= blocks.length) {
+        clearInterval(timer);
+        setDone(true);
+      }
+    }, 90);
+
+    return () => clearInterval(timer);
+  }, [full, enabled]);
+
+  return { shown, done };
+}
+
+function AskDocsAssistantBubble(props: {
+  content: string;
+  sources?: DocsChatSource[];
+  animate: boolean;
+  /** Should be a stable callback (e.g. useCallback). */
+  onContentChange?: () => void;
+}) {
+  const { shown: revealed, done } = useRevealMarkdown(
+    props.content,
+    props.animate,
+  );
+
+  useEffect(() => {
+    props.onContentChange?.();
+  }, [revealed, props.onContentChange]);
+
+  return (
+    <div
+      aria-live="polite"
+      aria-atomic="false"
+      className={cn(
+        'mr-auto max-w-[92%] rounded-2xl bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm text-[var(--workspace-shell-text)] ring-1 ring-[color:var(--workspace-shell-border)]',
+        props.animate &&
+          'animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500',
+      )}
+    >
+      <DocsChatMarkdown content={revealed || '…'} />
+      {done && props.sources && props.sources.length > 0 ? (
+        <div className="animate-in fade-in mt-2 flex flex-wrap gap-1.5 duration-300">
+          {props.sources.map((source) => (
+            <a
+              key={source.url}
+              href={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-[var(--workspace-shell-canvas)] px-2 py-0.5 text-[11px] font-medium text-[var(--ozer-accent)] ring-1 ring-[color:var(--workspace-shell-border)] hover:underline"
+            >
+              {source.title}
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AskDocsView(props: { onContactSupport: () => void }) {
   const [messages, setMessages] = useState<DocsChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sawCrisis, setSawCrisis] = useState(false);
+  const [animateMessageIds, setAnimateMessageIds] = useState(
+    () => new Set<string>(),
+  );
   const listRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages, sending]);
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, sending, animateMessageIds, scrollToBottom]);
 
   const send = async () => {
     const text = draft.trim();
@@ -540,10 +767,12 @@ function AskDocsView(props: { onContactSupport: () => void }) {
         setSawCrisis(true);
       }
 
+      const assistantId = `a-${Date.now()}`;
+      setAnimateMessageIds((prev) => new Set(prev).add(assistantId));
       setMessages((prev) => [
         ...prev,
         {
-          id: `a-${Date.now()}`,
+          id: assistantId,
           role: 'assistant',
           content: payload.answer,
           sources: payload.sources ?? [],
@@ -551,7 +780,9 @@ function AskDocsView(props: { onContactSupport: () => void }) {
         },
       ]);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not get an answer');
+      toast.error(
+        err instanceof Error ? err.message : 'Could not get an answer',
+      );
     } finally {
       setSending(false);
     }
@@ -567,37 +798,27 @@ function AskDocsView(props: { onContactSupport: () => void }) {
           </div>
         ) : null}
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={cn(
-              'max-w-[92%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap',
-              message.role === 'user'
-                ? 'ml-auto bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                : 'mr-auto bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] ring-1 ring-[color:var(--workspace-shell-border)]',
-            )}
-          >
-            <p>{message.content}</p>
-            {message.sources && message.sources.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {message.sources.map((source) => (
-                  <a
-                    key={source.url}
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-[var(--workspace-shell-canvas)] px-2 py-0.5 text-[11px] font-medium text-[var(--ozer-accent)] ring-1 ring-[color:var(--workspace-shell-border)] hover:underline"
-                  >
-                    {source.title}
-                  </a>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ))}
+        {messages.map((message) =>
+          message.role === 'user' ? (
+            <div
+              key={message.id}
+              className="ml-auto max-w-[92%] rounded-2xl bg-[var(--ozer-accent)] px-3 py-2 text-sm whitespace-pre-wrap text-[var(--ozer-white)]"
+            >
+              {message.content}
+            </div>
+          ) : (
+            <AskDocsAssistantBubble
+              key={message.id}
+              content={message.content}
+              sources={message.sources}
+              animate={animateMessageIds.has(message.id)}
+              onContentChange={scrollToBottom}
+            />
+          ),
+        )}
 
         {sending ? (
-          <div className="mr-auto flex items-center gap-2 rounded-2xl bg-[var(--workspace-shell-panel)] px-3 py-2 text-xs text-[var(--workspace-shell-text-muted)] ring-1 ring-[color:var(--workspace-shell-border)]">
+          <div className="animate-in fade-in mr-auto flex items-center gap-2 rounded-2xl bg-[var(--workspace-shell-panel)] px-3 py-2 text-xs text-[var(--workspace-shell-text-muted)] ring-1 ring-[color:var(--workspace-shell-border)] duration-300">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             Searching docs…
           </div>

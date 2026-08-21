@@ -12,6 +12,16 @@ export const LISTING_STATUSES = [
 
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
+/** Live pipeline — excludes completed / off-market outcomes. */
+export const LISTING_ACTIVE_STATUSES = [
+  'draft',
+  'instructed',
+  'marketing',
+  'under_offer',
+] as const satisfies readonly ListingStatus[];
+
+export type ListingActiveStatus = (typeof LISTING_ACTIVE_STATUSES)[number];
+
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   draft: 'Draft',
   instructed: 'Instructed',

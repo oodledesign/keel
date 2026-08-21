@@ -68,8 +68,10 @@ export const listListings = enhanceAction(
     return getService().listListingsPage({
       accountId: input.accountId,
       status: input.status,
+      statuses: input.statuses,
       search: input.search,
       accountBranchId: input.accountBranchId,
+      actingAgentUserId: input.actingAgentUserId,
       page: input.page ?? 1,
       pageSize: input.pageSize ?? 20,
     });
@@ -82,6 +84,7 @@ export const countUnassignedListings = enhanceAction(
     return getService().countUnassignedListings({
       accountId: input.accountId,
       status: input.status,
+      statuses: input.statuses,
     });
   },
   { schema: CountUnassignedListingsSchema },

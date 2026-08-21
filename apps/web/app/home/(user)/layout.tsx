@@ -187,10 +187,33 @@ async function SidebarLayout({
       .filter((row) => Boolean(row.slug))
       .map((row) => ({ slug: String(row.slug), name: row.label }));
 
+    const oooWorkspaces = Array.from(
+      new Map(
+        [
+          ...sharedWorkspaces
+            .filter((row) => Boolean(row.slug))
+            .map((row) => ({
+              id: row.id,
+              slug: String(row.slug),
+              name: row.label,
+            })),
+          ...switcherAccounts
+            .filter((row) => Boolean(row.slug))
+            .map((row) => ({
+              id: row.id,
+              slug: String(row.slug),
+              name: row.label,
+            })),
+        ].map((workspace) => [workspace.id, workspace]),
+      ).values(),
+    );
+
     return (
       <PersonalVisionChromeShell>
         <WorkspaceFocusProviderShell
           settingsByAccountId={params.focusSettingsByAccountId}
+          oooWorkspaces={oooWorkspaces}
+          oooDefaultAccountId={oooWorkspaces[0]?.id ?? null}
         >
           <SidebarProvider defaultOpen={layoutState.open}>
             <Page

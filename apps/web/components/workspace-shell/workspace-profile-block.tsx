@@ -7,6 +7,7 @@ import { JWTUserData } from '@kit/supabase/types';
 import { cn } from '@kit/ui/utils';
 
 import { AiCreditsMenuMeter } from '~/components/ai/ai-credits-menu-meter';
+import { useOptionalWorkspaceOooDialog } from '~/components/workspace-shell/workspace-ooo-dialog-context';
 import pathsConfig from '~/config/paths.config';
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { docsUrl } from '~/lib/docs-url';
@@ -38,6 +39,7 @@ export function WorkspaceProfileBlock(props: {
   const signOut = useSignOut();
   const userState = useUser(props.user);
   const user = userState.data;
+  const oooDialog = useOptionalWorkspaceOooDialog();
 
   if (!user) {
     return null;
@@ -61,6 +63,11 @@ export function WorkspaceProfileBlock(props: {
       account={props.account}
       signOutRequested={() => signOut.mutateAsync()}
       showProfileName={!props.collapsed}
+      onOutOfOfficeClick={
+        oooDialog
+          ? () => oooDialog.openOooDialog(props.billingAccountId ?? null)
+          : undefined
+      }
       menuExtras={(open) => (
         <AiCreditsMenuMeter
           accountId={billingAccountId}

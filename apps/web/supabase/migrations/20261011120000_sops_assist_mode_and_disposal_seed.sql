@@ -143,7 +143,7 @@ BEGIN
         'Add photos and floor plans',
         'On the disposal Media tab, upload photos and floor plans so marketing and portals have visuals to show.',
         '[data-tour="sop-listing-media"]',
-        '/app/[account]/listings'
+        '/app/[account]/listings/[id]/media'
       ),
       (
         playbook_id,
@@ -151,7 +151,7 @@ BEGIN
         'Attach EPC certificate or rating',
         'Add the EPC band/rating on the disposal, or upload the EPC certificate on the Media tab.',
         '[data-tour="sop-listing-epc"]',
-        '/app/[account]/listings'
+        '/app/[account]/listings/[id]/media'
       ),
       (
         playbook_id,
@@ -159,7 +159,7 @@ BEGIN
         'Write the marketing description',
         'On the Marketing tab, write the summary, key points, and full marketing description buyers and tenants will see.',
         '[data-tour="sop-listing-marketing"]',
-        '/app/[account]/listings'
+        '/app/[account]/listings/[id]/marketing'
       ),
       (
         playbook_id,
@@ -167,7 +167,7 @@ BEGIN
         'Generate or attach the brochure',
         'Upload a brochure on Media, or open the brochure editor to generate a PDF brochure for the disposal.',
         '[data-tour="sop-listing-brochure"]',
-        '/app/[account]/listings'
+        '/app/[account]/listings/[id]/media'
       ),
       (
         playbook_id,
@@ -175,7 +175,7 @@ BEGIN
         'Check listing details for portal publishing',
         'Open Management and review portal publishing settings so listing fields map correctly to the portal feeds.',
         '[data-tour="sop-listing-portal"]',
-        '/app/[account]/listings'
+        '/app/[account]/listings/[id]/management'
       ),
       (
         playbook_id,
@@ -183,7 +183,7 @@ BEGIN
         'Publish to the portals and confirm it is live',
         'Publish to the connected portals from Management and confirm the disposal appears live on each feed.',
         '[data-tour="sop-listing-publish"]',
-        '/app/[account]/listings'
+        '/app/[account]/listings/[id]/management'
       );
   END LOOP;
 END;

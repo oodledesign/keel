@@ -6,6 +6,10 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import type { CommercialListing } from '~/home/[account]/listings/_lib/server/listings.service';
 import { createListingsService } from '~/home/[account]/listings/_lib/server/listings.service';
+import {
+  LISTING_ACTIVE_STATUSES,
+  type ListingStatus,
+} from '~/lib/commercial/commercial-constants';
 
 import {
   disposalsAccountTag,
@@ -55,12 +59,28 @@ export function getCachedDisposalsListPage(input: {
   accountId: string;
   userId: string;
   accountBranchId: string | null;
+  status?: ListingStatus;
+  statuses?: ListingStatus[];
+  actingAgentUserId?: string | null;
   page?: number;
   pageSize?: number;
 }): Promise<{ data: CommercialListing[]; total: number }> {
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 20;
   const officeKey = input.accountBranchId ?? 'all';
+  const hasExplicitStatuses = input.statuses != null;
+  const hasSingleStatus = Boolean(input.status);
+  const statuses = hasExplicitStatuses
+    ? input.statuses
+    : hasSingleStatus
+      ? undefined
+      : [...LISTING_ACTIVE_STATUSES];
+  const statusKey = hasSingleStatus
+    ? `one:${input.status}`
+    : hasExplicitStatuses
+      ? (input.statuses ?? []).join(',') || 'none'
+      : statuses!.join(',');
+  const agentKey = input.actingAgentUserId ?? 'all';
 
   return unstable_cache(
     async () => {
@@ -68,6 +88,9 @@ export function getCachedDisposalsListPage(input: {
       return createListingsService(admin).listListingsPage({
         accountId: input.accountId,
         accountBranchId: input.accountBranchId,
+        status: input.status,
+        statuses,
+        actingAgentUserId: input.actingAgentUserId,
         page,
         pageSize,
         includeSuggestedMatches: false,
@@ -78,6 +101,8 @@ export function getCachedDisposalsListPage(input: {
       input.accountId,
       input.userId,
       officeKey,
+      statusKey,
+      agentKey,
       String(page),
       String(pageSize),
     ],
@@ -117,15 +142,32 @@ export function getCachedDisposalDetail(input: {
 
 export function getCachedUnassignedListingsCount(input: {
   accountId: string;
+  status?: ListingStatus;
+  statuses?: ListingStatus[];
 }): Promise<number> {
+  const hasExplicitStatuses = input.statuses != null;
+  const hasSingleStatus = Boolean(input.status);
+  const statuses = hasExplicitStatuses
+    ? input.statuses
+    : hasSingleStatus
+      ? undefined
+      : [...LISTING_ACTIVE_STATUSES];
+  const statusKey = hasSingleStatus
+    ? `one:${input.status}`
+    : hasExplicitStatuses
+      ? (input.statuses ?? []).join(',') || 'none'
+      : statuses!.join(',');
+
   return unstable_cache(
     async () => {
       const admin = getSupabaseServerAdminClient();
       return createListingsService(admin).countUnassignedListings({
         accountId: input.accountId,
+        status: input.status,
+        statuses,
       });
     },
-    ['disposals-unassigned', input.accountId],
+    ['disposals-unassigned', input.accountId, statusKey],
     {
       revalidate: LIST_REVALIDATE_SECONDS,
       tags: [disposalsAccountTag(input.accountId)],

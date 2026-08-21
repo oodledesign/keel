@@ -24,6 +24,7 @@ import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-mo
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 
 import { WorkspaceNewMenu } from './workspace-new-menu';
+import { WorkspaceOooTopBarIcon } from './workspace-ooo-top-bar-icon';
 import { WorkspaceSearchButton } from './workspace-search-button';
 
 type WorkspaceTopBarBaseProps = {
@@ -89,6 +90,7 @@ export function WorkspaceMobileTopActions(
     <TooltipProvider delayDuration={200}>
       <div className="flex shrink-0 items-center gap-1">
         <PersonalVisionTopBarIcon />
+        <WorkspaceOooTopBarIcon accountId={props.accountId} />
         <WorkspaceSearchButton iconOnly />
         {featureFlagsConfig.enableNotifications ? (
           <NotificationsPopover
@@ -142,6 +144,7 @@ export function WorkspaceDesktopTopBar(
       <TooltipProvider delayDuration={200}>
         <div className="flex items-center gap-1.5">
           <PersonalVisionTopBarIcon />
+          <WorkspaceOooTopBarIcon accountId={props.accountId} />
           <WorkspaceSearchButton iconOnly />
 
           {featureFlagsConfig.enableNotifications ? (

@@ -2,6 +2,8 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
 import { loadAccountBranches } from '~/lib/brand/account-branches';
 import {
   getCachedDisposalsListPage,
@@ -14,7 +16,22 @@ import {
   COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
-import type { CommercialListing } from './listings.service';
+import {
+  type DisposalStatusFilter,
+  disposalStatusQueryParams,
+  parseDisposalStatusFilter,
+} from '../disposal-list-filters';
+import type {
+  CommercialListing,
+  ListingMemberOption,
+} from './listings.service';
+import { createListingsService } from './listings.service';
+
+export type DisposalsPageFilters = {
+  office?: string | null;
+  status?: string | null;
+  agent?: string | null;
+};
 
 export type DisposalsPageData = {
   accountId: string;
@@ -23,13 +40,16 @@ export type DisposalsPageData = {
   listings: CommercialListing[];
   total: number;
   offices: Array<{ id: string; name: string }>;
+  members: ListingMemberOption[];
   initialOfficeId: string | null;
+  initialStatusFilter: DisposalStatusFilter;
+  initialAgentUserId: string | null;
   unassignedCount: number;
 };
 
 async function loadDisposalsPageDataImpl(
   accountSlug: string,
-  officeParam: string | null | undefined,
+  filters: DisposalsPageFilters = {},
 ): Promise<DisposalsPageData> {
   const [workspace, user] = await Promise.all([
     loadTeamWorkspace(accountSlug),
@@ -47,27 +67,46 @@ async function loadDisposalsPageDataImpl(
     throw new Error('Workspace account ID is missing');
   }
 
+  const resolvedSlug = workspace.account.slug ?? accountSlug;
+  const client = getSupabaseServerClient();
+  const listingsService = createListingsService(client);
+
   const branches = await loadAccountBranches(accountId);
   const branchIds = new Set(branches.map((branch) => branch.id));
   const initialOfficeId =
-    officeParam && branchIds.has(officeParam) ? officeParam : null;
+    filters.office && branchIds.has(filters.office) ? filters.office : null;
+
+  const members = await listingsService.listAccountMembers(resolvedSlug);
+  const memberIds = new Set(members.map((member) => member.userId));
+  const initialStatusFilter = parseDisposalStatusFilter(filters.status);
+  const initialAgentUserId =
+    filters.agent && memberIds.has(filters.agent) ? filters.agent : null;
+
+  const { status, statuses } = disposalStatusQueryParams(initialStatusFilter);
 
   const [{ data: listings, total }, unassignedCount] = await Promise.all([
     getCachedDisposalsListPage({
       accountId,
       userId: user.id,
       accountBranchId: initialOfficeId,
+      status,
+      statuses,
+      actingAgentUserId: initialAgentUserId,
       page: 1,
       pageSize: 20,
     }),
     branches.length > 1
-      ? getCachedUnassignedListingsCount({ accountId })
+      ? getCachedUnassignedListingsCount({
+          accountId,
+          status,
+          statuses,
+        })
       : Promise.resolve(0),
   ]);
 
   return {
     accountId,
-    accountSlug: workspace.account.slug ?? accountSlug,
+    accountSlug: resolvedSlug,
     userId: user.id,
     listings,
     total,
@@ -75,7 +114,10 @@ async function loadDisposalsPageDataImpl(
       id: branch.id,
       name: branch.name,
     })),
+    members,
     initialOfficeId,
+    initialStatusFilter,
+    initialAgentUserId,
     unassignedCount,
   };
 }

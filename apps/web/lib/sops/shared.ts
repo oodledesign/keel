@@ -32,6 +32,8 @@ export type SopRunRow = {
   started_by: string | null;
   assigned_to: string | null;
   assist_mode?: boolean;
+  /** Assist context e.g. `{ listingId: string }`. */
+  context?: Record<string, unknown> | null;
   completed_at: string | null;
   created_at: string;
 };
@@ -39,12 +41,35 @@ export type SopRunRow = {
 /** Seeded commercial-property playbook title (migration). */
 export const SOP_ADDING_A_DISPOSAL_TITLE = 'Adding a Disposal';
 
+export type SopRouteContext = {
+  listingId?: string | null;
+};
+
 export function resolveSopTargetRoute(
   template: string | null | undefined,
   accountSlug: string,
+  context?: SopRouteContext | null,
 ): string | null {
   if (!template?.trim()) return null;
-  return template.replaceAll('[account]', accountSlug);
+  let path = template.replaceAll('[account]', accountSlug);
+  if (path.includes('[id]')) {
+    const listingId = context?.listingId?.trim();
+    if (!listingId) return null;
+    path = path.replaceAll('[id]', listingId);
+  }
+  return path;
+}
+
+export function sopRunListingId(
+  run: Pick<SopRunRow, 'context'> | null | undefined,
+): string | null {
+  const value = run?.context?.listingId;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function listingIdFromPathname(pathname: string): string | null {
+  const match = pathname.match(/\/listings\/([0-9a-f-]{36})(?:\/|$)/i);
+  return match?.[1] ?? null;
 }
 
 export type SopTeamMember = {

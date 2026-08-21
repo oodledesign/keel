@@ -531,3 +531,50 @@ export const updateSopPlaybookAction = enhanceAction(
     }),
   },
 );
+
+/** Bind a commercial listing to an assist-mode SOP run (disposal playbook). */
+export const bindSopRunListingAction = enhanceAction(
+  async (data) => {
+    const db = getSopsDb();
+
+    const { data: run, error: fetchErr } = await db
+      .from('runs')
+      .select('id, context, assist_mode')
+      .eq('id', data.runId)
+      .eq('account_id', data.accountId)
+      .maybeSingle();
+
+    if (fetchErr) throw fetchErr;
+    if (!run) throw new Error('Run not found');
+
+    const existing =
+      run.context && typeof run.context === 'object' && !Array.isArray(run.context)
+        ? (run.context as Record<string, unknown>)
+        : {};
+
+    const { error } = await db
+      .from('runs')
+      .update({
+        context: {
+          ...existing,
+          listingId: data.listingId,
+        },
+      })
+      .eq('id', data.runId)
+      .eq('account_id', data.accountId);
+
+    if (error) throw error;
+
+    revalidatePath(sopsBasePath(data.accountSlug));
+    revalidatePath('/home/[account]', 'layout');
+    return { ok: true as const };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      runId: z.string().uuid(),
+      listingId: z.string().uuid(),
+    }),
+  },
+);
