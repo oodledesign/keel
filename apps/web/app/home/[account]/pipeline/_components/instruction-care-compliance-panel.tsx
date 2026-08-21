@@ -9,13 +9,15 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import {
-  type InstructionCareLogEntry,
-  type InstructionComplianceItem,
   addInstructionCareLogEntry,
   ensureInstructionComplianceItems,
   listInstructionCareLog,
   setInstructionComplianceChecked,
 } from '../_lib/server/instruction-care-compliance.actions';
+import type {
+  InstructionCareLogEntry,
+  InstructionComplianceItem,
+} from '../_lib/server/instruction-care-compliance.shared';
 
 type Props = {
   instructionId: string;

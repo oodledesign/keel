@@ -11,31 +11,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 
-/**
- * PLACEHOLDER checklist — swap for Bracketts-confirmed compliance items
- * after Friday's discussion. Labels below are demo-only generics.
- */
-export const PLACEHOLDER_COMPLIANCE_LABELS = [
-  'Terms of business signed',
-  'EPC obtained',
-  'Marketing consent confirmed',
-  'Title documents received',
-] as const;
-
-export type InstructionCareLogEntry = {
-  id: string;
-  note: string;
-  createdAt: string;
-  createdBy: string;
-};
-
-export type InstructionComplianceItem = {
-  id: string;
-  label: string;
-  isChecked: boolean;
-  checkedAt: string | null;
-  sortOrder: number;
-};
+import {
+  PLACEHOLDER_COMPLIANCE_LABELS,
+  type InstructionCareLogEntry,
+  type InstructionComplianceItem,
+} from './instruction-care-compliance.shared';
 
 const InstructionIdSchema = z.object({
   instructionId: z.string().uuid(),
