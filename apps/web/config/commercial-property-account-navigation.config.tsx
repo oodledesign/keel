@@ -7,6 +7,7 @@ import {
   FileText,
   LayoutDashboard,
   LineChart,
+  ListChecks,
   Settings,
   StickyNote,
   UserRound,
@@ -147,6 +148,15 @@ export function buildCommercialPropertySpaceNavChildren(
             label: 'Notes and files',
             path: createPath(pathsConfig.app.accountNotes, account),
             Icon: <StickyNote className={iconClasses} />,
+          }
+        : null,
+    sops: () =>
+      access.canViewDashboard && isEnabled(ms, 'sops')
+        ? {
+            label: 'SOPs',
+            path: createPath(pathsConfig.app.accountSops, account),
+            Icon: <ListChecks className={iconClasses} />,
+            tourId: 'nav-sops',
           }
         : null,
     team: () =>

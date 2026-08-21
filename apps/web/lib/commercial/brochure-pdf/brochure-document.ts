@@ -5,6 +5,24 @@
 export type BrochureOrientation = 'portrait' | 'landscape';
 export type BrochureTemplateId = 'classic' | 'editorial' | 'compact';
 
+export type BrochureDisplayOptions = {
+  showRent: boolean;
+  showPrice: boolean;
+  showSize: boolean;
+  showRates: boolean;
+  showServiceCharge: boolean;
+  showEstateCharge: boolean;
+};
+
+export const DEFAULT_BROCHURE_DISPLAY_OPTIONS: BrochureDisplayOptions = {
+  showRent: true,
+  showPrice: true,
+  showSize: true,
+  showRates: true,
+  showServiceCharge: true,
+  showEstateCharge: false,
+};
+
 export type BrochureSlotType = 'image' | 'text' | 'map' | 'agents' | 'facts';
 
 export type BrochureSlotValue =

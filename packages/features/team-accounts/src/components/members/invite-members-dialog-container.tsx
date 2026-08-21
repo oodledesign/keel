@@ -56,6 +56,10 @@ import { InviteOptionsHelp } from './invite-options-help';
 import { MembershipRoleSelector } from './membership-role-selector';
 import { RolesDataProvider } from './roles-data-provider';
 
+/** Light surface for Select menus portaled out of the invite dialog. */
+const INVITE_LIGHT_SELECT_CONTENT_CN =
+  'bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)] border-[color:var(--ozer-border-on-light)] [--muted-foreground:var(--ozer-plum-600)] [--accent:var(--ozer-cream-100)] [--accent-foreground:var(--ozer-text-on-light)]';
+
 type InviteModel = ReturnType<typeof createEmptyInviteModel>;
 
 type Role = string;
@@ -121,7 +125,17 @@ export function InviteMembersDialogContainer({
       <DialogTrigger asChild>{children}</DialogTrigger>
 
       <DialogContent
-        className="sm:max-w-xl"
+        className={cn(
+          'sm:max-w-xl',
+          // Keep the invite sheet light even when the workspace shell is dark.
+          'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)]',
+          '[--background:var(--ozer-white)] [--foreground:var(--ozer-text-on-light)]',
+          '[--muted-foreground:var(--ozer-plum-600)] [--muted:var(--ozer-cream-100)]',
+          '[--border:var(--ozer-border-on-light)] [--input:var(--ozer-plum-alpha-18)]',
+          '[--secondary-foreground:var(--ozer-text-on-light)] [--secondary:var(--ozer-cream-100)]',
+          '[--popover-foreground:var(--ozer-text-on-light)] [--popover:var(--ozer-white)]',
+          '[--accent-foreground:var(--ozer-text-on-light)] [--accent:var(--ozer-cream-100)]',
+        )}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -447,6 +461,7 @@ function InviteMembersForm({
                         <FormControl>
                           <MembershipRoleSelector
                             triggerClassName="bg-background m-0 w-full capitalize"
+                            contentClassName={INVITE_LIGHT_SELECT_CONTENT_CN}
                             roles={roles}
                             value={roleField.value}
                             onChange={(role) => {
@@ -485,7 +500,12 @@ function InviteMembersForm({
                                   />
                                 </SelectValue>
                               </SelectTrigger>
-                              <SelectContent className="min-w-[16rem]">
+                              <SelectContent
+                                className={cn(
+                                  'min-w-[16rem]',
+                                  INVITE_LIGHT_SELECT_CONTENT_CN,
+                                )}
+                              >
                                 <SelectItem
                                   value="billable"
                                   textValue="Billable"
@@ -543,7 +563,9 @@ function InviteMembersForm({
                               />
                             </SelectTrigger>
 
-                            <SelectContent>
+                            <SelectContent
+                              className={INVITE_LIGHT_SELECT_CONTENT_CN}
+                            >
                               <SelectItem value={NO_PROJECT_VALUE}>
                                 <Trans i18nKey="teams:inviteProjectNone" />
                               </SelectItem>

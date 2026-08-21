@@ -19,7 +19,7 @@ import type {
   SopRunRow,
   SopRunStepRow,
   SopTeamMember,
-} from '~/lib/sops/types';
+} from '~/lib/sops/shared';
 
 import {
   duplicateSopRunAction,

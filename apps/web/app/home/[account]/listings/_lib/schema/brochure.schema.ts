@@ -121,6 +121,15 @@ export const RegenerateListingBrochureSchema = z.object({
   orientation: BrochureOrientationSchema,
 });
 
+export const BrochureDisplayOptionsSchema = z.object({
+  showRent: z.boolean().optional(),
+  showPrice: z.boolean().optional(),
+  showSize: z.boolean().optional(),
+  showRates: z.boolean().optional(),
+  showServiceCharge: z.boolean().optional(),
+  showEstateCharge: z.boolean().optional(),
+});
+
 export const BrochurePdfQuerySchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
@@ -130,6 +139,39 @@ export const BrochurePdfQuerySchema = z.object({
     .enum(['0', '1'])
     .optional()
     .transform((v) => v === '1'),
+  showRent: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+  showPrice: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+  showSize: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+  showRates: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+  showServiceCharge: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+  showEstateCharge: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+});
+
+export const PublishListingBrochurePdfSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  orientation: BrochureOrientationSchema.default('portrait'),
+  templateId: BrochureTemplateIdSchema.default('classic'),
+  useSaved: z.boolean().optional(),
+  display: BrochureDisplayOptionsSchema.optional(),
 });
 
 export type GetListingBrochureDocumentInput = z.infer<

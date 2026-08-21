@@ -72,6 +72,7 @@ import {
 import type { CommercialListing } from '../_lib/server/listings.service';
 import {
   backfillListingLocations,
+  countUnassignedListings,
   deleteListing,
   listListings,
 } from '../_lib/server/server-actions';
@@ -88,6 +89,9 @@ interface ListingsListProps {
   accountSlug: string;
   initialListings: CommercialListing[];
   initialTotal: number;
+  offices: Array<{ id: string; name: string }>;
+  initialOfficeId: string | null;
+  unassignedCount: number;
 }
 
 type ViewMode = 'cards' | 'table' | 'map';
@@ -189,10 +193,21 @@ export function ListingsList({
   accountSlug,
   initialListings,
   initialTotal,
+  offices,
+  initialOfficeId,
+  unassignedCount,
 }: ListingsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const createRequested = searchParams.get('create') === '1';
+  const showOfficeFilter = offices.length > 1;
+  const officeFromUrl = searchParams.get('office');
+  const officeId =
+    showOfficeFilter &&
+    officeFromUrl &&
+    offices.some((office) => office.id === officeFromUrl)
+      ? officeFromUrl
+      : (initialOfficeId ?? null);
   const [pageListings, setPageListings] = useState(initialListings);
   const [cachedListings, setCachedListings] = useState(initialListings);
   const [total, setTotal] = useState(initialTotal);
@@ -215,6 +230,12 @@ export function ListingsList({
   const [enrichingMap, setEnrichingMap] = useState(false);
   const [backfillingLocations, setBackfillingLocations] = useState(false);
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [unassignedVisibleCount, setUnassignedVisibleCount] =
+    useState(unassignedCount);
+
+  useEffect(() => {
+    setUnassignedVisibleCount(unassignedCount);
+  }, [unassignedCount]);
 
   useEffect(() => {
     setPageListings(initialListings);
@@ -228,6 +249,23 @@ export function ListingsList({
     return () => clearTimeout(t);
   }, [searchQuery]);
 
+  const setOfficeFilter = useCallback(
+    (nextOfficeId: string | null) => {
+      const url = new URL(window.location.href);
+      if (nextOfficeId) {
+        url.searchParams.set('office', nextOfficeId);
+      } else {
+        url.searchParams.delete('office');
+      }
+      // Drop scoped cache immediately so map/search don't show the previous office.
+      setCachedListings([]);
+      setPageListings([]);
+      setPage(1);
+      router.replace(url.pathname + url.search, { scroll: false });
+    },
+    [router],
+  );
+
   const clearCreateQuery = useCallback(() => {
     if (!createRequested) return;
     const url = new URL(window.location.href);
@@ -238,7 +276,11 @@ export function ListingsList({
   const fetchPage = useCallback(
     async (
       pageNum: number,
-      opts?: { search?: string; status?: ListingStatus | 'all' },
+      opts?: {
+        search?: string;
+        status?: ListingStatus | 'all';
+        accountBranchId?: string | null;
+      },
     ) => {
       setLoadingPage(true);
       try {
@@ -246,12 +288,15 @@ export function ListingsList({
           (opts?.status ?? statusFilter) === 'all'
             ? undefined
             : ((opts?.status ?? statusFilter) as ListingStatus);
+        const accountBranchId =
+          opts?.accountBranchId !== undefined ? opts.accountBranchId : officeId;
         const result = await listListings({
           accountId,
           page: pageNum,
           pageSize: PAGE_SIZE,
           search: opts?.search?.trim() || undefined,
           status,
+          accountBranchId: accountBranchId ?? undefined,
         });
         const list = Array.isArray(result?.data) ? result.data : [];
         const count = typeof result?.total === 'number' ? result.total : 0;
@@ -264,18 +309,29 @@ export function ListingsList({
         setLoadingPage(false);
       }
     },
-    [accountId, statusFilter],
+    [accountId, officeId, statusFilter],
   );
 
   useEffect(() => {
     if (searchDebounced.trim()) return;
 
     const isDefaultFirstPage =
-      page === 1 && statusFilter === 'all' && initialListings.length > 0;
+      page === 1 &&
+      statusFilter === 'all' &&
+      officeId === (initialOfficeId ?? null) &&
+      initialListings.length > 0;
     if (isDefaultFirstPage) return;
 
     void fetchPage(page);
-  }, [page, searchDebounced, statusFilter, fetchPage, initialListings.length]);
+  }, [
+    page,
+    searchDebounced,
+    statusFilter,
+    officeId,
+    initialOfficeId,
+    fetchPage,
+    initialListings.length,
+  ]);
 
   useEffect(() => {
     const query = searchDebounced.trim();
@@ -301,6 +357,7 @@ export function ListingsList({
             page: nextPage,
             pageSize: PAGE_SIZE,
             status,
+            accountBranchId: officeId ?? undefined,
           });
           const list = Array.isArray(result?.data) ? result.data : [];
           serverTotal =
@@ -331,11 +388,34 @@ export function ListingsList({
     return () => {
       cancelled = true;
     };
-  }, [accountId, searchDebounced, statusFilter]);
+  }, [accountId, searchDebounced, statusFilter, officeId]);
 
   useEffect(() => {
     setPage(1);
   }, [statusFilter]);
+
+  useEffect(() => {
+    if (!showOfficeFilter || !officeId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const count = await countUnassignedListings({
+          accountId,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+        });
+        if (!cancelled && typeof count === 'number') {
+          setUnassignedVisibleCount(count);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, officeId, showOfficeFilter, statusFilter]);
 
   useEffect(() => {
     if (viewMode !== 'map' && !needsLocationOnly && sortMode === 'updated') {
@@ -361,6 +441,7 @@ export function ListingsList({
             page: nextPage,
             pageSize: MAP_PAGE_SIZE,
             status,
+            accountBranchId: officeId ?? undefined,
           });
           const list = Array.isArray(result?.data) ? result.data : [];
           serverTotal =
@@ -368,7 +449,7 @@ export function ListingsList({
 
           if (!cancelled && list.length > 0) {
             setCachedListings((current) =>
-              nextPage === 1 && statusFilter !== 'all'
+              nextPage === 1 && (statusFilter !== 'all' || officeId)
                 ? list
                 : mergeListings(current, list),
             );
@@ -401,10 +482,17 @@ export function ListingsList({
     needsLocationOnly,
     sortMode,
     statusFilter,
+    officeId,
     searchDebounced,
   ]);
 
   const isSearching = searchDebounced.trim().length > 0;
+
+  const matchesOffice = useCallback(
+    (listing: CommercialListing) =>
+      !officeId || listing.accountBranchId === officeId,
+    [officeId],
+  );
 
   const visibleListings = useMemo(() => {
     const applyNeedsLocation = (items: CommercialListing[]) =>
@@ -417,6 +505,7 @@ export function ListingsList({
       return applyNeedsLocation(
         sortListings(
           cachedListings.filter((l) => {
+            if (!matchesOffice(l)) return false;
             if (statusFilter !== 'all' && l.status !== statusFilter)
               return false;
             if (!q) return true;
@@ -444,6 +533,7 @@ export function ListingsList({
     const q = searchDebounced.trim().toLowerCase();
     return sortListings(
       cachedListings.filter((l) => {
+        if (!matchesOffice(l)) return false;
         if (statusFilter !== 'all' && l.status !== statusFilter) return false;
         const haystack = [
           l.name,
@@ -465,6 +555,7 @@ export function ListingsList({
   }, [
     cachedListings,
     isSearching,
+    matchesOffice,
     needsLocationOnly,
     pageListings,
     searchDebounced,
@@ -615,7 +706,11 @@ export function ListingsList({
               <MapIcon className="h-4 w-4" />
             </button>
           </div>
-          <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
+          <Button
+            onClick={openCreate}
+            className={workspaceBtnPrimaryMd}
+            data-tour="sop-add-disposal"
+          >
             <Plus className="h-4 w-4" />
             Add disposal
           </Button>
@@ -633,6 +728,39 @@ export function ListingsList({
           className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
         />
       </div>
+
+      {showOfficeFilter ? (
+        <div className="space-y-2">
+          <div
+            className="flex flex-wrap items-center gap-2"
+            role="group"
+            aria-label="Filter by office"
+          >
+            <FilterChip
+              active={!officeId}
+              onClick={() => setOfficeFilter(null)}
+              label="All offices"
+              dataTest="office-filter-all"
+            />
+            {offices.map((office) => (
+              <FilterChip
+                key={office.id}
+                active={officeId === office.id}
+                onClick={() => setOfficeFilter(office.id)}
+                label={office.name}
+                dataTest={`office-filter-${office.id}`}
+              />
+            ))}
+          </div>
+          {officeId && unassignedVisibleCount > 0 ? (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {unassignedVisibleCount === 1
+                ? '1 disposal has no office assigned and only appears under All offices.'
+                : `${unassignedVisibleCount} disposals have no office assigned and only appear under All offices.`}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <FilterChip
@@ -679,6 +807,7 @@ export function ListingsList({
                     page: 1,
                     pageSize: MAP_PAGE_SIZE,
                     status: statusFilter === 'all' ? undefined : statusFilter,
+                    accountBranchId: officeId ?? undefined,
                   });
                   const list = Array.isArray(pageResult?.data)
                     ? pageResult.data
@@ -724,22 +853,23 @@ export function ListingsList({
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
             <p className="font-medium text-[var(--workspace-shell-text)]">
-              {searchQuery.trim() || statusFilter !== 'all'
+              {searchQuery.trim() || statusFilter !== 'all' || officeId
                 ? 'No matching disposals'
                 : 'No disposals yet'}
             </p>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-              {searchQuery.trim() || statusFilter !== 'all'
-                ? 'Try a different search or clear the status filter.'
+              {searchQuery.trim() || statusFilter !== 'all' || officeId
+                ? 'Try a different search or clear the filters.'
                 : 'Add a disposal instruction to get started.'}
             </p>
-            {searchQuery.trim() || statusFilter !== 'all' ? (
+            {searchQuery.trim() || statusFilter !== 'all' || officeId ? (
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => {
                   setSearchQuery('');
                   setStatusFilter('all');
+                  setOfficeFilter(null);
                 }}
               >
                 Clear filters
@@ -748,6 +878,7 @@ export function ListingsList({
               <Button
                 onClick={openCreate}
                 className={`mt-4 ${workspaceBtnPrimaryMd}`}
+                data-tour="sop-add-disposal"
               >
                 <Plus className="h-4 w-4" />
                 Add disposal
@@ -1164,17 +1295,20 @@ function FilterChip({
   onClick,
   label,
   activeClassName,
+  dataTest,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   activeClassName?: string;
+  dataTest?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
+      data-test={dataTest}
       className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
         active
           ? (activeClassName ?? 'bg-[var(--ozer-accent)] text-white')

@@ -6,7 +6,9 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   AddListingCoAgentSchema,
   AddListingPartySchema,
+  ArchiveListingSchema,
   BackfillListingLocationsSchema,
+  CountUnassignedListingsSchema,
   CreateListingEnquirySchema,
   CreateListingMediaSchema,
   CreateListingSchema,
@@ -15,6 +17,7 @@ import {
   DeleteListingMediaSchema,
   DeleteListingSchema,
   DeleteListingUnitSchema,
+  DuplicateListingSchema,
   GetListingAssignmentSchema,
   GetListingSchema,
   ListListingCoAgentsSchema,
@@ -48,11 +51,22 @@ export const listListings = enhanceAction(
       accountId: input.accountId,
       status: input.status,
       search: input.search,
+      accountBranchId: input.accountBranchId,
       page: input.page ?? 1,
       pageSize: input.pageSize ?? 20,
     });
   },
   { schema: ListListingsSchema },
+);
+
+export const countUnassignedListings = enhanceAction(
+  async (input) => {
+    return getService().countUnassignedListings({
+      accountId: input.accountId,
+      status: input.status,
+    });
+  },
+  { schema: CountUnassignedListingsSchema },
 );
 
 export const getListing = enhanceAction(
@@ -108,6 +122,44 @@ export const deleteListing = enhanceAction(
     return { success: true };
   },
   { schema: DeleteListingSchema },
+);
+
+export const duplicateListing = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await client.auth.getUser();
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
+    return createListingsService(client).duplicateListing({
+      listingId: input.listingId,
+      accountId: input.accountId,
+      accountSlug: input.accountSlug,
+      createdBy: user?.id ?? null,
+    });
+  },
+  { schema: DuplicateListingSchema },
+);
+
+export const archiveListing = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
+    return getService().archiveListing({
+      listingId: input.listingId,
+      accountId: input.accountId,
+    });
+  },
+  { schema: ArchiveListingSchema },
 );
 
 export const backfillListingLocations = enhanceAction(

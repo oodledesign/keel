@@ -144,9 +144,38 @@ export const startSopRunAction = enhanceAction(
       recurrence: z.infer<typeof RecurrenceSchema>;
     };
 
+    if (data.resumeIfActive) {
+      const { data: existing, error: existingErr } = await db
+        .from('runs')
+        .select('id')
+        .eq('account_id', data.accountId)
+        .eq('playbook_id', data.playbookId)
+        .eq('status', 'active')
+        .or(`started_by.eq.${user.id},assigned_to.eq.${user.id}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingErr) throw existingErr;
+
+      if (existing) {
+        const runId = (existing as { id: string }).id;
+        if (data.assistMode) {
+          await db
+            .from('runs')
+            .update({ assist_mode: true })
+            .eq('id', runId)
+            .eq('account_id', data.accountId);
+        }
+        revalidatePath(sopsBasePath(data.accountSlug));
+        revalidatePath(playbookPath(data.accountSlug, data.playbookId));
+        return { runId, resumed: true as const };
+      }
+    }
+
     const { data: templateSteps, error: stepsErr } = await db
       .from('playbook_steps')
-      .select('id, position, title, body_md')
+      .select('id, position, title, body_md, target_selector, target_route')
       .eq('playbook_id', data.playbookId)
       .order('position', { ascending: true });
 
@@ -177,6 +206,7 @@ export const startSopRunAction = enhanceAction(
         started_by: user.id,
         assigned_to: data.assignedToUserId ?? null,
         status: 'active',
+        assist_mode: data.assistMode ?? false,
       })
       .select('id')
       .single();
@@ -208,7 +238,7 @@ export const startSopRunAction = enhanceAction(
     revalidatePath(sopsBasePath(data.accountSlug));
     revalidatePath(playbookPath(data.accountSlug, data.playbookId));
 
-    return { runId };
+    return { runId, resumed: false as const };
   },
   {
     schema: z.object({
@@ -219,6 +249,8 @@ export const startSopRunAction = enhanceAction(
       periodLabel: z.string().max(200).optional(),
       notesMd: z.string().max(20_000).optional(),
       assignedToUserId: z.string().uuid().optional(),
+      assistMode: z.boolean().optional(),
+      resumeIfActive: z.boolean().optional(),
     }),
   },
 );
@@ -394,6 +426,18 @@ export const toggleSopRunStepAction = enhanceAction(
     if (fetchErr) throw fetchErr;
     if (!step) throw new Error('Step not found');
 
+    const runId = (step as { run_id: string }).run_id;
+
+    const { data: runRow, error: runFetchErr } = await db
+      .from('runs')
+      .select('id')
+      .eq('id', runId)
+      .eq('account_id', data.accountId)
+      .maybeSingle();
+
+    if (runFetchErr) throw runFetchErr;
+    if (!runRow) throw new Error('Run not found');
+
     const isComplete = data.isComplete;
     const { error } = await db
       .from('run_step_states')
@@ -403,21 +447,18 @@ export const toggleSopRunStepAction = enhanceAction(
         completed_by: isComplete ? user.id : null,
         step_notes: data.stepNotes?.trim() || null,
       })
-      .eq('id', data.stepStateId);
+      .eq('id', data.stepStateId)
+      .eq('run_id', runId);
 
     if (error) throw error;
-
-    const runId = (step as { run_id: string }).run_id;
 
     const { data: allSteps } = await db
       .from('run_step_states')
       .select('is_complete')
       .eq('run_id', runId);
 
-    const rows = allSteps ?? [];
-    const allDone =
-      rows.length > 0 &&
-      rows.every((r) => (r as { is_complete: boolean }).is_complete);
+    const rows = (allSteps ?? []) as Array<{ is_complete: boolean }>;
+    const allDone = rows.length > 0 && rows.every((r) => r.is_complete);
 
     await db
       .from('runs')

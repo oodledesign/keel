@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 
-import type { SopTeamMember } from '~/lib/sops/types';
+import type { SopTeamMember } from '~/lib/sops/shared';
 
 function memberLabel(member: SopTeamMember) {
   return member.name?.trim() || member.email?.trim() || 'Team member';

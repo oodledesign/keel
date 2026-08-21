@@ -3,12 +3,11 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
-import {
-  loadAccountBrandResolved,
-  wrapEmailHtmlWithBrand,
-} from '~/lib/brand/account-brand';
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { alignedReplyTo } from '~/lib/email/aligned-reply-to';
+import { escapeEmailHtml } from '~/lib/email/ozer-transactional-shell';
+import { wrapNotificationEmail } from '~/lib/email/wrap-notification-email';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { notifyInvoicePaidInApp } from '~/lib/invoices/invoice-in-app-notifications';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
@@ -205,35 +204,47 @@ export async function sendInvoicePaidNotifications(params: {
     ? new URL(`/portal/invoices/${invoice.public_token}`, siteUrl).href
     : null;
 
+  const safeInvoiceNumber = escapeEmailHtml(String(invoice.invoice_number));
+  const safeClientName = escapeEmailHtml(clientName);
+  const safeAmount = escapeEmailHtml(amount);
+  const safePaidAt = escapeEmailHtml(paidAt);
+  const safeMethod = escapeEmailHtml(methodLabel);
+  const safeAccountName = escapeEmailHtml(
+    account.name?.trim() || productName,
+  );
+
   const customerSubject = `Payment received for invoice ${invoice.invoice_number}`;
-  const customerInner = `
-      <h2 style="margin:0 0 16px">Payment received</h2>
-      <p>Hi ${clientName},</p>
-      <p>We have received payment for invoice <strong>${invoice.invoice_number}</strong> via <strong>${methodLabel}</strong>.</p>
-      <p><strong>Amount:</strong> ${amount}<br /><strong>Paid at:</strong> ${paidAt}</p>
-      ${
-        portalInvoiceUrl
-          ? `<p>You can view the invoice here: <a href="${portalInvoiceUrl}">${portalInvoiceUrl}</a></p>`
-          : ''
-      }
-      <p>Thanks,<br />${productName}</p>
-  `;
-  const customerHtml = wrapEmailHtmlWithBrand({
-    brand,
-    innerHtml: customerInner,
-  });
+  const customerHtml = wrapNotificationEmail(
+    `<p style="margin:0 0 12px;">Hi ${safeClientName},</p>
+      <p style="margin:0 0 12px;">We've received payment for invoice <strong>${safeInvoiceNumber}</strong> via <strong>${safeMethod}</strong>.</p>
+      <p style="margin:0 0 4px;"><strong>Amount:</strong> ${safeAmount}</p>
+      <p style="margin:0;">Paid at: ${safePaidAt}</p>`,
+    {
+      title: customerSubject,
+      heading: 'Payment received',
+      preview: `${amount} paid for invoice ${invoice.invoice_number}`,
+      cta: portalInvoiceUrl
+        ? { label: 'View invoice', href: portalInvoiceUrl }
+        : undefined,
+      footerNote: `You're receiving this because you paid an invoice from ${safeAccountName}.`,
+      productName,
+    },
+  );
 
   const ownerSubject = `Invoice ${invoice.invoice_number} paid via ${methodLabel}`;
-  const ownerInner = `
-      <h2 style="margin:0 0 16px">Invoice paid</h2>
-      <p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>${clientName}</strong> has been marked as paid via <strong>${methodLabel}</strong>.</p>
-      <p><strong>Amount:</strong> ${amount}<br /><strong>Paid at:</strong> ${paidAt}</p>
-      <p>Open invoice: <a href="${adminInvoiceUrl}">${adminInvoiceUrl}</a></p>
-  `;
-  const ownerHtml = wrapEmailHtmlWithBrand({
-    brand,
-    innerHtml: ownerInner,
-  });
+  const ownerHtml = wrapNotificationEmail(
+    `<p style="margin:0 0 12px;">Invoice <strong>${safeInvoiceNumber}</strong> for <strong>${safeClientName}</strong> has been marked as paid via <strong>${safeMethod}</strong>.</p>
+      <p style="margin:0 0 4px;"><strong>Amount:</strong> ${safeAmount}</p>
+      <p style="margin:0;">Paid at: ${safePaidAt}</p>`,
+    {
+      title: ownerSubject,
+      heading: 'Invoice paid',
+      preview: `${clientName} paid ${amount} via ${methodLabel}`,
+      cta: { label: 'Open invoice', href: adminInvoiceUrl },
+      footerNote: `You're receiving this because you own or admin ${safeAccountName} on ${escapeEmailHtml(productName)}.`,
+      productName,
+    },
+  );
 
   const emailJobs: Promise<unknown>[] = [];
 
@@ -410,16 +421,24 @@ export async function sendInvoiceIssuedEmail(params: {
     : '—';
   const amount = formatInvoiceMoney(invoice.total_pence ?? 0, invoice.currency);
 
-  const issuedInner = `
-      <h2 style="margin:0 0 16px">${subject}</h2>
-      <p>${bodyText.replace(/\n/g, '<br />')}</p>
-      <div style="margin:24px 0;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb">
-        <p style="margin:0 0 8px"><strong>Invoice ${invoice.invoice_number}</strong></p>
-        <p style="margin:0 0 4px"><strong>Total:</strong> ${amount}</p>
-        <p style="margin:0"><strong>Due date:</strong> ${dueDate}</p>
-        <p style="margin:16px 0 0"><a href="${portalInvoiceUrl}">View and pay invoice</a></p>
-      </div>
-      <p>${signature.replace(/\n/g, '<br />')}</p>
+  const safeInvoiceNumber = escapeEmailHtml(String(invoice.invoice_number));
+  const safeAmount = escapeEmailHtml(amount);
+  const safeDueDate = escapeEmailHtml(dueDate);
+  const safeAccountName = escapeEmailHtml(
+    account?.name?.trim() || productName,
+  );
+  const bodyHtml = `
+      <p style="margin:0 0 16px;">${escapeEmailHtml(bodyText).replace(/\r?\n/g, '<br />')}</p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 16px;background:#FBF6EC;border:1px solid #E7DECF;border-radius:12px;">
+        <tr>
+          <td style="padding:16px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.55;color:#5A4450;">
+            <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#2A1720;"><strong>Invoice ${safeInvoiceNumber}</strong></p>
+            <p style="margin:0 0 4px;"><strong>Total:</strong> ${safeAmount}</p>
+            <p style="margin:0;"><strong>Due date:</strong> ${safeDueDate}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;">${escapeEmailHtml(signature).replace(/\r?\n/g, '<br />')}</p>
   `;
 
   await sendPlatformEmail({
@@ -429,9 +448,13 @@ export async function sendInvoiceIssuedEmail(params: {
       from,
       to: params.recipientEmail,
       subject: params.testOnly ? `[Test] ${subject}` : subject,
-      html: wrapEmailHtmlWithBrand({
-        brand,
-        innerHtml: issuedInner,
+      html: wrapNotificationEmail(bodyHtml, {
+        title: subject,
+        heading: subject,
+        preview: `Invoice ${invoice.invoice_number} · ${amount} due ${dueDate}`,
+        cta: { label: 'View and pay invoice', href: portalInvoiceUrl },
+        footerNote: `You're receiving this invoice from ${safeAccountName}.`,
+        productName,
       }),
       ...(replyTo ? { replyTo } : {}),
     },

@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 
 import { ArrowRight, ListChecks, Plus } from 'lucide-react';
@@ -11,6 +13,7 @@ import type {
   SopPlaybookListItem,
   SopRunListItem,
 } from '../_lib/server/sops-data';
+import { setSopTrackerVisible } from '../_lib/sop-tracker-session';
 
 const panelClass =
   'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]';
@@ -23,12 +26,14 @@ const recurrenceLabel: Record<string, string> = {
 };
 
 type SopsLibraryPageProps = {
+  accountId: string;
   accountSlug: string;
   playbooks: SopPlaybookListItem[];
   recentRuns: SopRunListItem[];
 };
 
 export function SopsLibraryPage({
+  accountId,
   accountSlug,
   playbooks,
   recentRuns,
@@ -135,9 +140,18 @@ export function SopsLibraryPage({
               return (
                 <Link
                   key={run.id}
-                  href={pathsConfig.app.accountSopsRun
-                    .replace('[account]', accountSlug)
-                    .replace('[runId]', run.id)}
+                  href={
+                    run.status === 'active' && run.assist_mode
+                      ? `${pathsConfig.app.accountListings.replace('[account]', accountSlug)}?sopAssist=${run.id}`
+                      : pathsConfig.app.accountSopsRun
+                          .replace('[account]', accountSlug)
+                          .replace('[runId]', run.id)
+                  }
+                  onClick={() => {
+                    if (run.status === 'active' && run.assist_mode) {
+                      setSopTrackerVisible(accountId, run.id, true);
+                    }
+                  }}
                   className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
                   <div className="min-w-0 flex-1">

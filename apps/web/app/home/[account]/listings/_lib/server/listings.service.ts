@@ -1032,6 +1032,7 @@ export function createListingsService(client: SupabaseClient) {
       accountId: string;
       status?: ListingStatus;
       search?: string | null;
+      accountBranchId?: string | null;
       page?: number;
       pageSize?: number;
     }): Promise<{ data: CommercialListing[]; total: number }> {
@@ -1050,6 +1051,29 @@ export function createListingsService(client: SupabaseClient) {
 
       if (input.status) {
         query = query.eq('status', input.status);
+      }
+
+      if (input.accountBranchId) {
+        const { data: branch, error: branchError } = await client
+          .from('account_branches')
+          .select('id')
+          .eq('id', input.accountBranchId)
+          .eq('account_id', input.accountId)
+          .maybeSingle();
+
+        if (branchError) {
+          console.error(
+            '[listings] listListingsPage branch check:',
+            branchError.message,
+          );
+          return { data: [], total: 0 };
+        }
+
+        if (!branch) {
+          return { data: [], total: 0 };
+        }
+
+        query = query.eq('account_branch_id', input.accountBranchId);
       }
 
       const search = input.search?.trim();
@@ -1096,6 +1120,33 @@ export function createListingsService(client: SupabaseClient) {
         withCoAgents,
       );
       return { data: enriched, total: count ?? 0 };
+    },
+
+    async countUnassignedListings(input: {
+      accountId: string;
+      status?: ListingStatus;
+    }): Promise<number> {
+      let query = client
+        .from('commercial_listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_id', input.accountId)
+        .is('account_branch_id', null);
+
+      if (input.status) {
+        query = query.eq('status', input.status);
+      }
+
+      const { count, error } = await query;
+
+      if (error) {
+        console.error(
+          '[listings] countUnassignedListings error:',
+          error.message,
+        );
+        return 0;
+      }
+
+      return count ?? 0;
     },
 
     async listCompletedDisposals(
@@ -1275,7 +1326,9 @@ export function createListingsService(client: SupabaseClient) {
         input.status === 'sold' ||
         input.status === 'withdrawn'
       ) {
-        Object.assign(patch, { off_market_at: new Date().toISOString() });
+        if (!existing.offMarketAt) {
+          Object.assign(patch, { off_market_at: new Date().toISOString() });
+        }
       }
 
       const addressChanged =
@@ -1418,12 +1471,227 @@ export function createListingsService(client: SupabaseClient) {
       if (error) throw new Error(error.message);
     },
 
-    async listUnits(listingId: string): Promise<CommercialListingUnit[]> {
-      const { data, error } = await client
+    /**
+     * Clone a disposal into a new draft (copy core fields, units, and media).
+     * Does not copy portal publications, share tokens, or interest.
+     */
+    async duplicateListing(input: {
+      listingId: string;
+      accountId: string;
+      accountSlug: string;
+      createdBy?: string | null;
+    }): Promise<CommercialListing> {
+      const source = await this.getListing(input.listingId, input.accountId);
+      if (!source) {
+        throw new Error('Listing not found');
+      }
+
+      const copyName = source.name.trim().endsWith('(copy)')
+        ? `${source.name.trim()} 2`
+        : `${source.name.trim()} (copy)`;
+
+      const created = await this.createListing({
+        accountId: input.accountId,
+        name: copyName,
+        addressLine1: source.addressLine1,
+        addressLine2: source.addressLine2,
+        town: source.town,
+        postcode: source.postcode,
+        country: source.country,
+        county: source.county,
+        latitude: source.latitude,
+        longitude: source.longitude,
+        sector: source.sector,
+        tenure: source.tenure,
+        disposalType: source.disposalType,
+        instructionNature: source.instructionNature,
+        isInstructed: false,
+        termsOfEngagement: source.termsOfEngagement,
+        restrictAccessToAssigned: source.restrictAccessToAssigned,
+        hideLandlordFromMarketing: source.hideLandlordFromMarketing,
+        referenceNumber: null,
+        projectCode: source.projectCode,
+        accountBranchId: source.accountBranchId,
+        averageFloorPlateSqft: source.averageFloorPlateSqft,
+        sizeBreakdown:
+          source.sizeBreakdown as CreateListingInput['sizeBreakdown'],
+        controlledBy: source.controlledBy as CreateListingInput['controlledBy'],
+        sizeAccuracy: source.sizeAccuracy as CreateListingInput['sizeAccuracy'],
+        termsInternal: source.termsInternal,
+        breeamRating: source.breeamRating as CreateListingInput['breeamRating'],
+        conditionDescription: source.conditionDescription,
+        status: 'draft',
+        askingRentPence: source.askingRentPence,
+        askingRentToPence: source.askingRentToPence,
+        askingPricePence: source.askingPricePence,
+        rentFrequency: source.rentFrequency,
+        hideRentFromMarketing: source.hideRentFromMarketing,
+        hidePriceFromMarketing: source.hidePriceFromMarketing,
+        serviceChargePerSqft: source.serviceChargePerSqft,
+        ratesPayablePerSqft: source.ratesPayablePerSqft,
+        estateChargePerSqft: source.estateChargePerSqft,
+        sizeMinSqft: source.sizeMinSqft,
+        sizeMaxSqft: source.sizeMaxSqft,
+        measurementStandard: source.measurementStandard,
+        useClass: source.useClass,
+        availableFrom: source.availableFrom,
+        epcBand: source.epcBand,
+        epcRating: source.epcRating,
+        possession: source.possession,
+        buildStatus: source.buildStatus,
+        planningStatus: source.planningStatus,
+        fittedSpace: source.fittedSpace,
+        landSizeMin: source.landSizeMin,
+        landSizeMax: source.landSizeMax,
+        landSizeMetric:
+          source.landSizeMetric as CreateListingInput['landSizeMetric'],
+        insuranceType: source.insuranceType,
+        streetViewPanoId: source.streetViewPanoId,
+        streetViewHeading: source.streetViewHeading,
+        streetViewPitch: source.streetViewPitch,
+        streetViewZoom: source.streetViewZoom,
+        summary: source.summary,
+        description: source.description,
+        locationCopy: source.locationCopy,
+        keyPoints: source.keyPoints,
+        amenities: source.amenities,
+        marketingSections: source.marketingSections,
+        websiteUrl: null,
+        notes: source.notes,
+        externalId: null,
+        instructingClientId: source.instructingClientId,
+        createdBy: input.createdBy ?? null,
+      });
+
+      const [units, media, assignment] = await Promise.all([
+        this.listUnits(source.id, { accountId: input.accountId }),
+        this.listMedia(source.id, {
+          privacy: 'all',
+          accountId: input.accountId,
+        }),
+        this.getListingAssignment(
+          source.id,
+          input.accountId,
+          input.accountSlug,
+        ),
+      ]);
+
+      for (const unit of units) {
+        await this.createUnit({
+          accountId: input.accountId,
+          listingId: created.id,
+          label: unit.label,
+          floorOrUnit: unit.floorOrUnit,
+          description: unit.description,
+          partFloor: unit.partFloor,
+          sector: unit.sector,
+          tenure: unit.tenure,
+          status: unit.status,
+          sizeSqft: unit.sizeSqft,
+          measurementStandard: unit.measurementStandard,
+          askingRentPence: unit.askingRentPence,
+          rentPerSqft: unit.rentPerSqft,
+          serviceChargePerSqft: unit.serviceChargePerSqft,
+          ratesPayablePerSqft: unit.ratesPayablePerSqft,
+          estateChargePerSqft: unit.estateChargePerSqft,
+          epcBand: unit.epcBand,
+          possession: unit.possession,
+          buildStatus: unit.buildStatus,
+          planningStatus: unit.planningStatus,
+          fittedSpace: unit.fittedSpace,
+          sizeAccuracy:
+            unit.sizeAccuracy as CreateListingUnitInput['sizeAccuracy'],
+          notes: unit.notes,
+          sortOrder: unit.sortOrder,
+          externalId: null,
+        });
+      }
+
+      for (const item of media) {
+        if (!item.storagePath && !item.externalUrl) continue;
+        await this.createMedia({
+          accountId: input.accountId,
+          listingId: created.id,
+          mediaType: item.mediaType as CreateListingMediaInput['mediaType'],
+          storagePath: item.storagePath,
+          externalUrl: item.externalUrl,
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          sortOrder: item.sortOrder,
+          isCover: item.isCover,
+          isPrivate: item.isPrivate,
+        });
+      }
+
+      if (
+        assignment.actingAgents.length > 0 ||
+        assignment.paUserId ||
+        assignment.recordOwnerUserId ||
+        assignment.teamId ||
+        assignment.accountBranchId
+      ) {
+        await this.updateListingAssignment({
+          listingId: created.id,
+          accountId: input.accountId,
+          accountSlug: input.accountSlug,
+          actingAgentUserIds: assignment.actingAgents.map(
+            (agent) => agent.userId,
+          ),
+          paUserId: assignment.paUserId,
+          recordOwnerUserId: assignment.recordOwnerUserId,
+          teamId: assignment.teamId,
+          accountBranchId: assignment.accountBranchId,
+          restrictAccessToAssigned: assignment.restrictAccessToAssigned,
+        });
+      }
+
+      try {
+        await recordListingEvent(client, {
+          accountId: input.accountId,
+          listingId: created.id,
+          actorUserId: input.createdBy ?? null,
+          eventType: 'listing_created',
+          summary: `Duplicated from ${source.name}`,
+          metadata: { sourceListingId: source.id },
+        });
+      } catch {
+        /* best-effort */
+      }
+
+      return (await this.getListing(created.id, input.accountId)) ?? created;
+    },
+
+    async archiveListing(input: {
+      listingId: string;
+      accountId: string;
+    }): Promise<CommercialListing> {
+      const existing = await this.getListing(input.listingId, input.accountId);
+      if (!existing) {
+        throw new Error('Listing not found');
+      }
+      if (existing.status === 'withdrawn') {
+        return existing;
+      }
+      return this.updateListing(input.listingId, input.accountId, {
+        status: 'withdrawn',
+      });
+    },
+
+    async listUnits(
+      listingId: string,
+      options?: { accountId?: string },
+    ): Promise<CommercialListingUnit[]> {
+      let query = client
         .from('commercial_listing_units')
         .select('*')
         .eq('listing_id', listingId)
         .order('sort_order');
+
+      if (options?.accountId) {
+        query = query.eq('account_id', options.accountId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('[listings] listUnits error:', error.message);
@@ -1572,7 +1840,10 @@ export function createListingsService(client: SupabaseClient) {
 
     async listMedia(
       listingId: string,
-      options?: { privacy?: 'public' | 'private' | 'all' },
+      options?: {
+        privacy?: 'public' | 'private' | 'all';
+        accountId?: string;
+      },
     ): Promise<CommercialListingMedia[]> {
       let query = client
         .from('commercial_listing_media')
@@ -1580,6 +1851,10 @@ export function createListingsService(client: SupabaseClient) {
         .eq('listing_id', listingId)
         .order('sort_order')
         .order('created_at');
+
+      if (options?.accountId) {
+        query = query.eq('account_id', options.accountId);
+      }
 
       const privacy = options?.privacy ?? 'public';
       if (privacy === 'public') {

@@ -5,26 +5,26 @@ import { PageBody } from '@kit/ui/page';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { SOP_WORKSPACE_SPACE_TYPES } from '~/lib/sops/workspace';
 
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
+import { TeamAccountLayoutPageHeader } from '../../../../_components/team-account-layout-page-header';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
-} from '../../../_lib/role-access';
-import { isWorkNavModuleEnabled } from '../../../_lib/server/account-modules';
-import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
-import { SopPlaybookDetail } from '../../_components/sop-playbook-detail';
-import { loadSopPlaybookPage } from '../../_lib/server/sops-data';
+} from '../../../../_lib/role-access';
+import { isWorkNavModuleEnabled } from '../../../../_lib/server/account-modules';
+import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
+import { SopPlaybookGuide } from '../../../_components/sop-playbook-guide';
+import { loadSopPlaybookPage } from '../../../_lib/server/sops-data';
 
-interface SopPlaybookPageProps {
+interface SopGuidePageProps {
   params: Promise<{ account: string; playbookId: string }>;
 }
 
 export const generateMetadata = async () => ({
-  title: 'SOP playbook',
+  title: 'SOP guide',
 });
 
-async function SopPlaybookPage({ params }: SopPlaybookPageProps) {
+async function SopPlaybookGuidePage({ params }: SopGuidePageProps) {
   const { account: accountSlug, playbookId } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, SOP_WORKSPACE_SPACE_TYPES);
@@ -51,21 +51,19 @@ async function SopPlaybookPage({ params }: SopPlaybookPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         account={accountSlug}
-        title={data.playbook.title}
-        description="Process template — read the guide, get assisted, or start a checklist run."
+        title={`${data.playbook.title} — guide`}
+        description="Read-only reference for this process."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)]">
-        <SopPlaybookDetail
+        <SopPlaybookGuide
           accountId={data.accountId}
           accountSlug={data.accountSlug}
           playbook={data.playbook}
           steps={data.steps}
-          runs={data.runs}
-          teamMembers={data.teamMembers}
         />
       </PageBody>
     </>
   );
 }
 
-export default withI18n(SopPlaybookPage);
+export default withI18n(SopPlaybookGuidePage);

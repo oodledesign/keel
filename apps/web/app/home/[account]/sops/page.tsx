@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { SOP_WORKSPACE_SPACE_TYPES } from '~/lib/sops/workspace';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import {
@@ -29,7 +30,7 @@ export const generateMetadata = async () => ({
 async function SopsPage({ params }: SopsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, SOP_WORKSPACE_SPACE_TYPES);
 
   const access = getTeamAccountAccess(
     workspace.account as {
@@ -43,7 +44,7 @@ async function SopsPage({ params }: SopsPageProps) {
     !access.canViewDashboard ||
     !isWorkNavModuleEnabled(workspace.moduleSettings, 'sops')
   ) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug));
   }
 
   const schemaOk = await assertSopsSchemaAvailable();
@@ -78,6 +79,7 @@ async function SopsPage({ params }: SopsPageProps) {
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
         <SopsLibraryPage
+          accountId={data.accountId}
           accountSlug={data.accountSlug}
           playbooks={data.playbooks}
           recentRuns={data.recentRuns}

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { SOP_WORKSPACE_SPACE_TYPES } from '~/lib/sops/workspace';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import {
@@ -26,7 +27,7 @@ export const generateMetadata = async () => ({
 async function SopRunPage({ params }: SopRunPageProps) {
   const { account: accountSlug, runId } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, SOP_WORKSPACE_SPACE_TYPES);
 
   const access = getTeamAccountAccess(
     workspace.account as {
@@ -40,7 +41,7 @@ async function SopRunPage({ params }: SopRunPageProps) {
     !access.canViewDashboard ||
     !isWorkNavModuleEnabled(workspace.moduleSettings, 'sops')
   ) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug));
   }
 
   const data = await loadSopRunPage(accountSlug, runId);

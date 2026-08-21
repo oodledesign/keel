@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
+import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -15,6 +16,7 @@ import { createListingsService } from './_lib/server/listings.service';
 
 interface ListingsPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ office?: string }>;
 }
 
 export const generateMetadata = async () => {
@@ -23,8 +25,9 @@ export const generateMetadata = async () => {
   return { title: `${title} – Disposals` };
 };
 
-async function ListingsPage({ params }: ListingsPageProps) {
+async function ListingsPage({ params, searchParams }: ListingsPageProps) {
   const { account: slug } = await params;
+  const { office: officeParam } = await searchParams;
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(
     workspace,
@@ -34,11 +37,23 @@ async function ListingsPage({ params }: ListingsPageProps) {
 
   const accountId = workspace.account.id as string;
   const service = createListingsService(getSupabaseServerClient());
-  const { data: listings, total } = await service.listListingsPage({
-    accountId,
-    page: 1,
-    pageSize: 20,
-  });
+  const branches = await loadAccountBranches(accountId);
+  const branchIds = new Set(branches.map((branch) => branch.id));
+  const initialOfficeId =
+    officeParam && branchIds.has(officeParam) ? officeParam : null;
+
+  const [{ data: listings, total }, unassignedCount] = await Promise.all([
+    service.listListingsPage({
+      accountId,
+      page: 1,
+      pageSize: 20,
+      accountBranchId: initialOfficeId,
+    }),
+    // Needed as soon as an office chip is selected (before RSC refresh).
+    branches.length > 1
+      ? service.countUnassignedListings({ accountId })
+      : Promise.resolve(0),
+  ]);
 
   return (
     <>
@@ -49,6 +64,12 @@ async function ListingsPage({ params }: ListingsPageProps) {
           accountSlug={slug}
           initialListings={listings}
           initialTotal={total}
+          offices={branches.map((branch) => ({
+            id: branch.id,
+            name: branch.name,
+          }))}
+          initialOfficeId={initialOfficeId}
+          unassignedCount={unassignedCount}
         />
       </PageBody>
     </>

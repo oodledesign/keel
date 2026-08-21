@@ -19,6 +19,12 @@ export const GET = enhanceRouteHandler(
       orientation: searchParams.get('orientation') ?? undefined,
       template: searchParams.get('template') ?? undefined,
       useSaved: searchParams.get('useSaved') ?? undefined,
+      showRent: searchParams.get('showRent') ?? undefined,
+      showPrice: searchParams.get('showPrice') ?? undefined,
+      showSize: searchParams.get('showSize') ?? undefined,
+      showRates: searchParams.get('showRates') ?? undefined,
+      showServiceCharge: searchParams.get('showServiceCharge') ?? undefined,
+      showEstateCharge: searchParams.get('showEstateCharge') ?? undefined,
     });
 
     if (!parsed.success) {
@@ -28,8 +34,19 @@ export const GET = enhanceRouteHandler(
       );
     }
 
-    const { listingId, accountId, orientation, template, useSaved } =
-      parsed.data;
+    const {
+      listingId,
+      accountId,
+      orientation,
+      template,
+      useSaved,
+      showRent,
+      showPrice,
+      showSize,
+      showRates,
+      showServiceCharge,
+      showEstateCharge,
+    } = parsed.data;
     const client = getSupabaseServerClient();
 
     // Ensure membership via RLS on listing
@@ -44,11 +61,27 @@ export const GET = enhanceRouteHandler(
       return NextResponse.json({ error: 'Listing not found' }, { status: 404 });
     }
 
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      accountId,
+      'create or edit disposals',
+    );
+
     try {
       const service = createListingBrochureService(client);
       const saved = useSaved
         ? await service.getDocument(listingId, accountId, orientation)
         : null;
+
+      const display = {
+        showRent,
+        showPrice,
+        showSize,
+        showRates,
+        showServiceCharge,
+        showEstateCharge,
+      };
 
       const { bytes, filename, document } = await generateListingBrochurePdf({
         listingId,
@@ -56,6 +89,8 @@ export const GET = enhanceRouteHandler(
         orientation: saved?.orientation ?? orientation,
         templateId: saved?.templateId ?? template,
         document: saved,
+        // Saved docs already bake facts in; display only applies to fresh packs.
+        display: saved ? undefined : display,
       });
 
       // Persist auto pack when downloading without a saved doc so the editor starts warm

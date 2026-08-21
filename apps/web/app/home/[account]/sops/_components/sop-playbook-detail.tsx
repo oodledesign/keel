@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { Loader2, Play } from 'lucide-react';
+import { BookOpen, Loader2, Play, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -17,10 +17,15 @@ import type {
   SopPlaybookStepRow,
   SopRunRow,
   SopTeamMember,
-} from '~/lib/sops/types';
+} from '~/lib/sops/shared';
+import {
+  SOP_ADDING_A_DISPOSAL_TITLE,
+  resolveSopTargetRoute,
+} from '~/lib/sops/shared';
 
 import { startSopRunAction } from '../_lib/server/sops-actions';
 import { SopRunAssigneeSelect } from './sop-run-assignee-select';
+import { setSopTrackerVisible } from '../_lib/sop-tracker-session';
 
 const panelClass =
   'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]';
@@ -44,6 +49,7 @@ export function SopPlaybookDetail({
 }: SopPlaybookDetailProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [assistPending, startAssistTransition] = useTransition();
   const [runTitle, setRunTitle] = useState('');
   const [assignedToUserId, setAssignedToUserId] = useState<string | null>(null);
 
@@ -51,6 +57,12 @@ export function SopPlaybookDetail({
     '[account]',
     accountSlug,
   );
+  const guidePath = pathsConfig.app.accountSopsPlaybookGuide
+    .replace('[account]', accountSlug)
+    .replace('[playbookId]', playbook.id);
+
+  const activeRun = runs.find((r) => r.status === 'active');
+  const isGuidedPlaybook = playbook.title === SOP_ADDING_A_DISPOSAL_TITLE;
 
   function startRun() {
     startTransition(async () => {
@@ -71,6 +83,39 @@ export function SopPlaybookDetail({
         }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Could not start run');
+      }
+    });
+  }
+
+  function startAssist() {
+    startAssistTransition(async () => {
+      try {
+        const result = await startSopRunAction({
+          accountId,
+          accountSlug,
+          playbookId: playbook.id,
+          title: runTitle.trim() || undefined,
+          assignedToUserId: assignedToUserId ?? undefined,
+          assistMode: true,
+          resumeIfActive: true,
+        });
+        if (!result?.runId) return;
+
+        setSopTrackerVisible(accountId, result.runId, true);
+
+        const firstStep = steps.find((s) => s.target_route) ?? steps[0];
+        const target =
+          resolveSopTargetRoute(firstStep?.target_route, accountSlug) ??
+          pathsConfig.app.accountListings.replace('[account]', accountSlug);
+
+        const url = new URL(target, window.location.origin);
+        url.searchParams.set('sopAssist', result.runId);
+        router.push(`${url.pathname}${url.search}`);
+        router.refresh();
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : 'Could not start Assist mode',
+        );
       }
     });
   }
@@ -97,47 +142,71 @@ export function SopPlaybookDetail({
           {steps.length} steps · {playbook.category ?? 'General'}
         </p>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-0 flex-1 space-y-1">
-            <label
-              className="text-xs text-[var(--workspace-shell-text-muted)]"
-              htmlFor="run-title"
-            >
-              Run title (optional)
-            </label>
-            <Input
-              id="run-title"
-              value={runTitle}
-              onChange={(e) => setRunTitle(e.target.value)}
-              placeholder="e.g. March 2026 — Acme Co"
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
-            />
-          </div>
-          {teamMembers.length > 0 ? (
-            <div className="w-full min-w-0 sm:w-56">
-              <SopRunAssigneeSelect
-                id="start-run-assignee"
-                members={teamMembers}
-                value={assignedToUserId}
-                disabled={pending}
-                onChange={setAssignedToUserId}
-              />
-            </div>
-          ) : null}
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link href={guidePath}>
+              <BookOpen className="mr-2 h-4 w-4" />
+              Read guide
+            </Link>
+          </Button>
           <Button
             type="button"
-            disabled={pending || steps.length === 0}
-            onClick={startRun}
-            className="ozer-gradient-btn shrink-0"
+            disabled={assistPending || steps.length === 0}
+            onClick={startAssist}
+            className="ozer-gradient-btn shrink-0 rounded-xl"
           >
-            {pending ? (
+            {assistPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Play className="mr-2 h-4 w-4" />
+              <Sparkles className="mr-2 h-4 w-4" />
             )}
-            Start checklist
+            {activeRun ? 'Resume Assist me' : 'Assist me'}
           </Button>
         </div>
+
+        {!isGuidedPlaybook ? (
+          <div className="mt-6 flex flex-col gap-3 border-t border-[color:var(--workspace-shell-border)] pt-6 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1 space-y-1">
+              <label
+                className="text-xs text-[var(--workspace-shell-text-muted)]"
+                htmlFor="run-title"
+              >
+                Run title (optional)
+              </label>
+              <Input
+                id="run-title"
+                value={runTitle}
+                onChange={(e) => setRunTitle(e.target.value)}
+                placeholder="e.g. March 2026 — Acme Co"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+              />
+            </div>
+            {teamMembers.length > 0 ? (
+              <div className="w-full min-w-0 sm:w-56">
+                <SopRunAssigneeSelect
+                  id="start-run-assignee"
+                  members={teamMembers}
+                  value={assignedToUserId}
+                  disabled={pending}
+                  onChange={setAssignedToUserId}
+                />
+              </div>
+            ) : null}
+            <Button
+              type="button"
+              disabled={pending || steps.length === 0}
+              onClick={startRun}
+              className="ozer-gradient-btn shrink-0"
+            >
+              {pending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              Start checklist
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className={`${panelClass} divide-y divide-white/6`}>
@@ -174,12 +243,18 @@ export function SopPlaybookDetail({
                 .replace('[account]', accountSlug)
                 .replace('[runId]', run.id)}
               className="block px-5 py-4 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              onClick={() => {
+                if (run.status === 'active' && run.assist_mode) {
+                  setSopTrackerVisible(accountId, run.id, true);
+                }
+              }}
             >
               <p className="font-medium text-[var(--workspace-shell-text)]">
                 {run.title}
               </p>
               <p className="text-muted-foreground text-xs capitalize">
                 {run.status}
+                {run.assist_mode ? ' · Assist' : ''}
                 {run.period_label ? ` · ${run.period_label}` : ''}
               </p>
             </Link>

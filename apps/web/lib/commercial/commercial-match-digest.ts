@@ -3,16 +3,23 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { createMatchSuggestionsService } from '~/home/[account]/listings/_lib/server/match-suggestions.service';
+import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import {
-  escapeNotificationHtml,
-  wrapNotificationEmail,
-} from '~/lib/email/wrap-notification-email';
+  type DigestEmailMatch,
+  buildCommercialMatchDigestBodyHtml,
+} from '~/lib/commercial/commercial-match-digest-email';
+import {
+  buildCommercialListingMediaPublicUrl,
+  resolveSiteUrlForPublicMedia,
+} from '~/lib/commercial/listing-media-public-url';
+import { wrapNotificationEmail } from '~/lib/email/wrap-notification-email';
 import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
 import { isEmailNotificationEnabled } from '~/lib/notifications/email-notification-preferences';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 const MAX_ACCOUNTS = 80;
-const DIGEST_LIMIT = 8;
+/** Fetch enough pairs so the email can group several properties. */
+const DIGEST_LIMIT = 24;
 
 type DigestAccount = {
   accountId: string;
@@ -120,6 +127,75 @@ async function loadEmailPreferenceMap(
   return map;
 }
 
+/**
+ * Stable public cover URLs for email clients (proxy route, not short-lived signed URLs).
+ */
+export async function loadListingCoverUrlsForDigest(
+  admin: SupabaseClient,
+  listingIds: string[],
+  siteUrl: string,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const uniqueIds = [...new Set(listingIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return map;
+
+  const origin = siteUrl.trim().replace(/\/+$/, '');
+  if (!origin) return map;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = admin as any;
+  const { data, error } = await db
+    .from('commercial_listing_media')
+    .select(
+      'id, listing_id, media_type, file_name, mime_type, storage_path, external_url, is_cover, sort_order',
+    )
+    .in('listing_id', uniqueIds)
+    .eq('is_private', false)
+    .or('media_type.eq.image,mime_type.ilike.image/%')
+    .order('is_cover', { ascending: false })
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[match-digest] cover media', error.message);
+    return map;
+  }
+
+  for (const row of (data ?? []) as Array<{
+    id?: string | null;
+    listing_id?: string | null;
+    media_type?: string | null;
+    file_name?: string | null;
+    mime_type?: string | null;
+    storage_path?: string | null;
+    external_url?: string | null;
+  }>) {
+    const listingId = row.listing_id?.trim();
+    if (!listingId || map.has(listingId)) continue;
+
+    const mediaId = row.id?.trim();
+    if (mediaId) {
+      map.set(
+        listingId,
+        buildCommercialListingMediaPublicUrl({
+          siteUrl: origin,
+          mediaId,
+          mediaType: row.media_type ?? 'image',
+          fileName: row.file_name,
+          mimeType: row.mime_type,
+        }),
+      );
+      continue;
+    }
+
+    const external = row.external_url?.trim();
+    if (external && /^https?:\/\//i.test(external)) {
+      map.set(listingId, external);
+    }
+  }
+
+  return map;
+}
+
 export async function runCommercialMatchDigest(admin: SupabaseClient): Promise<{
   accounts: number;
   notified: number;
@@ -179,41 +255,51 @@ export async function runCommercialMatchDigest(admin: SupabaseClient): Promise<{
         recipients.map((r) => r.userId),
       );
 
-      const pipelineUrl = new URL(linkPath, siteUrl).toString();
-      const topLines = digest.suggestions
-        .slice(0, 5)
-        .map(
-          (s) =>
-            `<li style="margin:0 0 8px;"><strong>${escapeNotificationHtml(
-              s.listingName,
-            )}</strong> ↔ ${escapeNotificationHtml(
-              s.requirementLabel,
-            )} · ${s.score}% fit</li>`,
-        )
-        .join('');
-
-      const html = wrapNotificationEmail(
-        `
-          <p style="margin:0 0 16px;">${escapeNotificationHtml(
-            account.name,
-          )} has <strong>${digest.count}</strong> open match suggestion${
-            digest.count === 1 ? '' : 's'
-          } across active stock and requirements.</p>
-          <ul style="margin:0 0 20px;padding-left:18px;">${topLines}</ul>
-        `,
-        {
-          title: 'Commercial match digest',
-          heading: 'New match suggestions',
-          preview: `${digest.count} commercial match suggestion${
-            digest.count === 1 ? '' : 's'
-          }`,
-          cta: {
-            label: 'Open requirements pipeline',
-            href: pipelineUrl,
-          },
-          productName,
-        },
+      const appOrigin =
+        resolveSiteUrlForPublicMedia() ?? getAppSiteOrigin() ?? siteUrl;
+      const pipelineUrl = new URL(linkPath, appOrigin).toString();
+      const coverByListing = await loadListingCoverUrlsForDigest(
+        admin,
+        digest.suggestions.map((s) => s.listingId),
+        appOrigin,
       );
+
+      const emailSuggestions: DigestEmailMatch[] = digest.suggestions.map(
+        (s) => ({
+          listingId: s.listingId,
+          listingName: s.listingName,
+          requirementLabel: s.requirementLabel,
+          score: s.score,
+          listingCoverUrl: coverByListing.get(s.listingId) ?? null,
+        }),
+      );
+
+      const { html: bodyHtml, renderedPairCount } =
+        buildCommercialMatchDigestBodyHtml({
+          accountName: account.name,
+          totalCount: digest.count,
+          suggestions: emailSuggestions,
+          viewAllHref: pipelineUrl,
+          productName,
+        });
+
+      const ctaLabel =
+        digest.count > renderedPairCount
+          ? `View all ${digest.count} matches`
+          : `Open matches in ${productName}`;
+
+      const html = wrapNotificationEmail(bodyHtml, {
+        title: 'Commercial match digest',
+        heading: 'New match suggestions',
+        preview: `${digest.count} commercial match suggestion${
+          digest.count === 1 ? '' : 's'
+        }`,
+        cta: {
+          label: ctaLabel,
+          href: pipelineUrl,
+        },
+        productName,
+      });
 
       for (const recipient of recipients) {
         if (

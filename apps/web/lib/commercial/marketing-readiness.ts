@@ -126,7 +126,7 @@ export function getMarketingReadiness(input: {
       id: 'brochure_or_floorplan',
       label: 'Brochure or floor plan',
       pass: brochureOrFloorplan,
-      hint: 'Upload a brochure/floor plan, enable brochure share, or download a PDF brochure',
+      hint: 'Upload a brochure on Media (for portals), enable online brochure share, or download a PDF',
       hrefTab: 'media',
     },
     {

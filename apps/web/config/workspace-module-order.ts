@@ -139,6 +139,7 @@ export const COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER = [
   'docs',
   'tasks',
   'notes',
+  'sops',
   'team',
   'settings',
 ] as const;

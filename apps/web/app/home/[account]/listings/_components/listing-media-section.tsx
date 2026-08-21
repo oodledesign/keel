@@ -84,7 +84,8 @@ const PRIMARY_FILE_SECTIONS: Array<{
   {
     type: 'brochure',
     title: 'Brochure',
-    description: 'PDF or image marketing brochure.',
+    description:
+      'PDF or image uploaded for portals (e.g. Rightmove). Included the next time you publish or republish — not the online share link.',
     accept: 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
   },
   {
@@ -624,7 +625,19 @@ export function ListingMediaSection({
       {PRIMARY_FILE_SECTIONS.map((section) => {
         const items = media.filter((item) => item.mediaType === section.type);
         return (
-          <Card key={section.type} className={workspacePanelCard}>
+          <Card
+            key={section.type}
+            className={workspacePanelCard}
+            data-tour={
+              section.type === 'image' || section.type === 'floorplan'
+                ? 'sop-listing-media'
+                : section.type === 'epc'
+                  ? 'sop-listing-epc'
+                  : section.type === 'brochure'
+                    ? 'sop-listing-brochure'
+                    : undefined
+            }
+          >
             <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
               <div>
                 <CardTitle className="text-base text-[var(--workspace-shell-text)]">

@@ -48,6 +48,8 @@ type TeamWorkspaceMobileChromeProps = {
   bottomNavTabs: MobileBottomNavTab[];
   spaceType: WorkspaceSpaceType;
   showNewMenu?: boolean;
+  /** Optional floating SOP assist tracker (desktop FAB stack). */
+  sopTracker?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -62,6 +64,7 @@ export function TeamWorkspaceMobileChrome({
   bottomNavTabs,
   spaceType,
   showNewMenu = true,
+  sopTracker,
   children,
 }: TeamWorkspaceMobileChromeProps) {
   const pathname = usePathname();
@@ -169,6 +172,7 @@ export function TeamWorkspaceMobileChrome({
         workspaceChoices={workspaceChoices}
       />
       <WorkspaceCreateMeetingHost accountId={accountId} accountSlug={account} />
+      {sopTracker}
       {/* Desktop-only floating help; mobile support lives in the hamburger menu. */}
       <WorkspaceHelpButton defaultAccountId={accountId} />
     </>

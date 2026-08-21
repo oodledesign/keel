@@ -1,10 +1,12 @@
 import {
+  type BrochureDisplayOptions,
   type BrochureDocument,
   type BrochureLayoutId,
   type BrochureOrientation,
   type BrochurePage,
   type BrochureSlotValue,
   type BrochureTemplateId,
+  DEFAULT_BROCHURE_DISPLAY_OPTIONS,
   newBrochurePageId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
@@ -19,7 +21,23 @@ import {
 export type BuildBrochureDocumentOptions = {
   orientation: BrochureOrientation;
   templateId: BrochureTemplateId;
+  display?: Partial<BrochureDisplayOptions>;
 };
+
+function resolveDisplay(
+  display?: Partial<BrochureDisplayOptions>,
+): BrochureDisplayOptions {
+  return { ...DEFAULT_BROCHURE_DISPLAY_OPTIONS, ...display };
+}
+
+function formatPerSqft(value: number | null): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return `${new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    maximumFractionDigits: 2,
+  }).format(value)} per sq ft`;
+}
 
 function page(
   layoutId: BrochureLayoutId,
@@ -48,6 +66,7 @@ function textSlot(text: string): BrochureSlotValue {
 
 function buildFactsRows(
   data: PublicBrochureData,
+  display: BrochureDisplayOptions,
 ): Array<{ label: string; value: string }> {
   const { listing } = data;
   const rows: Array<{ label: string; value: string }> = [];
@@ -61,14 +80,41 @@ function buildFactsRows(
     rows.push({ label: 'Tenure', value: listing.tenure.trim() });
   }
 
-  const size = formatBrochureSize(listing);
-  if (size) rows.push({ label: 'Size', value: size });
+  if (display.showSize) {
+    const size = formatBrochureSize(listing);
+    if (size) rows.push({ label: 'Size', value: size });
+  }
 
-  const rent = formatBrochureRent(listing);
-  if (rent) rows.push({ label: 'Rent', value: rent });
+  if (display.showRent) {
+    const rent = formatBrochureRent({
+      ...listing,
+      hideRentFromMarketing: false,
+    });
+    if (rent) rows.push({ label: 'Rent', value: rent });
+  }
 
-  const price = formatBrochurePrice(listing);
-  if (price) rows.push({ label: 'Price', value: price });
+  if (display.showPrice) {
+    const price = formatBrochurePrice({
+      ...listing,
+      hidePriceFromMarketing: false,
+    });
+    if (price) rows.push({ label: 'Price', value: price });
+  }
+
+  if (display.showRates) {
+    const rates = formatPerSqft(listing.ratesPayablePerSqft);
+    if (rates) rows.push({ label: 'Business rates', value: rates });
+  }
+
+  if (display.showServiceCharge) {
+    const service = formatPerSqft(listing.serviceChargePerSqft);
+    if (service) rows.push({ label: 'Service charge', value: service });
+  }
+
+  if (display.showEstateCharge) {
+    const estate = formatPerSqft(listing.estateChargePerSqft);
+    if (estate) rows.push({ label: 'Estate charge', value: estate });
+  }
 
   if (listing.useClass?.trim()) {
     rows.push({ label: 'Use class', value: listing.useClass.trim() });
@@ -125,13 +171,25 @@ function buildAmenities(data: PublicBrochureData): Array<{
   return amenities;
 }
 
-function coverSlots(data: PublicBrochureData): Record<string, BrochureSlotValue> {
-  const cover =
-    data.images.find((i) => i.isCover) ?? data.images[0] ?? null;
+function coverSlots(
+  data: PublicBrochureData,
+  display: BrochureDisplayOptions,
+): Record<string, BrochureSlotValue> {
+  const cover = data.images.find((i) => i.isCover) ?? data.images[0] ?? null;
   const address = formatBrochureAddress(data.listing);
-  const size = formatBrochureSize(data.listing);
-  const rent = formatBrochureRent(data.listing);
-  const price = formatBrochurePrice(data.listing);
+  const size = display.showSize ? formatBrochureSize(data.listing) : null;
+  const rent = display.showRent
+    ? formatBrochureRent({
+        ...data.listing,
+        hideRentFromMarketing: false,
+      })
+    : null;
+  const price = display.showPrice
+    ? formatBrochurePrice({
+        ...data.listing,
+        hidePriceFromMarketing: false,
+      })
+    : null;
   const priceLine = [size, rent, price].filter(Boolean).join('  ·  ');
 
   return {
@@ -189,7 +247,11 @@ function photoPages(
       continue;
     }
 
-    if (remaining >= 3 && templateId === 'classic' && orientation === 'portrait') {
+    if (
+      remaining >= 3 &&
+      templateId === 'classic' &&
+      orientation === 'portrait'
+    ) {
       const a = pool[i]!;
       const b = pool[i + 1]!;
       const c = pool[i + 2]!;
@@ -223,9 +285,7 @@ function descriptionSlots(
   templateId: BrochureTemplateId,
 ): Record<string, BrochureSlotValue> | null {
   const description =
-    data.listing.description?.trim() ||
-    data.listing.summary?.trim() ||
-    '';
+    data.listing.description?.trim() || data.listing.summary?.trim() || '';
   const highlights = data.listing.keyPoints.slice(0, 8);
   if (!description && highlights.length === 0) return null;
 
@@ -243,9 +303,7 @@ function descriptionSlots(
     body: textSlot(description.slice(0, bodyLimit)),
     // Only populate when there are real key points — renderer omits empty section
     highlights: textSlot(
-      highlights.length > 0
-        ? highlights.map((h) => `• ${h}`).join('\n')
-        : '',
+      highlights.length > 0 ? highlights.map((h) => `• ${h}`).join('\n') : '',
     ),
   };
 }
@@ -271,7 +329,8 @@ export function buildBrochureDocument(
   options: BuildBrochureDocumentOptions,
 ): BrochureDocument {
   const { orientation, templateId } = options;
-  const facts = buildFactsRows(data);
+  const display = resolveDisplay(options.display);
+  const facts = buildFactsRows(data, display);
   const amenities = buildAmenities(data);
   const descSlots = descriptionSlots(data, templateId);
   const locationCopy = data.listing.locationCopy?.trim() ?? '';
@@ -282,7 +341,7 @@ export function buildBrochureDocument(
   pages.push(
     page(
       'cover_hero_band',
-      coverSlots(data),
+      coverSlots(data, display),
       templateId === 'editorial'
         ? { sectionNumber: '01', sectionLabel: 'Cover' }
         : undefined,

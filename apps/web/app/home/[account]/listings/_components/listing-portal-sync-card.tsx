@@ -102,11 +102,18 @@ export function ListingPortalSyncCard({
   };
 
   return (
-    <Card className={workspacePanelCard}>
+    <Card
+      className={workspacePanelCard}
+      data-tour="sop-listing-publish"
+    >
       <CardHeader>
         <CardTitle className="text-base text-[var(--workspace-shell-text)]">
           Portal publishing
         </CardTitle>
+        <p className="text-sm text-[var(--workspace-shell-text)]/50">
+          Brochure PDFs on portals come from files uploaded under Media →
+          Brochure. Online brochure share and PDF download do not publish here.
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <ListingEachFeedToggle

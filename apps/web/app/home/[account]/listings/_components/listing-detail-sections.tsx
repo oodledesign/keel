@@ -1212,80 +1212,110 @@ export function ListingManagementSection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
             <Link2 className="h-4 w-4" />
-            Brochure share
+            Brochures & sharing
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-[var(--workspace-shell-text)]/60">
-              Share a client-facing photo brochure.
-            </p>
-            <Switch
-              checked={listing.brochureShareEnabled}
-              disabled={brochurePending}
-              onCheckedChange={(enabled) => {
-                startBrochureTransition(async () => {
-                  try {
-                    const updated = await setBrochureShare({
-                      listingId: listing.id,
-                      accountId,
-                      enabled,
-                    });
-                    setListing(updated);
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : 'Could not update brochure share',
-                    );
-                  }
-                });
-              }}
-            />
-          </div>
-          {listing.brochureShareEnabled && brochurePath ? (
-            <div className="flex items-center gap-2">
-              <code className="flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text)]/70">
-                {brochureUrl ?? brochurePath}
-              </code>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (!brochureUrl) return;
-                  await navigator.clipboard.writeText(brochureUrl);
-                  setBrochureCopied(true);
-                  setTimeout(() => setBrochureCopied(false), 2000);
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Online brochure share
+                </p>
+                <p className="text-sm text-[var(--workspace-shell-text)]/60">
+                  Branded photo slideshow at an Ozer link (enquiries come back
+                  here). This is not publishing to Rightmove or other portals.
+                </p>
+              </div>
+              <Switch
+                checked={listing.brochureShareEnabled}
+                disabled={brochurePending}
+                onCheckedChange={(enabled) => {
+                  startBrochureTransition(async () => {
+                    try {
+                      const updated = await setBrochureShare({
+                        listingId: listing.id,
+                        accountId,
+                        enabled,
+                      });
+                      setListing(updated);
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not update brochure share',
+                      );
+                    }
+                  });
                 }}
-                className="shrink-0 gap-1.5"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                {brochureCopied ? 'Copied' : 'Copy'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                asChild
-                className="shrink-0"
-              >
-                <a href={brochurePath} target="_blank" rel="noreferrer">
-                  Open
-                </a>
-              </Button>
+              />
             </div>
-          ) : null}
+            {listing.brochureShareEnabled && brochurePath ? (
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text)]/70">
+                  {brochureUrl ?? brochurePath}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!brochureUrl) return;
+                    await navigator.clipboard.writeText(brochureUrl);
+                    setBrochureCopied(true);
+                    setTimeout(() => setBrochureCopied(false), 2000);
+                  }}
+                  className="shrink-0 gap-1.5"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {brochureCopied ? 'Copied' : 'Copy'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="shrink-0"
+                >
+                  <a href={brochurePath} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
+                </Button>
+              </div>
+            ) : null}
+          </div>
 
           <div className="border-t border-[var(--workspace-shell-border)] pt-3">
-            <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+            <p className="mb-1 text-sm font-medium text-[var(--workspace-shell-text)]">
               PDF brochure
             </p>
             <ListingBrochureDownload
               listingId={listing.id}
               accountId={accountId}
               accountSlug={accountSlug}
+              listingName={listing.name}
+              listingAddress={[
+                listing.addressLine1,
+                listing.town,
+                listing.postcode,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+              coverUrl={listing.coverUrl}
+              defaultShowRent={!listing.hideRentFromMarketing}
+              defaultShowPrice={!listing.hidePriceFromMarketing}
             />
+          </div>
+
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-3 py-2.5 text-sm text-[var(--workspace-shell-text)]/70">
+            <p className="font-medium text-[var(--workspace-shell-text)]">
+              Portals (Rightmove, etc.)
+            </p>
+            <p className="mt-0.5">
+              Use <span className="font-medium">Publish</span> in the brochure
+              drawer (or upload under Media → Brochure), then republish from
+              Portal publishing. Online brochure share is a separate Ozer link.
+            </p>
           </div>
 
           <div className="border-t border-[var(--workspace-shell-border)] pt-3">

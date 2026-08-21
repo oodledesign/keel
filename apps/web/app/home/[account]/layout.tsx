@@ -2,6 +2,7 @@ import { use } from 'react';
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 
 import { z } from 'zod';
 
@@ -46,6 +47,7 @@ import {
 } from './_lib/server/team-workspace-shell-adornments.loader';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
+import { SopTrackerHost } from './sops/_components/sop-tracker-host';
 
 const EMPTY_SHELL_ADORNMENTS: TeamWorkspaceShellAdornments = {
   navCounts: {},
@@ -344,6 +346,14 @@ function TeamWorkspaceSidebarShell({
               bottomNavTabs={bottomNavTabs}
               spaceType={spaceTypeFromProfile(workspaceProfile)}
               showNewMenu={showNewMenu}
+              sopTracker={
+                <Suspense fallback={null}>
+                  <SopTrackerHost
+                    accountId={accountId}
+                    accountSlug={account}
+                  />
+                </Suspense>
+              }
             >
               <ProductTourHost
                 variant="team"
@@ -525,6 +535,11 @@ function HeaderLayoutShell({
             bottomNavTabs={bottomNavTabs}
             spaceType={spaceTypeFromProfile(data.workspaceProfile)}
             showNewMenu={access.canUseQuickCreate}
+            sopTracker={
+              <Suspense fallback={null}>
+                <SopTrackerHost accountId={accountId} accountSlug={account} />
+              </Suspense>
+            }
           >
             <AiCreditsExhaustedShell
               accountId={accountId}

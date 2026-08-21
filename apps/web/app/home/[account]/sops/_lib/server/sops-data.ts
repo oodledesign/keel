@@ -14,6 +14,7 @@ import {
   type SopTeamMember,
   getSopsDb,
 } from '~/lib/sops/types';
+import { SOP_WORKSPACE_SPACE_TYPES } from '~/lib/sops/workspace';
 
 export type SopPlaybookListItem = SopPlaybookRow & {
   step_count: number;
@@ -25,6 +26,13 @@ export type SopRunListItem = SopRunRow & {
   completed_steps: number;
   total_steps: number;
   assignee_name: string | null;
+};
+
+export type SopActiveAssistRun = {
+  run: SopRunRow;
+  playbook: SopPlaybookRow | null;
+  steps: SopRunStepRow[];
+  playbookSteps: SopPlaybookStepRow[];
 };
 
 export async function loadSopTeamMembers(
@@ -59,7 +67,7 @@ function memberDisplayName(member: SopTeamMember | undefined): string | null {
 
 export const loadSopsLibraryPage = cache(async (accountSlug: string) => {
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, SOP_WORKSPACE_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
   const db = getSopsDb();
@@ -165,7 +173,7 @@ export const loadSopsLibraryPage = cache(async (accountSlug: string) => {
 export const loadSopPlaybookPage = cache(
   async (accountSlug: string, playbookId: string) => {
     const workspace = await loadTeamWorkspace(accountSlug);
-    redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+    redirectIfSpaceNotIn(workspace, accountSlug, SOP_WORKSPACE_SPACE_TYPES);
 
     const accountId = workspace.account.id as string;
     const db = getSopsDb();
@@ -208,7 +216,7 @@ export const loadSopPlaybookPage = cache(
 export const loadSopRunPage = cache(
   async (accountSlug: string, runId: string) => {
     const workspace = await loadTeamWorkspace(accountSlug);
-    redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+    redirectIfSpaceNotIn(workspace, accountSlug, SOP_WORKSPACE_SPACE_TYPES);
 
     const accountId = workspace.account.id as string;
     const db = getSopsDb();
@@ -255,4 +263,57 @@ export async function assertSopsSchemaAvailable(): Promise<boolean> {
   if (!error) return true;
   const msg = (error.message ?? '').toLowerCase();
   return !(msg.includes('schema') || msg.includes('does not exist'));
+}
+
+/** Active assist-mode run for the current user in this account (widget). */
+export async function loadActiveAssistRunForUser(params: {
+  accountId: string;
+  userId: string;
+}): Promise<SopActiveAssistRun | null> {
+  const db = getSopsDb();
+
+  const { data: run, error } = await db
+    .from('runs')
+    .select('*')
+    .eq('account_id', params.accountId)
+    .eq('status', 'active')
+    .eq('assist_mode', true)
+    .or(`started_by.eq.${params.userId},assigned_to.eq.${params.userId}`)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!run) return null;
+
+  const mine = run as SopRunRow;
+
+  const [{ data: playbook }, { data: steps }] = await Promise.all([
+    db.from('playbooks').select('*').eq('id', mine.playbook_id).maybeSingle(),
+    db
+      .from('run_step_states')
+      .select('*')
+      .eq('run_id', mine.id)
+      .order('position', { ascending: true }),
+  ]);
+
+  const playbookStepIds = ((steps ?? []) as SopRunStepRow[])
+    .map((s) => s.playbook_step_id)
+    .filter((id): id is string => Boolean(id));
+
+  let playbookSteps: SopPlaybookStepRow[] = [];
+  if (playbookStepIds.length > 0) {
+    const { data: pbSteps } = await db
+      .from('playbook_steps')
+      .select('*')
+      .in('id', playbookStepIds);
+    playbookSteps = (pbSteps ?? []) as SopPlaybookStepRow[];
+  }
+
+  return {
+    run: mine,
+    playbook: (playbook as SopPlaybookRow | null) ?? null,
+    steps: (steps ?? []) as SopRunStepRow[],
+    playbookSteps,
+  };
 }

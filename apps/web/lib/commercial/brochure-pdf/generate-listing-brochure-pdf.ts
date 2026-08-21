@@ -2,6 +2,7 @@ import 'server-only';
 
 import { buildBrochureDocument } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import type {
+  BrochureDisplayOptions,
   BrochureDocument,
   BrochureOrientation,
   BrochureTemplateId,
@@ -15,6 +16,7 @@ export async function generateListingBrochurePdf(input: {
   orientation: BrochureOrientation;
   templateId: BrochureTemplateId;
   document?: BrochureDocument | null;
+  display?: Partial<BrochureDisplayOptions>;
 }): Promise<{
   bytes: Uint8Array;
   document: BrochureDocument;
@@ -30,6 +32,7 @@ export async function generateListingBrochurePdf(input: {
     buildBrochureDocument(data, {
       orientation: input.orientation,
       templateId: input.templateId,
+      display: input.display,
     });
 
   const bytes = await renderBrochurePdf(document, data);

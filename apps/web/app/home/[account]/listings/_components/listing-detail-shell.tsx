@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 import {
   Activity,
+  Archive,
   Camera,
+  ChevronDown,
+  Copy,
   Edit2,
+  Eye,
   FileText,
   LayoutDashboard,
   MapPin,
@@ -17,7 +21,25 @@ import {
   Users,
 } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
+import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -29,6 +51,10 @@ import {
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
+import {
+  archiveListing,
+  duplicateListing,
+} from '../_lib/server/server-actions';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingSectorPills } from './listing-sector-pills';
@@ -91,6 +117,8 @@ export function ListingDetailShell({
   const router = useRouter();
   const [listing, setListing] = useState(initialListing);
   const [editOpen, setEditOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     setListing(initialListing);
@@ -102,16 +130,126 @@ export function ListingDetailShell({
 
   const isOverview = pathname === base || pathname === `${base}/`;
   const address = listingAddress(listing);
+  const isArchived = listing.status === 'withdrawn';
 
-  const editButton = (
-    <Button
-      type="button"
-      className={workspaceBtnPrimaryMd}
-      onClick={() => setEditOpen(true)}
-    >
-      <Edit2 className="h-4 w-4" />
-      Edit
-    </Button>
+  const onDuplicate = () => {
+    startTransition(async () => {
+      const toastId = toast.loading('Duplicating disposal…');
+      try {
+        const copy = await duplicateListing({
+          listingId: listing.id,
+          accountId,
+          accountSlug,
+        });
+        toast.success('Disposal duplicated', { id: toastId });
+        router.push(
+          pathsConfig.app.accountListingDetail
+            .replace('[account]', accountSlug)
+            .replace('[id]', copy.id),
+        );
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not duplicate',
+          { id: toastId },
+        );
+      }
+    });
+  };
+
+  const onArchive = () => {
+    startTransition(async () => {
+      const toastId = toast.loading('Archiving disposal…');
+      try {
+        const updated = await archiveListing({
+          listingId: listing.id,
+          accountId,
+        });
+        setListing(updated);
+        setArchiveOpen(false);
+        toast.success('Disposal archived (withdrawn)', { id: toastId });
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not archive',
+          { id: toastId },
+        );
+      }
+    });
+  };
+
+  const headerActions = (
+    <div className="flex shrink-0 items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            className="inline-flex items-center gap-1.5"
+          >
+            Actions
+            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="w-52 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+        >
+          <DropdownMenuItem asChild className="gap-2">
+            <Link href={`${base}/preview`}>
+              <Eye className="h-3.5 w-3.5" />
+              Preview
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="gap-2">
+            <Link href={`${base}/availability`}>
+              <FileText className="h-3.5 w-3.5" />
+              Availability
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="gap-2">
+            <Link href={`${base}/management`}>
+              <Megaphone className="h-3.5 w-3.5" />
+              Publishing
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="gap-2"
+            disabled={pending}
+            onSelect={(event) => {
+              event.preventDefault();
+              onDuplicate();
+            }}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Duplicate
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="gap-2 text-rose-400 focus:text-rose-400"
+            disabled={pending || isArchived}
+            onSelect={(event) => {
+              event.preventDefault();
+              setArchiveOpen(true);
+            }}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            {isArchived ? 'Archived' : 'Archive'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Button
+        type="button"
+        className={workspaceBtnPrimaryMd}
+        onClick={() => setEditOpen(true)}
+      >
+        <Edit2 className="h-4 w-4" />
+        Edit
+      </Button>
+    </div>
   );
 
   return (
@@ -120,13 +258,13 @@ export function ListingDetailShell({
         <OverviewHeader
           listing={listing}
           address={address}
-          editButton={editButton}
+          headerActions={headerActions}
         />
       ) : (
         <CompactHeader
           listing={listing}
           address={address}
-          editButton={editButton}
+          headerActions={headerActions}
         />
       )}
 
@@ -141,6 +279,15 @@ export function ListingDetailShell({
               <Link
                 key={item.key}
                 href={href}
+                data-tour={
+                  item.key === 'marketing'
+                    ? 'sop-listing-marketing'
+                    : item.key === 'media'
+                      ? 'sop-listing-media'
+                      : item.key === 'management'
+                        ? 'sop-listing-portal'
+                        : undefined
+                }
                 className={cn(
                   'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
                   active
@@ -170,6 +317,30 @@ export function ListingDetailShell({
           router.refresh();
         }}
       />
+
+      <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive this disposal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sets status to Withdrawn and takes it off market. You can change
+              the status again later from Edit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              onClick={(event) => {
+                event.preventDefault();
+                onArchive();
+              }}
+            >
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -177,11 +348,11 @@ export function ListingDetailShell({
 function CompactHeader({
   listing,
   address,
-  editButton,
+  headerActions,
 }: {
   listing: CommercialListing;
   address: string;
-  editButton: React.ReactNode;
+  headerActions: React.ReactNode;
 }) {
   const updatedLabel = formatUpdatedAt(listing.updatedAt);
 
@@ -203,7 +374,7 @@ function CompactHeader({
           </p>
         ) : null}
       </div>
-      <div className="shrink-0">{editButton}</div>
+      {headerActions}
     </div>
   );
 }
@@ -211,11 +382,11 @@ function CompactHeader({
 function OverviewHeader({
   listing,
   address,
-  editButton,
+  headerActions,
 }: {
   listing: CommercialListing;
   address: string;
-  editButton: React.ReactNode;
+  headerActions: React.ReactNode;
 }) {
   const updatedLabel = formatUpdatedAt(listing.updatedAt);
 
@@ -251,7 +422,7 @@ function OverviewHeader({
                 <span>{address || 'No address'}</span>
               </p>
             </div>
-            <div className="shrink-0">{editButton}</div>
+            {headerActions}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span

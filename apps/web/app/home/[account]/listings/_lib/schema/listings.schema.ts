@@ -14,8 +14,15 @@ export const ListListingsSchema = z.object({
   accountId: z.string().uuid(),
   status: z.enum(LISTING_STATUSES).optional(),
   search: z.string().trim().max(200).optional(),
+  /** Filter to a workspace office (`account_branches.id`). Omit for all offices. */
+  accountBranchId: z.string().uuid().optional(),
   page: z.number().int().min(1).optional(),
   pageSize: z.number().int().min(1).max(100).optional(),
+});
+
+export const CountUnassignedListingsSchema = z.object({
+  accountId: z.string().uuid(),
+  status: z.enum(LISTING_STATUSES).optional(),
 });
 
 export const GetListingSchema = z.object({
@@ -171,6 +178,17 @@ export const UpdateListingSchema = CreateListingSchema.omit({
   });
 
 export const DeleteListingSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+});
+
+export const DuplicateListingSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+});
+
+export const ArchiveListingSchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
 });

@@ -265,7 +265,10 @@ export function ListingMarketingEditor({
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+    <div
+      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]"
+      data-tour="sop-listing-marketing"
+    >
       <div className="space-y-6">
         <div className="flex flex-wrap justify-end gap-2">
           <Button
@@ -816,9 +819,14 @@ export function ListingMarketingEditor({
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-[var(--workspace-shell-text)]/70">
-                Brochure share
-              </span>
+              <div className="min-w-0">
+                <span className="text-sm text-[var(--workspace-shell-text)]/70">
+                  Online brochure share
+                </span>
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Public Ozer slideshow link — not a portal listing.
+                </p>
+              </div>
               <Switch
                 checked={listing.brochureShareEnabled}
                 disabled={brochurePending}
@@ -844,13 +852,23 @@ export function ListingMarketingEditor({
             </div>
 
             <div className="border-t border-[var(--workspace-shell-border)] pt-4">
-              <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+              <p className="mb-1 text-sm font-medium text-[var(--workspace-shell-text)]">
                 PDF brochure
+              </p>
+              <p className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                Preview, publish to Media for portals, or upload an external PDF.
               </p>
               <ListingBrochureDownload
                 listingId={listing.id}
                 accountId={accountId}
                 accountSlug={accountSlug}
+                listingName={listing.name}
+                listingAddress={[listing.town, listing.postcode]
+                  .filter(Boolean)
+                  .join(', ')}
+                coverUrl={listing.coverUrl}
+                defaultShowRent={!listing.hideRentFromMarketing}
+                defaultShowPrice={!listing.hidePriceFromMarketing}
                 compact
               />
             </div>

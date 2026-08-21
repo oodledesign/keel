@@ -41,6 +41,9 @@ export type BrochureListing = {
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
   hidePriceFromMarketing: boolean;
+  serviceChargePerSqft: number | null;
+  ratesPayablePerSqft: number | null;
+  estateChargePerSqft: number | null;
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   epcBand: string | null;
