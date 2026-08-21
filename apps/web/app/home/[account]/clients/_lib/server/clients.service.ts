@@ -14,6 +14,7 @@ import {
   normalizeContactRole,
 } from '~/lib/clients/contact-roles';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
+import { recordCommercialAccountEvent } from '~/lib/commercial/account-events';
 import { Database } from '~/lib/database.types';
 import {
   DELIVERY_PROJECT_FILTER,
@@ -468,6 +469,19 @@ class ClientsService {
     if (error) throw mapClientWriteError(error);
     if (!data?.id) return data;
 
+    void recordCommercialAccountEvent(this.client, {
+      accountId: input.accountId,
+      entityType: 'client',
+      entityId: data.id as string,
+      eventType: 'client_created',
+      summary: `Added contact “${displayName}”`,
+      actorUserId: user.id,
+      metadata: {
+        clientType,
+        commercialRole: input.commercial_role ?? null,
+      },
+    });
+
     if (existingContact) {
       const { error: linkError } = await this.adminDb
         .from('client_contacts')
@@ -733,6 +747,20 @@ class ClientsService {
       });
     }
 
+    const label =
+      (data.display_name as string | null)?.trim() ||
+      (data.company_name as string | null)?.trim() ||
+      'contact';
+
+    void recordCommercialAccountEvent(this.client, {
+      accountId: input.accountId,
+      entityType: 'client',
+      entityId: input.clientId,
+      eventType: 'client_updated',
+      summary: `Updated contact “${label}”`,
+      actorUserId: user.id,
+    });
+
     return data;
   }
 
@@ -857,7 +885,18 @@ class ClientsService {
    * client can be restored from the archive list.
    */
   async deleteClient(params: DeleteClientInput) {
-    await this.ensureUserAndPermission(params.accountId, 'clients.edit');
+    const user = await this.ensureUserAndPermission(
+      params.accountId,
+      'clients.edit',
+    );
+
+    const existing = (await this.getClient({
+      accountId: params.accountId,
+      clientId: params.clientId,
+    })) as {
+      display_name?: string | null;
+      company_name?: string | null;
+    } | null;
 
     const { error } = await this.adminDb
       .from('clients')
@@ -869,10 +908,35 @@ class ClientsService {
       .eq('account_id', params.accountId);
 
     if (error) throw mapClientWriteError(error);
+
+    const label =
+      existing?.display_name?.trim() ||
+      existing?.company_name?.trim() ||
+      'contact';
+
+    void recordCommercialAccountEvent(this.client, {
+      accountId: params.accountId,
+      entityType: 'client',
+      entityId: params.clientId,
+      eventType: 'client_archived',
+      summary: `Archived contact “${label}”`,
+      actorUserId: user.id,
+    });
   }
 
   async restoreClient(params: RestoreClientInput) {
-    await this.ensureUserAndPermission(params.accountId, 'clients.edit');
+    const user = await this.ensureUserAndPermission(
+      params.accountId,
+      'clients.edit',
+    );
+
+    const existing = (await this.getClient({
+      accountId: params.accountId,
+      clientId: params.clientId,
+    })) as {
+      display_name?: string | null;
+      company_name?: string | null;
+    } | null;
 
     const { error } = await this.adminDb
       .from('clients')
@@ -884,6 +948,20 @@ class ClientsService {
       .eq('account_id', params.accountId);
 
     if (error) throw mapClientWriteError(error);
+
+    const label =
+      existing?.display_name?.trim() ||
+      existing?.company_name?.trim() ||
+      'contact';
+
+    void recordCommercialAccountEvent(this.client, {
+      accountId: params.accountId,
+      entityType: 'client',
+      entityId: params.clientId,
+      eventType: 'client_restored',
+      summary: `Restored contact “${label}”`,
+      actorUserId: user.id,
+    });
   }
 
   /**

@@ -1,0 +1,786 @@
+{
+  "generatedAt": "2026-08-21T12:59:51.877Z",
+  "chunkCount": 130,
+  "chunks": [
+    {
+      "id": "42c411100896",
+      "path": "/",
+      "title": "Introduction",
+      "text": "feature guides from the sidebar as you need them.\n\nApp URLs in the guides use:\n\n- Personal — /app/... (no account slug)\n- Business and Commercial property — /app/[account]/... where [account] is your team workspace slug\n\nOutside the product docs\n\n- Product site: ozer.so\n- Pricing: ozer.so/pricing\n- Support: hello@ozer.so"
+    },
+    {
+      "id": "8b0e6ad354b1",
+      "path": "/",
+      "title": "Introduction",
+      "text": "Introduction\n\nOzer documentation is organised by workspace type. Pick the kind of workspace you use — the sidebar and guides will only show what’s relevant for that product.\n\nUse the Workspace dropdown at the top of the sidebar at any time to switch.\n\nChoose your workspace\n\n| Workspace | Best for | Start here |\n| --- | --- | --- |\n| Personal | Your free hub — home, tasks, planner, notes, people, and personal email | Personal overview |\n| Business | Studio / agency CRM — clients, pipeline, projects, invoices, portals | Business overview |\n| Commercial property | Agency disposals, WIP, requirements, viewings, HoTs, and portal publishing | Property overview |\n\nHow docs are organised\n\n1. Open this site (or follow a product Help link).\n2. Choose a workspace in the sidebar dropdown (or use a card above).\n3. Follow Getting started, then open feature guides from the sidebar as you need them.\n\nApp URLs in the guides use:\n\n- Personal — /app/... (no account slug)"
+    },
+    {
+      "id": "42e000a9f219",
+      "path": "/commercial-property",
+      "title": "Ozer Commercial property",
+      "text": "Ozer Commercial property\n\nOzer Commercial property is the Workspace OS for commercial agency teams — disposals, WIP instructions, acquisition requirements, viewings, HoTs, and portal publishing in one place.\n\nThis documentation is written for UK commercial agents and office managers. App URLs use your workspace slug: /app/[account]/….\n\nWho it’s for\n\n- Sole practitioners and micro agencies running occupational and investment disposals\n- Regional commercial desks that need shared WIP, requirements, and contacts\n- Teams that publish to a Property Hive website and major UK portals\n\nWhat you get\n\n| Area | In-app path | Docs |\n| --- | --- | --- |\n| Disposals | /app/[account]/listings | Disposals |\n| WIP | /app/[account]/pipeline | WIP pipeline |\n| Contacts | /app/[account]/clients | Contacts |\n| Requirements | /app/[account]/pipeline?view=requirements | Requirements |\n| Viewings | /app/[account]/viewings | Viewings |\n| HoTs / Proposals | /app/[account]/proposals | HoTs, proposals & sales |"
+    },
+    {
+      "id": "c06786d37f3a",
+      "path": "/commercial-property",
+      "title": "Ozer Commercial property",
+      "text": "ewings | /app/[account]/viewings | Viewings |\n| HoTs / Proposals | /app/[account]/proposals | HoTs, proposals & sales |\n| Sales register | /app/[account]/leases | HoTs, proposals & sales |\n| Insights | /app/[account]/commercial-reports | Covered under WIP and disposals workflows |\n| Website & portals | /app/[account]/commercial-publishing | Website & portals |\n| Tasks | /app/[account]/tasks | Workspace navigation |\n| Notes | /app/[account]/notes | Workspace navigation |\n| Team | /app/[account]/members | Invite your team |\n\nStart here\n\n1. Getting started — create your account and first commercial workspace\n2. Workspace navigation — learn the commercial sidebar\n3. Create a disposal — open your first listing\n4. Configure Website & portals when you are ready to publish\n\nProduct overview: ozer.so · Pricing: ozer.so/pricing"
+    },
+    {
+      "id": "2f834ab6ae01",
+      "path": "/commercial-property/circulation",
+      "title": "Circulation",
+      "text": "orm).\n2. Enable the public form and copy the embed snippet / public URL.\n3. Link your privacy notice URL on the form.\n4. Submissions arrive as requirements with source websiteembed and lawful basis websiterequirement_form.\n\nPublic form URL pattern: /share/requirement-form/[token].\n\nCirculate a disposal\n\n1. Open the disposal → Interest or Management.\n2. Choose Circulate.\n3. Review suggested matching requirements (score + contact).\n4. Deselect anyone who should not receive this send.\n5. Confirm — Ozer emails via Amazon SES, sets details_sent where applicable, and logs the send.\n\nTransactional thank-you emails after form submit still go through ZeptoMail.\n\nPreferences & suppressions\n\n- Unsubscribe is per workspace + email for purpose matching_disposals.\n- Hard bounces and complaints are suppressed and excluded from future circulations.\n- Updating a requirement never re-subscribes an unsubscribed address.\n\nSES checklist"
+    },
+    {
+      "id": "8167c60c705f",
+      "path": "/commercial-property/circulation",
+      "title": "Circulation",
+      "text": "xcluded from future circulations.\n- Updating a requirement never re-subscribes an unsubscribed address.\n\nSES checklist\n\n- AWSREGION / AWSACCESSKEYID / AWSSECRETACCESS_KEY configured for the app\n- Sending domain verified in SES\n- Production access approved (see compliance)\n- Workspace From address uses that verified domain"
+    },
+    {
+      "id": "d0bc3db31bdb",
+      "path": "/commercial-property/circulation",
+      "title": "Circulation",
+      "text": "Circulation\n\nCirculation connects requirement intake on your website with matching disposal emails to applicants who asked to be kept informed.\n\nOverview\n\n flowchart LR\n embed[Website embed]\n ozer[Ozer requirements]\n match[Match to disposal]\n ses[Amazon SES]\n embed --> ozer --> match --> ses\n\n1. Publish a requirement form embed (tokenised).\n2. Submissions create or update requirements and marketing preferences.\n3. On a disposal, open Circulate, review matches, and send.\n4. Applicants unsubscribe via the link in every email.\n\nCompliance background: Circulation & email compliance.\n\nSES setup checklist for engineers: apps/web/lib/commercial/circulation/SES_CHECKLIST.md in the monorepo.\n\nSet up the website embed\n\n1. Open Website & portals or Requirements settings (Circulation form).\n2. Enable the public form and copy the embed snippet / public URL.\n3. Link your privacy notice URL on the form.\n4."
+    },
+    {
+      "id": "16b3b64808b0",
+      "path": "/commercial-property/circulation/compliance",
+      "title": "Circulation & email compliance",
+      "text": "ction access for unrestricted sending. Re-apply with:\n\n- Public company/product website (not behind auth or bot blocks)\n- Use case text: UK B2B commercial property applicants who registered requirements; opt-out on every email; no purchased lists\n- Live privacy policy + unsubscribe URL\n- Verified sending domain (SPF/DKIM)\n\nSee also: Circulation product guide."
+    },
+    {
+      "id": "7e58fbae8a8c",
+      "path": "/commercial-property/circulation/compliance",
+      "title": "Circulation & email compliance",
+      "text": "processor for marketing/circulation delivery |\n| Zoho ZeptoMail | Sub-processor for transactional product email only |\n\nUpdate the DPA / data-processing inventory when enabling circulation: list SES for marketing sends; do not imply Zepto covers blasts.\n\nProduct rules (enforced in Ozer)\n\n1. Upserting a requirement must not re-subscribe someone who unsubscribed.\n2. Circulation recipients are filtered to marketing_status = subscribed (and not suppressed).\n3. Imported historical lists default to lawfulbasis = importedhistorical and should not circulate until the agency attests or re-permissions.\n4. Every SES circulation message includes List-Unsubscribe and a branded unsubscribe page scoped to that workspace.\n5. Agents preview the recipient set and confirm before send (audit log stores who/what/when).\n\nSES production access\n\nAmazon SES requires production access for unrestricted sending. Re-apply with:\n\n- Public company/product website (not behind auth or bot blocks)"
+    },
+    {
+      "id": "80dee397d8b8",
+      "path": "/commercial-property/circulation/compliance",
+      "title": "Circulation & email compliance",
+      "text": "Circulation & email compliance\n\nThis is an internal product brief for Ozer Commercial property. It is not legal advice. Agencies should have UK privacy counsel review soft opt-in copy and their own privacy notices.\n\nWhat “circulation” is\n\n1. Occupiers / investors register a requirement (website embed or CRM).\n2. Agents match a disposal to active requirements.\n3. Agents circulate particulars by email to that matching set.\n4. Recipients can unsubscribe from matching-opportunity emails for that agency.\n\nEmail classification\n\n| Message | Class | Pipe |\n| --- | --- | --- |\n| “Thanks — we received your requirement” | Transactional / service | ZeptoMail |\n| One-to-one reply about a specific enquiry / listing | Transactional / service | ZeptoMail |\n| “New letting that may match your registered requirement” (list) | Marketing (solicited / soft opt-in or LI) | Amazon SES |\n| General newsletter / market commentary | Marketing (usually consent) | Amazon SES |"
+    },
+    {
+      "id": "91511ade9c56",
+      "path": "/commercial-property/circulation/compliance",
+      "title": "Circulation & email compliance",
+      "text": "oft opt-in or LI) | Amazon SES |\n| General newsletter / market commentary | Marketing (usually consent) | Amazon SES |\n\nHaving a lawful basis does not make a circulation blast transactional. ZeptoMail’s terms forbid marketing/bulk; do not send circulation through Zepto.\n\nLawful basis (UK B2B PECR + UK GDPR)\n\nFor B2B commercial applicants, PECR is more permissive than consumer marketing, but you still need:\n\n1. Clear sender identity — agency brand From / body (not “via Ozer” alone).\n2. Easy opt-out on every circulation email (unsubscribe link + honour promptly).\n3. A documented basis, typically:\n - Soft opt-in / solicited: they submitted the requirement form asking to be notified of matching opportunities; or\n - Legitimate interests + balancing test for existing business contacts (use the platform LIA template / agency LIA); or\n - Consent where soft opt-in does not apply (cold, bought, or residential).\n\nNot permission: “their email is already in the CRM.”"
+    },
+    {
+      "id": "eb548acf8dd8",
+      "path": "/commercial-property/circulation/compliance",
+      "title": "Circulation & email compliance",
+      "text": "where soft opt-in does not apply (cold, bought, or residential).\n\nNot permission: “their email is already in the CRM.”\n\nSuggested soft opt-in notice (B2B — counsel to approve)\n\n> By submitting this form you ask {Agency} to store your requirement and email you commercial property opportunities that may match. You can unsubscribe at any time. See our privacy notice.\n\nPurpose limitation\n\nCirculation emails should only promote matching disposals for the purpose matching_disposals. Do not silently expand to newsletters without a separate preference / consent.\n\nRoles\n\n| Party | Role |\n| --- | --- |\n| Agency (workspace) | Controller of applicant data and circulation content |\n| Ozer | Processor hosting CRM, embed, and SES send on the agency’s behalf |\n| Amazon SES | Sub-processor for marketing/circulation delivery |\n| Zoho ZeptoMail | Sub-processor for transactional product email only |"
+    },
+    {
+      "id": "33fe5469326d",
+      "path": "/commercial-property/contacts",
+      "title": "Contacts",
+      "text": "Contacts\n\nContacts are the commercial CRM records for people and organisations you work with. Open them at /app/[account]/clients (sidebar label: Contacts).\n\nContact roles\n\nCommon commercial roles include:\n\n1. Landlord — owner / disposing party\n2. Tenant — occupational occupier / applicant\n3. Investor — investment buyer or seller side\n4. Solicitor — legal counsel on a deal\n5. Agent — co-agent or introducing agent\n\nCreate a contact\n\n1. Go to /app/[account]/clients.\n2. Choose New contact (or the create action on the page).\n3. Enter name, company, email, phone, and role.\n4. Save the record.\n5. Link the contact from disposals (Management parties), requirements, viewings, or interest as needed.\n\nUse contacts across the desk\n\n1. On a disposal’s Management tab, attach landlords and other parties from Contacts.\n2. When logging a requirement, select the applicant contact first.\n3. When booking a viewing, choose the attendee contacts and the disposal.\n4."
+    },
+    {
+      "id": "78643937cd43",
+      "path": "/commercial-property/contacts",
+      "title": "Contacts",
+      "text": "rement, select the applicant contact first.\n3. When booking a viewing, choose the attendee contacts and the disposal.\n4. Keep solicitor details on the contact so HoTs / Proposals can reference the right people.\n5. Prefer updating one canonical contact over duplicating records for the same person.\n\nHousekeeping\n\n1. Merge or rename duplicates when two negotiators create the same contact.\n2. Note preferred communication channel (email / phone) in the contact notes.\n3. Respect support vs billable limits: editing contacts may require a billable seat depending on your workspace permissions.\n\nNext common flows: Requirements, Viewings, Disposals."
+    },
+    {
+      "id": "033e3d03549c",
+      "path": "/commercial-property/disposals",
+      "title": "Disposals",
+      "text": "ates — see Website & portals.\n3. Log viewings from /app/[account]/viewings and link them to the disposal and contact.\n4. Progress interest statuses (new → viewing → offer → agreed) on the listing Interest tab.\n5. When the deal completes, set status to Let or Sold, update WIP to Completed / Exchanged, and record the outcome on the Sales register as needed.\n6. If the instruction dies, set Withdrawn (or Fallen through on WIP) so Insights stay honest.\n\nFilters and bulk hygiene\n\n1. Filter the disposals list by status (draft, instructed, marketing, under offer, let, sold, withdrawn).\n2. Filter by disposal type when reviewing to-let vs sale stock.\n3. Prefer withdrawing rather than deleting when audit history matters.\n\nListing tabs in detail: Listing detail."
+    },
+    {
+      "id": "216b40b29bdb",
+      "path": "/commercial-property/disposals",
+      "title": "Disposals",
+      "text": "Create a disposal\n\n1. Go to /app/[account]/listings.\n2. Choose New disposal (or the create action shown on the page).\n3. Enter the address, disposal type (to let / for sale / investment), and key size / tenure fields you have.\n4. Save as Draft, then open the listing detail.\n5. On Management, capture instruction details, landlords / parties, assignment, and co-agents.\n6. Move status to Instructed when terms are agreed.\n7. Complete Marketing and Media, then move to Marketing when you are ready to publish.\n8. Track interest on the Interest tab and keep Availability accurate as units change.\n\nMove a disposal through the market\n\n1. Keep WIP in sync: marketing disposals are usually Current Instructions on /app/[account]/pipeline — see WIP pipeline.\n2. When status becomes Marketing, ensure Website & portals credentials are set if you expect Property Hive or portal updates — see Website & portals.\n3. Log viewings from /app/[account]/viewings and link them to the disposal and contact.\n4."
+    },
+    {
+      "id": "dda18470b4b7",
+      "path": "/commercial-property/disposals",
+      "title": "Disposals",
+      "text": "Disposals\n\nDisposals are your commercial listings — to let, for sale, or investment. Open the list at /app/[account]/listings.\n\nYou need a billable seat to create or edit disposals. Support seats can view.\n\nDisposal types\n\n| Type | Typical use |\n| --- | --- |\n| To let | Occupational letting |\n| For sale | Occupational / freehold sale |\n| Investment | Investment disposal |\n\nStatus lifecycle\n\nStatuses move a disposal from draft through marketing to let, sold, or withdrawn:\n\n1. Draft — capture address and basics before instruction is confirmed\n2. Instructed — terms of engagement in place; not yet on the market\n3. Marketing — live for marketing / portals (when publishing is configured)\n4. Under offer — negotiation in progress\n5. Let or Sold — completed outcome\n6. Withdrawn — off the market without a deal\n\nCreate a disposal\n\n1. Go to /app/[account]/listings.\n2. Choose New disposal (or the create action shown on the page).\n3."
+    },
+    {
+      "id": "088adb399710",
+      "path": "/commercial-property/disposals/listing-detail",
+      "title": "Listing detail",
+      "text": "her tabs.\n4. Switch tabs from the listing nav — do not create a second disposal for the same instruction.\n\nMarketing\n\n1. Open Marketing.\n2. Complete headline particulars, description, and any AI-assisted draft fields you use.\n3. Align marketing text with the physical Availability schedule before going live.\n4. Save, then move listing status to Marketing only when content and media are ready.\n\nMedia\n\n1. Open Media.\n2. Upload public images and documents intended for brochures and portals.\n3. Set a primary image so list views and feeds look correct.\n4. Keep sensitive files (keys, reports, solicitor packs) on Management → private media, not here.\n\nInterest\n\n1. Open Interest.\n2. Add or attach interest from contacts and requirements.\n3. Progress each row through the interest schedule (for example new → viewing arranged → viewed → offer → under offer → agreed).\n4. Cross-check with Viewings so diary and interest stay aligned.\n5."
+    },
+    {
+      "id": "1c7d46bd916f",
+      "path": "/commercial-property/disposals/listing-detail",
+      "title": "Listing detail",
+      "text": "Listing detail\n\nOpen any disposal from /app/[account]/listings to reach /app/[account]/listings/[id]. The left (or top, on mobile) nav groups the work into these tabs:\n\n| Tab | Path suffix | Purpose |\n| --- | --- | --- |\n| Overview | (base) | Snapshot of status, address, and key metrics |\n| Marketing | /marketing | Particulars, marketing copy, and public messaging |\n| Media | /media | Public photos, floorplans, and brochure assets |\n| Interest | /interest | Interest schedule against contacts / requirements |\n| Availability | /availability | Units, floors, and availability schedule |\n| Management | /management | Instruction, assignment, parties, private media, portal publications |\n\nOverview\n\n1. Open the disposal from Disposals.\n2. Confirm address, disposal type, and status badge.\n3. Use the summary widgets (for example upcoming viewings) as a jump-off point into other tabs.\n4. Switch tabs from the listing nav — do not create a second disposal for the same instruction.\n\nMarketing\n\n1."
+    },
+    {
+      "id": "322ecbdfb158",
+      "path": "/commercial-property/disposals/listing-detail",
+      "title": "Listing detail",
+      "text": "eview portal / Property Hive publication status for this listing.\n\nYou need a billable seat to mutate management fields. Support seats remain view / notes limited — see Seats & billing."
+    },
+    {
+      "id": "42a6a27e8d76",
+      "path": "/commercial-property/disposals/listing-detail",
+      "title": "Listing detail",
+      "text": "g arranged → viewed → offer → under offer → agreed).\n4. Cross-check with Viewings so diary and interest stay aligned.\n5. When interest becomes a serious negotiation, also update WIP / HoTs as appropriate.\n\nAvailability\n\n1. Open Availability.\n2. Record total size or break down floor-by-floor / unit-by-unit.\n3. Mark units available, under offer, or let/sold so marketing matches stock.\n4. Revisit after each letting or sales completion.\n\nManagement\n\n1. Open Management.\n2. Complete instruction fields (terms of engagement, control, sizing accuracy, and related attributes).\n3. Assign internal negotiator / team ownership.\n4. Add co-agents when jointly instructed.\n5. Attach landlord and other parties from Contacts.\n6. Capture advanced attributes (for example BREEAM) when required for marketing or portals.\n7. Upload private media that must not publish.\n8. Review portal / Property Hive publication status for this listing.\n\nYou need a billable seat to mutate management fields."
+    },
+    {
+      "id": "efe0009b25a2",
+      "path": "/commercial-property/getting-started",
+      "title": "Getting started",
+      "text": "Getting started\n\nGet from signup to a working commercial agency workspace in a few minutes.\n\nSteps\n\n1. Create your account\n2. Set up your first commercial workspace\n3. Invite teammates and choose billable vs support seats\n4. Open the sidebar and confirm you can see Disposals, WIP, Contacts, and Requirements\n5. Create a draft disposal on /app/[account]/listings, then explore listing detail\n\nAfter setup\n\nOnce you are in:\n\n1. Read Workspace navigation\n2. Work through Disposals and WIP\n3. Configure Website & portals when credentials are ready\n4. Review Seats & billing before hiring extra negotiators"
+    },
+    {
+      "id": "3c728e0b1b95",
+      "path": "/commercial-property/getting-started/create-account",
+      "title": "Create your account",
+      "text": "Create your account\n\nSign up at app.ozer.so (or your local app host) with email and password, magic link, or a supported OAuth provider.\n\nSteps\n\n1. Open the app signup page and choose email, magic link, or OAuth.\n2. Enter your details and confirm your email if prompted.\n3. When asked for workspace type / profile, choose Commercial property (not Business / studio).\n4. Complete the short onboarding prompts for name, agency identity, and timezone.\n5. Land in your personal hub, then open or create the team workspace you will use for agency data.\n\nAfter signup\n\n- Your personal account is created automatically\n- Commercial agency work belongs on a team workspace with the commercial property profile\n- Confirm email before inviting colleagues if the product asks you to\n\nNeed help during onboarding? Use Support in the product, or email hello@ozer.so.\n\nNext: First workspace."
+    },
+    {
+      "id": "33988b30fc9e",
+      "path": "/commercial-property/getting-started/first-workspace",
+      "title": "First workspace",
+      "text": "First workspace\n\nCommercial property data lives on a team workspace whose profile is commercial property. The URL slug becomes [account] in every path below /app/[account]/….\n\nSteps\n\n1. Create or open the team workspace you will use for the agency (for example /app/bracketts).\n2. Confirm the workspace profile is Commercial property so the sidebar shows Disposals, WIP, Requirements, Viewings, and related items.\n3. Set the workspace name and branding so teammates recognise the space.\n4. Set timezone for viewing schedules and reminders.\n5. Open Team at /app/[account]/members and check you are a billable seat before mutating listings or publishing.\n6. Optionally open Website & portals at /app/[account]/commercial-publishing and leave credentials blank until you are ready.\n\nWhat to configure first\n\n| Setting | Why it matters |\n| --- | --- |\n| Workspace name | Shown to members and in invitations |\n| Timezone | Viewings and planner times |"
+    },
+    {
+      "id": "45e68e00eb18",
+      "path": "/commercial-property/getting-started/first-workspace",
+      "title": "First workspace",
+      "text": "ters |\n| --- | --- |\n| Workspace name | Shown to members and in invitations |\n| Timezone | Viewings and planner times |\n| Billable seats | Negotiators who create and edit disposals |\n| Support seats | View-only / notes help without editing stages |\n| Portal credentials | Property Hive, Rightmove, EACH / EG when publishing |\n\nYou can change modules later under workspace settings. See Workspace for personal vs team behaviour, and Seats & billing for seat types.\n\nNext: Invite your team."
+    },
+    {
+      "id": "149d6e5c6597",
+      "path": "/commercial-property/getting-started/invite-team",
+      "title": "Invite your team",
+      "text": "Invite your team\n\nOn a commercial team workspace, invite members from Team at /app/[account]/members.\n\nSteps\n\n1. Open /app/[account]/members.\n2. Choose Invite (or the equivalent invite action).\n3. Enter the colleague’s email address.\n4. Pick a workspace role appropriate to their job (owner/admin for setup; member for day-to-day agency work).\n5. Choose a seat kind:\n - Billable — can create and edit disposals, move WIP/requirement stages, and configure publishing (subject to plan limits).\n - Support — can view and add notes/activity; cannot mutate stages, disposals, or publishing.\n6. Send the invitation and ask them to accept from their email.\n7. After they join, ask them to sign out and back in if menus look stale.\n\nTips\n\n1. Start with billable owners/admins for setup, then invite negotiators as billable seats.\n2. Use free support seats for PAs, trainees, or viewers within your plan’s allowance.\n3."
+    },
+    {
+      "id": "e3bf0984887c",
+      "path": "/commercial-property/getting-started/invite-team",
+      "title": "Invite your team",
+      "text": "negotiators as billable seats.\n2. Use free support seats for PAs, trainees, or viewers within your plan’s allowance.\n3. Portal publishing (Rightmove / EACH / EG) needs at least two billable seats — see Seats & billing.\n4. Keep personal life CRM items in your personal account; agency contacts and instructions stay on the commercial workspace.\n\nDetailed seat pricing and allowances: Seats & billing."
+    },
+    {
+      "id": "a98e88e86486",
+      "path": "/commercial-property/proposals-sales",
+      "title": "HoTs, proposals & sales",
+      "text": "HoTs / proposal record.\n2. Move WIP to Fallen through.\n3. Revert Interest status (withdrawn / lost) on the disposal.\n4. Leave the disposal Marketing or Withdrawn depending on whether stock is still available.\n5. Keep Requirements on Actively Searching or Withdrawn as the applicant decides.\n\nRelated: WIP pipeline, Disposals."
+    },
+    {
+      "id": "bf03ed9aeefd",
+      "path": "/commercial-property/proposals-sales",
+      "title": "HoTs, proposals & sales",
+      "text": "HoTs, proposals & sales\n\nCommercial deal paperwork and the completed register live in two places:\n\n| Sidebar | Path | Purpose |\n| --- | --- | --- |\n| HoTs / Proposals | /app/[account]/proposals | Heads of terms, proposals, and deal paperwork in flight |\n| Sales register | /app/[account]/leases | Completed lettings / sales outcomes |\n\nCreate HoTs / a proposal\n\n1. Open /app/[account]/proposals.\n2. Choose New (or the create action on the page).\n3. Link the relevant disposal and contacts (applicant, landlord, solicitor).\n4. Capture headline commercial terms (rent / price, Lease length, incentives, conditions).\n5. Save and share with the appropriate parties outside Ozer if needed (email / PDF).\n6. Move related WIP to Under Offer / Negotiating on /app/[account]/pipeline.\n7. Keep Interest status on the disposal aligned (offer / negotiating / under offer).\n\nProgress a deal to completion\n\n1. Update HoTs as terms change — avoid parallel “final” documents with conflicting numbers.\n2."
+    },
+    {
+      "id": "cdb01104bee4",
+      "path": "/commercial-property/proposals-sales",
+      "title": "HoTs, proposals & sales",
+      "text": "ess a deal to completion\n\n1. Update HoTs as terms change — avoid parallel “final” documents with conflicting numbers.\n2. When solicitors are instructed, note them on Contacts and on the proposal record.\n3. On exchange / completion:\n 1. Move WIP to Completed / Exchanged.\n 2. Set the disposal status to Let or Sold.\n 3. Mark related requirements Fulfilled when this search is done.\n4. Add or update the row on the Sales register at /app/[account]/leases.\n\nSales register\n\n1. Open /app/[account]/leases.\n2. Confirm completed deals appear with correct parties, dates, and disposal references.\n3. Use register status (for example active / expired / terminated on lease-style rows) according to your office convention.\n4. Cross-check Insights so completed volumes match what partners expect.\n\nWhen a deal falls away\n\n1. Update or close the HoTs / proposal record.\n2. Move WIP to Fallen through.\n3. Revert Interest status (withdrawn / lost) on the disposal.\n4."
+    },
+    {
+      "id": "0604c44291b1",
+      "path": "/commercial-property/publishing-portals",
+      "title": "Website & portals",
+      "text": "Website & portals\n\nConfigure agency marketing destinations under Website & portals at /app/[account]/commercial-publishing.\n\nThis page is for commercial publishing only:\n\n1. Property Hive — website sync (XML feed and optional WordPress REST)\n2. Rightmove — UK property portal\n3. EACH / EG — commercial portal publishing (EG / EACH credentials)\n\nIt is not Site Studio. Site Studio is a Business-workspace website builder and is out of scope for commercial property docs.\n\nPrerequisites\n\n1. You hold a billable seat (support seats cannot change publishing settings).\n2. For Rightmove and EACH / EG, the workspace has at least two billable seats. Property Hive website sync remains available on a single billable (Solo) seat.\n3. Disposals you intend to publish are at Marketing (or otherwise on-market per your process) with Marketing and Media completed.\n\nProperty Hive\n\nPreferred path: Kato-compatible XML feed that Property Hive pulls on a schedule.\n\n1. Open /app/[account]/commercial-publishing.\n2."
+    },
+    {
+      "id": "07d4602dcad4",
+      "path": "/commercial-property/publishing-portals",
+      "title": "Website & portals",
+      "text": "[account]/commercial-publishing.\n3. Enter Rightmove branch ID, network ID, username, and secret.\n4. Save credentials.\n5. Ensure the disposal’s marketing data and media meet Rightmove requirements.\n6. Use the page’s test publish control against a marketing listing.\n7. Monitor publication status on the disposal Management tab.\n\nEACH / EG\n\n1. Confirm two or more billable seats.\n2. On /app/[account]/commercial-publishing, open the EACH / EG credentials section.\n3. Enter branch ID, network ID, username, and secret from your EG / EACH account.\n4. Save credentials.\n5. Test publish a marketing disposal.\n6. Check Management → publications for success or error detail.\n\nGoing live checklist\n\n1. Disposal status is Marketing.\n2. Marketing copy and Media (primary image) are complete.\n3. Availability schedule matches what you want portals to show.\n4. Property Hive feed and/or portal credentials are configured.\n5. Test publish succeeds before a bulk go-live.\n6."
+    },
+    {
+      "id": "3c182021750b",
+      "path": "/commercial-property/publishing-portals",
+      "title": "Website & portals",
+      "text": "path: Kato-compatible XML feed that Property Hive pulls on a schedule.\n\n1. Open /app/[account]/commercial-publishing.\n2. Find the Property Hive section.\n3. Click Enable feed (or equivalent) to generate a secret feed URL.\n4. Copy the feed URL.\n5. In Property Hive → Property Import, create or edit an import source and paste the feed URL.\n6. Set Property Hive to pull on your usual cadence (for example every 15 minutes).\n7. Optionally save WordPress REST credentials (site URL, username, application password, office ID) for live push — only if you need REST instead of, or in addition to, the feed.\n8. Run a test publish for a marketing disposal from the test controls on the same page.\n9. If you rotate the feed token, paste the new URL into Property Hive immediately or imports will stop.\n\nRightmove\n\n1. Confirm the workspace has two or more billable seats.\n2. Open /app/[account]/commercial-publishing.\n3. Enter Rightmove branch ID, network ID, username, and secret.\n4. Save credentials.\n5."
+    },
+    {
+      "id": "eceee5ea9ff9",
+      "path": "/commercial-property/publishing-portals",
+      "title": "Website & portals",
+      "text": "show.\n4. Property Hive feed and/or portal credentials are configured.\n5. Test publish succeeds before a bulk go-live.\n6. Off-market status changes (withdrawn / let / sold) are reflected so feeds and portals do not keep live stock incorrectly.\n\nCredentials are stored for the workspace — never commit them to documentation or share secrets in tickets.\n\nRelated: Seats & billing, Disposals."
+    },
+    {
+      "id": "564f32ccc655",
+      "path": "/commercial-property/requirements",
+      "title": "Requirements",
+      "text": "u start matching stock.\n\nMatch requirements to disposals\n\n1. Identify candidate disposals on /app/[account]/listings.\n2. Add interest on the disposal’s Interest tab, linking the requirement / contact.\n3. Book viewings from /app/[account]/viewings.\n4. As negotiations firm up, move the requirement to Under Offer / Negotiating.\n5. When they take space (or buy), set Fulfilled, update the disposal, and close related WIP.\n6. If they stop looking, set Withdrawn so the board stays clean.\n\nWeekly requirements hygiene\n\n1. Review New cards — chase missing briefs within 24–48 hours.\n2. Confirm Actively Searching cards still have a named negotiator.\n3. Cross-check under-offer requirements against HoTs / Proposals.\n4. Use Insights (/app/[account]/commercial-reports) to spot bottlenecks.\n\nBillable seats create and move requirements; support seats cannot mutate stages."
+    },
+    {
+      "id": "b23d332d1f7a",
+      "path": "/commercial-property/requirements",
+      "title": "Requirements",
+      "text": "Requirements\n\nRequirements capture what occupiers and investors are searching for. Open the board at /app/[account]/pipeline?view=requirements (sidebar label: Requirements).\n\nRequirements sit beside WIP on the pipeline surface but use their own stages.\n\nRequirement stages\n\n1. New — freshly logged requirement\n2. Actively Searching — shortlisting and viewing stock\n3. Under Offer / Negotiating — deal discussions in progress\n4. Fulfilled — requirement satisfied\n5. Withdrawn — search ended without fulfilment\n\nCreate a requirement\n\n1. Open /app/[account]/pipeline?view=requirements.\n2. Choose New requirement (or the create action on the board).\n3. Link a Contact (or create one first under /app/[account]/clients).\n4. Capture size, location, budget, use, and timeline notes.\n5. Save — the card appears in New.\n6. Move to Actively Searching when you start matching stock.\n\nMatch requirements to disposals\n\n1. Identify candidate disposals on /app/[account]/listings.\n2."
+    },
+    {
+      "id": "135458ebf581",
+      "path": "/commercial-property/seats-billing",
+      "title": "Seats & billing",
+      "text": "Seats & billing\n\nCommercial property uses graduated per-seat billing for billable seats, plus a small number of free support seats at team scale.\n\nManage membership on Team (/app/[account]/members) and the plan under workspace billing settings.\n\nBillable vs support\n\n| Seat kind | Pays on Stripe | Can do |\n| --- | --- | --- |\n| Billable | Yes | Create/edit disposals, move WIP and requirement stages, configure Website & portals, run day-to-day negotiating work |\n| Support | No (within free allowance) | View workspace data and contribute notes / activity; cannot mutate stages, disposals, or publishing |\n\nSeat kind is not a role. Roles remain owner / admin / staff (permissions). On invite you pick both: e.g. staff + support for a PA, or staff + billable for a negotiator.\n\nIf a support user tries a restricted action, Ozer asks them to use a billable colleague or upgrade the seat.\n\nGraduated pricing (illustrative)\n\nBillable seats are priced graduated (exact Stripe tiers apply at checkout):"
+    },
+    {
+      "id": "4ed3f31a7377",
+      "path": "/commercial-property/seats-billing",
+      "title": "Seats & billing",
+      "text": "e seat.\n\nGraduated pricing (illustrative)\n\nBillable seats are priced graduated (exact Stripe tiers apply at checkout):\n\n1. Seat 1 → higher solo rate\n2. Seats 2–7 → mid team rate each\n3. Seats 8+ → lower scale rate each\n\nMarketing illustrations:\n\n| Example | Billable seats | Free support seats | Portal publishing (Rightmove / EG) |\n| --- | --- | --- | --- |\n| Commercial Solo | 1 | 0 | Property Hive website sync only |\n| Commercial Team | 2–7 (example card often uses 4) | 2 | Included |\n| Commercial Scale | 8+ (example card often uses 10) | 4 | Included |\n\nPortal publishing to Rightmove and EACH / EG requires at least two billable seats. Property Hive website sync remains available on Solo.\n\nCurrent public pricing: ozer.so/pricing.\n\nInvite with the right seat\n\n1. Open /app/[account]/members.\n2. Invite the colleague.\n3. Choose billable for negotiators and anyone who edits stock or stages.\n4. Choose support for PAs, trainees, or viewers within your free support allowance.\n5."
+    },
+    {
+      "id": "8d422de7341c",
+      "path": "/commercial-property/seats-billing",
+      "title": "Seats & billing",
+      "text": "anyone who edits stock or stages.\n4. Choose support for PAs, trainees, or viewers within your free support allowance.\n5. Do not assign more billable members than your subscribed quantity without updating billing.\n6. After accept, confirm their seat kind on the members list.\n\nChange seats and plan\n\n1. Open workspace Billing.\n2. Adjust billable seat quantity to match the negotiators you need.\n3. Confirm the graduated monthly estimate.\n4. Save — Stripe updates the subscription item quantity.\n5. Invite or convert members so billable headcount matches seats purchased.\n6. Recheck Website & portals unlock after moving from 1 → 2+ billable seats.\n\nPractical tips\n\n1. Keep owners/admins billable during setup.\n2. Use support seats for visibility without inflating Stripe quantity.\n3. Unlock Rightmove / EG only when you intentionally take a second billable seat.\n4. If publishing is blocked, count billable seats first — then credentials.\n\nRelated: Invite your team, Website & portals."
+    },
+    {
+      "id": "48ccc8b15d7e",
+      "path": "/commercial-property/security-trust",
+      "title": "Security & trust",
+      "text": "Security & trust\n\nOzer Commercial property is built for agencies that care where client and instruction data lives.\n\nAt a glance\n\n1. Access to workspace data is enforced with Postgres row-level security (RLS) — members only see their account’s data\n2. Auth and billing use established providers (for example Supabase Auth and Stripe)\n3. Commercial portal credentials (Property Hive, Rightmove, EACH / EG) are stored for the workspace and must stay out of tickets and shareable docs\n4. Support seats are limited by design so viewers cannot change stages, disposals, or publishing\n\nSteps for a secure desk\n\n1. Invite colleagues only from Team (/app/[account]/members) with the correct seat kind.\n2. Prefer support seats for people who only need visibility.\n3. Rotate Property Hive feed tokens from Website & portals if a URL may have leaked, then update Property Hive Import immediately.\n4. Avoid pasting portal secrets into chat, email signatures, or public boards.\n5."
+    },
+    {
+      "id": "ab519dc83def",
+      "path": "/commercial-property/security-trust",
+      "title": "Security & trust",
+      "text": "date Property Hive Import immediately.\n4. Avoid pasting portal secrets into chat, email signatures, or public boards.\n5. Keep private listing media on the disposal Management private media section, not on public Media.\n6. Review members when staff leave — remove memberships that should no longer access instructions.\n\nRead more\n\nFull trust and security overview: ozer.so/trust.\n\nLegal: Privacy · Terms · DPA"
+    },
+    {
+      "id": "1fc816a16739",
+      "path": "/commercial-property/viewings",
+      "title": "Viewings",
+      "text": "Viewings\n\nViewings are the diary of property appointments and feedback. Open the list at /app/[account]/viewings.\n\nViewing statuses\n\n1. Upcoming — scheduled in the diary\n2. Completed — took place\n3. Awaiting feedback — happened; outcome not yet captured\n4. Cancelled — did not proceed\n\nOutcomes (feedback)\n\nAfter a viewing, capture sentiment:\n\n1. Positive\n2. Neutral\n3. Negative\n\nBook a viewing\n\n1. Open /app/[account]/viewings.\n2. Choose New viewing (or the create action).\n3. Select the disposal (listing) and the contact(s) attending.\n4. Set date, time, and location / access notes.\n5. Save — status starts as Upcoming.\n6. Optionally add a matching interest row on the disposal Interest tab (viewing arranged).\n\nAfter the viewing\n\n1. Open the viewing record.\n2. Mark it Completed or move it through Awaiting feedback if notes are pending.\n3. Record outcome (positive / neutral / negative) and free-text feedback.\n4. Update the disposal Interest status (for example to Viewed or Offer made).\n5."
+    },
+    {
+      "id": "ab8d2f8b28c0",
+      "path": "/commercial-property/viewings",
+      "title": "Viewings",
+      "text": "ral / negative) and free-text feedback.\n4. Update the disposal Interest status (for example to Viewed or Offer made).\n5. If interest cools, keep the requirement on Actively Searching or Withdrawn as appropriate.\n\nDesk routine\n\n1. Start the day on Viewings filtered to Upcoming.\n2. Clear Awaiting feedback before end of day so Insights stay accurate.\n3. Use Insights (/app/[account]/commercial-reports) to monitor feedback lag.\n4. Cancel politely and mark Cancelled rather than deleting — history helps reporting.\n\nRelated: Disposals — Interest, Requirements."
+    },
+    {
+      "id": "3e7f2c887c40",
+      "path": "/commercial-property/wip-pipeline",
+      "title": "WIP pipeline",
+      "text": "ithout an instruction card.\n4. Triage Under Offer / Negotiating against HoTs / Proposals at /app/[account]/proposals.\n5. Leave Fallen through visible long enough for reporting, then archive per your office policy.\n\nRequirements view\n\n1. Switch to Requirements with /app/[account]/pipeline?view=requirements (also linked from the sidebar as Requirements).\n2. Follow the Requirements guide for stage meanings and matching to disposals.\n\nSupport seats cannot move stages — ask a billable colleague, or upgrade the seat (Seats & billing)."
+    },
+    {
+      "id": "bb17570d5ff3",
+      "path": "/commercial-property/wip-pipeline",
+      "title": "WIP pipeline",
+      "text": "WIP pipeline\n\nWIP (work in progress) is the commercial instructions board. Open it at /app/[account]/pipeline. The default board name is WIP; your workspace may rename it.\n\nWIP tracks instruction stages for disposals — separate from the acquisition Requirements board (same pipeline page, ?view=requirements).\n\nInstruction stages\n\n1. Potential Instructions — early / anticipated instructions\n2. Current Instructions — live instructed work (often linked to marketing disposals)\n3. Under Offer / Negotiating — heads of terms and negotiation\n4. Completed / Exchanged — won / completed instructions\n5. Fallen through — lost instructions\n\nOpen WIP\n\n1. Go to /app/[account]/pipeline.\n2. Confirm you are on the WIP / instructions view (not Requirements).\n3. Review columns left to right from Potential through Completed / Fallen through.\n4. Drag a card between columns only if you are on a billable seat.\n\nKeep WIP and disposals aligned\n\n1. Create or update the disposal on /app/[account]/listings.\n2."
+    },
+    {
+      "id": "e4299a7a52d1",
+      "path": "/commercial-property/wip-pipeline",
+      "title": "WIP pipeline",
+      "text": "are on a billable seat.\n\nKeep WIP and disposals aligned\n\n1. Create or update the disposal on /app/[account]/listings.\n2. When terms of engagement are agreed, move WIP to Current Instructions and disposal status toward Instructed / Marketing.\n3. When offers land, move WIP to Under Offer / Negotiating and progress the disposal / interest schedule.\n4. On exchange or completion, move WIP to Completed / Exchanged and set disposal status to Let or Sold.\n5. If the deal dies, move WIP to Fallen through and set the disposal to Withdrawn when appropriate.\n\nDaily WIP routine\n\n1. Open Insights at /app/[account]/commercial-reports for a quick health check.\n2. Scan Potential for stale cards older than your desk’s chase window.\n3. Scan Current against marketing disposals so nothing is live without an instruction card.\n4. Triage Under Offer / Negotiating against HoTs / Proposals at /app/[account]/proposals.\n5."
+    },
+    {
+      "id": "f69b0a726ec4",
+      "path": "/commercial-property/workspace",
+      "title": "Workspace",
+      "text": "ath in these docs.\n2. Seat kind — billable members edit agency data; support seats are limited (see Seats & billing).\n3. Modules — workspace settings can show or hide nav items; missing keys default to on for new modules.\n\nNext: Navigation."
+    },
+    {
+      "id": "fb731dd1965a",
+      "path": "/commercial-property/workspace",
+      "title": "Workspace",
+      "text": "Workspace\n\nOzer is multi-tenant: every disposal, contact, viewing, and proposal belongs to an account (workspace). Commercial property work runs on a team workspace with the commercial property profile.\n\nPersonal vs team\n\n| | Personal | Commercial team |\n| --- | --- | --- |\n| Ownership | You alone | Shared with members |\n| Best for | Hub across life and work | Agency disposals, WIP, portals |\n| Invites | N/A | Roles, billable / support seats |\n| URL | Personal home routes | /app/[account]/… |\n\nSteps to switch workspace\n\n1. Open the account switcher in the app shell.\n2. Select the commercial team workspace (not your personal hub).\n3. Confirm the URL contains your slug: /app/[account]/….\n4. Check the sidebar shows commercial labels (Disposals, WIP, Contacts, Requirements).\n\nKey ideas\n\n1. Slug = account — replace [account] with your workspace slug in every path in these docs.\n2. Seat kind — billable members edit agency data; support seats are limited (see Seats & billing).\n3."
+    },
+    {
+      "id": "0468b469fb67",
+      "path": "/commercial-property/workspace/navigation",
+      "title": "Navigation",
+      "text": "around\n\n1. Switch to the commercial team workspace.\n2. Skim top to bottom: Disposals → WIP → Contacts → Requirements.\n3. Open a disposal and note the detail tabs: Overview, Marketing, Media, Interest, Availability, Management.\n4. Open Website & portals before you go live on portals.\n5. Use Insights for weekly pipeline health.\n\nKeyboard and accessibility preferences live under account settings."
+    },
+    {
+      "id": "0d81399e4dde",
+      "path": "/commercial-property/workspace/navigation",
+      "title": "Navigation",
+      "text": "Navigation\n\nThe commercial sidebar is ordered for agency desks. Paths use your workspace slug: /app/[account]/….\n\nMain sidebar\n\n| Label | Path | Use for |\n| --- | --- | --- |\n| Dashboard | /app/[account] | Agency overview and prompts |\n| Disposals | /app/[account]/listings | Occupational and investment instructions |\n| WIP | /app/[account]/pipeline | Instruction stages (Potential → Completed) |\n| Contacts | /app/[account]/clients | Landlords, tenants, investors, solicitors, agents |\n| Requirements | /app/[account]/pipeline?view=requirements | Acquisition / search requirements board |\n| Viewings | /app/[account]/viewings | Diary of viewings and feedback |\n| HoTs / Proposals | /app/[account]/proposals | Heads of terms and proposals |\n| Sales register | /app/[account]/leases | Completed lettings / sales register |\n| Insights | /app/[account]/commercial-reports | Disposals, viewings, and requirements metrics |\n| Tasks | /app/[account]/tasks | Team tasks |"
+    },
+    {
+      "id": "b4f196a040a6",
+      "path": "/commercial-property/workspace/navigation",
+      "title": "Navigation",
+      "text": "unt]/commercial-reports | Disposals, viewings, and requirements metrics |\n| Tasks | /app/[account]/tasks | Team tasks |\n| Notes and files | /app/[account]/notes | Shared notes and files |\n| Team | /app/[account]/members | Members, invites, seats |\n\nThe WIP board name can be renamed in settings; the default label is WIP.\n\nSettings group\n\n| Label | Path | Use for |\n| --- | --- | --- |\n| Workspace settings | /app/[account]/settings | Branding, modules, timezone |\n| Website & portals | /app/[account]/commercial-publishing | Property Hive, Rightmove, EACH / EG |\n\nWebsite & portals is not Site Studio. Commercial publishing connects agency marketing (Property Hive website sync and UK portals). Site Studio belongs to the Business workspace, not this docs set.\n\nSteps to find your way around\n\n1. Switch to the commercial team workspace.\n2. Skim top to bottom: Disposals → WIP → Contacts → Requirements.\n3."
+    },
+    {
+      "id": "2d5f075d8904",
+      "path": "/personal",
+      "title": "Personal workspace",
+      "text": "Personal workspace\n\nPersonal is the free hub in Ozer. It connects life and every other workspace you join — so today, tasks, and shortcuts stay in one place without turning Personal into a full CRM.\n\nURLs in Personal use /app with no account slug — for example /app/tasks, /app/planner/plan, and /app/settings.\n\nWhat Personal is for\n\n- A private home for your day: tasks, planner, notes, people, and personal email\n- Cross-workspace visibility so work from Business (and other spaces) can surface on Home and in Tasks when you want it\n- A lightweight life context — not clients, pipeline, invoices, or client portals\n\nBusiness features (clients, pipeline, invoicing, activity, and portals) live in a Business workspace.\n\nSidebar (Personal)\n\n| Label | Path |\n| ----- | ---- |\n| Home | /app |\n| Tasks | /app/tasks |\n| Projects | /app/projects |\n| Planner | /app/planner/plan |\n| Personal email | /app/email |\n| Notes | /app/notes |\n| People | /app/people |\n| Personal settings | /app/settings |"
+    },
+    {
+      "id": "4aa43d4b97a7",
+      "path": "/personal",
+      "title": "Personal workspace",
+      "text": "| Personal email | /app/email |\n| Notes | /app/notes |\n| People | /app/people |\n| Personal settings | /app/settings |\n\nStart here\n\n1. Getting started — account and Personal home\n2. Home hub — today, shortcuts, and cross-workspace visibility\n3. Tasks & planner — get the day under control\n\nProduct overview: ozer.so · Pricing: ozer.so/pricing"
+    },
+    {
+      "id": "0ebabde03e44",
+      "path": "/personal/email",
+      "title": "Personal email",
+      "text": "ure in settings so drafts stay in your voice.\n4. Mark handled mail and move on — keep the hub calm.\n\nSuggested tasks\n\n1. Open suggested to-dos at /app/email/suggested-tasks when the assistant surfaces follow-ups.\n2. Accept useful suggestions into Tasks (/app/tasks).\n3. Dismiss suggestions that are not actionable.\n4. Schedule accepted work in Planner (/app/planner/plan) if it belongs today.\n\nTips\n\n- Personal email is for your life inbox; client and studio mail belongs with Business tooling.\n- Prefer reviewing drafts before auto-save behaviours send anything you did not intend.\n- Availability of Gmail connect and AI assist can depend on plan and region — see Pricing and Security & trust."
+    },
+    {
+      "id": "97cfebc9a29e",
+      "path": "/personal/email",
+      "title": "Personal email",
+      "text": "Personal email\n\nPersonal email (/app/email) connects your personal Gmail mailbox (where available) for triage, suggested to-dos, and AI draft replies in your voice.\n\nThis is the Personal mailbox — not Business email for studio inboxes. Studio email assistant behaviour for team accounts is covered under Business.\n\nConnect and open\n\n1. Open Personal email in the sidebar (/app/email).\n2. Connect Gmail when prompted, and approve the access Ozer needs for inbox assist.\n3. Confirm the mailbox shows as personal; reconnect from Personal settings → integrations (/app/settings/integrations) if the link drops.\n4. Return to /app/email to triage.\n\nTriage the inbox\n\n1. Scan messages that need a reply; skip noise you have ignored by sender or domain.\n2. Open a thread and review any draft suggestion before sending.\n3. Adjust style notes or signature in settings so drafts stay in your voice.\n4. Mark handled mail and move on — keep the hub calm.\n\nSuggested tasks\n\n1."
+    },
+    {
+      "id": "d292a760d8d1",
+      "path": "/personal/getting-started",
+      "title": "Getting started",
+      "text": "Getting started\n\nGet from signup to a usable Personal workspace in a few minutes. Personal is free and created with you — no separate “create Personal” step after signup.\n\nSteps\n\n1. Create your account\n2. Find your way around Personal home\n3. Optionally open or create a Business workspace when you need clients, pipeline, and invoicing\n\nAfter setup\n\n- Pin the surfaces you open most from Home hub\n- Add a few tasks or open Planner\n- Keep friends and catch-ups in People — not a sales CRM\n\nNeed help? Use Support in the product, or email hello@ozer.so."
+    },
+    {
+      "id": "19f598e1d2a4",
+      "path": "/personal/getting-started/create-account",
+      "title": "Create your account",
+      "text": "Create your account\n\nSign up at app.ozer.so (or your local app host) with email and password, a magic link, or a supported OAuth provider.\n\nSteps\n\n1. Open the sign-up screen and choose your method (email, magic link, or OAuth).\n2. Confirm your email if prompted.\n3. Complete the short onboarding flow — your Personal account is created with you.\n4. When setup finishes, you land in Personal home at /app.\n\nWhat you get immediately\n\n- Personal sidebar: Home, Tasks, Projects, Planner, Personal email, Notes, People\n- Personal settings in the sidebar footer (/app/settings)\n- The workspace switcher (when team workspaces are enabled) so you can open Business or other spaces later\n\nWhat Personal is not\n\nPersonal is the free hub, not a full CRM. Clients, pipeline, invoicing, activity tracking, and client portals live in a Business workspace. You can start in Personal first and add Business when you need them.\n\nNext: Personal home."
+    },
+    {
+      "id": "662fb8e9fc4d",
+      "path": "/personal/getting-started/personal-home",
+      "title": "Personal home",
+      "text": "ces do (/app/[account]/…).\n- Prefer Business for client delivery; keep DIY, holidays, notes, and catch-ups in Personal.\n- Cross-workspace task visibility is controlled from preferences tied to Personal — see Home hub.\n\nMore detail: Home hub."
+    },
+    {
+      "id": "e6f7c3abe924",
+      "path": "/personal/getting-started/personal-home",
+      "title": "Personal home",
+      "text": "Personal home\n\nPersonal home (/app) is your private landing place after login. Use it to see what’s due, jump to shortcuts, and switch into other workspaces without losing the day.\n\nSteps\n\n1. Open Home in the Personal sidebar (or go to /app).\n2. Scan today’s highlights and anything due from Personal and, when enabled, other workspaces.\n3. Use the account switcher at the top of the sidebar to open a Business or team workspace — or stay on Personal for life context.\n4. Open Personal settings (/app/settings) to set timezone, preferences, and integrations you care about.\n\nPaths to remember\n\n| Where | Path |\n| ----- | ---- |\n| Home | /app |\n| Today (day view) | /app/planner/day |\n| Planner | /app/planner/plan |\n| Tasks | /app/tasks |\n| Settings | /app/settings |\n\nTips\n\n- Personal URLs never include an account slug — team spaces do (/app/[account]/…).\n- Prefer Business for client delivery; keep DIY, holidays, notes, and catch-ups in Personal."
+    },
+    {
+      "id": "2b3189e159b0",
+      "path": "/personal/home-hub",
+      "title": "Home hub",
+      "text": "l workspaces).\n3. Use Planner to schedule across Personal life and workspace delivery when your plan scope allows it.\n4. Switch into Business only when you need CRM, invoices, or portals — then return to Home for the day view.\n\nWhat stays in Business\n\nClients, pipeline stages, invoicing, activity feeds, meetings workflows, and client portals are documented under Business. Personal may show related tasks; it does not replace those modules.\n\nNext: Tasks & planner."
+    },
+    {
+      "id": "353c62f8fae7",
+      "path": "/personal/home-hub",
+      "title": "Home hub",
+      "text": "er where available.\n2. Choose destinations such as Tasks, Planner, Projects, Notes, People, Personal email, or Today.\n3. Reorder or trim the list so the first screen stays calm — one job per shortcut.\n4. On mobile, the bottom navigation reflects the shortcuts you keep.\n\nUseful destination paths:\n\n| Label | Path |\n| ----- | ---- |\n| Tasks | /app/tasks |\n| Planner | /app/planner/plan |\n| Today | /app/planner/day |\n| Projects | /app/projects |\n| Notes | /app/notes |\n| People | /app/people |\n| Personal email | /app/email |\n\nCross-workspace visibility\n\nPersonal can surface work from Business and other memberships so you plan one day, not five apps.\n\n1. Confirm you belong to at least one other workspace via the account switcher.\n2. In Tasks preferences, include workspace tasks when you want a unified list (/app/tasks can filter by Personal only or by all workspaces).\n3. Use Planner to schedule across Personal life and workspace delivery when your plan scope allows it.\n4."
+    },
+    {
+      "id": "6379103aab6b",
+      "path": "/personal/home-hub",
+      "title": "Home hub",
+      "text": "Home hub\n\nHome (/app) is the Personal hub: today at a glance, shortcuts into the surfaces you use most, and optional visibility into tasks and plans from other workspaces.\n\nPersonal stays a hub — not a CRM. Sales clients and invoicing belong in Business.\n\nToday\n\n1. Open Home, or jump straight to the day view at /app/planner/day.\n2. Review what is scheduled and due for today.\n3. Open an item to complete it, reschedule it in Planner (/app/planner/plan), or capture a follow-up in Tasks (/app/tasks).\n4. When the day needs a rethink, use Planner’s replan flow rather than hunting across workspaces.\n\nShortcuts\n\nShortcuts are fast links on Home (and in mobile navigation) to Personal routes you care about.\n\n1. Open Personal settings → shortcuts preferences (/app/settings/shortcuts), or manage them from the Home shortcut picker where available.\n2. Choose destinations such as Tasks, Planner, Projects, Notes, People, Personal email, or Today.\n3."
+    },
+    {
+      "id": "b86e9b2e9e30",
+      "path": "/personal/people",
+      "title": "People",
+      "text": "of stretching People into CRM.\n\nHow People fits Personal\n\n1. Use People for life relationships and social follow-ups.\n2. Capture “I should message X” as a Task (/app/tasks) when it needs a due date.\n3. Keep sales opportunities and studio contacts in Business pipeline and clients.\n\nTips\n\n- Personal stays the free hub; People stays lightweight by design.\n- Avoid duplicating Business CRM records here — switch workspace when you need pipeline.\n- Pair People with Notes for longer context that does not belong on a contact card."
+    },
+    {
+      "id": "f8c0f8321b5f",
+      "path": "/personal/people",
+      "title": "People",
+      "text": "People\n\nPeople (/app/people) is your personal list of friends, family, and catch-ups — not a sales CRM.\n\nClient companies, leads, and pipeline contacts live in Business.\n\nOpen People\n\n1. Select People in the Personal sidebar, or go to /app/people.\n2. Browse the list and open someone to see their detail page (/app/people/[personId]).\n3. Use the viewer context on the page to keep updates personal and private to your home.\n\nAdd or update someone\n\n1. From People, create a person with a name you will recognise.\n2. Add the context that helps a future you — relationship notes, reminders, or catch-up history as the feature supports.\n3. Save, then reopen the person from the list when you need them.\n4. Promote anything that becomes a shared company relationship into Business clients or contacts instead of stretching People into CRM.\n\nHow People fits Personal\n\n1. Use People for life relationships and social follow-ups.\n2."
+    },
+    {
+      "id": "14c801a2dd7c",
+      "path": "/personal/projects-notes",
+      "title": "Projects & notes",
+      "text": "Projects & notes\n\nPersonal Projects and Notes keep life plans organised without turning Personal into a studio CRM.\n\n| Sidebar label | Path | Role |\n| ------------- | ---- | ---- |\n| Projects | /app/projects | Personal projects — DIY, holidays, parties, plans |\n| Notes | /app/notes | Markdown notes private to your home |\n\nClient jobs, phases for paid work, and delivery boards belong in a Business workspace.\n\nProjects\n\n1. Open Projects (/app/projects).\n2. Create a project with a short name and enough context to recognise it later.\n3. Add tasks or phases as needed for your plan — keep scope personal, not client CRM.\n4. Open a project from the list to update status, tasks, and details.\n5. Link related day work from Tasks (/app/tasks) or schedule focus time in Planner (/app/planner/plan).\n\nGood fits for Personal projects\n\n- Home DIY and renovations\n- Holidays and travel prep\n- Parties, gifts, and life admin bundles\n- Personal learning plans\n\nBetter in Business"
+    },
+    {
+      "id": "f60a88a8bcd5",
+      "path": "/personal/projects-notes",
+      "title": "Projects & notes",
+      "text": "ions\n- Holidays and travel prep\n- Parties, gifts, and life admin bundles\n- Personal learning plans\n\nBetter in Business\n\n- Client retainers and delivery\n- Pipeline-linked jobs\n- Anything that needs invoices or a client portal\n\nNotes\n\n1. Open Notes (/app/notes).\n2. Create a note — content is saved as Markdown and stays private to Personal.\n3. Organise with folders or categories when available.\n4. Open /app/notes/new for a blank note, or an existing note at /app/notes/[noteId].\n5. Keep scrap thinking in Notes; promote action items into Tasks when they are due.\n\nTips\n\n- One purpose per project; park ideas in Notes until they earn a project.\n- Personal project URLs sit under /app/projects with no account slug.\n- Switch to Business when a plan becomes billable client work."
+    },
+    {
+      "id": "0719c1d58be3",
+      "path": "/personal/security-trust",
+      "title": "Security & trust",
+      "text": "Use Support in-product, or email hello@ozer.so, if something looks wrong with access.\n\nWhere business data should live\n\nClients, pipeline, invoices, activity, and portals stay in Business. Personal may surface tasks for planning; it is not the system of record for studio CRM.\n\nLegal\n\n- Privacy policy\n- Terms of service\n- DPA"
+    },
+    {
+      "id": "55d74aa067f3",
+      "path": "/personal/security-trust",
+      "title": "Security & trust",
+      "text": "Security & trust\n\nOzer is built for people who care where their data lives. Personal is private to you; Business and other workspaces keep their own tenancy boundaries.\n\nAt a glance\n\n1. Read the marketing Trust overview: ozer.so/trust.\n2. Know that workspace data access is enforced with Postgres row-level security — you see what your ownership or membership allows.\n3. Auth and billing use established providers (for example Supabase Auth and Stripe).\n4. Keep Personal free of sensitive client CRM if that data belongs in a controlled Business workspace.\n\nPersonal account practices\n\n1. Open Personal settings (/app/settings) and review preferences, accessibility, and integrations.\n2. Connect only the personal Gmail you intend for Personal email (/app/email).\n3. Sign out on shared devices and use a strong unique password or OAuth provider you trust.\n4. Use Support in-product, or email hello@ozer.so, if something looks wrong with access.\n\nWhere business data should live"
+    },
+    {
+      "id": "fde33ed1cd73",
+      "path": "/personal/tasks-planner",
+      "title": "Tasks & planner",
+      "text": "Tasks & planner\n\nPersonal puts Tasks and Planner side by side: capture what needs doing, then shape the day.\n\n| Sidebar label | Path | Role |\n| ------------- | ---- | ---- |\n| Tasks | /app/tasks | Unified (or Personal-only) task list |\n| Planner | /app/planner/plan | Plan and replan the day |\n| (Today) | /app/planner/day | Minimal schedule + due items |\n\nGuides\n\n1. Tasks — create, filter, and complete work across Personal and other workspaces\n2. Planner — build today’s plan and open the day view\n\nBusiness project delivery with phases and client linkage is covered under Business. Personal projects are life-sized — DIY, holidays, and personal plans — see Projects & notes."
+    },
+    {
+      "id": "0a63547e4234",
+      "path": "/personal/tasks-planner/planner",
+      "title": "Planner",
+      "text": "schedule and tick due tasks as you go.\n3. Jump back to /app/planner/plan when the structure needs another pass.\n\nTips\n\n- Set timezone and working hours in Personal settings so plans land on the right clock.\n- Use Planner for one coherent day; use Business project boards for multi-week client delivery (Business docs).\n- Home hub shortcuts can pin Planner or Today — see Home hub."
+    },
+    {
+      "id": "c894bae75a6b",
+      "path": "/personal/tasks-planner/planner",
+      "title": "Planner",
+      "text": "Planner\n\nPlanner (/app/planner/plan) shapes the day across Personal life and the workspaces in scope. The minimal Today view lives at /app/planner/day.\n\nBuild a plan\n\n1. Open Planner in the sidebar (/app/planner/plan).\n2. Review available tasks from Personal and any workspaces included in your plan scope.\n3. Place or adjust blocks for the day so the schedule matches energy and deadlines.\n4. Save the plan — then check it on Today (/app/planner/day).\n\nReplan the day\n\n1. When priorities shift, open the replan controls in Planner.\n2. Note what changed (new urgency, blocked work, time lost).\n3. Accept an updated plan and confirm it on /app/planner/day.\n4. Carry unfinished items back into Tasks (/app/tasks) rather than leaving them only in memory.\n\nDay view\n\n1. Open /app/planner/day (or a Today shortcut from Home).\n2. Follow the schedule and tick due tasks as you go.\n3. Jump back to /app/planner/plan when the structure needs another pass.\n\nTips"
+    },
+    {
+      "id": "55d341364105",
+      "path": "/personal/tasks-planner/tasks",
+      "title": "Tasks",
+      "text": "le inbox of open work.\n2. Filter /app/tasks by workspace when you need to focus (for example Business delivery only).\n3. Complete or reassign from the workspace that owns the work when that is required — Personal is the hub, not a replacement for Business project boards.\n\nTips\n\n- Keep Personal tasks for life and solo plans; keep client delivery tasks in Business projects.\n- Suggested work from email can feed Tasks via Personal email (/app/email/suggested-tasks).\n- Pair Tasks with the day view at /app/planner/day when you only need “what’s on now”.\n\nNext: Planner."
+    },
+    {
+      "id": "e36de2ad25ec",
+      "path": "/personal/tasks-planner/tasks",
+      "title": "Tasks",
+      "text": "Tasks\n\nTasks (/app/tasks) is the Personal list for to-dos across life and, optionally, every workspace you belong to.\n\nOpen Tasks\n\n1. Select Tasks in the Personal sidebar, or go to /app/tasks.\n2. Choose a workspace filter: Personal only, a specific workspace, or All when cross-workspace inclusion is on.\n3. Scan due dates and priorities, then open a task to edit details or mark it complete.\n\nCreate a task\n\n1. From Tasks, use the create control (or the workspace “new” menu on mobile).\n2. Give the task a clear title — one outcome per task.\n3. Set due date and optional link to a Personal project if it belongs to a larger plan.\n4. Save, then optionally drop it into Planner (/app/planner/plan) for today’s schedule.\n\nWork across workspaces\n\n1. In Personal preferences, enable including workspace tasks when you want a single inbox of open work.\n2. Filter /app/tasks by workspace when you need to focus (for example Business delivery only).\n3."
+    },
+    {
+      "id": "404072ef2223",
+      "path": "/work",
+      "title": "Ozer Business",
+      "text": "Ozer Business\n\nOzer Business is the team workspace for freelancers and small studios. Clients, pipeline, projects, invoices, activity, email, and client portals live under one account slug at /app/[account]/….\n\nThis documentation walks through the Business product — not Personal life tools or Commercial property agency workflows. Use the Workspace switcher at the top of the sidebar to move between documentation areas.\n\nWho it’s for\n\n- Solo freelancers billing clients and tracking deals\n- Small agencies and studios sharing one CRM and delivery board\n- Teams that want flat pricing, EU-hosted data, and client-facing portals\n\nMap of these docs\n\n1. Getting started — signup, first Business workspace, invites\n2. Workspace — accounts, sidebar sections, switching spaces\n3. Clients & pipeline — CRM records and deal board\n4. Projects & tasks — delivery, tasks, planner\n5. Invoicing & billing — client invoices and your Ozer plan\n6. Activity & meetings — desktop tracking and transcripts\n7."
+    },
+    {
+      "id": "d7f118165320",
+      "path": "/work",
+      "title": "Ozer Business",
+      "text": "5. Invoicing & billing — client invoices and your Ozer plan\n6. Activity & meetings — desktop tracking and transcripts\n7. Email assistant — Gmail triage and drafts\n8. Portals & websites — client portals and site publishing\n9. Security & trust — access model and policy links\n\nWhat you’ll see in the app sidebar\n\nIn a Business workspace the left sidebar is grouped roughly as:\n\n- Work — Dashboard, Projects, Tasks, Planner, Schedule, Scheduling\n- Clients — Pipeline, Clients, Meetings, Activity, Websites, Support (Emails appears here when the email add-on is available)\n- Commercial — Invoices, Proposals, Contracts, Finances\n- Team & tools — Team, Notes and files, Second brain, SOPs, Messages\n- Apps — optional marketplace apps (Rankly, Signatures, and so on)\n\nExact labels depend on modules enabled under Settings. Paths in these guides use /app/[account]/… where [account] is your workspace slug.\n\nProduct overview: ozer.so · Pricing: ozer.so/pricing"
+    },
+    {
+      "id": "72b9a86a53e5",
+      "path": "/work/activity-meetings",
+      "title": "Activity & meetings",
+      "text": "ist).\n5. Link follow-ups to the right client or project before assigning owners.\n\nSteps: booking meetings (optional)\n\n1. For client-booked calls, configure Scheduling (/app/[account]/scheduling) with availability and a public page.\n2. Share the booking link; accepted bookings appear under scheduling bookings and can feed your meeting workflow.\n\nMeetings tips\n\n- Record with consent and follow local regulations.\n- Extract tasks while the meeting is fresh — review queues go stale quickly.\n- Use Notes and files for artefacts that aren’t tasks.\n\nMeetings troubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Transcript stuck processing | Refresh later; check recorder settings under personal/workspace recorder preferences |\n| No tasks extracted | Run extract manually; ensure AI credits / plan allow it |\n| Meeting list empty | Confirm you’re in the Business workspace where capture was stored |\n\n---\n\nRelated docs\n\n- Tasks & planner\n- Email assistant\n- Security & trust"
+    },
+    {
+      "id": "a00cc8cf381f",
+      "path": "/work/activity-meetings",
+      "title": "Activity & meetings",
+      "text": "ding for the assistant |\n| Wrong workspace data | Change target account in the Mac app; refresh the web Activity page |\n| Feature missing | Check plan entitlements and that Activity isn’t disabled for the role |\n\n---\n\nMeetings\n\nWhat you’ll see\n\n- Meetings → /app/[account]/meetings — list of transcripts / meetings\n- Detail → /app/[account]/meetings/[transcriptId] — transcript, summary, task extraction\n\nSteps: capture and review a meeting\n\n1. Start or upload a meeting capture using the controls offered in Meetings (or the assistant / recorder flow configured for your workspace).\n2. Wait for processing to finish; open the meeting from the list.\n3. Read the transcript and AI summary on the detail page.\n4. Extract tasks into the workspace task system when prompted, then review them under Tasks (/app/[account]/tasks/review or the main tasks list).\n5. Link follow-ups to the right client or project before assigning owners.\n\nSteps: booking meetings (optional)\n\n1."
+    },
+    {
+      "id": "eff8f20cdbdf",
+      "path": "/work/activity-meetings",
+      "title": "Activity & meetings",
+      "text": "Activity & meetings\n\nUnderstand where time went — desktop activity from Assistant for Mac, plus meeting capture that feeds tasks and client context.\n\nGoal\n\nInstall and link desktop activity where you want it, capture meetings, and pull follow-ups into Tasks without manual copy-paste.\n\nPrerequisites\n\n- Business workspace at /app/[account]\n- Permission to view Activity / Meetings (under the Clients sidebar section)\n- For activity: a Mac you control, and awareness of privacy settings\n- For meetings: audio/transcript sources as offered in-product\n\nMarketing: Activity tracking · Desktop assistant\n\n| --- |\n| Nothing in Activity | Confirm Mac app is signed in, permissions granted, and the correct workspace is selected |\n| Permission denied loops | Open System Settings → Privacy & Security and re-enable Accessibility / Screen Recording for the assistant |\n| Wrong workspace data | Change target account in the Mac app; refresh the web Activity page |"
+    },
+    {
+      "id": "2bdf8b843fff",
+      "path": "/work/clients-pipeline",
+      "title": "Clients & pipeline",
+      "text": "Clients & pipeline\n\nTrack leads and clients in one CRM that connects to projects, invoices, portals, and meetings.\n\nGoal\n\nBuild a reliable client list and move opportunities through your pipeline without switching tools.\n\nPrerequisites\n\n- Business workspace at /app/[account]\n- Permission to view clients / dashboard\n- Clients and Pipeline modules enabled (sidebar under Clients)\n\nWhat lives where\n\n| Surface | Sidebar | Path | Purpose |\n| --- | --- | --- | --- |\n| Client records | Clients | /app/[account]/clients | Companies, contacts, portal invites |\n| Deal board | Pipeline | /app/[account]/pipeline | Stages from lead to won / lost |\n\nGuides in this section\n\n- Clients — create, edit, import, link work\n- Pipeline — stages, cards, converting to projects\n\nTypical first day\n\n1. Import or create two or three active clients.\n2. Open Pipeline and place open deals in the right stage.\n3. From a client or won deal, create a Project (see Projects).\n4."
+    },
+    {
+      "id": "46b3da0768f1",
+      "path": "/work/clients-pipeline",
+      "title": "Clients & pipeline",
+      "text": "Open Pipeline and place open deals in the right stage.\n3. From a client or won deal, create a Project (see Projects).\n4. When you bill, create an invoice linked to that client (Client invoices).\n\nTips\n\n- Treat Clients as the system of record for people and companies; treat Pipeline as the sales motion.\n- Portal access is driven from client contacts — see Portals & websites."
+    },
+    {
+      "id": "997a89c7291a",
+      "path": "/work/clients-pipeline/clients",
+      "title": "Clients",
+      "text": "roblem | What to try |\n| --- | --- |\n| Can’t create clients | Check role permission and that the Clients module is on |\n| Import fails | Validate required columns and UTF-8 CSV encoding |\n| Portal invite blocked | Add contact emails first, then invite again |\n\nNext: Pipeline."
+    },
+    {
+      "id": "cc59ffb52357",
+      "path": "/work/clients-pipeline/clients",
+      "title": "Clients",
+      "text": "Clients\n\nGoal\n\nCreate and maintain client records with contacts so projects, invoices, and portals all point at the same account.\n\nPrerequisites\n\n- Business workspace (/app/[account])\n- Access to Clients in the sidebar (Clients section)\n\nSteps: create a client\n\n1. Open Clients → /app/[account]/clients.\n2. Choose Create client (or the primary new-client action).\n3. Enter company / client name and any address or trading details you need.\n4. Add contacts (name, email, phone). Emails are required for portal invites and many notifications.\n5. Save. You’ll land on the client detail view with sections for related work.\n\nSteps: import clients\n\n1. From Clients, choose Import CSV → /app/[account]/clients/import.\n2. Download or match the expected columns, then upload your file.\n3. Review the preview and confirm the import.\n4. Optionally use LinkedIn import when shown (/app/[account]/import/linkedin) for contact seeding.\n\nSteps: use a client record day to day\n\n1. Open a client from the list.\n2."
+    },
+    {
+      "id": "dae758ee14a1",
+      "path": "/work/clients-pipeline/clients",
+      "title": "Clients",
+      "text": "ccount]/import/linkedin) for contact seeding.\n\nSteps: use a client record day to day\n\n1. Open a client from the list.\n2. Review linked projects, invoices, and portal status in the detail UI.\n3. Update contacts when people change roles.\n4. From the client, create related work (projects / invoices) using the actions offered on the page so records stay linked.\n5. For portal access, ensure contacts have emails, then invite them to the portal (see Portals & websites).\n\nWhat you’ll see\n\n- List / table of clients with search and filters\n- Detail page with contacts and related CRM objects\n- Import entry points in the Clients toolbar when enabled\n\nTips\n\n- Prefer one client record per organisation, with multiple contacts underneath.\n- Shared clients in the sidebar means another workspace shared a client with you — treat those carefully before editing.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Can’t create clients | Check role permission and that the Clients module is on |"
+    },
+    {
+      "id": "625201344949",
+      "path": "/work/clients-pipeline/pipeline",
+      "title": "Pipeline",
+      "text": "Pipeline\n\nGoal\n\nMove opportunities through named stages so the team sees what’s active, stuck, or won — and can spin up projects when deals close.\n\nPrerequisites\n\n- Business workspace with Pipeline visible under the Clients sidebar section\n- Preferably a few Clients already created\n\nSteps: open and read the board\n\n1. Click Pipeline in the sidebar → /app/[account]/pipeline.\n2. Scan columns (stages). Cards represent deals / opportunities tied to clients.\n3. Use filters or search on the board if your workspace exposes them, to focus on owner or stage.\n\nSteps: create and progress a deal\n\n1. On Pipeline, create a new card / opportunity.\n2. Link it to an existing client (create the client first if needed).\n3. Set title, value, and owner when those fields are available.\n4. Drag the card between stages as the deal progresses (for example Lead → Proposal → Won).\n5."
+    },
+    {
+      "id": "8e96de629de3",
+      "path": "/work/clients-pipeline/pipeline",
+      "title": "Pipeline",
+      "text": "tomisation in settings or board config).\n- One active primary opportunity per major engagement keeps reporting cleaner.\n- Proposals and contracts under Commercial often sit alongside late pipeline stages — open Proposals / Contracts when you need formal documents.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Pipeline missing from sidebar | Enable the pipeline module or check your role |\n| Can’t drag cards | Confirm you have edit access; refresh if the board is stale |\n| No clients to link | Create clients first under Clients |\n\nRelated: Projects · Client invoices"
+    },
+    {
+      "id": "9c1ba08d3092",
+      "path": "/work/clients-pipeline/pipeline",
+      "title": "Pipeline",
+      "text": "ose fields are available.\n4. Drag the card between stages as the deal progresses (for example Lead → Proposal → Won).\n5. When the deal is won, create a Project from the opportunity or client so delivery continues under Projects (/app/[account]/projects).\n\nSteps: keep pipeline honest\n\n1. Archive or move lost deals to a Lost stage instead of deleting history you may need.\n2. Review the board weekly in Planner downtime so stale cards don’t linger.\n3. Connect won work to invoices under Invoices once delivery is billable.\n\nWhat you’ll see\n\n- Kanban-style columns labelled by stage\n- Cards showing client / deal summary\n- Empty columns until you add opportunities\n\nTips\n\n- Align stage names with how your studio actually sells (your workspace may allow stage customisation in settings or board config).\n- One active primary opportunity per major engagement keeps reporting cleaner."
+    },
+    {
+      "id": "1c09cec96a67",
+      "path": "/work/email-assistant",
+      "title": "Email assistant",
+      "text": "ils missing from sidebar | Check add-on entitlement and refresh; confirm email assistant is available for the account |\n| OAuth / connect fails | Allow pop-ups; retry with the correct Google account; revoke and reconnect in Google Account → Security → Third-party access |\n| Drafts not in Gmail | Enable draft save; re-auth if scopes were reduced |\n| Wrong tone | Update style notes; regenerate the draft |\n| Suggested tasks empty | Only actionable threads produce tasks; open /app/[account]/email/suggested-tasks after triage |\n\nRelated: Tasks & planner · Activity & meetings"
+    },
+    {
+      "id": "8c4f38311ca3",
+      "path": "/work/email-assistant",
+      "title": "Email assistant",
+      "text": "Email assistant\n\nConnect Gmail to triage inbox mail, draft replies in your voice, and skip noise with ignored senders/domains.\n\nGoal\n\nCut inbox time: surface messages that need a reply, draft answers you can edit, and optionally save drafts back to Gmail.\n\nPrerequisites\n\n- Business workspace with the Email assistant add-on / entitlement available\n- A Google account with Gmail you are allowed to connect\n- Sidebar entry Emails under Clients (appears when email assistant is available) → /app/[account]/email\n\nMarketing: Email assistant. Billing of the add-on: Workspace subscription.\n\nSteps: connect Gmail\n\n1. Upgrade or enable the Email assistant add-on from Settings → Billing if it isn’t already on the plan.\n2. Open Emails in the sidebar → /app/[account]/email.\n3. Choose Connect Gmail (or equivalent) and complete Google OAuth.\n4. Grant the mail scopes requested. Without them, triage and draft save can’t run.\n5. Return to Ozer and confirm the inbox view loads threads."
+    },
+    {
+      "id": "9180e9bf7727",
+      "path": "/work/email-assistant",
+      "title": "Email assistant",
+      "text": "requested. Without them, triage and draft save can’t run.\n5. Return to Ozer and confirm the inbox view loads threads.\n\nSteps: triage and reply\n\n1. In Emails, review messages flagged as needing a reply (badge counts may appear on the sidebar item).\n2. Open a thread; read the suggestion / draft the assistant proposes.\n3. Edit the draft so it matches your voice and facts — never send AI text blindly.\n4. Send from Gmail or Ozer according to the controls offered, or save as a Gmail draft if auto-save is enabled.\n5. Mark noise as ignored (sender or domain) so similar mail skips the needs-reply queue next time.\n\nSteps: tune behaviour\n\n1. Open email settings from the Emails surface (or linked workspace/personal tone settings when shared).\n2. Add style notes — short guidance like “short UK English, no emojis, sign off with Thanks,”.\n3. Set or confirm your signature.\n4. Maintain the ignored senders / domains list for newsletters and automated mail.\n5."
+    },
+    {
+      "id": "e62f4cc91186",
+      "path": "/work/email-assistant",
+      "title": "Email assistant",
+      "text": "3. Set or confirm your signature.\n4. Maintain the ignored senders / domains list for newsletters and automated mail.\n5. Visit Suggested tasks at /app/[account]/email/suggested-tasks when the assistant proposes tasks from mail, and accept into Tasks.\n\nWhat you’ll see\n\n- Inbox / needs-reply list under Emails\n- Draft pane with AI suggestion\n- Sidebar badge when counts are available\n- Empty state until Gmail is connected\n\nTips\n\n- Start with advisory drafts only; turn on auto-save of drafts once you trust the tone settings.\n- Prefer ignored domains (updates.example.com) over one-off deletes for recurring noise.\n- Keep client commitments in Projects/Tasks — email is a capture surface, not the system of record.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Emails missing from sidebar | Check add-on entitlement and refresh; confirm email assistant is available for the account |"
+    },
+    {
+      "id": "d4cb37dc540b",
+      "path": "/work/getting-started",
+      "title": "Getting started",
+      "text": "Getting started\n\nGet from signup to a usable Business workspace in a few minutes.\n\nGoal\n\nCreate your Ozer account, open a Business (team) workspace, and optionally invite teammates so everyone shares the same clients and projects.\n\nPrerequisites\n\n- A work email you can access for verification\n- Browser access to app.ozer.so (or your local app host)\n\nSteps\n\n1. Create your account\n2. Set up your first Business workspace\n3. Invite teammates (optional)\n\nWhat you’ll see\n\nAfter onboarding you’ll land in the workspace shell. Switch accounts from the account switcher at the top of the sidebar. Business workspaces use URLs like /app/[account]/….\n\nNext\n\nOnce you’re in, wire up day-to-day work:\n\n- Clients & pipeline\n- Projects & tasks\n- Invoicing & billing"
+    },
+    {
+      "id": "11592c1da9ad",
+      "path": "/work/getting-started/create-account",
+      "title": "Create your account",
+      "text": "Create your account\n\nGoal\n\nSign up so you have an Ozer user and personal hub, then continue into Business workspace setup.\n\nPrerequisites\n\n- Email address (or a supported OAuth provider)\n- Ability to click the verification link if email confirmation is required\n\nSteps\n\n1. Open app.ozer.so and choose Sign up (or go to /auth/sign-up).\n2. Register with email and password, magic link, or a supported OAuth provider (for example Google).\n3. If prompted, confirm your email from the verification message.\n4. Complete the short onboarding flow. You’ll start with a personal account at /app.\n5. Continue to create or select a Business team workspace when the product asks for workspace type (see First workspace).\n\nWhat you’ll see\n\n- Auth screens for sign-in / sign-up / verify email\n- Personal home under /app after you authenticate\n- Account switcher once you have more than one workspace\n\nTips\n\n- Use your primary work email so invites and invoice PDFs look professional."
+    },
+    {
+      "id": "11b0185dc40a",
+      "path": "/work/getting-started/create-account",
+      "title": "Create your account",
+      "text": "ce you have more than one workspace\n\nTips\n\n- Use your primary work email so invites and invoice PDFs look professional.\n- If you already have an account, use Sign in at /auth/sign-in instead of creating a duplicate.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| No verification email | Check spam; request a resend from the verify screen |\n| OAuth denied | Allow pop-ups; retry with the same Google account |\n| Stuck after signup | Sign out and back in, or email hello@ozer.so |\n\nNeed help during onboarding? Use Support in the product, or email hello@ozer.so."
+    },
+    {
+      "id": "108aab14958f",
+      "path": "/work/getting-started/first-workspace",
+      "title": "First Business workspace",
+      "text": "etup during onboarding.\n2. Set a workspace name clients and teammates will recognise (for example your studio brand).\n3. Confirm the slug — it becomes [account] in URLs such as /app/[account]/clients.\n4. Pick the Business / work profile when asked so you get Clients, Pipeline, Projects, and Invoices rather than property or community modules.\n5. Open Settings (footer of the sidebar or /app/[account]/settings) and check:\n - General — name, timezone, basics\n - Brand — logo and colours used on client-facing surfaces\n - Modules / features your plan enables (pipeline, invoicing, activity, websites, and so on)\n6. Optionally set Payments and Services under Settings so invoices and proposals have sensible defaults.\n7. Open Dashboard in the Work sidebar section to confirm you’re inside /app/[account].\n\nWhat you’ll see in the sidebar\n\nOnce modules load, expect sections labelled Work, Clients, Commercial, and Team & tools."
+    },
+    {
+      "id": "b5052dfbcbe9",
+      "path": "/work/getting-started/first-workspace",
+      "title": "First Business workspace",
+      "text": "First Business workspace\n\nGoal\n\nCreate a shared Business (team) workspace with a clear name, slug, and the modules you’ll actually use.\n\nPrerequisites\n\n- An authenticated Ozer account (Create your account)\n- Permission to create a team workspace (any signed-in user can start one)\n\nPersonal vs Business\n\n| | Personal (/app) | Business (/app/[account]) |\n| --- | --- | --- |\n| Ownership | You alone | Shared with members |\n| Best for | Private planner, life tools, personal CRM | Studio CRM, jobs, invoices, portals |\n| Invites | N/A for workspace sharing | Team + roles |\n\nYour personal hub is created with you. Business workspaces are separate accounts with members, billing, and /app/[account]/… routes.\n\nSteps\n\n1. From the account switcher (top of the sidebar), choose to create a new workspace / team account when offered, or complete workspace setup during onboarding.\n2. Set a workspace name clients and teammates will recognise (for example your studio brand).\n3."
+    },
+    {
+      "id": "e919a609a38d",
+      "path": "/work/getting-started/first-workspace",
+      "title": "First Business workspace",
+      "text": "What you’ll see in the sidebar\n\nOnce modules load, expect sections labelled Work, Clients, Commercial, and Team & tools. Missing items usually means a module is switched off or your role lacks access — see Navigation.\n\nTips\n\n- Choose a short, stable slug; changing it later breaks bookmarks and portal links that embed the path.\n- Set timezone early — Planner and scheduling use it for “today”.\n- Keep one Business workspace per brand or entity; create another account when you need a hard boundary.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Landed in personal /app only | Use the account switcher; create or select the Business workspace |\n| Sidebar missing Clients / Invoices | Check Settings modules and your plan under Workspace subscription |\n| Wrong product profile | Confirm Business/work profile in Settings; commercial property is a different docs workspace |\n\nMore on account types: Personal & team accounts."
+    },
+    {
+      "id": "50c37ac3f011",
+      "path": "/work/getting-started/invite-team",
+      "title": "Invite your team",
+      "text": "Clients and Projects.\n\nWhat you’ll see\n\n- Member list with roles and status\n- Pending invites until the person accepts\n- Role-gated sidebar items (someone without invoice permission won’t see Invoices)\n\nTips\n\n- Invite owners/admins first for setup, then collaborators.\n- Use the shared Business workspace for client work; keep purely personal items in your personal account when that split helps.\n- Permissions follow workspace roles; Postgres row-level security enforces access on the server — you don’t configure RLS yourself.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Invite email missing | Check spam; resend from Team; confirm the email spelling |\n| “Seat limit” or can’t invite | Upgrade plan or remove unused members under Settings → Billing |\n| Member sees empty sidebar | They may need a different role, or modules are disabled for the workspace |\n| Stale permissions after role change | Have them sign out and back in |\n\nNext: Workspace overview or jump into Clients."
+    },
+    {
+      "id": "67ae27420be5",
+      "path": "/work/getting-started/invite-team",
+      "title": "Invite your team",
+      "text": "Invite your team\n\nGoal\n\nAdd colleagues to your Business workspace with roles that match what they should see and edit.\n\nPrerequisites\n\n- A Business team workspace you own or administer\n- Colleague email addresses\n- Seats available on your plan (see Workspace subscription)\n\nSteps\n\n1. Switch to the Business workspace with the account switcher.\n2. In the sidebar under Team & tools, open Team (/app/[account]/members).\n3. Choose invite / add member (also available at /app/[account]/members/invites).\n4. Enter the email address and select a role (owner, admin, or member — exact labels depend on your workspace roles).\n5. Send the invitation.\n6. Ask your colleague to open the invite email (or the in-app invitation), accept it, and sign in with the same email.\n7. Confirm they appear under Team and can open shared Clients and Projects.\n\nWhat you’ll see\n\n- Member list with roles and status\n- Pending invites until the person accepts"
+    },
+    {
+      "id": "317b39f4b95a",
+      "path": "/work/invoicing-billing",
+      "title": "Invoicing & billing",
+      "text": "→ Contracts | /app/[account]/contracts |\n| Payment defaults | Settings → Payments | /app/[account]/settings/payments |\n| Services catalogue | Settings → Services | /app/[account]/settings/services |\n| Your Ozer plan | Settings → Billing | /app/[account]/settings/billing |\n\nPublic pricing: ozer.so/pricing."
+    },
+    {
+      "id": "da67b9229aca",
+      "path": "/work/invoicing-billing",
+      "title": "Invoicing & billing",
+      "text": "Invoicing & billing\n\nTwo related ideas share the word “billing” in studios — keep them separate:\n\n1. Client invoices — you bill your clients from Ozer (Commercial → Invoices).\n2. Workspace subscription — you pay Ozer for the Business plan (Settings → Billing).\n\nGoal\n\nGet paid by clients, and keep your Ozer plan and seats in good order.\n\nPrerequisites\n\n- Business workspace with invoicing modules enabled for client billing\n- Owner/admin access for subscription changes\n\nGuides in this section\n\n- Client invoices — create, send, track (plus proposals & contracts)\n- Workspace subscription — Solo / Team / Scale plans, add-ons, Stripe portal\n\nWhere to click\n\n| Job | Sidebar / settings | Path |\n| --- | --- | --- |\n| Invoice clients | Commercial → Invoices | /app/[account]/invoices |\n| Proposals | Commercial → Proposals | /app/[account]/proposals |\n| Contracts | Commercial → Contracts | /app/[account]/contracts |\n| Payment defaults | Settings → Payments | /app/[account]/settings/payments |"
+    },
+    {
+      "id": "11fe29c2ec67",
+      "path": "/work/invoicing-billing/client-invoices",
+      "title": "Client invoices",
+      "text": "invoice.\n3. Select the client (and project when applicable).\n4. Add line items — manually or from services/templates.\n5. Set issue date, due date, tax, and notes.\n6. Save draft, then open edit at /app/[account]/invoices/[id]/edit if you need to refine.\n7. Send / share the invoice using the actions on the invoice (email or share link depending on workspace).\n8. Watch status move (draft → sent → paid / overdue) on the invoices list.\n\nSteps: proposals and contracts\n\n1. For pre-invoice sales docs, open Proposals (/app/[account]/proposals) or Contracts (/app/[account]/contracts).\n2. Create the document, link the client, edit at the /edit route, and send for review/signature as offered.\n3. When accepted, create the matching Invoice so finance stays in sync.\n\nSteps: finances overview\n\n1. Open Finances under Commercial when enabled (/app/[account]/finances or settings finances).\n2. Use it for higher-level money views / integrations (for example accounting connections when configured)."
+    },
+    {
+      "id": "5db35bd051cc",
+      "path": "/work/invoicing-billing/client-invoices",
+      "title": "Client invoices",
+      "text": "Client invoices\n\nGoal\n\nCreate invoices against clients (and often projects), send them, and track status through to paid. Optionally use proposals and contracts on the same Commercial track.\n\nPrerequisites\n\n- Business workspace\n- Invoices visible under Commercial\n- Client records (and preferably projects) already created\n- Settings → Payments configured with how you expect to get paid (bank details / provider defaults as offered)\n\nSteps: configure payment defaults (once)\n\n1. Open Settings → Payments (/app/[account]/settings/payments).\n2. Enter payment instructions and options your invoices should carry.\n3. Optionally set up Services (/app/[account]/settings/services) for reusable line items.\n4. Check Brand so PDFs and portals match your studio.\n\nSteps: create and send an invoice\n\n1. Open Invoices → /app/[account]/invoices.\n2. Create a new invoice.\n3. Select the client (and project when applicable).\n4. Add line items — manually or from services/templates.\n5."
+    },
+    {
+      "id": "8187b5ddd9b0",
+      "path": "/work/invoicing-billing/client-invoices",
+      "title": "Client invoices",
+      "text": "finances).\n2. Use it for higher-level money views / integrations (for example accounting connections when configured).\n\nWhat you’ll see\n\n- Invoice list with status filters\n- Editor for line items and client details\n- Related proposal/contract lists nearby in the same sidebar section\n\nTips\n\n- Invoice from the client or project context when available so links stay correct.\n- Keep currency and VAT approach consistent with your legal entity.\n- Recurring or retainer patterns: duplicate a prior invoice as a starting point when templates aren’t enough.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Can’t create invoices | Role needs invoice permission; check Business plan includes invoicing |\n| Send fails | Confirm client email; verify outbound email / provider settings |\n| Wrong branding on PDF | Update Settings → Brand |\n| Looking for Stripe subscription UI | That’s Settings → Billing — see Workspace subscription |"
+    },
+    {
+      "id": "2f52d7f9490a",
+      "path": "/work/invoicing-billing/workspace-subscription",
+      "title": "Workspace subscription",
+      "text": "card, download Ozer receipts).\n2. Adjust seats by upgrading to a plan with capacity, or request extra seats on Scale.\n3. Cancel or change renewal only from Billing / portal — cancelling does not delete workspace data immediately, but modules may lock when entitlement ends.\n\nWhat you’ll see\n\n- Plan cards and feature lists\n- Current subscription status and trial countdown when applicable\n- Add-on toggles or marketplace upsells for Email assistant, portals, etc.\n\nTips\n\n- Bill the correct workspace — each Business account has its own subscription.\n- Invite seats only after the plan supports them (Invite your team).\n- For marketing comparisons see Pricing.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Billing page missing | You need billing permission; ask an owner |\n| Checkout succeeded but features missing | Refresh; wait a moment for webhooks; sign out/in |\n| Seat invite blocked | Upgrade plan or remove inactive members |"
+    },
+    {
+      "id": "7f55aeb7e7e2",
+      "path": "/work/invoicing-billing/workspace-subscription",
+      "title": "Workspace subscription",
+      "text": "rials (where offered) are commonly 14 days on paid Business plans. Annual billing is available on Solo / Team / Scale.\n\nCommon add-ons (when sold separately): Email assistant, portal publishing, branded signatures, media units, and similar marketplace apps.\n\nSteps: start or change a plan\n\n1. Switch to the Business workspace you want billed.\n2. Open Settings → Billing → /app/[account]/settings/billing.\n3. Review current plan, seats, and renewal.\n4. Choose Business Solo, Team, Scale, or Lite as appropriate.\n5. Complete Stripe Checkout; you’ll return via the billing return route (/app/[account]/billing/return).\n6. Confirm the new plan features unlock (sidebar modules, seat capacity).\n\nSteps: manage payment method and invoices from Ozer\n\n1. From Settings → Billing, open the Stripe customer portal when offered (update card, download Ozer receipts).\n2. Adjust seats by upgrading to a plan with capacity, or request extra seats on Scale.\n3."
+    },
+    {
+      "id": "8cc028364953",
+      "path": "/work/invoicing-billing/workspace-subscription",
+      "title": "Workspace subscription",
+      "text": "Workspace subscription\n\nGoal\n\nChoose and manage the Ozer Business plan (and add-ons) that funds this team workspace.\n\nPrerequisites\n\n- Business team account\n- Permission to view billing (Settings → Billing)\n- Payment method ready for checkout (Stripe)\n\nThis is not client invoicing. Client bills live under Client invoices.\n\nBusiness plans (summary)\n\nExact prices can change — confirm on ozer.so/pricing. Typical Business products:\n\n| Plan | Best for | Typical inclusions |\n| --- | --- | --- |\n| Business Lite | Apps-only / light use | Marketplace access; pay for apps you use |\n| Business Solo | One person | Clients, jobs, invoices, tasks, activity, AI credits, 1 seat |\n| Business Team | Small studios | Everything in Solo, more seats and AI credits |\n| Business Scale | Larger teams | More seats & credits, priority support |\n\nTrials (where offered) are commonly 14 days on paid Business plans. Annual billing is available on Solo / Team / Scale."
+    },
+    {
+      "id": "9de5384dbd5a",
+      "path": "/work/invoicing-billing/workspace-subscription",
+      "title": "Workspace subscription",
+      "text": "| Refresh; wait a moment for webhooks; sign out/in |\n| Seat invite blocked | Upgrade plan or remove inactive members |\n| Confused with client invoices | Use Commercial → Invoices for client billing |"
+    },
+    {
+      "id": "12b16e400340",
+      "path": "/work/portals-websites",
+      "title": "Portals & websites",
+      "text": "capabilities when advanced tabs appear for your plan.\n\nWebsite troubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Websites missing | Enable the websites module; check plan |\n| Custom domain not resolving | Confirm DNS records and wait for propagation |\n| Client can’t see site in portal | Link site/portal configuration for that client; republish |\n\n---\n\nRelated docs\n\n- Clients\n- Projects\n- Security & trust"
+    },
+    {
+      "id": "b40a1bcd0637",
+      "path": "/work/portals-websites",
+      "title": "Portals & websites",
+      "text": "Portals & websites\n\nShare selected work with clients through portals, and publish marketing or client sites from Websites when that module is enabled.\n\nGoal\n\nGive clients a scoped view of projects and status without a full workspace login, and ship a public site when you need one.\n\nPrerequisites\n\n- Business workspace\n- Clients with contact emails for portal invites\n- Projects linked to those clients when sharing delivery\n- For sites: Websites module under the Clients sidebar section\n- Portal publishing entitlement / add-on when required by plan (Workspace subscription)\n\n| --- |\n| Can’t invite | Add contact emails first |\n| Client sees no projects | Toggle portal visibility on the project; confirm same client link |\n| Invite expired | Resend from the client detail; have them use the newest email |\n| Join link 404 | Token already used or invalid — issue a fresh invite |\n\n---\n\nWebsites\n\nSteps: create and publish a site\n\n1. Open Websites → /app/[account]/websites.\n2."
+    },
+    {
+      "id": "f58ef2b23a42",
+      "path": "/work/portals-websites",
+      "title": "Portals & websites",
+      "text": "issue a fresh invite |\n\n---\n\nWebsites\n\nSteps: create and publish a site\n\n1. Open Websites → /app/[account]/websites.\n2. Choose New → /app/[account]/websites/new.\n3. Pick a template / blank site as offered and set the site name.\n4. Open the site (/app/[account]/websites/[id]) and use Edit (/app/[account]/websites/[id]/edit) to build pages.\n5. Configure domain: start on an Ozer sites host (for example *.sites.ozer.so) then attach a custom domain when the UI allows DNS verification.\n6. Publish / update the live site from the editor or site overview.\n7. Optionally surface the site in the client portal website area when both portal and site are wired for that client.\n\nWebsite tips\n\n- Keep brand tokens aligned with Settings → Brand so studio and sites match.\n- Publish drafts only when content and legal pages (privacy/terms) are ready.\n- Use marketplace Site Studio capabilities when advanced tabs appear for your plan.\n\nWebsite troubleshooting\n\n| Problem | What to try |\n| --- | --- |"
+    },
+    {
+      "id": "1ab7a71fd83d",
+      "path": "/work/projects-tasks",
+      "title": "Projects & tasks",
+      "text": "Projects & tasks\n\nDelivery lives in Projects (jobs) with phases and tasks, plus Tasks and Planner for day-to-day execution.\n\nGoal\n\nTurn won work into structured delivery and plan what the team actually does today.\n\nPrerequisites\n\n- Business workspace at /app/[account]\n- Projects / Tasks modules enabled under the Work sidebar section\n\nSurfaces\n\n| Sidebar | Path | Purpose |\n| --- | --- | --- |\n| Projects | /app/[account]/projects | Jobs, campaigns, kanban overview |\n| Tasks | /app/[account]/tasks | Cross-project task inbox |\n| Planner | /app/[account]/planner/day | Today view and AI day planning |\n| Schedule | /app/[account]/schedule | Schedule board |\n\nGuides in this section\n\n- Projects — create jobs, phases, portal sharing\n- Tasks & planner — tasks, review, plan for the day\n\nSuggested flow\n\n1. Create a project linked to a client.\n2. Break it into phases and tasks.\n3. Plan today’s work in Planner.\n4. Invoice from Commercial → Invoices when milestones complete."
+    },
+    {
+      "id": "34f8ad026ee9",
+      "path": "/work/projects-tasks",
+      "title": "Projects & tasks",
+      "text": "nto phases and tasks.\n3. Plan today’s work in Planner.\n4. Invoice from Commercial → Invoices when milestones complete.\n\nMarketing overview: Features."
+    },
+    {
+      "id": "5ac535392192",
+      "path": "/work/projects-tasks/projects",
+      "title": "Projects",
+      "text": "Projects\n\nGoal\n\nCreate and run delivery projects linked to clients, with phases and optional client-portal visibility.\n\nPrerequisites\n\n- Business workspace\n- Sidebar Work → Projects (/app/[account]/projects)\n- Ideally an existing client\n\nSteps: create a project\n\n1. Open Projects in the sidebar.\n2. Choose create / new project.\n3. Set the project name and link a client.\n4. Choose status / dates if prompted.\n5. Save. You’ll open the project detail at /app/[account]/projects/[id].\n\nSteps: structure delivery\n\n1. On the project detail page, add phases (milestones or workstreams).\n2. Open a phase (/app/[account]/projects/[id]/phases/[phaseId]) to manage its tasks.\n3. Assign owners and due dates so Planner and Tasks stay useful.\n4. Use edit at /app/[account]/projects/[id]/edit when you need to change basics (client, title, status).\n\nSteps: share with the client portal\n\n1. Ensure the project is linked to a client with portal-ready contacts.\n2."
+    },
+    {
+      "id": "a994a4f82677",
+      "path": "/work/projects-tasks/projects",
+      "title": "Projects",
+      "text": "tatus).\n\nSteps: share with the client portal\n\n1. Ensure the project is linked to a client with portal-ready contacts.\n2. On the project, toggle Client portal access / “Shared with client portal” when you want the client to see the project, tasks, and comments in their portal.\n3. Leave portal sharing off for internal-only work.\n4. Invite contacts from the client record if they don’t have portal access yet (Portals & websites).\n\nWhat you’ll see\n\n- Project list / kanban overview under Projects\n- Detail with phases, tasks, and portal toggle\n- Links into invoices / notes depending on workspace modules\n\nTips\n\n- Name projects the way clients recognise them (e.g. “Acme — Website redesign”).\n- Keep one primary project per engagement unless you intentionally split tracks.\n- Campaign-style trackers also live under Projects in Business workspaces.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Can’t see Projects | Check module + role (canViewProjects) |"
+    },
+    {
+      "id": "b9fbfff1bd50",
+      "path": "/work/projects-tasks/projects",
+      "title": "Projects",
+      "text": "Troubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Can’t see Projects | Check module + role (canViewProjects) |\n| Portal toggle disabled | Link a client first |\n| Tasks don’t show in Planner | Confirm due dates / assignees and open Planner for the same workspace |\n\nNext: Tasks & planner."
+    },
+    {
+      "id": "28c9ebb70c14",
+      "path": "/work/projects-tasks/tasks-planner",
+      "title": "Tasks & planner",
+      "text": "y & meetings.\n- Email assistant can surface suggested tasks under /app/[account]/email/suggested-tasks when connected.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Planner empty | Add due dates / plan items; confirm timezone under Settings → General |\n| Extract/review empty | Run extract after a meeting or import; nothing appears until there’s input |\n| Can’t assign teammates | Invite them under Team first |\n\nRelated: Projects · Email assistant"
+    },
+    {
+      "id": "8bc30136136a",
+      "path": "/work/projects-tasks/tasks-planner",
+      "title": "Tasks & planner",
+      "text": "hat’s scheduled for today across the workspace.\n3. Pull in or prioritise tasks so the day list matches real capacity.\n4. Use AI day planning if offered to reshape the day; accept or edit suggestions before committing.\n5. Recheck Schedule (/app/[account]/schedule) if you need a broader calendar layout.\n\nSteps: scheduling clients (bookings)\n\n1. Open Scheduling under Work → /app/[account]/scheduling.\n2. Configure availability and public booking pages.\n3. Share the booking link with clients; meetings land in your scheduling / meetings flows.\n\nWhat you’ll see\n\n- Tasks: list / board of actionable items, including review queues\n- Planner: focused “today” composition and optional AI assist\n- Badges or counts when review queues need attention\n\nTips\n\n- Prefer linking tasks to projects so reporting and portals stay coherent.\n- Meeting transcripts can feed tasks — see Activity & meetings.\n- Email assistant can surface suggested tasks under /app/[account]/email/suggested-tasks when connected."
+    },
+    {
+      "id": "c6675aadee86",
+      "path": "/work/projects-tasks/tasks-planner",
+      "title": "Tasks & planner",
+      "text": "Tasks & planner\n\nGoal\n\nCapture work as tasks, review imports/extractions items, and plan the day so nothing important stays buried.\n\nPrerequisites\n\n- Business workspace with Tasks and Planner under Work\n- Optional: meetings or email connected so extracted tasks can appear\n\nSteps: work from Tasks\n\n1. Open Tasks → /app/[account]/tasks.\n2. Create a task or open an existing one; link it to a project when relevant.\n3. Set status, assignee, and due date.\n4. Use related flows when you need bulk capture:\n - Extract — /app/[account]/tasks/extract\n - Review — /app/[account]/tasks/review\n - Import — /app/[account]/tasks/import\n5. Admins can tune automation under Settings → Task automation (/app/[account]/settings/task-automation).\n\nSteps: plan the day with Planner\n\n1. Open Planner → /app/[account]/planner/day (plan view also at /app/[account]/planner/plan).\n2. Review what’s scheduled for today across the workspace.\n3. Pull in or prioritise tasks so the day list matches real capacity.\n4."
+    },
+    {
+      "id": "12c139ee806b",
+      "path": "/work/security-trust",
+      "title": "Security & trust",
+      "text": "ny connected email/DNS |\n| Compliance questionnaire | Start from Trust and the DPA, then email support for specifics |\n\nReturn to the Business overview or Getting started when you’re ready to continue setup."
+    },
+    {
+      "id": "a710dfc9b9f9",
+      "path": "/work/security-trust",
+      "title": "Security & trust",
+      "text": "east-privilege role that still lets people do their jobs.\n3. Remove people who left the studio; revoke stale invites.\n4. Open Settings → Activity tracking (/app/[account]/settings/activity) and set capture / retention expectations the team has agreed.\n5. Review connected integrations (Gmail, Mac assistant, finances) and disconnect accounts that are no longer needed.\n6. Confirm Settings → Billing is owned by a current admin with a company card — not a personal card of someone who’s leaving.\n7. For client portals, invite only required contacts and share only the projects that should be external (Portals & websites).\n\nSteps: if something looks wrong\n\n1. Have the affected user sign out and back in (role and membership claims refresh).\n2. Compare their role to a known-good teammate.\n3. Check whether the data lives in a different account in the switcher (personal vs Business slug).\n4."
+    },
+    {
+      "id": "cce624233c9d",
+      "path": "/work/security-trust",
+      "title": "Security & trust",
+      "text": "Security & trust\n\nOzer is built for studios that care where data lives and who can see it.\n\nGoal\n\nUnderstand how access works in a Business workspace, what you control as an admin, and where to read formal trust / legal documents.\n\nPrerequisites\n\n- Access to a Business workspace (owner/admin for settings that affect the whole team)\n\nAt a glance\n\n- Marketing trust centre: ozer.so/trust\n- Workspace data access is enforced with Postgres row-level security (RLS) — the app client only sees rows your membership allows\n- Auth uses Supabase Auth; workspace billing uses Stripe\n- Desktop activity and email connects add optional data flows — configure them deliberately\n\nLegal: Privacy · Terms · DPA\n\nSteps: lock down a Business workspace\n\n1. Open Team (/app/[account]/members) and audit members and pending invites.\n2. Assign the least-privilege role that still lets people do their jobs.\n3. Remove people who left the studio; revoke stale invites.\n4."
+    },
+    {
+      "id": "d531756a1bfd",
+      "path": "/work/security-trust",
+      "title": "Security & trust",
+      "text": "wn-good teammate.\n3. Check whether the data lives in a different account in the switcher (personal vs Business slug).\n4. Contact hello@ozer.so with the workspace slug and approximate time of the issue — don’t share passwords or full card numbers.\n\nTips\n\n- Prefer Business workspaces for client work you’ll share; keep sensitive personal life data in the personal hub.\n- Treat portal and guest links like credentials — don’t post them publicly.\n- Admins should rarely use elevated admin/service clients in integrations; stick to normal app access so RLS stays in force.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| User sees another studio’s data | They’re likely on the wrong workspace — switch accounts |\n| User sees too little | Raise role or enable modules; don’t bypass RLS |\n| Ex-employee still has access | Remove from Team; rotate shared passwords for any connected email/DNS |\n| Compliance questionnaire | Start from Trust and the DPA, then email support for specifics |"
+    },
+    {
+      "id": "10c6372306b0",
+      "path": "/work/workspace",
+      "title": "Workspace",
+      "text": "Workspace\n\nOzer is multi-tenant: every client, project, and invoice belongs to an account (workspace). Business work runs inside a team account at /app/[account]/….\n\nGoal\n\nUnderstand how personal and Business accounts differ, and how the shell is organised so you can find features quickly.\n\nPrerequisites\n\n- Signed in to Ozer\n- At least one Business workspace (First workspace)\n\nPersonal vs Business at a glance\n\n| | Personal | Business (team) |\n| --- | --- | --- |\n| Ownership | You alone | Shared with members |\n| Best for | Solo planner, life modules, private context | Studios and small agencies |\n| Invites | N/A | Roles & permissions via Team |\n| URL | /app/… | /app/[account]/… |\n\nSwitch workspaces from the account switcher at the top of the sidebar. The URL slug identifies the Business workspace.\n\nGuides in this section\n\n- Personal & team accounts\n- Navigation\n\nSteps to orient yourself\n\n1. Open the account switcher and select your Business workspace.\n2."
+    },
+    {
+      "id": "e6dcc74d5ede",
+      "path": "/work/workspace",
+      "title": "Workspace",
+      "text": "eam accounts\n- Navigation\n\nSteps to orient yourself\n\n1. Open the account switcher and select your Business workspace.\n2. Confirm the browser path starts with /app/[account]/.\n3. Scan the sidebar sections: Work, Clients, Commercial, Team & tools, Apps.\n4. Open Settings (/app/[account]/settings) for General, Brand, Billing, Payments, and Activity privacy.\n\nTips\n\n- Bookmark /app/[account]/clients or /app/[account]/projects after your slug stabilises.\n- If a teammate can’t see a section you see, compare roles under Team and module toggles in Settings.\n\nContinue to Clients & pipeline once you know where things live."
+    },
+    {
+      "id": "2ddf413c3a1f",
+      "path": "/work/workspace/accounts",
+      "title": "Personal & team accounts",
+      "text": ". Name it, set the slug, and pick the Business profile.\n4. Invite people from Team (/app/[account]/members) as needed.\n\nCreate additional team workspaces when you need a clean boundary between brands or legal entities.\n\nTips\n\n- Don’t put studio client data only in personal space if colleagues need access — use a Business workspace.\n- One person can belong to many team accounts; switch deliberately before creating clients or invoices.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Created data in the wrong space | Switch account in the switcher; recreate or migrate by creating records in the correct workspace |\n| Can’t access a colleague’s workspace | Ask an owner to invite your email under Team |\n\nRelated: Invite your team · Navigation"
+    },
+    {
+      "id": "c683bbafe22d",
+      "path": "/work/workspace/accounts",
+      "title": "Personal & team accounts",
+      "text": "Personal & team accounts\n\nGoal\n\nChoose the right account type for data, sharing, and billing.\n\nPrerequisites\n\n- An Ozer login (Create your account)\n\nAccount types\n\nPersonal account\n\n- Linked to your user ID (auth.users.id matches accounts.id in Makerkit terms).\n- Good for private pipelines, personal projects, planner, and life context that isn’t shared with a studio.\n- Reach it via /app and the personal entries in the account switcher.\n\nTeam (Business) account\n\n- A shared workspace with members, roles, and shared CRM / projects / invoices.\n- Data is scoped by account_id. You only see what your membership allows.\n- URLs use the workspace slug: /app/[account]/….\n- Billing for Business plans lives under Settings → Billing on that account.\n\nSteps: create another Business workspace\n\n1. Open the account switcher in the sidebar.\n2. Create a new team / Business workspace.\n3. Name it, set the slug, and pick the Business profile.\n4. Invite people from Team (/app/[account]/members) as needed."
+    },
+    {
+      "id": "5649a311d722",
+      "path": "/work/workspace/navigation",
+      "title": "Navigation",
+      "text": "Navigation\n\nGoal\n\nLearn the Business sidebar so you can open the right surface without hunting.\n\nPrerequisites\n\n- Business workspace open at /app/[account]\n- Modules enabled for the areas you need (Settings)\n\nSidebar map\n\nBusiness workspaces group links into sections. Labels below match the default work / Business profile.\n\nWork\n\n| Sidebar label | Typical path | Use for |\n| --- | --- | --- |\n| Dashboard | /app/[account] | Workspace home |\n| Projects | /app/[account]/projects | Delivery jobs and phases |\n| Tasks | /app/[account]/tasks | Cross-project task list |\n| Planner | /app/[account]/planner/day | Today / AI day planning |\n| Schedule | /app/[account]/schedule | Calendar-style schedule |\n| Scheduling | /app/[account]/scheduling | Public booking pages |\n\nClients\n\n| Sidebar label | Typical path | Use for |\n| --- | --- | --- |\n| Pipeline | /app/[account]/pipeline | Deal board |\n| Clients | /app/[account]/clients | Client records |"
+    },
+    {
+      "id": "6435f1356d45",
+      "path": "/work/workspace/navigation",
+      "title": "Navigation",
+      "text": "| Sidebar label | Typical path | Use for |\n| --- | --- | --- |\n| Team | /app/[account]/members | Members and invites |\n| Notes and files | /app/[account]/notes | Notes |\n| Second brain | /app/[account]/brain | Knowledge chat (when enabled) |\n| SOPs | /app/[account]/sops | Process checklists |\n| Messages | /app/[account]/messages | Team / client chat |\n\nApps\n\nMarketplace apps (Rankly, Signatures, Videos, Generate, and so on) appear when installed or enabled for the workspace.\n\nSettings\n\nOpen Settings from the shell footer / settings entry → /app/[account]/settings. Common sub-pages:\n\n- General, Focus & Availability, Activity tracking\n- Payments, Services, Finances, Brand, Brand voice, Templates\n- Billing — your Ozer subscription (not client invoices)\n\nSteps: find something quickly\n\n1. Confirm you’re on the correct workspace in the account switcher.\n2. Expand the section that matches the job (Work / Clients / Commercial / Team & tools).\n3."
+    },
+    {
+      "id": "8cd635e58c11",
+      "path": "/work/workspace/navigation",
+      "title": "Navigation",
+      "text": "| --- | --- |\n| Pipeline | /app/[account]/pipeline | Deal board |\n| Clients | /app/[account]/clients | Client records |\n| Meetings | /app/[account]/meetings | Transcripts & extracted tasks |\n| Activity | /app/[account]/activity | Desktop activity from Assistant for Mac |\n| Emails | /app/[account]/email | Email assistant (when available) |\n| Websites | /app/[account]/websites | Studio / client sites |\n| Support | /app/[account]/support | Support tickets |\n\nShared clients appears when partners shared clients into this workspace.\n\nCommercial\n\n| Sidebar label | Typical path | Use for |\n| --- | --- | --- |\n| Invoices | /app/[account]/invoices | Client invoices |\n| Proposals | /app/[account]/proposals | Sales proposals |\n| Contracts | /app/[account]/contracts | Contracts |\n| Finances | /app/[account]/finances | Finances / integrations views |\n\nTeam & tools\n\n| Sidebar label | Typical path | Use for |\n| --- | --- | --- |\n| Team | /app/[account]/members | Members and invites |"
+    },
+    {
+      "id": "b76312d4994c",
+      "path": "/work/workspace/navigation",
+      "title": "Navigation",
+      "text": "ace in the account switcher.\n2. Expand the section that matches the job (Work / Clients / Commercial / Team & tools).\n3. Click the sidebar label listed in the tables above.\n4. If the item is missing, open Settings and check modules, or ask an admin about your role.\n\nTips\n\n- Mobile uses a bottom nav / chrome with the same destinations; labels stay consistent.\n- Marketing deep-dives: Features · Apps.\n- Keyboard and accessibility preferences live under account settings (personal or workspace, depending on context).\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Empty or short sidebar | Role permissions or modules disabled |\n| “Emails” missing | Email assistant add-on / availability for the account |\n| Wrong language of board name | Some profiles rename Pipeline (for example WIP in property) — Business uses Pipeline |"
+    }
+  ]
+}

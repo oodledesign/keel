@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   type RightmoveMapperListing,
+  annualChargeFromPerSqft,
   asOptionalNumber,
+  mapCondition,
   mapListingMediaToRightmove,
   mapListingToRightmovePayload,
   mapSectorToSubType,
@@ -42,6 +44,10 @@ function baseListing(
     description: 'A modern industrial unit.',
     keyPoints: ['Secure Estate'],
     referenceNumber: null,
+    serviceChargePerSqft: null,
+    ratesPayablePerSqft: null,
+    conditionDescription: null,
+    fittedSpace: null,
     ...overrides,
   };
 }
@@ -288,5 +294,85 @@ describe('mapListingToRightmovePayload', () => {
     });
 
     expect(payload.building.useClasses).toEqual(['CLASS_E']);
+  });
+
+  it('maps service charge and rates from £/sqft × size to annual totals', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        serviceChargePerSqft: 4.5,
+        ratesPayablePerSqft: 8.25,
+        fittedSpace: true,
+        hideRentFromMarketing: false,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.serviceCharge).toBe(7992);
+    expect(payload.building.businessRates).toBe(14652);
+    expect(payload.building.condition).toBe('FULL_FIT_OUT');
+  });
+
+  it('maps unit rent, description, charges and status onto spaces', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        hideRentFromMarketing: false,
+        askingRentPence: null,
+        serviceChargePerSqft: 2,
+        ratesPayablePerSqft: 3,
+      }),
+      agentId: 283634,
+      units: [
+        {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          label: 'Unit 1',
+          floorOrUnit: 'Ground',
+          sizeSqft: 1000,
+          measurementStandard: 'gia',
+          sortOrder: 0,
+          externalId: null,
+          askingRentPence: 1_500_000,
+          rentPerSqft: null,
+          description: 'Ground floor warehouse bay.',
+          sector: 'Industrial / Warehouse',
+          status: 'Available',
+          serviceChargePerSqft: 5,
+          ratesPayablePerSqft: null,
+          fittedSpace: false,
+        },
+      ],
+    });
+
+    expect('spaces' in payload.building).toBe(true);
+    if (!('spaces' in payload.building)) return;
+
+    const space = payload.building.spaces[0];
+    expect(space?.description).toBe('Ground floor warehouse bay.');
+    expect(space?.pricing).toEqual({
+      price: 15000,
+      frequency: 'YEARLY',
+    });
+    expect(space?.serviceCharge).toBe(5000);
+    expect(space?.businessRates).toBe(3000);
+    expect(space?.condition).toBe('SHELL_SPACE');
+    expect(space?.status).toBe('AVAILABLE');
+    expect(space?.primaryPropertyClassification.subType).toBe('WAREHOUSE');
+  });
+});
+
+describe('annualChargeFromPerSqft', () => {
+  it('returns undefined without rate or size', () => {
+    expect(annualChargeFromPerSqft(null, 1000)).toBeUndefined();
+    expect(annualChargeFromPerSqft(4.5, null)).toBeUndefined();
+    expect(annualChargeFromPerSqft(4.5, 1776)).toBe(7992);
+  });
+});
+
+describe('mapCondition', () => {
+  it('prefers fittedSpace over free text', () => {
+    expect(mapCondition({ fittedSpace: true })).toBe('FULL_FIT_OUT');
+    expect(mapCondition({ fittedSpace: false })).toBe('SHELL_SPACE');
+    expect(
+      mapCondition({ conditionDescription: 'Partial fit-out remaining' }),
+    ).toBe('PARTIAL_FIT_OUT');
   });
 });

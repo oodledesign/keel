@@ -606,6 +606,7 @@ export function ClientsPageContent({
             accountId={accountId}
             canEditClients={canEditClients}
             onRestored={() => void refreshClients()}
+            terminology={isCommercial ? 'commercial' : 'default'}
           />
         ) : loadingPage && displayedClients.length === 0 ? (
           <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">

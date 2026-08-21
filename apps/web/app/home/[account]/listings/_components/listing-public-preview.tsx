@@ -17,6 +17,7 @@ import {
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import { formatCommercialUseClassLabel } from '~/lib/commercial/commercial-constants';
 import {
   type PublicBrochureData,
   formatBrochureAddress,
@@ -233,7 +234,9 @@ export function ListingPublicPreview({
   const headlineParts = [
     formatDisposalLabel(listing.disposalType).toUpperCase(),
     size?.toUpperCase() ?? null,
-    listing.useClass ? `CLASS ${listing.useClass.toUpperCase()}` : null,
+    listing.useClass
+      ? (formatCommercialUseClassLabel(listing.useClass) ?? listing.useClass)
+      : null,
     sector ? sector.toUpperCase() : null,
     listing.name,
   ].filter(Boolean);
@@ -329,7 +332,13 @@ export function ListingPublicPreview({
               {size ? <FactRow label="Size" value={size} /> : null}
               {sector ? <FactRow label="Property type" value={sector} /> : null}
               {listing.useClass ? (
-                <FactRow label="Use class" value={listing.useClass} />
+                <FactRow
+                  label="Use class"
+                  value={
+                    formatCommercialUseClassLabel(listing.useClass) ??
+                    listing.useClass
+                  }
+                />
               ) : null}
               {rent ? <FactRow label="Rent" value={rent} /> : null}
               {price ? <FactRow label="Price" value={price} /> : null}

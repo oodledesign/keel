@@ -57,6 +57,7 @@ import type { CommercialInterestMatch } from '~/home/[account]/listings/_lib/ser
 import { listListings } from '~/home/[account]/listings/_lib/server/server-actions';
 import { listRequirements } from '~/home/[account]/requirements/_lib/server/server-actions';
 import {
+  COMMERCIAL_PROPERTY_TYPES,
   INTEREST_STATUSES,
   INTEREST_STATUS_LABELS,
   type InterestStatus,
@@ -252,7 +253,7 @@ export function CommercialInterestPanel({
   const filteredHint = useMemo(() => {
     if (mode.kind !== 'listing') return null;
     const bits = [];
-    if (sector.trim()) bits.push(`sector “${sector.trim()}”`);
+    if (sector.trim()) bits.push(`property type “${sector.trim()}”`);
     if (sizeMin || sizeMax) bits.push('size band');
     if (lastDays !== 'all') bits.push(`last ${lastDays} days`);
     return bits.length ? `Filtered by ${bits.join(', ')}` : null;
@@ -641,7 +642,7 @@ export function CommercialInterestPanel({
               Suggested fits
             </p>
             <p className="text-xs text-[var(--workspace-shell-text)]/45">
-              Automatic matches from sector, size, location, tenure and budget —
+              Automatic matches from property type, size, location, tenure and budget —
               then optionally explain with AI.
               {suggestions.length > 0 ? (
                 <>
@@ -1023,13 +1024,29 @@ export function CommercialInterestPanel({
               {mode.kind === 'listing' && !compact ? (
                 <div className="grid gap-3 sm:grid-cols-4">
                   <div className="space-y-1">
-                    <Label className="text-xs">Sector</Label>
-                    <Input
-                      value={sector}
-                      onChange={(e) => setSector(e.target.value)}
-                      placeholder="e.g. industrial"
-                      className="h-8"
-                    />
+                    <Label className="text-xs">Property type</Label>
+                    <Select
+                      value={sector || 'all'}
+                      onValueChange={(v) => setSector(v === 'all' ? '' : v)}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="All types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All types</SelectItem>
+                        {COMMERCIAL_PROPERTY_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                        {sector &&
+                        !(COMMERCIAL_PROPERTY_TYPES as readonly string[]).includes(
+                          sector,
+                        ) ? (
+                          <SelectItem value={sector}>{sector}</SelectItem>
+                        ) : null}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Size min</Label>

@@ -11,6 +11,7 @@ import {
 
 import {
   ArrowLeft,
+  BookOpen,
   Home,
   LifeBuoy,
   Loader2,
@@ -48,7 +49,21 @@ import {
   formatPlatformTicketNumber,
 } from '~/lib/support/platform-support.types';
 
-type View = 'home' | 'messages' | 'new' | 'thread';
+type View = 'home' | 'messages' | 'new' | 'thread' | 'ask';
+
+type DocsChatSource = {
+  title: string;
+  path: string;
+  url: string;
+};
+
+type DocsChatMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: DocsChatSource[];
+  crisis?: boolean;
+};
 
 type PlatformSupportMessengerProps = {
   open: boolean;
@@ -201,12 +216,18 @@ export function PlatformSupportMessenger({
       <header className="relative shrink-0 bg-[var(--ozer-plum-900)] px-4 pt-4 pb-5 text-[var(--ozer-text-on-dark)]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {(view === 'thread' || view === 'new') && (
+            {(view === 'thread' || view === 'new' || view === 'ask') && (
               <button
                 type="button"
                 className="mb-2 inline-flex items-center gap-1 text-xs text-[var(--ozer-text-on-dark)]/80 hover:text-[var(--ozer-text-on-dark)]"
                 onClick={() => {
-                  setView(view === 'new' ? 'home' : 'messages');
+                  if (view === 'new') {
+                    setView('home');
+                  } else if (view === 'ask') {
+                    setView('home');
+                  } else {
+                    setView('messages');
+                  }
                   setActiveTicketId(null);
                   setThread(null);
                 }}
@@ -222,11 +243,18 @@ export function PlatformSupportMessenger({
                   ? 'Messages'
                   : view === 'new'
                     ? 'New conversation'
-                    : (thread?.subject ?? 'Conversation')}
+                    : view === 'ask'
+                      ? 'Ask docs'
+                      : (thread?.subject ?? 'Conversation')}
             </p>
             {view === 'home' ? (
               <p className="mt-1 text-sm text-[var(--ozer-text-on-dark)]/75">
                 Chat with Ozer support
+              </p>
+            ) : null}
+            {view === 'ask' ? (
+              <p className="mt-1 text-sm text-[var(--ozer-text-on-dark)]/75">
+                Answers from product docs
               </p>
             ) : null}
             {view === 'thread' && thread ? (
@@ -252,10 +280,15 @@ export function PlatformSupportMessenger({
           <HomeView
             loading={loadingBootstrap}
             recentTickets={recentTickets}
+            onAskDocs={() => setView('ask')}
             onStart={() => setView('new')}
             onOpenTicket={(id) => void openTicket(id)}
             onSeeAll={() => setView('messages')}
           />
+        ) : null}
+
+        {view === 'ask' ? (
+          <AskDocsView onContactSupport={() => setView('new')} />
         ) : null}
 
         {view === 'messages' ? (
@@ -360,6 +393,7 @@ function TabButton(props: {
 function HomeView(props: {
   loading: boolean;
   recentTickets: PlatformSupportMessengerTicketSummary[];
+  onAskDocs: () => void;
   onStart: () => void;
   onOpenTicket: (id: string) => void;
   onSeeAll: () => void;
@@ -368,8 +402,26 @@ function HomeView(props: {
     <div className="flex-1 overflow-y-auto p-4">
       <button
         type="button"
+        onClick={props.onAskDocs}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-4 text-left shadow-sm transition-colors hover:bg-[var(--workspace-shell-canvas)]"
+      >
+        <div>
+          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Ask docs
+          </p>
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+            Free AI answers from the product guides — rate limited.
+          </p>
+        </div>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-plum-900)]/10 text-[var(--ozer-plum-900)]">
+          <BookOpen className="h-5 w-5" />
+        </span>
+      </button>
+
+      <button
+        type="button"
         onClick={props.onStart}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl bg-[var(--ozer-accent)] px-4 py-4 text-left text-[var(--ozer-white)] shadow-sm transition-colors hover:bg-[var(--ozer-accent-hover)]"
+        className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl bg-[var(--ozer-accent)] px-4 py-4 text-left text-[var(--ozer-white)] shadow-sm transition-colors hover:bg-[var(--ozer-accent-hover)]"
       >
         <div>
           <p className="text-sm font-semibold">Contact support</p>
@@ -417,6 +469,194 @@ function HomeView(props: {
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AskDocsView(props: { onContactSupport: () => void }) {
+  const [messages, setMessages] = useState<DocsChatMessage[]>([]);
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sawCrisis, setSawCrisis] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, sending]);
+
+  const send = async () => {
+    const text = draft.trim();
+    if (!text || sending) return;
+
+    const userMessage: DocsChatMessage = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      content: text,
+    };
+    const nextHistory = [...messages, userMessage];
+    setMessages(nextHistory);
+    setDraft('');
+    setSending(true);
+
+    try {
+      const response = await fetch('/api/support/docs-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          history: nextHistory.slice(-6).map((item) => ({
+            role: item.role,
+            content: item.content,
+          })),
+        }),
+      });
+
+      if (response.status === 429) {
+        toast.error('You’ve asked a lot — try again in a minute');
+        setMessages((prev) => prev.slice(0, -1));
+        setDraft(text);
+        return;
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setMessages((prev) => prev.slice(0, -1));
+        setDraft(text);
+        throw new Error(payload?.error || 'Could not get an answer');
+      }
+
+      const payload = (await response.json()) as {
+        answer: string;
+        sources?: DocsChatSource[];
+        crisis?: boolean;
+      };
+
+      if (payload.crisis) {
+        setSawCrisis(true);
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          content: payload.answer,
+          sources: payload.sources ?? [],
+          crisis: Boolean(payload.crisis),
+        },
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not get an answer');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+        {messages.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-6 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+            Ask how something works in Ozer — invoices, tasks, email assistant,
+            and more. Answers come from the public product docs.
+          </div>
+        ) : null}
+
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={cn(
+              'max-w-[92%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap',
+              message.role === 'user'
+                ? 'ml-auto bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                : 'mr-auto bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] ring-1 ring-[color:var(--workspace-shell-border)]',
+            )}
+          >
+            <p>{message.content}</p>
+            {message.sources && message.sources.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {message.sources.map((source) => (
+                  <a
+                    key={source.url}
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-[var(--workspace-shell-canvas)] px-2 py-0.5 text-[11px] font-medium text-[var(--ozer-accent)] ring-1 ring-[color:var(--workspace-shell-border)] hover:underline"
+                  >
+                    {source.title}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+
+        {sending ? (
+          <div className="mr-auto flex items-center gap-2 rounded-2xl bg-[var(--workspace-shell-panel)] px-3 py-2 text-xs text-[var(--workspace-shell-text-muted)] ring-1 ring-[color:var(--workspace-shell-border)]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Searching docs…
+          </div>
+        ) : null}
+      </div>
+
+      <div className="shrink-0 space-y-2 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3">
+        {!sawCrisis ? (
+          <button
+            type="button"
+            onClick={props.onContactSupport}
+            className="text-xs font-medium text-[var(--ozer-accent)] hover:underline"
+          >
+            Still stuck? Contact support
+          </button>
+        ) : null}
+
+        <p className="text-[11px] leading-snug text-[var(--workspace-shell-text-muted)]">
+          AI answers from product docs. Don’t share passwords or personal data.{' '}
+          <a
+            href="/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[var(--ozer-accent)] hover:underline"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
+
+        <div className="flex items-end gap-2">
+          <Textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Ask a question…"
+            rows={2}
+            maxLength={1000}
+            className="min-h-[52px] flex-1 resize-none"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void send();
+              }
+            }}
+          />
+          <Button
+            type="button"
+            size="icon"
+            disabled={sending || !draft.trim()}
+            onClick={() => void send()}
+            aria-label="Send question"
+          >
+            {sending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

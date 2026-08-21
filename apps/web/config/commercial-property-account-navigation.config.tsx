@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LineChart,
   ListChecks,
+  ScrollText,
   Settings,
   StickyNote,
   UserRound,
@@ -89,6 +90,18 @@ export function buildCommercialPropertySpaceNavChildren(
             path: createPath(pathsConfig.app.accountClients, account),
             Icon: <UserRound className={iconClasses} />,
             tourId: 'nav-contacts',
+          }
+        : null,
+    properties: () =>
+      access.canViewDashboard && isEnabled(ms, 'properties')
+        ? {
+            label: 'Properties',
+            path: createPath(
+              pathsConfig.app.accountCommercialProperties,
+              account,
+            ),
+            Icon: <Building2 className={iconClasses} />,
+            tourId: 'nav-properties',
           }
         : null,
     requirements: () =>
@@ -182,6 +195,15 @@ export function buildCommercialPropertySpaceNavChildren(
   // Entitled Business Lite / add-on apps (Signatures, Rankly, etc.) stay available
   // after Commercial Property conversion.
   items.push(...buildWorkAppLinks(account, ms));
+
+  if (access.canViewDashboard) {
+    items.push({
+      label: 'Audit',
+      path: createPath(pathsConfig.app.accountAudit, account),
+      Icon: <ScrollText className={iconClasses} />,
+      tourId: 'nav-audit',
+    });
+  }
 
   return items;
 }

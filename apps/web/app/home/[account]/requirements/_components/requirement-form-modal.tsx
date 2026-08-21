@@ -255,7 +255,7 @@ function RequirementFormFields({
     setForm(briefFromDraft(draft));
     setPasteOpen(false);
     setPasteText('');
-    toast.success('Draft applied — link a client and save to confirm');
+    toast.success('Draft applied — link a contact and save to confirm');
   };
 
   const runPasteDraft = () => {

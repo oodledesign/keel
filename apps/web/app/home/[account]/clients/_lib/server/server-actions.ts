@@ -75,6 +75,11 @@ export const listClientSales = enhanceAction(
   { schema: ClientScopedListSchema },
 );
 
+export const listClientProperties = enhanceAction(
+  async (input) => getCommercialService().listProperties(input),
+  { schema: ClientScopedListSchema },
+);
+
 export const listClients = enhanceAction(
   async (input) => {
     const service = getService();

@@ -28,11 +28,8 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
+import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
-import {
-  LISTING_STATUS_LABELS,
-  type ListingStatus,
-} from '~/lib/commercial/commercial-constants';
 import { isEachFeedIncluded } from '~/lib/commercial/each-feed-inclusion';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
@@ -286,7 +283,10 @@ export function ListingMarketingEditor({
           </Button>
         </div>
 
-        <Card id="summary-key-points" className={workspacePanelCard}>
+        <Card
+          id="summary-key-points"
+          className={`${workspacePanelCard} scroll-mt-36`}
+        >
           <CardHeader>
             <CardTitle className="text-base text-[var(--workspace-shell-text)]">
               Summary & key points
@@ -455,7 +455,7 @@ export function ListingMarketingEditor({
           </CardContent>
         </Card>
 
-        <Card id="amenities" className={workspacePanelCard}>
+        <Card id="amenities" className={`${workspacePanelCard} scroll-mt-36`}>
           <CardHeader className="flex flex-row items-start justify-between gap-3">
             <div>
               <CardTitle className="text-base text-[var(--workspace-shell-text)]">
@@ -584,7 +584,10 @@ export function ListingMarketingEditor({
           </CardContent>
         </Card>
 
-        <Card id="marketing-text" className={workspacePanelCard}>
+        <Card
+          id="marketing-text"
+          className={`${workspacePanelCard} scroll-mt-36`}
+        >
           <CardHeader>
             <CardTitle className="text-base text-[var(--workspace-shell-text)]">
               Marketing text
@@ -721,7 +724,10 @@ export function ListingMarketingEditor({
           </CardContent>
         </Card>
 
-        <Card id="accommodation" className={workspacePanelCard}>
+        <Card
+          id="accommodation"
+          className={`${workspacePanelCard} scroll-mt-36`}
+        >
           <CardHeader>
             <CardTitle className="text-base text-[var(--workspace-shell-text)]">
               Accommodation
@@ -742,7 +748,10 @@ export function ListingMarketingEditor({
           </CardContent>
         </Card>
 
-        <div id="agent-contacts" className="grid gap-4 xl:grid-cols-2">
+        <div
+          id="agent-contacts"
+          className="grid scroll-mt-36 gap-4 xl:grid-cols-2"
+        >
           <ListingAssignmentCard
             accountId={accountId}
             accountSlug={accountSlug}
@@ -801,7 +810,10 @@ export function ListingMarketingEditor({
           </CardContent>
         </Card>
 
-        <Card className={workspacePanelCard}>
+        <Card
+          id="publish-options"
+          className={`${workspacePanelCard} scroll-mt-36`}
+        >
           <CardHeader>
             <CardTitle className="text-sm text-[var(--workspace-shell-text)]">
               Publish options
@@ -813,8 +825,7 @@ export function ListingMarketingEditor({
                 Status
               </span>
               <span className="font-medium text-[var(--workspace-shell-text)]">
-                {LISTING_STATUS_LABELS[listing.status as ListingStatus] ??
-                  listing.status}
+                <ListingStatusBadge status={listing.status} />
               </span>
             </div>
 
@@ -856,7 +867,8 @@ export function ListingMarketingEditor({
                 PDF brochure
               </p>
               <p className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                Preview, publish to Media for portals, or upload an external PDF.
+                Preview, publish to Media for portals, or upload an external
+                PDF.
               </p>
               <ListingBrochureDownload
                 listingId={listing.id}

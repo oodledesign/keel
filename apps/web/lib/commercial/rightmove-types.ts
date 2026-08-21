@@ -88,6 +88,11 @@ export type RightmoveRemovalReason =
   | 'LET_BY_US'
   | 'REMOVED';
 
+export type RightmoveCondition =
+  | 'FULL_FIT_OUT'
+  | 'PARTIAL_FIT_OUT'
+  | 'SHELL_SPACE';
+
 export type RightmoveMediaAsset = {
   url: string;
   description?: string;
@@ -167,6 +172,9 @@ export type RightmoveSpace = {
   pricing?: RightmoveSpacePricing;
   keyFeatures?: string[];
   availableDate?: string;
+  serviceCharge?: number;
+  businessRates?: number;
+  condition?: RightmoveCondition;
   published?: boolean;
   primaryPropertyClassification: RightmovePropertyClassification;
   media?: RightmoveMedia;
@@ -204,7 +212,7 @@ type RightmoveBuildingBase = {
   businessRates?: number;
   letContractLength?: number;
   isRentAllInclusive?: boolean;
-  condition?: string;
+  condition?: RightmoveCondition;
   environment?: {
     environmentalDescription?: string;
     breeamRating?: number;

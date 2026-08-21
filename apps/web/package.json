@@ -9,6 +9,9 @@
   "type": "module",
   "scripts": {
     "analyze": "ANALYZE=true pnpm run build",
+    "docs:corpus": "node scripts/generate-docs-corpus.mjs",
+    "prebuild": "pnpm run docs:corpus",
+    "predev": "pnpm run docs:corpus",
     "build": "NODE_OPTIONS='--max-old-space-size=5120' next build --webpack",
     "build:test": "NODE_ENV=test NODE_OPTIONS='--max-old-space-size=5120' next build --webpack",
     "clean": "git clean -xdf .next .turbo node_modules",

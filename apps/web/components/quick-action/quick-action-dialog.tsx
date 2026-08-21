@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ArrowRight, Clock3, Loader2, Search, X } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 
 import {
   CommandEmpty,
@@ -26,6 +26,7 @@ import {
   getCachedNavCatalog,
   prefetchNavCatalog,
 } from '~/lib/quick-action/nav-catalog-cache';
+import { resolveNavSearchCategoryVisual } from '~/lib/quick-action/nav-search-category-icon';
 import {
   type SearchHistoryItem,
   loadSearchHistory,
@@ -60,6 +61,35 @@ function readVisualViewport(): VisualViewportBox {
     return { offsetTop: 0, height: window.innerHeight };
   }
   return { offsetTop: vv.offsetTop, height: vv.height };
+}
+
+function SearchResultItem(props: {
+  item: Pick<NavSearchItem, 'id' | 'label' | 'href' | 'category'>;
+  value: string;
+  onSelect: () => void;
+}) {
+  const { item, value, onSelect } = props;
+  const { Icon, className } = resolveNavSearchCategoryVisual(item.category, {
+    label: item.label,
+  });
+
+  return (
+    <CommandItem
+      value={value}
+      onSelect={onSelect}
+      className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
+    >
+      <Icon className={cn('h-4 w-4 shrink-0', className)} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{item.label}</p>
+        {item.category ? (
+          <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+            {item.category}
+          </p>
+        ) : null}
+      </div>
+    </CommandItem>
+  );
 }
 
 export function QuickActionDialog(props: QuickActionDialogProps) {
@@ -244,24 +274,12 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
                 className="p-0 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-[var(--workspace-shell-text-muted)]"
               >
                 {history.map((item) => (
-                  <CommandItem
+                  <SearchResultItem
                     key={`history-${item.id}`}
+                    item={item}
                     value={`history-${item.id}`}
                     onSelect={() => goTo(item)}
-                    className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
-                  >
-                    <Clock3 className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {item.label}
-                      </p>
-                      {item.category ? (
-                        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                          {item.category}
-                        </p>
-                      ) : null}
-                    </div>
-                  </CommandItem>
+                  />
                 ))}
               </CommandGroup>
             ) : null}
@@ -269,24 +287,12 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
             {matches.length > 0 ? (
               <CommandGroup className="p-0">
                 {matches.map((item) => (
-                  <CommandItem
+                  <SearchResultItem
                     key={item.id}
+                    item={item}
                     value={item.id}
                     onSelect={() => goTo(item)}
-                    className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
-                  >
-                    <ArrowRight className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {item.label}
-                      </p>
-                      {item.category ? (
-                        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                          {item.category}
-                        </p>
-                      ) : null}
-                    </div>
-                  </CommandItem>
+                  />
                 ))}
               </CommandGroup>
             ) : null}

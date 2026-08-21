@@ -375,28 +375,28 @@ export function createMatchSuggestionsService(client: SupabaseClient) {
 
       const minScore = input.minScore ?? DEFAULT_MATCH_SUGGESTION_MIN_SCORE;
 
-      const [
-        { data: listingRows, error: listingError },
-        { data: reqRows, error: reqError },
-      ] = await Promise.all([
-        db
-          .from('commercial_listings')
-          .select(LISTING_SELECT)
-          .eq('account_id', input.accountId)
-          .in('id', input.listingIds),
-        db
-          .from('commercial_requirements')
-          .select(REQUIREMENT_SELECT)
-          .eq('account_id', input.accountId)
-          .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
-          .order('updated_at', { ascending: false })
-          .limit(250),
-      ]);
+      const { getCachedActiveMatchRequirements } =
+        await import('~/lib/cache/disposals-data-cache');
 
-      if (listingError || reqError) {
+      const [{ data: listingRows, error: listingError }, reqRows] =
+        await Promise.all([
+          db
+            .from('commercial_listings')
+            .select(LISTING_SELECT)
+            .eq('account_id', input.accountId)
+            .in('id', input.listingIds),
+          getCachedActiveMatchRequirements({
+            accountId: input.accountId,
+            select: REQUIREMENT_SELECT,
+            stages: ACTIVE_REQUIREMENT_STAGES_FOR_MATCH,
+            limit: 250,
+          }),
+        ]);
+
+      if (listingError) {
         console.error(
           '[match-suggestions] countByListing',
-          listingError?.message ?? reqError?.message,
+          listingError.message,
         );
         return counts;
       }
@@ -404,9 +404,7 @@ export function createMatchSuggestionsService(client: SupabaseClient) {
       const listings = (
         (listingRows ?? []) as Array<Record<string, unknown>>
       ).map(mapListing);
-      const requirements = (
-        (reqRows ?? []) as Array<Record<string, unknown>>
-      ).map(mapRequirement);
+      const requirements = (reqRows ?? []).map(mapRequirement);
 
       if (listings.length === 0 || requirements.length === 0) {
         return counts;

@@ -1,6 +1,12 @@
 import 'server-only';
 
+import { cache } from 'react';
+
+import { unstable_cache } from 'next/cache';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import { accountBranchesTag } from '~/lib/cache/disposals-cache-tags';
 
 export type AccountBranch = {
   id: string;
@@ -40,7 +46,8 @@ function mapBranch(row: AccountBranchRow): AccountBranch {
   };
 }
 
-export async function loadAccountBranches(
+/** Uncached fetch — used by the tagged Next data cache. */
+export async function loadAccountBranchesUncached(
   accountId: string,
 ): Promise<AccountBranch[]> {
   const admin = getSupabaseServerAdminClient();
@@ -57,6 +64,22 @@ export async function loadAccountBranches(
 
   return ((data ?? []) as AccountBranchRow[]).map(mapBranch);
 }
+
+function getCachedBranches(accountId: string): Promise<AccountBranch[]> {
+  return unstable_cache(
+    async () => loadAccountBranchesUncached(accountId),
+    ['account-branches', accountId],
+    {
+      revalidate: 300,
+      tags: [accountBranchesTag(accountId)],
+    },
+  )();
+}
+
+/** Request-memoized + short-TTL cross-request cache. */
+export const loadAccountBranches = cache(async (accountId: string) => {
+  return getCachedBranches(accountId);
+});
 
 export async function loadAccountBranchById(
   accountId: string,
@@ -81,7 +104,7 @@ export async function loadDefaultAccountBranch(
   accountId: string,
 ): Promise<AccountBranch | null> {
   const branches = await loadAccountBranches(accountId);
-  return branches.find((b) => b.isDefault) ?? branches[0] ?? null;
+  return branches.find((branch) => branch.isDefault) ?? branches[0] ?? null;
 }
 
 export async function resolveBranchForStaff(input: {

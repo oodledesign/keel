@@ -181,6 +181,8 @@ export function ClientForm({
 
   const isReadOnly = mode === 'edit' && !canEdit;
   const isIndividual = clientType === 'individual';
+  const entityLabel = showCommercialRole ? 'contact' : 'client';
+  const entityLabelTitle = showCommercialRole ? 'Contact' : 'Client';
   const showCreateContact = mode === 'create' && !isIndividual;
 
   const loadWorkspaceContacts = useCallback(async () => {
@@ -226,7 +228,9 @@ export function ClientForm({
       return;
     }
     if (!isIndividual && !company_name.trim()) {
-      toast.error('Company name is required for a business client');
+      toast.error(
+        `Company name is required for a business ${entityLabel}`,
+      );
       return;
     }
     if (
@@ -293,8 +297,8 @@ export function ClientForm({
         });
         toast.success(
           isIndividual
-            ? 'Individual client created'
-            : 'Business client created',
+            ? `Individual ${entityLabel} created`
+            : `Business ${entityLabel} created`,
         );
         onSaved();
       } else if (client) {
@@ -320,7 +324,7 @@ export function ClientForm({
           aml_completed: amlCompleted,
           aml_notes: amlNotes.trim() || null,
         });
-        toast.success('Client updated');
+        toast.success(`${entityLabelTitle} updated`);
         onSaved();
       }
     } catch (e) {
@@ -340,13 +344,15 @@ export function ClientForm({
     if (
       !client ||
       !onDeleted ||
-      !confirm('Delete this client? This cannot be undone.')
+      !confirm(
+        `Delete this ${entityLabel}? This cannot be undone.`,
+      )
     )
       return;
     setDeleting(true);
     try {
       await deleteClient({ accountId, clientId: client.id });
-      toast.success('Client deleted');
+      toast.success(`${entityLabelTitle} deleted`);
       onDeleted();
     } catch (e) {
       const message =
@@ -364,7 +370,7 @@ export function ClientForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <Label>Client type</Label>
+        <Label>{entityLabelTitle} type</Label>
         <div className="flex overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
           <button
             type="button"
@@ -831,7 +837,7 @@ export function ClientForm({
             {saving
               ? 'Saving...'
               : mode === 'create'
-                ? 'Create client'
+                ? `Create ${entityLabel}`
                 : 'Save changes'}
           </Button>
         )}
@@ -847,7 +853,7 @@ export function ClientForm({
             onClick={handleDelete}
             disabled={deleting}
           >
-            {deleting ? 'Deleting...' : 'Delete client'}
+            {deleting ? 'Deleting...' : `Delete ${entityLabel}`}
           </Button>
         )}
       </div>

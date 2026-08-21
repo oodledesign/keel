@@ -49,6 +49,80 @@ export function disposalIncludesToLet(type: DisposalType): boolean {
   return type === 'to_let' || type === 'to_let_and_for_sale';
 }
 
+/**
+ * Canonical property types for disposals + requirements (stored in `sector`).
+ * Labels are agent-facing; Rightmove classification still uses fuzzy matching.
+ */
+export const COMMERCIAL_PROPERTY_TYPES = [
+  'Offices',
+  'Industrial / Warehouse',
+  'Retail',
+  'Leisure',
+  'Retail / Leisure',
+  'Land',
+  'Mixed use',
+  'Investment',
+  'Development',
+] as const;
+
+export type CommercialPropertyType = (typeof COMMERCIAL_PROPERTY_TYPES)[number];
+
+/**
+ * UK planning use classes for disposals (stored in `use_class`).
+ * Values are Rightmove ADF enum tokens so publish mapping stays exact.
+ */
+export const COMMERCIAL_USE_CLASSES = [
+  'CLASS_E',
+  'CLASS_B2',
+  'CLASS_B8',
+  'CLASS_F1',
+  'CLASS_F2',
+  'CLASS_C1',
+  'CLASS_C2',
+  'CLASS_C2A',
+  'CLASS_C3',
+  'CLASS_C4',
+  'CLASS_1A',
+  'SUI_GENERIS',
+] as const;
+
+export type CommercialUseClass = (typeof COMMERCIAL_USE_CLASSES)[number];
+
+export const COMMERCIAL_USE_CLASS_LABELS: Record<CommercialUseClass, string> = {
+  CLASS_E: 'Class E – Commercial, Business and Service',
+  CLASS_B2: 'Class B2 – General industrial',
+  CLASS_B8: 'Class B8 – Storage or distribution',
+  CLASS_F1: 'Class F1 – Learning and non-residential institutions',
+  CLASS_F2: 'Class F2 – Local community',
+  CLASS_C1: 'Class C1 – Hotels',
+  CLASS_C2: 'Class C2 – Residential institutions',
+  CLASS_C2A: 'Class C2A – Secure residential institutions',
+  CLASS_C3: 'Class C3 – Dwellinghouses',
+  CLASS_C4: 'Class C4 – Houses in multiple occupation',
+  CLASS_1A: 'Class 1A – Shops (Scotland)',
+  SUI_GENERIS: 'Sui generis',
+};
+
+export function isCommercialUseClass(
+  value: string | null | undefined,
+): value is CommercialUseClass {
+  return (
+    !!value &&
+    (COMMERCIAL_USE_CLASSES as readonly string[]).includes(value.trim())
+  );
+}
+
+export function formatCommercialUseClassLabel(
+  value: string | null | undefined,
+): string | null {
+  if (!value?.trim()) return null;
+  const trimmed = value.trim();
+  if (isCommercialUseClass(trimmed)) {
+    return COMMERCIAL_USE_CLASS_LABELS[trimmed];
+  }
+  return trimmed;
+}
+
 export function disposalIncludesForSale(type: DisposalType): boolean {
   return (
     type === 'for_sale' ||
@@ -67,9 +141,31 @@ export const TERMS_OF_ENGAGEMENT_LABELS: Record<TermsOfEngagement, string> = {
   pending: 'Pending',
 };
 
-export const LISTING_PARTY_ROLES = ['landlord', 'other'] as const;
+/** Roles for people/companies on a disposal or commercial property asset. */
+export const LISTING_PARTY_ROLES = [
+  'landlord',
+  'landlord_representative',
+  'tenant',
+  'managing_agent',
+  'solicitor',
+  'other',
+] as const;
 
 export type ListingPartyRole = (typeof LISTING_PARTY_ROLES)[number];
+
+export const LISTING_PARTY_ROLE_LABELS: Record<ListingPartyRole, string> = {
+  landlord: 'Landlord',
+  landlord_representative: 'Landlord representative',
+  tenant: 'Tenant',
+  managing_agent: 'Managing agent',
+  solicitor: 'Solicitor',
+  other: 'Other',
+};
+
+/** Alias for property parties — same vocabulary as listing parties. */
+export const PROPERTY_PARTY_ROLES = LISTING_PARTY_ROLES;
+export type PropertyPartyRole = ListingPartyRole;
+export const PROPERTY_PARTY_ROLE_LABELS = LISTING_PARTY_ROLE_LABELS;
 
 export const LISTING_SIZE_BREAKDOWNS = [
   'floor_by_floor',

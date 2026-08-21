@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { recordCommercialAccountEvent } from '~/lib/commercial/account-events';
+
 /** Tables not yet in generated Database types — unwrap until typegen. */
 function fromTable(client: SupabaseClient, table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,6 +33,8 @@ export type CommercialListingEvent = {
   summary: string;
   metadata: Record<string, unknown>;
   createdAt: string;
+  actorName?: string | null;
+  actorPictureUrl?: string | null;
 };
 
 export type RecordListingEventInput = {
@@ -98,6 +102,24 @@ export async function recordListingEvent(
       return null;
     }
 
+    // Dual-write into the workspace audit feed (best-effort).
+    // Skip synthetic seed rows so historical backfill does not flood Audit.
+    if (input.eventType !== 'seeded') {
+      void recordCommercialAccountEvent(client, {
+        accountId: input.accountId,
+        entityType: 'listing',
+        entityId: input.listingId,
+        eventType: input.eventType,
+        summary: input.summary,
+        actorUserId: input.actorUserId ?? null,
+        metadata: {
+          ...(input.metadata ?? {}),
+          listingId: input.listingId,
+        },
+        createdAt: input.createdAt,
+      });
+    }
+
     return mapListingEvent(data as EventRow);
   } catch (err) {
     console.error('[listing-events] insert error:', err);
@@ -122,7 +144,48 @@ export async function listListingEvents(
     return [];
   }
 
-  return ((data ?? []) as EventRow[]).map(mapListingEvent);
+  const events = ((data ?? []) as EventRow[]).map(mapListingEvent);
+  return enrichListingEventsWithActors(client, events);
+}
+
+async function enrichListingEventsWithActors(
+  client: SupabaseClient,
+  events: CommercialListingEvent[],
+): Promise<CommercialListingEvent[]> {
+  const actorIds = [
+    ...new Set(
+      events
+        .map((event) => event.actorUserId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (actorIds.length === 0) return events;
+
+  const { data } = await client
+    .from('accounts')
+    .select('id, name, picture_url')
+    .in('id', actorIds);
+
+  const actorMap = new Map(
+    (
+      (data ?? []) as Array<{
+        id: string;
+        name: string | null;
+        picture_url: string | null;
+      }>
+    ).map((row) => [row.id, { name: row.name, pictureUrl: row.picture_url }]),
+  );
+
+  return events.map((event) => {
+    const actor = event.actorUserId
+      ? actorMap.get(event.actorUserId)
+      : undefined;
+    return {
+      ...event,
+      actorName: actor?.name ?? null,
+      actorPictureUrl: actor?.pictureUrl ?? null,
+    };
+  });
 }
 
 /**

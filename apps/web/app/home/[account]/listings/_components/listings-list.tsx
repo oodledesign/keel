@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from 'react';
@@ -52,12 +53,12 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 
+import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
 import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
   LISTING_STATUSES,
-  LISTING_STATUS_BADGE_CLASS,
   LISTING_STATUS_FILTER_ACTIVE_CLASS,
   LISTING_STATUS_LABELS,
   type ListingStatus,
@@ -72,6 +73,7 @@ import {
 import type { CommercialListing } from '../_lib/server/listings.service';
 import {
   backfillListingLocations,
+  countSuggestedMatches,
   countUnassignedListings,
   deleteListing,
   listListings,
@@ -230,19 +232,57 @@ export function ListingsList({
   const [enrichingMap, setEnrichingMap] = useState(false);
   const [backfillingLocations, setBackfillingLocations] = useState(false);
   const [isDeleting, startDeleteTransition] = useTransition();
-  const [unassignedVisibleCount, setUnassignedVisibleCount] =
-    useState(unassignedCount);
-
-  useEffect(() => {
-    setUnassignedVisibleCount(unassignedCount);
-  }, [unassignedCount]);
+  const [unassignedOverride, setUnassignedOverride] = useState<number | null>(
+    null,
+  );
+  const unassignedVisibleCount = unassignedOverride ?? unassignedCount;
+  const suggestedMatchIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
     setPageListings(initialListings);
     setCachedListings(initialListings);
     setTotal(initialTotal);
     setPage(1);
+    setUnassignedOverride(null);
+    suggestedMatchIdsRef.current.clear();
   }, [initialListings, initialTotal]);
+
+  // Suggested match scoring is deferred off SSR — fill badges after paint.
+  useEffect(() => {
+    const listingIds = pageListings
+      .map((listing) => listing.id)
+      .filter((id) => !suggestedMatchIdsRef.current.has(id));
+    if (listingIds.length === 0) return;
+
+    let cancelled = false;
+    void countSuggestedMatches({ accountId, listingIds })
+      .then((suggested) => {
+        if (cancelled || !suggested || typeof suggested !== 'object') return;
+        for (const id of listingIds) {
+          suggestedMatchIdsRef.current.add(id);
+        }
+        const listingIdSet = new Set(listingIds);
+        const apply = (list: CommercialListing[]) =>
+          list.map((listing) => {
+            if (!listingIdSet.has(listing.id)) return listing;
+            const extra = suggested[listing.id] ?? 0;
+            if (extra <= 0) return listing;
+            return {
+              ...listing,
+              matchCount: (listing.matchCount ?? 0) + extra,
+            };
+          });
+        setPageListings(apply);
+        setCachedListings((current) => apply(current));
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, pageListings]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(searchQuery), 300);
@@ -405,7 +445,7 @@ export function ListingsList({
           status: statusFilter === 'all' ? undefined : statusFilter,
         });
         if (!cancelled && typeof count === 'number') {
-          setUnassignedVisibleCount(count);
+          setUnassignedOverride(count);
         }
       } catch (err) {
         console.error(err);
@@ -723,7 +763,7 @@ export function ListingsList({
           type="search"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name, address, postcode, or sector…"
+          placeholder="Search by name, address, postcode, or property type…"
           aria-label="Search disposals"
           className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
         />
@@ -935,6 +975,7 @@ export function ListingsList({
                 const rent = formatMoney(listing.askingRentPence);
                 const price = formatMoney(listing.askingPricePence);
                 const size = formatSize(listing) ?? '—';
+                const location = locationLabel(listing);
 
                 return (
                   <tr
@@ -964,9 +1005,9 @@ export function ListingsList({
                           >
                             {listing.name}
                           </Link>
-                          {locationLabel(listing) ? (
+                          {location ? (
                             <p className="truncate text-xs text-[var(--workspace-shell-text)]/45">
-                              {locationLabel(listing)}
+                              {location}
                             </p>
                           ) : null}
                         </div>
@@ -980,11 +1021,7 @@ export function ListingsList({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${LISTING_STATUS_BADGE_CLASS[listing.status]}`}
-                      >
-                        {LISTING_STATUS_LABELS[listing.status]}
-                      </span>
+                      <ListingStatusBadge status={listing.status} />
                     </td>
                     <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 lg:table-cell">
                       {size}
@@ -1149,11 +1186,10 @@ function ListingCard({
         ) : (
           <Building2 className="h-10 w-10 text-[var(--workspace-shell-text)]/15" />
         )}
-        <span
-          className={`absolute top-3 left-3 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm ${LISTING_STATUS_BADGE_CLASS[listing.status]}`}
-        >
-          {LISTING_STATUS_LABELS[listing.status]}
-        </span>
+        <ListingStatusBadge
+          status={listing.status}
+          className="absolute top-3 left-3 shadow-sm"
+        />
         <span
           className={`absolute top-3 right-3 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm ${DISPOSAL_TYPE_BADGE_CLASS[listing.disposalType]}`}
         >

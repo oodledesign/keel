@@ -25,6 +25,11 @@ export const CountUnassignedListingsSchema = z.object({
   status: z.enum(LISTING_STATUSES).optional(),
 });
 
+export const CountSuggestedMatchesSchema = z.object({
+  accountId: z.string().uuid(),
+  listingIds: z.array(z.string().uuid()).max(100),
+});
+
 export const GetListingSchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
@@ -46,6 +51,7 @@ export const CreateListingSchema = z.object({
   termsOfEngagement: z.enum(['yes', 'no', 'pending']).optional().nullable(),
   restrictAccessToAssigned: z.boolean().optional(),
   hideLandlordFromMarketing: z.boolean().optional(),
+  commercialPropertyId: z.string().uuid().optional().nullable(),
   referenceNumber: z.string().trim().max(120).optional().nullable(),
   projectCode: z.string().trim().max(120).optional().nullable(),
   accountBranchId: z.string().uuid().optional().nullable(),
@@ -454,6 +460,7 @@ export const AddListingPartySchema = z
     accountId: z.string().uuid(),
     role: z.enum(LISTING_PARTY_ROLES),
     clientId: z.string().uuid().optional(),
+    contactId: z.string().uuid().optional().nullable(),
     companyName: z.string().trim().min(1).max(200).optional(),
     contactName: z.string().trim().max(200).optional().nullable(),
     contactEmail: z
@@ -466,7 +473,7 @@ export const AddListingPartySchema = z
     if (!data.clientId && !data.companyName?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Select a client or enter a company name',
+        message: 'Select a contact or enter a company name',
         path: ['companyName'],
       });
     }

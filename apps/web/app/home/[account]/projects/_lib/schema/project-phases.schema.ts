@@ -305,10 +305,18 @@ export type JobBoardAssignee = {
   picture_url: string | null;
 };
 
+export type JobBoardContactAssignee = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  picture_url: string | null;
+};
+
 export type JobBoardResult = {
   job: Record<string, unknown>;
   client: Record<string, unknown> | null;
   assignees: JobBoardAssignee[];
+  contactAssignees: JobBoardContactAssignee[];
   members: Array<{
     user_id: string;
     name: string | null;

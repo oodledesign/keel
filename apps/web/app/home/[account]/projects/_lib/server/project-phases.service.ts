@@ -739,9 +739,13 @@ class ProjectPhasesService {
 
     const tasksByPhase: Record<string, JobBoardTask[]> = {};
     const jobTaskCounts = EMPTY_TASK_COUNTS();
+    const contactIds = new Set<string>();
 
     for (const row of taskRows ?? []) {
       const task = mapJobBoardTask(row as Record<string, unknown>);
+      if (task.assignee_contact_id) {
+        contactIds.add(task.assignee_contact_id);
+      }
       const key = task.phase_id ?? '__unphased__';
       if (!tasksByPhase[key]) tasksByPhase[key] = [];
       tasksByPhase[key].push(task);
@@ -754,10 +758,45 @@ class ProjectPhasesService {
       }
     }
 
+    let contactAssignees: Array<{
+      id: string;
+      name: string | null;
+      email: string | null;
+      picture_url: string | null;
+    }> = [];
+
+    if (contactIds.size > 0) {
+      const { data: contacts, error: contactsErr } = await this.db
+        .from('contacts')
+        .select('id, full_name, first_name, last_name, email, picture_url')
+        .eq('account_id', input.accountId)
+        .in('id', [...contactIds]);
+
+      if (contactsErr) this.throwErr(contactsErr);
+
+      contactAssignees = ((contacts ?? []) as Array<Record<string, unknown>>).map(
+        (row) => {
+          const fullName = (row.full_name as string | null)?.trim() || null;
+          const composed = [row.first_name, row.last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+          const email = (row.email as string | null)?.trim() || null;
+          return {
+            id: String(row.id),
+            name: fullName || composed || email,
+            email,
+            picture_url: (row.picture_url as string | null) ?? null,
+          };
+        },
+      );
+    }
+
     return {
       job,
       client,
       assignees,
+      contactAssignees,
       members,
       phases,
       tasksByPhase,
@@ -1118,6 +1157,10 @@ class ProjectPhasesService {
     if (input.priority !== undefined) payload.priority = input.priority;
     if (input.assigneeUserId !== undefined) {
       payload.user_id = input.assigneeUserId;
+      // Member assignee replaces any contact assignee.
+      if (input.assigneeUserId) {
+        payload.assignee_contact_id = null;
+      }
     }
     if (input.assigneeContactId !== undefined) {
       if (input.assigneeContactId) {
@@ -1131,6 +1174,8 @@ class ProjectPhasesService {
         if (!contact) {
           throw new Error('Contact not found in this workspace');
         }
+        // Contact assignee replaces any member assignee.
+        payload.user_id = null;
       }
       payload.assignee_contact_id = input.assigneeContactId;
     }

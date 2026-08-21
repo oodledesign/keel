@@ -2,12 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import {
   DISPOSAL_TYPE_LABELS,
   type DisposalType,
   ENQUIRY_STATUS_LABELS,
   type EnquiryStatus,
-  LISTING_STATUS_LABELS,
   type ListingStatus,
   disposalIncludesForSale,
   disposalIncludesToLet,
@@ -201,9 +201,7 @@ async function LandlordSharePage({ params }: LandlordSharePageProps) {
             {formatAddress(listing) || 'No address recorded'}
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
-            <span className="inline-flex rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
-              {LISTING_STATUS_LABELS[listingStatus] ?? listing.status}
-            </span>
+            <ListingStatusBadge status={listingStatus} />
             <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">
               {DISPOSAL_TYPE_LABELS[disposalType] ?? listing.disposal_type}
             </span>

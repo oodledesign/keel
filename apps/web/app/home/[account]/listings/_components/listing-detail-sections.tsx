@@ -32,6 +32,7 @@ import {
   ENQUIRY_SOURCE_LABELS,
   type EnquirySource,
   type EnquiryStatus,
+  formatCommercialUseClassLabel,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -45,6 +46,7 @@ import type {
   CommercialListingMedia,
   CommercialListingUnit,
   CommercialPortalPublication,
+  ListingParty,
 } from '../_lib/server/listings.service';
 import {
   createListingEnquiry,
@@ -59,6 +61,7 @@ import { ListingCirculateDialog } from './listing-circulate-dialog';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
+import { ListingPeopleStrip } from './listing-people-strip';
 import { ListingPortalSyncCard } from './listing-portal-sync-card';
 import { ListingUnitFormModal } from './listing-unit-form-modal';
 
@@ -164,6 +167,7 @@ export function ListingOverviewSection({
   accountId,
   accountSlug,
   interestSummary,
+  parties = [],
 }: {
   listing: CommercialListing;
   accountId: string;
@@ -176,6 +180,7 @@ export function ListingOverviewSection({
     upcomingViewings?: number;
     awaitingFeedback?: number;
   };
+  parties?: ListingParty[];
 }) {
   const { listing } = useListingState(initial);
   const [matchBadgeCount, setMatchBadgeCount] = useState(
@@ -194,6 +199,9 @@ export function ListingOverviewSection({
   const interestHref = `${pathsConfig.app.accountListingDetail
     .replace('[account]', accountSlug)
     .replace('[id]', listing.id)}/interest`;
+  const managementHref = `${pathsConfig.app.accountListingDetail
+    .replace('[account]', accountSlug)
+    .replace('[id]', listing.id)}/management`;
 
   useEffect(() => {
     setMatchBadgeCount(listing.matchCount ?? 0);
@@ -208,6 +216,11 @@ export function ListingOverviewSection({
 
   return (
     <div className="space-y-6">
+      <ListingPeopleStrip
+        accountSlug={accountSlug}
+        parties={parties}
+        managementHref={managementHref}
+      />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Asking rent"
@@ -329,7 +342,11 @@ export function ListingOverviewSection({
           <CardContent>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <DetailItem label="Tenure" value={listing.tenure} />
-              <DetailItem label="Use class" value={listing.useClass} />
+              <DetailItem
+                label="Use class"
+                value={formatCommercialUseClassLabel(listing.useClass)}
+              />
+              <DetailItem label="Property type" value={listing.sector} />
               <DetailItem
                 label="EPC"
                 value={

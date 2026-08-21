@@ -130,7 +130,9 @@ async function loadListingForRightmove(
       asking_rent_pence, asking_price_pence, rent_frequency,
       hide_rent_from_marketing, hide_price_from_marketing, size_min_sqft, size_max_sqft,
       measurement_standard, use_class, available_from, epc_rating,
-      breeam_rating, summary, description, key_points, reference_number
+      breeam_rating, summary, description, key_points, reference_number,
+      service_charge_per_sqft, rates_payable_per_sqft, condition_description,
+      fitted_space
     `,
     )
     .eq('id', listingId)
@@ -181,6 +183,11 @@ async function loadListingForRightmove(
     description: (data.description as string | null) ?? null,
     keyPoints,
     referenceNumber: (data.reference_number as string | null) ?? null,
+    serviceChargePerSqft: asOptionalNumber(data.service_charge_per_sqft),
+    ratesPayablePerSqft: asOptionalNumber(data.rates_payable_per_sqft),
+    conditionDescription: (data.condition_description as string | null) ?? null,
+    fittedSpace:
+      data.fitted_space == null ? null : Boolean(data.fitted_space),
   };
 }
 
@@ -191,7 +198,9 @@ async function loadUnitsForRightmove(
   const { data, error } = await db()
     .from('commercial_listing_units')
     .select(
-      'id, label, floor_or_unit, size_sqft, measurement_standard, sort_order, external_id, asking_rent_pence, rent_per_sqft',
+      `id, label, floor_or_unit, size_sqft, measurement_standard, sort_order, external_id,
+       asking_rent_pence, rent_per_sqft, description, sector, status,
+       service_charge_per_sqft, rates_payable_per_sqft, fitted_space`,
     )
     .eq('listing_id', listingId)
     .eq('account_id', accountId)
@@ -209,6 +218,12 @@ async function loadUnitsForRightmove(
     externalId: (row.external_id as string | null) ?? null,
     askingRentPence: asOptionalNumber(row.asking_rent_pence),
     rentPerSqft: asOptionalNumber(row.rent_per_sqft),
+    description: (row.description as string | null) ?? null,
+    sector: (row.sector as string | null) ?? null,
+    status: (row.status as string | null) ?? null,
+    serviceChargePerSqft: asOptionalNumber(row.service_charge_per_sqft),
+    ratesPayablePerSqft: asOptionalNumber(row.rates_payable_per_sqft),
+    fittedSpace: row.fitted_space == null ? null : Boolean(row.fitted_space),
   }));
 }
 

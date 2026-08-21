@@ -8,6 +8,10 @@ import { PlusCircle } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
+import {
+  ListingStatusBadge,
+  isListingStatus,
+} from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
 import {
   LISTING_STATUS_LABELS,
@@ -17,6 +21,7 @@ import {
 import type {
   ClientCommercialDisposalRow,
   ClientCommercialLeaseRow,
+  ClientCommercialPropertyRow,
   ClientCommercialRequirementRow,
   ClientCommercialSaleRow,
   ClientCommercialViewingRow,
@@ -24,6 +29,7 @@ import type {
 import {
   listClientDisposals,
   listClientLeases,
+  listClientProperties,
   listClientRequirements,
   listClientSales,
   listClientViewings,
@@ -82,7 +88,7 @@ function RowLink({
   href: string;
   title: string;
   meta?: string | null;
-  status: string;
+  status?: string | null;
 }) {
   return (
     <Link
@@ -99,9 +105,17 @@ function RowLink({
           </p>
         ) : null}
       </div>
-      <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
-        {formatStatus(status)}
-      </span>
+      {status ? (
+        <span className="shrink-0">
+          {isListingStatus(status) ? (
+            <ListingStatusBadge status={status} />
+          ) : (
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {formatStatus(status)}
+            </span>
+          )}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -112,6 +126,78 @@ type BlockProps = {
   clientId: string;
   canEdit?: boolean;
 };
+
+export function ClientPropertiesBlock({
+  accountSlug,
+  accountId,
+  clientId,
+}: BlockProps) {
+  const [rows, setRows] = useState<ClientCommercialPropertyRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const listHref = pathsConfig.app.accountCommercialProperties.replace(
+    '[account]',
+    accountSlug,
+  );
+  const detailBase = pathsConfig.app.accountCommercialPropertyDetail.replace(
+    '[account]',
+    accountSlug,
+  );
+
+  const fetchRows = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await listClientProperties({ accountId, clientId });
+      setRows(data ?? []);
+    } catch {
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [accountId, clientId]);
+
+  useEffect(() => {
+    void fetchRows();
+  }, [fetchRows]);
+
+  if (loading) {
+    return (
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+        Loading…
+      </p>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        message="No properties linked to this contact yet."
+        ctaLabel="Open Properties"
+        ctaHref={listHref}
+      />
+    );
+  }
+
+  return (
+    <ul className="space-y-2">
+      {rows.map((row) => (
+        <li key={row.id}>
+          <RowLink
+            href={detailBase.replace('[id]', row.id)}
+            title={row.name}
+            meta={[
+              row.role.replace(/_/g, ' '),
+              [row.town, row.postcode].filter(Boolean).join(', '),
+              row.displayPhone,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            status={null}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function ClientDisposalsBlock({
   accountSlug,
@@ -168,7 +254,7 @@ export function ClientDisposalsBlock({
             href={detailBase.replace('[id]', row.id)}
             title={row.name}
             meta={
-              row.relation === 'instructing' ? 'Instructing client' : 'Party'
+              row.relation === 'instructing' ? 'Instructing contact' : 'Party'
             }
             status={row.status}
           />

@@ -22,6 +22,7 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+import { COMMERCIAL_PROPERTY_TYPES } from '~/lib/commercial/commercial-constants';
 
 import type { CommercialListingUnit } from '../_lib/server/listings.service';
 import {
@@ -272,13 +273,30 @@ function ListingUnitFormFields({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-[var(--workspace-shell-text)]/70">
-            Sector
+            Property type
           </Label>
-          <Input
-            value={form.sector}
-            onChange={(e) => field('sector', e.target.value)}
-            className={inputClass}
-          />
+          <Select
+            value={form.sector || 'unset'}
+            onValueChange={(v) => field('sector', v === 'unset' ? '' : v)}
+          >
+            <SelectTrigger className={inputClass}>
+              <SelectValue placeholder="Select property type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unset">Not set</SelectItem>
+              {COMMERCIAL_PROPERTY_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+              {form.sector &&
+              !(COMMERCIAL_PROPERTY_TYPES as readonly string[]).includes(
+                form.sector,
+              ) ? (
+                <SelectItem value={form.sector}>{form.sector}</SelectItem>
+              ) : null}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-[var(--workspace-shell-text)]/70">

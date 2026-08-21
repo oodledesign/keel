@@ -10,6 +10,7 @@ import { getLogger } from '@kit/shared/logger';
 
 import type {
   DisposalType,
+  ListingPartyRole,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
 import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
@@ -115,6 +116,7 @@ export type CommercialListing = {
   termsOfEngagement: 'yes' | 'no' | 'pending' | null;
   restrictAccessToAssigned: boolean;
   hideLandlordFromMarketing: boolean;
+  commercialPropertyId: string | null;
   referenceNumber: string | null;
   projectCode: string | null;
   accountBranchId: string | null;
@@ -214,17 +216,22 @@ export type CoAgentClientOption = {
   email: string | null;
   phone: string | null;
   commercialRole: string | null;
+  contactId?: string | null;
+  contactName?: string | null;
+  subtitle?: string | null;
 };
 
 export type ListingParty = {
   id: string;
   listingId: string;
   clientId: string;
-  role: 'landlord' | 'other';
+  contactId: string | null;
+  role: ListingPartyRole;
   clientName: string;
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  displayPhone: string | null;
   isPrivate: boolean;
   sortOrder: number;
 };
@@ -441,6 +448,8 @@ function mapListing(row: ListingRow): CommercialListing {
       (row.terms_of_engagement as 'yes' | 'no' | 'pending' | null) ?? null,
     restrictAccessToAssigned: Boolean(row.restrict_access_to_assigned),
     hideLandlordFromMarketing: Boolean(row.hide_landlord_from_marketing),
+    commercialPropertyId:
+      (row.commercial_property_id as string | null) ?? null,
     referenceNumber: (row.reference_number as string | null) ?? null,
     projectCode: (row.project_code as string | null) ?? null,
     accountBranchId: (row.account_branch_id as string | null) ?? null,
@@ -619,6 +628,9 @@ function writeColumns(input: Partial<CreateListingInput>) {
     ...(input.hideLandlordFromMarketing !== undefined && {
       hide_landlord_from_marketing: input.hideLandlordFromMarketing,
     }),
+    ...(input.commercialPropertyId !== undefined && {
+      commercial_property_id: input.commercialPropertyId,
+    }),
     ...(input.referenceNumber !== undefined && {
       reference_number: input.referenceNumber,
     }),
@@ -768,6 +780,17 @@ async function signMediaUrl(
   client: SupabaseClient,
   item: CommercialListingMedia,
 ): Promise<CommercialListingMedia> {
+  // External/public cover hosts need no storage round-trip.
+  if (!item.storagePath && item.externalUrl) {
+    return {
+      ...item,
+      url: resolveCommercialMediaPublicUrl({
+        storageSignedUrl: null,
+        externalUrl: item.externalUrl,
+      }),
+    };
+  }
+
   let storageSignedUrl: string | null = null;
   if (item.storagePath) {
     const { data, error } = await client.storage
@@ -796,7 +819,9 @@ async function attachCoverUrls(
   const listingIds = listings.map((l) => l.id);
   const { data: mediaRows, error } = await client
     .from('commercial_listing_media')
-    .select('*')
+    .select(
+      'id, listing_id, account_id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at',
+    )
     .in('listing_id', listingIds)
     .eq('is_private', false)
     .or('media_type.eq.image,mime_type.ilike.image/%')
@@ -957,20 +982,25 @@ async function attachMatchCounts(
   client: SupabaseClient,
   accountId: string,
   listings: CommercialListing[],
+  options?: { includeSuggestions?: boolean },
 ): Promise<CommercialListing[]> {
   if (listings.length === 0) return listings;
 
   const listingIds = listings.map((l) => l.id);
+  const includeSuggestions = options?.includeSuggestions === true;
+
   const [{ data, error }, suggestedByListing] = await Promise.all([
     client
       .from('commercial_matches')
       .select('listing_id')
       .eq('account_id', accountId)
       .in('listing_id', listingIds),
-    createMatchSuggestionsService(client).countSuggestionsByListingIds({
-      accountId,
-      listingIds,
-    }),
+    includeSuggestions
+      ? createMatchSuggestionsService(client).countSuggestionsByListingIds({
+          accountId,
+          listingIds,
+        })
+      : Promise.resolve(new Map<string, number>()),
   ]);
 
   if (error) {
@@ -991,6 +1021,21 @@ async function attachMatchCounts(
       matchCount: linked + suggested,
     };
   });
+}
+
+/** Merge parallel attach results that share the same listing order. */
+function mergeListingEnrichment(
+  base: CommercialListing[],
+  covers: CommercialListing[],
+  agents: CommercialListing[],
+  coAgents: CommercialListing[],
+): CommercialListing[] {
+  return base.map((listing, index) => ({
+    ...listing,
+    coverUrl: covers[index]?.coverUrl ?? null,
+    actingAgents: agents[index]?.actingAgents ?? [],
+    coAgents: coAgents[index]?.coAgents ?? [],
+  }));
 }
 
 export function createListingsService(client: SupabaseClient) {
@@ -1018,14 +1063,20 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
-      const withCovers = await attachCoverUrls(client, listings);
-      const withAgents = await attachActingAgents(
-        client,
-        accountId,
-        withCovers,
+      const [covers, agents, coAgents] = await Promise.all([
+        attachCoverUrls(client, listings),
+        attachActingAgents(client, accountId, listings),
+        attachCoAgents(client, accountId, listings),
+      ]);
+      const enriched = mergeListingEnrichment(
+        listings,
+        covers,
+        agents,
+        coAgents,
       );
-      const withCoAgents = await attachCoAgents(client, accountId, withAgents);
-      return attachMatchCounts(client, accountId, withCoAgents);
+      return attachMatchCounts(client, accountId, enriched, {
+        includeSuggestions: true,
+      });
     },
 
     async listListingsPage(input: {
@@ -1035,6 +1086,8 @@ export function createListingsService(client: SupabaseClient) {
       accountBranchId?: string | null;
       page?: number;
       pageSize?: number;
+      /** Suggested fits are expensive; default off for list/SSR. */
+      includeSuggestedMatches?: boolean;
     }): Promise<{ data: CommercialListing[]; total: number }> {
       const page = Math.max(1, input.page ?? 1);
       const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 20));
@@ -1103,23 +1156,35 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
-      const withCovers = await attachCoverUrls(client, listings);
-      const withAgents = await attachActingAgents(
-        client,
-        input.accountId,
-        withCovers,
-      );
-      const withCoAgents = await attachCoAgents(
-        client,
-        input.accountId,
-        withAgents,
-      );
+      const [covers, agents, coAgents] = await Promise.all([
+        attachCoverUrls(client, listings),
+        attachActingAgents(client, input.accountId, listings),
+        attachCoAgents(client, input.accountId, listings),
+      ]);
+      const merged = mergeListingEnrichment(listings, covers, agents, coAgents);
       const enriched = await attachMatchCounts(
         client,
         input.accountId,
-        withCoAgents,
+        merged,
+        {
+          includeSuggestions: input.includeSuggestedMatches === true,
+        },
       );
       return { data: enriched, total: count ?? 0 };
+    },
+
+    async countSuggestedMatchesByListingIds(input: {
+      accountId: string;
+      listingIds: string[];
+    }): Promise<Record<string, number>> {
+      if (input.listingIds.length === 0) return {};
+      const counts = await createMatchSuggestionsService(
+        client,
+      ).countSuggestionsByListingIds({
+        accountId: input.accountId,
+        listingIds: input.listingIds,
+      });
+      return Object.fromEntries(counts.entries());
     },
 
     async countUnassignedListings(input: {
@@ -1183,14 +1248,15 @@ export function createListingsService(client: SupabaseClient) {
 
       if (error || !data) return null;
       const mapped = mapListing(data as ListingRow);
-      const [withCover] = await attachCoverUrls(client, [mapped]);
-      const [withAgents] = await attachActingAgents(client, accountId, [
-        withCover ?? mapped,
+      const [covers, agents] = await Promise.all([
+        attachCoverUrls(client, [mapped]),
+        attachActingAgents(client, accountId, [mapped]),
       ]);
-      const [withMatches] = await attachMatchCounts(client, accountId, [
-        withAgents ?? withCover ?? mapped,
-      ]);
-      return withMatches ?? withAgents ?? withCover ?? mapped;
+      const merged = mergeListingEnrichment([mapped], covers, agents, [mapped]);
+      const [enriched] = await attachMatchCounts(client, accountId, merged, {
+        includeSuggestions: true,
+      });
+      return enriched ?? mapped;
     },
 
     async createListing(
@@ -2699,21 +2765,23 @@ export function createListingsService(client: SupabaseClient) {
       const q = input.query?.trim().replace(/[%_,]/g, ' ');
       if (q) {
         query = query.or(
-          `display_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%`,
+          `display_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%`,
         );
       }
 
       const { data, error } = await query;
       if (error) throw new Error(error.message);
 
-      return ((data ?? []) as Array<Record<string, unknown>>)
+      const results: CoAgentClientOption[] = ((data ?? []) as Array<
+        Record<string, unknown>
+      >)
         .filter((row) => !excludeIds.includes(row.id as string))
         .map((row) => {
           const name =
             (row.display_name as string | null)?.trim() ||
             (row.company_name as string | null)?.trim() ||
             [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
-            'Client';
+            'Contact';
           return {
             id: row.id as string,
             name,
@@ -2722,6 +2790,75 @@ export function createListingsService(client: SupabaseClient) {
             commercialRole: (row.commercial_role as string | null) ?? null,
           };
         });
+
+      if (q && q.length >= 2) {
+        const { data: people } = await client
+          .from('contacts')
+          .select(
+            'id, full_name, first_name, last_name, email, phone, client_contacts!inner(client_id, clients!inner(id, display_name, company_name, account_id))',
+          )
+          .eq('account_id', input.accountId)
+          .or(
+            `full_name.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`,
+          )
+          .limit(20);
+
+        for (const person of (people ?? []) as Array<Record<string, unknown>>) {
+          const links = person.client_contacts as unknown as Array<{
+            clients:
+              | {
+                  id: string;
+                  display_name: string | null;
+                  company_name: string | null;
+                  account_id: string;
+                }
+              | Array<{
+                  id: string;
+                  display_name: string | null;
+                  company_name: string | null;
+                  account_id: string;
+                }>;
+          }>;
+          for (const link of links ?? []) {
+            const company = Array.isArray(link.clients)
+              ? link.clients[0]
+              : link.clients;
+            if (!company || company.account_id !== input.accountId) continue;
+            if (excludeIds.includes(company.id)) continue;
+            const personName =
+              (person.full_name as string | null)?.trim() ||
+              [person.first_name, person.last_name]
+                .filter(Boolean)
+                .join(' ')
+                .trim() ||
+              'Person';
+            const companyName =
+              company.display_name?.trim() ||
+              company.company_name?.trim() ||
+              'Company';
+            results.push({
+              id: company.id,
+              name: `${personName} @ ${companyName}`,
+              email: (person.email as string | null) ?? null,
+              phone: (person.phone as string | null) ?? null,
+              commercialRole: null,
+              contactId: person.id as string,
+              contactName: personName,
+              subtitle: companyName,
+            });
+          }
+        }
+      }
+
+      const seen = new Set<string>();
+      return results
+        .filter((row) => {
+          const key = `${row.id}:${row.contactId ?? ''}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 20);
     },
 
     async addCoAgent(input: {
@@ -2923,11 +3060,11 @@ export function createListingsService(client: SupabaseClient) {
     async listParties(
       listingId: string,
       accountId: string,
-      role?: 'landlord' | 'other',
+      role?: ListingPartyRole,
     ): Promise<ListingParty[]> {
       let query = fromTable(client, 'commercial_listing_parties')
         .select(
-          'id, listing_id, client_id, role, contact_name, contact_email, contact_phone, is_private, sort_order, clients(display_name, company_name, first_name, last_name)',
+          'id, listing_id, client_id, contact_id, role, contact_name, contact_email, contact_phone, is_private, sort_order, clients(display_name, company_name, first_name, last_name, phone, email), contacts(full_name, first_name, last_name, phone, email)',
         )
         .eq('listing_id', listingId)
         .eq('account_id', accountId)
@@ -2943,30 +3080,77 @@ export function createListingsService(client: SupabaseClient) {
         return [];
       }
 
-      return ((rows ?? []) as Array<Record<string, unknown>>).map(
-        (row, index) => {
-          const clientRow = row.clients as Record<string, unknown> | null;
-          const clientName =
-            (clientRow?.display_name as string | null)?.trim() ||
-            (clientRow?.company_name as string | null)?.trim() ||
-            [clientRow?.first_name, clientRow?.last_name]
-              .filter(Boolean)
-              .join(' ')
-              .trim() ||
-            (row.role === 'landlord' ? 'Landlord' : 'Contact');
-          return {
-            id: row.id as string,
-            listingId: row.listing_id as string,
-            clientId: row.client_id as string,
-            role: row.role as 'landlord' | 'other',
-            clientName,
-            contactName: (row.contact_name as string | null) ?? null,
-            contactEmail: (row.contact_email as string | null) ?? null,
-            contactPhone: (row.contact_phone as string | null) ?? null,
-            isPrivate: Boolean(row.is_private),
-            sortOrder: Number(row.sort_order ?? index),
-          };
-        },
+      return Promise.all(
+        ((rows ?? []) as Array<Record<string, unknown>>).map(
+          async (row, index) => {
+            const clientRow = row.clients as Record<string, unknown> | null;
+            const contactRow = row.contacts as Record<string, unknown> | null;
+            const clientName =
+              (clientRow?.display_name as string | null)?.trim() ||
+              (clientRow?.company_name as string | null)?.trim() ||
+              [clientRow?.first_name, clientRow?.last_name]
+                .filter(Boolean)
+                .join(' ')
+                .trim() ||
+              (row.role === 'landlord' ? 'Landlord' : 'Contact');
+            const contactName =
+              (row.contact_name as string | null)?.trim() ||
+              (contactRow?.full_name as string | null)?.trim() ||
+              [contactRow?.first_name, contactRow?.last_name]
+                .filter(Boolean)
+                .join(' ')
+                .trim() ||
+              null;
+            const contactPhone =
+              (row.contact_phone as string | null)?.trim() ||
+              (contactRow?.phone as string | null)?.trim() ||
+              null;
+            const contactEmail =
+              (row.contact_email as string | null)?.trim() ||
+              (contactRow?.email as string | null)?.trim() ||
+              null;
+
+            let displayPhone = contactPhone;
+            if (!displayPhone) {
+              displayPhone =
+                (clientRow?.phone as string | null)?.trim() || null;
+            }
+            if (!displayPhone) {
+              const { data: primaryLinks } = await client
+                .from('client_contacts')
+                .select('contacts(phone)')
+                .eq('client_id', row.client_id as string)
+                .order('is_primary', { ascending: false })
+                .limit(3);
+              for (const link of primaryLinks ?? []) {
+                const c = link.contacts as unknown as {
+                  phone?: string | null;
+                } | null;
+                const phone = c?.phone?.trim();
+                if (phone) {
+                  displayPhone = phone;
+                  break;
+                }
+              }
+            }
+
+            return {
+              id: row.id as string,
+              listingId: row.listing_id as string,
+              clientId: row.client_id as string,
+              contactId: (row.contact_id as string | null) ?? null,
+              role: row.role as ListingPartyRole,
+              clientName,
+              contactName,
+              contactEmail:
+                contactEmail || ((clientRow?.email as string | null) ?? null),
+              contactPhone,
+              displayPhone,
+              isPrivate: Boolean(row.is_private),
+              sortOrder: Number(row.sort_order ?? index),
+            };
+          },
+        ),
       );
     },
 
@@ -2974,7 +3158,7 @@ export function createListingsService(client: SupabaseClient) {
       accountId: string;
       query?: string;
       excludeListingId?: string;
-      role?: 'landlord' | 'other';
+      role?: ListingPartyRole;
     }): Promise<CoAgentClientOption[]> {
       let excludeIds: string[] = [];
       if (input.excludeListingId) {
@@ -2991,6 +3175,9 @@ export function createListingsService(client: SupabaseClient) {
         );
       }
 
+      const q = input.query?.trim().replace(/[%_,]/g, ' ');
+      const results: CoAgentClientOption[] = [];
+
       let query = client
         .from('clients')
         .select(
@@ -2999,41 +3186,113 @@ export function createListingsService(client: SupabaseClient) {
         .eq('account_id', input.accountId)
         .is('deleted_at', null)
         .order('display_name', { ascending: true })
-        .limit(40);
+        .limit(30);
 
-      const q = input.query?.trim().replace(/[%_,]/g, ' ');
       if (q) {
         query = query.or(
-          `display_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%`,
+          `display_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%`,
         );
       }
 
       const { data, error } = await query;
       if (error) throw new Error(error.message);
 
-      return ((data ?? []) as Array<Record<string, unknown>>)
-        .filter((row) => !excludeIds.includes(row.id as string))
-        .map((row) => {
-          const name =
-            (row.display_name as string | null)?.trim() ||
-            (row.company_name as string | null)?.trim() ||
-            [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
-            'Client';
-          return {
-            id: row.id as string,
-            name,
-            email: (row.email as string | null) ?? null,
-            phone: (row.phone as string | null) ?? null,
-            commercialRole: (row.commercial_role as string | null) ?? null,
-          };
+      for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+        if (excludeIds.includes(row.id as string)) continue;
+        const name =
+          (row.display_name as string | null)?.trim() ||
+          (row.company_name as string | null)?.trim() ||
+          [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+          'Contact';
+        results.push({
+          id: row.id as string,
+          name,
+          email: (row.email as string | null) ?? null,
+          phone: (row.phone as string | null) ?? null,
+          commercialRole: (row.commercial_role as string | null) ?? null,
         });
+      }
+
+      if (q && q.length >= 2) {
+        const { data: people } = await client
+          .from('contacts')
+          .select(
+            'id, full_name, first_name, last_name, email, phone, client_contacts!inner(client_id, clients!inner(id, display_name, company_name, account_id))',
+          )
+          .eq('account_id', input.accountId)
+          .or(
+            `full_name.ilike.%${q}%,first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`,
+          )
+          .limit(20);
+
+        for (const person of (people ?? []) as Array<Record<string, unknown>>) {
+          const links = person.client_contacts as unknown as Array<{
+            client_id: string;
+            clients:
+              | {
+                  id: string;
+                  display_name: string | null;
+                  company_name: string | null;
+                  account_id: string;
+                }
+              | Array<{
+                  id: string;
+                  display_name: string | null;
+                  company_name: string | null;
+                  account_id: string;
+                }>;
+          }>;
+
+          for (const link of links ?? []) {
+            const company = Array.isArray(link.clients)
+              ? link.clients[0]
+              : link.clients;
+            if (!company || company.account_id !== input.accountId) continue;
+            if (excludeIds.includes(company.id)) continue;
+
+            const personName =
+              (person.full_name as string | null)?.trim() ||
+              [person.first_name, person.last_name]
+                .filter(Boolean)
+                .join(' ')
+                .trim() ||
+              'Person';
+            const companyName =
+              company.display_name?.trim() ||
+              company.company_name?.trim() ||
+              'Company';
+
+            results.push({
+              id: company.id,
+              name: `${personName} @ ${companyName}`,
+              email: (person.email as string | null) ?? null,
+              phone: (person.phone as string | null) ?? null,
+              commercialRole: null,
+              contactId: person.id as string,
+              contactName: personName,
+              subtitle: companyName,
+            });
+          }
+        }
+      }
+
+      const seen = new Set<string>();
+      return results
+        .filter((row) => {
+          const key = `${row.id}:${row.contactId ?? ''}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 20);
     },
 
     async addParty(input: {
       listingId: string;
       accountId: string;
-      role: 'landlord' | 'other';
+      role: ListingPartyRole;
       clientId?: string;
+      contactId?: string | null;
       companyName?: string;
       contactName?: string | null;
       contactEmail?: string | null;
@@ -3047,7 +3306,10 @@ export function createListingsService(client: SupabaseClient) {
       const contactName = input.contactName?.trim() || null;
       const contactEmail = input.contactEmail?.trim() || null;
       const contactPhone = input.contactPhone?.trim() || null;
-      const commercialRole = input.role === 'landlord' ? 'landlord' : 'other';
+      const commercialRole =
+        input.role === 'landlord' || input.role === 'tenant'
+          ? input.role
+          : 'other';
 
       if (!clientId) {
         const companyName = input.companyName?.trim();
@@ -3096,6 +3358,7 @@ export function createListingsService(client: SupabaseClient) {
         listing_id: input.listingId,
         account_id: input.accountId,
         client_id: clientId,
+        contact_id: input.contactId ?? null,
         role: input.role,
         contact_name: contactName,
         contact_email: contactEmail,
@@ -3209,11 +3472,7 @@ export function createListingsService(client: SupabaseClient) {
         if (error) throw new Error(error.message);
       }
 
-      return this.listParties(
-        input.listingId,
-        input.accountId,
-        existing.role as 'landlord' | 'other',
-      );
+      return this.listParties(input.listingId, input.accountId);
     },
   };
 }

@@ -374,7 +374,7 @@ export function ViewingsList({
               <tr>
                 <th className="px-4 py-3 font-medium">Listing</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">
-                  Client
+                  Contact
                 </th>
                 <th className="px-4 py-3 font-medium">When</th>
                 <th className="px-4 py-3 font-medium">Status</th>
@@ -488,6 +488,7 @@ export function ViewingsList({
               onError={setError}
               showSummary
               allowNone
+              terminology="commercial"
             />
 
             <div className="space-y-1.5">

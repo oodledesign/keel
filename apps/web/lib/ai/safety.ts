@@ -37,6 +37,7 @@ const CONVERSATIONAL_FEATURES = new Set([
   'planner_generate',
   'meal_plan_generate',
   'meal_recipes_generate',
+  'support_docs_chat',
 ]);
 
 export function isConversationalAiFeature(feature: string): boolean {

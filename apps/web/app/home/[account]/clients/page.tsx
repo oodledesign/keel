@@ -22,9 +22,20 @@ interface ClientsPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const metadata = {
-  title: 'Clients',
-};
+export async function generateMetadata({ params }: ClientsPageProps) {
+  const accountSlug = (await params).account;
+  const workspace = await loadTeamWorkspace(accountSlug);
+  const spaceType = getSpaceTypeFromAccount(
+    workspace.account as { space_type?: string | null },
+  );
+  const title =
+    spaceType === 'property'
+      ? 'Tenants'
+      : spaceType === 'commercial-property'
+        ? 'Contacts'
+        : 'Clients';
+  return { title };
+}
 
 async function ClientsPage({ params }: ClientsPageProps) {
   const accountSlug = (await params).account;

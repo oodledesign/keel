@@ -8,6 +8,7 @@ import {
   AddListingPartySchema,
   ArchiveListingSchema,
   BackfillListingLocationsSchema,
+  CountSuggestedMatchesSchema,
   CountUnassignedListingsSchema,
   CreateListingEnquirySchema,
   CreateListingMediaSchema,
@@ -45,6 +46,23 @@ function getService() {
   return createListingsService(getSupabaseServerClient());
 }
 
+async function invalidateDisposalsData(input: {
+  accountId: string;
+  listingId?: string;
+}) {
+  const client = getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  const { revalidateDisposalsCaches } =
+    await import('~/lib/cache/disposals-data-cache');
+  revalidateDisposalsCaches({
+    accountId: input.accountId,
+    userId: user?.id,
+    listingId: input.listingId,
+  });
+}
+
 export const listListings = enhanceAction(
   async (input) => {
     return getService().listListingsPage({
@@ -69,6 +87,16 @@ export const countUnassignedListings = enhanceAction(
   { schema: CountUnassignedListingsSchema },
 );
 
+export const countSuggestedMatches = enhanceAction(
+  async (input) => {
+    return getService().countSuggestedMatchesByListingIds({
+      accountId: input.accountId,
+      listingIds: input.listingIds,
+    });
+  },
+  { schema: CountSuggestedMatchesSchema },
+);
+
 export const getListing = enhanceAction(
   async (input) => {
     return getService().getListing(input.listingId, input.accountId);
@@ -88,10 +116,18 @@ export const createListing = enhanceAction(
       input.accountId,
       'create or edit disposals',
     );
-    return createListingsService(client).createListing({
-      ...input,
-      createdBy: user?.id ?? null,
-    });
+    return createListingsService(client)
+      .createListing({
+        ...input,
+        createdBy: user?.id ?? null,
+      })
+      .then(async (listing) => {
+        await invalidateDisposalsData({
+          accountId: input.accountId,
+          listingId: listing.id,
+        });
+        return listing;
+      });
   },
   { schema: CreateListingSchema },
 );
@@ -105,7 +141,13 @@ export const updateListing = enhanceAction(
       'create or edit disposals',
     );
     const { listingId, accountId, ...rest } = input;
-    return getService().updateListing(listingId, accountId, rest);
+    const listing = await getService().updateListing(
+      listingId,
+      accountId,
+      rest,
+    );
+    await invalidateDisposalsData({ accountId, listingId });
+    return listing;
   },
   { schema: UpdateListingSchema },
 );
@@ -119,6 +161,10 @@ export const deleteListing = enhanceAction(
       'create or edit disposals',
     );
     await getService().deleteListing(input.listingId, input.accountId);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
     return { success: true };
   },
   { schema: DeleteListingSchema },
@@ -136,12 +182,17 @@ export const duplicateListing = enhanceAction(
       input.accountId,
       'create or edit disposals',
     );
-    return createListingsService(client).duplicateListing({
+    const listing = await createListingsService(client).duplicateListing({
       listingId: input.listingId,
       accountId: input.accountId,
       accountSlug: input.accountSlug,
       createdBy: user?.id ?? null,
     });
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: listing.id,
+    });
+    return listing;
   },
   { schema: DuplicateListingSchema },
 );
@@ -154,10 +205,15 @@ export const archiveListing = enhanceAction(
       input.accountId,
       'create or edit disposals',
     );
-    return getService().archiveListing({
+    const listing = await getService().archiveListing({
       listingId: input.listingId,
       accountId: input.accountId,
     });
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
+    return listing;
   },
   { schema: ArchiveListingSchema },
 );
@@ -384,6 +440,7 @@ export const addListingParty = enhanceAction(
       accountId: input.accountId,
       role: input.role,
       clientId: input.clientId,
+      contactId: input.contactId,
       companyName: input.companyName,
       contactName: input.contactName,
       contactEmail: input.contactEmail || null,

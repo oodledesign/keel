@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { Building2, Plus, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@kit/ui/sonner';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
@@ -146,13 +146,13 @@ export function ListingCoAgentsCard({
           Co-marketing agents
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
-          Link another agency from Clients to jointly market this disposal.
+          Link another agency from Contacts to jointly market this disposal.
           Linking sets instruction nature to joint.
         </p>
       </CardHeader>
       <CardContent className="max-w-lg space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="co-agent-search">Add from clients</Label>
+          <Label htmlFor="co-agent-search">Add from contacts</Label>
           <Input
             id="co-agent-search"
             placeholder="Search agencies or contacts…"
@@ -187,7 +187,7 @@ export function ListingCoAgentsCard({
                 ))}
               {!searching && results.length === 0 ? (
                 <li className="px-3 py-2 text-sm text-[var(--workspace-shell-text)]/45">
-                  No matching clients
+                  No matching contacts
                 </li>
               ) : null}
             </ul>
@@ -197,7 +197,7 @@ export function ListingCoAgentsCard({
         {showCreate ? (
           <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
             <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              New agency client
+              New agency contact
             </p>
             <div className="space-y-1.5">
               <Label htmlFor="co-agent-company">Agency name</Label>
@@ -266,7 +266,7 @@ export function ListingCoAgentsCard({
             onClick={() => setShowCreate(true)}
           >
             <Plus className="h-4 w-4" />
-            Create new agency client
+            Create new agency contact
           </Button>
         )}
 

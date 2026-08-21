@@ -25,15 +25,20 @@ import {
 } from '@kit/ui/select';
 import { Textarea } from '@kit/ui/textarea';
 
+import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
+import { AddressSearchField } from '~/components/commercial/address-search-field';
 import pathsConfig from '~/config/paths.config';
 import {
+  COMMERCIAL_PROPERTY_TYPES,
+  COMMERCIAL_USE_CLASSES,
+  COMMERCIAL_USE_CLASS_LABELS,
   DISPOSAL_TYPES,
   DISPOSAL_TYPE_LABELS,
   type DisposalType,
   LISTING_STATUSES,
-  LISTING_STATUS_LABELS,
   type ListingStatus,
 } from '~/lib/commercial/commercial-constants';
+import type { AddressSuggestion } from '~/lib/commercial/address-suggest.types';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
@@ -365,12 +370,35 @@ function ListingFormFields({
   const inputClass =
     'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30';
 
+  function applyAddressSuggestion(suggestion: AddressSuggestion) {
+    setForm((prev) => ({
+      ...prev,
+      name:
+        prev.name.trim() ||
+        suggestion.nameHint?.trim() ||
+        suggestion.addressLine1?.trim() ||
+        suggestion.label,
+      addressLine1: suggestion.addressLine1 ?? prev.addressLine1,
+      addressLine2: suggestion.addressLine2 ?? '',
+      town: suggestion.town ?? prev.town,
+      county: suggestion.county ?? prev.county,
+      postcode: suggestion.postcode ?? prev.postcode,
+      country: suggestion.country || prev.country || 'GB',
+      latitude: String(suggestion.latitude),
+      longitude: String(suggestion.longitude),
+    }));
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pt-2">
       <section className="space-y-4">
         <h3 className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
           Basics
         </h3>
+        <AddressSearchField
+          onSelect={applyAddressSuggestion}
+          inputClassName={inputClass}
+        />
         <div className="space-y-1.5">
           <Label className="text-[var(--workspace-shell-text)]/70">
             Name *
@@ -504,13 +532,13 @@ function ListingFormFields({
               value={form.status}
               onValueChange={(v) => field('status', v)}
             >
-              <SelectTrigger className={inputClass}>
-                <SelectValue />
+              <SelectTrigger className={`${inputClass} h-auto min-h-10 py-2`}>
+                <ListingStatusBadge status={form.status} size="md" />
               </SelectTrigger>
               <SelectContent>
                 {LISTING_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {LISTING_STATUS_LABELS[status]}
+                  <SelectItem key={status} value={status} className="py-2">
+                    <ListingStatusBadge status={status} size="md" />
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -809,14 +837,30 @@ function ListingFormFields({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
-              Sector
+              Property type
             </Label>
-            <Input
-              value={form.sector}
-              onChange={(e) => field('sector', e.target.value)}
-              placeholder="Office, retail, industrial…"
-              className={inputClass}
-            />
+            <Select
+              value={form.sector || 'unset'}
+              onValueChange={(v) => field('sector', v === 'unset' ? '' : v)}
+            >
+              <SelectTrigger className={inputClass}>
+                <SelectValue placeholder="Select property type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not set</SelectItem>
+                {COMMERCIAL_PROPERTY_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+                {form.sector &&
+                !(COMMERCIAL_PROPERTY_TYPES as readonly string[]).includes(
+                  form.sector,
+                ) ? (
+                  <SelectItem value={form.sector}>{form.sector}</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
@@ -836,12 +880,30 @@ function ListingFormFields({
             <Label className="text-[var(--workspace-shell-text)]/70">
               Use class
             </Label>
-            <Input
-              value={form.useClass}
-              onChange={(e) => field('useClass', e.target.value)}
-              placeholder="e.g. E"
-              className={inputClass}
-            />
+            <Select
+              value={form.useClass || 'unset'}
+              onValueChange={(v) => field('useClass', v === 'unset' ? '' : v)}
+            >
+              <SelectTrigger className={inputClass}>
+                <SelectValue placeholder="Select use class" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not set</SelectItem>
+                {COMMERCIAL_USE_CLASSES.map((useClass) => (
+                  <SelectItem key={useClass} value={useClass}>
+                    {COMMERCIAL_USE_CLASS_LABELS[useClass]}
+                  </SelectItem>
+                ))}
+                {form.useClass &&
+                !(COMMERCIAL_USE_CLASSES as readonly string[]).includes(
+                  form.useClass,
+                ) ? (
+                  <SelectItem value={form.useClass}>
+                    {form.useClass}
+                  </SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">

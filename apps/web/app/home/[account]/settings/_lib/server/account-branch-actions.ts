@@ -105,6 +105,9 @@ export const saveAccountBranchAction = enhanceAction(
     }
 
     revalidateBrandPaths(accountSlug);
+    const { revalidateAccountBranchesCache } =
+      await import('~/lib/cache/disposals-data-cache');
+    revalidateAccountBranchesCache(input.accountId);
     return { ok: true as const };
   },
   { schema: saveAccountBranchSchema },
@@ -166,6 +169,9 @@ export const saveAccountBranchesAction = enhanceAction(
     }
 
     revalidateBrandPaths(accountSlug);
+    const { revalidateAccountBranchesCache } =
+      await import('~/lib/cache/disposals-data-cache');
+    revalidateAccountBranchesCache(input.accountId);
     return { ok: true as const };
   },
   { schema: saveAccountBranchesSchema },
@@ -188,6 +194,9 @@ export const deleteAccountBranchAction = enhanceAction(
     if (error) throw new Error(error.message);
 
     revalidateBrandPaths(accountSlug);
+    const { revalidateAccountBranchesCache } =
+      await import('~/lib/cache/disposals-data-cache');
+    revalidateAccountBranchesCache(input.accountId);
     return { ok: true as const };
   },
   { schema: deleteAccountBranchSchema },

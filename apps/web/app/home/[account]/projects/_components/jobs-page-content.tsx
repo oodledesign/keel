@@ -445,9 +445,12 @@ export function JobsPageContent({
       ) : view === 'kanban' ? (
         <ProjectsKanbanView
           accountSlug={accountSlug}
+          accountId={accountId}
           items={kanbanItems}
+          canEditJobs={canEditJobs}
           personalScope={personalScope}
           projectDetailPathBuilder={projectDetailPathBuilder}
+          onStatusUpdated={fetchJobs}
         />
       ) : view === 'timeline' ? (
         <JobsPmTimelineView

@@ -48,7 +48,9 @@ export function ClientCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Create client</DialogTitle>
+          <DialogTitle>
+            {showCommercialRole ? 'Create contact' : 'Create client'}
+          </DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             Or{' '}
             <Link

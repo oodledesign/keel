@@ -71,6 +71,27 @@ type MemberLookup = Map<
   { name: string | null; email: string | null; picture_url?: string | null }
 >;
 
+type ContactLookup = Map<
+  string,
+  { name: string | null; email: string | null; picture_url?: string | null }
+>;
+
+function resolveTaskAssigneeLabel(
+  task: JobBoardTask,
+  memberLookup: MemberLookup,
+  contactLookup: ContactLookup,
+): string | null {
+  if (task.assignee_contact_id) {
+    const contact = contactLookup.get(task.assignee_contact_id);
+    return contact?.name ?? contact?.email ?? 'Assigned contact';
+  }
+  if (task.user_id) {
+    const member = memberLookup.get(task.user_id);
+    return member?.name ?? member?.email ?? 'Assigned';
+  }
+  return null;
+}
+
 function phasePath(accountSlug: string, jobId: string, phaseId: string) {
   return projectPhaseHref(accountSlug, jobId, phaseId);
 }
@@ -78,17 +99,23 @@ function phasePath(accountSlug: string, jobId: string, phaseId: string) {
 function TaskCard({
   task,
   memberLookup,
+  contactLookup,
   isOverlay,
   onOpen,
   subtasks = [],
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
+  contactLookup: ContactLookup;
   isOverlay?: boolean;
   onOpen?: () => void;
   subtasks?: JobBoardTask[];
 }) {
-  const assignee = task.user_id ? memberLookup.get(task.user_id) : null;
+  const assigneeLabel = resolveTaskAssigneeLabel(
+    task,
+    memberLookup,
+    contactLookup,
+  );
   const priorityKey = task.priority || 'none';
   const linkCount = task.links?.length ?? 0;
   const attachedNoteCount = task.note_refs?.length ?? 0;
@@ -139,11 +166,11 @@ function TaskCard({
                 {formatShortDate(task.due_date)}
               </span>
             )}
-            {assignee && (
+            {assigneeLabel ? (
               <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
-                {assignee.name ?? assignee.email ?? 'Assigned'}
+                {assigneeLabel}
               </span>
-            )}
+            ) : null}
             {metaBits.length > 0 && (
               <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {metaBits.join(' · ')}
@@ -172,12 +199,14 @@ function TaskCard({
 function SortableTaskCard({
   task,
   memberLookup,
+  contactLookup,
   disabled,
   onOpen,
   subtasks = [],
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
+  contactLookup: ContactLookup;
   disabled: boolean;
   onOpen: () => void;
   subtasks?: JobBoardTask[];
@@ -218,6 +247,7 @@ function SortableTaskCard({
           <TaskCard
             task={task}
             memberLookup={memberLookup}
+            contactLookup={contactLookup}
             onOpen={onOpen}
             subtasks={subtasks}
           />
@@ -234,6 +264,7 @@ function PhaseColumn({
   jobId,
   canEditJobs,
   memberLookup,
+  contactLookup,
   onAddTask,
   addingTask,
   onDeletePhase,
@@ -246,6 +277,7 @@ function PhaseColumn({
   jobId: string;
   canEditJobs: boolean;
   memberLookup: MemberLookup;
+  contactLookup: ContactLookup;
   onAddTask: (
     phaseId: string | null,
     title: string,
@@ -389,6 +421,7 @@ function PhaseColumn({
               key={task.id}
               task={task}
               memberLookup={memberLookup}
+              contactLookup={contactLookup}
               disabled={!canEditJobs}
               onOpen={() => onOpenTask(task)}
               subtasks={subtasksByParent.get(task.id) ?? []}
@@ -418,6 +451,7 @@ function SortablePhaseColumn(props: {
   jobId: string;
   canEditJobs: boolean;
   memberLookup: MemberLookup;
+  contactLookup: ContactLookup;
   onAddTask: (
     phaseId: string | null,
     title: string,
@@ -477,6 +511,18 @@ export function JobProjectBoard({
     }
     return map;
   }, [members]);
+
+  const contactLookup = useMemo<ContactLookup>(() => {
+    const map: ContactLookup = new Map();
+    for (const contact of board.contactAssignees ?? []) {
+      map.set(contact.id, {
+        name: contact.name,
+        email: contact.email,
+        picture_url: contact.picture_url ?? undefined,
+      });
+    }
+    return map;
+  }, [board.contactAssignees]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -764,6 +810,7 @@ export function JobProjectBoard({
               jobId={jobId}
               canEditJobs={canEditJobs}
               memberLookup={memberLookup}
+              contactLookup={contactLookup}
               onAddTask={handleAddTask}
               addingTask={addingTask}
               onDeletePhase={handleDeletePhase}
@@ -779,6 +826,7 @@ export function JobProjectBoard({
               jobId={jobId}
               canEditJobs={canEditJobs}
               memberLookup={memberLookup}
+              contactLookup={contactLookup}
               onAddTask={handleAddTask}
               addingTask={addingTask}
               onOpenTask={openTask}
@@ -788,7 +836,12 @@ export function JobProjectBoard({
 
         <DragOverlay dropAnimation={null}>
           {activeTask ? (
-            <TaskCard task={activeTask} memberLookup={memberLookup} isOverlay />
+            <TaskCard
+              task={activeTask}
+              memberLookup={memberLookup}
+              contactLookup={contactLookup}
+              isOverlay
+            />
           ) : null}
         </DragOverlay>
       </DndContext>

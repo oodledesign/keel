@@ -34,6 +34,27 @@ type MemberLookup = Map<
   { name: string | null; email: string | null; picture_url?: string | null }
 >;
 
+type ContactLookup = Map<
+  string,
+  { name: string | null; email: string | null; picture_url?: string | null }
+>;
+
+function resolveTaskAssigneeLabel(
+  task: JobBoardTask,
+  memberLookup: MemberLookup,
+  contactLookup: ContactLookup,
+): string | null {
+  if (task.assignee_contact_id) {
+    const contact = contactLookup.get(task.assignee_contact_id);
+    return contact?.name ?? contact?.email ?? 'Assigned contact';
+  }
+  if (task.user_id) {
+    const member = memberLookup.get(task.user_id);
+    return member?.name ?? member?.email ?? 'Assigned';
+  }
+  return null;
+}
+
 function normalizeStatus(status: string): ProgressStatus {
   if (status === 'completed') return 'done';
   if (STATUS_COLUMNS.some((col) => col.key === status)) {
@@ -72,17 +93,23 @@ function patchTaskStatus(
 function ProgressTaskCard({
   task,
   memberLookup,
+  contactLookup,
   canEditJobs,
   onOpen,
   onStatusChange,
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
+  contactLookup: ContactLookup;
   canEditJobs: boolean;
   onOpen: () => void;
   onStatusChange: (status: ProgressStatus) => void;
 }) {
-  const assignee = task.user_id ? memberLookup.get(task.user_id) : null;
+  const assigneeLabel = resolveTaskAssigneeLabel(
+    task,
+    memberLookup,
+    contactLookup,
+  );
   const priorityKey = task.priority || 'none';
   const status = normalizeStatus(task.status);
   const linkCount = task.links?.length ?? 0;
@@ -152,9 +179,9 @@ function ProgressTaskCard({
                 {formatShortDate(task.due_date)}
               </span>
             ) : null}
-            {assignee ? (
+            {assigneeLabel ? (
               <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
-                {assignee.name ?? assignee.email ?? 'Assigned'}
+                {assigneeLabel}
               </span>
             ) : null}
             {metaBits.length > 0 ? (
@@ -212,6 +239,18 @@ export function JobProjectProgressBoard({
     }
     return map;
   }, [board.assignees, members]);
+
+  const contactLookup = useMemo(() => {
+    const map: ContactLookup = new Map();
+    for (const contact of board.contactAssignees ?? []) {
+      map.set(contact.id, {
+        name: contact.name,
+        email: contact.email,
+        picture_url: contact.picture_url ?? undefined,
+      });
+    }
+    return map;
+  }, [board.contactAssignees]);
 
   const phaseNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -320,6 +359,7 @@ export function JobProjectProgressBoard({
                       <ProgressTaskCard
                         task={task}
                         memberLookup={memberLookup}
+                        contactLookup={contactLookup}
                         canEditJobs={canEditJobs}
                         onOpen={() => openTask(task)}
                         onStatusChange={(status) =>

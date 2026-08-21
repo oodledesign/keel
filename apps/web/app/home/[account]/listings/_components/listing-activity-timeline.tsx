@@ -71,6 +71,14 @@ export function ListingActivityTimeline({
                   {event.summary}
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                  {event.actorName ? (
+                    <>
+                      <span>{event.actorName}</span>
+                      <span className="mx-1.5 text-[var(--workspace-shell-text)]/25">
+                        ·
+                      </span>
+                    </>
+                  ) : null}
                   <span className="tracking-wide uppercase">
                     {event.eventType.replace(/_/g, ' ')}
                   </span>

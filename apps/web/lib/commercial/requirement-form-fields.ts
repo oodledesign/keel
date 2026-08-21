@@ -1,16 +1,9 @@
 /** Applicant-facing requirement fields aligned with PropertyHive commercial intake. */
 
-export const REQUIREMENT_PROPERTY_TYPES = [
-  'Offices',
-  'Industrial / Warehouse',
-  'Retail',
-  'Leisure',
-  'Retail / Leisure',
-  'Land',
-  'Mixed use',
-  'Investment',
-  'Development',
-] as const;
+import { COMMERCIAL_PROPERTY_TYPES } from '~/lib/commercial/commercial-constants';
+
+/** @deprecated Prefer COMMERCIAL_PROPERTY_TYPES — kept for existing imports. */
+export const REQUIREMENT_PROPERTY_TYPES = COMMERCIAL_PROPERTY_TYPES;
 
 export type RequirementPropertyType =
   (typeof REQUIREMENT_PROPERTY_TYPES)[number];

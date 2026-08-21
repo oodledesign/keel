@@ -4,6 +4,7 @@ import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
+import { createCommercialPropertiesService } from '../../../commercial-properties/_lib/server/commercial-properties.service';
 import { ListingAdvancedAttrsCard } from '../../_components/listing-advanced-attrs-card';
 import { ListingAssignmentCard } from '../../_components/listing-assignment-card';
 import { ListingCoAgentsCard } from '../../_components/listing-co-agents-card';
@@ -11,12 +12,15 @@ import { ListingManagementSection } from '../../_components/listing-detail-secti
 import { ListingInstructionCard } from '../../_components/listing-instruction-card';
 import { ListingPartiesCard } from '../../_components/listing-parties-card';
 import { ListingPrivateMediaSection } from '../../_components/listing-private-media-section';
+import { ListingPropertyLinkCard } from '../../_components/listing-property-link-card';
 import { MarketingReadinessCard } from '../../_components/marketing-readiness-card';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
   params: Promise<{ account: string; id: string }>;
 }
+
+const SECTION_CLASS = 'scroll-mt-36 space-y-4';
 
 async function ListingManagementPage({ params }: PageProps) {
   const { account: slug, id: listingId } = await params;
@@ -38,6 +42,7 @@ async function ListingManagementPage({ params }: PageProps) {
     publicMedia,
     landlords,
     otherParties,
+    linkedProperty,
   ] = await Promise.all([
     service.listPublicationsForListing(listingId),
     service.listAccountMembers(slug),
@@ -49,6 +54,11 @@ async function ListingManagementPage({ params }: PageProps) {
     service.listMedia(listingId, { privacy: 'public' }),
     service.listParties(listingId, accountId, 'landlord'),
     service.listParties(listingId, accountId, 'other'),
+    listing.commercialPropertyId
+      ? createCommercialPropertiesService(
+          getSupabaseServerClient(),
+        ).getProperty(listing.commercialPropertyId, accountId)
+      : Promise.resolve(null),
   ]);
 
   const privateMediaWithUrls = await service.withSignedMediaUrls(privateMedia);
@@ -64,56 +74,81 @@ async function ListingManagementPage({ params }: PageProps) {
 
   return (
     <div className="space-y-4">
-      <MarketingReadinessCard
-        listing={listing}
-        accountSlug={slug}
-        media={publicMedia}
-        publications={publications}
-      />
-      <ListingInstructionCard accountId={accountId} listing={listing} />
-      <ListingAssignmentCard
-        accountId={accountId}
-        accountSlug={slug}
-        members={members}
-        teams={teams}
-        branches={branches.map((branch) => ({
-          id: branch.id,
-          name: branch.name,
-          rightmoveBranchId: branch.rightmoveBranchId,
-        }))}
-        assignment={assignment}
-      />
-      <ListingCoAgentsCard
-        accountId={accountId}
-        listingId={listingId}
-        initialCoAgents={coAgents}
-      />
-      <ListingPartiesCard
-        accountId={accountId}
-        listingId={listingId}
-        role="landlord"
-        initialParties={landlords}
-        listing={listing}
-      />
-      <ListingPartiesCard
-        accountId={accountId}
-        listingId={listingId}
-        role="other"
-        initialParties={otherParties}
-      />
-      <ListingAdvancedAttrsCard accountId={accountId} listing={listing} />
-      <ListingPrivateMediaSection
-        accountId={accountId}
-        listingId={listingId}
-        privateImages={privateImages}
-        privateFiles={privateFiles}
-      />
-      <ListingManagementSection
-        listing={listing}
-        publications={publications}
-        accountId={accountId}
-        accountSlug={slug}
-      />
+      <section id="marketing-readiness" className={SECTION_CLASS}>
+        <MarketingReadinessCard
+          listing={listing}
+          accountSlug={slug}
+          media={publicMedia}
+          publications={publications}
+        />
+      </section>
+      <section id="instruction" className={SECTION_CLASS}>
+        <ListingInstructionCard accountId={accountId} listing={listing} />
+      </section>
+      <section id="assignment" className={SECTION_CLASS}>
+        <ListingAssignmentCard
+          accountId={accountId}
+          accountSlug={slug}
+          members={members}
+          teams={teams}
+          branches={branches.map((branch) => ({
+            id: branch.id,
+            name: branch.name,
+            rightmoveBranchId: branch.rightmoveBranchId,
+          }))}
+          assignment={assignment}
+        />
+      </section>
+      <section id="co-agents" className={SECTION_CLASS}>
+        <ListingCoAgentsCard
+          accountId={accountId}
+          listingId={listingId}
+          initialCoAgents={coAgents}
+        />
+      </section>
+      <section id="parties" className={SECTION_CLASS}>
+        <ListingPropertyLinkCard
+          accountId={accountId}
+          accountSlug={slug}
+          listingId={listingId}
+          initialPropertyId={listing.commercialPropertyId}
+          initialPropertyName={linkedProperty?.name ?? null}
+        />
+        <ListingPartiesCard
+          accountId={accountId}
+          accountSlug={slug}
+          listingId={listingId}
+          role="landlord"
+          initialParties={landlords}
+          listing={listing}
+        />
+        <ListingPartiesCard
+          accountId={accountId}
+          accountSlug={slug}
+          listingId={listingId}
+          role="other"
+          initialParties={otherParties}
+        />
+      </section>
+      <section id="advanced-attrs" className={SECTION_CLASS}>
+        <ListingAdvancedAttrsCard accountId={accountId} listing={listing} />
+      </section>
+      <section id="private-media" className={SECTION_CLASS}>
+        <ListingPrivateMediaSection
+          accountId={accountId}
+          listingId={listingId}
+          privateImages={privateImages}
+          privateFiles={privateFiles}
+        />
+      </section>
+      <section id="publishing" className={SECTION_CLASS}>
+        <ListingManagementSection
+          listing={listing}
+          publications={publications}
+          accountId={accountId}
+          accountSlug={slug}
+        />
+      </section>
     </div>
   );
 }

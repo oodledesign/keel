@@ -90,6 +90,7 @@ import { AttachRetainerPlanButton } from './attach-retainer-plan-button';
 import {
   ClientDisposalsBlock,
   ClientLeasesBlock,
+  ClientPropertiesBlock,
   ClientRequirementsBlock,
   ClientSalesBlock,
   ClientViewingsBlock,
@@ -143,6 +144,7 @@ type DetailTab =
   | 'tasks'
   | 'support'
   | 'disposals'
+  | 'properties'
   | 'requirements'
   | 'viewings'
   | 'leases'
@@ -543,6 +545,7 @@ export function ClientDetailSidebar({
             : []),
           ['tasks', 'Tasks'],
           ['notes', 'Comments'],
+          ['properties', 'Properties'],
           ['disposals', 'Disposals'],
           ['requirements', 'Requirements'],
           ['viewings', 'Viewings'],
@@ -582,11 +585,17 @@ export function ClientDetailSidebar({
     setArchiving(true);
     try {
       await deleteClient({ accountId, clientId });
-      toast.success('Client archived');
+      toast.success(isCommercial ? 'Contact archived' : 'Client archived');
       setArchiveDialogOpen(false);
       onDeleted();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to archive client');
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : isCommercial
+            ? 'Failed to archive contact'
+            : 'Failed to archive client',
+      );
     } finally {
       setArchiving(false);
     }
@@ -697,7 +706,7 @@ export function ClientDetailSidebar({
     return (
       <div className={shellClass}>
         <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 text-sm text-[var(--workspace-shell-text-muted)]">
-          Client not found.
+          {isCommercial ? 'Contact not found.' : 'Client not found.'}
         </p>
       </div>
     );
@@ -706,7 +715,7 @@ export function ClientDetailSidebar({
   const displayName =
     (client.display_name ??
       [client.first_name, client.last_name].filter(Boolean).join(' ').trim()) ||
-    'Unnamed client';
+    (isCommercial ? 'Unnamed contact' : 'Unnamed client');
   const subtitle = isCommercial
     ? [client.commercial_role, client.company_name ?? client.city]
         .filter(Boolean)
@@ -877,7 +886,7 @@ export function ClientDetailSidebar({
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <OverviewMetric
                     icon={Calendar}
-                    label="Client since"
+                    label={isCommercial ? 'Contact since' : 'Client since'}
                     value={formatCreatedDate(client.created_at)}
                   />
                   <OverviewMetric
@@ -1295,6 +1304,17 @@ export function ClientDetailSidebar({
       );
     }
 
+    if (isCommercial && activeTab === 'properties') {
+      return (
+        <ClientPropertiesBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
+        />
+      );
+    }
+
     if (isCommercial && activeTab === 'disposals') {
       return (
         <ClientDisposalsBlock
@@ -1413,7 +1433,9 @@ export function ClientDetailSidebar({
                     <a
                       href={`tel:${client.phone}`}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
-                      aria-label="Call client"
+                      aria-label={
+                        isCommercial ? 'Call contact' : 'Call client'
+                      }
                     >
                       <Phone className="h-4 w-4" />
                     </a>
@@ -1422,7 +1444,9 @@ export function ClientDetailSidebar({
                     <a
                       href={`mailto:${client.email}`}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
-                      aria-label="Email client"
+                      aria-label={
+                        isCommercial ? 'Email contact' : 'Email client'
+                      }
                     >
                       <Mail className="h-4 w-4" />
                     </a>
@@ -1443,7 +1467,9 @@ export function ClientDetailSidebar({
                         variant="outline"
                         size="icon"
                         className="h-9 w-9 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                        aria-label="Client actions"
+                        aria-label={
+                          isCommercial ? 'Contact actions' : 'Client actions'
+                        }
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>

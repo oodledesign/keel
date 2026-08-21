@@ -252,7 +252,7 @@ export function JobProjectTaskSheet({
           assigneeUserId:
             person.kind === 'member'
               ? person.id
-              : person.kind === 'none'
+              : person.kind === 'contact' || person.kind === 'none'
                 ? null
                 : undefined,
           assigneeContactId:

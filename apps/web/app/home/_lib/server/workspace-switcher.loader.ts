@@ -1,15 +1,17 @@
 import 'server-only';
 
+import { cache } from 'react';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
+import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import {
+  type WorkspaceProfile,
   resolveWorkspaceProfile,
   workspaceTypeLabel,
-  type WorkspaceProfile,
 } from '~/home/[account]/_lib/server/workspace-profile';
-import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/server/workspace-profile';
+import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 export type WorkspaceSwitcherAccount = {
@@ -24,7 +26,7 @@ export type WorkspaceSwitcherAccount = {
   createdAt: string;
 };
 
-export async function loadWorkspaceSwitcherAccounts(
+async function loadWorkspaceSwitcherAccountsImpl(
   client: SupabaseClient,
   userId: string,
 ): Promise<WorkspaceSwitcherAccount[]> {
@@ -92,3 +94,8 @@ export async function loadWorkspaceSwitcherAccounts(
     };
   });
 }
+
+/** Request-memoized — layout + metadata share one switcher fetch per request. */
+export const loadWorkspaceSwitcherAccounts = cache(
+  loadWorkspaceSwitcherAccountsImpl,
+);

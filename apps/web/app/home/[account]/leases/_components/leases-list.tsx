@@ -29,11 +29,14 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import {
+  ListingStatusBadge,
+  isListingStatus,
+} from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
 import {
   DISPOSAL_TYPE_LABELS,
   LEASE_STATUSES,
-  LISTING_STATUS_LABELS,
   type LeaseStatus,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
@@ -56,7 +59,13 @@ const STATUS_LABELS: Record<LeaseStatus, string> = {
 const COMPLETED_STATUS_LABELS = new Set(['Completed', 'Sold', 'Let']);
 
 function StatusPill({ status }: { status: string }) {
-  const isCompleted = COMPLETED_STATUS_LABELS.has(status);
+  if (isListingStatus(status)) {
+    return <ListingStatusBadge status={status} />;
+  }
+
+  const displayLabel =
+    STATUS_LABELS[status as LeaseStatus] ?? status;
+  const isCompleted = COMPLETED_STATUS_LABELS.has(displayLabel);
 
   return (
     <span
@@ -67,7 +76,7 @@ function StatusPill({ status }: { status: string }) {
           : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
       )}
     >
-      {status}
+      {displayLabel}
     </span>
   );
 }
@@ -247,7 +256,7 @@ export function LeasesList({
         title: listing.name,
         party: DISPOSAL_TYPE_LABELS[listing.disposalType],
         meta: [listing.town, listing.postcode].filter(Boolean).join(' · '),
-        status: LISTING_STATUS_LABELS[listing.status],
+        status: listing.status,
         updatedAt: listing.offMarketAt ?? listing.updatedAt,
         href: listingDetailBase.replace('[id]', listing.id),
       }));

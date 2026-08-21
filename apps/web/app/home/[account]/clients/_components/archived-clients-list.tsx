@@ -35,11 +35,18 @@ export function ArchivedClientsList({
   accountId,
   canEditClients,
   onRestored,
+  terminology = 'default',
 }: {
   accountId: string;
   canEditClients: boolean;
   onRestored?: () => void;
+  terminology?: 'default' | 'commercial';
 }) {
+  const isCommercial = terminology === 'commercial';
+  const entity = isCommercial ? 'contact' : 'client';
+  const entityPlural = isCommercial ? 'contacts' : 'clients';
+  const entityTitle = isCommercial ? 'Contact' : 'Client';
+
   const [clients, setClients] = useState<ArchivedClient[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -59,12 +66,14 @@ export function ArchivedClientsList({
       setTotal(result?.total ?? 0);
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : 'Failed to load archived clients',
+        e instanceof Error
+          ? e.message
+          : `Failed to load archived ${entityPlural}`,
       );
     } finally {
       setLoading(false);
     }
-  }, [accountId]);
+  }, [accountId, entityPlural]);
 
   useEffect(() => {
     void load();
@@ -74,11 +83,13 @@ export function ArchivedClientsList({
     setBusyId(client.id);
     try {
       await restoreClient({ accountId, clientId: client.id });
-      toast.success(`${client.display_name ?? 'Client'} restored`);
+      toast.success(`${client.display_name ?? entityTitle} restored`);
       setClients((current) => current.filter((c) => c.id !== client.id));
       onRestored?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to restore client');
+      toast.error(
+        e instanceof Error ? e.message : `Failed to restore ${entity}`,
+      );
     } finally {
       setBusyId(null);
     }
@@ -91,10 +102,14 @@ export function ArchivedClientsList({
     setDeleteTarget(null);
     try {
       await destroyClient({ accountId, clientId: target.id });
-      toast.success(`${target.display_name ?? 'Client'} permanently deleted`);
+      toast.success(
+        `${target.display_name ?? entityTitle} permanently deleted`,
+      );
       setClients((current) => current.filter((c) => c.id !== target.id));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to delete client');
+      toast.error(
+        e instanceof Error ? e.message : `Failed to delete ${entity}`,
+      );
     } finally {
       setBusyId(null);
     }
@@ -103,7 +118,7 @@ export function ArchivedClientsList({
   if (loading) {
     return (
       <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-        Loading archived clients…
+        Loading archived {entityPlural}…
       </div>
     );
   }
@@ -111,8 +126,8 @@ export function ArchivedClientsList({
   if (clients.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-        No archived clients. Archived clients can be restored or permanently
-        deleted from here.
+        No archived {entityPlural}. Archived {entityPlural} can be restored or
+        permanently deleted from here.
       </div>
     );
   }
@@ -177,7 +192,8 @@ export function ArchivedClientsList({
 
       {total > clients.length ? (
         <p className="mt-3 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-          Showing the {clients.length} most recent of {total} archived clients.
+          Showing the {clients.length} most recent of {total} archived{' '}
+          {entityPlural}.
         </p>
       ) : null}
 
@@ -188,14 +204,13 @@ export function ArchivedClientsList({
         <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Permanently delete {deleteTarget?.display_name ?? 'this client'}?
+              Permanently delete{' '}
+              {deleteTarget?.display_name ?? `this ${entity}`}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This cannot be undone. Their notes, contacts and meeting
-              transcripts will be deleted with them. Projects, tasks, documents,
-              proposals and emails are kept but will no longer be linked to a
-              client. Clients with invoices cannot be deleted — invoices are
-              kept as financial records.
+              {isCommercial
+                ? 'This cannot be undone. Their notes and people records will be deleted with them. Linked disposals, requirements and viewings are kept but will no longer be linked to this contact.'
+                : 'This cannot be undone. Their notes, contacts and meeting transcripts will be deleted with them. Projects, tasks, documents, proposals and emails are kept but will no longer be linked to a client. Clients with invoices cannot be deleted — invoices are kept as financial records.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

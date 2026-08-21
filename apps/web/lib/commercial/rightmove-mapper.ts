@@ -14,12 +14,14 @@ import type {
   RightmoveAreaSizeUnit,
   RightmoveBuildingPriceDisplayQualifier,
   RightmoveBuildingSizing,
+  RightmoveCondition,
   RightmoveMedia,
   RightmoveMediaAsset,
   RightmovePropertyClassification,
   RightmovePropertyPayload,
   RightmoveRentFrequency,
   RightmoveSpace,
+  RightmoveSpacePricing,
   RightmoveStatus,
   RightmoveSubType,
   RightmoveTransactionType,
@@ -54,6 +56,10 @@ export type RightmoveMapperListing = {
   description: string | null;
   keyPoints: string[];
   referenceNumber: string | null;
+  serviceChargePerSqft: number | null;
+  ratesPayablePerSqft: number | null;
+  conditionDescription: string | null;
+  fittedSpace: boolean | null;
 };
 
 export type RightmoveMapperUnit = {
@@ -66,6 +72,12 @@ export type RightmoveMapperUnit = {
   externalId: string | null;
   askingRentPence: number | null;
   rentPerSqft: number | null;
+  description: string | null;
+  sector: string | null;
+  status: string | null;
+  serviceChargePerSqft: number | null;
+  ratesPayablePerSqft: number | null;
+  fittedSpace: boolean | null;
 };
 
 export type RightmoveMapperMedia = {
@@ -344,6 +356,100 @@ function mapTenure(
 }
 
 /**
+ * Convert £/sqft × size → annual £ for Rightmove `serviceCharge` /
+ * `businessRates` (ADF examples are annual totals, not rates).
+ */
+export function annualChargeFromPerSqft(
+  perSqft: number | null | undefined,
+  sizeSqft: number | null | undefined,
+): number | undefined {
+  const rate = asOptionalNumber(perSqft);
+  const size = asOptionalNumber(sizeSqft);
+  if (rate == null || size == null || rate <= 0 || size <= 0) return undefined;
+  return Math.round(rate * size * 100) / 100;
+}
+
+export function mapCondition(input: {
+  fittedSpace?: boolean | null;
+  conditionDescription?: string | null;
+}): RightmoveCondition | undefined {
+  if (input.fittedSpace === true) return 'FULL_FIT_OUT';
+  if (input.fittedSpace === false) return 'SHELL_SPACE';
+
+  const text = input.conditionDescription?.trim().toLowerCase() ?? '';
+  if (!text) return undefined;
+  if (/shell|cat\s*a\b|category\s*a\b|bare|strip/.test(text)) {
+    return 'SHELL_SPACE';
+  }
+  if (/partial|part[\s-]?fit|cat\s*b\b|category\s*b\b/.test(text)) {
+    return 'PARTIAL_FIT_OUT';
+  }
+  if (/full[\s-]?fit|fitted|fit[\s-]?out|ready\s+to\s+occupy/.test(text)) {
+    return 'FULL_FIT_OUT';
+  }
+  return undefined;
+}
+
+export function mapUnitStatusToRightmove(
+  status: string | null | undefined,
+  fallback: RightmoveStatus,
+): RightmoveStatus {
+  if (!status?.trim()) return fallback;
+  const value = status.trim().toLowerCase();
+  if (/under[\s_-]*offer|offer\s+agreed/.test(value)) return 'UNDER_OFFER';
+  if (/let\s*agreed|\blet\b|leased/.test(value)) return 'LET_AGREED';
+  if (/sold\s*stcm/.test(value)) return 'SOLD_STCM';
+  if (/\bsold\b/.test(value)) return 'SOLD_STC';
+  if (/reserv/.test(value)) return 'RESERVED';
+  if (/withdrawn|unavailable|off[\s_-]*market/.test(value)) return fallback;
+  return 'AVAILABLE';
+}
+
+function listingSizeForCharges(listing: RightmoveMapperListing): number | null {
+  return (
+    asOptionalNumber(listing.sizeMaxSqft) ??
+    asOptionalNumber(listing.sizeMinSqft)
+  );
+}
+
+function buildSpacePricing(input: {
+  listing: RightmoveMapperListing;
+  unit: RightmoveMapperUnit;
+}): RightmoveSpacePricing | undefined {
+  const { listing, unit } = input;
+  const isLettings = disposalIncludesToLet(listing.disposalType);
+  if (!isLettings) return undefined;
+
+  const hideRent = listing.hideRentFromMarketing;
+  let rentPounds = penceToPounds(unit.askingRentPence);
+  if (rentPounds == null) {
+    const psf = asOptionalNumber(unit.rentPerSqft);
+    const size = asOptionalNumber(unit.sizeSqft);
+    if (psf != null && size != null && psf > 0 && size > 0) {
+      rentPounds = Math.round(psf * size * 100) / 100;
+    }
+  }
+  if (rentPounds == null) {
+    rentPounds = penceToPounds(listing.askingRentPence);
+  }
+
+  const frequency = mapRentFrequency(listing.rentFrequency) ?? 'YEARLY';
+
+  if (hideRent || rentPounds == null) {
+    return {
+      price: rentPounds ?? 0,
+      displayQualifier: 'PRICE_ON_APPLICATION',
+      frequency,
+    };
+  }
+
+  return {
+    price: rentPounds,
+    frequency,
+  };
+}
+
+/**
  * Map free-text listing use class (e.g. "Class E - Commercial, Business and
  * Service") onto Rightmove's closed enum. Passing through `CLASS_*` prefixes
  * without a whitelist produced invalid values such as `CLASS_E_-_COMMERCIAL`.
@@ -532,8 +638,7 @@ function mediaAsset(
   // invalid URLs (and we used to append an ellipsis).
   if (url.length > RIGHTMOVE_MEDIA_URL_MAX_LENGTH) return null;
   try {
-    // eslint-disable-next-line no-new
-    new URL(url);
+    void new URL(url);
   } catch {
     return null;
   }
@@ -676,15 +781,40 @@ function mapUnitsToSpaces(input: {
   } = input;
 
   return units.map((unit, index) => {
-    const size =
+    const measuredSize =
       asOptionalNumber(unit.sizeSqft) ??
       asOptionalNumber(listing.sizeMinSqft) ??
-      asOptionalNumber(listing.sizeMaxSqft) ??
-      1;
+      asOptionalNumber(listing.sizeMaxSqft);
+    const size = measuredSize ?? 1;
     const features = keyFeatures(listing.keyPoints, 1);
     const measurementType = mapMeasurementType(
       unit.measurementStandard ?? listing.measurementStandard,
     );
+    const spaceStatus = mapUnitStatusToRightmove(unit.status, status);
+    const spaceClassification = unit.sector?.trim()
+      ? buildClassification(unit.sector)
+      : classification;
+    const description = clip(
+      unit.description?.trim() ||
+        listing.description ||
+        listing.summary ||
+        listing.name,
+      1_000_000,
+    );
+    const pricing = buildSpacePricing({ listing, unit });
+    const chargeSize =
+      asOptionalNumber(unit.sizeSqft) ?? listingSizeForCharges(listing);
+    const serviceCharge =
+      annualChargeFromPerSqft(unit.serviceChargePerSqft, chargeSize) ??
+      annualChargeFromPerSqft(listing.serviceChargePerSqft, chargeSize);
+    const businessRates =
+      annualChargeFromPerSqft(unit.ratesPayablePerSqft, chargeSize) ??
+      annualChargeFromPerSqft(listing.ratesPayablePerSqft, chargeSize);
+    const condition = mapCondition({
+      fittedSpace: unit.fittedSpace ?? listing.fittedSpace,
+      conditionDescription: listing.conditionDescription,
+    });
+
     return {
       reference: spaceReference(buildingReference, unit, index),
       name: clip(unit.label || unit.floorOrUnit || `Space ${index + 1}`, 200),
@@ -692,23 +822,24 @@ function mapUnitsToSpaces(input: {
         unit.floorOrUnit || unit.label || `Unit ${index + 1}`,
         50,
       ),
-      description: clip(
-        listing.description || listing.summary || listing.name,
-        1_000_000,
-      ),
+      description,
       sizing: {
         size,
         unit: 'SQFT',
         ...(measurementType ? { measurementType } : {}),
       },
-      status,
+      status: spaceStatus,
       published,
-      primaryPropertyClassification: classification,
+      primaryPropertyClassification: spaceClassification,
       order: index + 1,
+      ...(pricing ? { pricing } : {}),
       ...(features ? { keyFeatures: features } : {}),
       ...(availableDate(listing.availableFrom)
         ? { availableDate: availableDate(listing.availableFrom) }
         : {}),
+      ...(serviceCharge != null ? { serviceCharge } : {}),
+      ...(businessRates != null ? { businessRates } : {}),
+      ...(condition ? { condition } : {}),
     };
   });
 }
@@ -745,6 +876,19 @@ export function mapListingToRightmovePayload(input: {
   const features = keyFeatures(listing.keyPoints, 0);
   const useClasses = mapUseClasses(listing.useClass);
   const tenureType = mapTenure(listing.tenure);
+  const condition = mapCondition({
+    fittedSpace: listing.fittedSpace,
+    conditionDescription: listing.conditionDescription,
+  });
+  const chargeSize = listingSizeForCharges(listing);
+  const serviceCharge = annualChargeFromPerSqft(
+    listing.serviceChargePerSqft,
+    chargeSize,
+  );
+  const businessRates = annualChargeFromPerSqft(
+    listing.ratesPayablePerSqft,
+    chargeSize,
+  );
   const epcRating =
     listing.epcRating != null && Number.isFinite(listing.epcRating)
       ? Math.round(listing.epcRating)
@@ -781,6 +925,9 @@ export function mapListingToRightmovePayload(input: {
     ...(availableDate(listing.availableFrom)
       ? { availableDate: availableDate(listing.availableFrom) }
       : {}),
+    ...(serviceCharge != null ? { serviceCharge } : {}),
+    ...(businessRates != null ? { businessRates } : {}),
+    ...(condition ? { condition } : {}),
     ...(epcRating != null || breeamRating != null
       ? {
           environment: {

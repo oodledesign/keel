@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -42,11 +42,11 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
 import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
-  LISTING_STATUS_LABELS,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -59,9 +59,39 @@ import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingSectorPills } from './listing-sector-pills';
 
-const NAV = [
+type NavKey =
+  | 'overview'
+  | 'marketing'
+  | 'media'
+  | 'interest'
+  | 'availability'
+  | 'management'
+  | 'activity';
+
+type NavSection = { id: string; label: string };
+
+const NAV: Array<{
+  key: NavKey;
+  label: string;
+  icon: typeof LayoutDashboard;
+  href: string;
+  sections?: NavSection[];
+}> = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '' },
-  { key: 'marketing', label: 'Marketing', icon: Megaphone, href: '/marketing' },
+  {
+    key: 'marketing',
+    label: 'Marketing',
+    icon: Megaphone,
+    href: '/marketing',
+    sections: [
+      { id: 'summary-key-points', label: 'Summary' },
+      { id: 'amenities', label: 'Amenities' },
+      { id: 'marketing-text', label: 'Marketing text' },
+      { id: 'accommodation', label: 'Accommodation' },
+      { id: 'agent-contacts', label: 'Agents' },
+      { id: 'publish-options', label: 'Publish' },
+    ],
+  },
   { key: 'media', label: 'Media', icon: Camera, href: '/media' },
   { key: 'interest', label: 'Interest', icon: Users, href: '/interest' },
   {
@@ -75,9 +105,21 @@ const NAV = [
     label: 'Management',
     icon: Settings2,
     href: '/management',
+    sections: [
+      { id: 'marketing-readiness', label: 'Readiness' },
+      { id: 'instruction', label: 'Instruction' },
+      { id: 'assignment', label: 'Assignment' },
+      { id: 'co-agents', label: 'Co-agents' },
+      { id: 'parties', label: 'Parties' },
+      { id: 'advanced-attrs', label: 'Attributes' },
+      { id: 'private-media', label: 'Private media' },
+      { id: 'publishing', label: 'Publishing' },
+    ],
   },
   { key: 'activity', label: 'Activity', icon: Activity, href: '/activity' },
-] as const;
+];
+
+const STICKY_OFFSET_CLASS = 'top-0';
 
 function listingAddress(listing: CommercialListing) {
   return [
@@ -119,6 +161,8 @@ export function ListingDetailShell({
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [heroPinned, setHeroPinned] = useState(false);
+  const heroSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setListing(initialListing);
@@ -129,8 +173,38 @@ export function ListingDetailShell({
     .replace('[id]', listing.id);
 
   const isOverview = pathname === base || pathname === `${base}/`;
+  const activeNav =
+    NAV.find((item) =>
+      item.href === ''
+        ? isOverview
+        : pathname.startsWith(`${base}${item.href}`),
+    ) ?? NAV[0]!;
+  const activeSections = activeNav.sections ?? [];
   const address = listingAddress(listing);
   const isArchived = listing.status === 'withdrawn';
+  const showStickyTitle = !isOverview || heroPinned;
+
+  useEffect(() => {
+    if (!isOverview) {
+      setHeroPinned(true);
+      return;
+    }
+
+    const node = heroSentinelRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setHeroPinned(false);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHeroPinned(!entry?.isIntersecting);
+      },
+      { rootMargin: '-8px 0px 0px 0px', threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [isOverview]);
 
   const onDuplicate = () => {
     startTransition(async () => {
@@ -253,56 +327,140 @@ export function ListingDetailShell({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {isOverview ? (
-        <OverviewHeader
-          listing={listing}
-          address={address}
-          headerActions={headerActions}
-        />
-      ) : (
-        <CompactHeader
-          listing={listing}
-          address={address}
-          headerActions={headerActions}
-        />
-      )}
+        <>
+          <div ref={heroSentinelRef} className="h-px w-full" aria-hidden />
+          <OverviewHeader
+            listing={listing}
+            address={address}
+            headerActions={headerActions}
+          />
+        </>
+      ) : null}
+
+      <div
+        className={cn(
+          'sticky top-0 z-20 -mx-1 space-y-3 px-1',
+          showStickyTitle
+            ? 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3'
+            : 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3 lg:static lg:border-0 lg:bg-transparent lg:pb-0',
+        )}
+      >
+        {showStickyTitle ? (
+          <div className="flex items-start justify-between gap-3 pt-1">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-lg font-semibold text-[var(--workspace-shell-text)]">
+                  {listing.name}
+                </h2>
+                <ListingStatusBadge status={listing.status} />
+              </div>
+              {address ? (
+                <p className="mt-0.5 flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="line-clamp-1">{address}</span>
+                </p>
+              ) : null}
+            </div>
+            {headerActions}
+          </div>
+        ) : null}
+
+        {/* Mobile / tablet primary + section nav */}
+        <div className="space-y-2 lg:hidden">
+          <nav className="flex gap-1 overflow-x-auto pb-0.5">
+            {NAV.map((item) => {
+              const href = `${base}${item.href}`;
+              const active = item.key === activeNav.key;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  href={href}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                    active
+                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          {activeSections.length > 0 ? (
+            <nav className="flex gap-1 overflow-x-auto pb-0.5">
+              {activeSections.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className="inline-flex shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                >
+                  {section.label}
+                </a>
+              ))}
+            </nav>
+          ) : null}
+        </div>
+      </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        <nav className="flex shrink-0 gap-1 overflow-x-auto lg:w-48 lg:flex-col lg:overflow-visible">
+        <nav
+          className={cn(
+            'hidden shrink-0 lg:sticky lg:flex lg:w-52 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible',
+            STICKY_OFFSET_CLASS,
+            showStickyTitle ? 'lg:top-[4.75rem]' : 'lg:top-3',
+          )}
+        >
           {NAV.map((item) => {
             const href = `${base}${item.href}`;
-            const active =
-              item.href === '' ? isOverview : pathname.startsWith(href);
+            const active = item.key === activeNav.key;
             const Icon = item.icon;
             return (
-              <Link
-                key={item.key}
-                href={href}
-                data-tour={
-                  item.key === 'marketing'
-                    ? 'sop-listing-marketing'
-                    : item.key === 'media'
-                      ? 'sop-listing-media'
-                      : item.key === 'management'
-                        ? 'sop-listing-portal'
-                        : undefined
-                }
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                  active
-                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
-                    : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
+              <div key={item.key} className="space-y-0.5">
+                <Link
+                  href={href}
+                  data-tour={
+                    item.key === 'marketing'
+                      ? 'sop-listing-marketing'
+                      : item.key === 'media'
+                        ? 'sop-listing-media'
+                        : item.key === 'management'
+                          ? 'sop-listing-portal'
+                          : undefined
+                  }
+                  className={cn(
+                    'inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    active
+                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </Link>
+                {active && item.sections?.length ? (
+                  <div className="ml-3 space-y-0.5 border-l border-[color:var(--workspace-shell-border)] pl-2">
+                    {item.sections.map((section) => (
+                      <a
+                        key={section.id}
+                        href={`#${section.id}`}
+                        className="block rounded-md px-2 py-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                      >
+                        {section.label}
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             );
           })}
         </nav>
 
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-w-0 flex-1 space-y-4">{children}</div>
       </div>
 
       <ListingFormModal
@@ -345,40 +503,6 @@ export function ListingDetailShell({
   );
 }
 
-function CompactHeader({
-  listing,
-  address,
-  headerActions,
-}: {
-  listing: CommercialListing;
-  address: string;
-  headerActions: React.ReactNode;
-}) {
-  const updatedLabel = formatUpdatedAt(listing.updatedAt);
-
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-          {listing.name}
-        </h2>
-        {address ? (
-          <p className="mt-0.5 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text)]/55">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{address}</span>
-          </p>
-        ) : null}
-        {updatedLabel ? (
-          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
-            Updated {updatedLabel}
-          </p>
-        ) : null}
-      </div>
-      {headerActions}
-    </div>
-  );
-}
-
 function OverviewHeader({
   listing,
   address,
@@ -406,8 +530,8 @@ function OverviewHeader({
               <Camera className="h-10 w-10" />
             </div>
           )}
-          <span className="absolute bottom-2 left-2 rounded-md bg-[var(--ozer-accent)] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--ozer-white)] uppercase">
-            {LISTING_STATUS_LABELS[listing.status]}
+          <span className="absolute bottom-2 left-2">
+            <ListingStatusBadge status={listing.status} />
           </span>
         </div>
 

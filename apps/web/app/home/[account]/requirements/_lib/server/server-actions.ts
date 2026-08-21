@@ -56,6 +56,10 @@ export const createRequirement = enhanceAction(
       }
     }
 
+    const { revalidateMatchRequirementsCache } =
+      await import('~/lib/cache/disposals-data-cache');
+    revalidateMatchRequirementsCache(input.accountId);
+
     return created;
   },
   { schema: CreateRequirementSchema },
@@ -70,7 +74,15 @@ export const updateRequirement = enhanceAction(
       'create or edit requirements',
     );
     const { requirementId, accountId, ...rest } = input;
-    return getService().updateRequirement(requirementId, accountId, rest);
+    const updated = await getService().updateRequirement(
+      requirementId,
+      accountId,
+      rest,
+    );
+    const { revalidateMatchRequirementsCache } =
+      await import('~/lib/cache/disposals-data-cache');
+    revalidateMatchRequirementsCache(accountId);
+    return updated;
   },
   { schema: UpdateRequirementSchema },
 );
@@ -78,6 +90,9 @@ export const updateRequirement = enhanceAction(
 export const deleteRequirement = enhanceAction(
   async (input) => {
     await getService().deleteRequirement(input.requirementId, input.accountId);
+    const { revalidateMatchRequirementsCache } =
+      await import('~/lib/cache/disposals-data-cache');
+    revalidateMatchRequirementsCache(input.accountId);
     return { success: true };
   },
   { schema: DeleteRequirementSchema },

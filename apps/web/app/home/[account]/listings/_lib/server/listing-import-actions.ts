@@ -322,6 +322,9 @@ export const commitListingImportAction = enhanceAction(
     );
     revalidatePath(listingsPath, 'page');
     revalidatePath(`/home/${input.accountSlug}/listings`, 'page');
+    const { revalidateDisposalsCaches } =
+      await import('~/lib/cache/disposals-data-cache');
+    revalidateDisposalsCaches({ accountId: input.accountId });
 
     return { imported, updated, skipped, failed };
   },

@@ -86,7 +86,8 @@ const COMMERCIAL_STEPS: TourStepDef[] = [
   {
     element: '[data-tour="nav-contacts"]',
     title: 'Contacts',
-    description: 'Clients, applicants, and people linked to your deals.',
+    description:
+      'Companies and people linked to your disposals — landlords, applicants, and agents.',
   },
   {
     element: '[data-tour="nav-requirements"]',

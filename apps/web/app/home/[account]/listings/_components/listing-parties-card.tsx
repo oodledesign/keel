@@ -2,17 +2,36 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { Building2, EyeOff, Plus, X } from 'lucide-react';
+import Link from 'next/link';
+
+import { Building2, EyeOff, Mail, Phone, Plus, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
-import type { ListingPartyRole } from '~/lib/commercial/commercial-constants';
-import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
+import pathsConfig from '~/config/paths.config';
+import {
+  LISTING_PARTY_ROLES,
+  LISTING_PARTY_ROLE_LABELS,
+  type ListingPartyRole,
+} from '~/lib/commercial/commercial-constants';
+import {
+  workspaceBtnPrimaryMd,
+  workspacePanelCard,
+  workspaceSelectContentClass,
+  workspaceSelectItemClass,
+} from '~/lib/workspace-ui';
 
 import type {
   CoAgentClientOption,
@@ -29,19 +48,25 @@ import {
 
 export function ListingPartiesCard({
   accountId,
+  accountSlug,
   listingId,
-  role,
+  role: fixedRole,
   initialParties,
   listing,
+  allowRoleSelect = false,
 }: {
   accountId: string;
+  accountSlug?: string;
   listingId: string;
   role: ListingPartyRole;
   initialParties: ListingParty[];
   listing?: CommercialListing;
+  /** When true, show a role picker (used for unified People card). */
+  allowRoleSelect?: boolean;
 }) {
-  const isLandlord = role === 'landlord';
+  const isLandlord = fixedRole === 'landlord' && !allowRoleSelect;
   const [parties, setParties] = useState(initialParties);
+  const [role, setRole] = useState<ListingPartyRole>(fixedRole);
   const [hideLandlord, setHideLandlord] = useState(
     listing?.hideLandlordFromMarketing ?? false,
   );
@@ -54,6 +79,10 @@ export function ListingPartiesCard({
   const [contactPhone, setContactPhone] = useState('');
   const [pending, startTransition] = useTransition();
   const [searching, startSearch] = useTransition();
+
+  useEffect(() => {
+    setRole(fixedRole);
+  }, [fixedRole]);
 
   useEffect(() => {
     const q = query.trim();
@@ -81,24 +110,28 @@ export function ListingPartiesCard({
     return () => window.clearTimeout(handle);
   }, [accountId, listingId, query, role]);
 
-  const linkedIds = useMemo(
-    () => new Set(parties.map((p) => p.clientId)),
+  const linkedKeys = useMemo(
+    () => new Set(parties.map((p) => `${p.clientId}:${p.role}`)),
     [parties],
   );
 
-  const addExisting = (client: CoAgentClientOption) => {
+  const addExisting = (option: CoAgentClientOption) => {
     startTransition(async () => {
       try {
         const next = await addListingParty({
           accountId,
           listingId,
           role,
-          clientId: client.id,
+          clientId: option.id,
+          contactId: option.contactId ?? null,
+          contactName: option.contactName ?? null,
+          contactEmail: option.email,
+          contactPhone: option.phone,
         });
         setParties(next);
         setQuery('');
         setResults([]);
-        toast.success(`Linked ${client.name}`);
+        toast.success(`Linked ${option.name}`);
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : 'Could not link party',
@@ -131,7 +164,7 @@ export function ListingPartiesCard({
         setContactName('');
         setContactEmail('');
         setContactPhone('');
-        toast.success(`Added ${firm}`);
+        toast.success('Contact linked');
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Could not add');
       }
@@ -148,24 +181,8 @@ export function ListingPartiesCard({
         });
         setParties(next);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not remove');
-      }
-    });
-  };
-
-  const togglePrivate = (party: ListingParty, nextPrivate: boolean) => {
-    startTransition(async () => {
-      try {
-        const next = await updateListingParty({
-          accountId,
-          listingId,
-          partyId: party.id,
-          isPrivate: nextPrivate,
-        });
-        setParties(next);
-      } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : 'Could not update privacy',
+          err instanceof Error ? err.message : 'Could not remove party',
         );
       }
     });
@@ -189,20 +206,55 @@ export function ListingPartiesCard({
     });
   };
 
+  const togglePrivate = (party: ListingParty, checked: boolean) => {
+    setParties((prev) =>
+      prev.map((row) =>
+        row.id === party.id ? { ...row, isPrivate: checked } : row,
+      ),
+    );
+    startTransition(async () => {
+      try {
+        await updateListingParty({
+          accountId,
+          listingId,
+          partyId: party.id,
+          isPrivate: checked,
+        });
+      } catch (err) {
+        setParties((prev) =>
+          prev.map((row) =>
+            row.id === party.id ? { ...row, isPrivate: !checked } : row,
+          ),
+        );
+        toast.error(
+          err instanceof Error ? err.message : 'Could not update party',
+        );
+      }
+    });
+  };
+
+  const title = allowRoleSelect
+    ? 'People on this disposal'
+    : isLandlord
+      ? 'Landlords'
+      : 'Other contacts & companies';
+
   return (
     <Card className={workspacePanelCard}>
       <CardHeader>
         <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-          {isLandlord ? 'Landlords' : 'Other contacts & companies'}
+          {title}
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
-          {isLandlord
-            ? 'Store associated landlords on the disposal.'
-            : 'Store associated contacts or companies on the disposal.'}
+          {allowRoleSelect
+            ? 'Link companies and people with a role. Phone numbers show for quick calls.'
+            : isLandlord
+              ? 'Store associated landlords on the disposal.'
+              : 'Store associated contacts or companies on the disposal.'}
         </p>
       </CardHeader>
       <CardContent className="max-w-lg space-y-4">
-        {isLandlord ? (
+        {isLandlord || allowRoleSelect ? (
           <label className="flex items-start gap-2.5 text-sm text-[var(--workspace-shell-text)]">
             <Checkbox
               checked={hideLandlord}
@@ -213,53 +265,83 @@ export function ListingPartiesCard({
           </label>
         ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor={`${role}-party-search`}>Add from clients</Label>
-          <Input
-            id={`${role}-party-search`}
-            placeholder="Search companies or contacts…"
-            value={query}
-            disabled={pending}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {query.trim() && (searching || results.length > 0) ? (
-            <ul className="max-h-44 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
-              {results
-                .filter((row) => !linkedIds.has(row.id))
-                .slice(0, 8)
-                .map((row) => (
-                  <li key={row.id}>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                      onClick={() => addExisting(row)}
+        <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
+          {allowRoleSelect ? (
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select
+                value={role}
+                onValueChange={(value) => setRole(value as ListingPartyRole)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className={workspaceSelectContentClass}>
+                  {LISTING_PARTY_ROLES.map((value) => (
+                    <SelectItem
+                      key={value}
+                      value={value}
+                      className={workspaceSelectItemClass}
                     >
-                      <Building2 className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text)]/40" />
-                      <span className="min-w-0 flex-1 truncate">
-                        {row.name}
-                      </span>
-                      {row.commercialRole ? (
-                        <span className="text-[10px] tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
-                          {row.commercialRole}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                ))}
-              {!searching && results.length === 0 ? (
-                <li className="px-3 py-2 text-sm text-[var(--workspace-shell-text)]/45">
-                  No matching clients
-                </li>
-              ) : null}
-            </ul>
+                      {LISTING_PARTY_ROLE_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           ) : null}
+          <div
+            className={`space-y-2 ${allowRoleSelect ? '' : 'sm:col-span-2'}`}
+          >
+            <Label htmlFor={`${fixedRole}-party-search`}>
+              Add from contacts
+            </Label>
+            <Input
+              id={`${fixedRole}-party-search`}
+              placeholder="Search companies or people…"
+              value={query}
+              disabled={pending}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query.trim() && (searching || results.length > 0) ? (
+              <ul className="max-h-44 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
+                {results
+                  .filter((row) => !linkedKeys.has(`${row.id}:${role}`))
+                  .slice(0, 8)
+                  .map((row) => (
+                    <li key={`${row.id}:${row.contactId ?? 'c'}`}>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                        onClick={() => addExisting(row)}
+                      >
+                        <Building2 className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text)]/40" />
+                        <span className="min-w-0 flex-1 truncate">
+                          {row.name}
+                        </span>
+                        {row.phone ? (
+                          <span className="text-xs text-[var(--workspace-shell-text)]/45">
+                            {row.phone}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
+                {!searching && results.length === 0 ? (
+                  <li className="px-3 py-2 text-sm text-[var(--workspace-shell-text)]/45">
+                    No matching contacts
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
+          </div>
         </div>
 
         {showCreate ? (
           <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
             <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              New {isLandlord ? 'landlord' : 'company / contact'}
+              New {role === 'landlord' ? 'landlord' : 'company / contact'}
             </p>
             <Input
               placeholder="Company or contact name"
@@ -325,56 +407,98 @@ export function ListingPartiesCard({
           <p className="text-sm text-[var(--workspace-shell-text)]/45">
             {isLandlord
               ? 'No landlords associated yet.'
-              : 'No contacts or companies associated. You can attach any associated contacts or companies here.'}
+              : 'No contacts or companies associated yet.'}
           </p>
         ) : (
           <ul className="space-y-2">
-            {parties.map((party) => (
-              <li
-                key={party.id}
-                className="flex items-center gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
-              >
-                <Building2 className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text)]/40" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                    {party.isPrivate ? 'Private' : party.clientName}
-                  </p>
-                  {!party.isPrivate && party.contactName ? (
-                    <p className="truncate text-xs text-[var(--workspace-shell-text)]/50">
-                      {party.contactName}
-                    </p>
-                  ) : null}
-                </div>
-                {isLandlord ? (
+            {parties.map((party) => {
+              const phone = party.displayPhone;
+              const email = party.contactEmail;
+              const clientHref = accountSlug
+                ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${party.clientId}`
+                : null;
+              return (
+                <li
+                  key={party.id}
+                  className="flex items-start gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
+                >
+                  <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/40" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {clientHref ? (
+                        <Link
+                          href={clientHref}
+                          className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:underline"
+                        >
+                          {party.isPrivate
+                            ? 'Private'
+                            : party.contactName
+                              ? `${party.contactName} · ${party.clientName}`
+                              : party.clientName}
+                        </Link>
+                      ) : (
+                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {party.isPrivate
+                            ? 'Private'
+                            : party.contactName
+                              ? `${party.contactName} · ${party.clientName}`
+                              : party.clientName}
+                        </p>
+                      )}
+                      <span className="text-[10px] tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
+                        {LISTING_PARTY_ROLE_LABELS[party.role]}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[var(--workspace-shell-text)]/60">
+                      {phone ? (
+                        <a
+                          href={`tel:${phone}`}
+                          className="inline-flex items-center gap-1 hover:text-[var(--workspace-shell-text)]"
+                        >
+                          <Phone className="h-3 w-3" />
+                          {phone}
+                        </a>
+                      ) : null}
+                      {email ? (
+                        <a
+                          href={`mailto:${email}`}
+                          className="inline-flex items-center gap-1 hover:text-[var(--workspace-shell-text)]"
+                        >
+                          <Mail className="h-3 w-3" />
+                          {email}
+                        </a>
+                      ) : null}
+                      {!phone && !email ? <span>No phone on file</span> : null}
+                      {(party.role === 'landlord' ||
+                        party.role === 'landlord_representative') && (
+                        <label className="inline-flex items-center gap-1.5">
+                          <Checkbox
+                            checked={party.isPrivate}
+                            disabled={pending}
+                            onCheckedChange={(value) =>
+                              togglePrivate(party, value === true)
+                            }
+                          />
+                          <EyeOff className="h-3 w-3" />
+                          Private
+                        </label>
+                      )}
+                    </div>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
                     disabled={pending}
-                    title={
-                      party.isPrivate ? 'Show landlord name' : 'Mark as private'
-                    }
-                    onClick={() => togglePrivate(party, !party.isPrivate)}
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => remove(party)}
+                    aria-label={`Remove ${party.clientName}`}
                   >
-                    <EyeOff
-                      className={`h-3.5 w-3.5 ${party.isPrivate ? 'text-[var(--ozer-accent)]' : ''}`}
-                    />
+                    <X className="h-3.5 w-3.5" />
                   </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  disabled={pending}
-                  onClick={() => remove(party)}
-                  aria-label={`Remove ${party.clientName}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>

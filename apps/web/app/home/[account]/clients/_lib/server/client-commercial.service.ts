@@ -44,6 +44,16 @@ export type ClientCommercialSaleRow = {
   hrefKind: 'listing' | 'lease';
 };
 
+export type ClientCommercialPropertyRow = {
+  id: string;
+  name: string;
+  role: string;
+  postcode: string | null;
+  town: string | null;
+  displayPhone: string | null;
+  updatedAt: string;
+};
+
 const SALE_DISPOSAL_STATUSES = new Set(['sold', 'let']);
 
 export function createClientCommercialService(client: SupabaseClient) {
@@ -233,5 +243,51 @@ class ClientCommercialService {
     }
 
     return sales.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async listProperties(input: {
+    accountId: string;
+    clientId: string;
+  }): Promise<ClientCommercialPropertyRow[]> {
+    const { data, error } = await (
+      this.client as unknown as { from: (t: string) => any }
+    )
+      .from('commercial_property_parties')
+      .select(
+        'role, contact_phone, commercial_properties!inner(id, name, postcode, town, updated_at, account_id, archived_at)',
+      )
+      .eq('account_id', input.accountId)
+      .eq('client_id', input.clientId)
+      .eq('commercial_properties.account_id', input.accountId)
+      .is('commercial_properties.archived_at', null);
+
+    if (error) throw error;
+
+    const byId = new Map<string, ClientCommercialPropertyRow>();
+    for (const row of data ?? []) {
+      const property = row.commercial_properties as unknown as {
+        id: string;
+        name: string | null;
+        postcode: string | null;
+        town: string | null;
+        updated_at: string;
+      } | null;
+      if (!property?.id) continue;
+      const existing = byId.get(property.id);
+      if (existing) continue;
+      byId.set(property.id, {
+        id: property.id,
+        name: property.name || 'Untitled property',
+        role: (row.role as string) ?? 'other',
+        postcode: property.postcode,
+        town: property.town,
+        displayPhone: (row.contact_phone as string | null) ?? null,
+        updatedAt: property.updated_at,
+      });
+    }
+
+    return [...byId.values()].sort((a, b) =>
+      b.updatedAt.localeCompare(a.updatedAt),
+    );
   }
 }
