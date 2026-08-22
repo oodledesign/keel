@@ -51,88 +51,88 @@ export const EARLY_ACCESS_BENTO_FEATURES: Array<{
 }> = [
   {
     title: 'Pipeline & CRM',
-    desc: 'Every client and deal, tracked from first enquiry to signed work.',
+    desc: 'Every client and deal in one place — so nothing lives only in your inbox.',
     status: 'live',
     accent: 'cool-blue',
     wide: true,
   },
   {
     title: 'Invoicing',
-    desc: "Send invoices and track what's outstanding.",
+    desc: 'Send an invoice and see what is still owed — without opening a spreadsheet.',
     status: 'live',
     accent: 'coral',
   },
   {
     title: 'Client portals',
-    desc: 'A proper home for files, updates and approvals.',
+    desc: 'One link for files and sign-off — not another folder to babysit.',
     status: 'live',
     accent: 'sage',
   },
   {
     title: 'Second brain',
-    desc: 'Every note, meeting and client detail — remembered and searchable.',
+    desc: 'Walk into a call with context already there — not a scramble through notes.',
     status: 'live',
     accent: 'lime',
   },
   {
     title: 'Client requests',
-    desc: 'A menu of services clients can request, paid for with credits — not endless email back-and-forth.',
+    desc: 'Clear asks with credit costs — not vague favours buried in email.',
     status: 'live',
     accent: 'plum',
   },
   {
     title: 'Scheduling',
-    desc: 'Bookings and availability, without the back-and-forth.',
+    desc: 'Bookings without the back-and-forth — clients pick a time that works.',
     status: 'live',
     accent: 'cool-blue',
   },
   {
     title: 'Tasks',
-    desc: 'One list, not five apps and a notebook.',
+    desc: 'One list for what is actually due — not five apps and a notebook.',
     status: 'live',
     accent: 'coral',
   },
   {
     title: 'Messaging',
-    desc: 'Talk to clients without leaving the project.',
+    desc: 'Client chat tied to the project — not another thread to lose.',
     status: 'live',
     accent: 'sage',
   },
   {
     title: 'Email assistant',
-    desc: 'Triages your inbox, drafts replies, and turns messages into tasks automatically.',
+    desc: 'Open your inbox already sorted — replies drafted, tasks extracted.',
     status: 'soon',
     accent: 'plum',
     wide: true,
   },
   {
     title: 'Meeting assistant',
-    desc: 'Records, transcribes and coaches your calls — then turns them into follow-up tasks.',
+    desc: 'Leave the call with notes and follow-ups — not a mental to-do list.',
     status: 'soon',
     accent: 'sage',
   },
   {
     title: 'Planner',
-    desc: 'Turns your tasks, meetings and deadlines into an actual plan for your day.',
+    desc: 'See your day as a plan — calls, deep work, and what to do next.',
     status: 'soon',
     accent: 'coral',
     wide: true,
   },
   {
     title: 'Site Studio',
-    desc: 'Build and publish client sites visually.',
+    desc: 'Ship client sites from the same workspace you run the project in.',
     status: 'soon',
     accent: 'lime',
   },
   {
     title: 'AI media generation',
-    desc: 'On-brand images and video for client work.',
+    desc: 'On-brand visuals when the brief lands — not a separate creative stack.',
     status: 'addon',
     accent: 'cool-blue',
   },
   {
     title: 'Screen recording',
-    desc: 'Record your screen for tutorials, walkthroughs and client feedback.',
+    desc: 'Record a walkthrough in a click — feedback that clients actually watch.',
     status: 'addon',
     accent: 'plum',
   },
@@ -148,10 +148,14 @@ export const EARLY_ACCESS_STATUS_LABEL: Record<
 };
 
 export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
+  id: string;
   accent: EarlyAccessAccent;
+  icon: string;
   eyebrow: string;
   title: string;
+  moment: string;
   desc: string;
+  highlights: string[];
   mock:
     | 'kanban'
     | 'invoice'
@@ -160,96 +164,202 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     | 'email'
     | 'requests'
     | 'planner';
-  reverse?: boolean;
   soon?: boolean;
 }> = [
   {
+    id: 'pipeline-crm',
     accent: 'cool-blue',
+    icon: 'Kanban',
     eyebrow: 'Pipeline & CRM',
-    title: 'See every client and every deal, in one view.',
-    desc: 'Track enquiries through to signed work without losing anything in your inbox. One board, one source of truth.',
+    title: 'You always know what happens next with a client.',
+    moment:
+      'A new enquiry lands while you are in a meeting — you open Ozer later and it is already on the board, with the next step obvious.',
+    desc: 'Track enquiries through to signed work without digging through email. One board, one source of truth.',
+    highlights: [
+      'Kanban board from first enquiry to invoiced',
+      'Client records linked to every deal and note',
+      'See where each prospect stands at a glance',
+      'Nothing slips through because it lived in email',
+    ],
     mock: 'kanban',
   },
   {
-    accent: 'coral',
-    eyebrow: 'Invoicing',
-    title: 'Get paid without the admin.',
-    desc: "Send professional invoices, track what's outstanding, and stop copying numbers between spreadsheets.",
-    mock: 'invoice',
-    reverse: true,
-  },
-  {
-    accent: 'sage',
-    eyebrow: 'Client portals',
-    title: 'Give clients a proper home, not a shared folder.',
-    desc: 'Share files, updates and approvals somewhere that looks like part of your business — not a random Dropbox link.',
-    mock: 'portal',
-  },
-  {
-    accent: 'lime',
-    eyebrow: 'Second brain',
-    title: "Keep client context where you'll actually find it.",
-    desc: 'Meeting notes, project details and decisions, attached to the client they belong to — and searchable the moment you need them.',
-    mock: 'notes',
-    reverse: true,
-  },
-  {
+    id: 'email-assistant',
     accent: 'plum',
+    icon: 'Sparkles',
     eyebrow: 'Email assistant',
-    title: 'Your inbox, triaged for you.',
-    desc: 'Reads your inbox, drafts replies in your voice, and turns anything that needs doing into a task — automatically.',
+    title: 'Start the day knowing what actually needs you.',
+    moment:
+      'You open your inbox and the noise is already sorted — what needs a reply, what is waiting on someone else, and what can wait.',
+    desc: 'Drafts replies in your voice and turns action into tasks, so you are responding — not reorganising.',
+    highlights: [
+      'Triages your inbox by what needs a reply',
+      'Drafts responses in your voice',
+      'Turns action items into tasks automatically',
+      'Flags threads you should not let slip',
+    ],
     mock: 'email',
     soon: true,
   },
   {
-    accent: 'plum',
-    eyebrow: 'Client requests',
-    title: 'Let clients ask, without the endless email thread.',
-    desc: 'Publish a menu of services you offer, each with a credit cost. Clients request what they need, you approve it, and it lands straight in your queue.',
-    mock: 'requests',
+    id: 'planner',
+    accent: 'coral',
+    icon: 'CalendarDays',
+    eyebrow: 'Planner',
+    title: 'Your day has a shape, not just a pile of tasks.',
+    moment:
+      'It is 9:15 and you can see the call, the deep work block, and when to chase that invoice — without rebuilding the plan in your head.',
+    desc: 'Pulls tasks, meetings and deadlines into a schedule you can actually follow.',
+    highlights: [
+      'Builds a schedule from tasks and meetings',
+      'Shows what to do next, not just what is open',
+      'Balances deep work and client calls',
+      'Updates as deadlines and priorities shift',
+    ],
+    mock: 'planner',
+    soon: true,
   },
   {
+    id: 'invoicing',
     accent: 'coral',
-    eyebrow: 'Planner',
-    title: 'A plan for your day, not just a list for it.',
-    desc: "Pulls your tasks, meetings and deadlines together into an actual schedule — so you know what to do next, not just what's outstanding.",
-    mock: 'planner',
-    reverse: true,
-    soon: true,
+    icon: 'FileText',
+    eyebrow: 'Invoicing',
+    title: 'Getting paid should not need a spreadsheet ritual.',
+    moment:
+      'You send an invoice after a call and immediately see what is still outstanding — no copying numbers into another tab.',
+    desc: 'Professional invoices, payment status, and totals in one place tied to the client.',
+    highlights: [
+      'Send invoices in a few clicks',
+      'Track paid, sent and overdue at a glance',
+      'Outstanding totals without a spreadsheet',
+      'Invoices tied to the client and project they belong to',
+    ],
+    mock: 'invoice',
+  },
+  {
+    id: 'client-portals',
+    accent: 'sage',
+    icon: 'LayoutDashboard',
+    eyebrow: 'Client portals',
+    title: 'Clients feel looked after, not lost in a folder.',
+    moment:
+      'They open one link, find the latest files, and sign off — no "which Dropbox was that?" message.',
+    desc: 'A branded space for files, updates and approvals tied to the project.',
+    highlights: [
+      'Share files and updates in one branded space',
+      'Clients approve work without email chains',
+      'Everything tied to the right project',
+      'A client-facing home that looks like your business',
+    ],
+    mock: 'portal',
+  },
+  {
+    id: 'second-brain',
+    accent: 'lime',
+    icon: 'Brain',
+    eyebrow: 'Second brain',
+    title: 'Context is there when the client calls.',
+    moment:
+      'Five minutes before a catch-up, you pull up the record and the last decision is right where you left it.',
+    desc: 'Notes and meeting detail on the client they belong to — searchable when you need them.',
+    highlights: [
+      'Notes attached to the client they belong to',
+      'Meeting summaries searchable when you need them',
+      'Tags and context that survives the week',
+      'Decisions and details in one place, not five apps',
+    ],
+    mock: 'notes',
+  },
+  {
+    id: 'client-requests',
+    accent: 'plum',
+    icon: 'ClipboardList',
+    eyebrow: 'Client requests',
+    title: 'Scope stays clear without another email thread.',
+    moment:
+      'A client picks from your menu, you approve in a click, and it lands in your queue — not as a vague "quick favour".',
+    desc: 'Services with credit costs, so requests are explicit and billable.',
+    highlights: [
+      'Publish a menu of services with credit costs',
+      'Clients request work without back-and-forth email',
+      'Approve or decline in one click',
+      'Approved requests land straight in your queue',
+    ],
+    mock: 'requests',
   },
 ];
 
 export const EARLY_ACCESS_PERSONAS: Array<{
   accent: EarlyAccessAccent;
+  lead: string;
   title: string;
   desc: string;
-  wide?: boolean;
+  features: string[];
 }> = [
   {
     accent: 'cool-blue',
+    lead: 'Friday afternoon and you are not hunting for "where that lead went".',
     title: 'Solo designer or developer',
-    desc: 'Replace a CRM, an invoicing tool and a notes app with one login.',
+    desc: 'One login for clients, invoices, and the notes you actually check.',
+    features: [
+      'Pipeline & CRM',
+      'Invoicing',
+      'Client portals',
+      'Tasks',
+      'Scheduling',
+    ],
   },
   {
     accent: 'coral',
+    lead: 'You walk into every session knowing what you agreed last time.',
     title: 'Consultant or coach',
-    desc: "Keep every client's history and next step somewhere you'll actually check.",
+    desc: "Client history and next steps in one place — not scattered across apps.",
+    features: [
+      'Pipeline & CRM',
+      'Second brain',
+      'Scheduling',
+      'Messaging',
+      'Planner',
+    ],
   },
   {
     accent: 'sage',
+    lead: 'The whole team sees the same client picture — no status meeting required.',
     title: 'Small studio, 2–5 people',
-    desc: 'Give your team one shared view of clients, without more software to manage.',
+    desc: 'Shared context without another tool nobody remembers to update.',
+    features: [
+      'Pipeline & CRM',
+      'Tasks',
+      'Messaging',
+      'Invoicing',
+      'Client portals',
+    ],
   },
   {
     accent: 'lime',
+    lead: 'Briefs and feedback live on the deal — not buried in threads.',
     title: 'Freelance writer or marketer',
-    desc: 'Turn scattered briefs and feedback threads into a proper pipeline.',
+    desc: 'A pipeline that holds the story from pitch to signed-off copy.',
+    features: [
+      'Pipeline & CRM',
+      'Client portals',
+      'Second brain',
+      'Messaging',
+      'Client requests',
+    ],
   },
   {
     accent: 'plum',
+    lead: 'Retainer work and one-off asks land in one queue — clearly scoped.',
     title: 'Virtual assistant',
-    desc: 'Turn client requests and retainer hours into one simple system, not an inbox of one-off asks.',
-    wide: true,
+    desc: 'Credits and requests instead of an inbox of ambiguous favours.',
+    features: [
+      'Client requests',
+      'Tasks',
+      'Scheduling',
+      'Invoicing',
+      'Messaging',
+    ],
   },
 ];
 

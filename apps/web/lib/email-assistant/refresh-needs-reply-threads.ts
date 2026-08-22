@@ -6,8 +6,10 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 import { reconcileRepliedNeedsReplyThreads } from '~/lib/email-assistant/reconcile-replied-threads';
 
+import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
+
 /**
- * Pulls the latest Gmail state for `needs_reply` threads, then clears any that
+ * Pulls the latest Gmail state for actionable threads, then clears any that
  * were already answered outside Ozer (e.g. replied in Gmail).
  *
  * Prefer calling this from the email inbox / cron — not from the dashboard,
@@ -64,7 +66,7 @@ async function refreshAndReconcileNeedsReplyThreadsInner(params: {
   let query = admin
     .from('email_threads')
     .select('id, user_id, gmail_thread_id')
-    .eq('assistant_category', 'needs_reply')
+    .in('assistant_category', [...ACTIONABLE_EMAIL_CATEGORIES])
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -119,15 +121,16 @@ async function refreshAndReconcileNeedsReplyThreadsInner(params: {
         const { error: updateError } = await admin
           .from('email_threads')
           .update({
-            assistant_category: 'no_reply',
+            assistant_category: 'waiting',
             assistant_category_reason: 'Latest message is from you',
+            assistant_category_confidence: 1,
             assistant_processed_message_id:
               (latest?.id as string | undefined) ?? null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', threadId)
           .eq('user_id', mailboxUserId)
-          .eq('assistant_category', 'needs_reply');
+          .in('assistant_category', [...ACTIONABLE_EMAIL_CATEGORIES]);
 
         if (!updateError) {
           clearedViaSent += 1;

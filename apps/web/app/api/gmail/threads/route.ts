@@ -1,61 +1,67 @@
-import type {
-  EmailParticipant,
-  EmailThreadSummary,
-} from '~/home/(user)/email/_lib/types';
+import type { EmailThreadSummary } from '~/home/(user)/email/_lib/types';
 import { parseMailboxKind } from '~/lib/email-assistant/mailbox-kind';
+import {
+  ACTIONABLE_EMAIL_CATEGORIES,
+  isActionableEmailCategory,
+} from '~/lib/email-assistant/email-thread-categories';
+import { mapEmailThreadRow } from '~/lib/email-assistant/map-email-thread-row';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { searchEmailThreadIds } from '~/lib/email-assistant/search-threads';
 import {
   EMAIL_THREAD_LINK_SELECT,
   enrichEmailThreadLinks,
-  mapThreadLinkFields,
 } from '~/lib/email-assistant/thread-link-display';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const dynamic = 'force-dynamic';
 
-function parseParticipants(value: unknown): EmailParticipant[] {
-  if (!Array.isArray(value)) {
-    return [];
+function parseFilterCategories(filter: string | null): string[] | null {
+  if (!filter) return null;
+
+  if (filter === 'action' || filter === 'needs_reply') {
+    return [...ACTIONABLE_EMAIL_CATEGORIES];
   }
 
-  return value
-    .map((entry) => {
-      if (!entry || typeof entry !== 'object') {
-        return null;
-      }
+  if (filter === 'follow_up') {
+    return null;
+  }
 
-      const row = entry as { name?: unknown; email?: unknown };
-      const email = typeof row.email === 'string' ? row.email.trim() : '';
+  const parts = filter.split(',').map((part) => part.trim());
+  const valid = parts.filter((part) =>
+    [
+      'reply_now',
+      'reply_later',
+      'waiting',
+      'fyi',
+      'noise',
+      'linked',
+    ].includes(part),
+  );
 
-      if (!email) {
-        return null;
-      }
-
-      return {
-        name: typeof row.name === 'string' ? row.name : null,
-        email,
-      };
-    })
-    .filter((entry): entry is EmailParticipant => entry !== null);
+  return valid.length > 0 ? valid : null;
 }
 
-function mapThreadRow(row: Record<string, unknown>): EmailThreadSummary {
-  const category = row.assistant_category;
-  const assistantCategory =
-    category === 'needs_reply' || category === 'no_reply' ? category : null;
-
-  return {
-    id: String(row.id),
-    gmail_thread_id: String(row.gmail_thread_id),
-    subject: (row.subject as string | null) ?? null,
-    snippet: (row.snippet as string | null) ?? null,
-    participants: parseParticipants(row.participants),
-    is_unread: Boolean(row.is_unread),
-    last_message_at: (row.last_message_at as string | null) ?? null,
-    assistant_category: assistantCategory,
-    link: mapThreadLinkFields(row),
+function sortActionableThreads(threads: EmailThreadSummary[]): EmailThreadSummary[] {
+  const priority = (thread: EmailThreadSummary) => {
+    let score = 0;
+    if (thread.link.clientId) score += 100;
+    if (thread.assistant_category === 'reply_now') score += 20;
+    if (thread.assistant_category === 'reply_later') score += 10;
+    return score;
   };
+
+  return [...threads].sort((a, b) => {
+    const scoreDiff = priority(b) - priority(a);
+    if (scoreDiff !== 0) return scoreDiff;
+
+    const aTime = a.last_message_at
+      ? new Date(a.last_message_at).getTime()
+      : 0;
+    const bTime = b.last_message_at
+      ? new Date(b.last_message_at).getTime()
+      : 0;
+    return aTime - bTime;
+  });
 }
 
 export async function GET(request: Request) {
@@ -116,11 +122,11 @@ export async function GET(request: Request) {
     }
   }
 
+  const threadSelect = `id, gmail_thread_id, subject, snippet, participants, label_ids, is_unread, last_message_at, updated_at, assistant_category, assistant_category_reason, assistant_category_confidence, follow_up_at, follow_up_note, link_confidence, link_suggestion, pipeline_lead_suggestion, pipeline_lead_confidence, pipeline_deal_id, ${EMAIL_THREAD_LINK_SELECT}`;
+
   let query = auth.client
     .from('email_threads')
-    .select(
-      `id, gmail_thread_id, subject, snippet, participants, label_ids, is_unread, last_message_at, updated_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
-    )
+    .select(threadSelect)
     .eq('user_id', auth.user.id)
     .eq('connection_id', connectionId)
     .order('last_message_at', { ascending: false, nullsFirst: false })
@@ -130,12 +136,17 @@ export async function GET(request: Request) {
     query = query.in('id', matchingThreadIds);
   }
 
-  if (filter === 'needs_reply') {
-    query = query.eq('assistant_category', 'needs_reply');
-  }
+  const categoryFilters = parseFilterCategories(filter);
 
-  if (filter === 'linked') {
+  if (filter === 'follow_up') {
+    query = query
+      .not('follow_up_at', 'is', null)
+      .lte('follow_up_at', new Date().toISOString())
+      .in('assistant_category', [...ACTIONABLE_EMAIL_CATEGORIES]);
+  } else if (filter === 'linked') {
     query = query.or('client_id.not.is.null,project_id.not.is.null');
+  } else if (categoryFilters) {
+    query = query.in('assistant_category', categoryFilters);
   }
 
   if (cursor) {
@@ -156,10 +167,18 @@ export async function GET(request: Request) {
         ?.last_message_at ?? null)
     : null;
 
-  const threads = await enrichEmailThreadLinks(
+  let threads = await enrichEmailThreadLinks(
     auth.client,
-    pageRows.map((row) => mapThreadRow(row as Record<string, unknown>)),
+    pageRows.map((row) => mapEmailThreadRow(row as Record<string, unknown>)),
   );
+
+  if (
+    filter === 'action' ||
+    filter === 'needs_reply' ||
+    categoryFilters?.some((c) => isActionableEmailCategory(c))
+  ) {
+    threads = sortActionableThreads(threads);
+  }
 
   return jsonOk({
     threads,

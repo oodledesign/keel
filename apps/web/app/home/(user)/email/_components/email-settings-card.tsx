@@ -59,6 +59,7 @@ type Props = {
   initialAutoTriageEnabled: boolean;
   initialAutoDraftEnabled: boolean;
   initialAutoSaveGmailDrafts: boolean;
+  initialAllowSendFromOzer?: boolean;
   initialIgnoredSenders?: string[];
   initialIgnoredDomains?: string[];
   initialIgnoredSubjectKeywords?: string[];
@@ -252,6 +253,7 @@ export function EmailSettingsCard({
   initialAutoTriageEnabled,
   initialAutoDraftEnabled,
   initialAutoSaveGmailDrafts,
+  initialAllowSendFromOzer = false,
   initialIgnoredSenders = [],
   initialIgnoredDomains = [],
   initialIgnoredSubjectKeywords = [],
@@ -273,6 +275,9 @@ export function EmailSettingsCard({
   );
   const [autoSaveGmailDrafts, setAutoSaveGmailDrafts] = useState(
     initialAutoSaveGmailDrafts,
+  );
+  const [allowSendFromOzer, setAllowSendFromOzer] = useState(
+    initialAllowSendFromOzer,
   );
   const [rules, setRules] = useState(() =>
     rulesFromProps({
@@ -298,6 +303,7 @@ export function EmailSettingsCard({
     setAutoTriageEnabled(initialAutoTriageEnabled);
     setAutoDraftEnabled(initialAutoDraftEnabled);
     setAutoSaveGmailDrafts(initialAutoSaveGmailDrafts);
+    setAllowSendFromOzer(initialAllowSendFromOzer);
     setRules(
       rulesFromProps({
         ignoredSenders: initialIgnoredSenders,
@@ -315,6 +321,7 @@ export function EmailSettingsCard({
     initialAutoTriageEnabled,
     initialAutoDraftEnabled,
     initialAutoSaveGmailDrafts,
+    initialAllowSendFromOzer,
     initialIgnoredSenders,
     initialIgnoredDomains,
     initialIgnoredSubjectKeywords,
@@ -338,6 +345,7 @@ export function EmailSettingsCard({
         autoTriageEnabled,
         autoDraftEnabled,
         autoSaveGmailDrafts,
+        allowSendFromOzer,
         mailboxKind,
       });
 
@@ -523,6 +531,14 @@ export function EmailSettingsCard({
           checked={autoSaveGmailDrafts}
           onCheckedChange={setAutoSaveGmailDrafts}
           disabled={pending || !autoDraftEnabled}
+        />
+        <SettingToggle
+          id="email-allow-send-from-ozer"
+          label="Send from Ozer"
+          description="Show a Send button on drafts so you can reply from Ozer after reviewing the preview."
+          checked={allowSendFromOzer}
+          onCheckedChange={setAllowSendFromOzer}
+          disabled={pending}
         />
       </div>
 

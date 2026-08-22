@@ -189,7 +189,7 @@ export function ProjectsKanbanView({
       return;
     }
 
-    let nextStatus =
+    const nextStatus =
       parseColumnId(event.over?.id) ??
       (() => {
         const overItemId = parseItemId(event.over?.id);

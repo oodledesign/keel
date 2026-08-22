@@ -2,6 +2,12 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  EMAIL_THREAD_CATEGORY_LABELS,
+  isActionableEmailCategory,
+  normalizeEmailThreadCategory,
+  type EmailThreadCategory,
+} from '~/lib/email-assistant/email-thread-categories';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 
 import type { IndexableRecord } from './indexer';
@@ -14,7 +20,7 @@ export type EmailThreadForBrain = {
   subject: string | null;
   snippet: string | null;
   participants: unknown;
-  assistant_category: 'needs_reply' | 'no_reply' | null;
+  assistant_category: EmailThreadCategory | null;
   assistant_category_reason: string | null;
   client_id: string | null;
   project_id: string | null;
@@ -49,7 +55,7 @@ export function shouldIndexEmailThreadForBrain(thread: {
     return false;
   }
 
-  if (thread.assistant_category === 'needs_reply') {
+  if (isActionableEmailCategory(thread.assistant_category)) {
     return true;
   }
 
@@ -96,13 +102,15 @@ export function buildEmailThreadIndexText(params: {
   const title = params.thread.subject?.trim() || '(no subject)';
   const lines = [`# ${title}`];
 
-  if (params.thread.assistant_category === 'needs_reply') {
-    lines.push('Status: Needs reply');
+  const category = normalizeEmailThreadCategory(
+    params.thread.assistant_category,
+  );
+
+  if (category) {
+    lines.push(`Status: ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
     if (params.thread.assistant_category_reason?.trim()) {
       lines.push(`Reason: ${params.thread.assistant_category_reason.trim()}`);
     }
-  } else if (params.thread.assistant_category === 'no_reply') {
-    lines.push('Status: No reply needed');
   }
 
   const participants = formatParticipants(params.thread.participants);
@@ -321,7 +329,7 @@ export async function listEmailThreadIndexableRefs(
     )
     .eq('account_id', accountId)
     .or(
-      'assistant_category.eq.needs_reply,client_id.not.is.null,project_id.not.is.null',
+      'assistant_category.in.(reply_now,reply_later),client_id.not.is.null,project_id.not.is.null',
     );
 
   if (error) {

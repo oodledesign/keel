@@ -8,22 +8,41 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  HelpCircle,
   Loader2,
   MoreHorizontal,
+  Send,
   Sparkles,
   X,
 } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
@@ -31,9 +50,15 @@ import { listTemplatesPickerAction } from '~/lib/content-templates/account.actio
 import type { PickerTemplate } from '~/lib/content-templates/types';
 import {
   addEmailTriageRuleFromThreadAction,
-  ignoreEmailNeedsReplyAction,
-  markEmailNeedsReplyAction,
+  setEmailThreadCategoryAction,
+  setEmailThreadFollowUpAction,
 } from '~/lib/email-assistant/email-assistant.actions';
+import {
+  EMAIL_THREAD_CATEGORIES,
+  EMAIL_THREAD_CATEGORY_LABELS,
+  type EmailThreadCategory,
+  categoryFromTriageRuleAction,
+} from '~/lib/email-assistant/email-thread-categories';
 import type {
   EmailTriageAction,
   EmailTriageScope,
@@ -55,6 +80,8 @@ import type {
   EmailWorkspaceOption,
 } from '../_lib/types';
 import { AcceptActionItemDialog } from './accept-action-item-dialog';
+import { EmailCategoryBadge } from './email-category-badge';
+import { EmailThreadLeadSection } from './email-thread-lead-section';
 import { EmailThreadLinkSection } from './email-thread-link-section';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
 
@@ -95,20 +122,37 @@ function ActionItemStatusPill({ status }: { status: string }) {
   );
 }
 
+type SendDraftPreview = {
+  from: string;
+  to: string;
+  cc?: string;
+  subject: string;
+};
+
 type Props = {
   threadId: string | null;
   connected: boolean;
   workspaces: EmailWorkspaceOption[];
+  mailboxKind?: 'business' | 'personal';
+  accountSlug?: string | null;
+  reviewMode?: boolean;
+  allowSendFromOzer?: boolean;
   onBack?: () => void;
   showBackButton?: boolean;
+  onCategoryChange?: (threadId: string, category: EmailThreadCategory) => void;
 };
 
 export function EmailThreadPanel({
   threadId,
   connected,
   workspaces,
+  mailboxKind = 'personal',
+  accountSlug = null,
+  reviewMode = false,
+  allowSendFromOzer = false,
   onBack,
   showBackButton = false,
+  onCategoryChange,
 }: Props) {
   const { reportExhausted, accountId, billingHref } = useAiCreditsExhausted();
   const [detail, setDetail] = useState<EmailThreadDetail | null>(null);
@@ -120,6 +164,9 @@ export function EmailThreadPanel({
   const [acceptItem, setAcceptItem] = useState<EmailActionItemRow | null>(null);
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [extractInstructions, setExtractInstructions] = useState('');
+  const [sendPreview, setSendPreview] = useState<SendDraftPreview | null>(null);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [sendPreviewLoading, setSendPreviewLoading] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -318,55 +365,70 @@ export function EmailThreadPanel({
     });
   }
 
-  function markNeedsReply() {
+  function setCategory(category: EmailThreadCategory) {
     if (!threadId) return;
+
     startTransition(async () => {
       try {
-        await markEmailNeedsReplyAction({ threadId });
+        await setEmailThreadCategoryAction({ threadId, category });
         setDetail((current) =>
           current
             ? {
                 ...current,
                 thread: {
                   ...current.thread,
-                  assistant_category: 'needs_reply',
+                  assistant_category: category,
                 },
               }
             : current,
         );
-        toast.success('Marked as needing a reply');
+        onCategoryChange?.(threadId, category);
+        toast.success(`Marked as ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
-            : 'Could not mark as needing a reply',
+            : 'Could not update category',
         );
       }
     });
   }
 
-  function clearNeedsReply() {
+  function setFollowUp(days: number | null) {
     if (!threadId) return;
+
+    const followUpAt =
+      days == null
+        ? null
+        : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
     startTransition(async () => {
       try {
-        await ignoreEmailNeedsReplyAction({ threadId });
+        await setEmailThreadFollowUpAction({
+          threadId,
+          followUpAt,
+          followUpNote: null,
+        });
         setDetail((current) =>
           current
             ? {
                 ...current,
                 thread: {
                   ...current.thread,
-                  assistant_category: 'no_reply',
+                  follow_up_at: followUpAt,
+                  follow_up_note: null,
                 },
               }
             : current,
         );
-        toast.success('Marked as no reply needed');
+        toast.success(
+          followUpAt ? 'Follow-up reminder set' : 'Follow-up reminder cleared',
+        );
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
-            : 'Could not update this email',
+            : 'Could not update follow-up',
         );
       }
     });
@@ -381,18 +443,19 @@ export function EmailThreadPanel({
           action,
           scope,
         });
+        const category = categoryFromTriageRuleAction(action);
         setDetail((current) =>
           current
             ? {
                 ...current,
                 thread: {
                   ...current.thread,
-                  assistant_category:
-                    action === 'ignore' ? 'no_reply' : 'needs_reply',
+                  assistant_category: category,
                 },
               }
             : current,
         );
+        onCategoryChange?.(threadId, category);
         toast.success(
           triageRuleSuccessMessage(
             action,
@@ -404,6 +467,59 @@ export function EmailThreadPanel({
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not save triage rule',
+        );
+      }
+    });
+  }
+
+  function openSendDialog() {
+    const draftId = detail?.draft?.id;
+
+    if (!draftId || !draftBody.trim()) {
+      toast.error('Generate a draft with content first');
+      return;
+    }
+
+    setSendPreviewLoading(true);
+    setSendDialogOpen(true);
+
+    void emailApiFetch<{ preview: SendDraftPreview }>(
+      `/api/gmail/drafts/${draftId}/send`,
+    )
+      .then((data) => {
+        setSendPreview(data.preview);
+      })
+      .catch((error) => {
+        setSendDialogOpen(false);
+        toast.error(
+          error instanceof Error ? error.message : 'Could not load send preview',
+        );
+      })
+      .finally(() => {
+        setSendPreviewLoading(false);
+      });
+  }
+
+  function runSendDraft() {
+    const draftId = detail?.draft?.id;
+
+    if (!draftId || !sendPreview) {
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await emailApiFetch(`/api/gmail/drafts/${draftId}/send`, {
+          method: 'POST',
+          body: JSON.stringify({ bodyText: draftBody }),
+        });
+        setSendDialogOpen(false);
+        setSendPreview(null);
+        toast.success('Email sent from Ozer');
+        refreshDetail();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not send email',
         );
       }
     });
@@ -489,11 +605,74 @@ export function EmailThreadPanel({
               <h2 className="truncate text-base font-semibold text-[var(--workspace-shell-text)]">
                 {detail.thread.subject?.trim() || '(no subject)'}
               </h2>
-              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                {detail.messages.length} message
-                {detail.messages.length === 1 ? '' : 's'}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  {detail.messages.length} message
+                  {detail.messages.length === 1 ? '' : 's'}
+                </p>
+                <EmailCategoryBadge
+                  category={detail.thread.assistant_category}
+                  reason={detail.thread.assistant_category_reason}
+                  confidence={detail.thread.assistant_category_confidence}
+                  showWhy
+                />
+                {reviewMode ? (
+                  <span className="text-[10px] font-medium tracking-wide text-[var(--ozer-accent)] uppercase">
+                    Review mode
+                  </span>
+                ) : null}
+              </div>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-0.5 shrink-0 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
+                  disabled={pending}
+                >
+                  Category
+                  <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {EMAIL_THREAD_CATEGORIES.map((category) => (
+                  <DropdownMenuItem
+                    key={category}
+                    disabled={
+                      pending || detail.thread.assistant_category === category
+                    }
+                    onSelect={() => setCategory(category)}
+                  >
+                    {EMAIL_THREAD_CATEGORY_LABELS[category]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {detail.thread.assistant_category_reason?.trim() ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                      aria-label="Why this category?"
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    <p className="font-medium">Why this category?</p>
+                    <p className="mt-1 text-[var(--workspace-shell-text-muted)]">
+                      {detail.thread.assistant_category_reason.trim()}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -508,21 +687,18 @@ export function EmailThreadPanel({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {detail.thread.assistant_category === 'needs_reply' ? (
+                {EMAIL_THREAD_CATEGORIES.map((category) => (
                   <DropdownMenuItem
-                    disabled={pending}
-                    onSelect={() => clearNeedsReply()}
+                    key={`menu-${category}`}
+                    disabled={
+                      pending || detail.thread.assistant_category === category
+                    }
+                    onSelect={() => setCategory(category)}
                   >
-                    Mark as no reply needed
+                    Mark as {EMAIL_THREAD_CATEGORY_LABELS[category]}
                   </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    disabled={pending}
-                    onSelect={() => markNeedsReply()}
-                  >
-                    Mark as needing a reply
-                  </DropdownMenuItem>
-                )}
+                ))}
+                <DropdownMenuSeparator />
                 <EmailTriageRulesMenuItems
                   subject={detail.thread.subject}
                   disabled={pending}
@@ -534,12 +710,107 @@ export function EmailThreadPanel({
         </div>
 
         <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+              Follow-up
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 border-[color:var(--workspace-shell-border)] bg-transparent px-2.5 text-xs"
+              disabled={pending}
+              onClick={() => setFollowUp(1)}
+            >
+              1d
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 border-[color:var(--workspace-shell-border)] bg-transparent px-2.5 text-xs"
+              disabled={pending}
+              onClick={() => setFollowUp(3)}
+            >
+              3d
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 border-[color:var(--workspace-shell-border)] bg-transparent px-2.5 text-xs"
+              disabled={pending}
+              onClick={() => setFollowUp(7)}
+            >
+              1w
+            </Button>
+            {detail.thread.follow_up_at ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2.5 text-xs text-[var(--workspace-shell-text-muted)]"
+                disabled={pending}
+                onClick={() => setFollowUp(null)}
+              >
+                Clear
+              </Button>
+            ) : null}
+            {detail.thread.follow_up_at ? (
+              <span className="text-xs text-[var(--ozer-accent)]">
+                Reminder{' '}
+                {formatEmailDateTime(detail.thread.follow_up_at)}
+              </span>
+            ) : null}
+          </div>
           <EmailThreadLinkSection
             threadId={threadId}
             link={detail.thread.link}
+            linkSuggestion={detail.thread.link_suggestion}
+            linkConfidence={detail.thread.link_confidence}
             workspaces={workspaces}
-            onUpdated={() => refreshDetail()}
+            onUpdated={(link) => {
+              setDetail((current) =>
+                current
+                  ? { ...current, thread: { ...current.thread, link } }
+                  : current,
+              );
+            }}
+            onSuggestionUpdated={(link_suggestion) => {
+              setDetail((current) =>
+                current
+                  ? {
+                      ...current,
+                      thread: { ...current.thread, link_suggestion },
+                    }
+                  : current,
+              );
+            }}
           />
+          {mailboxKind === 'business' &&
+          (detail.thread.pipeline_deal_id ||
+            detail.thread.pipeline_lead_suggestion ||
+            (!detail.thread.link.linked && !detail.thread.link.clientId)) ? (
+            <EmailThreadLeadSection
+              threadId={threadId}
+              mailboxKind={mailboxKind}
+              accountSlug={accountSlug}
+              pipelineLeadSuggestion={detail.thread.pipeline_lead_suggestion}
+              pipelineLeadConfidence={detail.thread.pipeline_lead_confidence}
+              pipelineDealId={detail.thread.pipeline_deal_id}
+              workspaces={workspaces}
+              onUpdated={(patch) => {
+                setDetail((current) =>
+                  current
+                    ? {
+                        ...current,
+                        thread: { ...current.thread, ...patch },
+                      }
+                    : current,
+                );
+              }}
+            />
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4">
@@ -791,6 +1062,18 @@ export function EmailThreadPanel({
               >
                 Save to Gmail
               </Button>
+              {allowSendFromOzer && draftBody.trim() ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  onClick={openSendDialog}
+                  disabled={pending || !connected || !detail.draft}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send
+                </Button>
+              ) : null}
               {detail.draft?.status === 'saved_to_gmail' ? (
                 <span className="text-xs text-[var(--ozer-accent)]">
                   Saved to Gmail
@@ -800,6 +1083,69 @@ export function EmailThreadPanel({
           </div>
         </div>
       </section>
+
+      <AlertDialog
+        open={sendDialogOpen}
+        onOpenChange={(open) => {
+          setSendDialogOpen(open);
+          if (!open) {
+            setSendPreview(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send this reply from Ozer?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                {sendPreviewLoading ? (
+                  <p className="flex items-center gap-2 text-[var(--workspace-shell-text-muted)]">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading preview…
+                  </p>
+                ) : sendPreview ? (
+                  <>
+                    <p>
+                      <span className="font-medium">From:</span> {sendPreview.from}
+                    </p>
+                    <p>
+                      <span className="font-medium">To:</span> {sendPreview.to}
+                    </p>
+                    {sendPreview.cc ? (
+                      <p>
+                        <span className="font-medium">Cc:</span> {sendPreview.cc}
+                      </p>
+                    ) : null}
+                    <p>
+                      <span className="font-medium">Subject:</span>{' '}
+                      {sendPreview.subject}
+                    </p>
+                    <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] p-3 whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+                      {draftBody.trim()}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[var(--workspace-shell-text-muted)]">
+                    Could not load send preview.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending || sendPreviewLoading || !sendPreview}
+              onClick={(event) => {
+                event.preventDefault();
+                runSendDraft();
+              }}
+            >
+              {pending ? 'Sending…' : 'Send email'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AcceptActionItemDialog
         open={acceptOpen}

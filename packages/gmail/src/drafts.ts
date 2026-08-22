@@ -60,3 +60,20 @@ export async function updateDraft(
     mailboxKind,
   );
 }
+
+export async function sendDraft(
+  userId: string,
+  draftId: string,
+  mailboxKind: MailboxKind = 'business',
+): Promise<GmailDraftResponse> {
+  return gmailFetch<GmailDraftResponse>(
+    userId,
+    `/drafts/${encodeURIComponent(draftId)}/send`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    },
+    mailboxKind,
+  );
+}

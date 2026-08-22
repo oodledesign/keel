@@ -38,7 +38,7 @@ function BentoCard({
     <div
       className={cn(
         marketingCard,
-        'flex min-h-32 flex-col rounded-[1.125rem] p-5',
+        'flex min-h-32 flex-col rounded-[1.5rem] p-5 md:p-6',
         wide && 'sm:col-span-2',
         status === 'soon' &&
           'bg-[repeating-linear-gradient(135deg,var(--workspace-shell-panel),var(--workspace-shell-panel)_10px,var(--workspace-shell-canvas)_10px,var(--workspace-shell-canvas)_11px)]',
@@ -82,8 +82,8 @@ export function EarlyAccessBentoGrid() {
     : EARLY_ACCESS_BENTO_FEATURES.slice(0, 6);
 
   return (
-    <div className="mx-auto max-w-[56rem]">
-      <div className="grid grid-flow-dense grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3">
+    <div className="w-full">
+      <div className="grid grid-flow-dense grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
         {visible.map((feature) => (
           <BentoCard key={feature.title} {...feature} />
         ))}

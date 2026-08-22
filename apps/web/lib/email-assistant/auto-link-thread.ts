@@ -19,19 +19,480 @@ type Participant = {
   email?: string;
 };
 
+type ClientMatch = {
+  id: string;
+  account_id: string;
+};
+
 type ThreadLinkRow = {
   id: string;
   subject: string | null;
+  snippet: string | null;
   participants: unknown;
   client_id: string | null;
   project_id: string | null;
   link_source: string | null;
 };
 
-type ClientMatch = {
-  id: string;
-  account_id: string;
+const AUTO_LINK_CONFIDENCE_THRESHOLD = 0.75;
+
+type LinkCandidate = ClientMatch & {
+  confidence: number;
+  projectId: string | null;
+  clientName: string | null;
+  projectName: string | null;
 };
+
+function normalizeSearchText(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function keywordInText(keyword: string, haystack: string): boolean {
+  const normalized = keyword.trim().toLowerCase();
+  if (normalized.length < 3) {
+    return false;
+  }
+  return haystack.includes(normalized);
+}
+
+async function findContactEmailAddressMatches(
+  admin: SupabaseClient,
+  accountIds: string[],
+  emails: string[],
+): Promise<ClientMatch[]> {
+  if (accountIds.length === 0 || emails.length === 0) {
+    return [];
+  }
+
+  const normalizedEmails = emails.map((email) => email.toLowerCase());
+  const { data: addressRows, error } = await admin
+    .from('contact_email_addresses')
+    .select('email, account_id, contact_id')
+    .in('account_id', accountIds);
+
+  if (error) {
+    if (!error.message.includes('contact_email_addresses')) {
+      throw new Error(error.message);
+    }
+    return [];
+  }
+
+  const contactIds = [
+    ...new Set(
+      (addressRows ?? [])
+        .filter((row) =>
+          normalizedEmails.includes(
+            String(row.email ?? '')
+              .trim()
+              .toLowerCase(),
+          ),
+        )
+        .map((row) => row.contact_id as string),
+    ),
+  ];
+
+  if (contactIds.length === 0) {
+    return [];
+  }
+
+  const { data: links, error: linksError } = await admin
+    .from('client_contacts')
+    .select('client_id, clients ( id, account_id )')
+    .in('contact_id', contactIds);
+
+  if (linksError) {
+    return [];
+  }
+
+  const matches = new Map<string, ClientMatch>();
+
+  for (const row of links ?? []) {
+    const client = row.clients as { id?: string; account_id?: string } | null;
+    if (!client?.id || !client.account_id) {
+      continue;
+    }
+
+    matches.set(client.id, {
+      id: client.id,
+      account_id: client.account_id,
+    });
+  }
+
+  return [...matches.values()];
+}
+
+async function findKeywordMatches(
+  admin: SupabaseClient,
+  accountIds: string[],
+  subject: string | null,
+  snippet: string | null,
+): Promise<LinkCandidate[]> {
+  if (accountIds.length === 0) {
+    return [];
+  }
+
+  const haystack = `${normalizeSearchText(subject)} ${normalizeSearchText(snippet)}`;
+  if (!haystack.trim()) {
+    return [];
+  }
+
+  const { data: clients, error: clientsError } = await admin
+    .from('clients')
+    .select('id, account_id, name')
+    .in('account_id', accountIds);
+
+  if (clientsError) {
+    throw new Error(clientsError.message);
+  }
+
+  const candidates: LinkCandidate[] = [];
+
+  for (const row of clients ?? []) {
+    const name = String(row.name ?? '').trim();
+    if (!keywordInText(name, haystack)) {
+      continue;
+    }
+
+    const clientId = row.id as string;
+    const accountId = row.account_id as string;
+    const projectId = await inferProjectId(admin, accountId, clientId, subject);
+
+    let projectName: string | null = null;
+    if (projectId) {
+      const { data: project } = await admin
+        .from('projects')
+        .select('name')
+        .eq('id', projectId)
+        .maybeSingle();
+      projectName = (project?.name as string | null) ?? null;
+    }
+
+    candidates.push({
+      id: clientId,
+      account_id: accountId,
+      confidence: 0.72,
+      projectId,
+      clientName: name,
+      projectName,
+    });
+  }
+
+  const { data: projects, error: projectsError } = await admin
+    .from('projects')
+    .select('id, account_id, client_id, name')
+    .in('account_id', accountIds);
+
+  if (!projectsError) {
+    for (const row of projects ?? []) {
+      const name = String(row.name ?? '').trim();
+      if (!keywordInText(name, haystack)) {
+        continue;
+      }
+
+      const clientId = row.client_id as string | null;
+      const accountId = row.account_id as string;
+      if (!clientId) {
+        continue;
+      }
+
+      candidates.push({
+        id: clientId,
+        account_id: accountId,
+        confidence: 0.78,
+        projectId: row.id as string,
+        clientName: null,
+        projectName: name,
+      });
+    }
+  }
+
+  return candidates;
+}
+
+function participantDisplayNames(
+  participants: unknown,
+  ownerEmail: string,
+): string[] {
+  if (!Array.isArray(participants)) {
+    return [];
+  }
+
+  const owner = extractEmailAddress(ownerEmail);
+  const names = new Set<string>();
+
+  for (const entry of participants) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+
+    const row = entry as Participant;
+    const email = extractEmailAddress(row.email);
+    if (!email || (owner && email === owner)) {
+      continue;
+    }
+
+    const name = row.name?.trim();
+    if (name && name.length >= 2) {
+      names.add(name.toLowerCase());
+    }
+  }
+
+  return [...names];
+}
+
+async function findDisplayNameMatches(
+  admin: SupabaseClient,
+  accountIds: string[],
+  displayNames: string[],
+): Promise<LinkCandidate[]> {
+  if (accountIds.length === 0 || displayNames.length === 0) {
+    return [];
+  }
+
+  const { data: contacts, error } = await admin
+    .from('contacts')
+    .select('id, account_id, name')
+    .in('account_id', accountIds);
+
+  if (error) {
+    return [];
+  }
+
+  const matchedContactIds: string[] = [];
+
+  for (const row of contacts ?? []) {
+    const name = normalizeSearchText(row.name as string | null);
+    if (!name) {
+      continue;
+    }
+
+    if (displayNames.some((candidate) => name.includes(candidate) || candidate.includes(name))) {
+      matchedContactIds.push(row.id as string);
+    }
+  }
+
+  if (matchedContactIds.length === 0) {
+    return [];
+  }
+
+  const { data: links } = await admin
+    .from('client_contacts')
+    .select('client_id, clients ( id, account_id, name )')
+    .in('contact_id', matchedContactIds);
+
+  const candidates: LinkCandidate[] = [];
+
+  for (const row of links ?? []) {
+    const client = row.clients as {
+      id?: string;
+      account_id?: string;
+      name?: string | null;
+    } | null;
+    if (!client?.id || !client.account_id) {
+      continue;
+    }
+
+    candidates.push({
+      id: client.id,
+      account_id: client.account_id,
+      confidence: 0.68,
+      projectId: null,
+      clientName: (client.name as string | null) ?? null,
+      projectName: null,
+    });
+  }
+
+  return candidates;
+}
+
+async function loadClientName(
+  admin: SupabaseClient,
+  clientId: string,
+): Promise<string | null> {
+  const { data } = await admin
+    .from('clients')
+    .select('name')
+    .eq('id', clientId)
+    .maybeSingle();
+
+  return (data?.name as string | null) ?? null;
+}
+
+async function resolveEmailThreadLinkCandidates(
+  admin: SupabaseClient,
+  userId: string,
+  row: ThreadLinkRow,
+  ownerEmail: string,
+  preferredAccountId: string | null,
+): Promise<LinkCandidate[]> {
+  const emails = participantEmails(row.participants, ownerEmail);
+  if (emails.length === 0) {
+    return [];
+  }
+
+  const accountIds = await loadAccountIds(admin, userId);
+  const candidates: LinkCandidate[] = [];
+
+  const exactMatches = await findExactEmailMatches(admin, accountIds, emails);
+  for (const match of exactMatches) {
+    const projectId = await inferProjectId(
+      admin,
+      match.account_id,
+      match.id,
+      row.subject,
+    );
+    candidates.push({
+      ...match,
+      confidence: 0.95,
+      projectId,
+      clientName: await loadClientName(admin, match.id),
+      projectName: null,
+    });
+  }
+
+  const contactMatches = await findContactEmailAddressMatches(
+    admin,
+    accountIds,
+    emails,
+  );
+  for (const match of contactMatches) {
+    if (candidates.some((candidate) => candidate.id === match.id)) {
+      continue;
+    }
+    const projectId = await inferProjectId(
+      admin,
+      match.account_id,
+      match.id,
+      row.subject,
+    );
+    candidates.push({
+      ...match,
+      confidence: 0.92,
+      projectId,
+      clientName: await loadClientName(admin, match.id),
+      projectName: null,
+    });
+  }
+
+  if (candidates.length === 0) {
+    const domains = domainsFromEmails(emails);
+    const domainMatches = await findDomainMatches(admin, accountIds, domains);
+    for (const match of domainMatches) {
+      const projectId = await inferProjectId(
+        admin,
+        match.account_id,
+        match.id,
+        row.subject,
+      );
+      candidates.push({
+        ...match,
+        confidence: 0.82,
+        projectId,
+        clientName: await loadClientName(admin, match.id),
+        projectName: null,
+      });
+    }
+  }
+
+  const keywordMatches = await findKeywordMatches(
+    admin,
+    accountIds,
+    row.subject,
+    row.snippet,
+  );
+  for (const match of keywordMatches) {
+    if (!candidates.some((candidate) => candidate.id === match.id)) {
+      candidates.push(match);
+    }
+  }
+
+  const displayNames = participantDisplayNames(row.participants, ownerEmail);
+  const nameMatches = await findDisplayNameMatches(
+    admin,
+    accountIds,
+    displayNames,
+  );
+  for (const match of nameMatches) {
+    if (!candidates.some((candidate) => candidate.id === match.id)) {
+      candidates.push(match);
+    }
+  }
+
+  if (preferredAccountId) {
+    candidates.sort((a, b) => {
+      const aPreferred = a.account_id === preferredAccountId ? 1 : 0;
+      const bPreferred = b.account_id === preferredAccountId ? 1 : 0;
+      if (aPreferred !== bPreferred) {
+        return bPreferred - aPreferred;
+      }
+      return b.confidence - a.confidence;
+    });
+  } else {
+    candidates.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  return candidates;
+}
+
+async function applyThreadLink(
+  admin: SupabaseClient,
+  userId: string,
+  threadId: string,
+  candidate: LinkCandidate,
+) {
+  const { error: updateError } = await admin
+    .from('email_threads')
+    .update({
+      account_id: candidate.account_id,
+      client_id: candidate.id,
+      project_id: candidate.projectId,
+      link_source: 'auto',
+      link_confidence: candidate.confidence,
+      link_suggestion: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', threadId)
+    .eq('user_id', userId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  await syncSuggestedActionItemsFromThreadLink(admin, userId, threadId, {
+    accountId: candidate.account_id,
+    clientId: candidate.id,
+    projectId: candidate.projectId,
+  });
+
+  queueEmailThreadBrainSync(threadId);
+}
+
+async function storeThreadLinkSuggestion(
+  admin: SupabaseClient,
+  userId: string,
+  threadId: string,
+  candidate: LinkCandidate,
+) {
+  const { error } = await admin
+    .from('email_threads')
+    .update({
+      link_confidence: candidate.confidence,
+      link_suggestion: {
+        accountId: candidate.account_id,
+        clientId: candidate.id,
+        projectId: candidate.projectId,
+        clientName: candidate.clientName,
+        projectName: candidate.projectName,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', threadId)
+    .eq('user_id', userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
 
 function participantEmails(
   participants: unknown,
@@ -341,6 +802,68 @@ async function inferProjectId(
   return null;
 }
 
+export async function suggestEmailThreadLink(
+  admin: SupabaseClient,
+  userId: string,
+  threadId: string,
+  ownerEmail: string,
+  options?: { preferredAccountId?: string | null },
+): Promise<LinkCandidate | null> {
+  const { data: thread, error: threadError } = await admin
+    .from('email_threads')
+    .select(
+      'id, subject, snippet, participants, client_id, project_id, link_source',
+    )
+    .eq('id', threadId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (threadError) {
+    throw new Error(threadError.message);
+  }
+
+  if (!thread) {
+    return null;
+  }
+
+  const row = thread as ThreadLinkRow;
+  const candidates = await resolveEmailThreadLinkCandidates(
+    admin,
+    userId,
+    row,
+    ownerEmail,
+    options?.preferredAccountId ?? null,
+  );
+
+  const unique = pickUniqueClientMatch(candidates, options?.preferredAccountId);
+  const best = unique ?? candidates[0] ?? null;
+
+  if (!best) {
+    await admin
+      .from('email_threads')
+      .update({
+        link_confidence: null,
+        link_suggestion: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', threadId)
+      .eq('user_id', userId);
+    return null;
+  }
+
+  if (
+    best.confidence >= AUTO_LINK_CONFIDENCE_THRESHOLD &&
+    unique &&
+    row.link_source !== 'manual'
+  ) {
+    await applyThreadLink(admin, userId, threadId, best);
+    return best;
+  }
+
+  await storeThreadLinkSuggestion(admin, userId, threadId, best);
+  return best;
+}
+
 export async function autoLinkEmailThread(
   admin: SupabaseClient,
   userId: string,
@@ -354,7 +877,9 @@ export async function autoLinkEmailThread(
 
   const { data: thread, error: threadError } = await admin
     .from('email_threads')
-    .select('id, subject, participants, client_id, project_id, link_source')
+    .select(
+      'id, subject, snippet, participants, client_id, project_id, link_source',
+    )
     .eq('id', threadId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -373,58 +898,13 @@ export async function autoLinkEmailThread(
     return false;
   }
 
-  const emails = participantEmails(row.participants, ownerEmail);
-
-  if (emails.length === 0) {
-    return false;
-  }
-
-  const accountIds = await loadAccountIds(admin, userId);
-  const preferredAccountId = options?.preferredAccountId ?? null;
-
-  const exactMatches = await findExactEmailMatches(admin, accountIds, emails);
-  let client = pickUniqueClientMatch(exactMatches, preferredAccountId);
-
-  if (!client) {
-    const domains = domainsFromEmails(emails);
-    const domainMatches = await findDomainMatches(admin, accountIds, domains);
-    client = pickUniqueClientMatch(domainMatches, preferredAccountId);
-  }
-
-  if (!client) {
-    return false;
-  }
-
-  const projectId = await inferProjectId(
+  const result = await suggestEmailThreadLink(
     admin,
-    client.account_id,
-    client.id,
-    row.subject,
+    userId,
+    threadId,
+    ownerEmail,
+    options,
   );
 
-  const { error: updateError } = await admin
-    .from('email_threads')
-    .update({
-      account_id: client.account_id,
-      client_id: client.id,
-      project_id: projectId,
-      link_source: 'auto',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', threadId)
-    .eq('user_id', userId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  await syncSuggestedActionItemsFromThreadLink(admin, userId, threadId, {
-    accountId: client.account_id,
-    clientId: client.id,
-    projectId,
-  });
-
-  queueEmailThreadBrainSync(threadId);
-
-  return true;
+  return Boolean(result && result.confidence >= AUTO_LINK_CONFIDENCE_THRESHOLD);
 }

@@ -1,3 +1,31 @@
+export type EmailThreadCategory =
+  | 'reply_now'
+  | 'reply_later'
+  | 'waiting'
+  | 'fyi'
+  | 'noise';
+
+export type EmailThreadLinkSuggestion = {
+  accountId: string | null;
+  clientId: string | null;
+  projectId: string | null;
+  clientName: string | null;
+  projectName: string | null;
+};
+
+export type EmailThreadPipelineLeadSuggestion = {
+  accountId: string;
+  contactName: string;
+  companyName: string;
+  contactEmail: string | null;
+  description: string | null;
+};
+
+export type EmailThreadPipelineLead = {
+  dealId: string | null;
+  accountSlug: string | null;
+};
+
 export type EmailParticipant = {
   name: string | null;
   email: string;
@@ -22,11 +50,28 @@ export type EmailThreadSummary = {
   participants: EmailParticipant[];
   is_unread: boolean;
   last_message_at: string | null;
-  assistant_category: 'needs_reply' | 'no_reply' | null;
+  assistant_category: EmailThreadCategory | null;
+  assistant_category_reason: string | null;
+  assistant_category_confidence: number | null;
+  follow_up_at: string | null;
+  follow_up_note: string | null;
   link: EmailThreadLink;
+  link_confidence: number | null;
+  link_suggestion: EmailThreadLinkSuggestion | null;
+  pipeline_lead_suggestion: EmailThreadPipelineLeadSuggestion | null;
+  pipeline_lead_confidence: number | null;
+  pipeline_deal_id: string | null;
 };
 
-export type EmailInboxFilter = 'all' | 'needs_reply' | 'linked';
+export type EmailInboxFilter =
+  | 'all'
+  | 'action'
+  | 'reply_later'
+  | 'waiting'
+  | 'fyi'
+  | 'follow_up'
+  | 'linked'
+  | 'needs_reply';
 
 export type EmailMessageRow = {
   id: string;
@@ -83,6 +128,7 @@ export type EmailPageInitialData = {
     autoTriageEnabled: boolean;
     autoDraftEnabled: boolean;
     autoSaveGmailDrafts: boolean;
+    allowSendFromOzer: boolean;
     ignoredSenders: string[];
     ignoredDomains: string[];
     ignoredSubjectKeywords: string[];

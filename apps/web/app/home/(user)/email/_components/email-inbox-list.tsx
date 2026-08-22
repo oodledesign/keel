@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
@@ -20,9 +21,15 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import {
   addEmailTriageRuleFromThreadAction,
-  ignoreEmailNeedsReplyAction,
-  markEmailNeedsReplyAction,
+  setEmailThreadCategoryAction,
 } from '~/lib/email-assistant/email-assistant.actions';
+import {
+  EMAIL_THREAD_CATEGORIES,
+  EMAIL_THREAD_CATEGORY_LABELS,
+  type EmailThreadCategory,
+  categoryFromTriageRuleAction,
+  isActionableEmailCategory,
+} from '~/lib/email-assistant/email-thread-categories';
 import type {
   EmailTriageAction,
   EmailTriageScope,
@@ -35,10 +42,20 @@ import type {
   EmailThreadSummary,
   EmailWorkspaceOption,
 } from '../_lib/types';
+import { EmailCategoryBadge } from './email-category-badge';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
+
+const FILTER_TABS: { value: EmailInboxFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'action', label: 'Action' },
+  { value: 'reply_later', label: 'Later' },
+  { value: 'waiting', label: 'Waiting' },
+  { value: 'fyi', label: 'FYI' },
+  { value: 'follow_up', label: 'Follow-up' },
+];
 
 function participantLabel(thread: EmailThreadSummary) {
   const first = thread.participants[0];
@@ -80,13 +97,60 @@ function clientHref(
   return `${pathsConfig.app.accountClients.replace('[account]', workspace.slug)}/${thread.link.clientId}`;
 }
 
+function emptyFilterMessage(filter: EmailInboxFilter): string {
+  switch (filter) {
+    case 'action':
+      return 'No threads need action yet';
+    case 'reply_later':
+      return 'No threads to reply later';
+    case 'waiting':
+      return 'No threads waiting on others';
+    case 'fyi':
+      return 'No FYI threads';
+    case 'follow_up':
+      return 'No follow-up reminders due';
+    case 'linked':
+      return 'No linked threads yet';
+  }
+
+  return 'No threads yet';
+}
+
+function listSummaryMessage(input: {
+  filter: EmailInboxFilter;
+  threads: EmailThreadSummary[];
+  actionCount: number;
+  followUpCount: number;
+}): string {
+  const { filter, threads, actionCount, followUpCount } = input;
+  const count = threads.length;
+  const plural = count === 1 ? '' : 's';
+
+  switch (filter) {
+    case 'action':
+      return `${count} thread${plural} need action`;
+    case 'reply_later':
+      return `${count} thread${plural} to reply later`;
+    case 'waiting':
+      return `${count} thread${plural} waiting`;
+    case 'fyi':
+      return `${count} FYI thread${plural}`;
+    case 'follow_up':
+      return `${count} follow-up reminder${plural}`;
+    case 'linked':
+      return `${count} linked thread${plural}`;
+    default:
+      return `${count} thread${plural}${actionCount > 0 ? ` · ${actionCount} need action` : ''}${followUpCount > 0 ? ` · ${followUpCount} follow-up` : ''}`;
+  }
+}
+
 type Props = {
   threads: EmailThreadSummary[];
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
   onThreadCategoryChange?: (
     threadId: string,
-    category: 'needs_reply' | 'no_reply',
+    category: EmailThreadCategory,
   ) => void;
   filter: EmailInboxFilter;
   onFilterChange: (filter: EmailInboxFilter) => void;
@@ -118,44 +182,28 @@ export function EmailInboxList({
 }: Props) {
   const [pending, startTransition] = useTransition();
   const trimmedSearch = searchQuery.trim();
-  const needsReplyCount = threads.filter(
-    (thread) => thread.assistant_category === 'needs_reply',
+  const actionCount = threads.filter((thread) =>
+    isActionableEmailCategory(thread.assistant_category),
   ).length;
-  const linkedCount = threads.filter((thread) => thread.link.linked).length;
+  const followUpCount = threads.filter((thread) =>
+    Boolean(thread.follow_up_at),
+  ).length;
 
-  function markNeedsReply(threadId: string) {
+  function setCategory(threadId: string, category: EmailThreadCategory) {
     startTransition(async () => {
       try {
-        await markEmailNeedsReplyAction({
+        await setEmailThreadCategoryAction({
           threadId,
+          category,
           accountSlug: accountSlug ?? undefined,
         });
-        onThreadCategoryChange?.(threadId, 'needs_reply');
-        toast.success('Marked as needing a reply');
+        onThreadCategoryChange?.(threadId, category);
+        toast.success(`Marked as ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
-            : 'Could not mark as needing a reply',
-        );
-      }
-    });
-  }
-
-  function clearNeedsReply(threadId: string) {
-    startTransition(async () => {
-      try {
-        await ignoreEmailNeedsReplyAction({
-          threadId,
-          accountSlug: accountSlug ?? undefined,
-        });
-        onThreadCategoryChange?.(threadId, 'no_reply');
-        toast.success('Marked as no reply needed');
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not update this email',
+            : 'Could not update category',
         );
       }
     });
@@ -174,10 +222,8 @@ export function EmailInboxList({
           scope,
           accountSlug: accountSlug ?? undefined,
         });
-        onThreadCategoryChange?.(
-          threadId,
-          action === 'ignore' ? 'no_reply' : 'needs_reply',
-        );
+        const category = categoryFromTriageRuleAction(action);
+        onThreadCategoryChange?.(threadId, category);
         toast.success(
           triageRuleSuccessMessage(
             action,
@@ -206,43 +252,24 @@ export function EmailInboxList({
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             Inbox
           </h2>
-          <div className="flex max-w-full rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
-            <button
-              type="button"
-              onClick={() => onFilterChange('all')}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                filter === 'all'
-                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => onFilterChange('linked')}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                filter === 'linked'
-                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              Linked
-            </button>
-            <button
-              type="button"
-              onClick={() => onFilterChange('needs_reply')}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                filter === 'needs_reply'
-                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              Needs reply
-            </button>
+          <div className="-mx-1 max-w-full overflow-x-auto px-1">
+            <div className="flex w-max rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
+              {FILTER_TABS.map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => onFilterChange(tab.value)}
+                  className={cn(
+                    'shrink-0 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors',
+                    filter === tab.value
+                      ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
@@ -251,18 +278,15 @@ export function EmailInboxList({
             : threads.length === 0
               ? trimmedSearch
                 ? `No threads match “${trimmedSearch}”`
-                : filter === 'needs_reply'
-                  ? 'No threads need a reply yet'
-                  : filter === 'linked'
-                    ? 'No linked threads yet'
-                    : 'No threads yet'
+                : emptyFilterMessage(filter)
               : trimmedSearch
                 ? `${threads.length} result${threads.length === 1 ? '' : 's'} for “${trimmedSearch}”`
-                : filter === 'linked'
-                  ? `${threads.length} linked thread${threads.length === 1 ? '' : 's'}`
-                  : filter === 'needs_reply'
-                    ? `${threads.length} thread${threads.length === 1 ? '' : 's'} need a reply`
-                    : `${threads.length} threads${needsReplyCount > 0 && filter === 'all' ? ` · ${needsReplyCount} need a reply` : ''}${linkedCount > 0 && filter === 'all' ? ` · ${linkedCount} linked` : ''}`}
+                : listSummaryMessage({
+                    filter,
+                    threads,
+                    actionCount,
+                    followUpCount,
+                  })}
         </p>
 
         <div className="relative mt-3">
@@ -299,6 +323,9 @@ export function EmailInboxList({
               const selected = thread.id === selectedThreadId;
               const href = clientHref(thread, workspaces);
               const badge = linkBadgeLabel(thread);
+              const showUnlinked =
+                isActionableEmailCategory(thread.assistant_category) &&
+                !thread.link.clientId;
 
               return (
                 <li
@@ -349,13 +376,13 @@ export function EmailInboxList({
                         {thread.subject?.trim() || '(no subject)'}
                       </span>
                       <span className="mt-1 flex flex-wrap items-center gap-1">
-                        {thread.assistant_category === 'needs_reply' ? (
-                          <span className="inline-flex rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--ozer-accent)] uppercase">
-                            Needs reply
-                          </span>
-                        ) : thread.assistant_category === null ? (
-                          <span className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                            Untriaged
+                        <EmailCategoryBadge
+                          category={thread.assistant_category}
+                          confidence={thread.assistant_category_confidence}
+                        />
+                        {showUnlinked ? (
+                          <span className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-300">
+                            Unlinked
                           </span>
                         ) : null}
                         {badge && !href ? (
@@ -394,21 +421,19 @@ export function EmailInboxList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {thread.assistant_category === 'needs_reply' ? (
+                        {EMAIL_THREAD_CATEGORIES.map((category) => (
                           <DropdownMenuItem
-                            disabled={pending}
-                            onSelect={() => clearNeedsReply(thread.id)}
+                            key={category}
+                            disabled={
+                              pending ||
+                              thread.assistant_category === category
+                            }
+                            onSelect={() => setCategory(thread.id, category)}
                           >
-                            Mark as no reply needed
+                            Mark as {EMAIL_THREAD_CATEGORY_LABELS[category]}
                           </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            disabled={pending}
-                            onSelect={() => markNeedsReply(thread.id)}
-                          >
-                            Mark as needing a reply
-                          </DropdownMenuItem>
-                        )}
+                        ))}
+                        <DropdownMenuSeparator />
                         <EmailTriageRulesMenuItems
                           subject={thread.subject}
                           disabled={pending}

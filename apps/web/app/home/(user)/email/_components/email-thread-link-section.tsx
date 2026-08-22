@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { ChevronDown, Link2, Loader2, X } from 'lucide-react';
+import { ChevronDown, Link2, Loader2, Sparkles, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -28,7 +28,11 @@ import {
 } from '~/home/(user)/_lib/actions/task-actions';
 
 import { emailApiFetch } from '../_lib/email-api';
-import type { EmailThreadLink, EmailWorkspaceOption } from '../_lib/types';
+import type {
+  EmailThreadLink,
+  EmailThreadLinkSuggestion,
+  EmailWorkspaceOption,
+} from '../_lib/types';
 
 const panelClass =
   'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60';
@@ -36,8 +40,11 @@ const panelClass =
 type Props = {
   threadId: string;
   link: EmailThreadLink;
+  linkSuggestion?: EmailThreadLinkSuggestion | null;
+  linkConfidence?: number | null;
   workspaces: EmailWorkspaceOption[];
   onUpdated: (link: EmailThreadLink) => void;
+  onSuggestionUpdated?: (suggestion: EmailThreadLinkSuggestion | null) => void;
 };
 
 function linkLabel(link: EmailThreadLink): string | null {
@@ -52,11 +59,26 @@ function linkLabel(link: EmailThreadLink): string | null {
   return null;
 }
 
+function suggestionLabel(suggestion: EmailThreadLinkSuggestion): string | null {
+  if (suggestion.projectName) {
+    return suggestion.projectName;
+  }
+
+  if (suggestion.clientName) {
+    return suggestion.clientName;
+  }
+
+  return null;
+}
+
 export function EmailThreadLinkSection({
   threadId,
   link,
+  linkSuggestion = null,
+  linkConfidence = null,
   workspaces,
   onUpdated,
+  onSuggestionUpdated,
 }: Props) {
   const [workspaceId, setWorkspaceId] = useState(link.accountId ?? '');
   const [assignTo, setAssignTo] = useState(
@@ -68,6 +90,10 @@ export function EmailThreadLinkSection({
   const [open, setOpen] = useState(() => !link.linked);
 
   const currentLabel = useMemo(() => linkLabel(link), [link]);
+  const suggestedLabel = useMemo(
+    () => (linkSuggestion ? suggestionLabel(linkSuggestion) : null),
+    [linkSuggestion],
+  );
 
   useEffect(() => {
     setOpen(!link.linked);
@@ -90,21 +116,28 @@ export function EmailThreadLinkSection({
     let cancelled = false;
     setOptionsLoading(true);
 
-    void loadTaskAssignmentOptionsForWorkspace(workspaceId).then((data) => {
-      if (cancelled) {
-        return;
-      }
+    void loadTaskAssignmentOptionsForWorkspace(workspaceId)
+      .then((data) => {
+        if (cancelled) {
+          return;
+        }
 
-      setOptions(data);
-      setOptionsLoading(false);
-    });
+        setOptions(data);
+        setOptionsLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOptions([]);
+          setOptionsLoading(false);
+        }
+      });
 
     return () => {
       cancelled = true;
     };
   }, [workspaceId]);
 
-  function saveLink(clear = false) {
+  function saveLink(clear = false, suggestion?: EmailThreadLinkSuggestion | null) {
     startTransition(async () => {
       try {
         const selected = options.find((option) => option.id === assignTo);
@@ -119,21 +152,56 @@ export function EmailThreadLinkSection({
                     clientId: null,
                     projectId: null,
                   }
-                : {
-                    accountId: workspaceId || null,
-                    clientId: selected?.type === 'client' ? selected.id : null,
-                    projectId:
-                      selected?.type === 'project' ? selected.id : null,
-                  },
+                : suggestion
+                  ? {
+                      accountId: suggestion.accountId,
+                      clientId: suggestion.clientId,
+                      projectId: suggestion.projectId,
+                    }
+                  : {
+                      accountId: workspaceId || null,
+                      clientId:
+                        selected?.type === 'client' ? selected.id : null,
+                      projectId:
+                        selected?.type === 'project' ? selected.id : null,
+                    },
             ),
           },
         );
 
         onUpdated(data.thread.link);
+        if (suggestion) {
+          onSuggestionUpdated?.(null);
+        }
         toast.success(clear ? 'Link removed' : 'Thread linked');
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not update link',
+        );
+      }
+    });
+  }
+
+  function runSuggestLink() {
+    startTransition(async () => {
+      try {
+        const data = await emailApiFetch<{
+          thread: {
+            link_suggestion: EmailThreadLinkSuggestion | null;
+            link_confidence: number | null;
+          };
+        }>(`/api/gmail/threads/${threadId}/suggest-link`, {
+          method: 'POST',
+        });
+        onSuggestionUpdated?.(data.thread.link_suggestion);
+        if (data.thread.link_suggestion) {
+          toast.success('Link suggestion ready');
+        } else {
+          toast.message('No confident link suggestion for this thread');
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not suggest link',
         );
       }
     });
@@ -189,6 +257,31 @@ export function EmailThreadLinkSection({
           ) : null}
         </div>
 
+        {!link.linked && suggestedLabel && linkSuggestion ? (
+          <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--ozer-accent)]">
+                <Sparkles className="h-3 w-3 shrink-0" />
+                <span className="truncate">
+                  Suggested: {suggestedLabel}
+                  {typeof linkConfidence === 'number'
+                    ? ` · ${Math.round(linkConfidence * 100)}%`
+                    : ''}
+                </span>
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 bg-[var(--ozer-accent)] px-2.5 text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                disabled={pending}
+                onClick={() => saveLink(false, linkSuggestion)}
+              >
+                Accept
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <CollapsibleContent className="border-t border-[color:var(--workspace-shell-border)] px-3 py-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -232,7 +325,22 @@ export function EmailThreadLinkSection({
             </div>
           </div>
 
-          <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              disabled={pending}
+              onClick={runSuggestLink}
+            >
+              {pending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Suggest link
+            </Button>
             <Button
               type="button"
               size="sm"

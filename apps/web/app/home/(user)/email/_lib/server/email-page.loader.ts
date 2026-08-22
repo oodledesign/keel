@@ -6,18 +6,16 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadPersonalSidebarWorkspaces } from '~/home/(user)/_lib/server/personal-sidebar-workspaces.loader';
 import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
+import { mapEmailThreadRow } from '~/lib/email-assistant/map-email-thread-row';
 import {
   EMAIL_THREAD_LINK_SELECT,
   enrichEmailThreadLinks,
-  mapThreadLinkFields,
 } from '~/lib/email-assistant/thread-link-display';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-import type {
-  EmailPageInitialData,
-  EmailParticipant,
-  EmailThreadSummary,
-} from '../types';
+import type { EmailPageInitialData, EmailThreadSummary } from '../types';
+
+const THREAD_SELECT = `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, assistant_category_reason, assistant_category_confidence, follow_up_at, follow_up_note, link_confidence, link_suggestion, pipeline_lead_suggestion, pipeline_lead_confidence, pipeline_deal_id, ${EMAIL_THREAD_LINK_SELECT}`;
 
 function inferSignatureIsHtml(
   signature: string | null | undefined,
@@ -35,50 +33,6 @@ function inferSignatureIsHtml(
   return Boolean(trimmed && /<[a-z][\s\S]*>/i.test(trimmed));
 }
 
-function parseParticipants(value: unknown): EmailParticipant[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => {
-      if (!entry || typeof entry !== 'object') {
-        return null;
-      }
-
-      const row = entry as { name?: unknown; email?: unknown };
-      const email = typeof row.email === 'string' ? row.email.trim() : '';
-
-      if (!email) {
-        return null;
-      }
-
-      return {
-        name: typeof row.name === 'string' ? row.name : null,
-        email,
-      };
-    })
-    .filter((entry): entry is EmailParticipant => entry !== null);
-}
-
-function mapThreadRow(row: Record<string, unknown>): EmailThreadSummary {
-  const category = row.assistant_category;
-  const assistantCategory =
-    category === 'needs_reply' || category === 'no_reply' ? category : null;
-
-  return {
-    id: String(row.id),
-    gmail_thread_id: String(row.gmail_thread_id),
-    subject: (row.subject as string | null) ?? null,
-    snippet: (row.snippet as string | null) ?? null,
-    participants: parseParticipants(row.participants),
-    is_unread: Boolean(row.is_unread),
-    last_message_at: (row.last_message_at as string | null) ?? null,
-    assistant_category: assistantCategory,
-    link: mapThreadLinkFields(row),
-  };
-}
-
 export type LoadEmailPageOptions = {
   mailboxKind?: MailboxKind;
   preferredAccountId?: string | null;
@@ -90,9 +44,6 @@ export const loadEmailPageData = cache(
     const mailboxKind = options?.mailboxKind ?? 'personal';
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
-
-    // Inbox first paint must stay DB-only. Gmail refresh for needs_reply runs via
-    // cron (+ optional manual sync); blocking here made the page feel multi-second.
 
     const [connectionResult, workspaces] = await Promise.all([
       client
@@ -117,7 +68,7 @@ export const loadEmailPageData = cache(
         ? client
             .from('email_assistant_settings')
             .select(
-              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
+              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, allow_send_from_ozer, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
             )
             .eq('connection_id', connectionId)
             .maybeSingle()
@@ -125,9 +76,7 @@ export const loadEmailPageData = cache(
       connectionId
         ? client
             .from('email_threads')
-            .select(
-              `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
-            )
+            .select(THREAD_SELECT)
             .eq('user_id', user.id)
             .eq('connection_id', connectionId)
             .order('last_message_at', { ascending: false, nullsFirst: false })
@@ -143,6 +92,7 @@ export const loadEmailPageData = cache(
       auto_triage_enabled?: boolean | null;
       auto_draft_enabled?: boolean | null;
       auto_save_gmail_drafts?: boolean | null;
+      allow_send_from_ozer?: boolean | null;
       ignored_senders?: string[] | null;
       ignored_domains?: string[] | null;
       ignored_subject_keywords?: string[] | null;
@@ -176,6 +126,7 @@ export const loadEmailPageData = cache(
         autoTriageEnabled: settingsRow?.auto_triage_enabled ?? true,
         autoDraftEnabled: settingsRow?.auto_draft_enabled ?? true,
         autoSaveGmailDrafts: settingsRow?.auto_save_gmail_drafts ?? false,
+        allowSendFromOzer: settingsRow?.allow_send_from_ozer ?? false,
         ignoredSenders: (settingsRow?.ignored_senders ?? []).filter(Boolean),
         ignoredDomains: (settingsRow?.ignored_domains ?? []).filter(Boolean),
         ignoredSubjectKeywords: (
@@ -189,7 +140,7 @@ export const loadEmailPageData = cache(
       },
       threads: await enrichEmailThreadLinks(
         client,
-        pageRows.map((row) => mapThreadRow(row as Record<string, unknown>)),
+        pageRows.map((row) => mapEmailThreadRow(row as Record<string, unknown>)),
       ),
       hasMoreThreads: hasMoreInitial,
       workspaces: workspaces.map((workspace) => ({
@@ -209,9 +160,7 @@ export async function loadEmailThreadDetailFromDb(
 
   const { data, error } = await client
     .from('email_threads')
-    .select(
-      `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
-    )
+    .select(THREAD_SELECT)
     .eq('id', threadId)
     .eq('user_id', user.id)
     .maybeSingle();
@@ -220,7 +169,7 @@ export async function loadEmailThreadDetailFromDb(
     return null;
   }
 
-  const thread = mapThreadRow(data as Record<string, unknown>);
+  const thread = mapEmailThreadRow(data as Record<string, unknown>);
   const [enriched] = await enrichEmailThreadLinks(client, [thread]);
   return enriched ?? null;
 }

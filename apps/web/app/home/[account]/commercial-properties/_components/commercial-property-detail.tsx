@@ -184,7 +184,10 @@ export function CommercialPropertyDetail({
             )}
             <Button asChild variant="outline" size="sm" className="mt-2 w-full">
               <Link
-                href={`${pathsConfig.app.accountListings.replace('[account]', accountSlug)}?create=1`}
+                href={pathsConfig.app.accountListingNew.replace(
+                  '[account]',
+                  accountSlug,
+                )}
               >
                 Create disposal
               </Link>

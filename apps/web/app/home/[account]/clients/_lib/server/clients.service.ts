@@ -1118,6 +1118,7 @@ class ClientsService {
       )
       .eq('client_id', params.clientId)
       .eq('account_id', params.accountId)
+      .is('archived_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;

@@ -3,9 +3,10 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
+import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
 
 /**
- * Count threads marked needs_reply for a user's Gmail connection.
+ * Count threads marked actionable (reply_now / reply_later) for a user's Gmail connection.
  */
 export async function countNeedsReplyEmailThreads(
   client: SupabaseClient,
@@ -32,7 +33,7 @@ export async function countNeedsReplyEmailThreads(
     .select('id', { count: 'exact', head: true })
     .eq('user_id', params.userId)
     .eq('connection_id', connectionId)
-    .eq('assistant_category', 'needs_reply');
+    .in('assistant_category', [...ACTIONABLE_EMAIL_CATEGORIES]);
 
   if (error) {
     throw error;

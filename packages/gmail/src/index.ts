@@ -1,5 +1,5 @@
 export { GmailApiError, gmailFetch, gmailFetchPaginated } from './client';
-export { createDraft, updateDraft } from './drafts';
+export { createDraft, sendDraft, updateDraft } from './drafts';
 export {
   getGmailDefaultSendAs,
   getGmailDefaultSignature,

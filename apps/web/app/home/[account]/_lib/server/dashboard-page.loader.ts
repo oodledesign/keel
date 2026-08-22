@@ -293,6 +293,7 @@ async function loadDashboardPageDataImpl(
       .select('total_pence')
       .eq('account_id', accountId)
       .eq('status', 'paid')
+      .is('archived_at', null)
       .gte('paid_at', monthStartIso),
     client
       .from('projects')
@@ -389,6 +390,7 @@ async function loadDashboardPageDataImpl(
       .from('invoices')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
+      .is('archived_at', null)
       .gte('updated_at', invoiceActivityCutoffIso),
     client.rpc('get_account_members', { account_slug: accountSlug }),
     userId
@@ -415,7 +417,7 @@ async function loadDashboardPageDataImpl(
         )
         .eq('user_id', userId ?? '')
         .eq('connection_id', businessConnectionId)
-        .eq('assistant_category', 'needs_reply')
+        .in('assistant_category', ['reply_now', 'reply_later'])
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .limit(8)
     : { data: [], count: 0, error: null };

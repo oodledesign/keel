@@ -4,10 +4,11 @@ import { cache } from 'react';
 
 import { notFound } from 'next/navigation';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { getAgencyBrandingByBusinessId } from '~/lib/agency-branding';
+import { buildClientPortalPath } from '~/lib/clients/client-portal-invites.service';
 
 import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
 import { getTeamAccountAccess } from '../../../_lib/role-access';
@@ -35,12 +36,59 @@ import type {
   SavedLinkListItem,
 } from '../../../_lib/workspace-content/types';
 import { createSchedulingService } from '../../../scheduling/_lib/server/scheduling.service';
+import { createWebsitesService } from '../../../websites/_lib/server/websites.service';
 import type { ClientDetailOverviewSeed } from '../client-detail.types';
 import { createClientsService } from './clients.service';
 
 export type { ClientDetailOverviewSeed } from '../client-detail.types';
 
 export const loadClientDetailPageData = cache(loadClientDetailPageDataImpl);
+
+async function resolveClientPortalHref(
+  accountId: string,
+  clientId: string,
+  clientOrgId: string | null | undefined,
+  canEditClients: boolean,
+): Promise<string | null> {
+  const admin = getSupabaseServerAdminClient();
+  let resolvedOrgId = clientOrgId?.trim() || null;
+
+  if (!resolvedOrgId && canEditClients) {
+    try {
+      const websitesService = createWebsitesService(getSupabaseServerClient());
+      const resolved = await websitesService.resolveOrCreateClientOrgForCrmClient(
+        accountId,
+        clientId,
+      );
+      resolvedOrgId = resolved.clientOrgId;
+    } catch (error) {
+      console.error('[client-detail] resolve client org failed', error);
+      return null;
+    }
+  }
+
+  if (!resolvedOrgId) {
+    return null;
+  }
+
+  const { data: org, error } = await admin
+    .from('client_orgs')
+    .select('slug')
+    .eq('id', resolvedOrgId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[client-detail] load client org slug failed', error);
+    return null;
+  }
+
+  const slug = (org as { slug?: string | null } | null)?.slug?.trim();
+  if (!slug) {
+    return null;
+  }
+
+  return buildClientPortalPath(slug);
+}
 
 async function loadClientDetailPageDataImpl(
   accountSlug: string,
@@ -83,7 +131,6 @@ async function loadClientDetailPageDataImpl(
 
   const [
     clientRow,
-    agencyBranding,
     workspaceContentResult,
     jobsResult,
     notesResult,
@@ -92,7 +139,6 @@ async function loadClientDetailPageDataImpl(
     ranklyResult,
   ] = await Promise.all([
     clientPromise,
-    getAgencyBrandingByBusinessId(accountId),
     loadContextWorkspaceContent({
       accountId,
       spaceType,
@@ -201,12 +247,13 @@ async function loadClientDetailPageDataImpl(
     })),
   };
 
-  const portalHref = agencyBranding?.slug
-    ? pathsConfig.app.clientPortalHome.replace(
-        '[clientSlug]',
-        agencyBranding.slug,
-      )
-    : null;
+  const clientOrgId = (clientRow as { client_org_id?: string | null }).client_org_id;
+  const portalHref = await resolveClientPortalHref(
+    accountId,
+    clientId,
+    clientOrgId,
+    access.canEditClients,
+  );
 
   const variant: 'work' | 'commercial' =
     workspaceProfile === 'commercial_property' ? 'commercial' : 'work';

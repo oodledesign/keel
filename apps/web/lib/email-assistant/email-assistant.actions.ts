@@ -12,12 +12,16 @@ import {
   addEmailTriageRuleFromThread,
   removeEmailTriageRule,
 } from '~/lib/email-assistant/email-triage-rules';
-import { ignoreEmailThreadNeedsReply } from '~/lib/email-assistant/ignore-thread-needs-reply';
+import { EMAIL_THREAD_CATEGORIES } from './email-thread-categories';
+import {
+  ignoreEmailThreadNeedsReply,
+  setEmailThreadCategory,
+  markEmailThreadNeedsReply,
+} from '~/lib/email-assistant/set-thread-category';
 import {
   ignoreEmailRuleAndDismissSuggestions,
   removeIgnoredEmailRule,
 } from '~/lib/email-assistant/ignored-senders';
-import { markEmailThreadNeedsReply } from '~/lib/email-assistant/mark-thread-needs-reply';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 
 const IgnoreEmailNeedsReplySchema = z.object({
@@ -28,6 +32,19 @@ const IgnoreEmailNeedsReplySchema = z.object({
 
 const MarkEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),
+  accountSlug: z.string().min(1).optional(),
+});
+
+const SetEmailThreadCategorySchema = z.object({
+  threadId: z.string().uuid(),
+  category: z.enum(EMAIL_THREAD_CATEGORIES),
+  accountSlug: z.string().min(1).optional(),
+});
+
+const SetEmailThreadFollowUpSchema = z.object({
+  threadId: z.string().uuid(),
+  followUpAt: z.string().datetime().nullable(),
+  followUpNote: z.string().max(500).nullable().optional(),
   accountSlug: z.string().min(1).optional(),
 });
 
@@ -103,6 +120,56 @@ export const markEmailNeedsReplyAction = enhanceAction(
   {
     auth: true,
     schema: MarkEmailNeedsReplySchema,
+  },
+);
+
+export const setEmailThreadCategoryAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    await setEmailThreadCategory(
+      client,
+      user.id,
+      data.threadId,
+      data.category,
+      'Manually updated category',
+      { confidence: 1 },
+    );
+
+    revalidateNeedsReplyPaths(data.accountSlug);
+
+    return { ok: true as const, category: data.category };
+  },
+  {
+    auth: true,
+    schema: SetEmailThreadCategorySchema,
+  },
+);
+
+export const setEmailThreadFollowUpAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+
+    const { error } = await client
+      .from('email_threads')
+      .update({
+        follow_up_at: data.followUpAt,
+        follow_up_note: data.followUpNote?.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', data.threadId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    revalidateNeedsReplyPaths(data.accountSlug);
+
+    return { ok: true as const };
+  },
+  {
+    auth: true,
+    schema: SetEmailThreadFollowUpSchema,
   },
 );
 

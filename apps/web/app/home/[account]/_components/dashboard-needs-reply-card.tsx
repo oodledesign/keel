@@ -59,7 +59,7 @@ export function DashboardNeedsReplyCard({
     setItems(threads);
   }, [threads]);
 
-  const emailHref = `${pathsConfig.app.accountEmailAssistant.replace('[account]', accountSlug)}?filter=needs_reply`;
+  const emailHref = `${pathsConfig.app.accountEmailAssistant.replace('[account]', accountSlug)}?filter=action`;
   const displayCount = Math.max(
     0,
     totalCount - Math.max(0, threads.length - items.length),

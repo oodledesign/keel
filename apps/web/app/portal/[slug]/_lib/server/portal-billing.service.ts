@@ -336,6 +336,7 @@ class PortalBillingService {
           'id, invoice_number, status, total_pence, currency, due_at, paid_at, public_token',
         )
         .in('client_id', clientIds)
+        .is('archived_at', null)
         .order('due_at', { ascending: false });
 
       agencyInvoices = ((invoices ?? []) as Array<Record<string, unknown>>).map(

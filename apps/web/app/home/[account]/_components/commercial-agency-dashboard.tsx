@@ -127,6 +127,10 @@ export function CommercialAgencyDashboard({
     accountSlug,
     pathsConfig.app.accountListings,
   );
+  const newDisposalHref = accountPath(
+    accountSlug,
+    pathsConfig.app.accountListingNew,
+  );
   const requirementsHref = `${accountPath(
     accountSlug,
     pathsConfig.app.accountPipeline,
@@ -338,7 +342,7 @@ export function CommercialAgencyDashboard({
                   interest.
                 </p>
                 <Button asChild className={`${workspaceBtnPrimaryMd} mt-4`}>
-                  <Link href={listingsHref}>Create disposal</Link>
+                  <Link href={newDisposalHref}>Create disposal</Link>
                 </Button>
               </div>
             ) : (

@@ -9,16 +9,16 @@ describe('shouldIndexEmailThreadForBrain', () => {
   it('requires a workspace link', () => {
     expect(
       shouldIndexEmailThreadForBrain({
-        assistant_category: 'needs_reply',
+        assistant_category: 'reply_now',
       }),
     ).toBe(false);
   });
 
-  it('indexes needs-reply threads in a workspace', () => {
+  it('indexes actionable threads in a workspace', () => {
     expect(
       shouldIndexEmailThreadForBrain({
         account_id: 'acc-1',
-        assistant_category: 'needs_reply',
+        assistant_category: 'reply_now',
       }),
     ).toBe(true);
   });
@@ -27,7 +27,7 @@ describe('shouldIndexEmailThreadForBrain', () => {
     expect(
       shouldIndexEmailThreadForBrain({
         account_id: 'acc-1',
-        assistant_category: 'no_reply',
+        assistant_category: 'noise',
         client_id: 'client-1',
       }),
     ).toBe(true);
@@ -43,7 +43,7 @@ describe('buildEmailThreadIndexText', () => {
         subject: 'Project update',
         snippet: 'Quick question about the timeline',
         participants: [{ name: 'Alex', email: 'alex@acme.test' }],
-        assistant_category: 'needs_reply',
+        assistant_category: 'reply_now',
         assistant_category_reason: 'Client asked a direct question',
         client_id: 'client-1',
         project_id: 'project-1',
@@ -71,7 +71,7 @@ describe('buildEmailThreadIndexText', () => {
     });
 
     expect(text).toContain('# Project update');
-    expect(text).toContain('Status: Needs reply');
+    expect(text).toContain('Status: Reply now');
     expect(text).toContain('Linked client: Acme Co');
     expect(text).toContain('Linked project: Website redesign');
     expect(text).toContain('Suggested action items');

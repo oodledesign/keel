@@ -607,19 +607,21 @@ export function ClientDetailSidebar({
       return;
     }
 
-    const brandSettingsHref = pathsConfig.app.accountBrandSettings.replace(
-      '[account]',
-      accountSlug,
+    toast.error(
+      canEditClients
+        ? 'This client does not have a portal yet. Invite contacts to set one up.'
+        : 'This client does not have a portal yet.',
+      canEditClients
+        ? {
+            action: {
+              label: 'Invite',
+              onClick: () => {
+                void handleInviteToPortal();
+              },
+            },
+          }
+        : undefined,
     );
-
-    toast.error('Set a client portal slug in Brand settings first.', {
-      action: {
-        label: 'Open Brand',
-        onClick: () => {
-          window.location.href = brandSettingsHref;
-        },
-      },
-    });
   };
 
   const handleInviteToPortal = async () => {

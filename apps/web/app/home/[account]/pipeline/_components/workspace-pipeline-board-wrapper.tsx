@@ -22,9 +22,7 @@ import type {
 } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
 import { WonDealFollowUp } from '~/home/(user)/pipeline/_components/won-deal-follow-up';
-import { updateDeal } from '~/home/(user)/pipeline/actions';
-import { ListingFormModal } from '~/home/[account]/listings/_components/listing-form-modal';
-import type { CommercialListing } from '~/home/[account]/listings/_lib/server/listings.service';
+import { buildNewDisposalPath } from '~/home/[account]/listings/_lib/disposal-create-url';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
@@ -85,13 +83,23 @@ export function WorkspacePipelineBoardWrapper({
   const [wonDeal, setWonDeal] = useState<PipelineDeal | null>(null);
   const [newInstructionDeal, setNewInstructionDeal] =
     useState<PipelineDeal | null>(null);
-  const [disposalDeal, setDisposalDeal] = useState<PipelineDeal | null>(null);
 
-  const openDisposalForm = useCallback((deal: PipelineDeal) => {
-    setPromptDeal(null);
-    setNewInstructionDeal(null);
-    setDisposalDeal(deal);
-  }, []);
+  const openDisposalForm = useCallback(
+    (deal: PipelineDeal) => {
+      setPromptDeal(null);
+      setNewInstructionDeal(null);
+      router.push(
+        buildNewDisposalPath(accountSlug, {
+          name: instructionTitle(deal),
+          askingRent: deal.value > 0 ? String(deal.value) : null,
+          notes: deal.description?.trim() || null,
+          clientId: deal.clientId,
+          dealId: deal.id,
+        }),
+      );
+    },
+    [accountSlug, router],
+  );
 
   const handleDealWon = async (deal: PipelineDeal) => {
     if (variant === 'commercial') {
@@ -100,18 +108,6 @@ export function WorkspacePipelineBoardWrapper({
     }
 
     setWonDeal(deal);
-  };
-
-  const handleDisposalSaved = async (
-    listing: CommercialListing,
-    deal: PipelineDeal,
-  ): Promise<void> => {
-    await updateDeal(deal.id, {
-      commercialListingId: listing.id,
-      accountSlug,
-    });
-    setDisposalDeal(null);
-    router.refresh();
   };
 
   return (
@@ -197,26 +193,6 @@ export function WorkspacePipelineBoardWrapper({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {disposalDeal ? (
-        <ListingFormModal
-          open
-          onClose={() => setDisposalDeal(null)}
-          accountId={accountId}
-          accountSlug={accountSlug}
-          defaults={{
-            name: instructionTitle(disposalDeal),
-            askingRent:
-              disposalDeal.value > 0 ? String(disposalDeal.value) : '',
-            notes: disposalDeal.description?.trim() || '',
-            status: 'draft',
-          }}
-          instructingClientId={disposalDeal.clientId}
-          onSaved={(listing) => {
-            void handleDisposalSaved(listing, disposalDeal);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

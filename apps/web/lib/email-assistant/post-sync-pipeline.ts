@@ -21,7 +21,46 @@ import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
 import { resolveEmailAssistantBillingAccountId } from './resolve-email-assistant-billing-account';
+import { suggestPipelineLeadForThread } from './suggest-pipeline-lead';
 import { buildThreadText } from './thread-text';
+import {
+  type EmailThreadCategory,
+  categoryFromTriageRuleAction,
+  isActionableEmailCategory,
+  shouldAutoDraftCategory,
+  shouldAutoExtractCategory,
+  shouldAutoLinkCategory,
+} from './email-thread-categories';
+
+async function maybeSuggestPipelineLead(
+  admin: ReturnType<typeof getSupabaseServerAdminClient>,
+  params: {
+    userId: string;
+    threadId: string;
+    mailboxKind: MailboxKind;
+    preferredAccountId: string | null;
+    billingAccountId: string | null;
+  },
+  errors: string[],
+) {
+  if (params.mailboxKind === 'personal') {
+    return;
+  }
+
+  try {
+    await suggestPipelineLeadForThread(admin, {
+      userId: params.userId,
+      threadId: params.threadId,
+      preferredAccountId: params.preferredAccountId,
+      billingAccountId: params.billingAccountId,
+      mailboxKind: params.mailboxKind,
+    });
+  } catch (error) {
+    errors.push(
+      error instanceof Error ? error.message : 'Pipeline lead suggestion failed',
+    );
+  }
+}
 
 const MAX_CLASSIFY_PER_RUN = 40;
 const MAX_AUTO_DRAFT_PER_RUN = 3;
@@ -40,7 +79,7 @@ export type EmailAssistantPipelineResult = {
 type ThreadRow = {
   id: string;
   subject: string | null;
-  assistant_category: 'needs_reply' | 'no_reply' | null;
+  assistant_category: EmailThreadCategory | null;
   assistant_processed_message_id: string | null;
   assistant_extract_message_id: string | null;
   link_source: string | null;
@@ -209,13 +248,13 @@ export async function runEmailAssistantPipeline(
     );
 
     if (ruleMatch) {
-      const category =
-        ruleMatch.action === 'ignore' ? 'no_reply' : 'needs_reply';
+      const category = categoryFromTriageRuleAction(ruleMatch.action);
       const { error: ruleUpdateError } = await admin
         .from('email_threads')
         .update({
           assistant_category: category,
           assistant_category_reason: ruleMatch.reason,
+          assistant_category_confidence: 1,
           assistant_processed_message_id: latest.id,
           updated_at: new Date().toISOString(),
         })
@@ -236,7 +275,7 @@ export async function runEmailAssistantPipeline(
       // Already handled this message tip — do not reclassify every sync.
       // Backfill extract only when this tip has never been extracted.
       if (
-        thread.assistant_category === 'needs_reply' &&
+        isActionableEmailCategory(thread.assistant_category) &&
         thread.assistant_extract_message_id !== latest.id &&
         extractsRemaining > 0
       ) {
@@ -287,8 +326,9 @@ export async function runEmailAssistantPipeline(
       }
 
       if (
-        thread.assistant_category === 'needs_reply' &&
+        isActionableEmailCategory(thread.assistant_category) &&
         settings.auto_draft_enabled &&
+        shouldAutoDraftCategory(thread.assistant_category) &&
         draftsRemaining > 0
       ) {
         try {
@@ -321,6 +361,7 @@ export async function runEmailAssistantPipeline(
 
       if (
         !skipAutoLink &&
+        shouldAutoLinkCategory(thread.assistant_category) &&
         (!thread.link_source || thread.link_source === 'auto')
       ) {
         try {
@@ -341,6 +382,18 @@ export async function runEmailAssistantPipeline(
           );
         }
       }
+
+      await maybeSuggestPipelineLead(
+        admin,
+        {
+          userId,
+          threadId: thread.id,
+          mailboxKind,
+          preferredAccountId,
+          billingAccountId,
+        },
+        result.errors,
+      );
 
       // Workspace email page passes preferredAccountId (e.g. Oodle) — stamp it
       // when auto-link did not find a client/project.
@@ -365,12 +418,14 @@ export async function runEmailAssistantPipeline(
       continue;
     }
 
-    let category: 'needs_reply' | 'no_reply' | null = 'no_reply';
+    let category: EmailThreadCategory | null = 'noise';
     let reason: string | null = null;
+    let confidence: number | null = null;
 
     if (isFromOwner(latest.from_address, owner.email)) {
-      category = 'no_reply';
+      category = 'waiting';
       reason = 'Latest message is from you';
+      confidence = 1;
     } else {
       const { data: messages, error: messagesError } = await admin
         .from('email_messages')
@@ -400,6 +455,7 @@ export async function runEmailAssistantPipeline(
         );
         category = classified.category;
         reason = classified.reason;
+        confidence = classified.confidence;
       } catch (error) {
         result.errors.push(
           error instanceof Error ? error.message : 'Classification failed',
@@ -416,6 +472,7 @@ export async function runEmailAssistantPipeline(
       .update({
         assistant_category: category,
         assistant_category_reason: reason,
+        assistant_category_confidence: confidence,
         assistant_processed_message_id: latest.id,
         updated_at: new Date().toISOString(),
       })
@@ -431,6 +488,7 @@ export async function runEmailAssistantPipeline(
 
     if (
       !skipAutoLink &&
+      shouldAutoLinkCategory(category) &&
       (!thread.link_source || thread.link_source === 'auto')
     ) {
       try {
@@ -452,6 +510,18 @@ export async function runEmailAssistantPipeline(
       }
     }
 
+    await maybeSuggestPipelineLead(
+      admin,
+      {
+        userId,
+        threadId: thread.id,
+        mailboxKind,
+        preferredAccountId,
+        billingAccountId,
+      },
+      result.errors,
+    );
+
     try {
       await ensureNeedsReplyWorkspaceAffinity(admin, {
         userId,
@@ -467,7 +537,7 @@ export async function runEmailAssistantPipeline(
     queueEmailThreadBrainSync(thread.id, preferredAccountId);
 
     if (
-      category === 'needs_reply' &&
+      shouldAutoDraftCategory(category) &&
       draftsRemaining > 0 &&
       settings.auto_draft_enabled
     ) {
@@ -498,7 +568,7 @@ export async function runEmailAssistantPipeline(
     }
 
     if (
-      category === 'needs_reply' &&
+      shouldAutoExtractCategory(category) &&
       extractsRemaining > 0 &&
       thread.assistant_extract_message_id !== latest.id
     ) {

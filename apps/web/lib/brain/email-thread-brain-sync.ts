@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { isActionableEmailCategory } from '~/lib/email-assistant/email-thread-categories';
 import { ensureNeedsReplyWorkspaceAffinity } from '~/lib/email-assistant/needs-reply-workspace-affinity';
 
 import { shouldIndexEmailThreadForBrain } from './email-thread-index';
@@ -34,7 +35,7 @@ export async function syncEmailThreadToBrain(
 
   if (
     !accountId &&
-    thread.assistant_category === 'needs_reply' &&
+    isActionableEmailCategory(thread.assistant_category as string | null) &&
     !(thread.client_id || thread.project_id)
   ) {
     accountId = await ensureNeedsReplyWorkspaceAffinity(admin, {

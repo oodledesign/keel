@@ -71,6 +71,7 @@ import {
   workspaceSelectItemClass,
 } from '~/lib/workspace-ui';
 
+import { buildNewDisposalPath } from '../_lib/disposal-create-url';
 import {
   type DisposalStatusFilter,
   disposalStatusQueryParams,
@@ -92,7 +93,6 @@ import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingSectorPills } from './listing-sector-pills';
 import { ListingsMapView } from './listings-map-view';
-import { bindListingToActiveSopAssist } from '../../sops/_components/sop-tracker-widget';
 
 const PAGE_SIZE = 20;
 const MAP_PAGE_SIZE = 100;
@@ -399,19 +399,21 @@ export function ListingsList({
 
   const setNeedsLocationOnly = useCallback(
     (next: boolean | ((current: boolean) => boolean)) => {
-      const value =
-        typeof next === 'function' ? next(needsLocationOnly) : next;
+      const value = typeof next === 'function' ? next(needsLocationOnly) : next;
       updateListFilters({ needsLocation: value });
     },
     [needsLocationOnly, updateListFilters],
   );
 
-  const clearCreateQuery = useCallback(() => {
+  useEffect(() => {
     if (!createRequested) return;
-    const url = new URL(window.location.href);
-    url.searchParams.delete('create');
-    router.replace(url.pathname + url.search, { scroll: false });
-  }, [createRequested, router]);
+    const sopAssist = searchParams.get('sopAssist');
+    router.replace(
+      buildNewDisposalPath(accountSlug, {
+        sopAssist,
+      }),
+    );
+  }, [accountSlug, createRequested, router, searchParams]);
 
   const fetchPage = useCallback(
     async (
@@ -763,8 +765,12 @@ export function ListingsList({
   const effectiveTotalPages = usesFullCache ? clientTotalPages : totalPages;
 
   const openCreate = () => {
-    setEditing(null);
-    setModalOpen(true);
+    const sopAssist = searchParams.get('sopAssist');
+    router.push(
+      buildNewDisposalPath(accountSlug, {
+        sopAssist,
+      }),
+    );
   };
 
   const openEdit = (listing: CommercialListing) => {
@@ -774,11 +780,7 @@ export function ListingsList({
 
   const handleSaved = useCallback(
     (saved: CommercialListing) => {
-      let wasNew = false;
-      setCachedListings((prev) => {
-        wasNew = !prev.some((l) => l.id === saved.id);
-        return mergeListings(prev, [saved]);
-      });
+      setCachedListings((prev) => mergeListings(prev, [saved]));
       setPageListings((prev) => {
         const idx = prev.findIndex((l) => l.id === saved.id);
         if (idx >= 0) {
@@ -788,36 +790,9 @@ export function ListingsList({
         }
         return [saved, ...prev];
       });
-      setTotal((prev) => (wasNew ? prev + 1 : prev));
-
-      if (wasNew) {
-        const assistRunId = searchParams.get('sopAssist');
-        if (assistRunId) {
-          void bindListingToActiveSopAssist({
-            accountId,
-            accountSlug,
-            runId: assistRunId,
-            listingId: saved.id,
-          })
-            .then(() => {
-              const mediaPath = pathsConfig.app.accountListingDetail
-                .replace('[account]', accountSlug)
-                .replace('[id]', saved.id);
-              router.push(
-                `${mediaPath}/media?sopAssist=${assistRunId}`,
-              );
-            })
-            .catch((err: unknown) => {
-              console.error(err);
-              router.refresh();
-            });
-          return;
-        }
-      }
-
       router.refresh();
     },
-    [accountId, accountSlug, router, searchParams],
+    [router],
   );
 
   const confirmDelete = useCallback(() => {
@@ -1069,9 +1044,7 @@ export function ListingsList({
                     setCachedListings((current) =>
                       mergeListings(current, list),
                     );
-                    setPageListings((current) =>
-                      mergeListings(current, list),
-                    );
+                    setPageListings((current) => mergeListings(current, list));
                     if (
                       typeof result?.updated === 'number' &&
                       result.updated > 0
@@ -1340,11 +1313,10 @@ export function ListingsList({
       ) : null}
 
       <ListingFormModal
-        open={modalOpen || createRequested}
+        open={modalOpen}
         onClose={() => {
           setModalOpen(false);
           setEditing(null);
-          clearCreateQuery();
         }}
         accountId={accountId}
         accountSlug={accountSlug}

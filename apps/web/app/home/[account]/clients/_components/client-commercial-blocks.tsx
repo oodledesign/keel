@@ -206,7 +206,10 @@ export function ClientDisposalsBlock({
 }: BlockProps) {
   const [rows, setRows] = useState<ClientCommercialDisposalRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const listHref = `${pathsConfig.app.accountListings.replace('[account]', accountSlug)}?create=1`;
+  const listHref = pathsConfig.app.accountListingNew.replace(
+    '[account]',
+    accountSlug,
+  );
   const detailBase = pathsConfig.app.accountListingDetail.replace(
     '[account]',
     accountSlug,

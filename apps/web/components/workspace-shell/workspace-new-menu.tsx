@@ -465,7 +465,7 @@ function getTeamItems(
         key: 'disposal',
         label: 'New disposal',
         icon: Building2,
-        href: `${accountPath(account, pathsConfig.app.accountListings)}?create=1`,
+        href: accountPath(account, pathsConfig.app.accountListingNew),
       },
       {
         key: 'instruction',

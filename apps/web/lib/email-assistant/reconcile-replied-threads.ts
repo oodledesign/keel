@@ -6,8 +6,10 @@ import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 import { isFromOwner } from '~/lib/email-assistant/address-utils';
 import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
 
+import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
+
 /**
- * Clears `needs_reply` when the latest synced message is already from the mailbox owner
+ * Clears actionable categories when the latest synced message is already from the mailbox owner
  * (e.g. they replied in Gmail outside Ozer).
  */
 export async function reconcileRepliedNeedsReplyThreads(params: {
@@ -21,7 +23,7 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
   let query = admin
     .from('email_threads')
     .select('id, user_id')
-    .eq('assistant_category', 'needs_reply');
+    .in('assistant_category', [...ACTIONABLE_EMAIL_CATEGORIES]);
 
   if (params.threadIds && params.threadIds.length > 0) {
     query = query.in('id', params.threadIds);
@@ -78,8 +80,9 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
     const { error: updateError } = await admin
       .from('email_threads')
       .update({
-        assistant_category: 'no_reply',
+        assistant_category: 'waiting',
         assistant_category_reason: 'Latest message is from you',
+        assistant_category_confidence: 1,
         assistant_processed_message_id: latest.id as string,
         updated_at: new Date().toISOString(),
       })

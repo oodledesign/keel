@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { isActionableEmailCategory } from './email-thread-categories';
 import { pickMostFrequentAccountId } from './pick-most-frequent-account-id';
 
 type AdminClient = SupabaseClient;
@@ -92,7 +93,7 @@ export async function ensureNeedsReplyWorkspaceAffinity(
     return thread.account_id as string;
   }
 
-  if (thread.assistant_category !== 'needs_reply') {
+  if (!isActionableEmailCategory(thread.assistant_category)) {
     return null;
   }
 

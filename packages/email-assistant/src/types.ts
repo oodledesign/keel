@@ -24,11 +24,17 @@ export type ExtractContext = {
   instructions?: string | null;
 };
 
-export type EmailThreadCategory = 'needs_reply' | 'no_reply';
+export type EmailThreadCategory =
+  | 'reply_now'
+  | 'reply_later'
+  | 'waiting'
+  | 'fyi'
+  | 'noise';
 
 export type ClassifyResponseJson = {
   category: EmailThreadCategory;
   reason?: string | null;
+  confidence?: number | null;
 };
 
 export type ExtractResponseJson = {
@@ -40,4 +46,24 @@ export type ExtractResponseJson = {
     assignee_confidence?: number | null;
     suggested_assignee_email?: string | null;
   }>;
+};
+
+export type DetectPipelineLeadResponseJson = {
+  is_lead: boolean;
+  contact_name?: string | null;
+  company_name?: string | null;
+  contact_email?: string | null;
+  description?: string | null;
+  reason?: string | null;
+  confidence?: number | null;
+};
+
+export type PipelineLeadDetection = {
+  isLead: boolean;
+  contactName: string | null;
+  companyName: string | null;
+  contactEmail: string | null;
+  description: string | null;
+  reason: string | null;
+  confidence: number | null;
 };

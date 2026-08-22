@@ -4,6 +4,7 @@ import type {
   EmailActionItem,
   EmailThreadCategory,
   ExtractResponseJson,
+  PipelineLeadDetection,
 } from './types';
 
 const ExtractItemSchema = z.object({
@@ -19,9 +20,26 @@ const ExtractResponseSchema = z.object({
   items: z.array(ExtractItemSchema),
 });
 
-const ClassifyResponseSchema = z.object({
-  category: z.enum(['needs_reply', 'no_reply']),
+const DetectPipelineLeadResponseSchema = z.object({
+  is_lead: z.boolean(),
+  contact_name: z.string().nullable().optional(),
+  company_name: z.string().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   reason: z.string().nullable().optional(),
+  confidence: z.number().min(0).max(1).nullable().optional(),
+});
+
+const ClassifyResponseSchema = z.object({
+  category: z.enum([
+    'reply_now',
+    'reply_later',
+    'waiting',
+    'fyi',
+    'noise',
+  ]),
+  reason: z.string().nullable().optional(),
+  confidence: z.number().min(0).max(1).nullable().optional(),
 });
 
 /** Strip accidental markdown fences before JSON.parse. */
@@ -118,6 +136,7 @@ export function parseExtractResponse(raw: string): EmailActionItem[] {
 export function parseClassifyResponse(raw: string): {
   category: EmailThreadCategory | null;
   reason: string | null;
+  confidence: number | null;
 } {
   const cleaned = stripJsonFences(raw);
 
@@ -130,25 +149,103 @@ export function parseClassifyResponse(raw: string): {
     const end = cleaned.lastIndexOf('}');
 
     if (start < 0 || end <= start) {
-      return { category: null, reason: 'Could not parse classification' };
+      return {
+        category: null,
+        reason: 'Could not parse classification',
+        confidence: null,
+      };
     }
 
     try {
       json = JSON.parse(cleaned.slice(start, end + 1));
     } catch {
-      return { category: null, reason: 'Could not parse classification' };
+      return {
+        category: null,
+        reason: 'Could not parse classification',
+        confidence: null,
+      };
     }
   }
 
   const parsed = ClassifyResponseSchema.safeParse(json);
 
   if (!parsed.success) {
-    return { category: null, reason: 'Could not parse classification' };
+    return {
+      category: null,
+      reason: 'Could not parse classification',
+      confidence: null,
+    };
   }
 
   return {
     category: parsed.data.category,
     reason: parsed.data.reason?.trim() || null,
+    confidence: normalizeConfidence(parsed.data.confidence),
+  };
+}
+
+export function parseDetectPipelineLeadResponse(
+  raw: string,
+): PipelineLeadDetection {
+  const cleaned = stripJsonFences(raw);
+
+  let json: unknown;
+
+  try {
+    json = JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+
+    if (start < 0 || end <= start) {
+      return {
+        isLead: false,
+        contactName: null,
+        companyName: null,
+        contactEmail: null,
+        description: null,
+        reason: 'Could not parse lead detection',
+        confidence: null,
+      };
+    }
+
+    try {
+      json = JSON.parse(cleaned.slice(start, end + 1));
+    } catch {
+      return {
+        isLead: false,
+        contactName: null,
+        companyName: null,
+        contactEmail: null,
+        description: null,
+        reason: 'Could not parse lead detection',
+        confidence: null,
+      };
+    }
+  }
+
+  const parsed = DetectPipelineLeadResponseSchema.safeParse(json);
+
+  if (!parsed.success) {
+    return {
+      isLead: false,
+      contactName: null,
+      companyName: null,
+      contactEmail: null,
+      description: null,
+      reason: 'Could not parse lead detection',
+      confidence: null,
+    };
+  }
+
+  return {
+    isLead: parsed.data.is_lead,
+    contactName: parsed.data.contact_name?.trim() || null,
+    companyName: parsed.data.company_name?.trim() || null,
+    contactEmail: normalizeEmail(parsed.data.contact_email),
+    description: parsed.data.description?.trim() || null,
+    reason: parsed.data.reason?.trim() || null,
+    confidence: normalizeConfidence(parsed.data.confidence),
   };
 }
 

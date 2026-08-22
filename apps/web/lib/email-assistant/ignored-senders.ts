@@ -432,7 +432,7 @@ async function dismissSuggestedItemsMatchingIgnore(
     const { error: threadUpdateError } = await client
       .from('email_threads')
       .update({
-        assistant_category: 'no_reply',
+        assistant_category: 'noise',
         assistant_category_reason: reason,
         updated_at: new Date().toISOString(),
       })

@@ -143,7 +143,7 @@ const projectsProvider: DynamicShortcutProvider = {
   async build(ctx) {
     if (!isAccountModuleEnabled(ctx.moduleSettings, 'jobs')) return [];
 
-    let query = ctx.client
+    const query = ctx.client
       .from(PROJECTS_TABLE)
       .select('id, title, name, project_type')
       .eq('account_id', ctx.accountId)

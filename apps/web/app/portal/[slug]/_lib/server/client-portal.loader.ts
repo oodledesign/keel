@@ -117,8 +117,29 @@ export const loadClientPortalContext = cache(
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (membershipError || !membership) {
+    let membershipRole: string | null = membership?.role ?? null;
+
+    if (membershipError) {
       redirect(pathsConfig.app.home);
+    }
+
+    if (!membership) {
+      const { data: teamMembership } = await client
+        .from('accounts_memberships')
+        .select('account_role')
+        .eq('account_id', accountId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const teamRole = (
+        teamMembership as { account_role?: string | null } | null
+      )?.account_role;
+
+      if (!teamRole || teamRole === 'contractor' || teamRole === 'client') {
+        redirect(pathsConfig.app.home);
+      }
+
+      membershipRole = null;
     }
 
     const [{ data: profile }, { data: userAccount }] = await Promise.all([
@@ -264,7 +285,7 @@ export const loadClientPortalContext = cache(
       clientSlug,
       orgName,
       clientPictureUrl: clientPictures.get(org.id) ?? null,
-      membershipRole: membership.role ?? null,
+      membershipRole,
       userAvatarUrl,
       hasContactRecord: contact !== null,
       hasWorkspaceAccess: (teamMembership.count ?? 0) > 0,

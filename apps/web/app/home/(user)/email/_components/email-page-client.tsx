@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Loader2, RefreshCw, Settings2 } from 'lucide-react';
+import { Loader2, RefreshCw, Keyboard, Settings2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -12,6 +12,11 @@ import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
+import { setEmailThreadCategoryAction } from '~/lib/email-assistant/email-assistant.actions';
+import {
+  type EmailThreadCategory,
+  isActionableEmailCategory,
+} from '~/lib/email-assistant/email-thread-categories';
 
 import { emailApiFetch, formatEmailApiError } from '../_lib/email-api';
 import type {
@@ -25,6 +30,52 @@ import { EmailThreadPanel } from './email-thread-panel';
 
 const AUTO_SYNC_STALE_MS = 15 * 60 * 1000;
 const MANUAL_SYNC_MAX_BATCHES = 8;
+
+const INBOX_FILTERS: EmailInboxFilter[] = [
+  'all',
+  'action',
+  'reply_later',
+  'waiting',
+  'fyi',
+  'follow_up',
+  'linked',
+  'needs_reply',
+];
+
+function parseInboxFilter(value: string | null): EmailInboxFilter {
+  if (value === 'needs_reply') {
+    return 'action';
+  }
+
+  if (value && INBOX_FILTERS.includes(value as EmailInboxFilter)) {
+    return value as EmailInboxFilter;
+  }
+
+  return 'all';
+}
+
+function threadMatchesFilter(
+  thread: EmailThreadSummary,
+  filter: EmailInboxFilter,
+): boolean {
+  if (filter === 'all') {
+    return true;
+  }
+
+  if (filter === 'action') {
+    return isActionableEmailCategory(thread.assistant_category);
+  }
+
+  if (filter === 'follow_up') {
+    return Boolean(thread.follow_up_at);
+  }
+
+  if (filter === 'linked') {
+    return thread.link.linked;
+  }
+
+  return thread.assistant_category === filter;
+}
 
 type SyncOptions = {
   mailOnly?: boolean;
@@ -45,12 +96,8 @@ function buildThreadsUrl(input: {
   const params = new URLSearchParams({ limit: '25' });
   params.set('mailbox', input.mailboxKind ?? 'personal');
 
-  if (input.filter === 'needs_reply') {
-    params.set('filter', 'needs_reply');
-  }
-
-  if (input.filter === 'linked') {
-    params.set('filter', 'linked');
+  if (input.filter !== 'all') {
+    params.set('filter', input.filter);
   }
 
   const trimmedSearch = input.searchQuery?.trim();
@@ -77,11 +124,12 @@ export function EmailPageClient({ initialData }: Props) {
   const [hasMore, setHasMore] = useState(initialData.hasMoreThreads);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
   const [syncing, startSyncTransition] = useTransition();
-  const [inboxFilter, setInboxFilter] = useState<EmailInboxFilter>(() => {
-    const filter = searchParams.get('filter');
-    return filter === 'needs_reply' || filter === 'linked' ? filter : 'all';
-  });
+  const [, startCategoryTransition] = useTransition();
+  const [inboxFilter, setInboxFilter] = useState<EmailInboxFilter>(() =>
+    parseInboxFilter(searchParams.get('filter')),
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searching, setSearching] = useState(false);
@@ -364,6 +412,132 @@ export function EmailPageClient({ initialData }: Props) {
     setInboxFilter(filter);
   }, []);
 
+  const handleThreadCategoryChange = useCallback(
+    (threadId: string, category: EmailThreadCategory) => {
+      setThreads((prev) =>
+        prev
+          .map((thread) =>
+            thread.id === threadId
+              ? { ...thread, assistant_category: category }
+              : thread,
+          )
+          .filter((thread) => threadMatchesFilter(thread, inboxFilter)),
+      );
+    },
+    [inboxFilter],
+  );
+
+  const categorizeSelectedThread = useCallback(
+    (category: EmailThreadCategory) => {
+      if (!selectedThreadId) {
+        return;
+      }
+
+      startCategoryTransition(async () => {
+        try {
+          await setEmailThreadCategoryAction({
+            threadId: selectedThreadId,
+            category,
+            accountSlug: initialData.accountSlug ?? undefined,
+          });
+          handleThreadCategoryChange(selectedThreadId, category);
+          toast.success('Category updated');
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not update category',
+          );
+        }
+      });
+    },
+    [
+      selectedThreadId,
+      initialData.accountSlug,
+      handleThreadCategoryChange,
+      startCategoryTransition,
+    ],
+  );
+
+  const navigateThreads = useCallback(
+    (direction: 1 | -1) => {
+      if (threads.length === 0) {
+        return;
+      }
+
+      const currentIndex = selectedThreadId
+        ? threads.findIndex((thread) => thread.id === selectedThreadId)
+        : -1;
+      const nextIndex =
+        currentIndex === -1
+          ? direction === 1
+            ? 0
+            : threads.length - 1
+          : Math.min(
+              threads.length - 1,
+              Math.max(0, currentIndex + direction),
+            );
+      const nextThread = threads[nextIndex];
+
+      if (nextThread) {
+        selectThread(nextThread.id);
+      }
+    },
+    [threads, selectedThreadId, selectThread],
+  );
+
+  useEffect(() => {
+    if (!reviewMode) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+
+      if (
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === 'j') {
+        event.preventDefault();
+        navigateThreads(1);
+        return;
+      }
+
+      if (key === 'k') {
+        event.preventDefault();
+        navigateThreads(-1);
+        return;
+      }
+
+      const categoryByKey: Record<string, EmailThreadCategory> = {
+        r: 'reply_now',
+        l: 'reply_later',
+        w: 'waiting',
+        f: 'fyi',
+        n: 'noise',
+      };
+
+      const category = categoryByKey[key];
+
+      if (category && selectedThreadId) {
+        event.preventDefault();
+        categorizeSelectedThread(category);
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [reviewMode, selectedThreadId, navigateThreads, categorizeSelectedThread]);
+
   const handleSearchQueryChange = useCallback((value: string) => {
     setSearchQuery(value);
   }, []);
@@ -434,6 +608,20 @@ export function EmailPageClient({ initialData }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
+            variant={reviewMode ? 'default' : 'outline'}
+            className={cn(
+              reviewMode
+                ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]'
+                : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]',
+            )}
+            onClick={() => setReviewMode((value) => !value)}
+            disabled={!connected}
+          >
+            <Keyboard className="mr-2 h-4 w-4" />
+            {reviewMode ? 'Review mode on' : 'Review mode'}
+          </Button>
+          <Button
+            type="button"
             variant="outline"
             className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             onClick={() => setShowSettings((value) => !value)}
@@ -476,6 +664,7 @@ export function EmailPageClient({ initialData }: Props) {
             initialAutoSaveGmailDrafts={
               initialData.settings.autoSaveGmailDrafts
             }
+            initialAllowSendFromOzer={initialData.settings.allowSendFromOzer}
             initialIgnoredSenders={initialData.settings.ignoredSenders}
             initialIgnoredDomains={initialData.settings.ignoredDomains}
             initialIgnoredSubjectKeywords={
@@ -502,21 +691,7 @@ export function EmailPageClient({ initialData }: Props) {
             threads={threads}
             selectedThreadId={selectedThreadId}
             onSelectThread={selectThread}
-            onThreadCategoryChange={(threadId, category) => {
-              setThreads((prev) =>
-                prev
-                  .map((thread) =>
-                    thread.id === threadId
-                      ? { ...thread, assistant_category: category }
-                      : thread,
-                  )
-                  .filter((thread) =>
-                    inboxFilter === 'needs_reply'
-                      ? thread.assistant_category === 'needs_reply'
-                      : true,
-                  ),
-              );
-            }}
+            onThreadCategoryChange={handleThreadCategoryChange}
             filter={inboxFilter}
             onFilterChange={changeInboxFilter}
             searchQuery={searchQuery}
@@ -540,8 +715,13 @@ export function EmailPageClient({ initialData }: Props) {
             threadId={selectedThreadId}
             connected={connected}
             workspaces={initialData.workspaces}
+            mailboxKind={mailboxKind}
+            accountSlug={initialData.accountSlug}
+            reviewMode={reviewMode}
+            allowSendFromOzer={initialData.settings.allowSendFromOzer}
             onBack={clearThread}
             showBackButton
+            onCategoryChange={handleThreadCategoryChange}
           />
         </div>
       </div>

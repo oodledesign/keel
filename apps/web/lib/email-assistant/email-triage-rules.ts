@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractEmailAddress } from './address-utils';
+import { categoryFromTriageRuleAction } from './email-thread-categories';
 import {
   type EmailTriageAction,
   type EmailTriageMatch,
@@ -388,7 +389,7 @@ async function applyRuleToMatchingThreads(
 
   if (matching.length === 0) return 0;
 
-  const category = action === 'ignore' ? 'no_reply' : 'needs_reply';
+  const category = categoryFromTriageRuleAction(action);
   const reason =
     action === 'ignore'
       ? scope === 'subject'

@@ -45,7 +45,7 @@ We process data to perform our contract with you, for legitimate interests (secu
 
 **Data:** encrypted OAuth tokens, synced email threads and messages, drafts, and extracted action items.
 
-**Purpose:** to sync your connected mailbox, triage messages, extract tasks, and draft replies when you use those features.
+**Purpose:** to sync your connected mailbox, triage messages, extract tasks, draft replies, and optionally send replies when you explicitly enable send-from-Ozer and confirm each send.
 
 **Google scopes:** `gmail.readonly`, `gmail.modify`, `gmail.settings.basic`.
 

@@ -130,6 +130,7 @@ export async function saveEmailAssistantSettings(input: {
   autoTriageEnabled: boolean;
   autoDraftEnabled: boolean;
   autoSaveGmailDrafts: boolean;
+  allowSendFromOzer?: boolean;
   mailboxKind?: 'business' | 'personal';
 }) {
   const client = getSupabaseServerClient();
@@ -166,6 +167,7 @@ export async function saveEmailAssistantSettings(input: {
       auto_triage_enabled: input.autoTriageEnabled,
       auto_draft_enabled: input.autoDraftEnabled,
       auto_save_gmail_drafts: input.autoSaveGmailDrafts,
+      allow_send_from_ozer: input.allowSendFromOzer ?? false,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'connection_id' },
