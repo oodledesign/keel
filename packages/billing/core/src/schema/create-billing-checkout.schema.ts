@@ -16,4 +16,6 @@ export const CreateBillingCheckoutSchema = z.object({
     }),
   ),
   metadata: z.record(z.string()).optional(),
+  /** Stripe coupon id for referral discount (mutually exclusive with promotion codes). */
+  referralDiscountCouponId: z.string().optional(),
 });

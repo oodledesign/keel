@@ -16,6 +16,7 @@ import {
   LifeBuoy,
   ListChecks,
   Mail,
+  Instagram,
   MessageSquare,
   MessageSquareText,
   Mic,
@@ -40,6 +41,7 @@ import {
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
   isFeedflowModuleEnabled,
+  isInstagramAutoreplyModuleEnabled,
   isMediaGenerateModuleEnabled,
   isRanklyModuleEnabled,
   isSignaturesModuleEnabled,
@@ -108,6 +110,15 @@ export function buildWorkAppLinks(
   }
 
   // Site Studio gates advanced tabs on Websites — no separate Apps nav item.
+
+  if (isInstagramAutoreplyModuleEnabled(ms)) {
+    children.push({
+      label: 'Instagram',
+      path: createPath(pathsConfig.app.accountInstagramAutoreply, account),
+      Icon: <Instagram className={iconClasses} />,
+      description: 'Keyword-triggered comment replies and DMs.',
+    });
+  }
 
   if (isFeedflowModuleEnabled(ms)) {
     children.push(

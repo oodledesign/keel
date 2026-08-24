@@ -113,9 +113,19 @@ export async function createStripeCheckout(
         }
       : {};
 
+  const referralCouponId = params.referralDiscountCouponId;
+  const discountParams = referralCouponId
+    ? {
+        discounts: [{ coupon: referralCouponId }],
+        allow_promotion_codes: false as const,
+      }
+    : {
+        allow_promotion_codes: params.enableDiscountField,
+      };
+
   return stripe.checkout.sessions.create({
     mode,
-    allow_promotion_codes: params.enableDiscountField,
+    ...discountParams,
     ui_mode: uiMode,
     line_items: lineItems,
     client_reference_id: clientReferenceId,

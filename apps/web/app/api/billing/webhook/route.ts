@@ -2,6 +2,8 @@ import { after } from 'next/server';
 
 import type Stripe from 'stripe';
 
+import { convertReferralOnInvoicePaid } from '~/lib/rewards/convert-referral-on-invoice-paid';
+
 import { getPlanTypesMap } from '@kit/billing';
 import { getBillingEventHandlerService } from '@kit/billing-gateway';
 import type {
@@ -186,6 +188,14 @@ export const POST = enhanceRouteHandler(
         },
         onEvent: async (rawEvent) => {
           const event = rawEvent as Stripe.Event;
+          if (event.type === 'invoice.paid') {
+            const admin = getSupabaseServerAdminClient();
+            await convertReferralOnInvoicePaid(
+              admin,
+              event as Stripe.InvoicePaidEvent,
+            );
+          }
+
           if (!isBillingLifecycleStripeEvent(event.type)) {
             return;
           }

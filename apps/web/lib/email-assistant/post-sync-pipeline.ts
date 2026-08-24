@@ -7,6 +7,7 @@ import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
 import { isFromOwner } from './address-utils';
+import { categoryForOwnerLatestMessage } from './owner-latest-message-category';
 import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
@@ -272,6 +273,31 @@ export async function runEmailAssistantPipeline(
     }
 
     if (thread.assistant_processed_message_id === latest.id) {
+      if (thread.assistant_category === 'waiting') {
+        const ownerCategory = categoryForOwnerLatestMessage({
+          subject: latest.subject ?? thread.subject,
+          snippet: latest.snippet,
+          bodyText: latest.body_text,
+        });
+
+        if (ownerCategory.category !== 'waiting') {
+          const { error: fixCategoryError } = await admin
+            .from('email_threads')
+            .update({
+              assistant_category: ownerCategory.category,
+              assistant_category_reason: ownerCategory.reason,
+              assistant_category_confidence: ownerCategory.confidence,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', thread.id)
+            .eq('user_id', userId);
+
+          if (fixCategoryError) {
+            result.errors.push(fixCategoryError.message);
+          }
+        }
+      }
+
       // Already handled this message tip — do not reclassify every sync.
       // Backfill extract only when this tip has never been extracted.
       if (
@@ -423,9 +449,14 @@ export async function runEmailAssistantPipeline(
     let confidence: number | null = null;
 
     if (isFromOwner(latest.from_address, owner.email)) {
-      category = 'waiting';
-      reason = 'Latest message is from you';
-      confidence = 1;
+      const ownerCategory = categoryForOwnerLatestMessage({
+        subject: latest.subject ?? thread.subject,
+        snippet: latest.snippet,
+        bodyText: latest.body_text,
+      });
+      category = ownerCategory.category;
+      reason = ownerCategory.reason;
+      confidence = ownerCategory.confidence;
     } else {
       const { data: messages, error: messagesError } = await admin
         .from('email_messages')

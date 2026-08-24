@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import { attributeReferralAtSignup } from '~/lib/rewards/attribute-referral-at-signup';
 
 import {
   authRateLimitKey,
@@ -69,6 +72,15 @@ export async function POST(request: Request) {
   }
 
   if (user?.id && user.email) {
+    void getSupabaseServerAdminClient()
+      .then((admin) => attributeReferralAtSignup({ referredUserId: user.id!, admin }))
+      .catch((err) => {
+        console.error(
+          '[sign-up] Referral attribution failed:',
+          err instanceof Error ? err.message : err,
+        );
+      });
+
     void import('~/lib/admin/platform-lifecycle-notifications')
       .then(({ notifyPlatformNewSignup }) =>
         notifyPlatformNewSignup({

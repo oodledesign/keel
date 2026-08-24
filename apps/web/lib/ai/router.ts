@@ -78,6 +78,8 @@ export const OzerAIFeature = {
   commercial_match_outreach: 'commercial_match_outreach',
   video_chapters: 'video_chapters',
   video_summary: 'video_summary',
+  instagram_reply_draft: 'instagram_reply_draft',
+  instagram_reply_enhanced: 'instagram_reply_enhanced',
 } as const;
 
 export type OzerAIFeatureKey =
@@ -515,6 +517,22 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     provider: 'anthropic',
     model: HAIKU_MODEL,
     credits: 2,
+    batchable: false,
+    maxOutputTokens: 512,
+    structuredOutput: false,
+  },
+  instagram_reply_draft: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 5,
+    batchable: false,
+    maxOutputTokens: 512,
+    structuredOutput: false,
+  },
+  instagram_reply_enhanced: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 10,
     batchable: false,
     maxOutputTokens: 512,
     structuredOutput: false,

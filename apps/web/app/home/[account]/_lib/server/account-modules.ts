@@ -39,7 +39,8 @@ export type AccountModuleKey =
   | 'viewings'
   | 'leases'
   | 'reports'
-  | 'proposals';
+  | 'proposals'
+  | 'instagram_autoreply';
 
 /** Nav label "Projects" maps to module_key `jobs` in account_module_settings. */
 export function resolveAccountModuleKey(navKey: string): string {
@@ -196,4 +197,11 @@ export function isMediaGenerateModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,
 ) {
   return isWorkModuleEnabled(moduleSettings, 'media_generate');
+}
+
+/** Instagram auto-reply add-on (`account_module_settings.module_key = 'instagram_autoreply'`). */
+export function isInstagramAutoreplyModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'instagram_autoreply');
 }

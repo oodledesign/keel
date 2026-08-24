@@ -17,6 +17,8 @@ import pathsConfig from '~/config/paths.config';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { isPurchasableWorkspaceAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import { Database } from '~/lib/database.types';
+import { resolveReferralCheckoutCoupon } from '~/lib/rewards/create-referred-user-discount';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { TeamCheckoutSchema } from '../schema/team-billing.schema';
 
@@ -170,6 +172,21 @@ class TeamBillingService {
         `Creating checkout session...`,
       );
 
+      const admin = getSupabaseServerAdminClient();
+      const primaryLineItem = plan.lineItems[0];
+      const primaryQuantity =
+        variantQuantities.find((v) => v.variantId === primaryLineItem?.id)
+          ?.quantity ?? 1;
+
+      const referralDiscountCouponId = primaryLineItem?.id
+        ? await resolveReferralCheckoutCoupon({
+            admin,
+            referredUserId: userId,
+            stripePriceId: primaryLineItem.id,
+            quantity: primaryQuantity,
+          })
+        : undefined;
+
       // call the payment gateway to create the checkout session
       const { checkoutToken } = await service.createCheckoutSession({
         accountId,
@@ -179,6 +196,7 @@ class TeamBillingService {
         customerId,
         variantQuantities,
         enableDiscountField: product.enableDiscountField,
+        referralDiscountCouponId,
       });
 
       // return the checkout token to the client

@@ -2,10 +2,12 @@ import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
 
 import { createAuthCallbackService } from '@kit/supabase/auth';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { resolvePostAuthLandingPath } from '~/lib/dashboard-shortcuts/resolve-post-auth-landing';
+import { attributeReferralAtSignup } from '~/lib/rewards/attribute-referral-at-signup';
 
 const HOME = pathsConfig.app.home;
 
@@ -32,6 +34,17 @@ async function landingAfterAuth(
       );
 
       if (isBrandNew && hasOAuthIdentity && user.email) {
+        void getSupabaseServerAdminClient()
+          .then((admin) =>
+            attributeReferralAtSignup({ referredUserId: user.id, admin }),
+          )
+          .catch((err) => {
+            console.error(
+              '[auth/callback] Referral attribution failed:',
+              err instanceof Error ? err.message : err,
+            );
+          });
+
         void import('~/lib/admin/platform-lifecycle-notifications')
           .then(({ notifyPlatformNewSignup }) =>
             notifyPlatformNewSignup({

@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileText,
   Inbox,
+  Gift,
   LayoutDashboard,
   LayoutGrid,
   LifeBuoy,
@@ -121,6 +122,16 @@ export function AdminSidebar() {
                 >
                   <LifeBuoy className={'h-4'} />
                   <span>At-risk</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
+                isActive={path.includes('/admin/rewards/content')}
+                asChild
+              >
+                <Link className={'flex gap-2.5'} href={'/admin/rewards/content'}>
+                  <Gift className={'h-4'} />
+                  <span>Content rewards</span>
                 </Link>
               </SidebarMenuButton>
 

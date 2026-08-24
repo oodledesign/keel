@@ -52,6 +52,11 @@ export function buildPersonalSettingsNav(): PersonalSettingsNavItem[] {
       href: pathsConfig.app.personalAccountVisionSettings,
     },
     {
+      id: 'rewards',
+      label: 'Referrals & rewards',
+      href: pathsConfig.app.personalAccountRewardsSettings,
+    },
+    {
       id: 'dictation',
       label: 'Dictation history',
       href: pathsConfig.app.personalAccountDictationHistory,

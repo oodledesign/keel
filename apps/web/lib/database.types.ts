@@ -633,6 +633,7 @@ export type Database = {
         Row: {
           account_id: string
           max_members: number | null
+          max_project_guests: number | null
           max_properties: number | null
           max_videos: number | null
           pending_billable_seats: number | null
@@ -645,6 +646,7 @@ export type Database = {
         Insert: {
           account_id: string
           max_members?: number | null
+          max_project_guests?: number | null
           max_properties?: number | null
           max_videos?: number | null
           pending_billable_seats?: number | null
@@ -657,6 +659,7 @@ export type Database = {
         Update: {
           account_id?: string
           max_members?: number | null
+          max_project_guests?: number | null
           max_properties?: number | null
           max_videos?: number | null
           pending_billable_seats?: number | null
@@ -689,6 +692,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      account_storage_purges: {
+        Row: {
+          account_id: string
+          account_name: string | null
+          error: string | null
+          id: string
+          notice_14d_sent_at: string | null
+          notice_3d_sent_at: string | null
+          objects_removed: number | null
+          owner_email: string | null
+          purge_after: string
+          purged_at: string | null
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          account_id: string
+          account_name?: string | null
+          error?: string | null
+          id?: string
+          notice_14d_sent_at?: string | null
+          notice_3d_sent_at?: string | null
+          objects_removed?: number | null
+          owner_email?: string | null
+          purge_after?: string
+          purged_at?: string | null
+          requested_at?: string
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          account_name?: string | null
+          error?: string | null
+          id?: string
+          notice_14d_sent_at?: string | null
+          notice_3d_sent_at?: string | null
+          objects_removed?: number | null
+          owner_email?: string | null
+          purge_after?: string
+          purged_at?: string | null
+          requested_at?: string
+          status?: string
+        }
+        Relationships: []
       }
       account_task_automation_settings: {
         Row: {
@@ -1426,6 +1474,8 @@ export type Database = {
         Row: {
           account_id: string
           created_at: string | null
+          credit_alert_period_start: string | null
+          credit_alerts_sent: number
           credits_monthly_limit: number
           credits_purchased: number
           credits_remaining: number
@@ -1437,6 +1487,8 @@ export type Database = {
         Insert: {
           account_id: string
           created_at?: string | null
+          credit_alert_period_start?: string | null
+          credit_alerts_sent?: number
           credits_monthly_limit?: number
           credits_purchased?: number
           credits_remaining?: number
@@ -1448,6 +1500,8 @@ export type Database = {
         Update: {
           account_id?: string
           created_at?: string | null
+          credit_alert_period_start?: string | null
+          credit_alerts_sent?: number
           credits_monthly_limit?: number
           credits_purchased?: number
           credits_remaining?: number
@@ -2011,6 +2065,7 @@ export type Database = {
           account_id: string
           id: string
           notification_type: string
+          period_key: string
           sent_at: string
           subscription_id: string
         }
@@ -2018,6 +2073,7 @@ export type Database = {
           account_id: string
           id?: string
           notification_type: string
+          period_key?: string
           sent_at?: string
           subscription_id: string
         }
@@ -2025,6 +2081,7 @@ export type Database = {
           account_id?: string
           id?: string
           notification_type?: string
+          period_key?: string
           sent_at?: string
           subscription_id?: string
         }
@@ -3920,6 +3977,9 @@ export type Database = {
           account_id: string
           address_line_1: string | null
           address_line_2: string | null
+          aml_completed: boolean
+          aml_completed_at: string | null
+          aml_notes: string | null
           archived_at: string | null
           city: string | null
           client_org_id: string | null
@@ -3946,6 +4006,9 @@ export type Database = {
           account_id: string
           address_line_1?: string | null
           address_line_2?: string | null
+          aml_completed?: boolean
+          aml_completed_at?: string | null
+          aml_notes?: string | null
           archived_at?: string | null
           city?: string | null
           client_org_id?: string | null
@@ -3972,6 +4035,9 @@ export type Database = {
           account_id?: string
           address_line_1?: string | null
           address_line_2?: string | null
+          aml_completed?: boolean
+          aml_completed_at?: string | null
+          aml_notes?: string | null
           archived_at?: string | null
           city?: string | null
           client_org_id?: string | null
@@ -4028,6 +4094,198 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_account_events: {
+        Row: {
+          account_id: string
+          actor_user_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          metadata: Json
+          summary: string
+        }
+        Insert: {
+          account_id: string
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          summary: string
+        }
+        Update: {
+          account_id?: string
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_account_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_account_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_account_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_circulation_recipients: {
+        Row: {
+          account_id: string
+          created_at: string
+          email: string
+          error_message: string | null
+          id: string
+          requirement_id: string | null
+          send_id: string
+          skip_reason: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          email: string
+          error_message?: string | null
+          id?: string
+          requirement_id?: string | null
+          send_id: string
+          skip_reason?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          id?: string
+          requirement_id?: string | null
+          send_id?: string
+          skip_reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_circulation_recipients_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_recipients_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_recipients_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_recipients_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_recipients_send_id_fkey"
+            columns: ["send_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_circulation_sends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_circulation_sends: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          listing_id: string
+          recipient_count: number
+          sent_by: string | null
+          subject: string
+          template_version: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          recipient_count?: number
+          sent_by?: string | null
+          subject: string
+          template_version?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          recipient_count?: number
+          sent_by?: string | null
+          subject?: string
+          template_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_circulation_sends_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_sends_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_sends_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_sends_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_listings"
             referencedColumns: ["id"]
           },
         ]
@@ -4302,6 +4560,74 @@ export type Database = {
           },
         ]
       }
+      commercial_listing_brochures: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          listing_id: string
+          orientation: string
+          page_size: string
+          pages: Json
+          storage_path: string | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          orientation?: string
+          page_size?: string
+          pages?: Json
+          storage_path?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          orientation?: string
+          page_size?: string
+          pages?: Json
+          storage_path?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_listing_brochures_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_listing_brochures_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_listing_brochures_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_listing_brochures_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_listing_co_agents: {
         Row: {
           account_id: string
@@ -4518,6 +4844,7 @@ export type Database = {
           account_id: string
           client_id: string
           contact_email: string | null
+          contact_id: string | null
           contact_name: string | null
           contact_phone: string | null
           created_at: string
@@ -4531,6 +4858,7 @@ export type Database = {
           account_id: string
           client_id: string
           contact_email?: string | null
+          contact_id?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -4544,6 +4872,7 @@ export type Database = {
           account_id?: string
           client_id?: string
           contact_email?: string | null
+          contact_id?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -4580,6 +4909,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_listing_parties_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -4786,6 +5122,7 @@ export type Database = {
           brochure_share_enabled: boolean
           brochure_share_token: string | null
           build_status: string | null
+          commercial_property_id: string | null
           condition_description: string | null
           controlled_by: string | null
           country: string | null
@@ -4805,8 +5142,12 @@ export type Database = {
           id: string
           instructing_client_id: string | null
           instruction_nature: string | null
+          insurance_type: string | null
           is_instructed: boolean
           key_points: Json
+          land_size_max: number | null
+          land_size_metric: string | null
+          land_size_min: number | null
           landlord_share_enabled: boolean
           landlord_share_token: string | null
           latitude: number | null
@@ -4819,6 +5160,8 @@ export type Database = {
           off_market_at: string | null
           on_market_at: string | null
           pa_user_id: string | null
+          parking_available: boolean
+          parking_spaces: number | null
           planning_status: string | null
           possession: string | null
           postcode: string | null
@@ -4835,6 +5178,10 @@ export type Database = {
           size_max_sqft: number | null
           size_min_sqft: number | null
           status: string
+          street_view_heading: number | null
+          street_view_pano_id: string | null
+          street_view_pitch: number | null
+          street_view_zoom: number | null
           summary: string | null
           team_id: string | null
           tenure: string | null
@@ -4861,6 +5208,7 @@ export type Database = {
           brochure_share_enabled?: boolean
           brochure_share_token?: string | null
           build_status?: string | null
+          commercial_property_id?: string | null
           condition_description?: string | null
           controlled_by?: string | null
           country?: string | null
@@ -4880,8 +5228,12 @@ export type Database = {
           id?: string
           instructing_client_id?: string | null
           instruction_nature?: string | null
+          insurance_type?: string | null
           is_instructed?: boolean
           key_points?: Json
+          land_size_max?: number | null
+          land_size_metric?: string | null
+          land_size_min?: number | null
           landlord_share_enabled?: boolean
           landlord_share_token?: string | null
           latitude?: number | null
@@ -4894,6 +5246,8 @@ export type Database = {
           off_market_at?: string | null
           on_market_at?: string | null
           pa_user_id?: string | null
+          parking_available?: boolean
+          parking_spaces?: number | null
           planning_status?: string | null
           possession?: string | null
           postcode?: string | null
@@ -4910,6 +5264,10 @@ export type Database = {
           size_max_sqft?: number | null
           size_min_sqft?: number | null
           status?: string
+          street_view_heading?: number | null
+          street_view_pano_id?: string | null
+          street_view_pitch?: number | null
+          street_view_zoom?: number | null
           summary?: string | null
           team_id?: string | null
           tenure?: string | null
@@ -4936,6 +5294,7 @@ export type Database = {
           brochure_share_enabled?: boolean
           brochure_share_token?: string | null
           build_status?: string | null
+          commercial_property_id?: string | null
           condition_description?: string | null
           controlled_by?: string | null
           country?: string | null
@@ -4955,8 +5314,12 @@ export type Database = {
           id?: string
           instructing_client_id?: string | null
           instruction_nature?: string | null
+          insurance_type?: string | null
           is_instructed?: boolean
           key_points?: Json
+          land_size_max?: number | null
+          land_size_metric?: string | null
+          land_size_min?: number | null
           landlord_share_enabled?: boolean
           landlord_share_token?: string | null
           latitude?: number | null
@@ -4969,6 +5332,8 @@ export type Database = {
           off_market_at?: string | null
           on_market_at?: string | null
           pa_user_id?: string | null
+          parking_available?: boolean
+          parking_spaces?: number | null
           planning_status?: string | null
           possession?: string | null
           postcode?: string | null
@@ -4985,6 +5350,10 @@ export type Database = {
           size_max_sqft?: number | null
           size_min_sqft?: number | null
           status?: string
+          street_view_heading?: number | null
+          street_view_pano_id?: string | null
+          street_view_pitch?: number | null
+          street_view_zoom?: number | null
           summary?: string | null
           team_id?: string | null
           tenure?: string | null
@@ -5025,6 +5394,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commercial_listings_commercial_property_id_fkey"
+            columns: ["commercial_property_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_properties"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commercial_listings_instructing_client_id_fkey"
             columns: ["instructing_client_id"]
             isOneToOne: false
@@ -5036,6 +5412,89 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "commercial_workspace_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_marketing_preferences: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          consent_copy_version: string | null
+          consent_source: string | null
+          consented_at: string | null
+          created_at: string
+          email: string
+          id: string
+          lawful_basis: string
+          marketing_status: string
+          purpose: string
+          suppressed_at: string | null
+          suppression_reason: string | null
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          consent_copy_version?: string | null
+          consent_source?: string | null
+          consented_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          lawful_basis?: string
+          marketing_status?: string
+          purpose?: string
+          suppressed_at?: string | null
+          suppression_reason?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          consent_copy_version?: string | null
+          consent_source?: string | null
+          consented_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          lawful_basis?: string
+          marketing_status?: string
+          purpose?: string
+          suppressed_at?: string | null
+          suppression_reason?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_marketing_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_marketing_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_marketing_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_marketing_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -5262,10 +5721,239 @@ export type Database = {
           },
         ]
       }
+      commercial_properties: {
+        Row: {
+          account_id: string
+          address_line_1: string | null
+          address_line_2: string | null
+          archived_at: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          notes: string | null
+          postcode: string | null
+          sector: string | null
+          town: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          address_line_1?: string | null
+          address_line_2?: string | null
+          archived_at?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          notes?: string | null
+          postcode?: string | null
+          sector?: string | null
+          town?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          address_line_1?: string | null
+          address_line_2?: string | null
+          archived_at?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          notes?: string | null
+          postcode?: string | null
+          sector?: string | null
+          town?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_properties_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_properties_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_properties_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_property_parties: {
+        Row: {
+          account_id: string
+          client_id: string
+          contact_email: string | null
+          contact_id: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          property_id: string
+          role: string
+          sort_order: number
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          property_id: string
+          role: string
+          sort_order?: number
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          property_id?: string
+          role?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_property_parties_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_property_parties_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_property_parties_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_property_parties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_property_parties_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_property_parties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_requirement_forms: {
+        Row: {
+          account_id: string
+          consent_copy_version: string
+          created_at: string
+          enabled: boolean
+          id: string
+          intro: string | null
+          privacy_policy_url: string | null
+          share_token: string
+          success_message: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          consent_copy_version?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          intro?: string | null
+          privacy_policy_url?: string | null
+          share_token: string
+          success_message?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          consent_copy_version?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          intro?: string | null
+          privacy_policy_url?: string | null
+          share_token?: string
+          success_message?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_requirement_forms_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_requirement_forms_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_requirement_forms_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_requirements: {
         Row: {
           account_id: string
           assigned_to: string | null
+          branch_id: string | null
           budget_max_pence: number | null
           budget_min_pence: number | null
           client_id: string | null
@@ -5283,6 +5971,7 @@ export type Database = {
           latitude: number | null
           location_text: string | null
           longitude: number | null
+          marketing_preference_id: string | null
           notes: string | null
           search_radius_miles: number | null
           sector: string | null
@@ -5297,6 +5986,7 @@ export type Database = {
         Insert: {
           account_id: string
           assigned_to?: string | null
+          branch_id?: string | null
           budget_max_pence?: number | null
           budget_min_pence?: number | null
           client_id?: string | null
@@ -5314,6 +6004,7 @@ export type Database = {
           latitude?: number | null
           location_text?: string | null
           longitude?: number | null
+          marketing_preference_id?: string | null
           notes?: string | null
           search_radius_miles?: number | null
           sector?: string | null
@@ -5328,6 +6019,7 @@ export type Database = {
         Update: {
           account_id?: string
           assigned_to?: string | null
+          branch_id?: string | null
           budget_max_pence?: number | null
           budget_min_pence?: number | null
           client_id?: string | null
@@ -5345,6 +6037,7 @@ export type Database = {
           latitude?: number | null
           location_text?: string | null
           longitude?: number | null
+          marketing_preference_id?: string | null
           notes?: string | null
           search_radius_miles?: number | null
           sector?: string | null
@@ -5379,6 +6072,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commercial_requirements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "account_branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commercial_requirements_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
@@ -5390,6 +6090,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_requirements_marketing_preference_id_fkey"
+            columns: ["marketing_preference_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_marketing_preferences"
             referencedColumns: ["id"]
           },
         ]
@@ -6073,6 +6780,9 @@ export type Database = {
       contacts: {
         Row: {
           account_id: string | null
+          aml_completed: boolean
+          aml_completed_at: string | null
+          aml_notes: string | null
           client_id: string | null
           client_org_id: string | null
           created_at: string | null
@@ -6091,6 +6801,9 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          aml_completed?: boolean
+          aml_completed_at?: string | null
+          aml_notes?: string | null
           client_id?: string | null
           client_org_id?: string | null
           created_at?: string | null
@@ -6109,6 +6822,9 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          aml_completed?: boolean
+          aml_completed_at?: string | null
+          aml_notes?: string | null
           client_id?: string | null
           client_org_id?: string | null
           created_at?: string | null
@@ -6770,6 +7486,7 @@ export type Database = {
       }
       email_assistant_settings: {
         Row: {
+          allow_send_from_ozer: boolean
           auto_draft_enabled: boolean
           auto_save_gmail_drafts: boolean
           auto_triage_enabled: boolean
@@ -6790,6 +7507,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          allow_send_from_ozer?: boolean
           auto_draft_enabled?: boolean
           auto_save_gmail_drafts?: boolean
           auto_triage_enabled?: boolean
@@ -6810,6 +7528,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          allow_send_from_ozer?: boolean
           auto_draft_enabled?: boolean
           auto_save_gmail_drafts?: boolean
           auto_triage_enabled?: boolean
@@ -7109,9 +7828,11 @@ export type Database = {
           body_text: string
           created_at: string
           gmail_draft_id: string | null
+          gmail_message_id: string | null
           id: string
           model: string | null
           reply_to_message_id: string | null
+          sent_at: string | null
           status: string
           subject: string | null
           thread_id: string
@@ -7122,9 +7843,11 @@ export type Database = {
           body_text: string
           created_at?: string
           gmail_draft_id?: string | null
+          gmail_message_id?: string | null
           id?: string
           model?: string | null
           reply_to_message_id?: string | null
+          sent_at?: string | null
           status?: string
           subject?: string | null
           thread_id: string
@@ -7135,9 +7858,11 @@ export type Database = {
           body_text?: string
           created_at?: string
           gmail_draft_id?: string | null
+          gmail_message_id?: string | null
           id?: string
           model?: string | null
           reply_to_message_id?: string | null
+          sent_at?: string | null
           status?: string
           subject?: string | null
           thread_id?: string
@@ -7300,18 +8025,27 @@ export type Database = {
         Row: {
           account_id: string | null
           assistant_category: string | null
+          assistant_category_confidence: number | null
           assistant_category_reason: string | null
+          assistant_extract_message_id: string | null
           assistant_processed_message_id: string | null
           client_id: string | null
           connection_id: string | null
           created_at: string
+          follow_up_at: string | null
+          follow_up_note: string | null
           gmail_thread_id: string
           id: string
           is_unread: boolean
           label_ids: string[] | null
           last_message_at: string | null
+          link_confidence: number | null
           link_source: string | null
+          link_suggestion: Json | null
           participants: Json
+          pipeline_deal_id: string | null
+          pipeline_lead_confidence: number | null
+          pipeline_lead_suggestion: Json | null
           project_id: string | null
           snippet: string | null
           subject: string | null
@@ -7321,18 +8055,27 @@ export type Database = {
         Insert: {
           account_id?: string | null
           assistant_category?: string | null
+          assistant_category_confidence?: number | null
           assistant_category_reason?: string | null
+          assistant_extract_message_id?: string | null
           assistant_processed_message_id?: string | null
           client_id?: string | null
           connection_id?: string | null
           created_at?: string
+          follow_up_at?: string | null
+          follow_up_note?: string | null
           gmail_thread_id: string
           id?: string
           is_unread?: boolean
           label_ids?: string[] | null
           last_message_at?: string | null
+          link_confidence?: number | null
           link_source?: string | null
+          link_suggestion?: Json | null
           participants?: Json
+          pipeline_deal_id?: string | null
+          pipeline_lead_confidence?: number | null
+          pipeline_lead_suggestion?: Json | null
           project_id?: string | null
           snippet?: string | null
           subject?: string | null
@@ -7342,18 +8085,27 @@ export type Database = {
         Update: {
           account_id?: string | null
           assistant_category?: string | null
+          assistant_category_confidence?: number | null
           assistant_category_reason?: string | null
+          assistant_extract_message_id?: string | null
           assistant_processed_message_id?: string | null
           client_id?: string | null
           connection_id?: string | null
           created_at?: string
+          follow_up_at?: string | null
+          follow_up_note?: string | null
           gmail_thread_id?: string
           id?: string
           is_unread?: boolean
           label_ids?: string[] | null
           last_message_at?: string | null
+          link_confidence?: number | null
           link_source?: string | null
+          link_suggestion?: Json | null
           participants?: Json
+          pipeline_deal_id?: string | null
+          pipeline_lead_confidence?: number | null
+          pipeline_lead_suggestion?: Json | null
           project_id?: string | null
           snippet?: string | null
           subject?: string | null
@@ -7383,6 +8135,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "email_threads_assistant_extract_message_id_fkey"
+            columns: ["assistant_extract_message_id"]
+            isOneToOne: false
+            referencedRelation: "email_messages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "email_threads_assistant_processed_message_id_fkey"
             columns: ["assistant_processed_message_id"]
             isOneToOne: false
@@ -7401,6 +8160,13 @@ export type Database = {
             columns: ["connection_id"]
             isOneToOne: false
             referencedRelation: "google_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_threads_pipeline_deal_id_fkey"
+            columns: ["pipeline_deal_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_deals"
             referencedColumns: ["id"]
           },
           {
@@ -8563,15 +9329,367 @@ export type Database = {
           },
         ]
       }
+      ig_comment_events: {
+        Row: {
+          account_id: string
+          comment_id: string
+          comment_text: string | null
+          commenter_ig_id: string | null
+          commenter_username: string | null
+          created_at: string
+          dm_ai_credits_spent: number | null
+          dm_content: string | null
+          dm_sent_at: string | null
+          dm_status: string | null
+          error_message: string | null
+          id: string
+          ig_account_id: string
+          matched_trigger_id: string | null
+          media_id: string | null
+          pipeline_deal_id: string | null
+          public_reply_ai_credits_spent: number | null
+          public_reply_content: string | null
+          public_reply_sent_at: string | null
+          public_reply_status: string | null
+        }
+        Insert: {
+          account_id: string
+          comment_id: string
+          comment_text?: string | null
+          commenter_ig_id?: string | null
+          commenter_username?: string | null
+          created_at?: string
+          dm_ai_credits_spent?: number | null
+          dm_content?: string | null
+          dm_sent_at?: string | null
+          dm_status?: string | null
+          error_message?: string | null
+          id?: string
+          ig_account_id: string
+          matched_trigger_id?: string | null
+          media_id?: string | null
+          pipeline_deal_id?: string | null
+          public_reply_ai_credits_spent?: number | null
+          public_reply_content?: string | null
+          public_reply_sent_at?: string | null
+          public_reply_status?: string | null
+        }
+        Update: {
+          account_id?: string
+          comment_id?: string
+          comment_text?: string | null
+          commenter_ig_id?: string | null
+          commenter_username?: string | null
+          created_at?: string
+          dm_ai_credits_spent?: number | null
+          dm_content?: string | null
+          dm_sent_at?: string | null
+          dm_status?: string | null
+          error_message?: string | null
+          id?: string
+          ig_account_id?: string
+          matched_trigger_id?: string | null
+          media_id?: string | null
+          pipeline_deal_id?: string | null
+          public_reply_ai_credits_spent?: number | null
+          public_reply_content?: string | null
+          public_reply_sent_at?: string | null
+          public_reply_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_comment_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_comment_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_comment_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_comment_events_ig_account_id_fkey"
+            columns: ["ig_account_id"]
+            isOneToOne: false
+            referencedRelation: "ig_connected_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_comment_events_matched_trigger_id_fkey"
+            columns: ["matched_trigger_id"]
+            isOneToOne: false
+            referencedRelation: "ig_triggers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_comment_events_pipeline_deal_id_fkey"
+            columns: ["pipeline_deal_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_connected_accounts: {
+        Row: {
+          access_token: string
+          account_id: string
+          created_at: string
+          facebook_page_id: string
+          id: string
+          ig_business_account_id: string
+          ig_username: string | null
+          is_active: boolean
+          token_expires_at: string | null
+          updated_at: string
+          voice_settings: Json
+        }
+        Insert: {
+          access_token: string
+          account_id: string
+          created_at?: string
+          facebook_page_id: string
+          id?: string
+          ig_business_account_id: string
+          ig_username?: string | null
+          is_active?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+          voice_settings?: Json
+        }
+        Update: {
+          access_token?: string
+          account_id?: string
+          created_at?: string
+          facebook_page_id?: string
+          id?: string
+          ig_business_account_id?: string
+          ig_username?: string | null
+          is_active?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+          voice_settings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_connected_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_connected_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_connected_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_triggers: {
+        Row: {
+          account_id: string
+          create_deal_on_match: boolean
+          created_at: string
+          deal_stage: string | null
+          dm_ai_tier: string | null
+          dm_enabled: boolean
+          dm_mode: string
+          dm_template: string | null
+          id: string
+          ig_account_id: string
+          is_active: boolean
+          keywords: string[]
+          match_type: string
+          name: string
+          public_reply_ai_tier: string | null
+          public_reply_enabled: boolean
+          public_reply_mode: string
+          public_reply_template: string | null
+          scope: string
+          target_media_ids: string[] | null
+          updated_at: string
+          voice_settings_override: Json | null
+        }
+        Insert: {
+          account_id: string
+          create_deal_on_match?: boolean
+          created_at?: string
+          deal_stage?: string | null
+          dm_ai_tier?: string | null
+          dm_enabled?: boolean
+          dm_mode?: string
+          dm_template?: string | null
+          id?: string
+          ig_account_id: string
+          is_active?: boolean
+          keywords: string[]
+          match_type?: string
+          name: string
+          public_reply_ai_tier?: string | null
+          public_reply_enabled?: boolean
+          public_reply_mode?: string
+          public_reply_template?: string | null
+          scope?: string
+          target_media_ids?: string[] | null
+          updated_at?: string
+          voice_settings_override?: Json | null
+        }
+        Update: {
+          account_id?: string
+          create_deal_on_match?: boolean
+          created_at?: string
+          deal_stage?: string | null
+          dm_ai_tier?: string | null
+          dm_enabled?: boolean
+          dm_mode?: string
+          dm_template?: string | null
+          id?: string
+          ig_account_id?: string
+          is_active?: boolean
+          keywords?: string[]
+          match_type?: string
+          name?: string
+          public_reply_ai_tier?: string | null
+          public_reply_enabled?: boolean
+          public_reply_mode?: string
+          public_reply_template?: string | null
+          scope?: string
+          target_media_ids?: string[] | null
+          updated_at?: string
+          voice_settings_override?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_triggers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_triggers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_triggers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_triggers_ig_account_id_fkey"
+            columns: ["ig_account_id"]
+            isOneToOne: false
+            referencedRelation: "ig_connected_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instruction_client_care_log: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          instruction_id: string
+          note: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          instruction_id: string
+          note: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          instruction_id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instruction_client_care_log_instruction_id_fkey"
+            columns: ["instruction_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instruction_compliance_items: {
+        Row: {
+          checked_at: string | null
+          checked_by: string | null
+          id: string
+          instruction_id: string
+          is_checked: boolean
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          checked_at?: string | null
+          checked_by?: string | null
+          id?: string
+          instruction_id: string
+          is_checked?: boolean
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          checked_at?: string | null
+          checked_by?: string | null
+          id?: string
+          instruction_id?: string
+          is_checked?: boolean
+          label?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instruction_compliance_items_instruction_id_fkey"
+            columns: ["instruction_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           account_id: string
           created_at: string
           email: string
           expires_at: string
+          first_name: string | null
           id: number
           invite_token: string
           invited_by: string
+          last_name: string | null
           project_id: string | null
           role: string
           seat_kind: string
@@ -8582,9 +9700,11 @@ export type Database = {
           created_at?: string
           email: string
           expires_at?: string
+          first_name?: string | null
           id?: number
           invite_token: string
           invited_by: string
+          last_name?: string | null
           project_id?: string | null
           role: string
           seat_kind?: string
@@ -8595,9 +9715,11 @@ export type Database = {
           created_at?: string
           email?: string
           expires_at?: string
+          first_name?: string | null
           id?: number
           invite_token?: string
           invited_by?: string
+          last_name?: string | null
           project_id?: string | null
           role?: string
           seat_kind?: string
@@ -10775,6 +11897,7 @@ export type Database = {
       pipeline_deals: {
         Row: {
           account_id: string | null
+          board_position: number
           business_id: string | null
           client_id: string | null
           client_org_id: string | null
@@ -10786,6 +11909,7 @@ export type Database = {
           contact_name: string | null
           contact_phone: string | null
           created_at: string | null
+          email_thread_id: string | null
           expected_close: string | null
           hots_incentives: string | null
           hots_lease_years: number | null
@@ -10795,6 +11919,7 @@ export type Database = {
           hots_solicitor_name: string | null
           hots_target_exchange_date: string | null
           id: string
+          ladder_position: number
           lost_at: string | null
           lost_reason: string | null
           name: string
@@ -10811,6 +11936,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          board_position?: number
           business_id?: string | null
           client_id?: string | null
           client_org_id?: string | null
@@ -10822,6 +11948,7 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          email_thread_id?: string | null
           expected_close?: string | null
           hots_incentives?: string | null
           hots_lease_years?: number | null
@@ -10831,6 +11958,7 @@ export type Database = {
           hots_solicitor_name?: string | null
           hots_target_exchange_date?: string | null
           id?: string
+          ladder_position?: number
           lost_at?: string | null
           lost_reason?: string | null
           name: string
@@ -10847,6 +11975,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          board_position?: number
           business_id?: string | null
           client_id?: string | null
           client_org_id?: string | null
@@ -10858,6 +11987,7 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          email_thread_id?: string | null
           expected_close?: string | null
           hots_incentives?: string | null
           hots_lease_years?: number | null
@@ -10867,6 +11997,7 @@ export type Database = {
           hots_solicitor_name?: string | null
           hots_target_exchange_date?: string | null
           id?: string
+          ladder_position?: number
           lost_at?: string | null
           lost_reason?: string | null
           name?: string
@@ -10936,6 +12067,13 @@ export type Database = {
             columns: ["commercial_requirement_id"]
             isOneToOne: false
             referencedRelation: "commercial_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_deals_email_thread_id_fkey"
+            columns: ["email_thread_id"]
+            isOneToOne: false
+            referencedRelation: "email_threads"
             referencedColumns: ["id"]
           },
         ]
@@ -13860,6 +14998,7 @@ export type Database = {
           created_at: string | null
           default_landing_type: string
           default_workspace_slug: string | null
+          email_notification_preferences: Json
           first_name: string | null
           last_name: string | null
           mobile: string | null
@@ -13867,6 +15006,7 @@ export type Database = {
           personal_include_workspace_tasks: boolean
           personal_mobile_nav_shortcuts: Json
           personal_vision_dashboard_enabled: boolean
+          personal_vision_morning_prompt_enabled: boolean
           updated_at: string | null
           use_ozer_for_community: boolean
           use_ozer_for_family: boolean
@@ -13884,6 +15024,7 @@ export type Database = {
           created_at?: string | null
           default_landing_type?: string
           default_workspace_slug?: string | null
+          email_notification_preferences?: Json
           first_name?: string | null
           last_name?: string | null
           mobile?: string | null
@@ -13891,6 +15032,7 @@ export type Database = {
           personal_include_workspace_tasks?: boolean
           personal_mobile_nav_shortcuts?: Json
           personal_vision_dashboard_enabled?: boolean
+          personal_vision_morning_prompt_enabled?: boolean
           updated_at?: string | null
           use_ozer_for_community?: boolean
           use_ozer_for_family?: boolean
@@ -13908,6 +15050,7 @@ export type Database = {
           created_at?: string | null
           default_landing_type?: string
           default_workspace_slug?: string | null
+          email_notification_preferences?: Json
           first_name?: string | null
           last_name?: string | null
           mobile?: string | null
@@ -13915,6 +15058,7 @@ export type Database = {
           personal_include_workspace_tasks?: boolean
           personal_mobile_nav_shortcuts?: Json
           personal_vision_dashboard_enabled?: boolean
+          personal_vision_morning_prompt_enabled?: boolean
           updated_at?: string | null
           use_ozer_for_community?: boolean
           use_ozer_for_family?: boolean
@@ -15203,6 +16347,7 @@ export type Database = {
           name: string
           notes: string | null
           portal_share_scope: string
+          portal_visible: boolean
           project_id: string | null
           sitemap: Json
           stack: string
@@ -15229,6 +16374,7 @@ export type Database = {
           name?: string
           notes?: string | null
           portal_share_scope?: string
+          portal_visible?: boolean
           project_id?: string | null
           sitemap?: Json
           stack?: string
@@ -15255,6 +16401,7 @@ export type Database = {
           name?: string
           notes?: string | null
           portal_share_scope?: string
+          portal_visible?: boolean
           project_id?: string | null
           sitemap?: Json
           stack?: string
@@ -15455,6 +16602,120 @@ export type Database = {
           },
         ]
       }
+      workspace_links: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          client_org_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          favicon_url: string | null
+          id: string
+          is_pinned: boolean
+          og_image_url: string | null
+          project_id: string | null
+          property_id: string | null
+          task_id: string | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          client_org_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          favicon_url?: string | null
+          id?: string
+          is_pinned?: boolean
+          og_image_url?: string | null
+          project_id?: string | null
+          property_id?: string | null
+          task_id?: string | null
+          title?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          client_org_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          favicon_url?: string | null
+          id?: string
+          is_pinned?: boolean
+          og_image_url?: string | null
+          project_id?: string | null
+          property_id?: string | null
+          task_id?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_links_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_links_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_links_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_links_client_org_id_fkey"
+            columns: ["client_org_id"]
+            isOneToOne: false
+            referencedRelation: "client_orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_links_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_links_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       family_recipe_popularity: {
@@ -15520,6 +16781,10 @@ export type Database = {
       allocate_invoice_number: {
         Args: { p_account_id: string }
         Returns: string
+      }
+      attach_invitation_names: {
+        Args: { account_slug: string; links: Json }
+        Returns: undefined
       }
       attach_invitation_projects: {
         Args: { account_slug: string; links: Json }
@@ -15647,9 +16912,11 @@ export type Database = {
           created_at: string
           email: string
           expires_at: string
+          first_name: string | null
           id: number
           invite_token: string
           invited_by: string
+          last_name: string | null
           project_id: string | null
           role: string
           seat_kind: string
@@ -15796,6 +17063,8 @@ export type Database = {
         Returns: {
           account_id: string
           created_at: string | null
+          credit_alert_period_start: string | null
+          credit_alerts_sent: number
           credits_monthly_limit: number
           credits_purchased: number
           credits_remaining: number
@@ -15956,6 +17225,14 @@ export type Database = {
         Args: { p_person_id: string }
         Returns: boolean
       }
+      prepare_account_storage_purge: {
+        Args: {
+          target_account_id: string
+          target_email?: string
+          target_name?: string
+        }
+        Returns: undefined
+      }
       refund_client_credits: {
         Args: {
           p_actor_id?: string
@@ -15977,6 +17254,8 @@ export type Database = {
         Returns: {
           account_id: string
           created_at: string | null
+          credit_alert_period_start: string | null
+          credit_alerts_sent: number
           credits_monthly_limit: number
           credits_purchased: number
           credits_remaining: number
@@ -16000,6 +17279,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       team_account_workspace: {
         Args: { account_slug: string }
         Returns: {

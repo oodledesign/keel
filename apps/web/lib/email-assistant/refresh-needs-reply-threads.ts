@@ -5,6 +5,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 import { reconcileRepliedNeedsReplyThreads } from '~/lib/email-assistant/reconcile-replied-threads';
+import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
 
 import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
 
@@ -111,21 +112,30 @@ async function refreshAndReconcileNeedsReplyThreadsInner(params: {
 
         const { data: latest } = await admin
           .from('email_messages')
-          .select('id')
+          .select('id, subject, snippet, body_text')
           .eq('thread_id', threadId)
           .eq('user_id', mailboxUserId)
           .order('internal_date', { ascending: false, nullsFirst: false })
           .limit(1)
           .maybeSingle();
 
+        if (!latest) {
+          return;
+        }
+
+        const ownerCategory = categoryForOwnerLatestMessage({
+          subject: latest.subject as string | null,
+          snippet: latest.snippet as string | null,
+          bodyText: latest.body_text as string | null,
+        });
+
         const { error: updateError } = await admin
           .from('email_threads')
           .update({
-            assistant_category: 'waiting',
-            assistant_category_reason: 'Latest message is from you',
-            assistant_category_confidence: 1,
-            assistant_processed_message_id:
-              (latest?.id as string | undefined) ?? null,
+            assistant_category: ownerCategory.category,
+            assistant_category_reason: ownerCategory.reason,
+            assistant_category_confidence: ownerCategory.confidence,
+            assistant_processed_message_id: latest.id as string,
             updated_at: new Date().toISOString(),
           })
           .eq('id', threadId)
