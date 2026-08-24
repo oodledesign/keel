@@ -5,15 +5,15 @@ import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { upsertIgTrigger } from '../../(instagram-autoreply)/_lib/server/instagram-autoreply-actions';
-import { InstagramTriggerEditor } from '../../(instagram-autoreply)/_components/instagram-trigger-editor';
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
-import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { upsertIgTrigger } from '../../../(instagram-autoreply)/_lib/server/instagram-autoreply-actions';
+import { InstagramTriggerEditor } from '../../../(instagram-autoreply)/_components/instagram-trigger-editor';
+import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
+import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import {
   ADDON_APPS_SPACE_TYPES,
   redirectIfSpaceNotIn,
-} from '../../_lib/server/workspace-route-guard';
-import { workAccountPath, workPaths } from '../../_lib/work-account-path';
+} from '../../../_lib/server/workspace-route-guard';
+import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
 import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
 
 type InstagramTriggerDetailPageProps = {

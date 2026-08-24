@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
@@ -14,7 +16,7 @@ function absoluteUrl(path: string) {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-async function resolveAccountSlug(client: ReturnType<typeof getSupabaseServerClient>, accountId: string) {
+async function resolveAccountSlug(client: SupabaseClient, accountId: string) {
   const { data } = await client
     .from('accounts')
     .select('slug')

@@ -11,10 +11,15 @@ import { toast } from '@kit/ui/sonner';
 
 import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
 
+import type { upsertIgTriggerActionSchema } from '../_lib/schema/instagram-autoreply.schema';
+import type { z } from 'zod';
+
+type UpsertIgTriggerInput = z.infer<typeof upsertIgTriggerActionSchema>;
+
 type InstagramTriggerEditorProps = {
   accountId: string;
   trigger: Partial<IgTriggerRow> | null;
-  onSave: (input: Record<string, unknown>) => Promise<{ ok: boolean }>;
+  onSave: (input: UpsertIgTriggerInput) => Promise<{ ok: boolean }>;
 };
 
 export function InstagramTriggerEditor({

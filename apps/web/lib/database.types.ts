@@ -1901,6 +1901,90 @@ export type Database = {
           },
         ]
       }
+      balance_transactions_log: {
+        Row: {
+          amount_pence: number
+          created_at: string
+          currency: string
+          id: string
+          idempotency_key: string | null
+          metadata: Json
+          source: Database["public"]["Enums"]["balance_transaction_source"]
+          source_content_submission_id: string | null
+          source_referral_id: string | null
+          stripe_balance_transaction_id: string
+          stripe_customer_id: string
+          target_account_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_pence: number
+          created_at?: string
+          currency?: string
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          source: Database["public"]["Enums"]["balance_transaction_source"]
+          source_content_submission_id?: string | null
+          source_referral_id?: string | null
+          stripe_balance_transaction_id: string
+          stripe_customer_id: string
+          target_account_id: string
+          user_id: string
+        }
+        Update: {
+          amount_pence?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          source?: Database["public"]["Enums"]["balance_transaction_source"]
+          source_content_submission_id?: string | null
+          source_referral_id?: string | null
+          stripe_balance_transaction_id?: string
+          stripe_customer_id?: string
+          target_account_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_transactions_log_source_content_submission_id_fkey"
+            columns: ["source_content_submission_id"]
+            isOneToOne: false
+            referencedRelation: "content_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balance_transactions_log_source_referral_id_fkey"
+            columns: ["source_referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balance_transactions_log_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balance_transactions_log_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "balance_transactions_log_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_customers: {
         Row: {
           account_id: string
@@ -6878,6 +6962,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_submissions: {
+        Row: {
+          account_age_days_at_review: number | null
+          content_type: Database["public"]["Enums"]["content_submission_type"]
+          created_at: string
+          follow_ozer_confirmed: boolean | null
+          follower_count_at_review: number | null
+          id: string
+          post_url: string | null
+          rejection_reason: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewer_user_id: string | null
+          reward_amount_pence: number | null
+          screenshot_path: string | null
+          status: Database["public"]["Enums"]["content_submission_status"]
+          user_id: string
+        }
+        Insert: {
+          account_age_days_at_review?: number | null
+          content_type: Database["public"]["Enums"]["content_submission_type"]
+          created_at?: string
+          follow_ozer_confirmed?: boolean | null
+          follower_count_at_review?: number | null
+          id?: string
+          post_url?: string | null
+          rejection_reason?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_user_id?: string | null
+          reward_amount_pence?: number | null
+          screenshot_path?: string | null
+          status?: Database["public"]["Enums"]["content_submission_status"]
+          user_id: string
+        }
+        Update: {
+          account_age_days_at_review?: number | null
+          content_type?: Database["public"]["Enums"]["content_submission_type"]
+          created_at?: string
+          follow_ozer_confirmed?: boolean | null
+          follower_count_at_review?: number | null
+          id?: string
+          post_url?: string | null
+          rejection_reason?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewer_user_id?: string | null
+          reward_amount_pence?: number | null
+          screenshot_path?: string | null
+          status?: Database["public"]["Enums"]["content_submission_status"]
+          user_id?: string
+        }
+        Relationships: []
       }
       content_templates: {
         Row: {
@@ -13773,6 +13911,116 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_clicks: {
+        Row: {
+          clicked_at: string
+          converted_referred_user_id: string | null
+          id: string
+          referral_code: string
+          referrer_user_id: string
+          session_fingerprint: string | null
+          utm_source: string
+        }
+        Insert: {
+          clicked_at?: string
+          converted_referred_user_id?: string | null
+          id?: string
+          referral_code: string
+          referrer_user_id: string
+          session_fingerprint?: string | null
+          utm_source?: string
+        }
+        Update: {
+          clicked_at?: string
+          converted_referred_user_id?: string | null
+          id?: string
+          referral_code?: string
+          referrer_user_id?: string
+          session_fingerprint?: string | null
+          utm_source?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          converted_at: string | null
+          converting_account_id: string | null
+          converting_stripe_invoice_id: string | null
+          created_at: string
+          id: string
+          referral_click_id: string | null
+          referred_discount_pence: number | null
+          referred_stripe_coupon_id: string | null
+          referred_user_id: string
+          referrer_credit_pence: number | null
+          referrer_plan_key: string | null
+          referrer_user_id: string
+          status: Database["public"]["Enums"]["referral_status"]
+          utm_source: string | null
+        }
+        Insert: {
+          converted_at?: string | null
+          converting_account_id?: string | null
+          converting_stripe_invoice_id?: string | null
+          created_at?: string
+          id?: string
+          referral_click_id?: string | null
+          referred_discount_pence?: number | null
+          referred_stripe_coupon_id?: string | null
+          referred_user_id: string
+          referrer_credit_pence?: number | null
+          referrer_plan_key?: string | null
+          referrer_user_id: string
+          status?: Database["public"]["Enums"]["referral_status"]
+          utm_source?: string | null
+        }
+        Update: {
+          converted_at?: string | null
+          converting_account_id?: string | null
+          converting_stripe_invoice_id?: string | null
+          created_at?: string
+          id?: string
+          referral_click_id?: string | null
+          referred_discount_pence?: number | null
+          referred_stripe_coupon_id?: string | null
+          referred_user_id?: string
+          referrer_credit_pence?: number | null
+          referrer_plan_key?: string | null
+          referrer_user_id?: string
+          status?: Database["public"]["Enums"]["referral_status"]
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_converting_account_id_fkey"
+            columns: ["converting_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_converting_account_id_fkey"
+            columns: ["converting_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_converting_account_id_fkey"
+            columns: ["converting_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referral_click_id_fkey"
+            columns: ["referral_click_id"]
+            isOneToOne: false
+            referencedRelation: "referral_clicks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_types: {
         Row: {
           account_id: string
@@ -15007,6 +15255,9 @@ export type Database = {
           personal_mobile_nav_shortcuts: Json
           personal_vision_dashboard_enabled: boolean
           personal_vision_morning_prompt_enabled: boolean
+          referral_code: string | null
+          reward_credit_target: Database["public"]["Enums"]["reward_credit_target"]
+          reward_credit_workspace_id: string | null
           updated_at: string | null
           use_ozer_for_community: boolean
           use_ozer_for_family: boolean
@@ -15033,6 +15284,9 @@ export type Database = {
           personal_mobile_nav_shortcuts?: Json
           personal_vision_dashboard_enabled?: boolean
           personal_vision_morning_prompt_enabled?: boolean
+          referral_code?: string | null
+          reward_credit_target?: Database["public"]["Enums"]["reward_credit_target"]
+          reward_credit_workspace_id?: string | null
           updated_at?: string | null
           use_ozer_for_community?: boolean
           use_ozer_for_family?: boolean
@@ -15059,6 +15313,9 @@ export type Database = {
           personal_mobile_nav_shortcuts?: Json
           personal_vision_dashboard_enabled?: boolean
           personal_vision_morning_prompt_enabled?: boolean
+          referral_code?: string | null
+          reward_credit_target?: Database["public"]["Enums"]["reward_credit_target"]
+          reward_credit_workspace_id?: string | null
           updated_at?: string | null
           use_ozer_for_community?: boolean
           use_ozer_for_family?: boolean
@@ -15066,7 +15323,29 @@ export type Database = {
           user_id?: string
           workspace_setup_skipped_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_reward_credit_workspace_id_fkey"
+            columns: ["reward_credit_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_settings_reward_credit_workspace_id_fkey"
+            columns: ["reward_credit_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_settings_reward_credit_workspace_id_fkey"
+            columns: ["reward_credit_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_analytics_daily: {
         Row: {
@@ -16900,6 +17179,23 @@ export type Database = {
         }
         Returns: Json
       }
+      content_reward_used_month_pence: {
+        Args: { p_for_month?: string; p_user_id: string }
+        Returns: number
+      }
+      content_reward_used_year_pence: {
+        Args: { p_for_year?: number; p_user_id: string }
+        Returns: number
+      }
+      content_reward_would_exceed_caps: {
+        Args: {
+          p_annual_cap_pence?: number
+          p_monthly_cap_pence?: number
+          p_new_amount_pence: number
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       contractor_assigned_to_job: { Args: { job_id: string }; Returns: boolean }
       contractor_assigned_to_project: {
         Args: { project_id: string }
@@ -17002,6 +17298,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      ensure_user_referral_code: {
+        Args: { p_user_id: string }
+        Returns: string
       }
       expire_stale_client_credit_batches: { Args: never; Returns: number }
       expire_stale_media_credit_batches: { Args: never; Returns: number }
@@ -17397,12 +17697,17 @@ export type Database = {
         | "scheduling.edit"
         | "listings.view"
         | "listings.edit"
+      balance_transaction_source: "referral" | "content"
       billing_provider: "stripe" | "lemon-squeezy" | "paddle"
       chat_participant_kind: "member" | "client"
       chat_thread_type: "direct" | "group" | "job" | "client_portal"
+      content_submission_status: "pending" | "approved" | "rejected"
+      content_submission_type: "story" | "image_post" | "reel"
       notification_channel: "in_app" | "email"
       notification_type: "info" | "warning" | "error"
       payment_status: "pending" | "succeeded" | "failed"
+      referral_status: "pending" | "converted" | "void"
+      reward_credit_target: "personal" | "workspace"
       subscription_item_type: "flat" | "per_seat" | "metered"
       subscription_status:
         | "active"
@@ -17570,12 +17875,17 @@ export const Constants = {
         "listings.view",
         "listings.edit",
       ],
+      balance_transaction_source: ["referral", "content"],
       billing_provider: ["stripe", "lemon-squeezy", "paddle"],
       chat_participant_kind: ["member", "client"],
       chat_thread_type: ["direct", "group", "job", "client_portal"],
+      content_submission_status: ["pending", "approved", "rejected"],
+      content_submission_type: ["story", "image_post", "reel"],
       notification_channel: ["in_app", "email"],
       notification_type: ["info", "warning", "error"],
       payment_status: ["pending", "succeeded", "failed"],
+      referral_status: ["pending", "converted", "void"],
+      reward_credit_target: ["personal", "workspace"],
       subscription_item_type: ["flat", "per_seat", "metered"],
       subscription_status: [
         "active",

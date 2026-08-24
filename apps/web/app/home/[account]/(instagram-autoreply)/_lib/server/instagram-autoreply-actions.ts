@@ -6,7 +6,6 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -141,7 +140,6 @@ export const previewIgReply = enhanceAction(
       if (isInsufficientCreditsError(error)) {
         return {
           ok: false as const,
-          code: INSUFFICIENT_AI_CREDITS_CODE,
           ...insufficientCreditsResponse(error),
         };
       }

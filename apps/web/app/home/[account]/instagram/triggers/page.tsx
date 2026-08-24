@@ -6,15 +6,15 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   deleteIgTrigger,
   toggleIgTrigger,
-} from '../(instagram-autoreply)/_lib/server/instagram-autoreply-actions';
-import { InstagramTriggersList } from '../(instagram-autoreply)/_components/instagram-triggers-list';
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+} from '../../(instagram-autoreply)/_lib/server/instagram-autoreply-actions';
+import { InstagramTriggersList } from '../../(instagram-autoreply)/_components/instagram-triggers-list';
+import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
+import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   ADDON_APPS_SPACE_TYPES,
   redirectIfSpaceNotIn,
-} from '../_lib/server/workspace-route-guard';
-import { workAccountPath, workPaths } from '../_lib/work-account-path';
+} from '../../_lib/server/workspace-route-guard';
+import { workAccountPath, workPaths } from '../../_lib/work-account-path';
 import { loadIgTriggers } from '~/lib/instagram-autoreply/assert-access';
 
 type InstagramTriggersPageProps = {
