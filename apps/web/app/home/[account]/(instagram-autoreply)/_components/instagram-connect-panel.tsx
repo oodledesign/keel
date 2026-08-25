@@ -60,10 +60,10 @@ export function InstagramConnectPanel({
     <div className="mx-4 space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-6 lg:mx-0">
       {!instagramConfigured ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Instagram OAuth is not configured. Set META_INSTAGRAM_APP_ID (or
-          META_APP_ID), META_INSTAGRAM_APP_SECRET (or META_APP_SECRET), and
-          META_REDIRECT_URI on the server. Use the Instagram App ID/Secret from
-          Meta → Instagram → Business login settings.
+          Instagram OAuth is not configured. Set META_INSTAGRAM_APP_ID and
+          META_INSTAGRAM_APP_SECRET from Meta → Instagram → Business login
+          settings, plus META_REDIRECT_URI. Do not use the Facebook App ID from
+          App settings → Basic.
         </p>
       ) : null}
 

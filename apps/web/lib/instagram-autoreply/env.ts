@@ -4,17 +4,15 @@ import { z } from 'zod';
 
 /**
  * Instagram Business Login credentials.
- * Prefer Instagram App ID / Secret from Meta → Instagram → API setup
- * (Business login settings). Falls back to META_APP_ID / META_APP_SECRET.
+ * Must use the Instagram App ID + Secret from Meta → Instagram → API setup
+ * → Business login settings. Do NOT use App settings → Basic (Facebook App ID).
  */
 export function getOptionalMetaInstagram() {
   const appId =
     process.env.META_INSTAGRAM_APP_ID?.trim() ||
-    process.env.META_APP_ID?.trim() ||
     process.env.INSTAGRAM_APP_ID?.trim();
   const appSecret =
     process.env.META_INSTAGRAM_APP_SECRET?.trim() ||
-    process.env.META_APP_SECRET?.trim() ||
     process.env.INSTAGRAM_APP_SECRET?.trim();
   const redirectUri =
     process.env.META_REDIRECT_URI?.trim() ||

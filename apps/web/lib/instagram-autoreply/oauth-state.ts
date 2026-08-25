@@ -1,7 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-import { getFeedflowServerEnv } from '~/lib/feedflow/env';
-
 export type IgAutoreplyOAuthStatePayload = {
   accountId: string;
   userId: string;
@@ -15,23 +13,21 @@ export function isSafeOAuthReturnPath(path: string): boolean {
 }
 
 function stateSecret(): string {
-  try {
-    const e = getFeedflowServerEnv();
-    if (e.OAUTH_STATE_SECRET && e.OAUTH_STATE_SECRET.length >= 16) {
-      return e.OAUTH_STATE_SECRET;
-    }
-    return createHmac('sha256', e.TOKEN_ENCRYPTION_KEY)
-      .update('instagram-autoreply-oauth-state-v1')
-      .digest('hex');
-  } catch {
-    const key = process.env.TOKEN_ENCRYPTION_KEY;
-    if (!key || key.length < 32) {
-      throw new Error('TOKEN_ENCRYPTION_KEY is required for OAuth state');
-    }
-    return createHmac('sha256', key)
-      .update('instagram-autoreply-oauth-state-v1')
-      .digest('hex');
+  const explicit = process.env.OAUTH_STATE_SECRET?.trim();
+  if (explicit && explicit.length >= 16) {
+    return explicit;
   }
+
+  const tokenKey = process.env.TOKEN_ENCRYPTION_KEY?.trim();
+  if (!tokenKey || tokenKey.length < 16) {
+    throw new Error(
+      'OAUTH_STATE_SECRET or TOKEN_ENCRYPTION_KEY is required for Instagram OAuth state',
+    );
+  }
+
+  return createHmac('sha256', tokenKey)
+    .update('instagram-autoreply-oauth-state-v1')
+    .digest('hex');
 }
 
 export function signIgAutoreplyOAuthState(

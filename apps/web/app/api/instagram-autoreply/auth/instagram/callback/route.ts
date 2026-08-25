@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
         account_id: payload.accountId,
         ig_business_account_id: ig.igUserId,
         ig_username: ig.username,
-        facebook_page_id: null,
         access_token: enc,
         token_expires_at: expiresAt,
         is_active: true,
