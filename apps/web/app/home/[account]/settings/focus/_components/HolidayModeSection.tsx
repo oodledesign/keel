@@ -32,6 +32,7 @@ import type {
 } from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 import {
   getGmailVacationStatus,
+  reconcileGmailVacationWithHolidayMode,
   syncHolidayModeToGmail,
   turnOffGmailVacationResponder,
 } from '~/home/[account]/settings/focus/actions';
@@ -77,16 +78,29 @@ export function HolidayModeSection({
   useEffect(() => {
     let cancelled = false;
 
-    void getGmailVacationStatus(userId).then((status) => {
+    void (async () => {
+      // If Ozer holiday is off/expired but Gmail vacation lingered, clear Gmail.
+      if (!holidayEnabled) {
+        const reconcile = await reconcileGmailVacationWithHolidayMode(accountId);
+        if (cancelled) {
+          return;
+        }
+
+        if (reconcile.success === false && reconcile.error) {
+          console.error('[focus] Gmail vacation reconcile:', reconcile.error);
+        }
+      }
+
+      const status = await getGmailVacationStatus(userId);
       if (!cancelled) {
         setGmailStatus(status);
       }
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [accountId, holidayEnabled, userId]);
 
   const gmailResponderOn = useMemo(() => {
     if (

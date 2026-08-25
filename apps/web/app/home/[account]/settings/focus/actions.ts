@@ -261,11 +261,15 @@ export async function getWorkspaceFocusSettings(
   return mapRowToSettings(data as WorkspaceFocusSettingsRow);
 }
 
-export async function autoDisableHolidayMode(accountId: string): Promise<void> {
+export async function autoDisableHolidayMode(accountId: string): Promise<{
+  cleared: boolean;
+  gmailSynced: boolean;
+  gmailError?: string;
+}> {
   const userId = await getAuthenticatedUserId();
 
   if (!userId) {
-    return;
+    return { cleared: false, gmailSynced: false, gmailError: 'Not authenticated' };
   }
 
   const client = getSupabaseServerClient();
@@ -278,14 +282,19 @@ export async function autoDisableHolidayMode(accountId: string): Promise<void> {
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (
-    !data?.holiday_mode_enabled ||
-    !isHolidayUntilExpired(data.holiday_mode_until as string | null)
-  ) {
-    return;
+  if (!data?.holiday_mode_enabled) {
+    return { cleared: false, gmailSynced: false };
   }
 
-  await client
+  const until = normalizeHolidayUntilIso(
+    (data.holiday_mode_until as string | null) ?? null,
+  );
+
+  if (!isHolidayUntilExpired(until)) {
+    return { cleared: false, gmailSynced: false };
+  }
+
+  const { error: updateError } = await client
     .from('workspace_focus_settings')
     .update({
       holiday_mode_enabled: false,
@@ -294,6 +303,15 @@ export async function autoDisableHolidayMode(accountId: string): Promise<void> {
     })
     .eq('account_id', accountId)
     .eq('user_id', userId);
+
+  if (updateError) {
+    console.error('[focus] autoDisableHolidayMode update:', updateError.message);
+    return {
+      cleared: false,
+      gmailSynced: false,
+      gmailError: updateError.message,
+    };
+  }
 
   const gmailSync = await setGmailVacationOff(userId);
   if (!gmailSync.success) {
@@ -304,6 +322,57 @@ export async function autoDisableHolidayMode(accountId: string): Promise<void> {
   }
 
   await revalidateFocusSettingsPage(accountId);
+
+  return {
+    cleared: true,
+    gmailSynced: gmailSync.success,
+    gmailError: gmailSync.success
+      ? undefined
+      : (gmailSync.error ?? 'Gmail sync failed'),
+  };
+}
+
+/**
+ * If holiday mode is off (or expired) but Gmail vacation is still on, turn Gmail off.
+ * Safe to call on Focus page load when Ozer and Gmail can drift apart.
+ */
+export async function reconcileGmailVacationWithHolidayMode(
+  accountId: string,
+): Promise<VacationSyncResult> {
+  const userId = await getAuthenticatedUserId();
+
+  if (!userId) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  const settings = await getWorkspaceFocusSettings(accountId);
+
+  if (!settings) {
+    return { success: false, error: 'Focus settings not found' };
+  }
+
+  const holidayActive =
+    settings.holiday_mode_enabled &&
+    !isHolidayUntilExpired(settings.holiday_mode_until);
+
+  if (holidayActive) {
+    return { success: true };
+  }
+
+  if (settings.holiday_mode_enabled && isHolidayUntilExpired(settings.holiday_mode_until)) {
+    const cleared = await autoDisableHolidayMode(accountId);
+    return {
+      success: cleared.gmailSynced || cleared.cleared,
+      error: cleared.gmailError,
+    };
+  }
+
+  const gmailStatus = await getGmailVacationSettings(userId);
+  if (!gmailStatus?.enableAutoReply) {
+    return { success: true };
+  }
+
+  return setGmailVacationOff(userId);
 }
 
 async function assertAuthenticatedUserId(

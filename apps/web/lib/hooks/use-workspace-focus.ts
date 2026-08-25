@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { autoDisableHolidayMode } from '~/home/[account]/settings/focus/actions';
 import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
@@ -41,6 +41,7 @@ export default function useWorkspaceFocus(
 ): WorkspaceFocusState {
   const [now, setNow] = useState(() => new Date());
   const [holidayClearedLocally, setHolidayClearedLocally] = useState(false);
+  const disableAttemptKey = useRef<string | null>(null);
 
   const memoizedNextWorkStart = useMemo(() => {
     if (!settings) {
@@ -60,20 +61,26 @@ export default function useWorkspaceFocus(
       isHolidayUntilExpired(settings.holiday_mode_until);
 
     if (!expired) {
+      disableAttemptKey.current = null;
+      setHolidayClearedLocally(false);
       return;
     }
 
-    setHolidayClearedLocally(true);
-    void autoDisableHolidayMode(settings.account_id);
-  }, [settings]);
+    const attemptKey = `${settings.account_id}:${settings.holiday_mode_until ?? 'none'}`;
+    if (disableAttemptKey.current === attemptKey) {
+      return;
+    }
 
-  useEffect(() => {
-    setHolidayClearedLocally(false);
-  }, [
-    settings?.id,
-    settings?.holiday_mode_enabled,
-    settings?.holiday_mode_until,
-  ]);
+    disableAttemptKey.current = attemptKey;
+    setHolidayClearedLocally(true);
+
+    void autoDisableHolidayMode(settings.account_id).then((result) => {
+      if (!result.cleared || !result.gmailSynced) {
+        // Allow a retry on the next settings refresh / remount.
+        disableAttemptKey.current = null;
+      }
+    });
+  }, [settings]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
