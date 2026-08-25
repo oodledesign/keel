@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { z } from 'zod';
 
-import { adminAction } from '@kit/admin/lib/server/utils/admin-action';
+import { adminAction } from '@kit/admin';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
