@@ -84,8 +84,6 @@ export default async function InstagramHomePage({
               ? {
                   ig_username: (connected as { ig_username: string | null })
                     .ig_username,
-                  facebook_page_id: (connected as { facebook_page_id: string })
-                    .facebook_page_id,
                   token_expires_at: (
                     connected as { token_expires_at: string | null }
                   ).token_expires_at,

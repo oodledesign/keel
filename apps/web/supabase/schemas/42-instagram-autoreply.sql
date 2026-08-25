@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.ig_connected_accounts (
   account_id uuid NOT NULL REFERENCES public.accounts (id) ON DELETE CASCADE,
   ig_business_account_id text NOT NULL,
   ig_username text,
-  facebook_page_id text NOT NULL,
+  facebook_page_id text,
   access_token text NOT NULL,
   token_expires_at timestamptz,
   voice_settings jsonb NOT NULL DEFAULT '{

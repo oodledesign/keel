@@ -26,7 +26,7 @@ export type IgConnectedAccountRow = {
   account_id: string;
   ig_business_account_id: string;
   ig_username: string | null;
-  facebook_page_id: string;
+  facebook_page_id: string | null;
   access_token: string;
   token_expires_at: string | null;
   voice_settings: IgVoiceSettings;

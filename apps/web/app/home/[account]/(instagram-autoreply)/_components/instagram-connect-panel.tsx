@@ -34,7 +34,6 @@ type InstagramConnectPanelProps = {
   accountSlug: string;
   connected: {
     ig_username: string | null;
-    facebook_page_id: string;
     token_expires_at: string | null;
     is_active: boolean;
   } | null;
@@ -61,8 +60,10 @@ export function InstagramConnectPanel({
     <div className="mx-4 space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-6 lg:mx-0">
       {!instagramConfigured ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Instagram OAuth is not configured. Set META_APP_ID, META_APP_SECRET,
-          and META_REDIRECT_URI on the server.
+          Instagram OAuth is not configured. Set META_INSTAGRAM_APP_ID (or
+          META_APP_ID), META_INSTAGRAM_APP_SECRET (or META_APP_SECRET), and
+          META_REDIRECT_URI on the server. Use the Instagram App ID/Secret from
+          Meta → Instagram → Business login settings.
         </p>
       ) : null}
 
@@ -71,9 +72,6 @@ export function InstagramConnectPanel({
           <div className="space-y-1">
             <p className="text-lg font-semibold">
               @{connected.ig_username ?? 'connected'}
-            </p>
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              Facebook Page ID: {connected.facebook_page_id}
             </p>
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               Token expires: {expiresLabel}

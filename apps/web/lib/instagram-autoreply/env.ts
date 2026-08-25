@@ -2,12 +2,23 @@ import 'server-only';
 
 import { z } from 'zod';
 
+/**
+ * Instagram Business Login credentials.
+ * Prefer Instagram App ID / Secret from Meta → Instagram → API setup
+ * (Business login settings). Falls back to META_APP_ID / META_APP_SECRET.
+ */
 export function getOptionalMetaInstagram() {
-  const appId = process.env.META_APP_ID ?? process.env.INSTAGRAM_APP_ID;
+  const appId =
+    process.env.META_INSTAGRAM_APP_ID?.trim() ||
+    process.env.META_APP_ID?.trim() ||
+    process.env.INSTAGRAM_APP_ID?.trim();
   const appSecret =
-    process.env.META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET;
+    process.env.META_INSTAGRAM_APP_SECRET?.trim() ||
+    process.env.META_APP_SECRET?.trim() ||
+    process.env.INSTAGRAM_APP_SECRET?.trim();
   const redirectUri =
-    process.env.META_REDIRECT_URI ?? process.env.INSTAGRAM_REDIRECT_URI;
+    process.env.META_REDIRECT_URI?.trim() ||
+    process.env.INSTAGRAM_REDIRECT_URI?.trim();
   if (!appId || !appSecret || !redirectUri) {
     return null;
   }
@@ -26,6 +37,7 @@ export function getMetaWebhookVerifyToken(): string | null {
 
 export function getMetaAppSecret(): string | null {
   return (
+    process.env.META_INSTAGRAM_APP_SECRET?.trim() ||
     process.env.META_APP_SECRET?.trim() ||
     process.env.INSTAGRAM_APP_SECRET?.trim() ||
     null

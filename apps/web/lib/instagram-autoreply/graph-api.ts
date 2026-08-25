@@ -1,4 +1,7 @@
-const FB_VERSION = 'v21.0';
+import 'server-only';
+
+const IG_VERSION = 'v21.0';
+const IG_GRAPH = `https://graph.instagram.com/${IG_VERSION}`;
 
 export class IgGraphApiError extends Error {
   readonly code: number | null;
@@ -27,11 +30,13 @@ function parseGraphError(data: unknown): IgGraphApiError {
 export function isDmWindowExpiredError(error: unknown): boolean {
   if (!(error instanceof IgGraphApiError)) return false;
   if (error.code === 10 || error.code === 200) return true;
+  if (error.subcode === 10903) return true;
   const msg = error.message.toLowerCase();
   return (
     msg.includes('outside of allowed window') ||
     msg.includes('cannot reply to this comment') ||
-    msg.includes('expired')
+    msg.includes('expired') ||
+    msg.includes('older than 7 days')
   );
 }
 
@@ -40,13 +45,14 @@ export async function postPublicCommentReply(
   message: string,
   accessToken: string,
 ): Promise<void> {
-  const url = new URL(
-    `https://graph.facebook.com/${FB_VERSION}/${commentId}/replies`,
-  );
+  const url = new URL(`${IG_GRAPH}/${commentId}/replies`);
   const res = await fetch(url.toString(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, access_token: accessToken }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ message }),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -60,16 +66,16 @@ export async function postPrivateCommentReply(
   message: string,
   accessToken: string,
 ): Promise<void> {
-  const url = new URL(
-    `https://graph.facebook.com/${FB_VERSION}/${igBusinessAccountId}/messages`,
-  );
+  const url = new URL(`${IG_GRAPH}/${igBusinessAccountId}/messages`);
   const res = await fetch(url.toString(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({
       recipient: { comment_id: commentId },
       message: { text: message },
-      access_token: accessToken,
     }),
   });
   const data = await res.json();

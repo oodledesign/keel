@@ -65,8 +65,11 @@ export async function GET(request: NextRequest) {
   try {
     const short = await exchangeInstagramAutoreplyCode(code);
     const long = await exchangeLongLivedInstagramAutoreply(short.accessToken);
-    const ig = await fetchInstagramAutoreplyBusinessAccount(long.accessToken);
-    const enc = encryptIgToken(ig.pageAccessToken);
+    const ig = await fetchInstagramAutoreplyBusinessAccount(
+      long.accessToken,
+      short.userId,
+    );
+    const enc = encryptIgToken(long.accessToken);
     const expiresAt = new Date(
       Date.now() + Math.max(long.expiresIn, 3600) * 1000,
     ).toISOString();
@@ -76,7 +79,7 @@ export async function GET(request: NextRequest) {
         account_id: payload.accountId,
         ig_business_account_id: ig.igUserId,
         ig_username: ig.username,
-        facebook_page_id: ig.pageId,
+        facebook_page_id: null,
         access_token: enc,
         token_expires_at: expiresAt,
         is_active: true,
