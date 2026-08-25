@@ -46,6 +46,10 @@ export async function POST(request: Request) {
   const signature = request.headers.get('x-hub-signature-256');
 
   if (!verifyMetaWebhookSignature(rawBody, signature)) {
+    console.error('[instagram-webhook] invalid signature', {
+      hasSignature: Boolean(signature),
+      bodyLength: rawBody.length,
+    });
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
@@ -61,6 +65,7 @@ export async function POST(request: Request) {
   }
 
   const admin = getSupabaseServerAdminClient();
+  let processed = 0;
 
   for (const entry of body.entry ?? []) {
     const igBusinessAccountId = entry.id?.trim();
@@ -78,7 +83,12 @@ export async function POST(request: Request) {
       continue;
     }
 
-    if (!igAccount) continue;
+    if (!igAccount) {
+      console.warn('[instagram-webhook] no connected account for IG id', {
+        igBusinessAccountId,
+      });
+      continue;
+    }
 
     for (const change of entry.changes ?? []) {
       if (change.field !== 'comments') continue;
@@ -91,6 +101,7 @@ export async function POST(request: Request) {
           igAccount: igAccount as IgConnectedAccountRow,
           comment: value,
         });
+        processed += 1;
       } catch (error) {
         console.error(
           '[instagram-webhook] process failed',
@@ -98,6 +109,10 @@ export async function POST(request: Request) {
         );
       }
     }
+  }
+
+  if (processed > 0) {
+    console.info('[instagram-webhook] processed comments', { processed });
   }
 
   return NextResponse.json({ received: true });

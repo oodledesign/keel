@@ -33,10 +33,14 @@ export function getMetaWebhookVerifyToken(): string | null {
   return token || null;
 }
 
+/**
+ * App secret for Meta webhook HMAC (X-Hub-Signature-256).
+ * Use the main App Secret from App settings → Basic, not the Instagram-only secret.
+ */
 export function getMetaAppSecret(): string | null {
   return (
-    process.env.META_INSTAGRAM_APP_SECRET?.trim() ||
     process.env.META_APP_SECRET?.trim() ||
+    process.env.META_INSTAGRAM_APP_SECRET?.trim() ||
     process.env.INSTAGRAM_APP_SECRET?.trim() ||
     null
   );
