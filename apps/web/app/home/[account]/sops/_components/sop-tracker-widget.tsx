@@ -297,6 +297,13 @@ export function SopTrackerWidget({
     });
   }
 
+  // While the help messenger is open, the Guides panel already shows the
+  // checklist — keep the floating chip hidden so it cannot overlay the
+  // messenger tab bar (and go translucent on hover).
+  if (messenger?.open && !completedFlash) {
+    return null;
+  }
+
   if (hidden && !completedFlash) {
     return null;
   }
@@ -323,7 +330,9 @@ export function SopTrackerWidget({
         type="button"
         onClick={openGuides}
         className={cn(
-          'group flex max-w-[14rem] items-center gap-2 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1.5 pr-3 pl-1.5 text-left shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] transition-colors hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]',
+          'group flex max-w-[14rem] items-center gap-2 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1.5 pr-3 pl-1.5 text-left shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] transition-colors',
+          // Opaque tint — never use --ozer-accent-subtle alone (it is 15% alpha).
+          'hover:border-[var(--ozer-accent)]/40 hover:bg-[color-mix(in_srgb,var(--ozer-accent)_14%,var(--workspace-shell-panel))]',
         )}
         aria-label={`Open guide: ${run.title}`}
         title="Open guide checklist"

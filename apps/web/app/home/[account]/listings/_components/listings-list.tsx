@@ -94,7 +94,9 @@ import { ListingFormModal } from './listing-form-modal';
 import { ListingSectorPills } from './listing-sector-pills';
 import { ListingsMapView } from './listings-map-view';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500] as const;
+type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number];
 const MAP_PAGE_SIZE = 100;
 
 interface ListingsListProps {
@@ -257,6 +259,7 @@ export function ListingsList({
   const [cachedListings, setCachedListings] = useState(initialListings);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSizeOption>(DEFAULT_PAGE_SIZE);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
@@ -438,7 +441,7 @@ export function ListingsList({
         const result = await listListings({
           accountId,
           page: pageNum,
-          pageSize: PAGE_SIZE,
+          pageSize,
           search: opts?.search?.trim() || undefined,
           status,
           statuses,
@@ -456,7 +459,7 @@ export function ListingsList({
         setLoadingPage(false);
       }
     },
-    [accountId, agentUserId, officeId, statusFilter],
+    [accountId, agentUserId, officeId, pageSize, statusFilter],
   );
 
   useEffect(() => {
@@ -473,6 +476,7 @@ export function ListingsList({
 
     const isDefaultFirstPage =
       page === 1 &&
+      pageSize === DEFAULT_PAGE_SIZE &&
       statusFilter === initialStatusFilter &&
       (agentUserId ?? null) === (initialAgentUserId ?? null) &&
       officeId === (initialOfficeId ?? null) &&
@@ -482,6 +486,7 @@ export function ListingsList({
     void fetchPage(page);
   }, [
     page,
+    pageSize,
     searchDebounced,
     statusFilter,
     agentUserId,
@@ -515,7 +520,7 @@ export function ListingsList({
             accountId,
             search: query,
             page: nextPage,
-            pageSize: PAGE_SIZE,
+            pageSize,
             status,
             statuses,
             accountBranchId: officeId ?? undefined,
@@ -532,7 +537,7 @@ export function ListingsList({
             if (nextPage === 1) setPageListings(list);
           }
 
-          if (list.length < PAGE_SIZE || nextPage * PAGE_SIZE >= serverTotal) {
+          if (list.length < pageSize || nextPage * pageSize >= serverTotal) {
             break;
           }
           nextPage += 1;
@@ -550,7 +555,14 @@ export function ListingsList({
     return () => {
       cancelled = true;
     };
-  }, [accountId, searchDebounced, statusFilter, officeId, agentUserId]);
+  }, [
+    accountId,
+    searchDebounced,
+    statusFilter,
+    officeId,
+    agentUserId,
+    pageSize,
+  ]);
 
   useEffect(() => {
     if (!showOfficeFilter || !officeId) return;
@@ -746,7 +758,7 @@ export function ListingsList({
     [cachedListings],
   );
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const usesFullCache =
     isSearching ||
     viewMode === 'map' ||
@@ -755,12 +767,12 @@ export function ListingsList({
   const displayCount = usesFullCache ? visibleListings.length : total;
   const pagedVisibleListings = useMemo(() => {
     if (!usesFullCache || viewMode === 'map') return visibleListings;
-    const start = (page - 1) * PAGE_SIZE;
-    return visibleListings.slice(start, start + PAGE_SIZE);
-  }, [page, usesFullCache, viewMode, visibleListings]);
+    const start = (page - 1) * pageSize;
+    return visibleListings.slice(start, start + pageSize);
+  }, [page, pageSize, usesFullCache, viewMode, visibleListings]);
   const clientTotalPages = Math.max(
     1,
-    Math.ceil(visibleListings.length / PAGE_SIZE),
+    Math.ceil(visibleListings.length / pageSize),
   );
   const effectiveTotalPages = usesFullCache ? clientTotalPages : totalPages;
 
@@ -819,11 +831,31 @@ export function ListingsList({
           {displayCount} {displayCount === 1 ? 'disposal' : 'disposals'}
           {usesFullCache && viewMode !== 'map' && effectiveTotalPages > 1
             ? ` · page ${page} of ${effectiveTotalPages}`
-            : !usesFullCache && total > PAGE_SIZE
+            : !usesFullCache && total > pageSize
               ? ` · page ${page} of ${totalPages}`
               : null}
         </p>
         <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => {
+              const next = Number(value) as PageSizeOption;
+              if (!PAGE_SIZE_OPTIONS.includes(next)) return;
+              setPageSize(next);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-[148px] border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]">
+              <SelectValue placeholder="Per page" />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size} per page
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select
             value={sortMode}
             onValueChange={(value) => {
@@ -1278,9 +1310,9 @@ export function ListingsList({
       {viewMode !== 'map' && effectiveTotalPages > 1 ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Showing {(page - 1) * PAGE_SIZE + 1}–
+            Showing {(page - 1) * pageSize + 1}–
             {Math.min(
-              page * PAGE_SIZE,
+              page * pageSize,
               usesFullCache ? visibleListings.length : total,
             )}{' '}
             of {usesFullCache ? visibleListings.length : total}

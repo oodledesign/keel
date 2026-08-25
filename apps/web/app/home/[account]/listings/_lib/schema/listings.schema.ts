@@ -22,7 +22,7 @@ export const ListListingsSchema = z.object({
   /** Filter to disposals where this user is an acting agent. */
   actingAgentUserId: z.string().uuid().optional(),
   page: z.number().int().min(1).optional(),
-  pageSize: z.number().int().min(1).max(100).optional(),
+  pageSize: z.number().int().min(1).max(500).optional(),
 });
 
 export const CountUnassignedListingsSchema = z.object({
@@ -33,7 +33,7 @@ export const CountUnassignedListingsSchema = z.object({
 
 export const CountSuggestedMatchesSchema = z.object({
   accountId: z.string().uuid(),
-  listingIds: z.array(z.string().uuid()).max(100),
+  listingIds: z.array(z.string().uuid()).max(500),
 });
 
 export const GetListingSchema = z.object({
