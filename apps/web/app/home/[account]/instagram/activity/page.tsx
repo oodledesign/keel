@@ -1,7 +1,9 @@
 import Link from 'next/link';
 
-import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { PageBody } from '@kit/ui/page';
+
+import { loadIgCommentEvents } from '~/lib/instagram-autoreply/assert-access';
 
 import { InstagramActivityFeed } from '../../(instagram-autoreply)/_components/instagram-activity-feed';
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
@@ -11,7 +13,6 @@ import {
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../_lib/work-account-path';
-import { loadIgCommentEvents } from '~/lib/instagram-autoreply/assert-access';
 
 type InstagramActivityPageProps = {
   params: Promise<{ account: string }>;

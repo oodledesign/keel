@@ -48,13 +48,15 @@ export async function createPipelineLeadFromComment(
   const dealId = String((data as { id: string }).id);
 
   const admin = getSupabaseServerAdminClient();
-  const { error: activityError } = await admin.from('pipeline_activities').insert({
-    deal_id: dealId,
-    user_id: null,
-    type: 'instagram_comment',
-    content: `Lead created from Instagram comment by ${contactName}`,
-    occurred_at: new Date().toISOString(),
-  });
+  const { error: activityError } = await admin
+    .from('pipeline_activities')
+    .insert({
+      deal_id: dealId,
+      user_id: null,
+      type: 'instagram_comment',
+      content: `Lead created from Instagram comment by ${contactName}`,
+      occurred_at: new Date().toISOString(),
+    });
 
   if (activityError) {
     console.error(

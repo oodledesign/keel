@@ -2,17 +2,18 @@
 
 import { useState, useTransition } from 'react';
 
+import type { z } from 'zod';
+
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
 
 import type { upsertIgTriggerActionSchema } from '../_lib/schema/instagram-autoreply.schema';
-import type { z } from 'zod';
 
 type UpsertIgTriggerInput = z.infer<typeof upsertIgTriggerActionSchema>;
 
@@ -31,9 +32,7 @@ export function InstagramTriggerEditor({
   const [keywordsText, setKeywordsText] = useState(
     (trigger?.keywords ?? []).join(', '),
   );
-  const [matchType, setMatchType] = useState(
-    trigger?.match_type ?? 'contains',
-  );
+  const [matchType, setMatchType] = useState(trigger?.match_type ?? 'contains');
   const [publicEnabled, setPublicEnabled] = useState(
     trigger?.public_reply_enabled ?? true,
   );

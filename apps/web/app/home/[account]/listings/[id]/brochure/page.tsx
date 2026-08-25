@@ -2,9 +2,9 @@ import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { withI18n } from '~/lib/i18n/with-i18n';
 import { loadListingBrochureData } from '~/lib/commercial/brochure-pdf/load-listing-brochure-data';
 import { requireCommercialBillableActor } from '~/lib/commercial/require-commercial-billable-actor';
+import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { ListingBrochureEditor } from '../../_components/listing-brochure-editor';
@@ -19,8 +19,7 @@ interface PageProps {
 async function ListingBrochureEditorPage({ params, searchParams }: PageProps) {
   const { account: slug, id: listingId } = await params;
   const sp = await searchParams;
-  const orientation =
-    sp.orientation === 'landscape' ? 'landscape' : 'portrait';
+  const orientation = sp.orientation === 'landscape' ? 'landscape' : 'portrait';
 
   const workspace = await loadTeamWorkspace(slug);
   const accountId = workspace.account.id as string;

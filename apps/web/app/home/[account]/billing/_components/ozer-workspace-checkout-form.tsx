@@ -171,9 +171,7 @@ export function OzerWorkspaceCheckoutForm(params: {
                 max={200}
                 value={billableSeats}
                 onChange={(event) =>
-                  setBillableSeats(
-                    clampSeats(Number(event.target.value) || 1),
-                  )
+                  setBillableSeats(clampSeats(Number(event.target.value) || 1))
                 }
               />
             </div>
@@ -193,8 +191,7 @@ export function OzerWorkspaceCheckoutForm(params: {
               ) : (
                 <>
                   <li>
-                    {businessCredits.toLocaleString()} shared AI credits /
-                    month
+                    {businessCredits.toLocaleString()} shared AI credits / month
                   </li>
                   <li>
                     {businessGuests} project guest
@@ -212,9 +209,7 @@ export function OzerWorkspaceCheckoutForm(params: {
           config={filteredConfig as typeof billingConfig}
           canStartTrial={canStartTrial}
           value={defaultPickerValue}
-          displayCostOverride={
-            usesGraduatedSeats ? monthlyEstimate : undefined
-          }
+          displayCostOverride={usesGraduatedSeats ? monthlyEstimate : undefined}
           onSubmit={({ planId, productId }) => {
             startTransition(async () => {
               const slug = routeParams.account as string;

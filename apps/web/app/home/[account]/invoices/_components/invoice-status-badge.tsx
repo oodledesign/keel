@@ -74,8 +74,7 @@ const RECURRING_STATUS_STYLES: Record<string, string> = {
 export function RecurringSeriesStatusBadge({ status }: { status: string }) {
   const key = status.trim().toLowerCase() || 'active';
   const label = key.toUpperCase();
-  const classes =
-    RECURRING_STATUS_STYLES[key] ?? RECURRING_STATUS_STYLES.ended;
+  const classes = RECURRING_STATUS_STYLES[key] ?? RECURRING_STATUS_STYLES.ended;
 
   return (
     <span

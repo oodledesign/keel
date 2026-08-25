@@ -453,8 +453,7 @@ function mapListing(row: ListingRow): CommercialListing {
       (row.terms_of_engagement as 'yes' | 'no' | 'pending' | null) ?? null,
     restrictAccessToAssigned: Boolean(row.restrict_access_to_assigned),
     hideLandlordFromMarketing: Boolean(row.hide_landlord_from_marketing),
-    commercialPropertyId:
-      (row.commercial_property_id as string | null) ?? null,
+    commercialPropertyId: (row.commercial_property_id as string | null) ?? null,
     referenceNumber: (row.reference_number as string | null) ?? null,
     projectCode: (row.project_code as string | null) ?? null,
     accountBranchId: (row.account_branch_id as string | null) ?? null,
@@ -2835,9 +2834,9 @@ export function createListingsService(client: SupabaseClient) {
       const { data, error } = await query;
       if (error) throw new Error(error.message);
 
-      const results: CoAgentClientOption[] = ((data ?? []) as Array<
-        Record<string, unknown>
-      >)
+      const results: CoAgentClientOption[] = (
+        (data ?? []) as Array<Record<string, unknown>>
+      )
         .filter((row) => !excludeIds.includes(row.id as string))
         .map((row) => {
           const name =

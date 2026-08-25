@@ -18,6 +18,7 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import type { PartnerBoardProject } from '~/lib/projects/partner-projects.loader';
 import {
   type ProjectsUiVariant,
   projectDetailHref,
@@ -36,6 +37,7 @@ import {
   mapCampaignRowToKanbanItem,
   mapDeliveryRowToKanbanItem,
 } from './projects-kanban-view';
+import { SharedPartnerProjectsSection } from './shared-partner-projects-section';
 
 type PageView = 'table' | 'timeline' | 'schedule' | 'kanban';
 type ProjectTypeFilter = 'all' | 'delivery' | 'campaign';
@@ -50,6 +52,7 @@ export function JobsPageContent({
   initialJobs,
   initialCampaigns,
   initialMembers,
+  sharedPartnerProjects = [],
   personalScope = false,
   projectDetailPathBuilder,
 }: {
@@ -67,6 +70,7 @@ export function JobsPageContent({
     email: string | null;
     picture_url?: string | null;
   }>;
+  sharedPartnerProjects?: PartnerBoardProject[];
   personalScope?: boolean;
   projectDetailPathBuilder?: (id: string) => string;
 }) {
@@ -316,11 +320,31 @@ export function JobsPageContent({
         });
 
   const visibleJobs = typeFilter === 'campaign' ? [] : jobs;
+  const sharedKanbanItems: ProjectsKanbanItem[] =
+    typeFilter === 'campaign'
+      ? []
+      : sharedPartnerProjects.map((project) => ({
+          id: `shared:${project.shareId}:${project.id}`,
+          projectType: 'delivery' as const,
+          status: project.status ?? 'in_progress',
+          title: project.name,
+          clientName: project.clientName,
+          dueDate: null,
+          href: pathsConfig.app.accountSharedClientProject
+            .replace('[account]', accountSlug)
+            .replace('[shareId]', project.shareId)
+            .replace('[projectId]', project.id),
+          sharedBadge: project.ownerAccountName
+            ? `Shared · ${project.ownerAccountName}`
+            : 'Shared',
+          readOnly: true,
+        }));
   const kanbanItems: ProjectsKanbanItem[] = [
     ...visibleJobs.map((row) =>
       mapDeliveryRowToKanbanItem(row as Record<string, unknown>),
     ),
     ...visibleCampaigns.map((row) => mapCampaignRowToKanbanItem(row)),
+    ...sharedKanbanItems,
   ];
 
   const typeFilters: { key: ProjectTypeFilter; label: string }[] = [
@@ -351,6 +375,13 @@ export function JobsPageContent({
           </Button>
         )}
       </div>
+
+      {!isSimple ? (
+        <SharedPartnerProjectsSection
+          accountSlug={accountSlug}
+          projects={sharedPartnerProjects}
+        />
+      ) : null}
 
       {!isSimple ? (
         <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 md:px-5">

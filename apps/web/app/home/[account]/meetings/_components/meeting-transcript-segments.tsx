@@ -14,6 +14,7 @@ import {
   type SpeakerBinding,
   type SpeakerMappings,
   type TranscriptSegment,
+  formatTranscriptTimestamp,
   resolveSpeakerLabel,
 } from '~/lib/recorder/transcript-speakers';
 
@@ -244,26 +245,33 @@ export function MeetingTranscriptSegments({
 
         return (
           <div key={`${speakerKey}-${index}`}>
-            {canEdit && !editing ? (
-              <SpeakerAssignPopover
-                accountId={accountId}
-                speakerKey={speakerKey}
-                mappings={mappings}
-                binding={mappings[speakerKey] ?? null}
-                clients={clients}
-                contacts={contacts}
-                members={members}
-                currentUserId={currentUserId}
-                linkClientId={linkClientId}
-                disabled={pending}
-                onSave={(binding) => persistMapping(speakerKey, binding)}
-                onContactsChange={onContactsChange}
-              />
-            ) : (
-              <p className="text-xs font-semibold text-[var(--workspace-shell-text)]">
-                {displaySpeaker}
-              </p>
-            )}
+            <div className="flex items-baseline gap-2">
+              {canEdit && !editing ? (
+                <SpeakerAssignPopover
+                  accountId={accountId}
+                  speakerKey={speakerKey}
+                  mappings={mappings}
+                  binding={mappings[speakerKey] ?? null}
+                  clients={clients}
+                  contacts={contacts}
+                  members={members}
+                  currentUserId={currentUserId}
+                  linkClientId={linkClientId}
+                  disabled={pending}
+                  onSave={(binding) => persistMapping(speakerKey, binding)}
+                  onContactsChange={onContactsChange}
+                />
+              ) : (
+                <p className="text-xs font-semibold text-[var(--workspace-shell-text)]">
+                  {displaySpeaker}
+                </p>
+              )}
+              {typeof segment.startMs === 'number' ? (
+                <span className="font-mono text-[11px] text-[var(--workspace-shell-text-muted)] tabular-nums">
+                  {formatTranscriptTimestamp(segment.startMs)}
+                </span>
+              ) : null}
+            </div>
             {editing && onDraftChange ? (
               <div className="mt-1 flex gap-2">
                 <Textarea

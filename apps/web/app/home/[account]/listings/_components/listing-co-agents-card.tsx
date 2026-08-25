@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { Building2, Plus, X } from 'lucide-react';
-import { toast } from '@kit/ui/sonner';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 

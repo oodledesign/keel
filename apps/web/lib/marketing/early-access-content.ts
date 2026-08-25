@@ -313,7 +313,7 @@ export const EARLY_ACCESS_PERSONAS: Array<{
     accent: 'coral',
     lead: 'You walk into every session knowing what you agreed last time.',
     title: 'Consultant or coach',
-    desc: "Client history and next steps in one place — not scattered across apps.",
+    desc: 'Client history and next steps in one place — not scattered across apps.',
     features: [
       'Pipeline & CRM',
       'Second brain',

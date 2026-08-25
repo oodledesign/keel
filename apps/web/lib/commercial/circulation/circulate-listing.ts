@@ -9,9 +9,9 @@ import {
   sendCirculationEmailViaSes,
 } from '~/lib/commercial/circulation/circulation.service';
 import {
-  scoreListingRequirementMatch,
   type MatchListingSnapshot,
   type MatchRequirementSnapshot,
+  scoreListingRequirementMatch,
 } from '~/lib/commercial/match-scoring';
 
 export type CirculationCandidate = {
@@ -29,7 +29,8 @@ function asListingSnapshot(row: Record<string, unknown>): MatchListingSnapshot {
     id: row.id as string,
     name: (row.name as string) ?? 'Property',
     sector: (row.sector as string | null) ?? null,
-    disposalType: (row.disposal_type as MatchListingSnapshot['disposalType']) ?? 'to_let',
+    disposalType:
+      (row.disposal_type as MatchListingSnapshot['disposalType']) ?? 'to_let',
     town: (row.town as string | null) ?? null,
     postcode: (row.postcode as string | null) ?? null,
     addressLine1: (row.address_line_1 as string | null) ?? null,
@@ -40,7 +41,9 @@ function asListingSnapshot(row: Record<string, unknown>): MatchListingSnapshot {
     askingRentPence:
       row.asking_rent_pence != null ? Number(row.asking_rent_pence) : null,
     askingRentToPence:
-      row.asking_rent_to_pence != null ? Number(row.asking_rent_to_pence) : null,
+      row.asking_rent_to_pence != null
+        ? Number(row.asking_rent_to_pence)
+        : null,
     askingPricePence:
       row.asking_price_pence != null ? Number(row.asking_price_pence) : null,
     status: (row.status as string) ?? 'draft',
@@ -97,7 +100,13 @@ export async function listCirculationCandidates(
     .select('*')
     .eq('account_id', input.accountId)
     .not('contact_email', 'is', null)
-    .in('stage', ['new', 'actively_searching', 'search', 'prospect', 'unactioned']);
+    .in('stage', [
+      'new',
+      'actively_searching',
+      'search',
+      'prospect',
+      'unactioned',
+    ]);
 
   if (reqError) throw new Error(reqError.message);
 
@@ -105,7 +114,11 @@ export async function listCirculationCandidates(
   const circulation = createCommercialCirculationService(client);
   const rows = (requirements ?? []) as Array<Record<string, unknown>>;
   const emails = rows
-    .map((row) => String(row.contact_email ?? '').trim().toLowerCase())
+    .map((row) =>
+      String(row.contact_email ?? '')
+        .trim()
+        .toLowerCase(),
+    )
     .filter(Boolean);
   const subscribedSet = await circulation.getSubscribedEmails(
     input.accountId,
@@ -233,7 +246,9 @@ export async function circulateListing(
 
   const summary =
     (listing as { summary?: string | null }).summary?.trim() ||
-    (listing as { description?: string | null }).description?.trim()?.slice(0, 600) ||
+    (listing as { description?: string | null }).description
+      ?.trim()
+      ?.slice(0, 600) ||
     '';
 
   const brochureToken = (listing as { brochure_share_token?: string | null })

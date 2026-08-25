@@ -5,9 +5,8 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 import { isFromOwner } from '~/lib/email-assistant/address-utils';
 import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
-import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
-
 import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
+import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
 
 /**
  * Clears actionable categories when the latest synced message is already from the mailbox owner

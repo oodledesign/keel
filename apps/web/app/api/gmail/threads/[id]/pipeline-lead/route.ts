@@ -1,7 +1,7 @@
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { loadEmailThreadDetailFromDb } from '~/home/(user)/email/_lib/server/email-page.loader';
 import { createPipelineLeadFromThread } from '~/lib/email-assistant/create-pipeline-lead-from-thread';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
-import { loadEmailThreadDetailFromDb } from '~/home/(user)/email/_lib/server/email-page.loader';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const dynamic = 'force-dynamic';
 

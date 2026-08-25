@@ -69,16 +69,14 @@ export function AdminContentRewardsTable({
         setReviewNotes('');
         setRejectionReason('');
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Review failed',
-        );
+        toast.error(error instanceof Error ? error.message : 'Review failed');
       }
     });
   };
 
   if (submissions.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No pending submissions.</p>
+      <p className="text-muted-foreground text-sm">No pending submissions.</p>
     );
   }
 
@@ -97,7 +95,9 @@ export function AdminContentRewardsTable({
           {submissions.map((row) => (
             <TableRow
               key={row.id}
-              className={selectedId === row.id ? 'bg-muted/50' : 'cursor-pointer'}
+              className={
+                selectedId === row.id ? 'bg-muted/50' : 'cursor-pointer'
+              }
               onClick={() => setSelectedId(row.id)}
             >
               <TableCell>{row.user_email ?? row.user_id.slice(0, 8)}</TableCell>
@@ -200,7 +200,7 @@ export function AdminContentRewardsTable({
           </div>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Select a submission to review.
         </p>
       )}

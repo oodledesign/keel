@@ -5,12 +5,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
-import { setEmailThreadCategory } from './set-thread-category';
 import { loadGmailReplyHeaders } from './gmail-reply-headers';
 import {
   buildReplyAllRecipients,
   saveDraftToGmail,
 } from './save-draft-to-gmail';
+import { setEmailThreadCategory } from './set-thread-category';
 
 function replySubject(subject: string | null | undefined) {
   const trimmed = subject?.trim();
@@ -131,7 +131,10 @@ export async function sendDraftFromOzer(input: {
     .limit(1)
     .maybeSingle();
 
-  if (!(settings as { allow_send_from_ozer?: boolean } | null)?.allow_send_from_ozer) {
+  if (
+    !(settings as { allow_send_from_ozer?: boolean } | null)
+      ?.allow_send_from_ozer
+  ) {
     throw new Error('Send from Ozer is disabled in email settings');
   }
 
@@ -162,7 +165,10 @@ export async function sendDraftFromOzer(input: {
   const { data: connection } = await admin
     .from('google_connections')
     .select('mailbox_kind')
-    .eq('id', (threadForConnection as { connection_id?: string }).connection_id ?? '')
+    .eq(
+      'id',
+      (threadForConnection as { connection_id?: string }).connection_id ?? '',
+    )
     .maybeSingle();
 
   const mailboxKind =
@@ -201,8 +207,10 @@ export async function sendDraftFromOzer(input: {
     .eq('id', threadId)
     .maybeSingle();
 
-  const gmailThreadId = (threadForConnection as { gmail_thread_id?: string } | null)
-    ?.gmail_thread_id ?? (thread as { gmail_thread_id?: string } | null)?.gmail_thread_id;
+  const gmailThreadId =
+    (threadForConnection as { gmail_thread_id?: string } | null)
+      ?.gmail_thread_id ??
+    (thread as { gmail_thread_id?: string } | null)?.gmail_thread_id;
 
   if (gmailThreadId) {
     try {

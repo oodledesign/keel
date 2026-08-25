@@ -6,6 +6,7 @@ import { PageBody } from '@kit/ui/page';
 import pathsConfig from '~/config/paths.config';
 import { getShareByIdForGuest } from '~/lib/clients/client-workspace-shares.service';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { listProjectsForShare } from '~/lib/projects/partner-projects.loader';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
@@ -25,6 +26,13 @@ async function SharedClientDetailPage({
   if (!share) {
     notFound();
   }
+
+  const projects = share.capabilities.canProjects
+    ? await listProjectsForShare({
+        guestAccountId: workspace.account.id,
+        shareId,
+      })
+    : [];
 
   const name =
     share.clientDisplayName ?? share.clientOrgName ?? 'Shared client';
@@ -50,8 +58,8 @@ async function SharedClientDetailPage({
         </div>
         <SharedClientDetailContent
           accountSlug={accountSlug}
-          accountId={workspace.account.id}
           share={share}
+          projects={projects}
         />
       </PageBody>
     </>

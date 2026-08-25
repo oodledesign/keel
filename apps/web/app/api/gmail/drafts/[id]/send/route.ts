@@ -1,9 +1,9 @@
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import {
   buildSendDraftPreview,
   sendDraftFromOzer,
 } from '~/lib/email-assistant/send-draft-from-ozer';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

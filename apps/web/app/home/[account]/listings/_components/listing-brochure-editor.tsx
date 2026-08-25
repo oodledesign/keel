@@ -28,15 +28,6 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
-  getListingBrochureDocument,
-  regenerateListingBrochure,
-  saveListingBrochureDocument,
-} from '../_lib/server/brochure-actions';
-import {
-  BROCHURE_LAYOUT_OPTIONS,
-  createBlankBrochurePage,
-} from '~/lib/commercial/brochure-pdf/build-brochure-document';
-import {
   BROCHURE_TEMPLATE_OPTIONS,
   type BrochureDocument,
   type BrochureLayoutId,
@@ -46,7 +37,17 @@ import {
   type BrochureTemplateId,
   newBrochurePageId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import {
+  BROCHURE_LAYOUT_OPTIONS,
+  createBlankBrochurePage,
+} from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
+
+import {
+  getListingBrochureDocument,
+  regenerateListingBrochure,
+  saveListingBrochureDocument,
+} from '../_lib/server/brochure-actions';
 
 type ListingBrochureEditorProps = {
   listingId: string;
@@ -68,10 +69,7 @@ function layoutLabel(id: BrochureLayoutId) {
   return BROCHURE_LAYOUT_OPTIONS.find((o) => o.id === id)?.label ?? id;
 }
 
-function slotText(
-  page: BrochurePage,
-  key: string,
-): string {
+function slotText(page: BrochurePage, key: string): string {
   const s = page.slots[key];
   return s?.type === 'text' ? s.text : '';
 }
@@ -111,7 +109,8 @@ function PreviewPage({
   if (page.layoutId === 'cover_hero_band') {
     const hero = slotImageUrl(page, 'hero');
     const disposal = slotText(page, 'disposal');
-    const bandPct = templateId === 'editorial' ? 26 : templateId === 'compact' ? 38 : 32;
+    const bandPct =
+      templateId === 'editorial' ? 26 : templateId === 'compact' ? 38 : 32;
 
     if (landscape) {
       return (
@@ -130,7 +129,9 @@ function PreviewPage({
                 backgroundColor: primary,
                 color: paper,
                 borderLeft:
-                  templateId === 'editorial' ? `3px solid ${accent}` : undefined,
+                  templateId === 'editorial'
+                    ? `3px solid ${accent}`
+                    : undefined,
               }}
             >
               {brand.logoUrl ? (
@@ -146,11 +147,14 @@ function PreviewPage({
                 </p>
               )}
               {disposal ? (
-                <p className="text-[9px] font-semibold uppercase" style={{ color: accent }}>
+                <p
+                  className="text-[9px] font-semibold uppercase"
+                  style={{ color: accent }}
+                >
                   {disposal}
                 </p>
               ) : null}
-              <p className="line-clamp-4 text-sm font-semibold leading-snug">
+              <p className="line-clamp-4 text-sm leading-snug font-semibold">
                 {title}
               </p>
               <p className="mt-auto text-[9px] opacity-50">Cover</p>
@@ -305,7 +309,7 @@ function PreviewPage({
           </p>
         ) : null}
         {highlights ? (
-          <p className="line-clamp-4 whitespace-pre-line text-[10px] text-[var(--workspace-shell-text)]">
+          <p className="line-clamp-4 text-[10px] whitespace-pre-line text-[var(--workspace-shell-text)]">
             {highlights}
           </p>
         ) : null}
@@ -338,7 +342,8 @@ function SlotEditor({
     <div className="space-y-4">
       {entries.map(([key, slot]) => {
         if (slot.type === 'text') {
-          const multiline = key === 'body' || key === 'highlights' || key === 'notice';
+          const multiline =
+            key === 'body' || key === 'highlights' || key === 'notice';
           return (
             <div key={key} className="grid gap-1.5">
               <Label className="capitalize">{key}</Label>
@@ -370,7 +375,11 @@ function SlotEditor({
                 value={slot.mediaId ?? '__none__'}
                 onValueChange={(v) => {
                   if (v === '__none__') {
-                    updateSlot(key, { type: 'image', mediaId: null, url: null });
+                    updateSlot(key, {
+                      type: 'image',
+                      mediaId: null,
+                      url: null,
+                    });
                     return;
                   }
                   const media = images.find((i) => i.id === v);
@@ -388,7 +397,8 @@ function SlotEditor({
                   <SelectItem value="__none__">No image</SelectItem>
                   {images.map((img) => (
                     <SelectItem key={img.id} value={img.id}>
-                      {img.fileName ?? (img.isCover ? 'Cover photo' : img.id.slice(0, 8))}
+                      {img.fileName ??
+                        (img.isCover ? 'Cover photo' : img.id.slice(0, 8))}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -410,7 +420,10 @@ function SlotEditor({
             <div key={key} className="grid gap-2">
               <Label>Facts</Label>
               {slot.rows.map((row, index) => (
-                <div key={`${row.label}-${index}`} className="grid grid-cols-2 gap-2">
+                <div
+                  key={`${row.label}-${index}`}
+                  className="grid grid-cols-2 gap-2"
+                >
                   <Input
                     value={row.label}
                     onChange={(e) => {
@@ -517,7 +530,8 @@ export function ListingBrochureEditor({
   const [pending, startTransition] = useTransition();
 
   const selectedPage = useMemo(
-    () => document.pages.find((p) => p.id === selectedPageId) ?? document.pages[0],
+    () =>
+      document.pages.find((p) => p.id === selectedPageId) ?? document.pages[0],
     [document.pages, selectedPageId],
   );
 
@@ -602,7 +616,9 @@ export function ListingBrochureEditor({
         setSelectedPageId(next.pages[0]?.id ?? '');
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not switch orientation',
+          error instanceof Error
+            ? error.message
+            : 'Could not switch orientation',
         );
       }
     });

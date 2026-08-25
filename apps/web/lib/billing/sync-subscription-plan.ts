@@ -8,13 +8,13 @@ import { syncAccountCreditLimit } from '~/lib/ai/tiers';
 
 import {
   maxMembersForBillableSeats as businessMaxMembersForBillableSeats,
-  maxProjectGuestsForBillableSeats,
   clampBillableSeats as clampBusinessBillableSeats,
+  maxProjectGuestsForBillableSeats,
 } from './business-graduated-pricing';
 import { markBusinessUpgradedFromLite } from './business-lite';
 import {
-  maxMembersForBillableSeats as commercialMaxMembersForBillableSeats,
   clampBillableSeats as clampCommercialBillableSeats,
+  maxMembersForBillableSeats as commercialMaxMembersForBillableSeats,
 } from './commercial-graduated-pricing';
 import { findPlanByStripePriceId } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
@@ -192,10 +192,7 @@ export async function syncKeelPlanFromSubscription(
       }
 
       // Clear pending seat downgrade once Stripe quantity matches (or is lower).
-      if (
-        (isCommercial || isGraduatedBusiness) &&
-        billableQuantity != null
-      ) {
+      if ((isCommercial || isGraduatedBusiness) && billableQuantity != null) {
         const { data: limits } = await admin
           .from('account_plan_limits')
           .select('pending_billable_seats')

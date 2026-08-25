@@ -59,7 +59,10 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
           clients:client_id (
             id,
             display_name,
-            company_name
+            company_name,
+            first_name,
+            last_name,
+            picture_url
           )
         )
       `,
@@ -124,11 +127,17 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
+                  first_name?: string | null;
+                  last_name?: string | null;
+                  picture_url?: string | null;
                 }
               | Array<{
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
+                  first_name?: string | null;
+                  last_name?: string | null;
+                  picture_url?: string | null;
                 }>
               | null;
           }
@@ -141,11 +150,17 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
+                  first_name?: string | null;
+                  last_name?: string | null;
+                  picture_url?: string | null;
                 }
               | Array<{
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
+                  first_name?: string | null;
+                  last_name?: string | null;
+                  picture_url?: string | null;
                 }>
               | null;
           }>
@@ -163,6 +178,10 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
     const clientName =
       clientRow?.display_name?.trim() ||
       clientRow?.company_name?.trim() ||
+      [clientRow?.first_name, clientRow?.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
       null;
 
     return {
@@ -179,7 +198,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       meetingDate: transcript?.meeting_date ?? null,
       clientId: transcript?.client_id ?? clientRow?.id ?? null,
       clientName,
-      clientPictureUrl: null,
+      clientPictureUrl: clientRow?.picture_url?.trim() || null,
     };
   });
 

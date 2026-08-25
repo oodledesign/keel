@@ -261,9 +261,8 @@ export const acceptInvitationAction = enhanceAction(
           .eq('id', accountId)
           .maybeSingle();
 
-        const { notifyPlatformTeamInviteAccepted } = await import(
-          '../services/notify-platform-invite-accepted'
-        );
+        const { notifyPlatformTeamInviteAccepted } =
+          await import('../services/notify-platform-invite-accepted');
 
         await notifyPlatformTeamInviteAccepted({
           email: invitationMeta?.email ?? user.email ?? '',

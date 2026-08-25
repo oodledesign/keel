@@ -308,7 +308,8 @@ export function PricingConversion() {
           Feature-by-tier compare
         </h2>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Lite vs paid Business. Use the seat calculator above for exact monthly totals.
+          Lite vs paid Business. Use the seat calculator above for exact monthly
+          totals.
         </p>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[28rem] text-left text-sm">

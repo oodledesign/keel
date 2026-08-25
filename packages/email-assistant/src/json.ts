@@ -31,13 +31,7 @@ const DetectPipelineLeadResponseSchema = z.object({
 });
 
 const ClassifyResponseSchema = z.object({
-  category: z.enum([
-    'reply_now',
-    'reply_later',
-    'waiting',
-    'fyi',
-    'noise',
-  ]),
+  category: z.enum(['reply_now', 'reply_later', 'waiting', 'fyi', 'noise']),
   reason: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
 });

@@ -4,7 +4,9 @@ import { retrieveDocsChunks } from './docs-chat-retrieve';
 
 describe('retrieveDocsChunks', () => {
   it('finds invoice-related docs for an invoicing question', () => {
-    const chunks = retrieveDocsChunks('How do I create and send a client invoice?');
+    const chunks = retrieveDocsChunks(
+      'How do I create and send a client invoice?',
+    );
     expect(chunks.length).toBeGreaterThan(0);
     expect(
       chunks.some(

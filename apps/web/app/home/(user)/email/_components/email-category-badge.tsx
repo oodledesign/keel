@@ -9,6 +9,7 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import {
+  EMAIL_THREAD_CATEGORY_HINTS,
   EMAIL_THREAD_CATEGORY_LABELS,
   type EmailThreadCategory,
 } from '~/lib/email-assistant/email-thread-categories';
@@ -74,6 +75,8 @@ export function EmailCategoryBadge({
 
   const styles = CATEGORY_STYLES[category];
   const label = EMAIL_THREAD_CATEGORY_LABELS[category];
+  const hint = EMAIL_THREAD_CATEGORY_HINTS[category];
+  const whyText = reason?.trim() || hint;
   const badge = (
     <span
       className={cn(
@@ -85,11 +88,13 @@ export function EmailCategoryBadge({
       )}
     >
       {label}
-      {typeof confidence === 'number' ? ` · ${Math.round(confidence * 100)}%` : ''}
+      {typeof confidence === 'number'
+        ? ` · ${Math.round(confidence * 100)}%`
+        : ''}
     </span>
   );
 
-  if (!showWhy || !reason?.trim()) {
+  if (!showWhy) {
     return badge;
   }
 
@@ -102,9 +107,9 @@ export function EmailCategoryBadge({
           </button>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs text-xs">
-          <p className="font-medium">Why this category?</p>
+          <p className="font-medium">{label}</p>
           <p className="mt-1 text-[var(--workspace-shell-text-muted)]">
-            {reason.trim()}
+            {whyText}
           </p>
         </TooltipContent>
       </Tooltip>

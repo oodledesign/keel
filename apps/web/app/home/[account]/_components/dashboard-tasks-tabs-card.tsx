@@ -4,8 +4,17 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Check, CheckSquare, ChevronRight, ListTodo, X } from 'lucide-react';
+import {
+  Check,
+  CheckSquare,
+  ChevronRight,
+  ListTodo,
+  Mail,
+  Mic,
+  X,
+} from 'lucide-react';
 
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
@@ -76,8 +85,22 @@ export function DashboardTasksTabsCard({
   const [tab, setTab] = useState<TabId>(defaultTab);
 
   useEffect(() => {
-    setTab(defaultTab);
-  }, [defaultTab]);
+    const countForCurrentTab =
+      tab === 'upcoming'
+        ? upcomingTasksTotalCount
+        : tab === 'meeting'
+          ? meetingTaskReview.totalCount
+          : emailCount;
+    if (countForCurrentTab === 0) {
+      setTab(defaultTab);
+    }
+  }, [
+    defaultTab,
+    emailCount,
+    meetingTaskReview.totalCount,
+    tab,
+    upcomingTasksTotalCount,
+  ]);
 
   const tasksHref = pathsConfig.app.accountTasks.replace(
     '[account]',
@@ -138,14 +161,25 @@ export function DashboardTasksTabsCard({
     });
   }
 
-  const tabs: Array<{ id: TabId; label: string; count: number }> = [
-    { id: 'upcoming', label: 'Upcoming', count: upcomingTasksTotalCount },
+  const tabs: Array<{
+    id: TabId;
+    label: string;
+    count: number;
+    icon: typeof ListTodo;
+  }> = [
+    {
+      id: 'upcoming',
+      label: 'Upcoming',
+      count: upcomingTasksTotalCount,
+      icon: ListTodo,
+    },
     {
       id: 'meeting',
       label: 'Meeting review',
       count: meetingTaskReview.totalCount,
+      icon: Mic,
     },
-    { id: 'email', label: 'Email review', count: emailCount },
+    { id: 'email', label: 'Email review', count: emailCount, icon: Mail },
   ];
 
   return (
@@ -173,6 +207,7 @@ export function DashboardTasksTabsCard({
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
+              <entry.icon className="h-3.5 w-3.5 shrink-0" />
               {entry.label}
               <span
                 className={cn(
@@ -218,17 +253,35 @@ export function DashboardTasksTabsCard({
               <li key={item.id}>
                 <HapticLink
                   href={meetingReviewHref}
-                  className="block px-4 py-2.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
-                  <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                    {item.suggestedTitle}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                    {item.meetingTitle}
-                    {item.suggestedDueDate
-                      ? ` · due ${item.suggestedDueDate}`
-                      : ''}
-                  </p>
+                  {item.clientName ? (
+                    <ProfileAvatar
+                      displayName={item.clientName}
+                      pictureUrl={item.clientPictureUrl}
+                      className="mt-0.5 h-8 w-8 shrink-0"
+                    />
+                  ) : (
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+                      <Mic className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {item.suggestedTitle}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                      {[
+                        item.clientName,
+                        item.meetingTitle,
+                        item.suggestedDueDate
+                          ? `due ${item.suggestedDueDate}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </span>
                 </HapticLink>
               </li>
             ))
@@ -251,15 +304,31 @@ export function DashboardTasksTabsCard({
                   key={item.id}
                   className="flex min-w-0 items-start gap-2 px-3 py-2.5 sm:px-4"
                 >
+                  {item.clientName ? (
+                    <ProfileAvatar
+                      displayName={item.clientName}
+                      pictureUrl={item.clientPictureUrl}
+                      className="mt-0.5 h-8 w-8 shrink-0"
+                    />
+                  ) : (
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+                      <Mail className="h-3.5 w-3.5" />
+                    </span>
+                  )}
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                       {item.title}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                      {item.threadSubject}
-                      {item.suggestedDueDate
-                        ? ` · due ${item.suggestedDueDate}`
-                        : ''}
+                      {[
+                        item.clientName,
+                        item.threadSubject,
+                        item.suggestedDueDate
+                          ? `due ${item.suggestedDueDate}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
                   </div>
                   <button

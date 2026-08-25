@@ -209,9 +209,7 @@ export async function sendInvoicePaidNotifications(params: {
   const safeAmount = escapeEmailHtml(amount);
   const safePaidAt = escapeEmailHtml(paidAt);
   const safeMethod = escapeEmailHtml(methodLabel);
-  const safeAccountName = escapeEmailHtml(
-    account.name?.trim() || productName,
-  );
+  const safeAccountName = escapeEmailHtml(account.name?.trim() || productName);
 
   const customerSubject = `Payment received for invoice ${invoice.invoice_number}`;
   const customerHtml = wrapNotificationEmail(
@@ -424,9 +422,7 @@ export async function sendInvoiceIssuedEmail(params: {
   const safeInvoiceNumber = escapeEmailHtml(String(invoice.invoice_number));
   const safeAmount = escapeEmailHtml(amount);
   const safeDueDate = escapeEmailHtml(dueDate);
-  const safeAccountName = escapeEmailHtml(
-    account?.name?.trim() || productName,
-  );
+  const safeAccountName = escapeEmailHtml(account?.name?.trim() || productName);
   const bodyHtml = `
       <p style="margin:0 0 16px;">${escapeEmailHtml(bodyText).replace(/\r?\n/g, '<br />')}</p>
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 16px;background:#FBF6EC;border:1px solid #E7DECF;border-radius:12px;">

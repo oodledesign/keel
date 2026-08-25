@@ -4,10 +4,9 @@ import { syncGmailThread } from '@kit/gmail';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
-import { reconcileRepliedNeedsReplyThreads } from '~/lib/email-assistant/reconcile-replied-threads';
-import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
-
 import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
+import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
+import { reconcileRepliedNeedsReplyThreads } from '~/lib/email-assistant/reconcile-replied-threads';
 
 /**
  * Pulls the latest Gmail state for actionable threads, then clears any that

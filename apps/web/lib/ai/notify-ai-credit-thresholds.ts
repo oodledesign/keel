@@ -407,9 +407,7 @@ async function loadAccountNotifyContext(accountId: string): Promise<{
   };
 
   let ownerEmail: string | null =
-    typeof row.email === 'string' && row.email.includes('@')
-      ? row.email
-      : null;
+    typeof row.email === 'string' && row.email.includes('@') ? row.email : null;
 
   const ownerUserId = row.primary_owner_user_id;
   if (ownerUserId) {

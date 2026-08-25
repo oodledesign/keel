@@ -64,14 +64,12 @@ export function AccountMembersTable({
     () => ({
       canUpdateRole: (targetRole: number) => {
         return (
-          isPrimaryOwner ||
-          (canManageMembers && userRoleHierarchy < targetRole)
+          isPrimaryOwner || (canManageMembers && userRoleHierarchy < targetRole)
         );
       },
       canRemoveFromAccount: (targetRole: number) => {
         return (
-          isPrimaryOwner ||
-          (canManageMembers && userRoleHierarchy < targetRole)
+          isPrimaryOwner || (canManageMembers && userRoleHierarchy < targetRole)
         );
       },
       canTransferOwnership: isPrimaryOwner,

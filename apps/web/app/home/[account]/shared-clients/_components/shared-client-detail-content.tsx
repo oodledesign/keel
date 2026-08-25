@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 
-import { LifeBuoy } from 'lucide-react';
+import { FolderKanban, LifeBuoy } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 import type { ClientWorkspaceShare } from '~/lib/clients/client-workspace-shares.service';
+import type { PartnerSharedProject } from '~/lib/projects/partner-projects.loader';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 function ModulePanel({
@@ -29,16 +30,29 @@ function ModulePanel({
   );
 }
 
+function formatPence(pence: number): string {
+  if (!pence) return '—';
+  return `£${(pence / 100).toFixed(2)}`;
+}
+
+function formatUpdated(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export function SharedClientDetailContent({
   accountSlug,
-  accountId,
   share,
+  projects,
 }: {
   accountSlug: string;
-  accountId: string;
   share: ClientWorkspaceShare;
+  projects: PartnerSharedProject[];
 }) {
-  void accountId;
   const caps = share.capabilities;
   const partnerSupportHref = pathsConfig.app.accountPartnerSupport.replace(
     '[account]',
@@ -81,10 +95,59 @@ export function SharedClientDetailContent({
       ) : null}
 
       {caps.canProjects ? (
-        <ModulePanel
-          title="Projects"
-          description="Project visibility is enabled for this share. Full project boards stay in the agency workspace for now — ask them for status updates as needed."
-        />
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
+          <div className="mb-4">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
+              <FolderKanban className="h-4 w-4" />
+              Projects
+            </h3>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+              Open boards shared by {share.ownerAccountName ?? 'the agency'} and
+              submit cost lines for approval.
+            </p>
+          </div>
+          {projects.length === 0 ? (
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              No delivery projects yet for this client.
+            </p>
+          ) : (
+            <ul className="divide-y divide-[color:var(--workspace-shell-border)] rounded-lg border border-[color:var(--workspace-shell-border)]">
+              {projects.map((project) => {
+                const href = pathsConfig.app.accountSharedClientProject
+                  .replace('[account]', accountSlug)
+                  .replace('[shareId]', share.id)
+                  .replace('[projectId]', project.id);
+                return (
+                  <li key={project.id}>
+                    <Link
+                      href={href}
+                      className="flex flex-col gap-1 px-4 py-3 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {project.name}
+                        </p>
+                        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          {project.status ?? '—'} · Updated{' '}
+                          {formatUpdated(project.updatedAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                        <span>Est. {formatPence(project.estimatePence)}</span>
+                        <span>Actual {formatPence(project.actualPence)}</span>
+                        {project.pendingApprovalCount > 0 ? (
+                          <span className="text-[var(--ozer-accent)]">
+                            {project.pendingApprovalCount} pending
+                          </span>
+                        ) : null}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       ) : null}
 
       {caps.canDocs ? (

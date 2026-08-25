@@ -23,10 +23,7 @@ export default async function PortalMeetingDetailPage({
   const { slug, transcriptId } = await params;
   const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
-  const meeting = await service.getPortalMeeting(
-    ctx.clientOrgId,
-    transcriptId,
-  );
+  const meeting = await service.getPortalMeeting(ctx.clientOrgId, transcriptId);
 
   if (!meeting) {
     notFound();

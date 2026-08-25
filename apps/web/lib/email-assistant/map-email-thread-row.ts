@@ -116,12 +116,13 @@ function parsePipelineLeadSuggestion(
         : typeof row.contact_email === 'string'
           ? row.contact_email
           : null,
-    description:
-      typeof row.description === 'string' ? row.description : null,
+    description: typeof row.description === 'string' ? row.description : null,
   };
 }
 
-function parseLinkSuggestion(value: unknown): EmailThreadSummary['link_suggestion'] {
+function parseLinkSuggestion(
+  value: unknown,
+): EmailThreadSummary['link_suggestion'] {
   if (!value || typeof value !== 'object') {
     return null;
   }

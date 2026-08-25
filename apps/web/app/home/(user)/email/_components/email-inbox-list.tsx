@@ -201,9 +201,7 @@ export function EmailInboxList({
         toast.success(`Marked as ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not update category',
+          error instanceof Error ? error.message : 'Could not update category',
         );
       }
     });
@@ -425,8 +423,7 @@ export function EmailInboxList({
                           <DropdownMenuItem
                             key={category}
                             disabled={
-                              pending ||
-                              thread.assistant_category === category
+                              pending || thread.assistant_category === category
                             }
                             onSelect={() => setCategory(thread.id, category)}
                           >

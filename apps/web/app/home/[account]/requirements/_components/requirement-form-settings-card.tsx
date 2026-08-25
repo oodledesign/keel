@@ -6,16 +6,17 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
+
+import pathsConfig from '~/config/paths.config';
+import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
   getRequirementFormSettings,
   updateRequirementFormSettings,
 } from '../../listings/_lib/server/circulation-actions';
-import pathsConfig from '~/config/paths.config';
-import { workspacePanelCard } from '~/lib/workspace-ui';
 
 type Props = {
   accountId: string;
@@ -135,7 +136,12 @@ export function RequirementFormSettingsCard({ accountId }: Props) {
               {publicUrl}
             </code>
             <Label>Embed snippet</Label>
-            <Textarea readOnly value={embedSnippet} rows={3} className="font-mono text-xs" />
+            <Textarea
+              readOnly
+              value={embedSnippet}
+              rows={3}
+              className="font-mono text-xs"
+            />
           </div>
         ) : null}
 

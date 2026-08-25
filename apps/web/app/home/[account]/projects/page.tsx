@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { listPartnerBoardProjectsForGuest } from '~/lib/projects/partner-projects.loader';
 
 import { getDefaultAccountPath } from '../_lib/role-access';
 import {
@@ -75,6 +76,11 @@ async function JobsPage({ params }: JobsPageProps) {
       })
     : null;
 
+  const sharedPartnerProjects =
+    uiVariant === 'projects'
+      ? await listPartnerBoardProjectsForGuest(accountId).catch(() => [])
+      : [];
+
   return (
     <>
       <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
@@ -88,6 +94,7 @@ async function JobsPage({ params }: JobsPageProps) {
           initialJobs={initialData?.jobs as never}
           initialCampaigns={initialData?.campaigns}
           initialMembers={initialData?.members}
+          sharedPartnerProjects={sharedPartnerProjects}
         />
       </PageBody>
     </>

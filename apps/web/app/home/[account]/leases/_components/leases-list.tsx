@@ -63,8 +63,7 @@ function StatusPill({ status }: { status: string }) {
     return <ListingStatusBadge status={status} />;
   }
 
-  const displayLabel =
-    STATUS_LABELS[status as LeaseStatus] ?? status;
+  const displayLabel = STATUS_LABELS[status as LeaseStatus] ?? status;
   const isCompleted = COMPLETED_STATUS_LABELS.has(displayLabel);
 
   return (

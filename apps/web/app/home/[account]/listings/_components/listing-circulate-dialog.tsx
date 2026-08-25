@@ -16,11 +16,12 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
+import type { CirculationCandidate } from '~/lib/commercial/circulation/circulate-listing';
+
 import {
   circulateListingAction,
   listListingCirculationCandidates,
 } from '../_lib/server/circulation-actions';
-import type { CirculationCandidate } from '~/lib/commercial/circulation/circulate-listing';
 
 type Props = {
   accountId: string;
@@ -50,9 +51,7 @@ export function ListingCirculateDialog({
       .then((rows) => {
         setCandidates(rows);
         setSelected(
-          new Set(
-            rows.filter((r) => r.subscribed).map((r) => r.requirementId),
-          ),
+          new Set(rows.filter((r) => r.subscribed).map((r) => r.requirementId)),
         );
       })
       .catch((err) => {
@@ -92,9 +91,7 @@ export function ListingCirculateDialog({
         );
         setOpen(false);
       } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : 'Circulation failed',
-        );
+        toast.error(err instanceof Error ? err.message : 'Circulation failed');
       }
     });
   }
@@ -154,9 +151,7 @@ export function ListingCirculateDialog({
                 <Checkbox
                   checked={selected.has(c.requirementId)}
                   disabled={!c.subscribed}
-                  onCheckedChange={(v) =>
-                    toggle(c.requirementId, Boolean(v))
-                  }
+                  onCheckedChange={(v) => toggle(c.requirementId, Boolean(v))}
                 />
                 <span className="min-w-0 flex-1 text-sm">
                   <span className="font-medium text-[var(--workspace-shell-text)]">

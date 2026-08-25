@@ -190,8 +190,8 @@ export function RewardsSettingsClient(props: RewardsSettingsClientProps) {
             Refer friends
           </CardTitle>
           <CardDescription>
-            Share your link. When a friend subscribes, you both earn credit
-            (50% of their plan&apos;s monthly price).
+            Share your link. When a friend subscribes, you both earn credit (50%
+            of their plan&apos;s monthly price).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import {
   BookOpen,
   ChevronsUpDown,
+  Gift,
   HelpCircle,
   Home,
   LogOut,
@@ -120,6 +121,7 @@ export function PersonalAccountDropdown({
   paths: {
     home: string;
     personalAccountSettings?: string;
+    personalAccountRewards?: string;
     support?: string;
   };
 
@@ -264,6 +266,14 @@ export function PersonalAccountDropdown({
               href={paths.personalAccountSettings}
               icon={Settings}
               label={<Trans i18nKey={'common:personalSettings'} />}
+            />
+          ) : null}
+
+          {paths.personalAccountRewards ? (
+            <MenuLinkItem
+              href={paths.personalAccountRewards}
+              icon={Gift}
+              label={<Trans i18nKey={'common:referrals'} />}
             />
           ) : null}
 

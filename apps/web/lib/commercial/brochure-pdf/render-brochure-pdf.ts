@@ -5,6 +5,7 @@ import {
   type PDFFont,
   type PDFImage,
   type PDFPage,
+  type RGB,
   StandardFonts,
   clip,
   closePath,
@@ -15,7 +16,6 @@ import {
   popGraphicsState,
   pushGraphicsState,
   rgb,
-  type RGB,
 } from 'pdf-lib';
 
 import type {
@@ -26,8 +26,8 @@ import type {
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import { fetchBrochureMapImageBytes } from '~/lib/commercial/brochure-pdf/mapbox-static';
-import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
+import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 };
 const A4_LANDSCAPE = { width: 841.89, height: 595.28 };
@@ -161,7 +161,10 @@ async function fetchImageBytes(url: string | null): Promise<Uint8Array | null> {
       !contentType.startsWith('image/') &&
       !contentType.includes('octet-stream')
     ) {
-      console.error('[brochure-pdf] blocked non-image content-type:', contentType);
+      console.error(
+        '[brochure-pdf] blocked non-image content-type:',
+        contentType,
+      );
       return null;
     }
     return new Uint8Array(await res.arrayBuffer());
@@ -212,7 +215,10 @@ function resolveFit(
   if (fit === 'cover') return 'cover';
   if (fit === 'contain') return 'contain';
 
-  const coverScale = Math.max(box.width / image.width, box.height / image.height);
+  const coverScale = Math.max(
+    box.width / image.width,
+    box.height / image.height,
+  );
   if (coverScale > MAX_UPSCALE) return 'contain';
 
   const imgAspect = image.width / image.height;
@@ -264,7 +270,10 @@ function drawImageInBox(
   page.pushOperators(popGraphicsState());
 }
 
-function slotText(slots: Record<string, BrochureSlotValue>, key: string): string {
+function slotText(
+  slots: Record<string, BrochureSlotValue>,
+  key: string,
+): string {
   const s = slots[key];
   return s?.type === 'text' ? s.text : '';
 }
@@ -380,7 +389,11 @@ function drawSectionTab(
   }
 }
 
-async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: RenderCtx) {
+async function renderCover(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+) {
   const { width, height } = page.getSize();
   const landscape = ctx.orientation === 'landscape';
   const hero = slotImage(brochurePage.slots, 'hero');
@@ -392,7 +405,11 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
   const brandName = slotText(brochurePage.slots, 'brandName');
   const bandRatio = coverBandRatio(ctx.templateId);
   const titleSize =
-    ctx.templateId === 'editorial' ? 26 : ctx.templateId === 'compact' ? 18 : 22;
+    ctx.templateId === 'editorial'
+      ? 26
+      : ctx.templateId === 'compact'
+        ? 18
+        : 22;
 
   if (landscape) {
     const bandW = Math.round(width * bandRatio);
@@ -704,10 +721,7 @@ async function renderDescription(
   });
 
   const fullW = width - margin * 2;
-  const colW =
-    landscape && hasHighlights
-      ? (width - margin * 3) / 2
-      : fullW;
+  const colW = landscape && hasHighlights ? (width - margin * 3) / 2 : fullW;
   let y = height - 80;
 
   if (body) {
@@ -1037,7 +1051,9 @@ async function renderMap(
 
   if (lat != null && lng != null) {
     const mapW = landscape ? width * 0.58 : width - margin * 2;
-    const mapH = landscape ? height - 96 : Math.min(280, Math.max(160, y - margin - 20));
+    const mapH = landscape
+      ? height - 96
+      : Math.min(280, Math.max(160, y - margin - 20));
     const mapX = landscape ? width - margin - mapW : margin;
     const mapY = landscape ? 48 : margin;
     const box = { x: mapX, y: mapY, width: mapW, height: Math.max(120, mapH) };
@@ -1101,9 +1117,7 @@ async function renderContact(
   if (logoH <= 0) {
     page.drawText(
       sanitizePdfText(
-        ctx.data.accountName ||
-          slotText(brochurePage.slots, 'brandName') ||
-          '',
+        ctx.data.accountName || slotText(brochurePage.slots, 'brandName') || '',
       ),
       {
         x: margin + 160,

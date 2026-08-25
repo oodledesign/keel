@@ -26,9 +26,7 @@ export async function POST(request: Request) {
 
   if (error) {
     const message =
-      error.code === 'otp_expired'
-        ? 'auth:errors.otp_expired'
-        : error.message;
+      error.code === 'otp_expired' ? 'auth:errors.otp_expired' : error.message;
     return NextResponse.json(
       { error: message, code: error.code },
       { status: 400 },

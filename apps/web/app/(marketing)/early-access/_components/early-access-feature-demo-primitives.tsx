@@ -1,12 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
-import {
-  motion,
-  useReducedMotion,
-  type Transition,
-} from 'framer-motion';
+import { type Transition, motion, useReducedMotion } from 'framer-motion';
 
 import { cn } from '@kit/ui/utils';
 
@@ -120,10 +116,8 @@ export function DemoCursor({
     ...(times ? { times } : {}),
   };
 
-  const xPx =
-    width > 0 ? x.map((value) => percentToPx(value, width)) : [0];
-  const yPx =
-    height > 0 ? y.map((value) => percentToPx(value, height)) : [0];
+  const xPx = width > 0 ? x.map((value) => percentToPx(value, width)) : [0];
+  const yPx = height > 0 ? y.map((value) => percentToPx(value, height)) : [0];
 
   return (
     <>
@@ -133,44 +127,47 @@ export function DemoCursor({
         aria-hidden
       />
       <motion.div
-        className={cn('pointer-events-none absolute top-0 left-0 z-30', className)}
+        className={cn(
+          'pointer-events-none absolute top-0 left-0 z-30',
+          className,
+        )}
         aria-hidden
         animate={{ x: xPx, y: yPx }}
         transition={transition}
       >
-      <motion.div
-        animate={{ scale: scaleKeyframes }}
-        transition={transition}
-        className="relative -translate-x-0.5 -translate-y-0.5"
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          className="drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
+        <motion.div
+          animate={{ scale: scaleKeyframes }}
+          transition={transition}
+          className="relative -translate-x-0.5 -translate-y-0.5"
         >
-          <path
-            d="M3 2.5L3 15.5L7.2 11.8L10.2 17.5L12.4 16.4L9.4 10.7L14.5 10.7L3 2.5Z"
-            fill="var(--ozer-cream-50)"
-            stroke="var(--ozer-plum-900)"
-            strokeWidth="1.25"
-            strokeLinejoin="round"
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            className="drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
+          >
+            <path
+              d="M3 2.5L3 15.5L7.2 11.8L10.2 17.5L12.4 16.4L9.4 10.7L14.5 10.7L3 2.5Z"
+              fill="var(--ozer-cream-50)"
+              stroke="var(--ozer-plum-900)"
+              strokeWidth="1.25"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <motion.span
+            className="absolute top-3 left-3 size-5 rounded-full border-2 border-[var(--ozer-accent)]"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: [0, 1.4, 0], opacity: [0, 0.55, 0] }}
+            transition={{
+              duration: 0.45,
+              repeat: Infinity,
+              repeatDelay: duration - 0.45,
+              ease: 'easeOut',
+            }}
           />
-        </svg>
-        <motion.span
-          className="absolute top-3 left-3 size-5 rounded-full border-2 border-[var(--ozer-accent)]"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: [0, 1.4, 0], opacity: [0, 0.55, 0] }}
-          transition={{
-            duration: 0.45,
-            repeat: Infinity,
-            repeatDelay: duration - 0.45,
-            ease: 'easeOut',
-          }}
-        />
+        </motion.div>
       </motion.div>
-    </motion.div>
     </>
   );
 }

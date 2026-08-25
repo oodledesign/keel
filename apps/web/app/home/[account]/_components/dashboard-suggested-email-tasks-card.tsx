@@ -4,8 +4,9 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Check, ChevronRight, ListTodo, X } from 'lucide-react';
+import { Check, ChevronRight, ListTodo, Mail, X } from 'lucide-react';
 
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { toast } from '@kit/ui/sonner';
 
 import { HapticLink } from '~/components/haptic-link';
@@ -128,18 +129,34 @@ export function DashboardSuggestedEmailTasksCard({
                 key={item.id}
                 className="flex min-w-0 items-start gap-2 px-3 py-2.5 sm:px-4"
               >
+                {item.clientName ? (
+                  <ProfileAvatar
+                    displayName={item.clientName}
+                    pictureUrl={item.clientPictureUrl}
+                    className="mt-0.5 h-8 w-8 shrink-0"
+                  />
+                ) : (
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+                    <Mail className="h-3.5 w-3.5" />
+                  </span>
+                )}
                 <div className="min-w-0 flex-1 overflow-hidden">
                   <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                     {item.title}
                   </p>
                   <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                    {item.threadSubject}
-                    {item.emailSentAt
-                      ? ` · sent ${new Date(item.emailSentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
-                      : ''}
-                    {item.suggestedDueDate
-                      ? ` · due ${item.suggestedDueDate}`
-                      : ''}
+                    {[
+                      item.clientName,
+                      item.threadSubject,
+                      item.emailSentAt
+                        ? `sent ${new Date(item.emailSentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                        : null,
+                      item.suggestedDueDate
+                        ? `due ${item.suggestedDueDate}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                 </div>
                 <button

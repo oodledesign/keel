@@ -1,13 +1,15 @@
 import Link from 'next/link';
 
-import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { PageBody } from '@kit/ui/page';
 
+import { loadIgTriggers } from '~/lib/instagram-autoreply/assert-access';
+
+import { InstagramTriggersList } from '../../(instagram-autoreply)/_components/instagram-triggers-list';
 import {
   deleteIgTrigger,
   toggleIgTrigger,
 } from '../../(instagram-autoreply)/_lib/server/instagram-autoreply-actions';
-import { InstagramTriggersList } from '../../(instagram-autoreply)/_components/instagram-triggers-list';
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
@@ -15,7 +17,6 @@ import {
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../_lib/work-account-path';
-import { loadIgTriggers } from '~/lib/instagram-autoreply/assert-access';
 
 type InstagramTriggersPageProps = {
   params: Promise<{ account: string }>;
@@ -51,12 +52,14 @@ export default async function InstagramTriggersPage({
         <InstagramTriggersList
           accountSlug={account}
           accountId={accountId}
-          triggers={triggers as Array<{
-            id: string;
-            name: string;
-            keywords: string[];
-            is_active: boolean;
-          }>}
+          triggers={
+            triggers as Array<{
+              id: string;
+              name: string;
+              keywords: string[];
+              is_active: boolean;
+            }>
+          }
           onToggle={toggleIgTrigger}
           onDelete={deleteIgTrigger}
         />

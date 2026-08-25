@@ -1,7 +1,22 @@
 export type TranscriptSegment = {
   speaker: string;
   text: string;
+  /** Milliseconds from the start of the recording, when known. */
+  startMs?: number;
 };
+
+/** Format a segment offset for transcript UI (`0:05`, `12:03`, `1:02:45`). */
+export function formatTranscriptTimestamp(startMs: number): string {
+  if (!Number.isFinite(startMs) || startMs < 0) return '';
+  const totalSeconds = Math.floor(startMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
 
 export type SpeakerBinding =
   | { type: 'custom'; name: string }
@@ -94,6 +109,21 @@ export function renameSpeakersInSegments(
   });
 }
 
+function readOptionalStartMs(
+  item: Record<string, unknown>,
+): number | undefined {
+  const raw =
+    item.startMs ?? item.start_ms ?? item.startOffsetMs ?? item.start_offset_ms;
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) {
+    return Math.round(raw);
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed >= 0) return Math.round(parsed);
+  }
+  return undefined;
+}
+
 export function normalizeTranscriptSegments(
   value: unknown,
 ): TranscriptSegment[] | null {
@@ -102,12 +132,15 @@ export function normalizeTranscriptSegments(
   const segments: TranscriptSegment[] = [];
   for (const item of value) {
     if (!item || typeof item !== 'object') continue;
-    const speaker = (item as { speaker?: unknown }).speaker;
-    const text = (item as { text?: unknown }).text;
+    const row = item as Record<string, unknown>;
+    const speaker = row.speaker;
+    const text = row.text;
     if (typeof speaker !== 'string' || !speaker.trim()) continue;
+    const startMs = readOptionalStartMs(row);
     segments.push({
       speaker: speaker.trim(),
       text: typeof text === 'string' ? text : '',
+      ...(startMs != null ? { startMs } : {}),
     });
   }
 

@@ -99,12 +99,7 @@ export async function refreshRecipePrepStep(input: {
     ? contentHasIngredientTokens(existing.content)
     : false;
 
-  if (
-    nextHash &&
-    nextHash === input.previousHash &&
-    existing &&
-    hasTokens
-  ) {
+  if (nextHash && nextHash === input.previousHash && existing && hasTokens) {
     return { hash: nextHash };
   }
 

@@ -108,13 +108,7 @@ export function RecipeMethodPanel({
         }),
       };
     });
-  }, [
-    steps,
-    ingredientsById,
-    servingsScale,
-    system,
-    showAmountsInMethod,
-  ]);
+  }, [steps, ingredientsById, servingsScale, system, showAmountsInMethod]);
 
   return (
     <div className="space-y-4">
@@ -162,9 +156,7 @@ export function RecipeMethodPanel({
             <input
               type="checkbox"
               checked={showAmountsInMethod}
-              onChange={(event) =>
-                setShowAmountsInMethod(event.target.checked)
-              }
+              onChange={(event) => setShowAmountsInMethod(event.target.checked)}
               className="h-4 w-4 accent-[var(--ozer-cool-blue)]"
             />
             Amounts in method

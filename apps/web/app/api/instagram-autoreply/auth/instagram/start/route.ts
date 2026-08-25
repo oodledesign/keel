@@ -7,7 +7,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { getOptionalMetaInstagram } from '~/lib/instagram-autoreply/env';
 import { buildInstagramAutoreplyAuthUrl } from '~/lib/instagram-autoreply/instagram-oauth';
-import { isSafeOAuthReturnPath, signIgAutoreplyOAuthState } from '~/lib/instagram-autoreply/oauth-state';
+import {
+  isSafeOAuthReturnPath,
+  signIgAutoreplyOAuthState,
+} from '~/lib/instagram-autoreply/oauth-state';
 
 export const dynamic = 'force-dynamic';
 

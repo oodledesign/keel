@@ -1,12 +1,12 @@
 import 'server-only';
 
-import { buildBrochureDocument } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import type {
   BrochureDisplayOptions,
   BrochureDocument,
   BrochureOrientation,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { buildBrochureDocument } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import { loadListingBrochureData } from '~/lib/commercial/brochure-pdf/load-listing-brochure-data';
 import { renderBrochurePdf } from '~/lib/commercial/brochure-pdf/render-brochure-pdf';
 

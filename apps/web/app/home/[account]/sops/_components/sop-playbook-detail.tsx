@@ -24,8 +24,8 @@ import {
 } from '~/lib/sops/shared';
 
 import { startSopRunAction } from '../_lib/server/sops-actions';
-import { SopRunAssigneeSelect } from './sop-run-assignee-select';
 import { setSopTrackerVisible } from '../_lib/sop-tracker-session';
+import { SopRunAssigneeSelect } from './sop-run-assignee-select';
 
 const panelClass =
   'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]';

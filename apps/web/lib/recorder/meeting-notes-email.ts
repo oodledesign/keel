@@ -60,7 +60,10 @@ export async function sendMeetingNotesEmails(params: {
   const dateLabel = formatMeetingDate(params.meetingDate);
   const title = params.meetingTitle.trim() || 'Meeting notes';
   const subject = `Meeting notes: ${title}`;
-  const preview = params.summaryPreview?.replace(/[#*_`]/g, '').trim().slice(0, 280);
+  const preview = params.summaryPreview
+    ?.replace(/[#*_`]/g, '')
+    .trim()
+    .slice(0, 280);
 
   const innerHtml = `
     <h2 style="margin:0 0 12px;font-size:20px;line-height:1.3">${escapeHtml(title)}</h2>

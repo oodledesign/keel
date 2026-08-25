@@ -140,7 +140,9 @@ export const loadEmailPageData = cache(
       },
       threads: await enrichEmailThreadLinks(
         client,
-        pageRows.map((row) => mapEmailThreadRow(row as Record<string, unknown>)),
+        pageRows.map((row) =>
+          mapEmailThreadRow(row as Record<string, unknown>),
+        ),
       ),
       hasMoreThreads: hasMoreInitial,
       workspaces: workspaces.map((workspace) => ({
@@ -154,9 +156,13 @@ export const loadEmailPageData = cache(
 
 export async function loadEmailThreadDetailFromDb(
   threadId: string,
+  userId?: string,
 ): Promise<EmailThreadSummary | null> {
   const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
+  const user =
+    userId != null
+      ? { id: userId }
+      : await requireUserInServerComponent();
 
   const { data, error } = await client
     .from('email_threads')

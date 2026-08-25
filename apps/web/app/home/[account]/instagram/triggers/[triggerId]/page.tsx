@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
-import { upsertIgTrigger } from '../../../(instagram-autoreply)/_lib/server/instagram-autoreply-actions';
+import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
+
 import { InstagramTriggerEditor } from '../../../(instagram-autoreply)/_components/instagram-trigger-editor';
+import { upsertIgTrigger } from '../../../(instagram-autoreply)/_lib/server/instagram-autoreply-actions';
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import {
@@ -14,7 +16,6 @@ import {
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
-import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
 
 type InstagramTriggerDetailPageProps = {
   params: Promise<{ account: string; triggerId: string }>;
@@ -58,9 +59,7 @@ export default async function InstagramTriggerDetailPage({
       .maybeSingle();
 
     if (!igAccount) {
-      redirect(
-        workAccountPath(workPaths.accountInstagramAutoreply, account),
-      );
+      redirect(workAccountPath(workPaths.accountInstagramAutoreply, account));
     }
   }
 

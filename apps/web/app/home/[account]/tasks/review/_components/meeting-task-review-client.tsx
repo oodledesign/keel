@@ -401,7 +401,7 @@ export function MeetingTaskReviewClient({
                     </span>
 
                     {item.clientName ? (
-                      <span className="mt-0.5 hidden shrink-0 sm:inline-flex">
+                      <span className="mt-0.5 inline-flex shrink-0">
                         <ProfileAvatar
                           displayName={item.clientName}
                           pictureUrl={item.clientPictureUrl}

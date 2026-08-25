@@ -5,6 +5,10 @@ import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  createPartnerCostLinesService,
+  projectHasPartnerCostShares,
+} from '~/lib/projects/partner-cost-lines.service';
 import { DELIVERY_PROJECT_TYPE } from '~/lib/projects/project-types';
 
 import {
@@ -172,6 +176,20 @@ async function ProjectDetailPage({
           defaultLink: { type: 'job' as const, id },
         };
 
+  const showPartnerCosts =
+    !isContractorView &&
+    (await projectHasPartnerCostShares({
+      ownerAccountId: accountId,
+      projectId: id,
+    }));
+
+  const partnerCostLines = showPartnerCosts
+    ? await createPartnerCostLinesService(client).listForHost({
+        ownerAccountId: accountId,
+        projectId: id,
+      })
+    : [];
+
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-2 py-2 md:px-3 md:py-3">
       <JobDetailContent
@@ -183,6 +201,8 @@ async function ProjectDetailPage({
         canViewJobs={canViewJobs}
         canEditJobs={canEditJobs}
         isContractorView={isContractorView}
+        showPartnerCosts={showPartnerCosts}
+        partnerCostLines={partnerCostLines}
         workspaceNotes={workspaceContent.notes}
         workspaceDocs={workspaceContent.docs}
         workspaceLinks={workspaceContent.links}

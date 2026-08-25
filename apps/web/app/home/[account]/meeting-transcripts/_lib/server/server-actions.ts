@@ -85,6 +85,7 @@ const DeleteSchema = z.object({
 const TranscriptSegmentSchema = z.object({
   speaker: z.string().min(1),
   text: z.string(),
+  startMs: z.number().nonnegative().optional(),
 });
 
 const UpdateContentSchema = z.object({

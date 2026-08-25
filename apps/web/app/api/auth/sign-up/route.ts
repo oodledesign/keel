@@ -2,16 +2,15 @@ import { NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-
-import { attributeReferralAtSignup } from '~/lib/rewards/attribute-referral-at-signup';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   authRateLimitKey,
   authRateLimitResponse,
   isAuthRateLimited,
 } from '~/lib/rate-limit/auth-rate-limit';
+import { attributeReferralAtSignup } from '~/lib/rewards/attribute-referral-at-signup';
 
 const SignUpSchema = z.object({
   email: z.string().email(),
@@ -73,7 +72,9 @@ export async function POST(request: Request) {
 
   if (user?.id && user.email) {
     void getSupabaseServerAdminClient()
-      .then((admin) => attributeReferralAtSignup({ referredUserId: user.id!, admin }))
+      .then((admin) =>
+        attributeReferralAtSignup({ referredUserId: user.id!, admin }),
+      )
       .catch((err) => {
         console.error(
           '[sign-up] Referral attribution failed:',

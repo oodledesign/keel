@@ -548,7 +548,9 @@ export const bindSopRunListingAction = enhanceAction(
     if (!run) throw new Error('Run not found');
 
     const existing =
-      run.context && typeof run.context === 'object' && !Array.isArray(run.context)
+      run.context &&
+      typeof run.context === 'object' &&
+      !Array.isArray(run.context)
         ? (run.context as Record<string, unknown>)
         : {};
 

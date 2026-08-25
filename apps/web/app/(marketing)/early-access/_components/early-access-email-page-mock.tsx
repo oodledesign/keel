@@ -145,7 +145,9 @@ export function EarlyAccessEmailPageMock() {
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-[38%_minmax(0,1fr)] gap-2">
-          <section className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}>
+          <section
+            className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}
+          >
             <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] p-2">
               <p className="text-[9px] font-semibold text-[var(--workspace-shell-text)]">
                 Inbox
@@ -186,7 +188,9 @@ export function EarlyAccessEmailPageMock() {
             </div>
           </section>
 
-          <section className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}>
+          <section
+            className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}
+          >
             <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-2.5 py-2">
               <p className="text-[10px] font-semibold text-[var(--workspace-shell-text)]">
                 Re: Tradeways bullet point
@@ -237,7 +241,10 @@ export function EarlyAccessEmailPageMock() {
                   </p>
                   <span className="relative inline-flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] px-1.5 py-0.5 text-[7px] text-[var(--workspace-shell-text)]">
                     <DemoPulse className="rounded-md" delay={0.95} />
-                    <Sparkles className="size-2 text-[var(--ozer-accent)]" aria-hidden />
+                    <Sparkles
+                      className="size-2 text-[var(--ozer-accent)]"
+                      aria-hidden
+                    />
                     Extract
                   </span>
                 </div>
@@ -325,7 +332,10 @@ export function EarlyAccessEmailPageMock() {
                 animate={
                   reduced
                     ? { opacity: 1, y: 0 }
-                    : { opacity: [0, 0, 0, 0, 1, 1, 0], y: [6, 6, 6, 6, 0, 0, 6] }
+                    : {
+                        opacity: [0, 0, 0, 0, 1, 1, 0],
+                        y: [6, 6, 6, 6, 0, 0, 6],
+                      }
                 }
                 transition={{
                   duration: LOOP,
@@ -340,7 +350,10 @@ export function EarlyAccessEmailPageMock() {
                   </p>
                   <span className="relative inline-flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] px-1.5 py-0.5 text-[7px] text-[var(--workspace-shell-text)]">
                     <DemoPulse className="rounded-md" delay={1.75} />
-                    <Sparkles className="size-2 text-[var(--ozer-accent)]" aria-hidden />
+                    <Sparkles
+                      className="size-2 text-[var(--ozer-accent)]"
+                      aria-hidden
+                    />
                     Generate
                   </span>
                 </div>

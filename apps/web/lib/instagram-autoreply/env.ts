@@ -4,7 +4,8 @@ import { z } from 'zod';
 
 export function getOptionalMetaInstagram() {
   const appId = process.env.META_APP_ID ?? process.env.INSTAGRAM_APP_ID;
-  const appSecret = process.env.META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET;
+  const appSecret =
+    process.env.META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET;
   const redirectUri =
     process.env.META_REDIRECT_URI ?? process.env.INSTAGRAM_REDIRECT_URI;
   if (!appId || !appSecret || !redirectUri) {

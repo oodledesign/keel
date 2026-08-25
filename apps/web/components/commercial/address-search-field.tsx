@@ -142,7 +142,7 @@ export function AddressSearchField({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          className={cn('pl-9 pr-9', inputClassName)}
+          className={cn('pr-9 pl-9', inputClassName)}
         />
         {loading ? (
           <Loader2 className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin text-[var(--workspace-shell-text)]/40" />
@@ -164,7 +164,11 @@ export function AddressSearchField({
             </li>
           ) : (
             suggestions.map((suggestion, index) => (
-              <li key={suggestion.id} role="option" aria-selected={index === activeIndex}>
+              <li
+                key={suggestion.id}
+                role="option"
+                aria-selected={index === activeIndex}
+              >
                 <button
                   type="button"
                   className={cn(
@@ -176,7 +180,9 @@ export function AddressSearchField({
                   onClick={() => applySuggestion(suggestion)}
                 >
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text)]/40" />
-                  <span className="min-w-0 leading-snug">{suggestion.label}</span>
+                  <span className="min-w-0 leading-snug">
+                    {suggestion.label}
+                  </span>
                 </button>
               </li>
             ))

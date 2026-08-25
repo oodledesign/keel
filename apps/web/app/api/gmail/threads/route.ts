@@ -1,9 +1,9 @@
 import type { EmailThreadSummary } from '~/home/(user)/email/_lib/types';
-import { parseMailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import {
   ACTIONABLE_EMAIL_CATEGORIES,
   isActionableEmailCategory,
 } from '~/lib/email-assistant/email-thread-categories';
+import { parseMailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { mapEmailThreadRow } from '~/lib/email-assistant/map-email-thread-row';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { searchEmailThreadIds } from '~/lib/email-assistant/search-threads';
@@ -28,20 +28,17 @@ function parseFilterCategories(filter: string | null): string[] | null {
 
   const parts = filter.split(',').map((part) => part.trim());
   const valid = parts.filter((part) =>
-    [
-      'reply_now',
-      'reply_later',
-      'waiting',
-      'fyi',
-      'noise',
-      'linked',
-    ].includes(part),
+    ['reply_now', 'reply_later', 'waiting', 'fyi', 'noise', 'linked'].includes(
+      part,
+    ),
   );
 
   return valid.length > 0 ? valid : null;
 }
 
-function sortActionableThreads(threads: EmailThreadSummary[]): EmailThreadSummary[] {
+function sortActionableThreads(
+  threads: EmailThreadSummary[],
+): EmailThreadSummary[] {
   const priority = (thread: EmailThreadSummary) => {
     let score = 0;
     if (thread.link.clientId) score += 100;
@@ -54,12 +51,8 @@ function sortActionableThreads(threads: EmailThreadSummary[]): EmailThreadSummar
     const scoreDiff = priority(b) - priority(a);
     if (scoreDiff !== 0) return scoreDiff;
 
-    const aTime = a.last_message_at
-      ? new Date(a.last_message_at).getTime()
-      : 0;
-    const bTime = b.last_message_at
-      ? new Date(b.last_message_at).getTime()
-      : 0;
+    const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+    const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
     return aTime - bTime;
   });
 }

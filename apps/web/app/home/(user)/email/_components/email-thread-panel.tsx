@@ -135,6 +135,7 @@ type Props = {
   workspaces: EmailWorkspaceOption[];
   mailboxKind?: 'business' | 'personal';
   accountSlug?: string | null;
+  preferredAccountId?: string | null;
   reviewMode?: boolean;
   allowSendFromOzer?: boolean;
   focusDraft?: boolean;
@@ -149,6 +150,7 @@ export function EmailThreadPanel({
   workspaces,
   mailboxKind = 'personal',
   accountSlug = null,
+  preferredAccountId = null,
   reviewMode = false,
   allowSendFromOzer = false,
   focusDraft = false,
@@ -178,10 +180,14 @@ export function EmailThreadPanel({
       setDetail(null);
       setDraftBody('');
       setLoadError(null);
+      setLoading(false);
       return;
     }
 
     let cancelled = false;
+    // Clear immediately so we never flash "unavailable" or a stale thread.
+    setDetail(null);
+    setDraftBody('');
     setLoading(true);
     setLoadError(null);
 
@@ -564,16 +570,24 @@ export function EmailThreadPanel({
     );
   }
 
-  if (loading) {
+  if (loading || (threadId && !detail && !loadError)) {
     return (
       <section
         className={cn(
           panelClass,
-          'flex min-h-[320px] items-center justify-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]',
+          'flex min-h-[320px] flex-col overflow-hidden',
         )}
       >
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Loading thread…
+        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <div className="space-y-2">
+            <div className="h-5 w-2/3 max-w-md animate-pulse rounded bg-[var(--workspace-shell-sidebar-accent)]" />
+            <div className="h-3 w-24 animate-pulse rounded bg-[var(--workspace-shell-sidebar-accent)]" />
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-sm text-[var(--workspace-shell-text-muted)]">
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--ozer-accent)]" />
+          Loading thread…
+        </div>
       </section>
     );
   }
@@ -786,6 +800,7 @@ export function EmailThreadPanel({
             linkSuggestion={detail.thread.link_suggestion}
             linkConfidence={detail.thread.link_confidence}
             workspaces={workspaces}
+            preferredAccountId={preferredAccountId}
             onUpdated={(link) => {
               setDetail((current) =>
                 current

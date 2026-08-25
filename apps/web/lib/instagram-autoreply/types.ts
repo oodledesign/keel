@@ -74,7 +74,13 @@ export type IgCommentEventRow = {
   public_reply_sent_at: string | null;
   public_reply_content: string | null;
   public_reply_ai_credits_spent: number | null;
-  dm_status: 'pending' | 'sent' | 'skipped' | 'failed' | 'window_expired' | null;
+  dm_status:
+    | 'pending'
+    | 'sent'
+    | 'skipped'
+    | 'failed'
+    | 'window_expired'
+    | null;
   dm_sent_at: string | null;
   dm_content: string | null;
   dm_ai_credits_spent: number | null;

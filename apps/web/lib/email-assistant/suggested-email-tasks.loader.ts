@@ -17,6 +17,9 @@ export type SuggestedEmailTaskItem = {
   fromAddress: string | null;
   fromEmail: string | null;
   fromDomain: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  clientPictureUrl: string | null;
 };
 
 export async function loadSuggestedEmailActionItems(
@@ -36,7 +39,16 @@ export async function loadSuggestedEmailActionItems(
       thread_id,
       created_at,
       message_id,
-      email_threads:thread_id ( subject, last_message_at ),
+      client_id,
+      clients:client_id (
+        id,
+        display_name,
+        company_name,
+        first_name,
+        last_name,
+        picture_url
+      ),
+      email_threads:thread_id ( subject, last_message_at, client_id ),
       email_messages:message_id ( from_address, internal_date )
     `,
       { count: 'exact' },
@@ -102,6 +114,7 @@ export async function loadSuggestedEmailActionItems(
   const items: SuggestedEmailTaskItem[] = rows.map((row) => {
     const thread = unwrapOne(row.email_threads);
     const message = unwrapOne(row.email_messages);
+    const linkedClient = unwrapOne(row.clients);
     const tip = tipByThread.get(row.thread_id as string);
     const fromAddress =
       (typeof message?.from_address === 'string'
@@ -119,6 +132,18 @@ export async function loadSuggestedEmailActionItems(
         : null) ??
       null;
 
+    const clientId =
+      (row.client_id as string | null) ??
+      (typeof thread?.client_id === 'string' ? thread.client_id : null) ??
+      (typeof linkedClient?.id === 'string' ? linkedClient.id : null);
+
+    const clientName = resolveClientDisplayName(linkedClient);
+    const clientPictureUrl =
+      typeof linkedClient?.picture_url === 'string' &&
+      linkedClient.picture_url.trim()
+        ? linkedClient.picture_url.trim()
+        : null;
+
     return {
       id: row.id as string,
       title: ((row.title as string | null) ?? 'Task').trim() || 'Task',
@@ -133,8 +158,54 @@ export async function loadSuggestedEmailActionItems(
       fromAddress,
       fromEmail: extractEmailAddress(fromAddress),
       fromDomain: extractEmailDomain(fromAddress),
+      clientId,
+      clientName,
+      clientPictureUrl,
     };
   });
+
+  // Resolve thread-linked clients when the action item itself has no client join.
+  const missingClientIds = [
+    ...new Set(
+      items
+        .filter((item) => item.clientId && !item.clientName)
+        .map((item) => item.clientId as string),
+    ),
+  ];
+
+  if (missingClientIds.length > 0) {
+    const { data: clientRows } = await client
+      .from('clients')
+      .select(
+        'id, display_name, company_name, first_name, last_name, picture_url',
+      )
+      .in('id', missingClientIds);
+
+    const byId = new Map(
+      (clientRows ?? []).map((row) => {
+        const name =
+          (row.display_name as string | null)?.trim() ||
+          (row.company_name as string | null)?.trim() ||
+          [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+          null;
+        return [
+          row.id as string,
+          {
+            name,
+            pictureUrl: (row.picture_url as string | null)?.trim() || null,
+          },
+        ] as const;
+      }),
+    );
+
+    for (const item of items) {
+      if (!item.clientId || item.clientName) continue;
+      const match = byId.get(item.clientId);
+      if (!match) continue;
+      item.clientName = match.name;
+      item.clientPictureUrl = match.pictureUrl;
+    }
+  }
 
   return { items, totalCount: count ?? items.length };
 }
@@ -149,4 +220,28 @@ function unwrapOne(value: unknown): Record<string, unknown> | null {
   }
 
   return value as Record<string, unknown>;
+}
+
+function resolveClientDisplayName(
+  client: Record<string, unknown> | null,
+): string | null {
+  if (!client) return null;
+
+  const displayName =
+    typeof client.display_name === 'string' ? client.display_name.trim() : '';
+  if (displayName) return displayName;
+
+  const companyName =
+    typeof client.company_name === 'string' ? client.company_name.trim() : '';
+  if (companyName) return companyName;
+
+  const fullName = [client.first_name, client.last_name]
+    .filter(
+      (part): part is string =>
+        typeof part === 'string' && Boolean(part.trim()),
+    )
+    .join(' ')
+    .trim();
+
+  return fullName || null;
 }

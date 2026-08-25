@@ -642,8 +642,8 @@ export function CommercialInterestPanel({
               Suggested fits
             </p>
             <p className="text-xs text-[var(--workspace-shell-text)]/45">
-              Automatic matches from property type, size, location, tenure and budget —
-              then optionally explain with AI.
+              Automatic matches from property type, size, location, tenure and
+              budget — then optionally explain with AI.
               {suggestions.length > 0 ? (
                 <>
                   {' '}
@@ -1040,9 +1040,9 @@ export function CommercialInterestPanel({
                           </SelectItem>
                         ))}
                         {sector &&
-                        !(COMMERCIAL_PROPERTY_TYPES as readonly string[]).includes(
-                          sector,
-                        ) ? (
+                        !(
+                          COMMERCIAL_PROPERTY_TYPES as readonly string[]
+                        ).includes(sector) ? (
                           <SelectItem value={sector}>{sector}</SelectItem>
                         ) : null}
                       </SelectContent>

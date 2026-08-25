@@ -7,13 +7,12 @@ import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { GuestProjectBoard } from '~/lib/projects/components/guest-project-board';
 import {
   linkPendingProjectGuestsForUser,
   listAcceptedGuestsForUser,
 } from '~/lib/projects/project-guests.service';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-
-import { GuestProjectBoard } from './_components/guest-project-board';
 
 interface PageProps {
   params: Promise<{ projectId: string }>;

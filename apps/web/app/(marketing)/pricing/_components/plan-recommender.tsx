@@ -501,12 +501,7 @@ function buildRecommendation(
     title: names.join(' + '),
     monthlyPriceGbp: monthly,
     yearlyPriceGbp: yearly,
-    why: buildWhy(
-      answers,
-      billableSeats,
-      signatureTier,
-      signaturesOnly,
-    ),
+    why: buildWhy(answers, billableSeats, signatureTier, signaturesOnly),
     note:
       answers.people === 'larger'
         ? "For larger desks, start on graduated Business and we'll confirm seat count on a call if you need help."
@@ -524,8 +519,7 @@ function buildRecommendation(
         : {
             profile: 'work_design',
             productId: BUSINESS_GRADUATED_PRODUCT_ID,
-            planId:
-              businessPlan?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
+            planId: businessPlan?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
             interval: 'month',
             seats: billableSeats,
           },

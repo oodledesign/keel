@@ -9,7 +9,9 @@ export function assertSafeTriggerRegex(pattern: string): void {
     throw new Error('Regex pattern cannot be empty');
   }
   if (k.length > MAX_REGEX_PATTERN_LENGTH) {
-    throw new Error(`Regex pattern must be at most ${MAX_REGEX_PATTERN_LENGTH} characters`);
+    throw new Error(
+      `Regex pattern must be at most ${MAX_REGEX_PATTERN_LENGTH} characters`,
+    );
   }
   if (/\([^)]*[+*][^)]*\)[+*?{]/.test(k)) {
     throw new Error('Unsafe regex pattern (nested quantifiers)');
@@ -59,21 +61,14 @@ export function matchTriggerKeyword(
 export function triggerMatchesComment(
   trigger: Pick<
     IgTriggerRow,
-    | 'keywords'
-    | 'match_type'
-    | 'scope'
-    | 'target_media_ids'
-    | 'is_active'
+    'keywords' | 'match_type' | 'scope' | 'target_media_ids' | 'is_active'
   >,
   commentText: string,
   mediaId: string | null,
 ): boolean {
   if (!trigger.is_active) return false;
 
-  if (
-    trigger.scope === 'specific_posts' &&
-    trigger.target_media_ids?.length
-  ) {
+  if (trigger.scope === 'specific_posts' && trigger.target_media_ids?.length) {
     if (!mediaId || !trigger.target_media_ids.includes(mediaId)) {
       return false;
     }

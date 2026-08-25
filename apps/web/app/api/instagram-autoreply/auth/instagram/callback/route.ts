@@ -3,13 +3,16 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { encryptIgToken } from '~/lib/instagram-autoreply/token-crypto';
 import {
   exchangeInstagramAutoreplyCode,
   exchangeLongLivedInstagramAutoreply,
   fetchInstagramAutoreplyBusinessAccount,
 } from '~/lib/instagram-autoreply/instagram-oauth';
-import { verifyIgAutoreplyOAuthState, isSafeOAuthReturnPath } from '~/lib/instagram-autoreply/oauth-state';
+import {
+  isSafeOAuthReturnPath,
+  verifyIgAutoreplyOAuthState,
+} from '~/lib/instagram-autoreply/oauth-state';
+import { encryptIgToken } from '~/lib/instagram-autoreply/token-crypto';
 
 export const dynamic = 'force-dynamic';
 

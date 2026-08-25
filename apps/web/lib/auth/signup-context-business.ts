@@ -55,7 +55,9 @@ export function buildBusinessSignupContext(
     profile: 'work_design',
     productId: BUSINESS_GRADUATED_PRODUCT_ID,
     planId:
-      intent.interval === 'year' ? 'business-yearly' : BUSINESS_GRADUATED_PLAN_ID,
+      intent.interval === 'year'
+        ? 'business-yearly'
+        : BUSINESS_GRADUATED_PLAN_ID,
     seats,
   };
 
@@ -87,7 +89,8 @@ export function buildBusinessSetupNext(
   return buildSetupPath({
     profile: 'work_design',
     productId: BUSINESS_GRADUATED_PRODUCT_ID,
-    planId: interval === 'year' ? 'business-yearly' : BUSINESS_GRADUATED_PLAN_ID,
+    planId:
+      interval === 'year' ? 'business-yearly' : BUSINESS_GRADUATED_PLAN_ID,
     seats: clampBillableSeats(seats),
     interval: interval === 'year' ? 'year' : 'month',
   });

@@ -18,6 +18,7 @@ import { resolveMeetingCalendarMetadata } from '~/lib/recorder/calendar-metadata
 import { queueMeetingSummaryGeneration } from '~/lib/recorder/meeting-summary';
 import {
   type TranscriptSegment,
+  normalizeTranscriptSegments,
   parseTranscriptContent,
   serializeTranscriptSegments,
 } from '~/lib/recorder/transcript-speakers';
@@ -30,6 +31,8 @@ const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 const TranscriptSegmentSchema = z.object({
   speaker: z.string().min(1),
   text: z.string(),
+  startMs: z.number().nonnegative().optional(),
+  start_ms: z.number().nonnegative().optional(),
 });
 
 const SyncBodySchema = z.object({
@@ -189,10 +192,7 @@ export async function POST(request: Request) {
 
   const parsedFromContent = parseTranscriptContent(input.content.trim());
   const speakerSegments: TranscriptSegment[] | null = input.segments?.length
-    ? input.segments.map((segment) => ({
-        speaker: segment.speaker.trim(),
-        text: segment.text,
-      }))
+    ? normalizeTranscriptSegments(input.segments)
     : parsedFromContent.hasSpeakerLabels
       ? parsedFromContent.segments
       : null;

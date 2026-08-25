@@ -70,7 +70,8 @@ export async function answerSupportDocsQuestion(input: {
   const message = input.message.trim();
   if (!message) {
     return {
-      answer: 'Ask a question about how to use Ozer and I will search the docs.',
+      answer:
+        'Ask a question about how to use Ozer and I will search the docs.',
       sources: [],
       crisis: false,
     };
@@ -148,8 +149,7 @@ Write a helpful answer. Include markdown links to the most relevant excerpt URLs
   // Anthropic requires alternating roles starting with user.
   const normalized: Anthropic.Messages.MessageParam[] = [];
   for (const item of messages) {
-    const content =
-      typeof item.content === 'string' ? item.content : '';
+    const content = typeof item.content === 'string' ? item.content : '';
     const prev = normalized[normalized.length - 1];
     if (prev && prev.role === item.role) {
       const prevText = typeof prev.content === 'string' ? prev.content : '';

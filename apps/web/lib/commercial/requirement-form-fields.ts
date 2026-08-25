@@ -1,5 +1,4 @@
 /** Applicant-facing requirement fields aligned with PropertyHive commercial intake. */
-
 import { COMMERCIAL_PROPERTY_TYPES } from '~/lib/commercial/commercial-constants';
 
 /** @deprecated Prefer COMMERCIAL_PROPERTY_TYPES — kept for existing imports. */

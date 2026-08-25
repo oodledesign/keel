@@ -50,14 +50,10 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
   try {
     invoice = await getInvoice({ accountId, invoiceId: id });
   } catch {
-    redirect(
-      pathsConfig.app.accountInvoices.replace('[account]', accountSlug),
-    );
+    redirect(pathsConfig.app.accountInvoices.replace('[account]', accountSlug));
   }
   if (!invoice) {
-    redirect(
-      pathsConfig.app.accountInvoices.replace('[account]', accountSlug),
-    );
+    redirect(pathsConfig.app.accountInvoices.replace('[account]', accountSlug));
   }
 
   const supabase = getSupabaseServerClient();

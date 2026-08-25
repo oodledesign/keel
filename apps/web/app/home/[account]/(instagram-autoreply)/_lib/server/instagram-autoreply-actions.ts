@@ -29,7 +29,9 @@ function workPath(template: string, accountSlug: string) {
 }
 
 function revalidateInstagramPaths(accountSlug: string) {
-  revalidatePath(workPath(pathsConfig.app.accountInstagramAutoreply, accountSlug));
+  revalidatePath(
+    workPath(pathsConfig.app.accountInstagramAutoreply, accountSlug),
+  );
   revalidatePath(
     workPath(pathsConfig.app.accountInstagramAutoreplyTriggers, accountSlug),
   );
@@ -175,7 +177,9 @@ export const upsertIgTrigger = enhanceAction(
       match_type: input.match_type,
       scope: input.scope,
       target_media_ids:
-        input.scope === 'specific_posts' ? input.target_media_ids ?? [] : null,
+        input.scope === 'specific_posts'
+          ? (input.target_media_ids ?? [])
+          : null,
       public_reply_enabled: input.public_reply_enabled,
       public_reply_mode: input.public_reply_mode,
       public_reply_template: input.public_reply_template?.trim() || null,

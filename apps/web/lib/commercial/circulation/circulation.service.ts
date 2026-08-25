@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { createHash, randomBytes } from 'crypto';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { createHash, randomBytes } from 'crypto';
 
 import { createSesMailer } from '@kit/ses';
 
@@ -182,9 +182,7 @@ class CommercialCirculationService {
     accountId: string,
     emails: string[],
   ): Promise<Set<string>> {
-    const normalized = [
-      ...new Set(emails.map(normalizeEmail).filter(Boolean)),
-    ];
+    const normalized = [...new Set(emails.map(normalizeEmail).filter(Boolean))];
     if (normalized.length === 0) return new Set();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

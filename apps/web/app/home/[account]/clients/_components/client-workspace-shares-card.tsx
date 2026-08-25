@@ -205,7 +205,8 @@ export function ClientWorkspaceSharesCard({
             </h3>
             <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Invite another Ozer workspace by email or link. Choose which
-              modules they can access.
+              modules they can access. Enabling Projects lets them open boards
+              and submit cost lines for your approval.
             </p>
           </div>
 

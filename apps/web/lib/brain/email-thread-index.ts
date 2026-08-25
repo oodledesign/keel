@@ -4,9 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   EMAIL_THREAD_CATEGORY_LABELS,
+  type EmailThreadCategory,
   isActionableEmailCategory,
   normalizeEmailThreadCategory,
-  type EmailThreadCategory,
 } from '~/lib/email-assistant/email-thread-categories';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 

@@ -63,10 +63,7 @@ export const GET = enhanceRouteHandler(
 
     const { requireCommercialBillableActor } =
       await import('~/lib/commercial/require-commercial-billable-actor');
-    await requireCommercialBillableActor(
-      accountId,
-      'create or edit disposals',
-    );
+    await requireCommercialBillableActor(accountId, 'create or edit disposals');
 
     try {
       const service = createListingBrochureService(client);

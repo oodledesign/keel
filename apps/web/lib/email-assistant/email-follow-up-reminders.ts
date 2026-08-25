@@ -2,15 +2,15 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import pathsConfig from '~/config/paths.config';
+import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
-import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
-import { isEmailNotificationEnabled } from '~/lib/notifications/email-notification-preferences';
 import {
   escapeEmailHtml,
   renderOzerTransactionalEmail,
 } from '~/lib/email/ozer-transactional-shell';
+import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
+import { isEmailNotificationEnabled } from '~/lib/notifications/email-notification-preferences';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 export async function runEmailFollowUpReminders(

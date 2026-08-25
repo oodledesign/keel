@@ -203,9 +203,7 @@ export function BusinessSeatCalculator({
           </dl>
 
           <ul className="space-y-2 text-sm text-[var(--ozer-plum-700)]">
-            <li>
-              {aiCredits.toLocaleString()} shared AI credits / month
-            </li>
+            <li>{aiCredits.toLocaleString()} shared AI credits / month</li>
             <li>
               {projectGuests} project guest
               {projectGuests === 1 ? '' : 's'} included

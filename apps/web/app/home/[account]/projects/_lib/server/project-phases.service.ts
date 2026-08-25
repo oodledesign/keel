@@ -774,22 +774,22 @@ class ProjectPhasesService {
 
       if (contactsErr) this.throwErr(contactsErr);
 
-      contactAssignees = ((contacts ?? []) as Array<Record<string, unknown>>).map(
-        (row) => {
-          const fullName = (row.full_name as string | null)?.trim() || null;
-          const composed = [row.first_name, row.last_name]
-            .filter(Boolean)
-            .join(' ')
-            .trim();
-          const email = (row.email as string | null)?.trim() || null;
-          return {
-            id: String(row.id),
-            name: fullName || composed || email,
-            email,
-            picture_url: (row.picture_url as string | null) ?? null,
-          };
-        },
-      );
+      contactAssignees = (
+        (contacts ?? []) as Array<Record<string, unknown>>
+      ).map((row) => {
+        const fullName = (row.full_name as string | null)?.trim() || null;
+        const composed = [row.first_name, row.last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+        const email = (row.email as string | null)?.trim() || null;
+        return {
+          id: String(row.id),
+          name: fullName || composed || email,
+          email,
+          picture_url: (row.picture_url as string | null) ?? null,
+        };
+      });
     }
 
     return {

@@ -1435,9 +1435,7 @@ export function ClientDetailSidebar({
                     <a
                       href={`tel:${client.phone}`}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
-                      aria-label={
-                        isCommercial ? 'Call contact' : 'Call client'
-                      }
+                      aria-label={isCommercial ? 'Call contact' : 'Call client'}
                     >
                       <Phone className="h-4 w-4" />
                     </a>

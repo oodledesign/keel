@@ -2,8 +2,6 @@ import { after } from 'next/server';
 
 import type Stripe from 'stripe';
 
-import { convertReferralOnInvoicePaid } from '~/lib/rewards/convert-referral-on-invoice-paid';
-
 import { getPlanTypesMap } from '@kit/billing';
 import { getBillingEventHandlerService } from '@kit/billing-gateway';
 import type {
@@ -33,6 +31,7 @@ import {
   isBillingLifecycleStripeEvent,
 } from '~/lib/billing/handle-billing-lifecycle-event';
 import { syncKeelPlanFromSubscription } from '~/lib/billing/sync-subscription-plan';
+import { convertReferralOnInvoicePaid } from '~/lib/rewards/convert-referral-on-invoice-paid';
 
 /**
  * @description Handle the webhooks from Stripe related to checkouts + Ozer billing lifecycle

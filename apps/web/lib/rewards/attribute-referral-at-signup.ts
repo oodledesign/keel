@@ -7,8 +7,8 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import type { Database } from '~/lib/database.types';
 
-import { clearReferralCookies, readReferralCookies } from './referral-cookies';
 import { ensureUserReferralCode } from './ensure-referral-code';
+import { clearReferralCookies, readReferralCookies } from './referral-cookies';
 
 type AdminClient = SupabaseClient<Database>;
 

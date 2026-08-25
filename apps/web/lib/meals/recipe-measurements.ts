@@ -133,7 +133,10 @@ function parseAmount(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function formatAmount(value: number, system?: MeasurementSystem): string {
+export function formatAmount(
+  value: number,
+  system?: MeasurementSystem,
+): string {
   if (!Number.isFinite(value)) return '';
 
   if (system === 'cups') {
@@ -342,9 +345,12 @@ export function tokeniseIngredientMentions(
     usedIds.add(candidate.id);
   }
 
-  const restored = working.replace(/\u0000TOKEN(\d+)\u0000/g, (_match, index) => {
-    return protectedTokens[Number(index)] ?? '';
-  });
+  const restored = working.replace(
+    /\u0000TOKEN(\d+)\u0000/g,
+    (_match, index) => {
+      return protectedTokens[Number(index)] ?? '';
+    },
+  );
 
   // Include any tokens that were already present.
   for (const id of extractIngredientTokenIds(restored)) {

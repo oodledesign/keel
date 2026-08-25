@@ -9,9 +9,9 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  type ContentSubmissionType,
   REWARDS_CONFIG,
   contentTierRewardPence,
-  type ContentSubmissionType,
 } from '~/config/rewards.config';
 
 const CreditTargetSchema = z.object({
@@ -41,17 +41,15 @@ export const updateRewardCreditTargetAction = enhanceAction(
       }
     }
 
-    const { error } = await client
-      .from('user_settings')
-      .upsert(
-        {
-          user_id: user.id,
-          reward_credit_target: parsed.target,
-          reward_credit_workspace_id:
-            parsed.target === 'workspace' ? parsed.workspaceId : null,
-        },
-        { onConflict: 'user_id' },
-      );
+    const { error } = await client.from('user_settings').upsert(
+      {
+        user_id: user.id,
+        reward_credit_target: parsed.target,
+        reward_credit_workspace_id:
+          parsed.target === 'workspace' ? parsed.workspaceId : null,
+      },
+      { onConflict: 'user_id' },
+    );
 
     if (error) {
       throw new Error(error.message);

@@ -43,7 +43,7 @@ export async function loadEmailThreadDetail(
 
   const [thread, messagesResult, actionItemsResult, draftResult] =
     await Promise.all([
-      loadEmailThreadDetailFromDb(threadId),
+      loadEmailThreadDetailFromDb(threadId, user.id),
       client
         .from('email_messages')
         .select('id, from_address, subject, body_text, snippet, internal_date')
@@ -112,12 +112,15 @@ export async function loadEmailThreadDetail(
     }
   }
 
+  // Enrich names after paint-critical payload is ready (usually tiny).
+  const enrichedItems = await enrichEmailActionItemLinks(actionItems);
+
   return {
     ok: true,
     data: {
       thread,
       messages: (messagesResult.data ?? []) as EmailMessageRow[],
-      actionItems: await enrichEmailActionItemLinks(actionItems),
+      actionItems: enrichedItems,
       draft: (draftResult.data as EmailDraftRow | null) ?? null,
     },
   };

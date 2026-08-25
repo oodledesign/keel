@@ -12,9 +12,9 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 
 import {
-  PLACEHOLDER_COMPLIANCE_LABELS,
   type InstructionCareLogEntry,
   type InstructionComplianceItem,
+  PLACEHOLDER_COMPLIANCE_LABELS,
 } from './instruction-care-compliance.shared';
 
 const InstructionIdSchema = z.object({

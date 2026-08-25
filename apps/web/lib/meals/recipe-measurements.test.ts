@@ -164,13 +164,10 @@ describe('tokeniseIngredientMentions', () => {
     const garlicId = '22222222-2222-4222-8222-222222222222';
 
     // onion is already tokenised; garlic is plain text
-    const result = tokeniseIngredientMentions(
-      `Add {${onionId}} and garlic.`,
-      [
-        { id: onionId, name: 'onion' },
-        { id: garlicId, name: 'garlic' },
-      ],
-    );
+    const result = tokeniseIngredientMentions(`Add {${onionId}} and garlic.`, [
+      { id: onionId, name: 'onion' },
+      { id: garlicId, name: 'garlic' },
+    ]);
 
     expect(result.content).toBe(`Add {${onionId}} and {${garlicId}}.`);
     expect(result.ingredientIds).toContain(onionId);

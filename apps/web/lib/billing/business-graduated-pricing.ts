@@ -160,10 +160,10 @@ export function aiCreditsForBillableSeats(billableSeats: number): number {
  * Workspace-wide project-guest allowance for paid Business.
  * Lite uses BUSINESS_LITE_MAX_PROJECT_GUESTS separately.
  */
-export function maxProjectGuestsForBillableSeats(billableSeats: number): number {
-  return (
-    BUSINESS_PROJECT_GUESTS_PER_SEAT * clampBillableSeats(billableSeats)
-  );
+export function maxProjectGuestsForBillableSeats(
+  billableSeats: number,
+): number {
+  return BUSINESS_PROJECT_GUESTS_PER_SEAT * clampBillableSeats(billableSeats);
 }
 
 /** Max memberships = billable seats (no free support seats on Business). */

@@ -12,17 +12,18 @@ import {
   addEmailTriageRuleFromThread,
   removeEmailTriageRule,
 } from '~/lib/email-assistant/email-triage-rules';
-import { EMAIL_THREAD_CATEGORIES } from './email-thread-categories';
-import {
-  ignoreEmailThreadNeedsReply,
-  setEmailThreadCategory,
-  markEmailThreadNeedsReply,
-} from '~/lib/email-assistant/set-thread-category';
 import {
   ignoreEmailRuleAndDismissSuggestions,
   removeIgnoredEmailRule,
 } from '~/lib/email-assistant/ignored-senders';
+import {
+  ignoreEmailThreadNeedsReply,
+  markEmailThreadNeedsReply,
+  setEmailThreadCategory,
+} from '~/lib/email-assistant/set-thread-category';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
+
+import { EMAIL_THREAD_CATEGORIES } from './email-thread-categories';
 
 const IgnoreEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),

@@ -4,8 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { detectPipelineLead } from '@kit/email-assistant';
 
-import { findPipelineDuplicate } from '~/lib/integrations/linkedin/linkedin-import';
 import { normalizeImportName } from '~/lib/clients/client-import';
+import { findPipelineDuplicate } from '~/lib/integrations/linkedin/linkedin-import';
 
 import { extractEmailAddress, isFromOwner } from './address-utils';
 import { resolveDraftOwnerContext } from './draft-owner';

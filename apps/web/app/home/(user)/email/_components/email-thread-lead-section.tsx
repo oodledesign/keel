@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useEffect, useRef, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -51,10 +51,7 @@ export function EmailThreadLeadSection({
   onUpdated,
 }: Props) {
   const [pending, startTransition] = useTransition();
-
-  if (mailboxKind === 'personal') {
-    return null;
-  }
+  const autoTriedRef = useRef<string | null>(null);
 
   const workspaceSlug =
     accountSlug ??
@@ -65,7 +62,7 @@ export function EmailThreadLeadSection({
     ? pathsConfig.app.accountPipeline.replace('[account]', workspaceSlug)
     : null;
 
-  function runSuggest() {
+  function runSuggest(silent = false) {
     startTransition(async () => {
       try {
         const data = await emailApiFetch<{ thread: EmailThreadSummary }>(
@@ -73,20 +70,42 @@ export function EmailThreadLeadSection({
           { method: 'POST' },
         );
         onUpdated(data.thread);
-        if (data.thread.pipeline_lead_suggestion) {
-          toast.success('Pipeline lead suggestion ready');
-        } else {
-          toast.message('No new lead detected for this thread');
+        if (!silent) {
+          if (data.thread.pipeline_lead_suggestion) {
+            toast.success('Pipeline lead suggestion ready');
+          } else {
+            toast.message('No new lead detected for this thread');
+          }
         }
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not suggest pipeline lead',
-        );
+        if (!silent) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not suggest pipeline lead',
+          );
+        }
       }
     });
   }
+
+  useEffect(() => {
+    if (mailboxKind !== 'business') {
+      return;
+    }
+
+    if (pipelineDealId || pipelineLeadSuggestion) {
+      return;
+    }
+
+    if (autoTriedRef.current === threadId) {
+      return;
+    }
+
+    autoTriedRef.current = threadId;
+    runSuggest(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per thread open
+  }, [mailboxKind, pipelineDealId, pipelineLeadSuggestion, threadId]);
 
   function acceptSuggestion() {
     startTransition(async () => {
@@ -118,6 +137,10 @@ export function EmailThreadLeadSection({
         );
       }
     });
+  }
+
+  if (mailboxKind === 'personal') {
+    return null;
   }
 
   if (pipelineDealId && pipelineHref) {
@@ -156,14 +179,14 @@ export function EmailThreadLeadSection({
               variant="outline"
               className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs"
               disabled={pending}
-              onClick={runSuggest}
+              onClick={() => runSuggest(false)}
             >
               {pending ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Detect lead
+              Re-scan
             </Button>
           </div>
 
@@ -197,7 +220,9 @@ export function EmailThreadLeadSection({
             </div>
           ) : (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Detect whether this enquiry should become a new pipeline lead.
+              {pending
+                ? 'Checking whether this looks like a new enquiry…'
+                : 'No new lead detected. Re-scan if this is an enquiry that should enter pipeline.'}
             </p>
           )}
         </div>

@@ -7,9 +7,7 @@ import {
 } from './match-trigger';
 import type { IgTriggerRow } from './types';
 
-function makeTrigger(
-  overrides: Partial<IgTriggerRow> = {},
-): IgTriggerRow {
+function makeTrigger(overrides: Partial<IgTriggerRow> = {}): IgTriggerRow {
   return {
     id: 't1',
     ig_account_id: 'ig1',
@@ -39,9 +37,9 @@ function makeTrigger(
 
 describe('matchTriggerKeyword', () => {
   it('matches contains case-insensitively', () => {
-    expect(matchTriggerKeyword('What is the PRICE?', ['price'], 'contains')).toBe(
-      true,
-    );
+    expect(
+      matchTriggerKeyword('What is the PRICE?', ['price'], 'contains'),
+    ).toBe(true);
   });
 
   it('matches exact only', () => {

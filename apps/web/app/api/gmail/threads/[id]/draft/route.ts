@@ -85,9 +85,8 @@ export async function POST(_request: Request, context: RouteContext) {
           .maybeSingle(),
   ]);
 
-  const mailboxKindRaw = (
-    connection as { mailbox_kind?: string | null } | null
-  )?.mailbox_kind;
+  const mailboxKindRaw = (connection as { mailbox_kind?: string | null } | null)
+    ?.mailbox_kind;
   const mailboxKind =
     mailboxKindRaw === 'personal' || mailboxKindRaw === 'business'
       ? mailboxKindRaw

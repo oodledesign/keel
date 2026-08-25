@@ -21,51 +21,51 @@ async function landingAfterAuth(
 
   if (!user) return nextPath ?? HOME;
 
-    // OAuth signups skip /api/auth/sign-up — notify ops on first callback
-    // for a brand-new OAuth user (password signups already notified at signup).
-    // Keep the window tight (~15s) so a retried callback does not double-email.
-    try {
-      const createdAtMs = user.created_at
-        ? new Date(user.created_at).getTime()
-        : 0;
-      const isBrandNew = createdAtMs > 0 && Date.now() - createdAtMs < 15_000;
-      const hasOAuthIdentity = (user.identities ?? []).some(
-        (identity) => identity.provider && identity.provider !== 'email',
-      );
+  // OAuth signups skip /api/auth/sign-up — notify ops on first callback
+  // for a brand-new OAuth user (password signups already notified at signup).
+  // Keep the window tight (~15s) so a retried callback does not double-email.
+  try {
+    const createdAtMs = user.created_at
+      ? new Date(user.created_at).getTime()
+      : 0;
+    const isBrandNew = createdAtMs > 0 && Date.now() - createdAtMs < 15_000;
+    const hasOAuthIdentity = (user.identities ?? []).some(
+      (identity) => identity.provider && identity.provider !== 'email',
+    );
 
-      if (isBrandNew && hasOAuthIdentity && user.email) {
-        void getSupabaseServerAdminClient()
-          .then((admin) =>
-            attributeReferralAtSignup({ referredUserId: user.id, admin }),
-          )
-          .catch((err) => {
-            console.error(
-              '[auth/callback] Referral attribution failed:',
-              err instanceof Error ? err.message : err,
-            );
-          });
+    if (isBrandNew && hasOAuthIdentity && user.email) {
+      void getSupabaseServerAdminClient()
+        .then((admin) =>
+          attributeReferralAtSignup({ referredUserId: user.id, admin }),
+        )
+        .catch((err) => {
+          console.error(
+            '[auth/callback] Referral attribution failed:',
+            err instanceof Error ? err.message : err,
+          );
+        });
 
-        void import('~/lib/admin/platform-lifecycle-notifications')
-          .then(({ notifyPlatformNewSignup }) =>
-            notifyPlatformNewSignup({
-              email: user.email!,
-              userId: user.id,
-              source: 'oauth',
-            }),
-          )
-          .catch((err) => {
-            console.error(
-              '[auth/callback] Failed to queue OAuth signup notification:',
-              err instanceof Error ? err.message : err,
-            );
-          });
-      }
-    } catch (err) {
-      console.error(
-        '[auth/callback] Signup notification check failed:',
-        err instanceof Error ? err.message : err,
-      );
+      void import('~/lib/admin/platform-lifecycle-notifications')
+        .then(({ notifyPlatformNewSignup }) =>
+          notifyPlatformNewSignup({
+            email: user.email!,
+            userId: user.id,
+            source: 'oauth',
+          }),
+        )
+        .catch((err) => {
+          console.error(
+            '[auth/callback] Failed to queue OAuth signup notification:',
+            err instanceof Error ? err.message : err,
+          );
+        });
     }
+  } catch (err) {
+    console.error(
+      '[auth/callback] Signup notification check failed:',
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   return resolvePostAuthLandingPath(client, user.id, nextPath, HOME);
 }
@@ -86,8 +86,7 @@ export async function GET(request: NextRequest) {
   const nextParam = url.searchParams.get('next');
 
   const recoveryDestination = pathsConfig.auth.passwordUpdate;
-  const isRecovery =
-    type === 'recovery' || nextParam === recoveryDestination;
+  const isRecovery = type === 'recovery' || nextParam === recoveryDestination;
 
   const baseParams = {
     joinTeamPath: pathsConfig.app.joinTeam,

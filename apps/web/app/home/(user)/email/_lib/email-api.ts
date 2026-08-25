@@ -46,12 +46,21 @@ export async function emailApiFetch<T>(
   url: string,
   init?: RequestInit,
 ): Promise<T> {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const hasBody = init?.body != null && init.body !== '';
+  // Empty POST + Content-Type: application/json can 400 before the route runs.
+  const needsJsonBody =
+    !hasBody && (method === 'POST' || method === 'PATCH' || method === 'PUT');
+
   const response = await fetch(url, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody || needsJsonBody
+        ? { 'Content-Type': 'application/json' }
+        : {}),
       ...(init?.headers ?? {}),
     },
+    body: hasBody ? init?.body : needsJsonBody ? '{}' : init?.body,
   });
 
   let raw: unknown;

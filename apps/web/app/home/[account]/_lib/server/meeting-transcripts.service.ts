@@ -1055,7 +1055,10 @@ class MeetingTranscriptsService {
       const org = normalizeEmbeddedRow(
         (
           clientRow as {
-            client_orgs?: { slug?: string | null } | { slug?: string | null }[] | null;
+            client_orgs?:
+              | { slug?: string | null }
+              | { slug?: string | null }[]
+              | null;
           } | null
         )?.client_orgs,
       );
@@ -1104,9 +1107,8 @@ class MeetingTranscriptsService {
         .maybeSingle(),
     ]);
 
-    const { sendMeetingNotesEmails } = await import(
-      '~/lib/recorder/meeting-notes-email'
-    );
+    const { sendMeetingNotesEmails } =
+      await import('~/lib/recorder/meeting-notes-email');
 
     return sendMeetingNotesEmails({
       accountId: input.accountId,

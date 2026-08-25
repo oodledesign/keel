@@ -14,6 +14,7 @@ import { toHomeBillingHref } from '~/lib/ai/billing-href';
 const paths = {
   home: pathsConfig.app.home,
   personalAccountSettings: pathsConfig.app.personalAccountSettings,
+  personalAccountRewards: pathsConfig.app.personalAccountRewardsSettings,
   support: pathsConfig.app.personalPlatformSupport,
 };
 

@@ -1,13 +1,13 @@
 import Link from 'next/link';
 
-import { PageBody } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { PageBody } from '@kit/ui/page';
 
-import { getOptionalMetaInstagram } from '~/lib/instagram-autoreply/env';
 import {
   loadIgConnectedAccount,
   loadIgTriggers,
 } from '~/lib/instagram-autoreply/assert-access';
+import { getOptionalMetaInstagram } from '~/lib/instagram-autoreply/env';
 import { parseIgVoiceSettings } from '~/lib/instagram-autoreply/types';
 
 import {
@@ -108,13 +108,19 @@ export default async function InstagramHomePage({
 
         <div className="mx-4 flex flex-wrap gap-3 text-sm lg:mx-0">
           <Link
-            href={workAccountPath(workPaths.accountInstagramAutoreplyTriggers, account)}
+            href={workAccountPath(
+              workPaths.accountInstagramAutoreplyTriggers,
+              account,
+            )}
             className="rounded-lg border border-[color:var(--workspace-shell-border)] px-4 py-2"
           >
             Triggers ({triggers.length})
           </Link>
           <Link
-            href={workAccountPath(workPaths.accountInstagramAutoreplyActivity, account)}
+            href={workAccountPath(
+              workPaths.accountInstagramAutoreplyActivity,
+              account,
+            )}
             className="rounded-lg border border-[color:var(--workspace-shell-border)] px-4 py-2"
           >
             Activity log

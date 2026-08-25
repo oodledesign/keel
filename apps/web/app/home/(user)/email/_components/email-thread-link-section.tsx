@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { ChevronDown, Link2, Loader2, Sparkles, X } from 'lucide-react';
 
@@ -43,6 +43,7 @@ type Props = {
   linkSuggestion?: EmailThreadLinkSuggestion | null;
   linkConfidence?: number | null;
   workspaces: EmailWorkspaceOption[];
+  preferredAccountId?: string | null;
   onUpdated: (link: EmailThreadLink) => void;
   onSuggestionUpdated?: (suggestion: EmailThreadLinkSuggestion | null) => void;
 };
@@ -71,40 +72,75 @@ function suggestionLabel(suggestion: EmailThreadLinkSuggestion): string | null {
   return null;
 }
 
+function defaultWorkspaceId(
+  link: EmailThreadLink,
+  workspaces: EmailWorkspaceOption[],
+  preferredAccountId?: string | null,
+): string {
+  if (link.accountId) {
+    return link.accountId;
+  }
+
+  if (
+    preferredAccountId &&
+    workspaces.some((workspace) => workspace.id === preferredAccountId)
+  ) {
+    return preferredAccountId;
+  }
+
+  return workspaces[0]?.id ?? '';
+}
+
 export function EmailThreadLinkSection({
   threadId,
   link,
   linkSuggestion = null,
   linkConfidence = null,
   workspaces,
+  preferredAccountId = null,
   onUpdated,
   onSuggestionUpdated,
 }: Props) {
-  const [workspaceId, setWorkspaceId] = useState(link.accountId ?? '');
+  const [workspaceId, setWorkspaceId] = useState(() =>
+    defaultWorkspaceId(link, workspaces, preferredAccountId),
+  );
   const [assignTo, setAssignTo] = useState(
     link.projectId ? link.projectId : link.clientId ? link.clientId : 'none',
   );
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
+  const [changeWorkspace, setChangeWorkspace] = useState(false);
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(() => !link.linked);
+  const autoSuggestTriedRef = useRef<string | null>(null);
 
   const currentLabel = useMemo(() => linkLabel(link), [link]);
   const suggestedLabel = useMemo(
     () => (linkSuggestion ? suggestionLabel(linkSuggestion) : null),
     [linkSuggestion],
   );
+  const workspaceLabel =
+    workspaces.find((workspace) => workspace.id === workspaceId)?.label ??
+    'Workspace';
 
   useEffect(() => {
     setOpen(!link.linked);
   }, [link.linked, threadId]);
 
   useEffect(() => {
-    setWorkspaceId(link.accountId ?? '');
+    setWorkspaceId(defaultWorkspaceId(link, workspaces, preferredAccountId));
     setAssignTo(
       link.projectId ? link.projectId : link.clientId ? link.clientId : 'none',
     );
-  }, [link.accountId, link.clientId, link.projectId, threadId]);
+    setChangeWorkspace(false);
+  }, [
+    link.accountId,
+    link.clientId,
+    link.projectId,
+    preferredAccountId,
+    threadId,
+    workspaces,
+  ]);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -137,7 +173,10 @@ export function EmailThreadLinkSection({
     };
   }, [workspaceId]);
 
-  function saveLink(clear = false, suggestion?: EmailThreadLinkSuggestion | null) {
+  function saveLink(
+    clear = false,
+    suggestion?: EmailThreadLinkSuggestion | null,
+  ) {
     startTransition(async () => {
       try {
         const selected = options.find((option) => option.id === assignTo);
@@ -182,30 +221,54 @@ export function EmailThreadLinkSection({
     });
   }
 
-  function runSuggestLink() {
+  function runSuggestLink(silent = false) {
     startTransition(async () => {
       try {
         const data = await emailApiFetch<{
           thread: {
             link_suggestion: EmailThreadLinkSuggestion | null;
             link_confidence: number | null;
+            link: EmailThreadLink;
           };
         }>(`/api/gmail/threads/${threadId}/suggest-link`, {
           method: 'POST',
         });
         onSuggestionUpdated?.(data.thread.link_suggestion);
-        if (data.thread.link_suggestion) {
-          toast.success('Link suggestion ready');
-        } else {
+        if (data.thread.link?.linked) {
+          onUpdated(data.thread.link);
+          if (!silent) {
+            toast.success('Thread auto-linked');
+          }
+        } else if (data.thread.link_suggestion) {
+          if (!silent) {
+            toast.success('Link suggestion ready');
+          }
+        } else if (!silent) {
           toast.message('No confident link suggestion for this thread');
         }
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Could not suggest link',
-        );
+        if (!silent) {
+          toast.error(
+            error instanceof Error ? error.message : 'Could not suggest link',
+          );
+        }
       }
     });
   }
+
+  useEffect(() => {
+    if (link.linked || linkSuggestion) {
+      return;
+    }
+
+    if (autoSuggestTriedRef.current === threadId) {
+      return;
+    }
+
+    autoSuggestTriedRef.current = threadId;
+    runSuggestLink(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per thread open
+  }, [link.linked, linkSuggestion, threadId]);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -233,7 +296,7 @@ export function EmailThreadLinkSection({
                 </span>
               ) : !open ? (
                 <span className="mt-1 block text-xs text-[var(--workspace-shell-text-muted)]">
-                  Link this thread to a workspace client or project.
+                  Link this thread to a client or project.
                 </span>
               ) : null}
             </span>
@@ -283,36 +346,50 @@ export function EmailThreadLinkSection({
         ) : null}
 
         <CollapsibleContent className="border-t border-[color:var(--workspace-shell-border)] px-3 py-3">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Workspace
-              </Label>
-              <Select
-                value={workspaceId || 'none'}
-                onValueChange={(value) => {
-                  setWorkspaceId(value === 'none' ? '' : value);
-                  setAssignTo('none');
-                }}
-              >
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
-                  <SelectValue placeholder="Select workspace" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Select workspace</SelectItem>
-                  {workspaces.map((workspace) => (
-                    <SelectItem key={workspace.id} value={workspace.id}>
-                      {workspace.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Client or project
+                </Label>
+                {workspaces.length > 1 ? (
+                  <button
+                    type="button"
+                    className="text-[11px] text-[var(--ozer-accent)] hover:underline"
+                    onClick={() => setChangeWorkspace((value) => !value)}
+                  >
+                    {changeWorkspace
+                      ? 'Hide workspace'
+                      : `Change workspace · ${workspaceLabel}`}
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                    {workspaceLabel}
+                  </span>
+                )}
+              </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Client or project
-              </Label>
+              {changeWorkspace && workspaces.length > 1 ? (
+                <Select
+                  value={workspaceId || 'none'}
+                  onValueChange={(value) => {
+                    setWorkspaceId(value === 'none' ? '' : value);
+                    setAssignTo('none');
+                  }}
+                >
+                  <SelectTrigger className="mb-2 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
+                    <SelectValue placeholder="Select workspace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workspaces.map((workspace) => (
+                      <SelectItem key={workspace.id} value={workspace.id}>
+                        {workspace.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+
               <TaskAssignmentCombobox
                 value={assignTo}
                 onValueChange={setAssignTo}
@@ -332,7 +409,7 @@ export function EmailThreadLinkSection({
               variant="outline"
               className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
               disabled={pending}
-              onClick={runSuggestLink}
+              onClick={() => runSuggestLink(false)}
             >
               {pending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

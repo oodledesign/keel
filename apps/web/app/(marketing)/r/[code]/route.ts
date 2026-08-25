@@ -4,9 +4,9 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import appConfig from '~/config/app.config';
 import {
+  REWARDS_CONFIG,
   buildReferralCookieOptions,
   hashReferralSessionFingerprint,
-  REWARDS_CONFIG,
 } from '~/lib/rewards/referral-cookies';
 
 type RouteContext = {

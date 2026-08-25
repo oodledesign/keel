@@ -71,24 +71,40 @@ import { MeetingParticipantAvatars } from './meeting-participant-avatars';
 
 type TranscriptRow = MeetingTranscriptListRow;
 
+type UpcomingMeetingRow = {
+  id: string;
+  title: string;
+  startAt: string;
+  inviteeName: string;
+  conferencingUrl: string | null;
+};
+
 type ClientOption = { id: string; name: string };
 
 type Props = {
   accountId: string;
   accountSlug: string;
   transcripts: TranscriptRow[];
+  upcomingMeetings: UpcomingMeetingRow[];
   clients: ClientOption[];
   canEdit: boolean;
 };
 
-function meetingSortKey(row: TranscriptRow) {
-  return row.meetingDate || row.createdAt.slice(0, 10);
+function formatUpcomingWhen(iso: string) {
+  return new Date(iso).toLocaleString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function MeetingsPageContent({
   accountId,
   accountSlug,
   transcripts: initialTranscripts,
+  upcomingMeetings,
   clients,
   canEdit,
 }: Props) {
@@ -151,13 +167,19 @@ export function MeetingsPageContent({
   }, []);
 
   const upcomingRows = useMemo(() => {
-    const today = todayIsoDate();
-    return [...rows]
-      .filter((row) => meetingSortKey(row) >= today)
-      .sort((a, b) => meetingSortKey(a).localeCompare(meetingSortKey(b)))
+    const now = Date.now();
+    return [...upcomingMeetings]
+      .filter((row) => new Date(row.startAt).getTime() >= now)
+      .sort(
+        (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
+      )
       .slice(0, 8);
-  }, [rows]);
+  }, [upcomingMeetings]);
 
+  const bookingsPath = pathsConfig.app.accountSchedulingBookings.replace(
+    '[account]',
+    accountSlug,
+  );
   const handleSave = () => {
     if (!canEdit) return;
     if (!clientId) {
@@ -548,28 +570,18 @@ export function MeetingsPageContent({
                 {upcomingRows.map((row) => (
                   <li key={row.id}>
                     <Link
-                      href={meetingDetailPath(row.id)}
-                      className="flex items-start gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                      href={bookingsPath}
+                      className="block rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
                     >
-                      {row.clientId ? (
-                        <ProfileAvatar
-                          displayName={row.clientName ?? 'Client'}
-                          pictureUrl={row.clientPictureUrl}
-                          className="mx-0 mt-0.5 h-7 w-7 shrink-0"
-                          fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-[10px] text-[var(--workspace-shell-text)]"
-                        />
-                      ) : null}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                          {row.title}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                          {meetingDisplayDate(row.meetingDate, row.createdAt)}
-                        </p>
-                        <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
-                          {contextLabel(row)}
-                        </p>
-                      </div>
+                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {row.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                        {formatUpcomingWhen(row.startAt)}
+                      </p>
+                      <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
+                        {row.inviteeName}
+                      </p>
                     </Link>
                   </li>
                 ))}

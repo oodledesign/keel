@@ -744,7 +744,10 @@ class ClientPortalService {
       .eq('client_org_id', clientOrgId);
 
     if (clientsError) {
-      console.error('[client-portal] listPortalMeetings clients:', clientsError.message);
+      console.error(
+        '[client-portal] listPortalMeetings clients:',
+        clientsError.message,
+      );
       return [];
     }
 

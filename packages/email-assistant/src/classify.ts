@@ -21,12 +21,13 @@ Categories:
 - reply_now: Direct ask, urgent decision, scheduling, client waiting on the owner now
 - reply_later: Important human mail that needs a reply but is not urgent
 - waiting: Ball is in the other party's court; owner sent last or thread is pending their response
-- fyi: Read-only updates, no reply expected
-- noise: Newsletters, marketing, automated receipts/alerts, mailing lists
+- fyi: Human updates, acknowledgements, "thanks", FYI notes, or useful conversation that does not need a reply
+- noise: Newsletters, marketing, automated receipts/alerts, mailing lists, no-reply senders
 
 When a real person expects a personal reply soon, prefer reply_now over reply_later.
 When unsure between reply_now and reply_later, choose reply_later with lower confidence.
 When the owner already sent the latest message and is waiting on someone else, choose waiting.
+A warm human reply that does not ask anything of the owner (thanks, confirmation, update) is fyi — never noise.
 When unsure between fyi and noise, choose fyi for human senders and noise for automated senders.`;
 
 function buildOwnerBlock(owner: DraftOwnerContext): string {

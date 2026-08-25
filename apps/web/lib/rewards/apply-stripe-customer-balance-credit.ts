@@ -29,9 +29,8 @@ export async function applyStripeCustomerBalanceCredit(
 ): Promise<{ applied: boolean; stripeBalanceTransactionId?: string }> {
   const logger = await getLogger();
   const stripe = params.stripe ?? getRewardsStripeClient();
-  const { resolveRewardStripeCustomer } = await import(
-    './resolve-reward-stripe-customer'
-  );
+  const { resolveRewardStripeCustomer } =
+    await import('./resolve-reward-stripe-customer');
 
   if (params.amountPence <= 0) {
     return { applied: false };

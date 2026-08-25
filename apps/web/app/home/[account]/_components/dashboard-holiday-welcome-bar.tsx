@@ -46,7 +46,7 @@ export function DashboardHolidayWelcomeBar({ accountId, accountSlug }: Props) {
   }
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] px-4 py-3 text-sm text-[var(--workspace-shell-text)] xl:col-span-2">
       <div className="min-w-0">
         <p className="font-medium">Welcome back</p>
         <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">

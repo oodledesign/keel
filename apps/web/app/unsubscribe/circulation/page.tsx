@@ -1,8 +1,9 @@
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import {
   createCommercialCirculationService,
   decodeCirculationUnsubscribeToken,
 } from '~/lib/commercial/circulation/circulation.service';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 export const metadata = {
   title: 'Unsubscribe from matching opportunities',
@@ -29,7 +30,8 @@ export default async function CirculationUnsubscribePage({
         .eq('id', decoded.accountId)
         .maybeSingle();
       agencyName =
-        (account as { name?: string | null } | null)?.name?.trim() || agencyName;
+        (account as { name?: string | null } | null)?.name?.trim() ||
+        agencyName;
 
       await createCommercialCirculationService(admin).unsubscribe(
         decoded.accountId,

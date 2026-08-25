@@ -78,8 +78,7 @@ export function BusinessSeatQuantityCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          Assigned members: {membersAssigned} · Subscribed:{' '}
-          {subscribedBillable}
+          Assigned members: {membersAssigned} · Subscribed: {subscribedBillable}
         </p>
         {pendingLabel ? (
           <p className="text-sm text-amber-700 dark:text-amber-400">

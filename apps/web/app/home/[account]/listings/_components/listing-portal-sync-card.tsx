@@ -102,10 +102,7 @@ export function ListingPortalSyncCard({
   };
 
   return (
-    <Card
-      className={workspacePanelCard}
-      data-tour="sop-listing-publish"
-    >
+    <Card className={workspacePanelCard} data-tour="sop-listing-publish">
       <CardHeader>
         <CardTitle className="text-base text-[var(--workspace-shell-text)]">
           Portal publishing

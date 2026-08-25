@@ -251,19 +251,16 @@ export const adminApplyPlanLimitsAction = enhanceAction(
     let maxProjectGuests: number | null = null;
 
     if (plan.family === 'business') {
-      const {
-        maxMembersForBillableSeats,
-        maxProjectGuestsForBillableSeats,
-      } = await import('~/lib/billing/business-graduated-pricing');
+      const { maxMembersForBillableSeats, maxProjectGuestsForBillableSeats } =
+        await import('~/lib/billing/business-graduated-pricing');
       const seats = Math.max(1, input.billableSeats ?? 1);
       maxMembers = maxMembersForBillableSeats(seats);
       maxProjectGuests = maxProjectGuestsForBillableSeats(seats);
     } else if (plan.family === 'business_lite') {
       maxProjectGuests = 1;
     } else if (plan.family === 'commercial_property') {
-      const { maxMembersForBillableSeats } = await import(
-        '~/lib/billing/commercial-graduated-pricing'
-      );
+      const { maxMembersForBillableSeats } =
+        await import('~/lib/billing/commercial-graduated-pricing');
       maxMembers =
         plan.limits.maxMembers ??
         maxMembersForBillableSeats(Math.max(1, input.billableSeats ?? 4));

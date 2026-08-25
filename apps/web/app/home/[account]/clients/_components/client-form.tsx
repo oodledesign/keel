@@ -228,9 +228,7 @@ export function ClientForm({
       return;
     }
     if (!isIndividual && !company_name.trim()) {
-      toast.error(
-        `Company name is required for a business ${entityLabel}`,
-      );
+      toast.error(`Company name is required for a business ${entityLabel}`);
       return;
     }
     if (
@@ -344,9 +342,7 @@ export function ClientForm({
     if (
       !client ||
       !onDeleted ||
-      !confirm(
-        `Delete this ${entityLabel}? This cannot be undone.`,
-      )
+      !confirm(`Delete this ${entityLabel}? This cannot be undone.`)
     )
       return;
     setDeleting(true);

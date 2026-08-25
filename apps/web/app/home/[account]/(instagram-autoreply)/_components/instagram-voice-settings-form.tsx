@@ -5,8 +5,8 @@ import { useState, useTransition } from 'react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import type { IgVoiceSettings } from '~/lib/instagram-autoreply/types';
 

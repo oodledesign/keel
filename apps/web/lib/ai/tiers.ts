@@ -58,7 +58,9 @@ async function billableSeatsForAccount(
 ): Promise<number | null> {
   const { data: subscriptions } = await supabase
     .from('subscriptions')
-    .select('status, items:subscription_items(variant_id, product_id, quantity)')
+    .select(
+      'status, items:subscription_items(variant_id, product_id, quantity)',
+    )
     .eq('account_id', accountId);
 
   for (const subscription of subscriptions ?? []) {
@@ -66,12 +68,14 @@ async function billableSeatsForAccount(
     if (!ACTIVE_SUB_STATUSES.has(status)) continue;
 
     const items =
-      (subscription as {
-        items?: Array<{
-          variant_id?: string | null;
-          quantity?: number | null;
-        }>;
-      }).items ?? [];
+      (
+        subscription as {
+          items?: Array<{
+            variant_id?: string | null;
+            quantity?: number | null;
+          }>;
+        }
+      ).items ?? [];
 
     for (const item of items) {
       const variantId = item.variant_id;
@@ -138,7 +142,9 @@ export async function getAccountCreditsLimit(
 
   const { data: subscriptions } = await supabase
     .from('subscriptions')
-    .select('status, items:subscription_items(variant_id, product_id, quantity)')
+    .select(
+      'status, items:subscription_items(variant_id, product_id, quantity)',
+    )
     .eq('account_id', accountId);
 
   for (const subscription of subscriptions ?? []) {
@@ -148,12 +154,14 @@ export async function getAccountCreditsLimit(
     if (status === 'trialing') {
       // Graduated Business trials still get seat-scaled credits.
       const items =
-        (subscription as {
-          items?: Array<{
-            variant_id?: string | null;
-            quantity?: number | null;
-          }>;
-        }).items ?? [];
+        (
+          subscription as {
+            items?: Array<{
+              variant_id?: string | null;
+              quantity?: number | null;
+            }>;
+          }
+        ).items ?? [];
       for (const item of items) {
         if (!item.variant_id) continue;
         const plan = findPlanByStripePriceId(item.variant_id);
@@ -165,12 +173,14 @@ export async function getAccountCreditsLimit(
     }
 
     const items =
-      (subscription as {
-        items?: Array<{
-          variant_id?: string | null;
-          quantity?: number | null;
-        }>;
-      }).items ?? [];
+      (
+        subscription as {
+          items?: Array<{
+            variant_id?: string | null;
+            quantity?: number | null;
+          }>;
+        }
+      ).items ?? [];
 
     for (const item of items) {
       const variantId = item.variant_id;

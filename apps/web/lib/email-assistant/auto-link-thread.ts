@@ -121,6 +121,17 @@ async function findContactEmailAddressMatches(
   return [...matches.values()];
 }
 
+function clientDisplayLabel(row: {
+  display_name?: string | null;
+  company_name?: string | null;
+}): string {
+  return (
+    String(row.display_name ?? '').trim() ||
+    String(row.company_name ?? '').trim() ||
+    ''
+  );
+}
+
 async function findKeywordMatches(
   admin: SupabaseClient,
   accountIds: string[],
@@ -138,7 +149,7 @@ async function findKeywordMatches(
 
   const { data: clients, error: clientsError } = await admin
     .from('clients')
-    .select('id, account_id, name')
+    .select('id, account_id, display_name, company_name')
     .in('account_id', accountIds);
 
   if (clientsError) {
@@ -148,8 +159,13 @@ async function findKeywordMatches(
   const candidates: LinkCandidate[] = [];
 
   for (const row of clients ?? []) {
-    const name = String(row.name ?? '').trim();
-    if (!keywordInText(name, haystack)) {
+    const displayName = String(row.display_name ?? '').trim();
+    const companyName = String(row.company_name ?? '').trim();
+    const matchedLabel =
+      (keywordInText(companyName, haystack) && companyName) ||
+      (keywordInText(displayName, haystack) && displayName) ||
+      '';
+    if (!matchedLabel) {
       continue;
     }
 
@@ -172,7 +188,7 @@ async function findKeywordMatches(
       account_id: accountId,
       confidence: 0.72,
       projectId,
-      clientName: name,
+      clientName: matchedLabel,
       projectName,
     });
   }
@@ -266,7 +282,11 @@ async function findDisplayNameMatches(
       continue;
     }
 
-    if (displayNames.some((candidate) => name.includes(candidate) || candidate.includes(name))) {
+    if (
+      displayNames.some(
+        (candidate) => name.includes(candidate) || candidate.includes(name),
+      )
+    ) {
       matchedContactIds.push(row.id as string);
     }
   }
@@ -277,7 +297,7 @@ async function findDisplayNameMatches(
 
   const { data: links } = await admin
     .from('client_contacts')
-    .select('client_id, clients ( id, account_id, name )')
+    .select('client_id, clients ( id, account_id, display_name, company_name )')
     .in('contact_id', matchedContactIds);
 
   const candidates: LinkCandidate[] = [];
@@ -286,7 +306,8 @@ async function findDisplayNameMatches(
     const client = row.clients as {
       id?: string;
       account_id?: string;
-      name?: string | null;
+      display_name?: string | null;
+      company_name?: string | null;
     } | null;
     if (!client?.id || !client.account_id) {
       continue;
@@ -297,7 +318,7 @@ async function findDisplayNameMatches(
       account_id: client.account_id,
       confidence: 0.68,
       projectId: null,
-      clientName: (client.name as string | null) ?? null,
+      clientName: clientDisplayLabel(client) || null,
       projectName: null,
     });
   }
@@ -311,11 +332,15 @@ async function loadClientName(
 ): Promise<string | null> {
   const { data } = await admin
     .from('clients')
-    .select('name')
+    .select('display_name, company_name')
     .eq('id', clientId)
     .maybeSingle();
 
-  return (data?.name as string | null) ?? null;
+  if (!data) {
+    return null;
+  }
+
+  return clientDisplayLabel(data) || null;
 }
 
 async function resolveEmailThreadLinkCandidates(
@@ -634,7 +659,7 @@ async function findDomainMatches(
   const domainSet = new Set(participantDomains);
   const { data: clients, error: clientsError } = await admin
     .from('clients')
-    .select('id, account_id, email, client_org_id')
+    .select('id, account_id, email, client_org_id, company_name, display_name')
     .in('account_id', accountIds);
 
   if (clientsError) {
@@ -647,14 +672,30 @@ async function findDomainMatches(
   for (const row of clientRows) {
     const domain = extractEmailDomain(row.email as string | null);
 
-    if (!domain || isPublicEmailDomain(domain) || !domainSet.has(domain)) {
+    if (domain && !isPublicEmailDomain(domain) && domainSet.has(domain)) {
+      matches.set(row.id as string, {
+        id: row.id as string,
+        account_id: row.account_id as string,
+      });
       continue;
     }
 
-    matches.set(row.id as string, {
-      id: row.id as string,
-      account_id: row.account_id as string,
-    });
+    // Match company / display name to email domain brand (e.g. bracketts.co.uk).
+    const label = clientDisplayLabel(row).toLowerCase();
+    if (!label) {
+      continue;
+    }
+
+    for (const participantDomain of domainSet) {
+      const brand = participantDomain.split('.')[0] ?? '';
+      if (brand.length >= 4 && label.includes(brand)) {
+        matches.set(row.id as string, {
+          id: row.id as string,
+          account_id: row.account_id as string,
+        });
+        break;
+      }
+    }
   }
 
   const clientIds = clientRows.map((row) => row.id as string);

@@ -2,9 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { createPipelineLeadFromComment } from './create-pipeline-lead-from-comment';
 import { resolveIgVoiceSettings } from './build-reply-prompt';
-import { decryptIgToken } from './token-crypto';
+import { createPipelineLeadFromComment } from './create-pipeline-lead-from-comment';
 import { generateIgReply } from './generate-reply';
 import {
   isDmWindowExpiredError,
@@ -12,6 +11,7 @@ import {
   postPublicCommentReply,
 } from './graph-api';
 import { findMatchingTrigger } from './match-trigger';
+import { decryptIgToken } from './token-crypto';
 import {
   type IgConnectedAccountRow,
   type IgTriggerRow,
@@ -58,11 +58,7 @@ export async function processInstagramCommentEvent(
   const commenterIgId = params.comment.from?.id?.trim() ?? null;
 
   const triggers = await loadActiveTriggers(admin, params.igAccount.id);
-  const matchedTrigger = findMatchingTrigger(
-    triggers,
-    commentText,
-    mediaId,
-  );
+  const matchedTrigger = findMatchingTrigger(triggers, commentText, mediaId);
 
   const { data: inserted, error: insertError } = await admin
     .from('ig_comment_events')
@@ -158,7 +154,8 @@ export async function processInstagramCommentEvent(
       await admin
         .from('ig_comment_events')
         .update({
-          public_reply_status: reply.reason === 'skipped' ? 'skipped' : 'failed',
+          public_reply_status:
+            reply.reason === 'skipped' ? 'skipped' : 'failed',
           error_message: reply.message,
         })
         .eq('id', eventId);
@@ -256,7 +253,9 @@ export async function processInstagramCommentEvent(
       pipelineDealId = lead.dealId;
     } catch (error) {
       const msg =
-        error instanceof Error ? error.message : 'Pipeline lead creation failed';
+        error instanceof Error
+          ? error.message
+          : 'Pipeline lead creation failed';
       errors.push(`Pipeline: ${msg}`);
     }
   }

@@ -53,8 +53,7 @@ function parseLeadSuggestion(value: unknown): PipelineLeadSuggestion | null {
         : typeof row.contact_email === 'string'
           ? row.contact_email
           : null,
-    description:
-      typeof row.description === 'string' ? row.description : null,
+    description: typeof row.description === 'string' ? row.description : null,
   };
 }
 

@@ -39,7 +39,10 @@ export function WorkspaceOooDialogProvider({
   );
 
   const resolvedAccountId = useMemo(() => {
-    if (accountId && workspaces.some((workspace) => workspace.id === accountId)) {
+    if (
+      accountId &&
+      workspaces.some((workspace) => workspace.id === accountId)
+    ) {
       return accountId;
     }
 

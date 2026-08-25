@@ -2,8 +2,8 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { loadEmailThreadDetailFromDb } from '~/home/(user)/email/_lib/server/email-page.loader';
 import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
-import { resolveEmailAssistantBillingAccountId } from '~/lib/email-assistant/resolve-email-assistant-billing-account';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { resolveEmailAssistantBillingAccountId } from '~/lib/email-assistant/resolve-email-assistant-billing-account';
 import { suggestPipelineLeadForThread } from '~/lib/email-assistant/suggest-pipeline-lead';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
@@ -44,8 +44,7 @@ export async function POST(_request: Request, context: RouteContext) {
       .select('mailbox_kind')
       .eq('id', connectionId)
       .maybeSingle();
-    const kind = (connection as { mailbox_kind?: string } | null)
-      ?.mailbox_kind;
+    const kind = (connection as { mailbox_kind?: string } | null)?.mailbox_kind;
     if (kind === 'personal' || kind === 'business') {
       mailboxKind = kind;
     }
@@ -67,21 +66,25 @@ export async function POST(_request: Request, context: RouteContext) {
   const billingAccountId = await resolveEmailAssistantBillingAccountId(admin, {
     userId: auth.user.id,
     mailboxKind,
-    preferredAccountId: (threadRow as { account_id?: string | null }).account_id,
+    preferredAccountId: (threadRow as { account_id?: string | null })
+      .account_id,
   });
 
   try {
     await suggestPipelineLeadForThread(admin, {
       userId: auth.user.id,
       threadId,
-      preferredAccountId: (threadRow as { account_id?: string | null }).account_id,
+      preferredAccountId: (threadRow as { account_id?: string | null })
+        .account_id,
       billingAccountId,
       mailboxKind,
     });
   } catch (error) {
     return jsonErr(
       'SUGGEST_FAILED',
-      error instanceof Error ? error.message : 'Could not suggest pipeline lead',
+      error instanceof Error
+        ? error.message
+        : 'Could not suggest pipeline lead',
       500,
     );
   }

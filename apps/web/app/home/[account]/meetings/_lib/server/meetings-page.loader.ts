@@ -206,6 +206,37 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
   const clients = mapClientOptions(clientsResult.data ?? []);
   const contacts = mapContactOptions(contactsResult.data ?? []);
 
+  let upcomingMeetings: Array<{
+    id: string;
+    title: string;
+    startAt: string;
+    inviteeName: string;
+    conferencingUrl: string | null;
+  }> = [];
+
+  try {
+    const { createSchedulingService } =
+      await import('~/home/[account]/scheduling/_lib/server/scheduling.service');
+    const { upcoming } =
+      await createSchedulingService(client).listBookings(accountId);
+    const now = Date.now();
+    upcomingMeetings = upcoming
+      .filter((row) => new Date(row.startAt).getTime() >= now)
+      .slice(0, 8)
+      .map((row) => ({
+        id: row.id,
+        title:
+          row.eventTypeName?.trim() ||
+          row.bookingPageTitle?.trim() ||
+          'Meeting',
+        startAt: row.startAt,
+        inviteeName: row.inviteeName,
+        conferencingUrl: row.conferencingUrl,
+      }));
+  } catch (error) {
+    console.warn('[meetings] load upcoming bookings failed', error);
+  }
+
   return {
     accountId,
     accountSlug,
@@ -217,6 +248,7 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
         extractedTranscriptIds,
       ),
     ),
+    upcomingMeetings,
     clients,
     contacts,
     canEdit: access.canEditClients,
@@ -340,8 +372,7 @@ async function loadMeetingTranscriptPageDataImpl(
     const plannerTaskId = (row.planner_task_id as string | null) ?? null;
     const planner = plannerTaskId ? plannerById.get(plannerTaskId) : undefined;
     const assigneeUserId =
-      planner?.userId ??
-      ((row.suggested_assignee_id as string | null) ?? null);
+      planner?.userId ?? (row.suggested_assignee_id as string | null) ?? null;
     if (assigneeUserId && !memberNameById.has(assigneeUserId)) {
       unresolvedUserIds.add(assigneeUserId);
     }
@@ -369,8 +400,7 @@ async function loadMeetingTranscriptPageDataImpl(
     const plannerTaskId = (row.planner_task_id as string | null) ?? null;
     const planner = plannerTaskId ? plannerById.get(plannerTaskId) : undefined;
     const assigneeUserId =
-      planner?.userId ??
-      ((row.suggested_assignee_id as string | null) ?? null);
+      planner?.userId ?? (row.suggested_assignee_id as string | null) ?? null;
     const assigneeContactId = planner?.contactId ?? null;
     const assigneeName = assigneeUserId
       ? (memberNameById.get(assigneeUserId) ?? null)
@@ -381,13 +411,12 @@ async function loadMeetingTranscriptPageDataImpl(
     return {
       id: (plannerTaskId as string) || (row.id as string),
       title:
-        (planner?.title?.trim() ||
-          ((row.suggested_title as string | null) ?? 'Task').trim()) ||
+        planner?.title?.trim() ||
+        ((row.suggested_title as string | null) ?? 'Task').trim() ||
         'Task',
       description: (row.suggested_description as string | null)?.trim() || null,
       dueDate:
-        planner?.dueDate ??
-        ((row.suggested_due_date as string | null) ?? null),
+        planner?.dueDate ?? (row.suggested_due_date as string | null) ?? null,
       status: planner?.status ?? (row.status as string) ?? 'approved',
       assigneeName,
       plannerTaskId,

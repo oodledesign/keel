@@ -72,7 +72,10 @@ export async function loadIgConnectedAccount(
   return data;
 }
 
-export async function loadIgTriggers(client: SupabaseClient, accountId: string) {
+export async function loadIgTriggers(
+  client: SupabaseClient,
+  accountId: string,
+) {
   const { data, error } = await client
     .from('ig_triggers')
     .select('*')

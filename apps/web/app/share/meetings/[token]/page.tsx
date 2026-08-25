@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 
+import { SharedMeetingNotesView } from '~/components/meetings/shared-meeting-notes-view';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { loadPublicMeetingByToken } from '~/lib/recorder/public-meeting.loader';
-import { SharedMeetingNotesView } from '~/components/meetings/shared-meeting-notes-view';
 
 interface PublicMeetingPageProps {
   params: Promise<{ token: string }>;

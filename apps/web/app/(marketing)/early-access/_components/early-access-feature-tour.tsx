@@ -382,11 +382,7 @@ function StackedFeatureTour() {
 
       <div className="flex min-w-0 flex-col gap-6 md:gap-8">
         {EARLY_ACCESS_FEATURE_BLOCKS.map((block) => (
-          <article
-            key={block.id}
-            id={block.id}
-            className="scroll-mt-28"
-          >
+          <article key={block.id} id={block.id} className="scroll-mt-28">
             <FeatureTourCard block={block} />
           </article>
         ))}

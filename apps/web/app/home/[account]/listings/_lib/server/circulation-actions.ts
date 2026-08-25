@@ -73,16 +73,15 @@ export const updateRequirementFormSettings = enhanceAction(
       input.accountId,
       'create or edit disposals',
     );
-    return createCommercialCirculationService(getClient()).updateRequirementForm(
-      input.accountId,
-      {
-        enabled: input.enabled,
-        privacyPolicyUrl: input.privacyPolicyUrl,
-        successMessage: input.successMessage,
-        title: input.title,
-        intro: input.intro,
-      },
-    );
+    return createCommercialCirculationService(
+      getClient(),
+    ).updateRequirementForm(input.accountId, {
+      enabled: input.enabled,
+      privacyPolicyUrl: input.privacyPolicyUrl,
+      successMessage: input.successMessage,
+      title: input.title,
+      intro: input.intro,
+    });
   },
   { schema: UpdateFormSchema },
 );

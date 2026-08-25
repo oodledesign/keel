@@ -39,7 +39,10 @@ describe('selectCreditAlertThresholds', () => {
   });
 
   it('does not alert when still above 50%', () => {
-    const result = selectCreditAlertThresholds({ pctLeft: 50.1, alertsSent: 0 });
+    const result = selectCreditAlertThresholds({
+      pctLeft: 50.1,
+      alertsSent: 0,
+    });
     expect(result).toBeNull();
   });
 });

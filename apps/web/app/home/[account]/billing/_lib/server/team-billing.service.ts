@@ -8,6 +8,7 @@ import { LineItemSchema } from '@kit/billing';
 import { getBillingGatewayProvider } from '@kit/billing-gateway';
 import { getLogger } from '@kit/shared/logger';
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
@@ -18,7 +19,6 @@ import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { isPurchasableWorkspaceAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import { Database } from '~/lib/database.types';
 import { resolveReferralCheckoutCoupon } from '~/lib/rewards/create-referred-user-discount';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { TeamCheckoutSchema } from '../schema/team-billing.schema';
 

@@ -90,7 +90,10 @@ export function parseMapboxAddressFeature(
     addressLine1 = feature.text?.trim() || null;
     // Mapbox often puts the street in place_name after the POI name.
     const placeName = feature.place_name?.trim() ?? '';
-    const afterComma = placeName.split(',').slice(1).map((p) => p.trim());
+    const afterComma = placeName
+      .split(',')
+      .slice(1)
+      .map((p) => p.trim());
     if (afterComma[0] && afterComma[0] !== town && afterComma[0] !== postcode) {
       addressLine2 = afterComma[0];
     }
@@ -140,7 +143,11 @@ export async function suggestUkAddresses(
   });
 
   if (!res.ok) {
-    console.error('[address-suggest] Mapbox error', res.status, await res.text());
+    console.error(
+      '[address-suggest] Mapbox error',
+      res.status,
+      await res.text(),
+    );
     return [];
   }
 

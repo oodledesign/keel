@@ -10,6 +10,7 @@ import {
   Calendar,
   ClipboardList,
   FileText,
+  Handshake,
   ImageIcon,
   LayoutGrid,
   MessageSquare,
@@ -35,6 +36,7 @@ import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import pathsConfig from '~/config/paths.config';
+import type { PartnerCostLine } from '~/lib/projects/partner-cost-lines.service';
 import {
   isPersonalProjectsScope,
   projectListHref,
@@ -59,6 +61,7 @@ import {
   listJobNotes,
   removeJobAssignment,
 } from '../_lib/server/server-actions';
+import { HostPartnerCostsPanel } from './host-partner-costs-panel';
 import { JobProjectWorkspace } from './job-project/job-project-workspace';
 import { JobScheduleTabContent } from './job-schedule-tab';
 import { ProjectFinancePanel } from './project-finance-panel';
@@ -149,6 +152,8 @@ export function JobDetailContent({
   canViewJobs,
   canEditJobs,
   isContractorView,
+  showPartnerCosts = false,
+  partnerCostLines = [],
   workspaceNotes,
   workspaceDocs,
   workspaceLinks = [],
@@ -166,6 +171,8 @@ export function JobDetailContent({
   canViewJobs: boolean;
   canEditJobs: boolean;
   isContractorView: boolean;
+  showPartnerCosts?: boolean;
+  partnerCostLines?: PartnerCostLine[];
   workspaceNotes: NoteListItem[];
   workspaceDocs: DocListItem[];
   workspaceLinks?: SavedLinkListItem[];
@@ -610,6 +617,15 @@ export function JobDetailContent({
                   Finance
                 </TabsTrigger>
               )}
+              {!isContractorView && showPartnerCosts && (
+                <TabsTrigger
+                  value="partner-costs"
+                  className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+                >
+                  <Handshake className="h-3.5 w-3.5" />
+                  Partner costs
+                </TabsTrigger>
+              )}
               {!isContractorView && (
                 <TabsTrigger
                   value="docs"
@@ -964,6 +980,45 @@ export function JobDetailContent({
               accountId={accountId}
               accountSlug={accountSlug}
               projectId={jobId}
+            />
+          </TabsContent>
+        )}
+
+        {!isContractorView && showPartnerCosts && (
+          <TabsContent
+            value="partner-costs"
+            className="mt-0 flex-1 overflow-auto p-4 md:p-5"
+          >
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Partner costs
+              </h3>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                Review cost lines submitted by shared workspaces on this
+                project.
+                {client?.id ? (
+                  <>
+                    {' '}
+                    Manage sharing on the{' '}
+                    <Link
+                      href={pathsConfig.app.accountClientDetail
+                        .replace('[account]', accountSlug)
+                        .replace('[clientId]', client.id)}
+                      className="text-[var(--ozer-accent)] hover:underline"
+                    >
+                      client record
+                    </Link>
+                    .
+                  </>
+                ) : null}
+              </p>
+            </div>
+            <HostPartnerCostsPanel
+              accountSlug={accountSlug}
+              accountId={accountId}
+              projectId={jobId}
+              canEdit={canEditJobs}
+              initialLines={partnerCostLines}
             />
           </TabsContent>
         )}

@@ -129,8 +129,14 @@ type AiCreditTxnRow = {
 type AdminClient = {
   from: (table: string) => {
     select: (cols: string) => {
-      gte: (col: string, value: string) => {
-        lt: (col: string, value: string) => {
+      gte: (
+        col: string,
+        value: string,
+      ) => {
+        lt: (
+          col: string,
+          value: string,
+        ) => {
           order: (
             col: string,
             opts: { ascending: boolean },

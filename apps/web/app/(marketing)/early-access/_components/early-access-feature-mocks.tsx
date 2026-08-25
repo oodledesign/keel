@@ -129,7 +129,9 @@ function InvoiceMock() {
               index === 1 && 'rounded-lg px-1',
             )}
           >
-            {index === 1 ? <DemoPulse className="rounded-lg" delay={1.1} /> : null}
+            {index === 1 ? (
+              <DemoPulse className="rounded-lg" delay={1.1} />
+            ) : null}
             <span className="flex-1 text-[var(--workspace-shell-text)]">
               {row.name}
             </span>
@@ -174,9 +176,7 @@ function InvoiceMock() {
                   statusClass.Sent,
                 )}
                 animate={
-                  reduced
-                    ? { opacity: 0 }
-                    : { opacity: [1, 1, 0, 0, 1] }
+                  reduced ? { opacity: 0 } : { opacity: [1, 1, 0, 0, 1] }
                 }
                 transition={{
                   duration: LOOP,
@@ -230,10 +230,7 @@ function PortalMock() {
             className="relative flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm"
           >
             {index === 0 ? (
-              <DemoHighlight
-                times={[0, 0.35, 0.4, 0.7, 1]}
-                duration={LOOP}
-              />
+              <DemoHighlight times={[0, 0.35, 0.4, 0.7, 1]} duration={LOOP} />
             ) : null}
             {index === 0 ? <DemoPulse delay={0.9} /> : null}
             <span
@@ -247,9 +244,7 @@ function PortalMock() {
               <motion.span
                 className="text-xs font-medium text-[var(--ozer-accent)]"
                 animate={
-                  reduced
-                    ? { opacity: 1 }
-                    : { opacity: [0, 0, 1, 1, 0] }
+                  reduced ? { opacity: 1 } : { opacity: [0, 0, 1, 1, 0] }
                 }
                 transition={{
                   duration: LOOP,
@@ -457,11 +452,7 @@ function RequestsMock({ accent }: { accent: EarlyAccessAccent }) {
               index === 0 && 'rounded-lg px-1',
             )}
             animate={
-              reduced
-                ? {}
-                : index === 0
-                  ? { opacity: [1, 1, 0.55, 1] }
-                  : {}
+              reduced ? {} : index === 0 ? { opacity: [1, 1, 0.55, 1] } : {}
             }
             transition={{
               duration: LOOP,

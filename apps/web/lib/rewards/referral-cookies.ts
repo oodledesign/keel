@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { createHash } from 'crypto';
-
 import { cookies } from 'next/headers';
+
+import { createHash } from 'crypto';
 
 import { REWARDS_CONFIG } from '~/config/rewards.config';
 

@@ -29,7 +29,9 @@ export async function GET(request: Request) {
   }
 
   const admin = getSupabaseServerAdminClient();
-  const threshold = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const threshold = new Date(
+    Date.now() + 7 * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   const { data: accounts, error } = await admin
     .from('ig_connected_accounts')
@@ -46,7 +48,9 @@ export async function GET(request: Request) {
 
   for (const row of accounts ?? []) {
     try {
-      const plain = decryptIgToken((row as { access_token: string }).access_token);
+      const plain = decryptIgToken(
+        (row as { access_token: string }).access_token,
+      );
       const result = await refreshInstagramAutoreplyToken(plain);
       const enc = encryptIgToken(result.accessToken);
       const expiresAt = new Date(

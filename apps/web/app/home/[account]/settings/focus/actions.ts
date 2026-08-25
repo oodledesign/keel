@@ -175,7 +175,9 @@ export async function upsertWorkspaceFocusSettings(
   } | null;
 
   const previousHolidayEnabled = Boolean(previous?.holiday_mode_enabled);
-  const holidayModeUntil = normalizeHolidayUntilIso(settings.holiday_mode_until);
+  const holidayModeUntil = normalizeHolidayUntilIso(
+    settings.holiday_mode_until,
+  );
 
   const { error } = await client.from('workspace_focus_settings').upsert(
     {
@@ -269,7 +271,11 @@ export async function autoDisableHolidayMode(accountId: string): Promise<{
   const userId = await getAuthenticatedUserId();
 
   if (!userId) {
-    return { cleared: false, gmailSynced: false, gmailError: 'Not authenticated' };
+    return {
+      cleared: false,
+      gmailSynced: false,
+      gmailError: 'Not authenticated',
+    };
   }
 
   const client = getSupabaseServerClient();
@@ -305,7 +311,10 @@ export async function autoDisableHolidayMode(accountId: string): Promise<{
     .eq('user_id', userId);
 
   if (updateError) {
-    console.error('[focus] autoDisableHolidayMode update:', updateError.message);
+    console.error(
+      '[focus] autoDisableHolidayMode update:',
+      updateError.message,
+    );
     return {
       cleared: false,
       gmailSynced: false,
@@ -359,7 +368,10 @@ export async function reconcileGmailVacationWithHolidayMode(
     return { success: true };
   }
 
-  if (settings.holiday_mode_enabled && isHolidayUntilExpired(settings.holiday_mode_until)) {
+  if (
+    settings.holiday_mode_enabled &&
+    isHolidayUntilExpired(settings.holiday_mode_until)
+  ) {
     const cleared = await autoDisableHolidayMode(accountId);
     return {
       success: cleared.gmailSynced || cleared.cleared,
@@ -462,8 +474,7 @@ export async function syncHolidayModeToGmail(
     const backOnStart = settings.holiday_mode_until
       ? holidayBackOnStartMs(settings.holiday_mode_until)
       : null;
-    const endDate =
-      backOnStart != null ? new Date(backOnStart) : null;
+    const endDate = backOnStart != null ? new Date(backOnStart) : null;
 
     return setGmailVacationOn(
       authenticatedUserId,

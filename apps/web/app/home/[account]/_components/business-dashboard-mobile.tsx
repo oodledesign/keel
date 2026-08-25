@@ -143,70 +143,75 @@ export function BusinessDashboardMobile({
   const preset = getDashboardPreset(presetId);
   const cardOrder = resolveDashboardCardOrder(presetId);
   const cardSizes = preset.cardSizes ?? {};
+  const hasSupportTickets = openSupportTickets.totalCount > 0;
   const defaultOverviewTab: DashboardOverviewTab =
     preset.defaultOverviewTab ?? 'projects';
 
   const renderCard = (cardId: DashboardCardId) => {
-    const density: DashboardCardSize = cardSizes[cardId] ?? 'md';
+    let density: DashboardCardSize = cardSizes[cardId] ?? 'md';
+
+    // Overview: notes sit half-width beside projects when there are no
+    // support tickets; full-width underneath when tickets push pipeline down.
+    if (preset.id === 'overview' && cardId === 'recent_notes') {
+      density = hasSupportTickets ? 'lg' : 'md';
+    }
 
     switch (cardId) {
       case 'finance':
         return (
-          <div
+          <section
             key={cardId}
-            className={cn(density === 'lg' ? 'xl:col-span-2' : '')}
+            className={cn(
+              panelClass,
+              'overflow-hidden p-4',
+              density === 'lg' && 'xl:col-span-2',
+            )}
           >
-            <DashboardHolidayWelcomeBar
-              accountId={accountId}
-              accountSlug={accountSlug}
-            />
-            <section className={cn(panelClass, 'overflow-hidden p-4')}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                    <Wallet
-                      className="h-3.5 w-3.5 text-[var(--ozer-accent)]"
-                      aria-hidden
-                    />
-                    {metrics.hasFinanceData ? 'This month' : 'Revenue'}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                  <Wallet
+                    className="h-3.5 w-3.5 text-[var(--ozer-accent)]"
+                    aria-hidden
+                  />
+                  {metrics.hasFinanceData ? 'This month' : 'Revenue'}
+                </p>
+                <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
+                  {totalRevenueLabel}
+                </p>
+                {netLabel ? (
+                  <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                    Net {netLabel}
                   </p>
-                  <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
-                    {totalRevenueLabel}
-                  </p>
-                  {netLabel ? (
-                    <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-                      Net {netLabel}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="text-right text-[11px] text-[var(--workspace-shell-text-muted)]">
-                  <p>{metrics.activeProjects} active projects</p>
-                  <p>{metrics.hoursLogged}h logged</p>
-                </div>
+                ) : null}
               </div>
-              <div
-                className={cn(
-                  'relative mt-3',
-                  density === 'sm' ? 'h-24' : 'h-36',
-                )}
+              <div className="text-right text-[11px] text-[var(--workspace-shell-text-muted)]">
+                <p>{metrics.activeProjects} active projects</p>
+                <p>{metrics.hoursLogged}h logged</p>
+              </div>
+            </div>
+            <div
+              className={cn(
+                'relative mt-3',
+                density === 'sm' ? 'h-24' : 'h-36',
+              )}
+            >
+              <FinanceTrendBarChart
+                data={revenueTrendData}
+                variant="grouped"
+                surface="workspace"
+                compact
+                currency={workspaceCurrency}
+              />
+              <HapticLink
+                href={financesHref}
+                aria-label="Open finances"
+                className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
               >
-                <FinanceTrendBarChart
-                  data={revenueTrendData}
-                  variant="grouped"
-                  surface="workspace"
-                  compact
-                  currency={workspaceCurrency}
-                />
-                <HapticLink
-                  href={financesHref}
-                  aria-label="Open finances"
-                  className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
-                >
-                  <ArrowUpRight className="h-4 w-4" />
-                </HapticLink>
-              </div>
-            </section>
-          </div>
+                <ArrowUpRight className="h-4 w-4" />
+              </HapticLink>
+            </div>
+          </section>
         );
       case 'pipeline':
         return (
@@ -276,7 +281,10 @@ export function BusinessDashboardMobile({
         );
       case 'recent_notes':
         return (
-          <section key={cardId} className="xl:col-span-2">
+          <section
+            key={cardId}
+            className={cn(density === 'lg' && 'xl:col-span-2')}
+          >
             <div className="mb-2 flex items-center justify-between">
               <DashboardPanelTitle icon={StickyNote}>
                 Recent notes
@@ -350,6 +358,10 @@ export function BusinessDashboardMobile({
         {shortcutsBar ? (
           <section className="xl:col-span-2">{shortcutsBar}</section>
         ) : null}
+        <DashboardHolidayWelcomeBar
+          accountId={accountId}
+          accountSlug={accountSlug}
+        />
         {cardOrder.map((cardId) => renderCard(cardId))}
       </div>
     </div>

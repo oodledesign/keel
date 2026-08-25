@@ -614,6 +614,7 @@ export function EmailPageClient({ initialData }: Props) {
             )}
             onClick={() => setReviewMode((value) => !value)}
             disabled={!connected}
+            title="Keyboard triage: J/K move threads · R reply now · L later · W waiting · F FYI · N noise"
           >
             <Keyboard className="mr-2 h-4 w-4" />
             {reviewMode ? 'Review mode on' : 'Review mode'}
@@ -715,6 +716,7 @@ export function EmailPageClient({ initialData }: Props) {
             workspaces={initialData.workspaces}
             mailboxKind={mailboxKind}
             accountSlug={initialData.accountSlug}
+            preferredAccountId={initialData.preferredAccountId}
             reviewMode={reviewMode}
             allowSendFromOzer={initialData.settings.allowSendFromOzer}
             focusDraft={focusDraft}

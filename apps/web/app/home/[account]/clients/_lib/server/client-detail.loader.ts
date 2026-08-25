@@ -56,10 +56,11 @@ async function resolveClientPortalHref(
   if (!resolvedOrgId && canEditClients) {
     try {
       const websitesService = createWebsitesService(getSupabaseServerClient());
-      const resolved = await websitesService.resolveOrCreateClientOrgForCrmClient(
-        accountId,
-        clientId,
-      );
+      const resolved =
+        await websitesService.resolveOrCreateClientOrgForCrmClient(
+          accountId,
+          clientId,
+        );
       resolvedOrgId = resolved.clientOrgId;
     } catch (error) {
       console.error('[client-detail] resolve client org failed', error);
@@ -247,7 +248,8 @@ async function loadClientDetailPageDataImpl(
     })),
   };
 
-  const clientOrgId = (clientRow as { client_org_id?: string | null }).client_org_id;
+  const clientOrgId = (clientRow as { client_org_id?: string | null })
+    .client_org_id;
   const portalHref = await resolveClientPortalHref(
     accountId,
     clientId,

@@ -1,8 +1,8 @@
 import { use } from 'react';
+import { Suspense } from 'react';
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
 
 import { z } from 'zod';
 
@@ -372,10 +372,7 @@ function TeamWorkspaceSidebarShell({
               showNewMenu={showNewMenu}
               sopTracker={
                 <Suspense fallback={null}>
-                  <SopTrackerHost
-                    accountId={accountId}
-                    accountSlug={account}
-                  />
+                  <SopTrackerHost accountId={accountId} accountSlug={account} />
                 </Suspense>
               }
             >

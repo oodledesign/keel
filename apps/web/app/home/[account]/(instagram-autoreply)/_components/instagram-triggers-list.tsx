@@ -1,11 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useTransition } from 'react';
 
+import Link from 'next/link';
+
 import { Button } from '@kit/ui/button';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -59,9 +60,10 @@ export function InstagramTriggersList({
       ) : (
         <ul className="divide-y divide-[color:var(--workspace-shell-border)] rounded-lg border border-[color:var(--workspace-shell-border)]">
           {triggers.map((trigger) => {
-            const editHref = pathsConfig.app.accountInstagramAutoreplyTriggerDetail
-              .replace('[account]', accountSlug)
-              .replace('[triggerId]', trigger.id);
+            const editHref =
+              pathsConfig.app.accountInstagramAutoreplyTriggerDetail
+                .replace('[account]', accountSlug)
+                .replace('[triggerId]', trigger.id);
 
             return (
               <li

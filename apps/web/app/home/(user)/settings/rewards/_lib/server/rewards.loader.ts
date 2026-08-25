@@ -80,20 +80,30 @@ export async function loadRewardsSettingsData(userId: string) {
         slug: account.slug,
       };
     })
-    .filter(Boolean) as Array<{ id: string; name: string; slug: string | null }>;
+    .filter(Boolean) as Array<{
+    id: string;
+    name: string;
+    slug: string | null;
+  }>;
 
   const totalReferralCreditPence = (balanceLogs ?? []).reduce(
     (sum, row) => sum + (row.amount_pence ?? 0),
     0,
   );
 
-  const { data: monthUsed } = await client.rpc('content_reward_used_month_pence', {
-    p_user_id: userId,
-  });
+  const { data: monthUsed } = await client.rpc(
+    'content_reward_used_month_pence',
+    {
+      p_user_id: userId,
+    },
+  );
 
-  const { data: yearUsed } = await client.rpc('content_reward_used_year_pence', {
-    p_user_id: userId,
-  });
+  const { data: yearUsed } = await client.rpc(
+    'content_reward_used_year_pence',
+    {
+      p_user_id: userId,
+    },
+  );
 
   return {
     referralCode,

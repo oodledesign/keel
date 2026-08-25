@@ -50,7 +50,10 @@ import {
   updateRecurringSeriesStatusAction,
 } from '../_lib/server/server-actions';
 import { InvoiceRowMenu } from './invoice-row-menu';
-import { InvoiceStatusBadge, RecurringSeriesStatusBadge } from './invoice-status-badge';
+import {
+  InvoiceStatusBadge,
+  RecurringSeriesStatusBadge,
+} from './invoice-status-badge';
 import { InvoicesIncomeSummary } from './invoices-income-summary';
 import {
   RecurringSeriesEditDialog,

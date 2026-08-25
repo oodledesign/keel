@@ -129,6 +129,8 @@ export type DashboardSuggestedEmailTask = {
   threadId: string;
   threadSubject: string;
   emailSentAt: string | null;
+  clientName: string | null;
+  clientPictureUrl: string | null;
 };
 
 export type DashboardSuggestedEmailTasksSummary = {
@@ -141,6 +143,8 @@ export type DashboardMeetingReviewItem = {
   suggestedTitle: string;
   meetingTitle: string;
   suggestedDueDate: string | null;
+  clientName: string | null;
+  clientPictureUrl: string | null;
 };
 
 export type DashboardMeetingReviewSummary = {
@@ -369,7 +373,16 @@ async function loadDashboardPageDataImpl(
         suggested_title,
         suggested_due_date,
         meeting_transcripts:meeting_transcript_id (
-          title
+          title,
+          client_id,
+          clients:client_id (
+            id,
+            display_name,
+            company_name,
+            first_name,
+            last_name,
+            picture_url
+          )
         )
       `,
         { count: 'exact' },
@@ -727,6 +740,18 @@ async function loadDashboardPageDataImpl(
       const transcript = Array.isArray(row.meeting_transcripts)
         ? row.meeting_transcripts[0]
         : row.meeting_transcripts;
+      const clientRow = Array.isArray(transcript?.clients)
+        ? transcript?.clients[0]
+        : transcript?.clients;
+      const clientName =
+        (clientRow?.display_name as string | null | undefined)?.trim() ||
+        (clientRow?.company_name as string | null | undefined)?.trim() ||
+        [clientRow?.first_name, clientRow?.last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim() ||
+        null;
+
       return {
         id: row.id as string,
         suggestedTitle: ((row.suggested_title as string | null)?.trim() ||
@@ -735,6 +760,9 @@ async function loadDashboardPageDataImpl(
         suggestedDueDate: toIsoDateString(
           row.suggested_due_date as string | null | undefined,
         ),
+        clientName,
+        clientPictureUrl:
+          (clientRow?.picture_url as string | null | undefined)?.trim() || null,
       };
     }),
     totalCount: meetingReviewUnavailable
@@ -783,6 +811,8 @@ async function loadDashboardPageDataImpl(
       threadId: item.threadId,
       threadSubject: item.threadSubject,
       emailSentAt: item.emailSentAt,
+      clientName: item.clientName,
+      clientPictureUrl: item.clientPictureUrl,
     })),
     totalCount: suggestedEmailLoaded.totalCount,
   };

@@ -12,8 +12,8 @@ import type { Database } from '~/lib/database.types';
 import { applyStripeCustomerBalanceCredit } from './apply-stripe-customer-balance-credit';
 import {
   computeMonthlyEquivalentPence,
-  computeReferrerRewardPence,
   computeReferredDiscountPence,
+  computeReferrerRewardPence,
 } from './compute-monthly-equivalent-gbp';
 import { getRewardsStripeClient } from './stripe-client';
 
@@ -43,9 +43,10 @@ async function resolveReferrerMonthlyPlan(params: {
   referrerUserId: string;
   stripe: Stripe;
 }): Promise<{ planId: string; amountPence: number; stripePriceId?: string }> {
-  const { targetAccountId } = await import('./resolve-reward-stripe-customer').then(
-    (m) => m.loadRewardCreditTarget(params.admin, params.referrerUserId),
-  );
+  const { targetAccountId } =
+    await import('./resolve-reward-stripe-customer').then((m) =>
+      m.loadRewardCreditTarget(params.admin, params.referrerUserId),
+    );
 
   const { data: subscription } = await params.admin
     .from('subscriptions')

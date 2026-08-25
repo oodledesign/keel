@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   distinctTranscriptSpeakers,
+  formatTranscriptTimestamp,
   normalizeSpeakerMappings,
   parseTranscriptContent,
   renameSpeakersInSegments,
@@ -83,6 +84,31 @@ describe('renameSpeakersInSegments', () => {
     expect(serializeTranscriptSegments(renamed)).toBe(
       'Sarah Chen: Hello\n\nSpeaker 1: Hi\n\nSarah Chen: Again',
     );
+  });
+});
+
+describe('normalizeTranscriptSegments', () => {
+  it('preserves startMs when present', () => {
+    const segments = resolveTranscriptSegments({
+      content: 'Speaker 1: Old',
+      speakerSegments: [
+        { speaker: 'Sarah Chen', text: 'Stored line', startMs: 12500 },
+        { speaker: 'Dan', text: 'Reply', start_ms: 20100 },
+      ],
+    });
+
+    expect(segments).toEqual([
+      { speaker: 'Sarah Chen', text: 'Stored line', startMs: 12500 },
+      { speaker: 'Dan', text: 'Reply', startMs: 20100 },
+    ]);
+  });
+});
+
+describe('formatTranscriptTimestamp', () => {
+  it('formats minutes and hours', () => {
+    expect(formatTranscriptTimestamp(5_000)).toBe('0:05');
+    expect(formatTranscriptTimestamp(125_000)).toBe('2:05');
+    expect(formatTranscriptTimestamp(3_725_000)).toBe('1:02:05');
   });
 });
 

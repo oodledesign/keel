@@ -43,7 +43,8 @@ export const reviewContentSubmissionAction = adminAction(
           .from('content_submissions')
           .update({
             status: 'rejected',
-            rejection_reason: parsed.rejectionReason ?? 'Did not meet guidelines',
+            rejection_reason:
+              parsed.rejectionReason ?? 'Did not meet guidelines',
             review_notes: parsed.reviewNotes ?? null,
             reviewer_user_id: user.id,
             reviewed_at: new Date().toISOString(),
@@ -57,7 +58,9 @@ export const reviewContentSubmissionAction = adminAction(
       }
 
       if (!parsed.followOzerConfirmed) {
-        throw new Error('Confirm the account follows @ozer.so before approving.');
+        throw new Error(
+          'Confirm the account follows @ozer.so before approving.',
+        );
       }
 
       const followerCount = parsed.followerCount ?? 0;

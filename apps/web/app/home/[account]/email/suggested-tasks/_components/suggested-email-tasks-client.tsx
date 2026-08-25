@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { toast } from '@kit/ui/sonner';
 
 import { HapticLink } from '~/components/haptic-link';
@@ -200,27 +201,45 @@ export function SuggestedEmailTasksClient({
                 key={item.id}
                 className="flex min-w-0 flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                    {item.title}
-                  </p>
-                  {item.detail ? (
-                    <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-                      {item.detail}
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  {item.clientName ? (
+                    <ProfileAvatar
+                      displayName={item.clientName}
+                      pictureUrl={item.clientPictureUrl}
+                      className="mt-0.5 h-9 w-9 shrink-0"
+                    />
+                  ) : (
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+                      <Mail className="h-4 w-4" />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {item.title}
                     </p>
-                  ) : null}
-                  <p className="mt-1.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                    {item.threadSubject}
-                    {item.suggestedDueDate
-                      ? ` · due ${item.suggestedDueDate}`
-                      : ''}
-                  </p>
-                  <p className="mt-1 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                    {item.fromEmail || item.fromAddress
-                      ? `From ${item.fromEmail ?? item.fromAddress}`
-                      : 'From unknown sender'}
-                    {sentLabel ? ` · sent ${sentLabel}` : ''}
-                  </p>
+                    {item.detail ? (
+                      <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                        {item.detail}
+                      </p>
+                    ) : null}
+                    <p className="mt-1.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                      {[
+                        item.clientName,
+                        item.threadSubject,
+                        item.suggestedDueDate
+                          ? `due ${item.suggestedDueDate}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                      {item.fromEmail || item.fromAddress
+                        ? `From ${item.fromEmail ?? item.fromAddress}`
+                        : 'From unknown sender'}
+                      {sentLabel ? ` · sent ${sentLabel}` : ''}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <button

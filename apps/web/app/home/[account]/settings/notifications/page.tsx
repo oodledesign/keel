@@ -1,14 +1,15 @@
 import { redirect } from 'next/navigation';
 
-import { EmailNotificationPreferencesForm } from '../_components/email-notification-preferences-form';
-import { loadEmailNotificationPreferences } from '../_lib/server/email-notification-preferences.loader';
+import { withI18n } from '~/lib/i18n/with-i18n';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { withI18n } from '~/lib/i18n/with-i18n';
+import { EmailNotificationPreferencesForm } from '../_components/email-notification-preferences-form';
+import { loadEmailNotificationPreferences } from '../_lib/server/email-notification-preferences.loader';
 
 interface NotificationsSettingsPageProps {
   params: Promise<{ account: string }>;

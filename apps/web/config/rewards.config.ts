@@ -24,7 +24,8 @@ export const REWARDS_CONFIG = {
   referralCookieMaxAgeDays: 30,
 } as const;
 
-export type ContentSubmissionType = keyof typeof REWARDS_CONFIG.contentTiersPence;
+export type ContentSubmissionType =
+  keyof typeof REWARDS_CONFIG.contentTiersPence;
 
 export function contentTierRewardPence(type: ContentSubmissionType): number {
   return REWARDS_CONFIG.contentTiersPence[type];

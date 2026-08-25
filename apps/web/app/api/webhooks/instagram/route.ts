@@ -34,12 +34,7 @@ export async function GET(request: Request) {
   const challenge = url.searchParams.get('hub.challenge');
   const expected = getMetaWebhookVerifyToken();
 
-  if (
-    mode === 'subscribe' &&
-    expected &&
-    token === expected &&
-    challenge
-  ) {
+  if (mode === 'subscribe' && expected && token === expected && challenge) {
     return new NextResponse(challenge, { status: 200 });
   }
 

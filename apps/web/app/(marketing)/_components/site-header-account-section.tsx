@@ -18,6 +18,7 @@ import { SiteMobileMarketingMenu } from './site-mobile-marketing-menu';
 const paths = {
   home: pathsConfig.app.home,
   personalAccountSettings: pathsConfig.app.personalAccountSettings,
+  personalAccountRewards: pathsConfig.app.personalAccountRewardsSettings,
   support: docsUrl(),
 };
 

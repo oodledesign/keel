@@ -7,23 +7,10 @@ import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
 import { isFromOwner } from './address-utils';
-import { categoryForOwnerLatestMessage } from './owner-latest-message-category';
 import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
-import {
-  type EmailTriageRules,
-  matchEmailTriageRule,
-  normalizeEmailTriageRules,
-} from './email-triage-rules';
-import type { MailboxKind } from './mailbox-kind';
-import { createMeteredEmailGenerateText } from './metered-generate-text';
-import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
-import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
-import { resolveEmailAssistantBillingAccountId } from './resolve-email-assistant-billing-account';
-import { suggestPipelineLeadForThread } from './suggest-pipeline-lead';
-import { buildThreadText } from './thread-text';
 import {
   type EmailThreadCategory,
   categoryFromTriageRuleAction,
@@ -32,6 +19,19 @@ import {
   shouldAutoExtractCategory,
   shouldAutoLinkCategory,
 } from './email-thread-categories';
+import {
+  type EmailTriageRules,
+  matchEmailTriageRule,
+  normalizeEmailTriageRules,
+} from './email-triage-rules';
+import type { MailboxKind } from './mailbox-kind';
+import { createMeteredEmailGenerateText } from './metered-generate-text';
+import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
+import { categoryForOwnerLatestMessage } from './owner-latest-message-category';
+import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
+import { resolveEmailAssistantBillingAccountId } from './resolve-email-assistant-billing-account';
+import { suggestPipelineLeadForThread } from './suggest-pipeline-lead';
+import { buildThreadText } from './thread-text';
 
 async function maybeSuggestPipelineLead(
   admin: ReturnType<typeof getSupabaseServerAdminClient>,
@@ -58,7 +58,9 @@ async function maybeSuggestPipelineLead(
     });
   } catch (error) {
     errors.push(
-      error instanceof Error ? error.message : 'Pipeline lead suggestion failed',
+      error instanceof Error
+        ? error.message
+        : 'Pipeline lead suggestion failed',
     );
   }
 }

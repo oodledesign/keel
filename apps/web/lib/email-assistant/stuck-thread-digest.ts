@@ -2,17 +2,17 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import pathsConfig from '~/config/paths.config';
-import { wrapNotificationEmail } from '~/lib/email/wrap-notification-email';
+import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
+import { wrapNotificationEmail } from '~/lib/email/wrap-notification-email';
 import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
 import { isEmailNotificationEnabled } from '~/lib/notifications/email-notification-preferences';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
-  buildStuckThreadDigestBodyHtml,
   type StuckThreadDigestItem,
+  buildStuckThreadDigestBodyHtml,
 } from './stuck-thread-digest-email';
 
 const STUCK_DAYS = 3;
@@ -27,7 +27,9 @@ function daysSince(iso: string | null): number {
 export async function runStuckThreadDigest(
   admin: SupabaseClient,
 ): Promise<{ usersNotified: number; emailsSent: number }> {
-  const cutoff = new Date(Date.now() - STUCK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(
+    Date.now() - STUCK_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const origin = getAppSiteOrigin();
 
   const { data: threads, error } = await admin
@@ -59,8 +61,7 @@ export async function runStuckThreadDigest(
 
   for (const [userId, userThreads] of byUser) {
     const top = userThreads.slice(0, MAX_THREADS);
-    const accountId =
-      (top[0]?.account_id as string | null) ?? userId;
+    const accountId = (top[0]?.account_id as string | null) ?? userId;
 
     const clientIds = [
       ...new Set(
@@ -107,7 +108,7 @@ export async function runStuckThreadDigest(
         id: row.id as string,
         subject: row.subject as string | null,
         lastMessageAt: row.last_message_at as string | null,
-        clientName: clientId ? clientNames.get(clientId) ?? null : null,
+        clientName: clientId ? (clientNames.get(clientId) ?? null) : null,
         href: threadHref,
         ageDays: daysSince(row.last_message_at as string | null),
       };

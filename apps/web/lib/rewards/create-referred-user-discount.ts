@@ -57,7 +57,9 @@ export async function getPendingReferralForUser(
 ) {
   const { data: referral } = await admin
     .from('referrals')
-    .select('id, referrer_user_id, referred_discount_pence, referred_stripe_coupon_id')
+    .select(
+      'id, referrer_user_id, referred_discount_pence, referred_stripe_coupon_id',
+    )
     .eq('referred_user_id', referredUserId)
     .eq('status', 'pending')
     .maybeSingle();

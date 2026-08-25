@@ -2,15 +2,24 @@
 
 import { useMemo, useState } from 'react';
 
-import { Check, CheckSquare, Circle, Copy, FileText, Sparkles } from 'lucide-react';
+import {
+  Check,
+  CheckSquare,
+  Circle,
+  Copy,
+  FileText,
+  Sparkles,
+} from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import { MeetingSummaryMarkdown } from '~/components/meetings/meeting-summary-markdown';
+import { formatTranscriptTimestamp } from '~/lib/recorder/transcript-speakers';
 
 export type PublicMeetingSpeakerSegment = {
   speaker: string;
   text: string;
+  startMs?: number;
 };
 
 export type PublicMeetingTaskItem = {
@@ -48,7 +57,13 @@ function buildTranscriptPlainText(
 ) {
   if (speakerSegments.length > 0) {
     return speakerSegments
-      .map((segment) => `${segment.speaker}\n${segment.text}`)
+      .map((segment) => {
+        const time =
+          typeof segment.startMs === 'number'
+            ? `[${formatTranscriptTimestamp(segment.startMs)}] `
+            : '';
+        return `${time}${segment.speaker}\n${segment.text}`;
+      })
       .join('\n\n');
   }
   return content.trim() || 'No transcript available.';
@@ -188,9 +203,16 @@ export function PublicMeetingNotesTabs({
             {speakerSegments.length > 0 ? (
               speakerSegments.map((segment, index) => (
                 <div key={`${segment.speaker}-${index}`}>
-                  <p className="text-xs font-semibold tracking-wide text-[var(--ozer-text-on-light)] uppercase">
-                    {segment.speaker}
-                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-xs font-semibold tracking-wide text-[var(--ozer-text-on-light)] uppercase">
+                      {segment.speaker}
+                    </p>
+                    {typeof segment.startMs === 'number' ? (
+                      <span className="font-mono text-[11px] text-[var(--ozer-text-on-light-muted)] tabular-nums">
+                        {formatTranscriptTimestamp(segment.startMs)}
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="mt-1 font-normal whitespace-pre-wrap text-[var(--ozer-plum-700)]">
                     {segment.text}
                   </p>

@@ -51,6 +51,10 @@ export type ProjectsKanbanItem = {
   clientName?: string | null;
   clientPictureUrl?: string | null;
   dueDate?: string | null;
+  /** When set, card links here instead of the host project detail route. */
+  href?: string;
+  sharedBadge?: string | null;
+  readOnly?: boolean;
 };
 
 function isBoardStatus(value: string): value is BoardStatus {
@@ -139,6 +143,9 @@ export function ProjectsKanbanView({
     : null;
 
   const persistStatus = (itemId: string, status: BoardStatus) => {
+    if (itemId.startsWith('shared:')) {
+      return;
+    }
     startTransition(async () => {
       try {
         await updateJob({ accountId, jobId: itemId, status });
@@ -153,6 +160,12 @@ export function ProjectsKanbanView({
 
   const handleDragStart = (event: DragStartEvent) => {
     const itemId = parseItemId(event.active.id);
+    if (itemId) {
+      const item = localItems.find((row) => row.id === itemId);
+      if (item?.readOnly) {
+        return;
+      }
+    }
     setActiveId(itemId);
     if (itemId) {
       const item = localItems.find((row) => row.id === itemId);
@@ -184,7 +197,7 @@ export function ProjectsKanbanView({
     }
 
     const item = localItems.find((row) => row.id === itemId);
-    if (!item || item.projectType !== 'delivery') {
+    if (!item || item.readOnly || item.projectType !== 'delivery') {
       setOverColumn(null);
       return;
     }
@@ -243,9 +256,7 @@ export function ProjectsKanbanView({
       </div>
 
       <DragOverlay>
-        {activeItem ? (
-          <ProjectCardBody item={activeItem} overlay />
-        ) : null}
+        {activeItem ? <ProjectCardBody item={activeItem} overlay /> : null}
       </DragOverlay>
     </DndContext>
   );
@@ -271,7 +282,10 @@ function KanbanColumn({
   });
 
   const sortableIds = items
-    .filter((item) => item.projectType === 'delivery' && canEditJobs)
+    .filter(
+      (item) =>
+        item.projectType === 'delivery' && canEditJobs && !item.readOnly,
+    )
     .map((item) => `item:${item.id}`);
 
   return (
@@ -291,30 +305,33 @@ function KanbanColumn({
           </span>
         </h3>
       </header>
-      <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={sortableIds}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
           {items.length === 0 ? (
             <p className="px-2 py-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
               No projects
             </p>
           ) : (
-            items.map((item) =>
-              item.projectType === 'delivery' && canEditJobs ? (
-                <SortableProjectCard
-                  key={item.id}
-                  item={item}
-                  href={detailPath(item.id)}
-                />
-              ) : (
-                <Link
-                  key={item.id}
-                  href={detailPath(item.id)}
-                  className="block"
-                >
+            items.map((item) => {
+              const href = item.href ?? detailPath(item.id);
+              if (
+                item.projectType === 'delivery' &&
+                canEditJobs &&
+                !item.readOnly
+              ) {
+                return (
+                  <SortableProjectCard key={item.id} item={item} href={href} />
+                );
+              }
+              return (
+                <Link key={item.id} href={href} className="block">
                   <ProjectCardBody item={item} />
                 </Link>
-              ),
-            )
+              );
+            })
           )}
         </div>
       </SortableContext>
@@ -394,6 +411,11 @@ function ProjectCardBody({
       <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
         {item.title}
       </p>
+      {item.sharedBadge ? (
+        <p className="mt-1 text-[10px] font-medium tracking-wide text-[var(--ozer-accent)] uppercase">
+          {item.sharedBadge}
+        </p>
+      ) : null}
       {item.clientName ? (
         <div className="mt-1 flex items-center gap-1.5">
           <ProfileAvatar
