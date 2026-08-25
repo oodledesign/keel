@@ -261,7 +261,8 @@ export function computeHolidayModeActive(
     return true;
   }
 
-  return new Date(settings.holiday_mode_until) > now;
+  // "Back on" = first day back. Holiday ends at the start of that UTC calendar day.
+  return !isHolidayUntilExpired(settings.holiday_mode_until, now);
 }
 
 export function computeOOOActive(
@@ -291,10 +292,48 @@ export function computeOOOActive(
   }
 }
 
+/**
+ * Start of the "Back on" calendar day (UTC ms) from a stored `holiday_mode_until`.
+ * Works for both legacy end-of-day values and start-of-day values.
+ */
+export function holidayBackOnStartMs(until: string): number | null {
+  const parsed = new Date(until);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return Date.UTC(
+    parsed.getUTCFullYear(),
+    parsed.getUTCMonth(),
+    parsed.getUTCDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+}
+
+/** True once the "Back on" day has begun (holiday should auto-disable). */
+export function isHolidayUntilExpired(
+  until: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!until) {
+    return false;
+  }
+
+  const start = holidayBackOnStartMs(until);
+  if (start == null) {
+    return false;
+  }
+
+  return now.getTime() >= start;
+}
+
 export function formatHolidayReturnDate(until: string): string {
   const parsed = new Date(until);
-  // End-of-day UTC — format the UTC calendar day so local offsets don't
-  // roll the label into the next day (e.g. 23:59Z → next morning in BST).
+  // Format the UTC calendar day so local offsets don't roll the label
+  // into the next day (e.g. legacy 23:59Z values).
   const calendarDay = new Date(
     parsed.getUTCFullYear(),
     parsed.getUTCMonth(),

@@ -16,7 +16,11 @@ import {
   setGmailVacationOff,
   setGmailVacationOn,
 } from '~/lib/gmail/vacation-responder';
-import { formatHolidayReturnDate } from '~/lib/workspace-focus';
+import {
+  formatHolidayReturnDate,
+  holidayBackOnStartMs,
+  isHolidayUntilExpired,
+} from '~/lib/workspace-focus';
 
 import {
   type GmailVacationStatus,
@@ -276,8 +280,7 @@ export async function autoDisableHolidayMode(accountId: string): Promise<void> {
 
   if (
     !data?.holiday_mode_enabled ||
-    !data.holiday_mode_until ||
-    data.holiday_mode_until >= now
+    !isHolidayUntilExpired(data.holiday_mode_until as string | null)
   ) {
     return;
   }
@@ -387,9 +390,11 @@ export async function syncHolidayModeToGmail(
   }
 
   if (settings.holiday_mode_enabled) {
-    const endDate = settings.holiday_mode_until
-      ? new Date(settings.holiday_mode_until)
+    const backOnStart = settings.holiday_mode_until
+      ? holidayBackOnStartMs(settings.holiday_mode_until)
       : null;
+    const endDate =
+      backOnStart != null ? new Date(backOnStart) : null;
 
     return setGmailVacationOn(
       authenticatedUserId,

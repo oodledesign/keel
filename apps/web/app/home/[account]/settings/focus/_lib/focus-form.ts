@@ -177,8 +177,9 @@ export function parseHolidayUntilDate(value: string | null): Date | undefined {
   if (!value) return undefined;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return undefined;
-  // Stored as end-of-day UTC; read UTC calendar day so BST/other offsets
-  // don't shift the selected day forward in the date picker.
+  // Stored as the "Back on" UTC calendar day (start-of-day going forward;
+  // legacy rows may be end-of-day). Read UTC date parts so BST/other offsets
+  // don't shift the selected day in the date picker.
   return new Date(
     parsed.getUTCFullYear(),
     parsed.getUTCMonth(),
@@ -186,9 +187,10 @@ export function parseHolidayUntilDate(value: string | null): Date | undefined {
   );
 }
 
+/** Persist the selected "Back on" day as start-of-day UTC. */
 export function holidayUntilToIso(date: Date): string {
   return new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59),
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0),
   ).toISOString();
 }
 

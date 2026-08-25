@@ -277,7 +277,7 @@ export function HolidayModeSection({
                       </Popover>
                       <FormDescription className="text-[var(--workspace-shell-text-muted)]">
                         {field.value
-                          ? 'Holiday mode will automatically turn off on this date'
+                          ? 'Holiday mode turns off at the start of this day'
                           : 'Leave blank to keep holiday mode on indefinitely'}
                       </FormDescription>
                       <FormMessage />

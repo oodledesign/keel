@@ -8,6 +8,7 @@ import {
   computeWorkspaceFocusState,
   DEFAULT_WORKSPACE_FOCUS_STATE,
   findNextWorkStart,
+  isHolidayUntilExpired,
   type WorkspaceFocusInput,
   type WorkspaceFocusState,
 } from '~/lib/workspace-focus';
@@ -56,8 +57,7 @@ export default function useWorkspaceFocus(
 
     const expired =
       settings.holiday_mode_enabled &&
-      settings.holiday_mode_until !== null &&
-      new Date(settings.holiday_mode_until) <= new Date();
+      isHolidayUntilExpired(settings.holiday_mode_until);
 
     if (!expired) {
       return;
