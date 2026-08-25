@@ -7,9 +7,10 @@ import { deserializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-fo
 
 import { PlatformSupportMessengerProvider } from './platform-support-messenger-context';
 import { WorkspaceFocusProvider } from './workspace-focus-context';
+import { WorkspaceHolidayReturnWatcher } from './workspace-holiday-return-watcher';
 import {
-  type WorkspaceOooWorkspaceOption,
   WorkspaceOooDialogProvider,
+  type WorkspaceOooWorkspaceOption,
 } from './workspace-ooo-dialog-context';
 
 export function WorkspaceFocusProviderShell({
@@ -40,6 +41,7 @@ export function WorkspaceFocusProviderShell({
           workspaces={oooWorkspaces}
           defaultAccountId={oooDefaultAccountId ?? supportDefaultAccountId}
         >
+          <WorkspaceHolidayReturnWatcher />
           {children}
         </WorkspaceOooDialogProvider>
       </PlatformSupportMessengerProvider>

@@ -65,6 +65,7 @@ export const OzerAIFeature = {
   quick_action_plan: 'quick_action_plan',
   voice_profile_distill: 'voice_profile_distill',
   meeting_summary: 'meeting_summary',
+  meeting_qa: 'meeting_qa',
   meeting_action_items: 'meeting_action_items',
   rankly_page_analyse: 'rankly_page_analyse',
   rankly_brief_synthesise: 'rankly_brief_synthesise',
@@ -415,6 +416,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     credits: 8,
     batchable: false,
     maxOutputTokens: 4096,
+    structuredOutput: false,
+  },
+  meeting_qa: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
     structuredOutput: false,
   },
   meeting_action_items: {

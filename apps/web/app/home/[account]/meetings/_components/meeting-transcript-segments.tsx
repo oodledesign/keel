@@ -19,6 +19,10 @@ import {
 
 import { saveSpeakerMappings } from './meeting-speaker-labels-editor';
 import {
+  HighlightedText,
+  findTextMatches,
+} from './meeting-transcript-highlight';
+import {
   SpeakerLabelPicker,
   type SpeakerPickerClient,
   type SpeakerPickerContact,
@@ -43,6 +47,8 @@ type Props = {
   onSaved: () => void;
   onMappingsChange: (mappings: SpeakerMappings) => void;
   onContactsChange: (contacts: SpeakerPickerContact[]) => void;
+  searchQuery?: string;
+  activeMatchIndex?: number;
 };
 
 function SpeakerAssignPopover({
@@ -176,6 +182,8 @@ export function MeetingTranscriptSegments({
   onSaved,
   onMappingsChange,
   onContactsChange,
+  searchQuery = '',
+  activeMatchIndex = -1,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const memberLookup = members.map((member) => ({
@@ -183,6 +191,14 @@ export function MeetingTranscriptSegments({
     name: member.name,
   }));
   const visibleSegments = draftSegments ?? segments;
+  const segmentMatchOffsets: number[] = [];
+  {
+    let offset = 0;
+    for (const segment of visibleSegments) {
+      segmentMatchOffsets.push(offset);
+      offset += findTextMatches(segment.text, searchQuery).length;
+    }
+  }
 
   const persistMapping = (
     speakerKey: string,
@@ -290,7 +306,16 @@ export function MeetingTranscriptSegments({
               </div>
             ) : (
               <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
-                {segment.text}
+                {searchQuery.trim() ? (
+                  <HighlightedText
+                    text={segment.text}
+                    query={searchQuery}
+                    matchOffset={segmentMatchOffsets[index] ?? 0}
+                    activeMatchIndex={activeMatchIndex}
+                  />
+                ) : (
+                  segment.text
+                )}
               </p>
             )}
           </div>

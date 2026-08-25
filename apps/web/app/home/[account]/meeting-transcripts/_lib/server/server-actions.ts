@@ -306,6 +306,71 @@ export const generateMeetingSummary = enhanceAction(
   { schema: GenerateSummarySchema },
 );
 
+const AskMeetingQuestionSchema = z.object({
+  accountId: z.string().uuid(),
+  transcriptId: z.string().uuid(),
+  question: z.string().min(1).max(2000),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().min(1).max(8000),
+      }),
+    )
+    .max(8)
+    .optional(),
+});
+
+export const askMeetingQuestion = enhanceAction(
+  async (input) => {
+    const service = getService();
+    const transcript = await service.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+
+    if (!transcript) {
+      throw new Error('Meeting not found');
+    }
+
+    const contentFromSegments = transcript.speakerSegments
+      .map((segment) => `${segment.speaker}: ${segment.text}`.trim())
+      .filter(Boolean)
+      .join('\n\n')
+      .trim();
+    const content = transcript.content?.trim() || contentFromSegments;
+
+    if (!content) {
+      throw new Error('This meeting has no transcript to ask about');
+    }
+
+    const client = getSupabaseServerClient();
+    const { loadMeetingSummary } =
+      await import('~/lib/recorder/meeting-summary');
+    const { answerMeetingQuestion } = await import('~/lib/recorder/meeting-qa');
+
+    const summary = await loadMeetingSummary(client, {
+      meetingTranscriptId: transcript.id,
+      accountId: input.accountId,
+    });
+
+    const answer = await answerMeetingQuestion(
+      {
+        title: transcript.title,
+        transcript: content,
+        summaryText: summary?.summaryText,
+        meetingDate: transcript.meetingDate,
+        question: input.question,
+        history: input.history,
+      },
+      { accountId: input.accountId, supabase: client },
+    );
+
+    return { answer };
+  },
+  { schema: AskMeetingQuestionSchema },
+);
+
 const SetPublicShareSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).max(200).optional(),
@@ -352,4 +417,68 @@ export const setMeetingPublicShareShowTasks = enhanceAction(
     return result;
   },
   { schema: SetPublicShareShowTasksSchema },
+);
+
+const SetPortalVisibleSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200).optional(),
+  transcriptId: z.string().uuid(),
+  portalVisible: z.boolean(),
+});
+
+export const setMeetingPortalVisible = enhanceAction(
+  async (input) => {
+    const result = await getService().setPortalVisible({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+      portalVisible: input.portalVisible,
+    });
+
+    if (input.accountSlug) {
+      revalidateMeetingPages(input.accountSlug, input.transcriptId);
+    }
+
+    if (result.clientOrgSlug) {
+      revalidatePath(
+        pathsConfig.app.clientPortalMeetings.replace(
+          '[clientSlug]',
+          result.clientOrgSlug,
+        ),
+        'page',
+      );
+      revalidatePath(
+        pathsConfig.app.clientPortalMeetingDetail
+          .replace('[clientSlug]', result.clientOrgSlug)
+          .replace('[transcriptId]', input.transcriptId),
+        'page',
+      );
+      revalidatePath(
+        pathsConfig.app.clientPortalHome.replace(
+          '[clientSlug]',
+          result.clientOrgSlug,
+        ),
+        'layout',
+      );
+    }
+
+    return result;
+  },
+  { schema: SetPortalVisibleSchema },
+);
+
+const EmailMeetingNotesSchema = z.object({
+  accountId: z.string().uuid(),
+  transcriptId: z.string().uuid(),
+  recipientEmails: z.array(z.string().email()).min(1).max(50),
+});
+
+export const emailMeetingNotes = enhanceAction(
+  async (input) => {
+    return getService().emailNotes({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+      recipientEmails: input.recipientEmails,
+    });
+  },
+  { schema: EmailMeetingNotesSchema },
 );

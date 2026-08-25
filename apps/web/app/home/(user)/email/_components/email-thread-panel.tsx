@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import {
   ArrowLeft,
@@ -109,9 +109,9 @@ function ActionItemStatusPill({ status }: { status: string }) {
       className={cn(
         'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase',
         isAccepted &&
-          'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
+          'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80 ring-inset dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
         isDismissed &&
-          'bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200/80 dark:bg-zinc-500/15 dark:text-zinc-300 dark:ring-zinc-500/30',
+          'bg-zinc-100 text-zinc-600 ring-1 ring-zinc-200/80 ring-inset dark:bg-zinc-500/15 dark:text-zinc-300 dark:ring-zinc-500/30',
         !isAccepted &&
           !isDismissed &&
           'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
@@ -137,6 +137,7 @@ type Props = {
   accountSlug?: string | null;
   reviewMode?: boolean;
   allowSendFromOzer?: boolean;
+  focusDraft?: boolean;
   onBack?: () => void;
   showBackButton?: boolean;
   onCategoryChange?: (threadId: string, category: EmailThreadCategory) => void;
@@ -150,6 +151,7 @@ export function EmailThreadPanel({
   accountSlug = null,
   reviewMode = false,
   allowSendFromOzer = false,
+  focusDraft = false,
   onBack,
   showBackButton = false,
   onCategoryChange,
@@ -168,6 +170,8 @@ export function EmailThreadPanel({
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [sendPreviewLoading, setSendPreviewLoading] = useState(false);
   const [pending, startTransition] = useTransition();
+  const draftSectionRef = useRef<HTMLDivElement | null>(null);
+  const draftTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (!threadId) {
@@ -205,6 +209,22 @@ export function EmailThreadPanel({
       cancelled = true;
     };
   }, [threadId]);
+
+  useEffect(() => {
+    if (!focusDraft || !detail || loading) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      draftSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      draftTextareaRef.current?.focus({ preventScroll: true });
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [detail, focusDraft, loading, threadId]);
 
   const suggestedItems = useMemo(
     () =>
@@ -386,9 +406,7 @@ export function EmailThreadPanel({
         toast.success(`Marked as ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not update category',
+          error instanceof Error ? error.message : 'Could not update category',
         );
       }
     });
@@ -426,9 +444,7 @@ export function EmailThreadPanel({
         );
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not update follow-up',
+          error instanceof Error ? error.message : 'Could not update follow-up',
         );
       }
     });
@@ -492,7 +508,9 @@ export function EmailThreadPanel({
       .catch((error) => {
         setSendDialogOpen(false);
         toast.error(
-          error instanceof Error ? error.message : 'Could not load send preview',
+          error instanceof Error
+            ? error.message
+            : 'Could not load send preview',
         );
       })
       .finally(() => {
@@ -758,8 +776,7 @@ export function EmailThreadPanel({
             ) : null}
             {detail.thread.follow_up_at ? (
               <span className="text-xs text-[var(--ozer-accent)]">
-                Reminder{' '}
-                {formatEmailDateTime(detail.thread.follow_up_at)}
+                Reminder {formatEmailDateTime(detail.thread.follow_up_at)}
               </span>
             ) : null}
           </div>
@@ -961,7 +978,10 @@ export function EmailThreadPanel({
             ) : null}
           </div>
 
-          <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
+          <div
+            ref={draftSectionRef}
+            className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4"
+          >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Draft reply
@@ -1046,6 +1066,7 @@ export function EmailThreadPanel({
             </div>
 
             <Textarea
+              ref={draftTextareaRef}
               value={draftBody}
               onChange={(event) => setDraftBody(event.target.value)}
               placeholder="Generate a reply, edit it here, then save to Gmail."
@@ -1106,14 +1127,16 @@ export function EmailThreadPanel({
                 ) : sendPreview ? (
                   <>
                     <p>
-                      <span className="font-medium">From:</span> {sendPreview.from}
+                      <span className="font-medium">From:</span>{' '}
+                      {sendPreview.from}
                     </p>
                     <p>
                       <span className="font-medium">To:</span> {sendPreview.to}
                     </p>
                     {sendPreview.cc ? (
                       <p>
-                        <span className="font-medium">Cc:</span> {sendPreview.cc}
+                        <span className="font-medium">Cc:</span>{' '}
+                        {sendPreview.cc}
                       </p>
                     ) : null}
                     <p>

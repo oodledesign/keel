@@ -29,6 +29,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'commercial_match_digest',
   'user_signup',
   'invite_accepted',
+  'meeting_notes',
 ] as const;
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];

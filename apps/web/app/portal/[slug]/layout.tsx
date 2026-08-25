@@ -64,6 +64,7 @@ export default async function PortalSlugLayout({
       hasWorkspaceAccess={ctx.hasWorkspaceAccess}
       showWebsiteNav={ctx.showWebsiteNav}
       showProjectsNav={ctx.showProjectsNav}
+      showMeetingsNav={ctx.showMeetingsNav}
       showMessagesNav={ctx.showMessagesNav}
     >
       {children}

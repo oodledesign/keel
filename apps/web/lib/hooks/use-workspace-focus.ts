@@ -2,16 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { autoDisableHolidayMode } from '~/home/[account]/settings/focus/actions';
 import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
+import { autoDisableHolidayMode } from '~/home/[account]/settings/focus/actions';
 import {
-  computeWorkspaceFocusState,
   DEFAULT_WORKSPACE_FOCUS_STATE,
-  findNextWorkStart,
-  isHolidayUntilExpired,
   type WorkspaceFocusInput,
   type WorkspaceFocusState,
+  computeWorkspaceFocusState,
+  findNextWorkStart,
+  isHolidayUntilExpired,
 } from '~/lib/workspace-focus';
+import { markHolidayWelcomePending } from '~/lib/workspace-focus/holiday-welcome-storage';
 
 export type { WorkspaceFocusState } from '~/lib/workspace-focus';
 
@@ -78,6 +79,12 @@ export default function useWorkspaceFocus(
       if (!result.cleared || !result.gmailSynced) {
         // Allow a retry on the next settings refresh / remount.
         disableAttemptKey.current = null;
+      }
+      if (result.cleared) {
+        markHolidayWelcomePending(
+          settings.account_id,
+          settings.holiday_mode_until ?? 'none',
+        );
       }
     });
   }, [settings]);

@@ -42,6 +42,18 @@ export type PublicMeetingPayload = {
   client: PublicMeetingParty | null;
 };
 
+type TranscriptShareRow = {
+  id: string;
+  account_id: string;
+  client_id?: string | null;
+  title?: string | null;
+  content?: string | null;
+  meeting_date?: string | null;
+  speaker_segments?: unknown;
+  speaker_mappings?: unknown;
+  public_share_show_tasks?: boolean | null;
+};
+
 function clientDisplayName(
   row: {
     display_name?: string | null;
@@ -73,35 +85,18 @@ function contactDisplayName(row: {
   );
 }
 
-export async function loadPublicMeetingByToken(
-  token: string,
-): Promise<PublicMeetingPayload | null> {
-  const normalized = token.trim();
-  if (!normalized || normalized.length < 16) {
-    return null;
-  }
-
-  const admin = getSupabaseServerAdminClient() as unknown as SupabaseClient;
-
-  const { data: transcript, error } = await admin
-    .from('meeting_transcripts')
-    .select(
-      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_enabled, public_share_token, public_share_show_tasks',
-    )
-    .eq('public_share_token', normalized)
-    .eq('public_share_enabled', true)
-    .maybeSingle();
-
-  if (error || !transcript) {
-    return null;
-  }
-
-  const transcriptId = transcript.id as string;
-  const accountId = transcript.account_id as string;
-  const clientId = (transcript.client_id as string | null) ?? null;
-  const content = ((transcript.content as string | null) ?? '').trim();
+async function assembleMeetingSharePayload(
+  admin: SupabaseClient,
+  transcript: TranscriptShareRow,
+  options?: { showTasks?: boolean },
+): Promise<PublicMeetingPayload> {
+  const transcriptId = transcript.id;
+  const accountId = transcript.account_id;
+  const clientId = transcript.client_id ?? null;
+  const content = (transcript.content ?? '').trim();
   const mappings = normalizeSpeakerMappings(transcript.speaker_mappings);
-  const showTasks = transcript.public_share_show_tasks !== false;
+  const showTasks =
+    options?.showTasks ?? transcript.public_share_show_tasks !== false;
 
   const clientIds = new Set<string>();
   const contactIds = new Set<string>();
@@ -269,9 +264,8 @@ export async function loadPublicMeetingByToken(
 
   return {
     id: transcriptId,
-    title:
-      ((transcript.title as string | null) ?? 'Meeting').trim() || 'Meeting',
-    meetingDate: (transcript.meeting_date as string | null) ?? null,
+    title: (transcript.title ?? 'Meeting').trim() || 'Meeting',
+    meetingDate: transcript.meeting_date ?? null,
     content,
     speakerSegments: segmentsWithResolvedSpeakers(
       rawSegments,
@@ -294,4 +288,55 @@ export async function loadPublicMeetingByToken(
       ? { name: linkedClient.name, logoUrl: linkedClient.pictureUrl }
       : null,
   };
+}
+
+export async function loadMeetingSharePayloadById(
+  transcriptId: string,
+  options?: { showTasks?: boolean },
+): Promise<PublicMeetingPayload | null> {
+  const admin = getSupabaseServerAdminClient() as unknown as SupabaseClient;
+
+  const { data: transcript, error } = await admin
+    .from('meeting_transcripts')
+    .select(
+      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_show_tasks',
+    )
+    .eq('id', transcriptId)
+    .maybeSingle();
+
+  if (error || !transcript) {
+    return null;
+  }
+
+  return assembleMeetingSharePayload(
+    admin,
+    transcript as TranscriptShareRow,
+    options,
+  );
+}
+
+export async function loadPublicMeetingByToken(
+  token: string,
+): Promise<PublicMeetingPayload | null> {
+  const normalized = token.trim();
+  if (!normalized || normalized.length < 16) {
+    return null;
+  }
+
+  const admin = getSupabaseServerAdminClient() as unknown as SupabaseClient;
+
+  const { data: transcript, error } = await admin
+    .from('meeting_transcripts')
+    .select(
+      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_enabled, public_share_token, public_share_show_tasks',
+    )
+    .eq('public_share_token', normalized)
+    .eq('public_share_enabled', true)
+    .maybeSingle();
+
+  if (error || !transcript) {
+    return null;
+  }
+
+  return assembleMeetingSharePayload(admin, transcript as TranscriptShareRow);
 }

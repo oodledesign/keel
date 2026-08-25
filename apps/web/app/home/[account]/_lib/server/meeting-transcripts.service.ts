@@ -45,6 +45,7 @@ export type MeetingTranscript = {
   publicShareEnabled: boolean;
   publicShareToken: string | null;
   publicShareShowTasks: boolean;
+  portalVisible: boolean;
 };
 
 export type MeetingTranscriptListItem = MeetingTranscript & {
@@ -72,6 +73,7 @@ type MeetingTranscriptRow = {
   public_share_enabled?: boolean | null;
   public_share_token?: string | null;
   public_share_show_tasks?: boolean | null;
+  portal_visible?: boolean | null;
 };
 
 function normalizeCalendarAttendees(value: unknown): MeetingCalendarAttendee[] {
@@ -124,6 +126,7 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
     publicShareEnabled: Boolean(row.public_share_enabled),
     publicShareToken: row.public_share_token ?? null,
     publicShareShowTasks: row.public_share_show_tasks !== false,
+    portalVisible: Boolean(row.portal_visible),
   };
 }
 
@@ -1006,6 +1009,116 @@ class MeetingTranscriptsService {
         (data as { public_share_show_tasks?: boolean | null })
           .public_share_show_tasks !== false,
     };
+  }
+
+  async setPortalVisible(input: {
+    accountId: string;
+    transcriptId: string;
+    portalVisible: boolean;
+  }): Promise<{ portalVisible: boolean; clientOrgSlug: string | null }> {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+
+    const existing = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+
+    if (!existing) {
+      throw new Error('Meeting not found');
+    }
+
+    if (input.portalVisible && !existing.clientId) {
+      throw new Error('Link a client to this meeting before sharing to portal');
+    }
+
+    const { data, error } = await this.db
+      .from('meeting_transcripts')
+      .update({
+        portal_visible: input.portalVisible,
+      } as Record<string, unknown>)
+      .eq('id', input.transcriptId)
+      .eq('account_id', input.accountId)
+      .select('portal_visible')
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    let clientOrgSlug: string | null = null;
+    if (existing.clientId) {
+      const { data: clientRow } = await this.db
+        .from('clients')
+        .select('client_org_id, client_orgs(slug)')
+        .eq('id', existing.clientId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      const org = normalizeEmbeddedRow(
+        (
+          clientRow as {
+            client_orgs?: { slug?: string | null } | { slug?: string | null }[] | null;
+          } | null
+        )?.client_orgs,
+      );
+      clientOrgSlug = org?.slug?.trim() || null;
+    }
+
+    return {
+      portalVisible: Boolean(
+        (data as { portal_visible?: boolean | null }).portal_visible,
+      ),
+      clientOrgSlug,
+    };
+  }
+
+  async emailNotes(input: {
+    accountId: string;
+    transcriptId: string;
+    recipientEmails: string[];
+  }): Promise<{ sent: number; failed: string[] }> {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+
+    const transcript = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+
+    if (!transcript) {
+      throw new Error('Meeting not found');
+    }
+
+    if (!transcript.publicShareEnabled || !transcript.publicShareToken) {
+      throw new Error('Enable the public page before emailing meeting notes');
+    }
+
+    const [{ data: account }, { data: summaryRow }] = await Promise.all([
+      this.db
+        .from('accounts')
+        .select('name')
+        .eq('id', input.accountId)
+        .maybeSingle(),
+      this.db
+        .from('meeting_summaries')
+        .select('summary_text')
+        .eq('meeting_transcript_id', input.transcriptId)
+        .eq('account_id', input.accountId)
+        .maybeSingle(),
+    ]);
+
+    const { sendMeetingNotesEmails } = await import(
+      '~/lib/recorder/meeting-notes-email'
+    );
+
+    return sendMeetingNotesEmails({
+      accountId: input.accountId,
+      accountName: (account as { name?: string | null } | null)?.name ?? null,
+      meetingTitle: transcript.title,
+      meetingDate: transcript.meetingDate,
+      publicShareToken: transcript.publicShareToken,
+      recipientEmails: input.recipientEmails,
+      summaryPreview:
+        ((summaryRow as { summary_text?: string | null } | null)
+          ?.summary_text as string | null) ?? null,
+    });
   }
 
   async delete(input: {

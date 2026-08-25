@@ -5,6 +5,7 @@ import type {
   DashboardFinanceMonth,
   DashboardInvoiceSummary,
   DashboardJobSummary,
+  DashboardMeetingReviewSummary,
   DashboardMetrics,
   DashboardNeedsReplySummary,
   DashboardNoteSummary,
@@ -14,8 +15,8 @@ import type {
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
 import { BusinessDashboardMobile } from './business-dashboard-mobile';
-import { DashboardLayoutControl } from './dashboard-layout-control';
 import { DashboardPresetOnboardingDialog } from './dashboard-preset-onboarding-dialog';
+import { DashboardWorkHomeHeader } from './dashboard-work-home-header';
 
 type DashboardPageContentProps = {
   accountSlug: string;
@@ -23,8 +24,10 @@ type DashboardPageContentProps = {
   metrics: DashboardMetrics;
   financeTrend: DashboardFinanceMonth[];
   upcomingTasks: DashboardTaskSummary[];
+  upcomingTasksTotalCount: number;
   needsReply: DashboardNeedsReplySummary;
   suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
+  meetingTaskReview: DashboardMeetingReviewSummary;
   openSupportTickets: DashboardSupportTicketsSummary;
   recentNotes: DashboardNoteSummary[];
   pipeline: DayViewPipeline | null;
@@ -49,8 +52,10 @@ export function DashboardPageContent({
   metrics,
   financeTrend,
   upcomingTasks,
+  upcomingTasksTotalCount,
   needsReply,
   suggestedEmailTasks,
+  meetingTaskReview,
   openSupportTickets,
   recentNotes,
   pipeline,
@@ -65,14 +70,22 @@ export function DashboardPageContent({
 }: DashboardPageContentProps) {
   return (
     <>
+      <DashboardWorkHomeHeader
+        accountId={accountId}
+        accountSlug={accountSlug}
+        activePresetId={presetId}
+        recommendedPresetId={recommendedPresetId}
+      />
       <BusinessDashboardMobile
         accountSlug={accountSlug}
         accountId={accountId}
         metrics={metrics}
         financeTrend={financeTrend}
         upcomingTasks={upcomingTasks}
+        upcomingTasksTotalCount={upcomingTasksTotalCount}
         needsReply={needsReply}
         suggestedEmailTasks={suggestedEmailTasks}
+        meetingTaskReview={meetingTaskReview}
         openSupportTickets={openSupportTickets}
         recentNotes={recentNotes}
         pipeline={pipeline}
@@ -82,14 +95,6 @@ export function DashboardPageContent({
         recentInvoices={recentInvoices}
         presetId={presetId}
         shortcutsBar={shortcutsBar}
-        layoutControl={
-          <DashboardLayoutControl
-            accountId={accountId}
-            accountSlug={accountSlug}
-            activePresetId={presetId}
-            recommendedPresetId={recommendedPresetId}
-          />
-        }
       />
       <DashboardPresetOnboardingDialog
         accountId={accountId}

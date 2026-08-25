@@ -2,10 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import Link from 'next/link';
-
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import type { UseFormReturn } from 'react-hook-form';
 
 import { Button } from '@kit/ui/button';
@@ -24,6 +22,7 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { cn } from '@kit/ui/utils';
 
+import { GmailVacationSyncPanel } from '~/components/workspace-shell/gmail-vacation-sync-panel';
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import type {
@@ -81,7 +80,8 @@ export function HolidayModeSection({
     void (async () => {
       // If Ozer holiday is off/expired but Gmail vacation lingered, clear Gmail.
       if (!holidayEnabled) {
-        const reconcile = await reconcileGmailVacationWithHolidayMode(accountId);
+        const reconcile =
+          await reconcileGmailVacationWithHolidayMode(accountId);
         if (cancelled) {
           return;
         }
@@ -311,133 +311,21 @@ export function HolidayModeSection({
           </div>
         </div>
 
-        {gmailPanelState !== 'hidden' ? (
-          <GmailVacationSyncPanel
-            state={gmailPanelState}
-            pending={pending}
-            reconnectHref={reconnectHref}
-            onTurnOffGmail={() =>
-              runGmailAction(() => turnOffGmailVacationResponder(userId))
-            }
-            onTurnOnHolidayMode={() =>
-              form.setValue('holiday_mode_enabled', true, { shouldDirty: true })
-            }
-            onSyncToGmail={() =>
-              runGmailAction(() => syncHolidayModeToGmail(accountId, userId))
-            }
-          />
-        ) : null}
+        <GmailVacationSyncPanel
+          state={gmailPanelState}
+          pending={pending}
+          reconnectHref={reconnectHref}
+          onTurnOffGmail={() =>
+            runGmailAction(() => turnOffGmailVacationResponder(userId))
+          }
+          onTurnOnHolidayMode={() =>
+            form.setValue('holiday_mode_enabled', true, { shouldDirty: true })
+          }
+          onSyncToGmail={() =>
+            runGmailAction(() => syncHolidayModeToGmail(accountId, userId))
+          }
+        />
       </div>
     </section>
   );
-}
-
-function GmailVacationSyncPanel({
-  state,
-  pending,
-  reconnectHref,
-  onTurnOffGmail,
-  onTurnOnHolidayMode,
-  onSyncToGmail,
-}: {
-  state:
-    | 'scope_missing'
-    | 'in_sync'
-    | 'gmail_on_ozer_off'
-    | 'ozer_on_gmail_off'
-    | 'both_off';
-  pending: boolean;
-  reconnectHref: string;
-  onTurnOffGmail: () => void;
-  onTurnOnHolidayMode: () => void;
-  onSyncToGmail: () => void;
-}) {
-  if (state === 'scope_missing') {
-    return (
-      <div className="rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] p-4 text-sm text-[var(--workspace-shell-text)]">
-        <p className="font-medium">Reconnect Google to enable Gmail sync</p>
-        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-          Your Google account was connected before vacation replies were
-          supported. A quick reconnect adds this permission.
-        </p>
-        <Button asChild size="sm" className="mt-3" variant="outline">
-          <Link href={reconnectHref}>Reconnect Google</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (state === 'in_sync') {
-    return (
-      <div className="rounded-xl border border-emerald-600/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
-        <p className="font-medium">✓ Gmail vacation responder is in sync</p>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="mt-3 border-emerald-700/30 text-emerald-950 hover:bg-emerald-500/10 dark:border-emerald-400/30 dark:text-emerald-100"
-          disabled={pending}
-          onClick={onSyncToGmail}
-        >
-          {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Push latest to Gmail
-        </Button>
-      </div>
-    );
-  }
-
-  if (state === 'gmail_on_ozer_off') {
-    return (
-      <div className="rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] p-4 text-sm text-[var(--workspace-shell-text)]">
-        <p>
-          Your Gmail vacation responder is currently on but holiday mode is off
-          in Ozer.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={pending}
-            onClick={onTurnOffGmail}
-          >
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Turn off in Gmail
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="ozer-gradient-btn"
-            disabled={pending}
-            onClick={onTurnOnHolidayMode}
-          >
-            Turn on holiday mode
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (state === 'ozer_on_gmail_off') {
-    return (
-      <div className="rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] p-4 text-sm text-[var(--workspace-shell-text)]">
-        <p>
-          Holiday mode is on but your Gmail vacation responder isn&apos;t
-          active.
-        </p>
-        <Button
-          type="button"
-          size="sm"
-          className="ozer-gradient-btn mt-3"
-          disabled={pending}
-          onClick={onSyncToGmail}
-        >
-          {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Sync to Gmail
-        </Button>
-      </div>
-    );
-  }
-
-  return null;
 }

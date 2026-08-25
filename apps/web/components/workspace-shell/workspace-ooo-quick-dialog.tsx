@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, Plane } from 'lucide-react';
 
+import { useUser } from '@kit/supabase/hooks/use-user';
 import { Button } from '@kit/ui/button';
 import { Calendar } from '@kit/ui/calendar';
 import {
@@ -31,11 +32,12 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
 import {
-  getWorkspaceFocusSettings,
-  upsertWorkspaceFocusSettings,
-} from '~/home/[account]/settings/focus/actions';
+  GmailVacationSyncPanel,
+  type GmailVacationSyncPanelState,
+} from '~/components/workspace-shell/gmail-vacation-sync-panel';
+import pathsConfig from '~/config/paths.config';
+import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
   FOCUS_FORM_DEFAULTS,
   HOLIDAY_LABEL_PRESETS,
@@ -43,7 +45,15 @@ import {
   holidayUntilToIso,
   parseHolidayUntilDate,
 } from '~/home/[account]/settings/focus/_lib/focus-form';
-import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import type { GmailVacationStatus } from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
+import {
+  getGmailVacationStatus,
+  getWorkspaceFocusSettings,
+  reconcileGmailVacationWithHolidayMode,
+  syncHolidayModeToGmail,
+  turnOffGmailVacationResponder,
+  upsertWorkspaceFocusSettings,
+} from '~/home/[account]/settings/focus/actions';
 import { useWorkspaceFocusSnapshot } from '~/lib/hooks/use-workspace-focus';
 
 import { useWorkspaceFocusSettingsMutations } from './workspace-focus-context';
@@ -67,8 +77,11 @@ export function WorkspaceOooQuickDialog({
   onAccountChange,
 }: WorkspaceOooQuickDialogProps) {
   const [pending, startTransition] = useTransition();
+  const [gmailPending, startGmailTransition] = useTransition();
   const [loading, setLoading] = useState(false);
   const { replaceSettings } = useWorkspaceFocusSettingsMutations();
+  const userState = useUser();
+  const userId = userState.data?.id ?? null;
 
   const [away, setAway] = useState(false);
   const [label, setLabel] = useState('Holiday');
@@ -76,6 +89,9 @@ export function WorkspaceOooQuickDialog({
   const [oooEnabled, setOooEnabled] = useState(false);
   const [oooMessage, setOooMessage] = useState('');
   const [baseline, setBaseline] = useState(FOCUS_FORM_DEFAULTS);
+  const [gmailStatus, setGmailStatus] = useState<
+    GmailVacationStatus | 'loading'
+  >('loading');
 
   const selectedDate = parseHolidayUntilDate(until);
   const previewSettings = useMemo(
@@ -93,6 +109,52 @@ export function WorkspaceOooQuickDialog({
   );
   const focusState = useWorkspaceFocusSnapshot(previewSettings);
 
+  const settingsHref =
+    accountSlug != null
+      ? workAccountPath(pathsConfig.app.accountFocusSettings, accountSlug)
+      : null;
+  const reconnectHref =
+    settingsHref != null
+      ? `/api/google/connect?returnPath=${encodeURIComponent(settingsHref)}`
+      : '/api/google/connect';
+
+  const gmailResponderOn = useMemo(() => {
+    if (
+      gmailStatus === 'loading' ||
+      gmailStatus === 'not_connected' ||
+      gmailStatus === 'scope_missing' ||
+      gmailStatus === null
+    ) {
+      return false;
+    }
+
+    return gmailStatus.enableAutoReply;
+  }, [gmailStatus]);
+
+  const gmailPanelState = useMemo((): GmailVacationSyncPanelState => {
+    if (gmailStatus === 'loading' || gmailStatus === 'not_connected') {
+      return 'hidden';
+    }
+
+    if (gmailStatus === 'scope_missing') {
+      return 'scope_missing';
+    }
+
+    if (away && gmailResponderOn) {
+      return 'in_sync';
+    }
+
+    if (!away && gmailResponderOn) {
+      return 'gmail_on_ozer_off';
+    }
+
+    if (away && !gmailResponderOn) {
+      return 'ozer_on_gmail_off';
+    }
+
+    return 'both_off';
+  }, [away, gmailResponderOn, gmailStatus]);
+
   useEffect(() => {
     if (!open || !accountId) {
       return;
@@ -100,6 +162,7 @@ export function WorkspaceOooQuickDialog({
 
     let cancelled = false;
     setLoading(true);
+    setGmailStatus('loading');
 
     void getWorkspaceFocusSettings(accountId)
       .then((settings) => {
@@ -122,10 +185,60 @@ export function WorkspaceOooQuickDialog({
     };
   }, [accountId, open]);
 
-  const settingsHref =
-    accountSlug != null
-      ? workAccountPath(pathsConfig.app.accountFocusSettings, accountSlug)
-      : null;
+  useEffect(() => {
+    // Wait until focus settings finished loading so we don't reconcile against
+    // the default "away=false" before the real holiday flag is known.
+    if (!open || !accountId || !userId || loading) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      if (!away) {
+        const reconcile =
+          await reconcileGmailVacationWithHolidayMode(accountId);
+        if (cancelled) return;
+
+        if (reconcile.success === false && reconcile.error) {
+          console.error(
+            '[ooo-quick] Gmail vacation reconcile:',
+            reconcile.error,
+          );
+        }
+      }
+
+      const status = await getGmailVacationStatus(userId);
+      if (!cancelled) {
+        setGmailStatus(status);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, away, loading, open, userId]);
+
+  function refreshGmailStatus() {
+    if (!userId) return;
+    void getGmailVacationStatus(userId).then(setGmailStatus);
+  }
+
+  function runGmailAction(
+    action: () => Promise<{ success: boolean; error?: string }>,
+  ) {
+    startGmailTransition(async () => {
+      const result = await action();
+
+      if (!result.success) {
+        toast.error(result.error ?? 'Gmail sync failed');
+        return;
+      }
+
+      toast.success('Gmail vacation responder updated');
+      refreshGmailStatus();
+    });
+  }
 
   function handleSave() {
     if (!accountId) {
@@ -339,6 +452,25 @@ export function WorkspaceOooQuickDialog({
                     className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40"
                   />
                 </div>
+              ) : null}
+
+              {userId ? (
+                <GmailVacationSyncPanel
+                  state={gmailPanelState}
+                  pending={gmailPending}
+                  reconnectHref={reconnectHref}
+                  hideInSync
+                  onTurnOffGmail={() =>
+                    runGmailAction(() => turnOffGmailVacationResponder(userId))
+                  }
+                  onTurnOnHolidayMode={() => setAway(true)}
+                  onSyncToGmail={() => {
+                    if (!accountId) return;
+                    runGmailAction(() =>
+                      syncHolidayModeToGmail(accountId, userId),
+                    );
+                  }}
+                />
               ) : null}
             </>
           )}

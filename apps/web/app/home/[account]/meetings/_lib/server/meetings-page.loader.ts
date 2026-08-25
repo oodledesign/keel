@@ -273,11 +273,11 @@ async function loadMeetingTranscriptPageDataImpl(
     client
       .from('meeting_action_items')
       .select(
-        'id, suggested_title, suggested_description, suggested_due_date, status, planner_task_id',
+        'id, suggested_title, suggested_description, suggested_due_date, suggested_assignee_id, status, planner_task_id',
       )
       .eq('meeting_transcript_id', transcriptId)
       .eq('account_id', accountId)
-      .in('status', ['pending_review', 'approved', 'auto_published'])
+      .in('status', ['approved', 'auto_published'])
       .order('created_at', { ascending: true }),
   ]);
 
@@ -289,15 +289,110 @@ async function loadMeetingTranscriptPageDataImpl(
     throw new Error(actionItemsResult.error.message);
   }
 
-  const meetingTasks = (
-    (actionItemsResult.data ?? []) as Array<Record<string, unknown>>
-  ).map((row) => ({
-    id: row.id as string,
-    title: ((row.suggested_title as string | null) ?? 'Task').trim() || 'Task',
-    description: (row.suggested_description as string | null)?.trim() || null,
-    dueDate: (row.suggested_due_date as string | null) ?? null,
-    status: (row.status as string) ?? 'pending_review',
-  }));
+  const actionItemRows = (actionItemsResult.data ?? []) as Array<
+    Record<string, unknown>
+  >;
+
+  const plannerTaskIds = actionItemRows
+    .map((row) => row.planner_task_id as string | null)
+    .filter((id): id is string => Boolean(id));
+
+  const plannerById = new Map<
+    string,
+    {
+      title: string | null;
+      dueDate: string | null;
+      userId: string | null;
+      contactId: string | null;
+      status: string | null;
+    }
+  >();
+
+  if (plannerTaskIds.length > 0) {
+    const { data: plannerRows } = await client
+      .from('tasks')
+      .select('id, title, due_date, user_id, assignee_contact_id, status')
+      .eq('account_id', accountId)
+      .in('id', plannerTaskIds);
+
+    for (const row of (plannerRows ?? []) as Array<Record<string, unknown>>) {
+      plannerById.set(row.id as string, {
+        title: (row.title as string | null) ?? null,
+        dueDate: (row.due_date as string | null) ?? null,
+        userId: (row.user_id as string | null) ?? null,
+        contactId: (row.assignee_contact_id as string | null) ?? null,
+        status: (row.status as string | null) ?? null,
+      });
+    }
+  }
+
+  const members = mapMemberOptions(membersResult.data ?? []);
+  const memberNameById = new Map(
+    members.map((member) => [member.userId, member.name] as const),
+  );
+  const contacts = mapContactOptions(contactsResult.data ?? []);
+  const contactNameById = new Map(
+    contacts.map((contact) => [contact.id, contact.name] as const),
+  );
+
+  const unresolvedUserIds = new Set<string>();
+  for (const row of actionItemRows) {
+    const plannerTaskId = (row.planner_task_id as string | null) ?? null;
+    const planner = plannerTaskId ? plannerById.get(plannerTaskId) : undefined;
+    const assigneeUserId =
+      planner?.userId ??
+      ((row.suggested_assignee_id as string | null) ?? null);
+    if (assigneeUserId && !memberNameById.has(assigneeUserId)) {
+      unresolvedUserIds.add(assigneeUserId);
+    }
+  }
+
+  if (unresolvedUserIds.size > 0) {
+    const { data: accountRows } = await client
+      .from('accounts')
+      .select('id, name, email')
+      .in('id', [...unresolvedUserIds]);
+
+    for (const row of (accountRows ?? []) as Array<{
+      id: string;
+      name?: string | null;
+      email?: string | null;
+    }>) {
+      memberNameById.set(
+        row.id,
+        row.name?.trim() || row.email?.trim() || 'Team member',
+      );
+    }
+  }
+
+  const meetingTasks = actionItemRows.map((row) => {
+    const plannerTaskId = (row.planner_task_id as string | null) ?? null;
+    const planner = plannerTaskId ? plannerById.get(plannerTaskId) : undefined;
+    const assigneeUserId =
+      planner?.userId ??
+      ((row.suggested_assignee_id as string | null) ?? null);
+    const assigneeContactId = planner?.contactId ?? null;
+    const assigneeName = assigneeUserId
+      ? (memberNameById.get(assigneeUserId) ?? null)
+      : assigneeContactId
+        ? (contactNameById.get(assigneeContactId) ?? null)
+        : null;
+
+    return {
+      id: (plannerTaskId as string) || (row.id as string),
+      title:
+        (planner?.title?.trim() ||
+          ((row.suggested_title as string | null) ?? 'Task').trim()) ||
+        'Task',
+      description: (row.suggested_description as string | null)?.trim() || null,
+      dueDate:
+        planner?.dueDate ??
+        ((row.suggested_due_date as string | null) ?? null),
+      status: planner?.status ?? (row.status as string) ?? 'approved',
+      assigneeName,
+      plannerTaskId,
+    };
+  });
 
   return {
     accountId,
@@ -314,13 +409,16 @@ async function loadMeetingTranscriptPageDataImpl(
           publicShareShowTasks: access.canEditClients
             ? transcript.publicShareShowTasks
             : false,
+          portalVisible: access.canEditClients
+            ? transcript.portalVisible
+            : false,
         }
       : transcript,
     summary,
     meetingTasks,
     clients: mapClientOptions(clientsResult.data ?? []),
-    contacts: mapContactOptions(contactsResult.data ?? []),
-    members: mapMemberOptions(membersResult.data ?? []),
+    contacts,
+    members,
     currentUserId: workspace.user.id,
     canEdit: access.canEditClients,
     canView: access.canViewClients,

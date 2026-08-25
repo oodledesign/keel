@@ -34,6 +34,7 @@ export type ClientPortalContext = {
   hasWorkspaceAccess: boolean;
   showWebsiteNav: boolean;
   showProjectsNav: boolean;
+  showMeetingsNav: boolean;
   showMessagesNav: boolean;
 };
 
@@ -267,6 +268,17 @@ export const loadClientPortalContext = cache(
       .eq('portal_visible', true)
       .or(projectFilter);
 
+    const portalVisibleMeetingCount =
+      orgClientIds.length > 0
+        ? (
+            await client
+              .from('meeting_transcripts')
+              .select('id', { count: 'exact', head: true })
+              .filter('portal_visible', 'eq', true)
+              .in('client_id', orgClientIds)
+          ).count
+        : 0;
+
     const rawOrgName = org.name?.trim();
     const orgName =
       rawOrgName && !PLACEHOLDER_ORG_NAMES.has(rawOrgName.toLowerCase())
@@ -291,6 +303,7 @@ export const loadClientPortalContext = cache(
       hasWorkspaceAccess: (teamMembership.count ?? 0) > 0,
       showWebsiteNav: (websiteCount.count ?? 0) > 0,
       showProjectsNav: (portalVisibleProjectCount ?? 0) > 0,
+      showMeetingsNav: (portalVisibleMeetingCount ?? 0) > 0,
       showMessagesNav,
     };
   },

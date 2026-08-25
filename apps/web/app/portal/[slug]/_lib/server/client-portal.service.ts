@@ -109,6 +109,13 @@ export type PortalProjectPhase = {
   sortOrder: number;
 };
 
+export type PortalMeetingSummary = {
+  id: string;
+  title: string;
+  meetingDate: string | null;
+  updatedAt: string;
+};
+
 export type PortalProjectTask = {
   id: string;
   title: string;
@@ -720,6 +727,105 @@ class ClientPortalService {
       pictureUrl:
         (data as { picture_url?: string | null }).picture_url?.trim() || null,
     };
+  }
+
+  /**
+   * Meetings the agency opted into the client portal (portal_visible).
+   * Authorization is the additive meeting_transcripts_select_client_portal RLS.
+   */
+  async listPortalMeetings(
+    clientOrgId: string,
+  ): Promise<PortalMeetingSummary[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data: orgClients, error: clientsError } = await this.db
+      .from('clients')
+      .select('id')
+      .eq('client_org_id', clientOrgId);
+
+    if (clientsError) {
+      console.error('[client-portal] listPortalMeetings clients:', clientsError.message);
+      return [];
+    }
+
+    const clientIds = (orgClients ?? []).map((row) => row.id as string);
+    if (clientIds.length === 0) return [];
+
+    const { data, error } = await this.db
+      .from('meeting_transcripts')
+      .select('id, title, meeting_date, updated_at')
+      .filter('portal_visible', 'eq', true)
+      .in('client_id', clientIds)
+      .order('meeting_date', { ascending: false, nullsFirst: false });
+
+    if (error) {
+      console.error('[client-portal] listPortalMeetings:', error.message);
+      return [];
+    }
+
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        title?: string | null;
+        meeting_date?: string | null;
+        updated_at: string;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      title: row.title?.trim() || 'Meeting',
+      meetingDate: row.meeting_date ?? null,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  /**
+   * Verifies portal membership + RLS visibility, then loads the same share
+   * payload used by the public meeting page (summary, transcript, tasks).
+   */
+  async getPortalMeeting(
+    clientOrgId: string,
+    transcriptId: string,
+  ): Promise<
+    Awaited<
+      ReturnType<
+        typeof import('~/lib/recorder/public-meeting.loader').loadMeetingSharePayloadById
+      >
+    >
+  > {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('meeting_transcripts')
+      .select('id, client_id')
+      .eq('id', transcriptId)
+      .filter('portal_visible', 'eq', true)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const clientId = (data as { client_id?: string | null }).client_id ?? null;
+    if (!clientId) return null;
+
+    const { data: clientLink } = await this.db
+      .from('clients')
+      .select('id')
+      .eq('id', clientId)
+      .eq('client_org_id', clientOrgId)
+      .maybeSingle();
+
+    if (!clientLink) return null;
+
+    const { loadMeetingSharePayloadById } =
+      await import('~/lib/recorder/public-meeting.loader');
+
+    const meeting = await loadMeetingSharePayloadById(transcriptId, {
+      showTasks: true,
+    });
+
+    if (!meeting) return null;
+
+    // Calendar invite emails can include internal team addresses — omit in portal.
+    return { ...meeting, attendeeEmails: [] };
   }
 
   async listPortalProjectPhases(

@@ -136,6 +136,18 @@ export type DashboardSuggestedEmailTasksSummary = {
   totalCount: number;
 };
 
+export type DashboardMeetingReviewItem = {
+  id: string;
+  suggestedTitle: string;
+  meetingTitle: string;
+  suggestedDueDate: string | null;
+};
+
+export type DashboardMeetingReviewSummary = {
+  items: DashboardMeetingReviewItem[];
+  totalCount: number;
+};
+
 export type DashboardSupportTicketSummary = {
   id: string;
   ticketNumber: number;
@@ -160,8 +172,10 @@ export type DashboardPageData = {
   statusSummary: DashboardStatusSummary;
   activeJobsList: DashboardJobSummary[];
   upcomingTasks: DashboardTaskSummary[];
+  upcomingTasksTotalCount: number;
   needsReply: DashboardNeedsReplySummary;
   suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
+  meetingTaskReview: DashboardMeetingReviewSummary;
   openSupportTickets: DashboardSupportTicketsSummary;
   recentNotes: DashboardNoteSummary[];
   recentInvoices: DashboardInvoiceSummary[];
@@ -268,6 +282,8 @@ async function loadDashboardPageDataImpl(
     notesResult,
     businessConnectionResult,
     upcomingTasksResult,
+    upcomingTasksCountResult,
+    meetingReviewResult,
     suggestedEmailLoaded,
     openSupportTicketsResult,
     pipelineDealsResult,
@@ -339,6 +355,29 @@ async function loadDashboardPageDataImpl(
       .not('status', 'in', '("done","cancelled")')
       .order('due_date', { ascending: true, nullsFirst: false })
       .limit(4),
+    client
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .is('parent_task_id', null)
+      .not('status', 'in', '("done","cancelled")'),
+    client
+      .from('meeting_action_items')
+      .select(
+        `
+        id,
+        suggested_title,
+        suggested_due_date,
+        meeting_transcripts:meeting_transcript_id (
+          title
+        )
+      `,
+        { count: 'exact' },
+      )
+      .eq('account_id', accountId)
+      .eq('status', 'pending_review')
+      .order('created_at', { ascending: false })
+      .limit(5),
     userId
       ? loadSuggestedEmailActionItems(client, userId, {
           accountId,
@@ -419,7 +458,7 @@ async function loadDashboardPageDataImpl(
         .eq('connection_id', businessConnectionId)
         .in('assistant_category', ['reply_now', 'reply_later'])
         .order('last_message_at', { ascending: false, nullsFirst: false })
-        .limit(8)
+        .limit(5)
     : { data: [], count: 0, error: null };
 
   const jobsUnavailable = isTableMissingFromApi(
@@ -664,6 +703,45 @@ async function loadDashboardPageDataImpl(
     projectName: resolveTaskContextName(t, clientNameById),
   }));
 
+  const upcomingTasksTotalCount = isTableMissingFromApi(
+    upcomingTasksCountResult.error,
+  )
+    ? upcomingTasks.length
+    : (upcomingTasksCountResult.count ?? upcomingTasks.length);
+
+  const meetingReviewUnavailable = isTableMissingFromApi(
+    meetingReviewResult.error,
+  );
+  if (!meetingReviewUnavailable && meetingReviewResult.error) {
+    console.error('[dashboard] meeting task review', meetingReviewResult.error);
+  }
+
+  const meetingReviewRows = meetingReviewUnavailable
+    ? []
+    : meetingReviewResult.error
+      ? []
+      : (meetingReviewResult.data ?? []);
+
+  const meetingTaskReview: DashboardMeetingReviewSummary = {
+    items: meetingReviewRows.map((row) => {
+      const transcript = Array.isArray(row.meeting_transcripts)
+        ? row.meeting_transcripts[0]
+        : row.meeting_transcripts;
+      return {
+        id: row.id as string,
+        suggestedTitle: ((row.suggested_title as string | null)?.trim() ||
+          'Untitled task') as string,
+        meetingTitle: (transcript?.title as string | null)?.trim() || 'Meeting',
+        suggestedDueDate: toIsoDateString(
+          row.suggested_due_date as string | null | undefined,
+        ),
+      };
+    }),
+    totalCount: meetingReviewUnavailable
+      ? 0
+      : (meetingReviewResult.count ?? meetingReviewRows.length),
+  };
+
   const needsReplyThreads: DashboardNeedsReplyThread[] = needsReplyRows.map(
     (row) => {
       const participants = Array.isArray(row.participants)
@@ -828,8 +906,10 @@ async function loadDashboardPageDataImpl(
     statusSummary,
     activeJobsList,
     upcomingTasks,
+    upcomingTasksTotalCount,
     needsReply,
     suggestedEmailTasks,
+    meetingTaskReview,
     openSupportTickets,
     recentNotes,
     recentInvoices,

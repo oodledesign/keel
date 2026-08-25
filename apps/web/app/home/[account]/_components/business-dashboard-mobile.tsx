@@ -2,13 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
-import {
-  ArrowUpRight,
-  CheckSquare,
-  ChevronRight,
-  StickyNote,
-  Wallet,
-} from 'lucide-react';
+import { ArrowUpRight, ChevronRight, StickyNote, Wallet } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -33,6 +27,7 @@ import type {
   DashboardFinanceMonth,
   DashboardInvoiceSummary,
   DashboardJobSummary,
+  DashboardMeetingReviewSummary,
   DashboardMetrics,
   DashboardNeedsReplySummary,
   DashboardNoteSummary,
@@ -41,13 +36,14 @@ import type {
   DashboardSupportTicketsSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
+import { DashboardHolidayWelcomeBar } from './dashboard-holiday-welcome-bar';
 import { DashboardNeedsReplyCard } from './dashboard-needs-reply-card';
 import { DashboardOverviewTabs } from './dashboard-overview-tabs';
 import { DashboardPipelineCard } from './dashboard-pipeline-card';
 import { DashboardSuggestedEmailTasksCard } from './dashboard-suggested-email-tasks-card';
 import { DashboardSupportTicketsCard } from './dashboard-support-tickets-card';
+import { DashboardTasksTabsCard } from './dashboard-tasks-tabs-card';
 import { DashboardPanelTitle } from './dashboard-ui';
-import { DashboardUpcomingTaskItem } from './dashboard-upcoming-task-item';
 import { NoteAssignmentLabels } from './note-assignment-labels';
 
 const FinanceTrendBarChart = dynamic(
@@ -75,8 +71,10 @@ type BusinessDashboardMobileProps = {
   metrics: DashboardMetrics;
   financeTrend: DashboardFinanceMonth[];
   upcomingTasks: DashboardTaskSummary[];
+  upcomingTasksTotalCount: number;
   needsReply: DashboardNeedsReplySummary;
   suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
+  meetingTaskReview: DashboardMeetingReviewSummary;
   openSupportTickets: DashboardSupportTicketsSummary;
   recentNotes: DashboardNoteSummary[];
   pipeline: DayViewPipeline | null;
@@ -91,7 +89,6 @@ type BusinessDashboardMobileProps = {
   recentInvoices: DashboardInvoiceSummary[];
   presetId: DashboardPresetId | null;
   shortcutsBar?: React.ReactNode;
-  layoutControl?: React.ReactNode;
 };
 
 export function BusinessDashboardMobile({
@@ -100,8 +97,10 @@ export function BusinessDashboardMobile({
   metrics,
   financeTrend,
   upcomingTasks,
+  upcomingTasksTotalCount,
   needsReply,
   suggestedEmailTasks,
+  meetingTaskReview,
   openSupportTickets,
   recentNotes,
   pipeline,
@@ -111,7 +110,6 @@ export function BusinessDashboardMobile({
   recentInvoices,
   presetId,
   shortcutsBar,
-  layoutControl,
 }: BusinessDashboardMobileProps) {
   const workspaceCurrency = useWorkspaceCurrency();
   const formatMoney = (value: number) =>
@@ -129,10 +127,6 @@ export function BusinessDashboardMobile({
     ? formatMoney(metrics.financeNetPence / 100)
     : null;
 
-  const tasksHref = pathsConfig.app.accountTasks.replace(
-    '[account]',
-    accountSlug,
-  );
   const notesHref = pathsConfig.app.accountNotes.replace(
     '[account]',
     accountSlug,
@@ -158,59 +152,61 @@ export function BusinessDashboardMobile({
     switch (cardId) {
       case 'finance':
         return (
-          <section
+          <div
             key={cardId}
-            className={cn(
-              panelClass,
-              'overflow-hidden p-4',
-              density === 'lg' ? 'xl:col-span-2' : '',
-            )}
+            className={cn(density === 'lg' ? 'xl:col-span-2' : '')}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                  <Wallet
-                    className="h-3.5 w-3.5 text-[var(--ozer-accent)]"
-                    aria-hidden
-                  />
-                  {metrics.hasFinanceData ? 'This month' : 'Revenue'}
-                </p>
-                <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
-                  {totalRevenueLabel}
-                </p>
-                {netLabel ? (
-                  <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-                    Net {netLabel}
+            <DashboardHolidayWelcomeBar
+              accountId={accountId}
+              accountSlug={accountSlug}
+            />
+            <section className={cn(panelClass, 'overflow-hidden p-4')}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                    <Wallet
+                      className="h-3.5 w-3.5 text-[var(--ozer-accent)]"
+                      aria-hidden
+                    />
+                    {metrics.hasFinanceData ? 'This month' : 'Revenue'}
                   </p>
-                ) : null}
+                  <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
+                    {totalRevenueLabel}
+                  </p>
+                  {netLabel ? (
+                    <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                      Net {netLabel}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="text-right text-[11px] text-[var(--workspace-shell-text-muted)]">
+                  <p>{metrics.activeProjects} active projects</p>
+                  <p>{metrics.hoursLogged}h logged</p>
+                </div>
               </div>
-              <div className="text-right text-[11px] text-[var(--workspace-shell-text-muted)]">
-                <p>{metrics.activeProjects} active projects</p>
-                <p>{metrics.hoursLogged}h logged</p>
-              </div>
-            </div>
-            <div
-              className={cn(
-                'relative mt-3',
-                density === 'sm' ? 'h-24' : 'h-36',
-              )}
-            >
-              <FinanceTrendBarChart
-                data={revenueTrendData}
-                variant="grouped"
-                surface="workspace"
-                compact
-                currency={workspaceCurrency}
-              />
-              <HapticLink
-                href={financesHref}
-                aria-label="Open finances"
-                className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
+              <div
+                className={cn(
+                  'relative mt-3',
+                  density === 'sm' ? 'h-24' : 'h-36',
+                )}
               >
-                <ArrowUpRight className="h-4 w-4" />
-              </HapticLink>
-            </div>
-          </section>
+                <FinanceTrendBarChart
+                  data={revenueTrendData}
+                  variant="grouped"
+                  surface="workspace"
+                  compact
+                  currency={workspaceCurrency}
+                />
+                <HapticLink
+                  href={financesHref}
+                  aria-label="Open finances"
+                  className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
+                >
+                  <ArrowUpRight className="h-4 w-4" />
+                </HapticLink>
+              </div>
+            </section>
+          </div>
         );
       case 'pipeline':
         return (
@@ -244,6 +240,9 @@ export function BusinessDashboardMobile({
           />
         );
       case 'support_tickets':
+        if (openSupportTickets.totalCount === 0) {
+          return null;
+        }
         return (
           <DashboardSupportTicketsCard
             key={cardId}
@@ -253,6 +252,7 @@ export function BusinessDashboardMobile({
           />
         );
       case 'email_tasks':
+        // Folded into upcoming_tasks tabs; keep render for legacy presets.
         return (
           <DashboardSuggestedEmailTasksCard
             key={cardId}
@@ -263,35 +263,16 @@ export function BusinessDashboardMobile({
         );
       case 'upcoming_tasks':
         return (
-          <section
+          <DashboardTasksTabsCard
             key={cardId}
-            className={cn(panelClass, density === 'lg' && 'xl:col-span-2')}
-          >
-            <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-              <DashboardPanelTitle icon={CheckSquare}>
-                Upcoming tasks
-              </DashboardPanelTitle>
-              <HapticLink href={tasksHref} className={dashboardLinkClass}>
-                View all
-                <ChevronRight className="h-3.5 w-3.5" />
-              </HapticLink>
-            </div>
-            <ul className="space-y-2 p-3">
-              {upcomingTasks.length === 0 ? (
-                <li className="px-1 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
-                  No upcoming tasks.
-                </li>
-              ) : (
-                upcomingTasks.map((task) => (
-                  <DashboardUpcomingTaskItem
-                    key={task.id}
-                    task={task}
-                    workspaceAccountId={accountId}
-                  />
-                ))
-              )}
-            </ul>
-          </section>
+            accountSlug={accountSlug}
+            accountId={accountId}
+            upcomingTasks={upcomingTasks}
+            upcomingTasksTotalCount={upcomingTasksTotalCount}
+            meetingTaskReview={meetingTaskReview}
+            suggestedEmailTasks={suggestedEmailTasks}
+            density={density}
+          />
         );
       case 'recent_notes':
         return (
@@ -360,11 +341,6 @@ export function BusinessDashboardMobile({
 
   return (
     <div className="space-y-4">
-      {layoutControl ? (
-        <div className="flex justify-end px-4 md:px-6 lg:px-8">
-          {layoutControl}
-        </div>
-      ) : null}
       <div
         className={cn(
           workspaceDashboardMainClassName,

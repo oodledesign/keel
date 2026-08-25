@@ -134,8 +134,10 @@ async function WorkDashboardContent({ account }: { account: string }) {
       metrics={data.metrics}
       financeTrend={data.financeTrend}
       upcomingTasks={data.upcomingTasks}
+      upcomingTasksTotalCount={data.upcomingTasksTotalCount}
       needsReply={data.needsReply}
       suggestedEmailTasks={data.suggestedEmailTasks}
+      meetingTaskReview={data.meetingTaskReview}
       openSupportTickets={data.openSupportTickets}
       recentNotes={data.recentNotes}
       pipeline={data.pipeline}
@@ -286,12 +288,6 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        account={account}
-        title={userFirstName ? `Welcome back, ${userFirstName}` : accountLabel}
-        description="Your business overview for this month."
-      />
-
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
         <Suspense fallback={null}></Suspense>
         <Suspense fallback={<BusinessDashboardSkeleton />}>

@@ -204,6 +204,8 @@ const PathsSchema = z.object({
     clientPortalWebsite: z.string().min(1),
     clientPortalProjects: z.string().min(1),
     clientPortalProjectDetail: z.string().min(1),
+    clientPortalMeetings: z.string().min(1),
+    clientPortalMeetingDetail: z.string().min(1),
     clientPortalMyTasks: z.string().min(1),
     clientPortalMessages: z.string().min(1),
     clientPortalSupport: z.string().min(1),
@@ -425,6 +427,9 @@ const pathsConfig = PathsSchema.parse({
     clientPortalWebsite: '/portal/[clientSlug]/website',
     clientPortalProjects: '/portal/[clientSlug]/projects',
     clientPortalProjectDetail: '/portal/[clientSlug]/projects/[projectId]',
+    clientPortalMeetings: '/portal/[clientSlug]/meetings',
+    clientPortalMeetingDetail:
+      '/portal/[clientSlug]/meetings/[transcriptId]',
     clientPortalMyTasks: '/portal/[clientSlug]/tasks',
     clientPortalMessages: '/portal/[clientSlug]/messages',
     clientPortalSupport: '/portal/[clientSlug]/services',

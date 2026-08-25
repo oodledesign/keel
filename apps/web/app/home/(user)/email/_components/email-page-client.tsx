@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Loader2, RefreshCw, Keyboard, Settings2 } from 'lucide-react';
+import { Keyboard, Loader2, RefreshCw, Settings2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -139,6 +139,7 @@ export function EmailPageClient({ initialData }: Props) {
   const autoSyncStarted = useRef(false);
 
   const selectedThreadId = searchParams.get('thread');
+  const focusDraft = searchParams.get('focus') === 'draft';
 
   const threadsEndpoint = useCallback(
     (cursor?: string | null) =>
@@ -473,10 +474,7 @@ export function EmailPageClient({ initialData }: Props) {
           ? direction === 1
             ? 0
             : threads.length - 1
-          : Math.min(
-              threads.length - 1,
-              Math.max(0, currentIndex + direction),
-            );
+          : Math.min(threads.length - 1, Math.max(0, currentIndex + direction));
       const nextThread = threads[nextIndex];
 
       if (nextThread) {
@@ -719,6 +717,7 @@ export function EmailPageClient({ initialData }: Props) {
             accountSlug={initialData.accountSlug}
             reviewMode={reviewMode}
             allowSendFromOzer={initialData.settings.allowSendFromOzer}
+            focusDraft={focusDraft}
             onBack={clearThread}
             showBackButton
             onCategoryChange={handleThreadCategoryChange}

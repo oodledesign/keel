@@ -24,6 +24,7 @@ describe('conversational safety prompt', () => {
   it('appends only on chat-like features', () => {
     expect(isConversationalAiFeature('second_brain_query')).toBe(true);
     expect(isConversationalAiFeature('support_docs_chat')).toBe(true);
+    expect(isConversationalAiFeature('meeting_qa')).toBe(true);
     expect(isConversationalAiFeature('email_draft')).toBe(false);
     expect(withAiSafetySystemPrompt('email_draft', 'Draft emails.')).toBe(
       'Draft emails.',

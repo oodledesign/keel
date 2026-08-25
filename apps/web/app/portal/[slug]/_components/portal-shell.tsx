@@ -10,6 +10,7 @@ import {
   Layers,
   LayoutDashboard,
   MessageSquare,
+  Mic,
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
@@ -41,6 +42,13 @@ const navItems = [
     pathKey: 'clientPortalProjects' as const,
     icon: <Briefcase className={iconClasses} />,
     showKey: 'showProjectsNav' as const,
+  },
+  {
+    key: 'meetings',
+    label: 'Meetings',
+    pathKey: 'clientPortalMeetings' as const,
+    icon: <Mic className={iconClasses} />,
+    showKey: 'showMeetingsNav' as const,
   },
   {
     key: 'tasks',
@@ -138,6 +146,7 @@ export function PortalShell({
   hasWorkspaceAccess = false,
   showWebsiteNav = true,
   showProjectsNav = false,
+  showMeetingsNav = false,
   showMessagesNav = false,
   children,
 }: {
@@ -154,6 +163,7 @@ export function PortalShell({
   hasWorkspaceAccess?: boolean;
   showWebsiteNav?: boolean;
   showProjectsNav?: boolean;
+  showMeetingsNav?: boolean;
   showMessagesNav?: boolean;
   children: React.ReactNode;
 }) {
@@ -162,6 +172,7 @@ export function PortalShell({
   const visibility: Record<string, boolean> = {
     showWebsiteNav,
     showProjectsNav,
+    showMeetingsNav,
     showMessagesNav,
   };
 

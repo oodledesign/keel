@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ChevronRight, Mail, MoreHorizontal, X } from 'lucide-react';
+import { ChevronRight, Mail, MoreHorizontal, Reply, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -163,6 +163,7 @@ export function DashboardNeedsReplyCard({
         <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
           {items.map((thread) => {
             const href = `${pathsConfig.app.accountEmailAssistant.replace('[account]', accountSlug)}?thread=${thread.id}`;
+            const replyHref = `${href}&focus=draft`;
             const busy = isPending && pendingIds.has(thread.id);
 
             return (
@@ -191,17 +192,25 @@ export function DashboardNeedsReplyCard({
                       .join(' · ')}
                   </p>
                 </HapticLink>
-                <div className="mt-0.5 flex shrink-0 items-center gap-1">
+                <div className="mt-0.5 flex shrink-0 items-center gap-0.5">
+                  <HapticLink
+                    href={replyHref}
+                    title="Reply — open draft"
+                    aria-label="Reply — open draft"
+                    className="inline-flex h-7 items-center gap-1 rounded-md border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-2 text-[11px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)]"
+                  >
+                    <Reply className="h-3 w-3" />
+                    Reply
+                  </HapticLink>
                   <button
                     type="button"
                     onClick={() => ignoreThread(thread.id)}
                     disabled={busy}
                     title="Ignore — no reply needed"
                     aria-label="Ignore — no reply needed"
-                    className="inline-flex h-8 items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--ozer-accent)] disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" />
-                    Ignore
                   </button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -209,11 +218,11 @@ export function DashboardNeedsReplyCard({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                        className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                         disabled={busy}
                         aria-label="More triage actions"
                       >
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
