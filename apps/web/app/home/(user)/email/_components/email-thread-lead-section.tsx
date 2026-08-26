@@ -4,7 +4,7 @@ import { useEffect, useRef, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { Kanban, Loader2, Sparkles } from 'lucide-react';
+import { Kanban, Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -145,7 +145,7 @@ export function EmailThreadLeadSection({
 
   if (pipelineDealId && pipelineHref) {
     return (
-      <div className={cn(panelClass, 'px-3 py-3')}>
+      <div className={cn(panelClass, 'px-3 py-2')}>
         <div className="flex items-start gap-2">
           <Kanban className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
           <div className="min-w-0 flex-1">
@@ -164,8 +164,12 @@ export function EmailThreadLeadSection({
     );
   }
 
+  if (!pipelineLeadSuggestion) {
+    return null;
+  }
+
   return (
-    <div className={cn(panelClass, 'px-3 py-3')}>
+    <div className={cn(panelClass, 'px-3 py-2')}>
       <div className="flex items-start gap-2">
         <Kanban className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
         <div className="min-w-0 flex-1 space-y-2">
@@ -173,41 +177,33 @@ export function EmailThreadLeadSection({
             Pipeline lead
           </p>
 
-          {pipelineLeadSuggestion ? (
-            <div className="rounded-lg border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-3 py-2">
-              <p className="text-xs font-medium text-[var(--workspace-shell-text)]">
-                Suggested: {suggestionHeadline(pipelineLeadSuggestion)}
-                {typeof pipelineLeadConfidence === 'number'
-                  ? ` (${Math.round(pipelineLeadConfidence * 100)}%)`
-                  : ''}
-              </p>
-              {pipelineLeadSuggestion.description ? (
-                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  {pipelineLeadSuggestion.description}
-                </p>
-              ) : null}
-              <div className="mt-2 flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                  disabled={pending}
-                  onClick={acceptSuggestion}
-                >
-                  {pending ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  ) : null}
-                  Create lead
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {pending
-                ? 'Checking whether this looks like a new enquiry…'
-                : 'No new lead detected. Use the thread menu to re-scan if this is an enquiry.'}
+          <div className="rounded-lg border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-3 py-2">
+            <p className="text-xs font-medium text-[var(--workspace-shell-text)]">
+              Suggested: {suggestionHeadline(pipelineLeadSuggestion)}
+              {typeof pipelineLeadConfidence === 'number'
+                ? ` (${Math.round(pipelineLeadConfidence * 100)}%)`
+                : ''}
             </p>
-          )}
+            {pipelineLeadSuggestion.description ? (
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                {pipelineLeadSuggestion.description}
+              </p>
+            ) : null}
+            <div className="mt-2 flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                disabled={pending}
+                onClick={acceptSuggestion}
+              >
+                {pending ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                Create lead
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

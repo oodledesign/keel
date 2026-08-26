@@ -1,3 +1,4 @@
+import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { loadEmailThreadDetailFromDb } from '~/home/(user)/email/_lib/server/email-page.loader';
@@ -75,6 +76,17 @@ export async function POST(_request: Request, context: RouteContext) {
       preferredAccountId,
     });
   } catch (error) {
+    const logger = await getLogger();
+    logger.error(
+      {
+        name: 'gmail.suggest-link',
+        threadId,
+        userId: auth.user.id,
+        error: error instanceof Error ? error.message : error,
+      },
+      'Failed to suggest email thread link',
+    );
+
     return jsonErr(
       'SUGGEST_FAILED',
       error instanceof Error ? error.message : 'Could not suggest link',

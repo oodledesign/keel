@@ -26,15 +26,15 @@ export const EMAIL_THREAD_CATEGORY_LABELS: Record<EmailThreadCategory, string> =
     noise: 'Noise',
   };
 
-/** Short explanations for UI tooltips / help. */
+/** Short explanations for UI tooltips / category picker. */
 export const EMAIL_THREAD_CATEGORY_HINTS: Record<EmailThreadCategory, string> =
   {
     reply_now: 'Needs your reply soon — a direct ask or decision.',
-    reply_later: 'Needs a reply eventually, but not urgent.',
+    reply_later: 'You might reply later — not urgent.',
     waiting:
-      'You already replied (or the ball is with them). No action until they respond.',
-    fyi: 'Useful human update — no reply required.',
-    noise: 'Marketing, newsletters, or automated mail you can usually ignore.',
+      'Ball is with them (or you already replied). Nothing to do for now.',
+    fyi: 'No reply needed — use when Action was wrong but the mail is real.',
+    noise: 'Ignore — newsletters, marketing, or low-value automated mail.',
   };
 
 export function isEmailThreadCategory(

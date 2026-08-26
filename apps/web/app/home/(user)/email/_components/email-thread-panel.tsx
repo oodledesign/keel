@@ -35,14 +35,13 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Label } from '@kit/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
@@ -55,6 +54,7 @@ import {
 } from '~/lib/email-assistant/email-assistant.actions';
 import {
   EMAIL_THREAD_CATEGORIES,
+  EMAIL_THREAD_CATEGORY_HINTS,
   EMAIL_THREAD_CATEGORY_LABELS,
   type EmailThreadCategory,
   categoryFromTriageRuleAction,
@@ -679,7 +679,7 @@ export function EmailThreadPanel({
           'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
         )}
       >
-        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-2.5">
           <div className="flex items-start gap-3">
             {showBackButton && onBack ? (
               <Button
@@ -777,7 +777,11 @@ export function EmailThreadPanel({
                       aria-hidden
                     />
                   ) : null}
-                  Category
+                  {detail.thread.assistant_category
+                    ? EMAIL_THREAD_CATEGORY_LABELS[
+                        detail.thread.assistant_category
+                      ]
+                    : 'Category'}
                   <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
@@ -792,42 +796,49 @@ export function EmailThreadPanel({
                         pending || detail.thread.assistant_category === category
                       }
                       onSelect={() => setCategory(category)}
+                      className="flex flex-col items-start gap-0.5 py-2"
                     >
-                      <span
-                        className={cn(
-                          'mr-2 h-2 w-2 shrink-0 rounded-full',
-                          styles.dot,
-                        )}
-                        aria-hidden
-                      />
-                      {EMAIL_THREAD_CATEGORY_LABELS[category]}
+                      <span className="flex items-center">
+                        <span
+                          className={cn(
+                            'mr-2 h-2 w-2 shrink-0 rounded-full',
+                            styles.dot,
+                          )}
+                          aria-hidden
+                        />
+                        {EMAIL_THREAD_CATEGORY_LABELS[category]}
+                      </span>
+                      <span className="pl-4 text-xs font-normal text-[var(--workspace-shell-text-muted)]">
+                        {EMAIL_THREAD_CATEGORY_HINTS[category]}
+                      </span>
                     </DropdownMenuItem>
                   );
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
             {detail.thread.assistant_category_reason?.trim() ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-                      aria-label="Why this category?"
-                    >
-                      <HelpCircle className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs text-xs">
-                    <p className="font-medium">Why this category?</p>
-                    <p className="mt-1 text-[var(--workspace-shell-text-muted)]">
-                      {detail.thread.assistant_category_reason.trim()}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                    aria-label="Why this category?"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-72 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 text-xs text-[var(--workspace-shell-text)]"
+                >
+                  <p className="font-medium">Why this category?</p>
+                  <p className="mt-1.5 text-[var(--workspace-shell-text-muted)]">
+                    {detail.thread.assistant_category_reason.trim()}
+                  </p>
+                </PopoverContent>
+              </Popover>
             ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -865,10 +876,8 @@ export function EmailThreadPanel({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
 
-        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
               Follow-up
             </span>
@@ -920,36 +929,47 @@ export function EmailThreadPanel({
               </span>
             ) : null}
           </div>
+
           {mailboxKind === 'business' &&
           (detail.thread.pipeline_deal_id ||
             detail.thread.pipeline_lead_suggestion ||
             (!detail.thread.link.linked && !detail.thread.link.clientId)) ? (
-            <EmailThreadLeadSection
-              threadId={threadId}
-              mailboxKind={mailboxKind}
-              accountSlug={accountSlug}
-              pipelineLeadSuggestion={detail.thread.pipeline_lead_suggestion}
-              pipelineLeadConfidence={detail.thread.pipeline_lead_confidence}
-              pipelineDealId={detail.thread.pipeline_deal_id}
-              workspaces={workspaces}
-              onUpdated={(patch) => {
-                setDetail((current) =>
-                  current
-                    ? {
-                        ...current,
-                        thread: { ...current.thread, ...patch },
-                      }
-                    : current,
-                );
-              }}
-            />
+            <div
+              className={cn(
+                (detail.thread.pipeline_deal_id ||
+                  detail.thread.pipeline_lead_suggestion) &&
+                  'mt-2',
+              )}
+            >
+              <EmailThreadLeadSection
+                threadId={threadId}
+                mailboxKind={mailboxKind}
+                accountSlug={accountSlug}
+                pipelineLeadSuggestion={detail.thread.pipeline_lead_suggestion}
+                pipelineLeadConfidence={detail.thread.pipeline_lead_confidence}
+                pipelineDealId={detail.thread.pipeline_deal_id}
+                workspaces={workspaces}
+                onUpdated={(patch) => {
+                  setDetail((current) =>
+                    current
+                      ? {
+                          ...current,
+                          thread: { ...current.thread, ...patch },
+                        }
+                      : current,
+                  );
+                }}
+              />
+            </div>
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4">
-          <ThreadMessages messages={detail.messages} />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-3">
+            <ThreadMessages messages={detail.messages} />
+          </div>
 
-          <div className="space-y-3">
+          <div className="min-h-0 shrink-0 space-y-4 overflow-x-hidden overflow-y-auto border-t border-[color:var(--workspace-shell-border)] px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Suggested to-dos
@@ -1346,11 +1366,7 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-        Messages
-      </h3>
-      <ul className="space-y-2">
+    <ul className="space-y-2">
         {messages.map((message) => {
           const isLatest = message.id === latestMessageId;
           const isExpanded = isLatest || expandedOlderIds.has(message.id);
@@ -1442,6 +1458,5 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
           );
         })}
       </ul>
-    </div>
   );
 }

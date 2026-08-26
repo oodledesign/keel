@@ -42,6 +42,7 @@ import type { EmailGmailLabel } from '../_lib/types';
 import { EMAIL_INBOX_FILTER_STYLES } from '../_lib/email-category-styles';
 import { EmailLabelChips } from './email-label-chips';
 import { EmailCategoryBadge } from './email-category-badge';
+import { HighlightSearchText } from './highlight-search-text';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
 
 const panelClass =
@@ -386,7 +387,14 @@ export function EmailInboxList({
                               : 'font-medium text-[var(--workspace-shell-text)]',
                           )}
                         >
-                          {participantLabel(thread)}
+                          {trimmedSearch ? (
+                            <HighlightSearchText
+                              text={participantLabel(thread)}
+                              query={trimmedSearch}
+                            />
+                          ) : (
+                            participantLabel(thread)
+                          )}
                         </span>
                         <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
                           {formatEmailDateTime(thread.last_message_at)}
@@ -400,7 +408,14 @@ export function EmailInboxList({
                             : 'text-[var(--workspace-shell-text-muted)]',
                         )}
                       >
-                        {thread.subject?.trim() || '(no subject)'}
+                        {trimmedSearch ? (
+                          <HighlightSearchText
+                            text={thread.subject?.trim() || '(no subject)'}
+                            query={trimmedSearch}
+                          />
+                        ) : (
+                          thread.subject?.trim() || '(no subject)'
+                        )}
                       </span>
                       <span className="mt-1 flex flex-wrap items-center gap-1">
                         <EmailCategoryBadge
@@ -425,7 +440,14 @@ export function EmailInboxList({
                         ) : null}
                       </span>
                       <span className="mt-1 block truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                        {thread.snippet?.trim() || 'No preview'}
+                        {trimmedSearch ? (
+                          <HighlightSearchText
+                            text={thread.snippet?.trim() || 'No preview'}
+                            query={trimmedSearch}
+                          />
+                        ) : (
+                          thread.snippet?.trim() || 'No preview'
+                        )}
                       </span>
                     </span>
                   </button>

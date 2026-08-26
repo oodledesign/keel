@@ -71,9 +71,6 @@ async function findContactEmailAddressMatches(
     .in('account_id', accountIds);
 
   if (error) {
-    if (!error.message.includes('contact_email_addresses')) {
-      throw new Error(error.message);
-    }
     return [];
   }
 
@@ -256,6 +253,30 @@ function participantDisplayNames(
   return [...names];
 }
 
+function contactSearchNames(row: {
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+}): string[] {
+  const names = new Set<string>();
+  const full = String(row.full_name ?? '').trim().toLowerCase();
+  if (full) {
+    names.add(full);
+  }
+
+  const composed = [row.first_name, row.last_name]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (composed) {
+    names.add(composed);
+  }
+
+  return [...names];
+}
+
 async function findDisplayNameMatches(
   admin: SupabaseClient,
   accountIds: string[],
@@ -267,7 +288,7 @@ async function findDisplayNameMatches(
 
   const { data: contacts, error } = await admin
     .from('contacts')
-    .select('id, account_id, name')
+    .select('id, account_id, full_name, first_name, last_name')
     .in('account_id', accountIds);
 
   if (error) {
@@ -277,14 +298,16 @@ async function findDisplayNameMatches(
   const matchedContactIds: string[] = [];
 
   for (const row of contacts ?? []) {
-    const name = normalizeSearchText(row.name as string | null);
-    if (!name) {
+    const contactNames = contactSearchNames(row);
+    if (contactNames.length === 0) {
       continue;
     }
 
     if (
-      displayNames.some(
-        (candidate) => name.includes(candidate) || candidate.includes(name),
+      displayNames.some((candidate) =>
+        contactNames.some(
+          (name) => name.includes(candidate) || candidate.includes(name),
+        ),
       )
     ) {
       matchedContactIds.push(row.id as string);
@@ -487,6 +510,8 @@ async function applyThreadLink(
     accountId: candidate.account_id,
     clientId: candidate.id,
     projectId: candidate.projectId,
+  }).catch(() => {
+    // Linking the thread is primary; action-item sync is best-effort.
   });
 
   queueEmailThreadBrainSync(threadId);
@@ -609,13 +634,6 @@ async function findExactEmailMatches(
     .in('client_id', clientIds);
 
   if (contactLinksError) {
-    if (
-      !contactLinksError.message.includes('client_contacts') &&
-      !contactLinksError.message.includes('contacts')
-    ) {
-      throw new Error(contactLinksError.message);
-    }
-
     return [...matches.values()];
   }
 
@@ -707,12 +725,7 @@ async function findDomainMatches(
       .in('client_id', clientIds);
 
     if (contactLinksError) {
-      if (
-        !contactLinksError.message.includes('client_contacts') &&
-        !contactLinksError.message.includes('contacts')
-      ) {
-        throw new Error(contactLinksError.message);
-      }
+      // Keep domain matches when contact embeds fail (schema drift / embed errors).
     } else {
       const clientAccountById = new Map(
         clientRows.map((row) => [row.id as string, row.account_id as string]),
