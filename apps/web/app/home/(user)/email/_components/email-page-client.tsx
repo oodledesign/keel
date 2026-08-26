@@ -4,13 +4,21 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Keyboard, Loader2, RefreshCw, Settings2 } from 'lucide-react';
+import { Loader2, MoreHorizontal, RefreshCw, Settings2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 import { setEmailThreadCategoryAction } from '~/lib/email-assistant/email-assistant.actions';
 import {
@@ -26,6 +34,7 @@ import type {
 } from '../_lib/types';
 import { EmailInboxList } from './email-inbox-list';
 import { EmailOnboardingDialog } from './email-onboarding-dialog';
+import { EmailReviewModeIndicator } from './email-review-mode-indicator';
 import { EmailSettingsCard } from './email-settings-card';
 import { EmailThreadPanel } from './email-thread-panel';
 
@@ -641,66 +650,73 @@ export function EmailPageClient({ initialData }: Props) {
   return (
     <div
       className={cn(
-        workspacePageMainClassName,
-        'min-h-0 flex-1 overflow-hidden',
+        'flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden px-3 pt-3 md:px-6 md:pt-6 lg:px-8',
       )}
     >
-      <div className="flex shrink-0 flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[color:var(--workspace-shell-border)] pb-5">
+        <div className="flex min-w-0 items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl">
             {mailboxKind === 'business' ? 'Emails' : 'Personal email'}
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-            {mailboxKind === 'business'
-              ? 'Sync your business Gmail, auto-draft replies, and link threads to clients and projects.'
-              : 'Connect a personal Gmail account for private mail — separate from your business inbox.'}
-          </p>
+          {reviewMode ? <EmailReviewModeIndicator size="md" /> : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant={reviewMode ? 'default' : 'outline'}
-            className={cn(
-              reviewMode
-                ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]'
-                : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]',
-            )}
-            onClick={() => setReviewMode((value) => !value)}
-            disabled={!connected}
-            title="Keyboard triage: J/K move threads · R reply now · L later · W waiting · F FYI · N noise"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              aria-label="Email page options"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-56 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
           >
-            <Keyboard className="mr-2 h-4 w-4" />
-            {reviewMode ? 'Review mode on' : 'Review mode'}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-            onClick={() => setShowSettings((value) => !value)}
-          >
-            <Settings2 className="mr-2 h-4 w-4" />
-            {showSettings ? 'Hide settings' : 'Settings'}
-          </Button>
-          <Button
-            type="button"
-            className="ozer-gradient-btn text-[var(--ozer-white)]"
-            onClick={syncNow}
-            disabled={!connected || syncing}
-          >
-            {syncing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Syncing…
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sync now
-              </>
-            )}
-          </Button>
-        </div>
+            <DropdownMenuLabel className="text-xs font-normal text-[var(--workspace-shell-text-muted)]">
+              Keyboard triage (J/K move thread)
+            </DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={reviewMode}
+              disabled={!connected}
+              onCheckedChange={setReviewMode}
+              className="text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+            >
+              Review mode
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
+            <DropdownMenuCheckboxItem
+              checked={showSettings}
+              onCheckedChange={setShowSettings}
+              className="text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+            >
+              <Settings2 className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
+            <DropdownMenuItem
+              disabled={!connected || syncing}
+              onSelect={syncNow}
+              className="text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing…
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Sync now
+                </>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {showSettings ? (
@@ -757,10 +773,10 @@ export function EmailPageClient({ initialData }: Props) {
       />
 
 
-      <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
+      <div className="grid h-full min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-col',
+            'flex h-full min-h-0 min-w-0 flex-col lg:sticky lg:top-0 lg:max-h-full lg:self-start',
             mobileShowThread && 'hidden lg:flex',
           )}
         >
@@ -787,7 +803,7 @@ export function EmailPageClient({ initialData }: Props) {
 
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-col',
+            'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
             !mobileShowThread && 'hidden lg:flex',
           )}
         >

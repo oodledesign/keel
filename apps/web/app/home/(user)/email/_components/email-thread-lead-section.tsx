@@ -169,26 +169,9 @@ export function EmailThreadLeadSection({
       <div className="flex items-start gap-2">
         <Kanban className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              Pipeline lead
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent text-xs"
-              disabled={pending}
-              onClick={() => runSuggest(false)}
-            >
-              {pending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Re-scan
-            </Button>
-          </div>
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            Pipeline lead
+          </p>
 
           {pipelineLeadSuggestion ? (
             <div className="rounded-lg border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-3 py-2">
@@ -222,7 +205,7 @@ export function EmailThreadLeadSection({
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               {pending
                 ? 'Checking whether this looks like a new enquiry…'
-                : 'No new lead detected. Re-scan if this is an enquiry that should enter pipeline.'}
+                : 'No new lead detected. Use the thread menu to re-scan if this is an enquiry.'}
             </p>
           )}
         </div>

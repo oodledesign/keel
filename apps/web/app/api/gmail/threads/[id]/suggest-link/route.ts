@@ -13,35 +13,6 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-async function resolveThreadMailboxKind(
-  userId: string,
-  threadId: string,
-): Promise<MailboxKind> {
-  const admin = getSupabaseServerAdminClient();
-  const { data } = await admin
-    .from('email_threads')
-    .select('connection_id')
-    .eq('id', threadId)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  const connectionId = (data as { connection_id?: string | null } | null)
-    ?.connection_id;
-  if (!connectionId) {
-    return 'business';
-  }
-
-  const { data: connection } = await admin
-    .from('google_connections')
-    .select('mailbox_kind')
-    .eq('id', connectionId)
-    .maybeSingle();
-
-  const kind = (connection as { mailbox_kind?: string | null } | null)
-    ?.mailbox_kind;
-  return kind === 'personal' ? 'personal' : 'business';
-}
-
 export async function POST(_request: Request, context: RouteContext) {
   const auth = await requireEmailAssistantApiUser();
 
@@ -50,17 +21,59 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   const { id: threadId } = await context.params;
-  const mailboxKind = await resolveThreadMailboxKind(auth.user.id, threadId);
-  const owner = await resolveDraftOwnerContext(auth.user.id, mailboxKind);
+
+  const { data: threadRow, error: threadError } = await auth.client
+    .from('email_threads')
+    .select('id, account_id, connection_id')
+    .eq('id', threadId)
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+
+  if (threadError) {
+    return jsonErr('LOAD_FAILED', threadError.message, 500);
+  }
+
+  if (!threadRow) {
+    return jsonErr('NOT_FOUND', 'Thread not found', 404);
+  }
+
+  const connectionId = (threadRow as { connection_id?: string | null })
+    .connection_id;
+
+  let mailboxKind: MailboxKind = 'business';
+  if (connectionId) {
+    const { data: connection } = await auth.client
+      .from('google_connections')
+      .select('mailbox_kind')
+      .eq('id', connectionId)
+      .maybeSingle();
+    const kind = (connection as { mailbox_kind?: string } | null)?.mailbox_kind;
+    if (kind === 'personal' || kind === 'business') {
+      mailboxKind = kind;
+    }
+  }
+
+  const owner = await resolveDraftOwnerContext(auth.user.id, mailboxKind, {
+    connectionId,
+    fallbackEmail: auth.user.email,
+  });
 
   if (!owner) {
-    return jsonErr('MISSING_OWNER', 'Could not resolve mailbox owner', 400);
+    return jsonErr(
+      'MISSING_OWNER',
+      'Could not determine your mailbox email for link suggestions',
+      400,
+    );
   }
 
   const admin = getSupabaseServerAdminClient();
+  const preferredAccountId = (threadRow as { account_id?: string | null })
+    .account_id;
 
   try {
-    await suggestEmailThreadLink(admin, auth.user.id, threadId, owner.email);
+    await suggestEmailThreadLink(admin, auth.user.id, threadId, owner.email, {
+      preferredAccountId,
+    });
   } catch (error) {
     return jsonErr(
       'SUGGEST_FAILED',
@@ -69,7 +82,7 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  const thread = await loadEmailThreadDetailFromDb(threadId);
+  const thread = await loadEmailThreadDetailFromDb(threadId, auth.user.id);
 
   if (!thread) {
     return jsonErr('NOT_FOUND', 'Thread not found', 404);

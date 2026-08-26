@@ -39,7 +39,11 @@ export function AcceptInvitationContainer(props: {
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       try {
-        await acceptInvitationAction(formData);
+        const result = await acceptInvitationAction(formData);
+
+        if (result?.ok === false) {
+          toast.error(result.error);
+        }
       } catch (error) {
         if (isRedirectError(error)) {
           throw error;

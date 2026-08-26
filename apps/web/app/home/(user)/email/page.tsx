@@ -8,6 +8,7 @@ import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { EmailPageClient } from './_components/email-page-client';
+import { EmailPageScrollShell } from './_components/email-page-scroll-shell';
 import { loadEmailPageData } from './_lib/server/email-page.loader';
 
 export const metadata = { title: 'Personal email' };
@@ -20,10 +21,12 @@ async function EmailPageContent() {
 
 function EmailPage() {
   return (
-    <PageBody className="min-h-0 overflow-hidden bg-[var(--workspace-shell-canvas)]">
-      <Suspense fallback={<EmailPageSkeleton />}>
-        <EmailPageContent />
-      </Suspense>
+    <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] py-0 lg:px-6">
+      <EmailPageScrollShell>
+        <Suspense fallback={<EmailPageSkeleton />}>
+          <EmailPageContent />
+        </Suspense>
+      </EmailPageScrollShell>
     </PageBody>
   );
 }
@@ -33,7 +36,6 @@ function EmailPageSkeleton() {
     <div className={cn(workspacePageMainClassName, 'min-h-0')}>
       <div className="space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-5">
         <div className="h-8 w-32 animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]" />
-        <div className="h-4 w-96 max-w-full animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]" />
       </div>
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="h-[480px] animate-pulse rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]" />

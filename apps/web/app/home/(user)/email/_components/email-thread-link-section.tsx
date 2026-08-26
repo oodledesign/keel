@@ -2,15 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
-import { ChevronDown, Link2, Loader2, Sparkles, X } from 'lucide-react';
+import { ChevronDown, Loader2, Sparkles, UserRound } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@kit/ui/collapsible';
-import { Label } from '@kit/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import {
   Select,
   SelectContent,
@@ -26,6 +21,7 @@ import {
   type TaskAssignmentOption,
   loadTaskAssignmentOptionsForWorkspace,
 } from '~/home/(user)/_lib/actions/task-actions';
+import { PlannerClientAvatar } from '~/home/(user)/planner/_components/planner-client-pill';
 
 import { emailApiFetch } from '../_lib/email-api';
 import type {
@@ -33,9 +29,6 @@ import type {
   EmailThreadLinkSuggestion,
   EmailWorkspaceOption,
 } from '../_lib/types';
-
-const panelClass =
-  'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60';
 
 type Props = {
   threadId: string;
@@ -110,8 +103,8 @@ export function EmailThreadLinkSection({
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [changeWorkspace, setChangeWorkspace] = useState(false);
+  const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [open, setOpen] = useState(() => !link.linked);
   const autoSuggestTriedRef = useRef<string | null>(null);
 
   const currentLabel = useMemo(() => linkLabel(link), [link]);
@@ -122,10 +115,6 @@ export function EmailThreadLinkSection({
   const workspaceLabel =
     workspaces.find((workspace) => workspace.id === workspaceId)?.label ??
     'Workspace';
-
-  useEffect(() => {
-    setOpen(!link.linked);
-  }, [link.linked, threadId]);
 
   useEffect(() => {
     setWorkspaceId(defaultWorkspaceId(link, workspaces, preferredAccountId));
@@ -145,7 +134,6 @@ export function EmailThreadLinkSection({
   useEffect(() => {
     if (!workspaceId) {
       setOptions([]);
-      setAssignTo('none');
       return;
     }
 
@@ -176,10 +164,11 @@ export function EmailThreadLinkSection({
   function saveLink(
     clear = false,
     suggestion?: EmailThreadLinkSuggestion | null,
+    nextAssignTo = assignTo,
   ) {
     startTransition(async () => {
       try {
-        const selected = options.find((option) => option.id === assignTo);
+        const selected = options.find((option) => option.id === nextAssignTo);
         const data = await emailApiFetch<{ thread: { link: EmailThreadLink } }>(
           `/api/gmail/threads/${threadId}/link`,
           {
@@ -212,13 +201,29 @@ export function EmailThreadLinkSection({
         if (suggestion) {
           onSuggestionUpdated?.(null);
         }
+        if (clear) {
+          setAssignTo('none');
+        }
         toast.success(clear ? 'Link removed' : 'Thread linked');
+        setOpen(false);
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not update link',
         );
       }
     });
+  }
+
+  function handleAssignToChange(value: string) {
+    setAssignTo(value);
+    if (value === 'none') {
+      if (link.linked) {
+        saveLink(true, null, value);
+      }
+      return;
+    }
+
+    saveLink(false, null, value);
   }
 
   function runSuggestLink(silent = false) {
@@ -239,6 +244,7 @@ export function EmailThreadLinkSection({
           if (!silent) {
             toast.success('Thread auto-linked');
           }
+          setOpen(false);
         } else if (data.thread.link_suggestion) {
           if (!silent) {
             toast.success('Link suggestion ready');
@@ -270,144 +276,132 @@ export function EmailThreadLinkSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per thread open
   }, [link.linked, linkSuggestion, threadId]);
 
+  const triggerLabel = currentLabel ?? 'Not assigned';
+  const showAssigned = Boolean(link.linked && currentLabel);
+
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div className={cn(panelClass, 'overflow-hidden')}>
-        <div className="flex items-start gap-2">
-          <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-2 px-3 py-3 text-left">
-            <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                  Client / project
-                </span>
-                <ChevronDown
-                  className={cn(
-                    'h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)] transition-transform',
-                    open && 'rotate-180',
-                  )}
-                />
-              </span>
-              {link.linked && currentLabel ? (
-                <span className="mt-1 block truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                  {currentLabel}
-                  {link.accountName ? ` · ${link.accountName}` : ''}
-                  {link.linkSource === 'auto' ? ' · auto-linked' : ''}
-                </span>
-              ) : !open ? (
-                <span className="mt-1 block text-xs text-[var(--workspace-shell-text-muted)]">
-                  Link this thread to a client or project.
-                </span>
-              ) : null}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          className={cn(
+            'mt-0.5 h-8 max-w-[12rem] shrink-0 gap-1.5 border-[color:var(--workspace-shell-border)] bg-transparent font-normal',
+            showAssigned
+              ? 'text-[var(--workspace-shell-text)]'
+              : 'text-[var(--workspace-shell-text-muted)]',
+          )}
+        >
+          {showAssigned ? (
+            <PlannerClientAvatar
+              name={triggerLabel}
+              pictureUrl={link.clientPictureUrl}
+              color={link.linkColor}
+              className="h-4 w-4"
+            />
+          ) : (
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]">
+              <UserRound className="h-2.5 w-2.5" />
             </span>
-          </CollapsibleTrigger>
-
-          {link.linked ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="mt-2 mr-1 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-              disabled={pending}
-              onClick={(event) => {
-                event.stopPropagation();
-                saveLink(true);
-              }}
-              aria-label="Remove link"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          ) : null}
-        </div>
-
-        {!link.linked && suggestedLabel && linkSuggestion ? (
-          <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--ozer-accent)]">
-                <Sparkles className="h-3 w-3 shrink-0" />
-                <span className="truncate">
-                  Suggested: {suggestedLabel}
-                  {typeof linkConfidence === 'number'
-                    ? ` · ${Math.round(linkConfidence * 100)}%`
-                    : ''}
-                </span>
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                className="h-7 bg-[var(--ozer-accent)] px-2.5 text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                disabled={pending}
-                onClick={() => saveLink(false, linkSuggestion)}
-              >
-                Accept
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        <CollapsibleContent className="border-t border-[color:var(--workspace-shell-border)] px-3 py-3">
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  Client or project
-                </Label>
-                {workspaces.length > 1 ? (
-                  <button
-                    type="button"
-                    className="text-[11px] text-[var(--ozer-accent)] hover:underline"
-                    onClick={() => setChangeWorkspace((value) => !value)}
-                  >
-                    {changeWorkspace
-                      ? 'Hide workspace'
-                      : `Change workspace · ${workspaceLabel}`}
-                  </button>
-                ) : (
-                  <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                    {workspaceLabel}
+          )}
+          <span className="truncate">{triggerLabel}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[min(22rem,calc(100vw-2rem))] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
+      >
+        <div className="space-y-3">
+          {!link.linked && suggestedLabel && linkSuggestion ? (
+            <div className="rounded-lg border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-3 py-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-[var(--ozer-accent)]">
+                  <Sparkles className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    Suggested: {suggestedLabel}
+                    {typeof linkConfidence === 'number'
+                      ? ` · ${Math.round(linkConfidence * 100)}%`
+                      : ''}
                   </span>
-                )}
-              </div>
-
-              {changeWorkspace && workspaces.length > 1 ? (
-                <Select
-                  value={workspaceId || 'none'}
-                  onValueChange={(value) => {
-                    setWorkspaceId(value === 'none' ? '' : value);
-                    setAssignTo('none');
-                  }}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 bg-[var(--ozer-accent)] px-2.5 text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                  disabled={pending}
+                  onClick={() => saveLink(false, linkSuggestion)}
                 >
-                  <SelectTrigger className="mb-2 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
-                    <SelectValue placeholder="Select workspace" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workspaces.map((workspace) => (
-                      <SelectItem key={workspace.id} value={workspace.id}>
-                        {workspace.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
-
-              <TaskAssignmentCombobox
-                value={assignTo}
-                onValueChange={setAssignTo}
-                options={options}
-                isWorkspaceMode
-                placeholder={
-                  optionsLoading ? 'Loading…' : 'Select client or project'
-                }
-              />
+                  Accept
+                </Button>
+              </div>
             </div>
+          ) : null}
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+                Client or project
+              </p>
+              {workspaces.length > 1 ? (
+                <button
+                  type="button"
+                  className="text-[11px] text-[var(--ozer-accent)] hover:underline"
+                  onClick={() => setChangeWorkspace((value) => !value)}
+                >
+                  {changeWorkspace
+                    ? 'Hide workspace'
+                    : `Change workspace · ${workspaceLabel}`}
+                </button>
+              ) : (
+                <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                  {workspaceLabel}
+                </span>
+              )}
+            </div>
+
+            {changeWorkspace && workspaces.length > 1 ? (
+              <Select
+                value={workspaceId || 'none'}
+                onValueChange={(value) => {
+                  setWorkspaceId(value === 'none' ? '' : value);
+                  setAssignTo('none');
+                }}
+              >
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
+                  <SelectValue placeholder="Select workspace" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workspaces.map((workspace) => (
+                    <SelectItem key={workspace.id} value={workspace.id}>
+                      {workspace.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+
+            <TaskAssignmentCombobox
+              embedded
+              value={assignTo}
+              onValueChange={handleAssignToChange}
+              options={options}
+              isWorkspaceMode
+              noneLabel="Not assigned"
+              placeholder={
+                optionsLoading ? 'Loading…' : 'Select client or project'
+              }
+            />
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              variant="ghost"
+              className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
               disabled={pending}
               onClick={() => runSuggestLink(false)}
             >
@@ -418,27 +412,21 @@ export function EmailThreadLinkSection({
               )}
               Suggest link
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-              disabled={
-                pending || !workspaceId || assignTo === 'none' || optionsLoading
-              }
-              onClick={() => saveLink(false)}
-            >
-              {pending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                'Save link'
-              )}
-            </Button>
+            {link.linked ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                disabled={pending}
+                onClick={() => saveLink(true)}
+              >
+                Remove link
+              </Button>
+            ) : null}
           </div>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

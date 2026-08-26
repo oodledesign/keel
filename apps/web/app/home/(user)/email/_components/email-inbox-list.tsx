@@ -11,7 +11,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
@@ -21,11 +20,8 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import {
   addEmailTriageRuleFromThreadAction,
-  setEmailThreadCategoryAction,
 } from '~/lib/email-assistant/email-assistant.actions';
 import {
-  EMAIL_THREAD_CATEGORIES,
-  EMAIL_THREAD_CATEGORY_LABELS,
   type EmailThreadCategory,
   categoryFromTriageRuleAction,
   isActionableEmailCategory,
@@ -43,6 +39,7 @@ import type {
   EmailWorkspaceOption,
 } from '../_lib/types';
 import type { EmailGmailLabel } from '../_lib/types';
+import { EMAIL_INBOX_FILTER_STYLES } from '../_lib/email-category-styles';
 import { EmailLabelChips } from './email-label-chips';
 import { EmailCategoryBadge } from './email-category-badge';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
@@ -197,24 +194,6 @@ export function EmailInboxList({
     Boolean(thread.follow_up_at),
   ).length;
 
-  function setCategory(threadId: string, category: EmailThreadCategory) {
-    startTransition(async () => {
-      try {
-        await setEmailThreadCategoryAction({
-          threadId,
-          category,
-          accountSlug: accountSlug ?? undefined,
-        });
-        onThreadCategoryChange?.(threadId, category);
-        toast.success(`Marked as ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Could not update category',
-        );
-      }
-    });
-  }
-
   function addTriageRule(
     threadId: string,
     action: EmailTriageAction,
@@ -260,21 +239,36 @@ export function EmailInboxList({
           </h2>
           <div className="-mx-1 max-w-full overflow-x-auto px-1">
             <div className="flex w-max rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
-              {FILTER_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => onFilterChange(tab.value)}
-                  className={cn(
-                    'shrink-0 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors',
-                    filter === tab.value
-                      ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              {FILTER_TABS.map((tab) => {
+                const tabStyles = EMAIL_INBOX_FILTER_STYLES[tab.value];
+                const isActive = filter === tab.value;
+
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => onFilterChange(tab.value)}
+                    className={cn(
+                      'flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors',
+                      isActive
+                        ? tabStyles?.tabActive ??
+                            'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                        : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                    )}
+                  >
+                    {tabStyles?.dot ? (
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 shrink-0 rounded-full',
+                          tabStyles.dot,
+                        )}
+                        aria-hidden
+                      />
+                    ) : null}
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -460,18 +454,6 @@ export function EmailInboxList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {EMAIL_THREAD_CATEGORIES.map((category) => (
-                          <DropdownMenuItem
-                            key={category}
-                            disabled={
-                              pending || thread.assistant_category === category
-                            }
-                            onSelect={() => setCategory(thread.id, category)}
-                          >
-                            Mark as {EMAIL_THREAD_CATEGORY_LABELS[category]}
-                          </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
                         <EmailTriageRulesMenuItems
                           subject={thread.subject}
                           disabled={pending}

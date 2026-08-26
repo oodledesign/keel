@@ -259,6 +259,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
       <div
         ref={scrollRef}
+        data-workspace-mobile-scroll-inner
         className="min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       >
         <div

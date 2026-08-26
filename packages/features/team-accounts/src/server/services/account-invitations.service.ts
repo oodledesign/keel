@@ -428,6 +428,12 @@ class AccountInvitationsService {
         );
       }
 
+      if (message.includes('ambiguous') && message.includes('user_id')) {
+        throw new Error(
+          'We could not complete your invitation due to a temporary system issue. Please try again in a few minutes, or ask the workspace admin to resend the invite.',
+        );
+      }
+
       throw new Error(
         'We could not add you to the workspace. Please try again, or ask the workspace admin to resend the invite.',
       );

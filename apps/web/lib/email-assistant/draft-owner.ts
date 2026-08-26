@@ -14,17 +14,31 @@ export type DraftOwnerContext = {
 export async function resolveDraftOwnerContext(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  options?: {
+    connectionId?: string | null;
+    fallbackEmail?: string | null;
+  },
 ): Promise<DraftOwnerContext | null> {
   const admin = getSupabaseServerAdminClient();
+  const connectionId = options?.connectionId?.trim() || null;
+
+  const connectionQuery = connectionId
+    ? admin
+        .from('google_connections')
+        .select('id, google_email, mailbox_kind')
+        .eq('id', connectionId)
+        .eq('user_id', userId)
+        .maybeSingle()
+    : admin
+        .from('google_connections')
+        .select('id, google_email, mailbox_kind')
+        .eq('user_id', userId)
+        .eq('mailbox_kind', mailboxKind)
+        .maybeSingle();
 
   const [{ data: connection }, { data: account }, { data: authUser }] =
     await Promise.all([
-      admin
-        .from('google_connections')
-        .select('id, google_email')
-        .eq('user_id', userId)
-        .eq('mailbox_kind', mailboxKind)
-        .maybeSingle(),
+      connectionQuery,
       admin
         .from('accounts')
         .select('name, email')
@@ -36,10 +50,15 @@ export async function resolveDraftOwnerContext(
   const connectionRow = connection as {
     id?: string;
     google_email?: string | null;
+    mailbox_kind?: string | null;
   } | null;
+
+  const resolvedMailboxKind: MailboxKind =
+    connectionRow?.mailbox_kind === 'personal' ? 'personal' : mailboxKind;
 
   const ownerEmail =
     connectionRow?.google_email?.trim() ||
+    options?.fallbackEmail?.trim() ||
     authUser?.user?.email?.trim() ||
     (account as { email?: string | null } | null)?.email?.trim() ||
     '';
@@ -69,6 +88,6 @@ export async function resolveDraftOwnerContext(
     email: ownerEmail,
     displayName,
     connectionId: connectionRow?.id ?? null,
-    mailboxKind,
+    mailboxKind: resolvedMailboxKind,
   };
 }

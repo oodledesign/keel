@@ -40,6 +40,8 @@ export type EmailThreadLink = {
   accountName: string | null;
   clientName: string | null;
   projectName: string | null;
+  clientPictureUrl?: string | null;
+  linkColor?: string | null;
 };
 
 export type EmailThreadSummary = {

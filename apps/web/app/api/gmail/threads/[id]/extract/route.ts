@@ -89,7 +89,10 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  const owner = await resolveDraftOwnerContext(auth.user.id, mailboxKind);
+  const owner = await resolveDraftOwnerContext(auth.user.id, mailboxKind, {
+    connectionId,
+    fallbackEmail: auth.user.email,
+  });
 
   if (!owner) {
     return jsonErr('OWNER_UNKNOWN', 'Could not resolve mailbox owner', 500);

@@ -58,7 +58,10 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  const owner = await resolveDraftOwnerContext(auth.user.id, mailboxKind);
+  const owner = await resolveDraftOwnerContext(auth.user.id, mailboxKind, {
+    connectionId,
+    fallbackEmail: auth.user.email,
+  });
   if (!owner) {
     return jsonErr('MISSING_OWNER', 'Could not resolve mailbox owner', 400);
   }
@@ -89,7 +92,7 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  const thread = await loadEmailThreadDetailFromDb(threadId);
+  const thread = await loadEmailThreadDetailFromDb(threadId, auth.user.id);
 
   if (!thread) {
     return jsonErr('NOT_FOUND', 'Thread not found', 404);

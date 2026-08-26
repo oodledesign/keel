@@ -1,5 +1,6 @@
 'use server';
 
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -175,113 +176,148 @@ export const updateInvitationAction = enhanceAction(
  * @name acceptInvitationAction
  * @description Accepts an invitation to join a team.
  */
+export type AcceptInvitationActionResult =
+  | { ok: false; error: string }
+  | void;
+
 export const acceptInvitationAction = enhanceAction(
-  async (data: FormData, user) => {
-    const client = getSupabaseServerClient();
+  async (data: FormData, user): Promise<AcceptInvitationActionResult> => {
+    try {
+      const client = getSupabaseServerClient();
 
-    const { inviteToken, nextPath } = AcceptInvitationSchema.parse(
-      Object.fromEntries(data),
-    );
-
-    // create the services
-    const perSeatBillingService = createAccountPerSeatBillingService(client);
-    const service = createAccountInvitationsService(client);
-
-    // use admin client to accept invitation
-    const adminClient = getSupabaseServerAdminClient();
-
-    // Read seat kind / role before accept deletes the invitation row
-    const { data: invitationRow } = await adminClient
-      .from('invitations')
-      .select('seat_kind, email, role, account_id')
-      .eq('invite_token', inviteToken)
-      .maybeSingle();
-    const seatKind =
-      (invitationRow as { seat_kind?: string } | null)?.seat_kind ?? 'billable';
-    const invitationMeta = invitationRow as {
-      email?: string;
-      role?: string;
-      account_id?: string;
-    } | null;
-
-    // Accept the invitation
-    const accountId = await service.acceptInvitationToTeam(adminClient, {
-      inviteToken,
-      userId: user.id,
-      userEmail: user.email,
-    });
-
-    // If the account ID is not present, throw an error
-    if (!accountId) {
-      throw new Error('Failed to accept invitation');
-    }
-
-    // Support seats do not bump Stripe quantity. Billable seats only bump when
-    // assigned headcount exceeds the subscribed quantity (explicit upgrade).
-    if (seatKind !== 'support') {
-      const subscription =
-        await perSeatBillingService.getPerSeatSubscriptionItem(accountId);
-      const item = subscription?.subscription_items.find(
-        (entry) => entry.type === 'per_seat',
+      const { inviteToken, nextPath } = AcceptInvitationSchema.parse(
+        Object.fromEntries(data),
       );
-      const subscribed = item?.quantity ?? 0;
 
-      const { count } = await (
-        adminClient as unknown as {
-          from: (t: string) => {
-            select: (
-              c: string,
-              o: { count: 'exact'; head: true },
-            ) => {
-              eq: (
-                a: string,
-                b: string,
+      // create the services
+      const perSeatBillingService = createAccountPerSeatBillingService(client);
+      const service = createAccountInvitationsService(client);
+
+      // use admin client to accept invitation
+      const adminClient = getSupabaseServerAdminClient();
+
+      // Read seat kind / role before accept deletes the invitation row
+      const { data: invitationRow } = await adminClient
+        .from('invitations')
+        .select('seat_kind, email, role, account_id')
+        .eq('invite_token', inviteToken)
+        .maybeSingle();
+      const seatKind =
+        (invitationRow as { seat_kind?: string } | null)?.seat_kind ??
+        'billable';
+      const invitationMeta = invitationRow as {
+        email?: string;
+        role?: string;
+        account_id?: string;
+      } | null;
+
+      // Accept the invitation
+      const accountId = await service.acceptInvitationToTeam(adminClient, {
+        inviteToken,
+        userId: user.id,
+        userEmail: user.email,
+      });
+
+      // If the account ID is not present, throw an error
+      if (!accountId) {
+        return {
+          ok: false,
+          error:
+            'We could not add you to the workspace. Please try again, or ask the workspace admin to resend the invite.',
+        };
+      }
+
+      // Support seats do not bump Stripe quantity. Billable seats only bump when
+      // assigned headcount exceeds the subscribed quantity (explicit upgrade).
+      if (seatKind !== 'support') {
+        const subscription =
+          await perSeatBillingService.getPerSeatSubscriptionItem(accountId);
+        const item = subscription?.subscription_items.find(
+          (entry) => entry.type === 'per_seat',
+        );
+        const subscribed = item?.quantity ?? 0;
+
+        const { count } = await (
+          adminClient as unknown as {
+            from: (t: string) => {
+              select: (
+                c: string,
+                o: { count: 'exact'; head: true },
               ) => {
-                eq: (c: string, d: string) => Promise<{ count: number | null }>;
+                eq: (
+                  a: string,
+                  b: string,
+                ) => {
+                  eq: (
+                    c: string,
+                    d: string,
+                  ) => Promise<{ count: number | null }>;
+                };
               };
             };
-          };
+          }
+        )
+          .from('accounts_memberships')
+          .select('*', { count: 'exact', head: true })
+          .eq('account_id', accountId)
+          .eq('seat_kind', 'billable');
+
+        if ((count ?? 0) > subscribed) {
+          await perSeatBillingService.increaseSeats(accountId);
         }
-      )
-        .from('accounts_memberships')
-        .select('*', { count: 'exact', head: true })
-        .eq('account_id', accountId)
-        .eq('seat_kind', 'billable');
-
-      if ((count ?? 0) > subscribed) {
-        await perSeatBillingService.increaseSeats(accountId);
       }
+
+      void (async () => {
+        try {
+          const { data: account } = await adminClient
+            .from('accounts')
+            .select('name, slug')
+            .eq('id', accountId)
+            .maybeSingle();
+
+          const { notifyPlatformTeamInviteAccepted } =
+            await import('../services/notify-platform-invite-accepted');
+
+          await notifyPlatformTeamInviteAccepted({
+            email: invitationMeta?.email ?? user.email ?? '',
+            userId: user.id,
+            accountId,
+            workspaceName: account?.name ?? null,
+            workspaceSlug: account?.slug ?? null,
+            role: invitationMeta?.role ?? null,
+          });
+        } catch (err) {
+          const logger = await getLogger();
+          logger.error(
+            { error: err instanceof Error ? err.message : err },
+            'Failed to send invite-accepted ops notification',
+          );
+        }
+      })();
+
+      redirect(nextPath);
+    } catch (error) {
+      if (isRedirectError(error)) {
+        throw error;
+      }
+
+      if (error instanceof z.ZodError) {
+        return {
+          ok: false,
+          error: 'That invitation link looks invalid. Ask the workspace admin to send a new invite.',
+        };
+      }
+
+      if (error instanceof Error && error.message.trim()) {
+        return { ok: false, error: error.message };
+      }
+
+      return {
+        ok: false,
+        error:
+          'We could not add you to the workspace. Please try again, or ask the workspace admin to resend the invite.',
+      };
     }
-
-    void (async () => {
-      try {
-        const { data: account } = await adminClient
-          .from('accounts')
-          .select('name, slug')
-          .eq('id', accountId)
-          .maybeSingle();
-
-        const { notifyPlatformTeamInviteAccepted } =
-          await import('../services/notify-platform-invite-accepted');
-
-        await notifyPlatformTeamInviteAccepted({
-          email: invitationMeta?.email ?? user.email ?? '',
-          userId: user.id,
-          accountId,
-          workspaceName: account?.name ?? null,
-          workspaceSlug: account?.slug ?? null,
-          role: invitationMeta?.role ?? null,
-        });
-      } catch (err) {
-        const logger = await getLogger();
-        logger.error(
-          { error: err instanceof Error ? err.message : err },
-          'Failed to send invite-accepted ops notification',
-        );
-      }
-    })();
-
-    return redirect(nextPath);
   },
   {},
 );

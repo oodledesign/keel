@@ -71,6 +71,7 @@ import {
 } from '~/lib/email-assistant/message-body-display';
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
+import { EMAIL_CATEGORY_STYLES } from '../_lib/email-category-styles';
 import { EmailApiError, emailApiFetch } from '../_lib/email-api';
 import type {
   EmailGmailLabel,
@@ -78,12 +79,14 @@ import type {
   EmailDraftRow,
   EmailMessageRow,
   EmailThreadDetail,
+  EmailThreadSummary,
   EmailWorkspaceOption,
 } from '../_lib/types';
 import { AcceptActionItemDialog } from './accept-action-item-dialog';
 import { EmailCategoryBadge } from './email-category-badge';
 import { EmailLabelChips } from './email-label-chips';
 import { EmailLabelsPicker } from './email-labels-picker';
+import { EmailReviewModeIndicator } from './email-review-mode-indicator';
 import { EmailThreadLeadSection } from './email-thread-lead-section';
 import { EmailThreadLinkSection } from './email-thread-link-section';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
@@ -264,6 +267,48 @@ export function EmailThreadPanel({
 
       setDetail(result.data);
       setDraftBody(result.data.draft?.body_text ?? '');
+    });
+  }
+
+  function runSuggestPipelineLead() {
+    if (!threadId || mailboxKind !== 'business' || detail?.thread.pipeline_deal_id) {
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const data = await emailApiFetch<{ thread: EmailThreadSummary }>(
+          `/api/gmail/threads/${threadId}/suggest-pipeline-lead`,
+          { method: 'POST' },
+        );
+
+        setDetail((current) =>
+          current
+            ? {
+                ...current,
+                thread: {
+                  ...current.thread,
+                  pipeline_lead_suggestion:
+                    data.thread.pipeline_lead_suggestion,
+                  pipeline_lead_confidence: data.thread.pipeline_lead_confidence,
+                  pipeline_deal_id: data.thread.pipeline_deal_id,
+                },
+              }
+            : current,
+        );
+
+        if (data.thread.pipeline_lead_suggestion) {
+          toast.success('Pipeline lead suggestion ready');
+        } else {
+          toast.message('No new lead detected for this thread');
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not suggest pipeline lead',
+        );
+      }
     });
   }
 
@@ -592,7 +637,7 @@ export function EmailThreadPanel({
           'flex min-h-[320px] flex-col overflow-hidden',
         )}
       >
-        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <div className="space-y-2">
             <div className="h-5 w-2/3 max-w-md animate-pulse rounded bg-[var(--workspace-shell-sidebar-accent)]" />
             <div className="h-3 w-24 animate-pulse rounded bg-[var(--workspace-shell-sidebar-accent)]" />
@@ -634,7 +679,7 @@ export function EmailThreadPanel({
           'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
         )}
       >
-        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <div className="flex items-start gap-3">
             {showBackButton && onBack ? (
               <Button
@@ -667,11 +712,7 @@ export function EmailThreadPanel({
                   labels={gmailLabels}
                   max={6}
                 />
-                {reviewMode ? (
-                  <span className="text-[10px] font-medium tracking-wide text-[var(--ozer-accent)] uppercase">
-                    Review mode
-                  </span>
-                ) : null}
+                {reviewMode ? <EmailReviewModeIndicator /> : null}
               </div>
             </div>
             <EmailLabelsPicker
@@ -692,6 +733,31 @@ export function EmailThreadPanel({
                 );
               }}
             />
+            <EmailThreadLinkSection
+              threadId={threadId}
+              link={detail.thread.link}
+              linkSuggestion={detail.thread.link_suggestion}
+              linkConfidence={detail.thread.link_confidence}
+              workspaces={workspaces}
+              preferredAccountId={preferredAccountId}
+              onUpdated={(link) => {
+                setDetail((current) =>
+                  current
+                    ? { ...current, thread: { ...current.thread, link } }
+                    : current,
+                );
+              }}
+              onSuggestionUpdated={(link_suggestion) => {
+                setDetail((current) =>
+                  current
+                    ? {
+                        ...current,
+                        thread: { ...current.thread, link_suggestion },
+                      }
+                    : current,
+                );
+              }}
+            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -701,22 +767,43 @@ export function EmailThreadPanel({
                   className="mt-0.5 shrink-0 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
                   disabled={pending}
                 >
+                  {detail.thread.assistant_category ? (
+                    <span
+                      className={cn(
+                        'mr-1.5 h-2 w-2 shrink-0 rounded-full',
+                        EMAIL_CATEGORY_STYLES[detail.thread.assistant_category]
+                          .dot,
+                      )}
+                      aria-hidden
+                    />
+                  ) : null}
                   Category
                   <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {EMAIL_THREAD_CATEGORIES.map((category) => (
-                  <DropdownMenuItem
-                    key={category}
-                    disabled={
-                      pending || detail.thread.assistant_category === category
-                    }
-                    onSelect={() => setCategory(category)}
-                  >
-                    {EMAIL_THREAD_CATEGORY_LABELS[category]}
-                  </DropdownMenuItem>
-                ))}
+                {EMAIL_THREAD_CATEGORIES.map((category) => {
+                  const styles = EMAIL_CATEGORY_STYLES[category];
+
+                  return (
+                    <DropdownMenuItem
+                      key={category}
+                      disabled={
+                        pending || detail.thread.assistant_category === category
+                      }
+                      onSelect={() => setCategory(category)}
+                    >
+                      <span
+                        className={cn(
+                          'mr-2 h-2 w-2 shrink-0 rounded-full',
+                          styles.dot,
+                        )}
+                        aria-hidden
+                      />
+                      {EMAIL_THREAD_CATEGORY_LABELS[category]}
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuContent>
             </DropdownMenu>
             {detail.thread.assistant_category_reason?.trim() ? (
@@ -756,18 +843,20 @@ export function EmailThreadPanel({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {EMAIL_THREAD_CATEGORIES.map((category) => (
+                {mailboxKind === 'business' &&
+                !detail.thread.pipeline_deal_id ? (
                   <DropdownMenuItem
-                    key={`menu-${category}`}
-                    disabled={
-                      pending || detail.thread.assistant_category === category
-                    }
-                    onSelect={() => setCategory(category)}
+                    disabled={pending}
+                    onSelect={runSuggestPipelineLead}
                   >
-                    Mark as {EMAIL_THREAD_CATEGORY_LABELS[category]}
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Re-scan for pipeline lead
                   </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
+                ) : null}
+                {mailboxKind === 'business' &&
+                !detail.thread.pipeline_deal_id ? (
+                  <DropdownMenuSeparator />
+                ) : null}
                 <EmailTriageRulesMenuItems
                   subject={detail.thread.subject}
                   disabled={pending}
@@ -778,7 +867,7 @@ export function EmailThreadPanel({
           </div>
         </div>
 
-        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
               Follow-up
@@ -831,31 +920,6 @@ export function EmailThreadPanel({
               </span>
             ) : null}
           </div>
-          <EmailThreadLinkSection
-            threadId={threadId}
-            link={detail.thread.link}
-            linkSuggestion={detail.thread.link_suggestion}
-            linkConfidence={detail.thread.link_confidence}
-            workspaces={workspaces}
-            preferredAccountId={preferredAccountId}
-            onUpdated={(link) => {
-              setDetail((current) =>
-                current
-                  ? { ...current, thread: { ...current.thread, link } }
-                  : current,
-              );
-            }}
-            onSuggestionUpdated={(link_suggestion) => {
-              setDetail((current) =>
-                current
-                  ? {
-                      ...current,
-                      thread: { ...current.thread, link_suggestion },
-                    }
-                  : current,
-              );
-            }}
-          />
           {mailboxKind === 'business' &&
           (detail.thread.pipeline_deal_id ||
             detail.thread.pipeline_lead_suggestion ||

@@ -14,36 +14,7 @@ import {
   type EmailThreadCategory,
 } from '~/lib/email-assistant/email-thread-categories';
 
-const CATEGORY_STYLES: Record<
-  EmailThreadCategory,
-  { border: string; bg: string; text: string }
-> = {
-  reply_now: {
-    border: 'border-[var(--ozer-accent)]/30',
-    bg: 'bg-[var(--ozer-accent-subtle)]',
-    text: 'text-[var(--ozer-accent)]',
-  },
-  reply_later: {
-    border: 'border-amber-500/30',
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-700 dark:text-amber-300',
-  },
-  waiting: {
-    border: 'border-sky-500/30',
-    bg: 'bg-sky-500/10',
-    text: 'text-sky-700 dark:text-sky-300',
-  },
-  fyi: {
-    border: 'border-[color:var(--workspace-shell-border)]',
-    bg: 'bg-[var(--workspace-shell-sidebar-accent)]',
-    text: 'text-[var(--workspace-shell-text-muted)]',
-  },
-  noise: {
-    border: 'border-[color:var(--workspace-shell-border)]',
-    bg: 'bg-[var(--workspace-shell-sidebar-accent)]/60',
-    text: 'text-[var(--workspace-shell-text-muted)]',
-  },
-};
+import { EMAIL_CATEGORY_STYLES } from '../_lib/email-category-styles';
 
 type Props = {
   category: EmailThreadCategory | null;
@@ -73,7 +44,7 @@ export function EmailCategoryBadge({
     );
   }
 
-  const styles = CATEGORY_STYLES[category];
+  const styles = EMAIL_CATEGORY_STYLES[category];
   const label = EMAIL_THREAD_CATEGORY_LABELS[category];
   const hint = EMAIL_THREAD_CATEGORY_HINTS[category];
   const whyText = reason?.trim() || hint;
