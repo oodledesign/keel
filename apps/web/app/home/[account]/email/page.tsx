@@ -7,7 +7,6 @@ import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { EmailPageClient } from '~/home/(user)/email/_components/email-page-client';
-import { EmailPageScrollShell } from '~/home/(user)/email/_components/email-page-scroll-shell';
 import { loadEmailPageData } from '~/home/(user)/email/_lib/server/email-page.loader';
 import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-assistant-access';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -48,11 +47,9 @@ async function BusinessEmailPage({ params }: PageProps) {
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] py-0 lg:px-6">
-      <EmailPageScrollShell>
-        <Suspense fallback={<EmailPageSkeleton />}>
-          <BusinessEmailPageContent accountSlug={account} />
-        </Suspense>
-      </EmailPageScrollShell>
+      <Suspense fallback={<EmailPageSkeleton />}>
+        <BusinessEmailPageContent accountSlug={account} />
+      </Suspense>
     </PageBody>
   );
 }

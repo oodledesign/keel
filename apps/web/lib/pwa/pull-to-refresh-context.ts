@@ -1,3 +1,4 @@
+import { isEmailRoute } from './is-email-route';
 import { isNoteEditorRoute } from './is-note-editor-route';
 import { isStandalonePwa } from './is-standalone-pwa';
 import {
@@ -61,7 +62,7 @@ export function isPullToRefreshEnabled(): boolean {
 
   const pathname = resolvePullToRefreshPathname();
 
-  if (isNoteEditorRoute(pathname)) {
+  if (isNoteEditorRoute(pathname) || isEmailRoute(pathname)) {
     return false;
   }
 

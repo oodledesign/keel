@@ -1,5 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
+
+import { usePathname } from 'next/navigation';
+
 import { MobileTapHaptics } from '~/components/mobile-tap-haptics';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
@@ -24,6 +28,9 @@ import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-swit
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import { isEmailRoute } from '~/lib/pwa/is-email-route';
+import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
+import { syncPullToRefreshPathname } from '~/lib/pwa/pull-to-refresh-context';
 import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
 import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 
@@ -44,7 +51,15 @@ export function PersonalHomeMobileChrome({
   switcherPortals = [],
   children,
 }: PersonalHomeMobileChromeProps) {
+  const pathname = usePathname();
+  const noteEditorScroll = isNoteEditorRoute(pathname);
+  const fullHeightPageScroll =
+    noteEditorScroll || isEmailRoute(pathname);
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
+
+  useEffect(() => {
+    syncPullToRefreshPathname(pathname);
+  }, [pathname]);
   const homePath = getExplicitPersonalHomePath();
   const userId = workspace.user.id;
   const switcherAccounts = buildPersonalSwitcherAccounts(rawSwitcherAccounts);
@@ -52,8 +67,14 @@ export function PersonalHomeMobileChrome({
   return (
     <>
       <MobileTapHaptics />
-      <WorkspaceMobileScrollLock />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      {!noteEditorScroll ? <WorkspaceMobileScrollLock /> : null}
+      <div
+        className={
+          fullHeightPageScroll
+            ? 'flex min-w-0 flex-1 flex-col'
+            : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
+        }
+      >
         <WorkspaceMobileHeaderBar>
           <div className="min-w-0 flex-1">
             <WorkspaceAccountsSelector
@@ -92,7 +113,11 @@ export function PersonalHomeMobileChrome({
           />
         </WorkspaceMobileHeaderBar>
 
-        <PullToRefresh className="min-w-0 lg:pb-0">{children}</PullToRefresh>
+        {fullHeightPageScroll ? (
+          <div className="min-h-0 min-w-0 flex-1 lg:pb-0">{children}</div>
+        ) : (
+          <PullToRefresh className="min-w-0 lg:pb-0">{children}</PullToRefresh>
+        )}
       </div>
 
       <WorkspaceMobileMenu

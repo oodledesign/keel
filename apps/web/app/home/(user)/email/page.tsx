@@ -8,7 +8,6 @@ import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { EmailPageClient } from './_components/email-page-client';
-import { EmailPageScrollShell } from './_components/email-page-scroll-shell';
 import { loadEmailPageData } from './_lib/server/email-page.loader';
 
 export const metadata = { title: 'Personal email' };
@@ -22,11 +21,9 @@ async function EmailPageContent() {
 function EmailPage() {
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] py-0 lg:px-6">
-      <EmailPageScrollShell>
-        <Suspense fallback={<EmailPageSkeleton />}>
-          <EmailPageContent />
-        </Suspense>
-      </EmailPageScrollShell>
+      <Suspense fallback={<EmailPageSkeleton />}>
+        <EmailPageContent />
+      </Suspense>
     </PageBody>
   );
 }

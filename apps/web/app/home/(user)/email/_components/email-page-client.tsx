@@ -650,12 +650,17 @@ export function EmailPageClient({ initialData }: Props) {
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden px-3 pt-3 md:px-6 md:pt-6 lg:px-8',
+        'flex h-full min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden px-3 pt-2 md:gap-4 md:px-6 md:pt-6 lg:px-8',
       )}
     >
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[color:var(--workspace-shell-border)] pb-5">
+      <div
+        className={cn(
+          'flex shrink-0 items-center justify-between gap-4 border-b border-[color:var(--workspace-shell-border)] pb-4 lg:pb-5',
+          mobileShowThread && 'hidden lg:flex',
+        )}
+      >
         <div className="flex min-w-0 items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl lg:text-2xl">
             {mailboxKind === 'business' ? 'Emails' : 'Personal email'}
           </h1>
           {reviewMode ? <EmailReviewModeIndicator size="md" /> : null}
@@ -773,7 +778,7 @@ export function EmailPageClient({ initialData }: Props) {
       />
 
 
-      <div className="grid h-full min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
+      <div className="grid h-full min-h-0 min-w-0 flex-1 gap-3 overflow-hidden md:gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
         <div
           className={cn(
             'flex h-full min-h-0 min-w-0 flex-col lg:sticky lg:top-0 lg:max-h-full lg:self-start',

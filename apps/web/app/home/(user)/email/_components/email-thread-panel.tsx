@@ -47,6 +47,7 @@ import { cn } from '@kit/ui/utils';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { listTemplatesPickerAction } from '~/lib/content-templates/account.actions';
 import type { PickerTemplate } from '~/lib/content-templates/types';
+import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import {
   addEmailTriageRuleFromThreadAction,
   setEmailThreadCategoryAction,
@@ -679,42 +680,54 @@ export function EmailThreadPanel({
           'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
         )}
       >
-        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-2.5">
-          <div className="flex items-start gap-3">
-            {showBackButton && onBack ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] lg:hidden"
-                onClick={onBack}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-base font-semibold text-[var(--workspace-shell-text)]">
-                {detail.thread.subject?.trim() || '(no subject)'}
-              </h2>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  {detail.messages.length} message
-                  {detail.messages.length === 1 ? '' : 's'}
-                </p>
-                <EmailCategoryBadge
-                  category={detail.thread.assistant_category}
-                  reason={detail.thread.assistant_category_reason}
-                  confidence={detail.thread.assistant_category_confidence}
-                  showWhy
-                />
-                <EmailLabelChips
-                  labelIds={detail.thread.label_ids}
-                  labels={gmailLabels}
-                  max={6}
-                />
-                {reviewMode ? <EmailReviewModeIndicator /> : null}
+        <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-3 py-2 lg:px-4 lg:py-2.5">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:gap-3">
+            <div className="flex min-w-0 items-start gap-2 lg:flex-1">
+              {showBackButton && onBack ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] lg:hidden"
+                  onClick={onBack}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <h2 className="line-clamp-2 text-base font-semibold text-[var(--workspace-shell-text)] lg:truncate lg:line-clamp-none">
+                  {detail.thread.subject?.trim() || '(no subject)'}
+                </h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    {detail.messages.length} message
+                    {detail.messages.length === 1 ? '' : 's'}
+                  </p>
+                  <EmailCategoryBadge
+                    category={detail.thread.assistant_category}
+                    reason={detail.thread.assistant_category_reason}
+                    confidence={detail.thread.assistant_category_confidence}
+                    showWhy
+                    className="hidden lg:inline-flex"
+                  />
+                  <EmailLabelChips
+                    labelIds={detail.thread.label_ids}
+                    labels={gmailLabels}
+                    max={3}
+                    className="lg:hidden"
+                  />
+                  <EmailLabelChips
+                    labelIds={detail.thread.label_ids}
+                    labels={gmailLabels}
+                    max={6}
+                    className="hidden lg:flex"
+                  />
+                  {reviewMode ? <EmailReviewModeIndicator /> : null}
+                </div>
               </div>
             </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 lg:mt-0.5 lg:shrink-0">
             <EmailLabelsPicker
               threadId={detail.thread.id}
               labelIds={detail.thread.label_ids ?? []}
@@ -764,7 +777,7 @@ export function EmailThreadPanel({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="mt-0.5 shrink-0 border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
+                  className="h-8 shrink-0 border-[color:var(--workspace-shell-border)] bg-transparent px-2.5 text-xs text-[var(--workspace-shell-text)]"
                   disabled={pending}
                 >
                   {detail.thread.assistant_category ? (
@@ -823,7 +836,7 @@ export function EmailThreadPanel({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                    className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                     aria-label="Why this category?"
                   >
                     <HelpCircle className="h-4 w-4" />
@@ -846,7 +859,7 @@ export function EmailThreadPanel({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                  className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                   disabled={pending}
                   aria-label="Thread triage actions"
                 >
@@ -875,6 +888,7 @@ export function EmailThreadPanel({
                 />
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -965,11 +979,22 @@ export function EmailThreadPanel({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-3">
+          <div
+            className={cn(
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-3 lg:px-4',
+              MOBILE_FLOATING_CHROME_SCROLL_PB,
+              'lg:pb-0',
+            )}
+          >
             <ThreadMessages messages={detail.messages} />
           </div>
 
-          <div className="min-h-0 shrink-0 space-y-4 overflow-x-hidden overflow-y-auto border-t border-[color:var(--workspace-shell-border)] px-4 py-3">
+          <div
+            className={cn(
+              'min-h-0 space-y-4 overflow-x-hidden overflow-y-auto border-t border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4',
+              'max-h-[min(52vh,28rem)] shrink lg:max-h-[min(46vh,28rem)] lg:shrink-0',
+            )}
+          >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Suggested to-dos
@@ -1112,12 +1137,11 @@ export function EmailThreadPanel({
                 </ul>
               </div>
             ) : null}
-          </div>
 
-          <div
-            ref={draftSectionRef}
-            className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4"
-          >
+            <div
+              ref={draftSectionRef}
+              className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4"
+            >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Draft reply

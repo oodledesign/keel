@@ -262,13 +262,13 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
         data-workspace-mobile-scroll-inner
         className="min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       >
-        <div
-          className={cn(
-            'rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
-            !isDragging && pullDistance === 0 && !refreshing
-              ? ''
-              : !isDragging && 'transition-transform duration-200 ease-out',
-          )}
+          <div
+            className={cn(
+              'flex min-h-full min-w-0 flex-col rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
+              !isDragging && pullDistance === 0 && !refreshing
+                ? ''
+                : !isDragging && 'transition-transform duration-200 ease-out',
+            )}
           style={
             contentOffset > 0
               ? { transform: `translateY(${contentOffset}px)` }

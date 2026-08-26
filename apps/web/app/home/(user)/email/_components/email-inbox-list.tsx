@@ -18,6 +18,7 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import {
   addEmailTriageRuleFromThreadAction,
 } from '~/lib/email-assistant/email-assistant.actions';
@@ -233,12 +234,12 @@ export function EmailInboxList({
         'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
       )}
     >
-      <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4">
+        <div className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             Inbox
           </h2>
-          <div className="-mx-1 max-w-full overflow-x-auto px-1">
+          <div className="-mx-3 overflow-x-auto px-3 lg:mx-0 lg:px-0">
             <div className="flex w-max rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
               {FILTER_TABS.map((tab) => {
                 const tabStyles = EMAIL_INBOX_FILTER_STYLES[tab.value];
@@ -338,7 +339,13 @@ export function EmailInboxList({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto',
+          MOBILE_FLOATING_CHROME_SCROLL_PB,
+          'lg:pb-0',
+        )}
+      >
         {threads.length === 0 ? (
           <div className="px-4 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
             {trimmedSearch
