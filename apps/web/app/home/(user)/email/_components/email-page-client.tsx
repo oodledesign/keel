@@ -148,8 +148,55 @@ export function EmailPageClient({ initialData }: Props) {
   const handledOAuthParams = useRef(false);
   const autoSyncStarted = useRef(false);
 
-  const selectedThreadId = searchParams.get('thread');
-  const focusDraft = searchParams.get('focus') === 'draft';
+  const emailHomePath =
+    mailboxKind === 'business' && initialData.accountSlug
+      ? pathsConfig.app.accountEmailAssistant.replace(
+          '[account]',
+          initialData.accountSlug,
+        )
+      : pathsConfig.app.personalEmailAssistant;
+
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
+    () => searchParams.get('thread'),
+  );
+  const [focusDraft, setFocusDraft] = useState(
+    () => searchParams.get('focus') === 'draft',
+  );
+
+  const syncThreadUrl = useCallback(
+    (threadId: string | null, focus: boolean) => {
+      const params = new URLSearchParams(window.location.search);
+
+      if (threadId) {
+        params.set('thread', threadId);
+      } else {
+        params.delete('thread');
+        params.delete('focus');
+      }
+
+      if (focus && threadId) {
+        params.set('focus', 'draft');
+      } else {
+        params.delete('focus');
+      }
+
+      const qs = params.toString();
+      const url = qs ? `${emailHomePath}?${qs}` : emailHomePath;
+      window.history.replaceState(null, '', url);
+    },
+    [emailHomePath],
+  );
+
+  useEffect(() => {
+    function onPopState() {
+      const params = new URLSearchParams(window.location.search);
+      setSelectedThreadId(params.get('thread'));
+      setFocusDraft(params.get('focus') === 'draft');
+    }
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const threadsEndpoint = useCallback(
     (cursor?: string | null) =>
@@ -264,14 +311,6 @@ export function EmailPageClient({ initialData }: Props) {
     },
     [reloadThreads, router, mailboxKind, initialData.preferredAccountId],
   );
-
-  const emailHomePath =
-    mailboxKind === 'business' && initialData.accountSlug
-      ? pathsConfig.app.accountEmailAssistant.replace(
-          '[account]',
-          initialData.accountSlug,
-        )
-      : pathsConfig.app.personalEmailAssistant;
 
   useEffect(() => {
     const connected = searchParams.get('email_connected');
@@ -411,16 +450,18 @@ export function EmailPageClient({ initialData }: Props) {
 
   const selectThread = useCallback(
     (threadId: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('thread', threadId);
-      router.push(`${emailHomePath}?${params.toString()}`);
+      setSelectedThreadId(threadId);
+      setFocusDraft(false);
+      syncThreadUrl(threadId, false);
     },
-    [emailHomePath, router, searchParams],
+    [syncThreadUrl],
   );
 
   const clearThread = useCallback(() => {
-    router.push(emailHomePath);
-  }, [emailHomePath, router]);
+    setSelectedThreadId(null);
+    setFocusDraft(false);
+    syncThreadUrl(null, false);
+  }, [syncThreadUrl]);
 
   const changeInboxFilter = useCallback((filter: EmailInboxFilter) => {
     setInboxFilter(filter);
@@ -701,6 +742,7 @@ export function EmailPageClient({ initialData }: Props) {
         open={showEmailOnboarding}
         onOpenChange={setShowEmailOnboarding}
         mailboxKind={mailboxKind}
+        accountSlug={initialData.accountSlug}
         onCompleted={() => {
           setShowEmailOnboarding(false);
           router.refresh();

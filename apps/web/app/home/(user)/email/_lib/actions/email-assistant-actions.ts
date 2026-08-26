@@ -21,9 +21,13 @@ import type {
 
 const EMAIL_PATH = '/app/email';
 
-function revalidateEmailPage() {
+function revalidateEmailPage(accountSlug?: string) {
   revalidatePath('/home/email');
   revalidatePath(EMAIL_PATH);
+  if (accountSlug) {
+    revalidatePath(`/home/${accountSlug}/email`);
+    revalidatePath(`/app/${accountSlug}/email`);
+  }
 }
 
 async function requireEmailAssistantAccess() {
@@ -237,6 +241,7 @@ export async function disconnectGmailConnection(input?: {
 
 export async function completeEmailOnboarding(input: {
   mailboxKind?: 'business' | 'personal';
+  accountSlug?: string;
   syncTriageToGmail: boolean;
   respectExistingGmailLabels: boolean;
   autoDraftEnabled: boolean;
@@ -289,6 +294,6 @@ export async function completeEmailOnboarding(input: {
     return { success: false as const, error: error.message };
   }
 
-  revalidateEmailPage();
+  revalidateEmailPage(input.accountSlug);
   return { success: true as const };
 }

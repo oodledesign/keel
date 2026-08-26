@@ -1,10 +1,31 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
+import { z } from 'zod';
+
+import { enhanceAction } from '@kit/next/actions';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import {
+  addEmailTriageRule,
+  addEmailTriageRuleFromThread,
+  removeEmailTriageRule,
+} from '~/lib/email-assistant/email-triage-rules';
+import {
+  ignoreEmailRuleAndDismissSuggestions,
+  removeIgnoredEmailRule,
+} from '~/lib/email-assistant/ignored-senders';
 import {
   listAllMailboxGmailLabels,
   listMailboxGmailLabels,
   modifyThreadGmailLabels,
 } from '~/lib/email-assistant/modify-thread-gmail-labels';
+import {
+  ignoreEmailThreadNeedsReply,
+  markEmailThreadNeedsReply,
+  setEmailThreadCategory,
+} from '~/lib/email-assistant/set-thread-category';
 import { syncCategoryToGmail } from '~/lib/email-assistant/sync-category-to-gmail';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 

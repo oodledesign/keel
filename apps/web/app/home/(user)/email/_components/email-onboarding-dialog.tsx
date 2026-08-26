@@ -21,6 +21,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mailboxKind: 'business' | 'personal';
+  accountSlug?: string | null;
   onCompleted?: () => void;
 };
 
@@ -76,6 +77,7 @@ export function EmailOnboardingDialog({
   open,
   onOpenChange,
   mailboxKind,
+  accountSlug,
   onCompleted,
 }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
@@ -109,6 +111,7 @@ export function EmailOnboardingDialog({
     startTransition(async () => {
       const result = await completeEmailOnboarding({
         mailboxKind,
+        accountSlug: accountSlug ?? undefined,
         syncTriageToGmail: skipped ? false : syncTriageToGmail,
         respectExistingGmailLabels,
         autoDraftEnabled: skipped ? false : autoDraftEnabled,
