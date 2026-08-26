@@ -73,6 +73,7 @@ import {
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
 import { EmailApiError, emailApiFetch } from '../_lib/email-api';
 import type {
+  EmailGmailLabel,
   EmailActionItemRow,
   EmailDraftRow,
   EmailMessageRow,
@@ -81,6 +82,8 @@ import type {
 } from '../_lib/types';
 import { AcceptActionItemDialog } from './accept-action-item-dialog';
 import { EmailCategoryBadge } from './email-category-badge';
+import { EmailLabelChips } from './email-label-chips';
+import { EmailLabelsPicker } from './email-labels-picker';
 import { EmailThreadLeadSection } from './email-thread-lead-section';
 import { EmailThreadLinkSection } from './email-thread-link-section';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
@@ -133,6 +136,7 @@ type Props = {
   threadId: string | null;
   connected: boolean;
   workspaces: EmailWorkspaceOption[];
+  gmailLabels?: EmailGmailLabel[];
   mailboxKind?: 'business' | 'personal';
   accountSlug?: string | null;
   preferredAccountId?: string | null;
@@ -148,6 +152,7 @@ export function EmailThreadPanel({
   threadId,
   connected,
   workspaces,
+  gmailLabels = [],
   mailboxKind = 'personal',
   accountSlug = null,
   preferredAccountId = null,
@@ -396,7 +401,10 @@ export function EmailThreadPanel({
 
     startTransition(async () => {
       try {
-        await setEmailThreadCategoryAction({ threadId, category });
+        const result = await setEmailThreadCategoryAction({
+          threadId,
+          category,
+        });
         setDetail((current) =>
           current
             ? {
@@ -404,12 +412,18 @@ export function EmailThreadPanel({
                 thread: {
                   ...current.thread,
                   assistant_category: category,
+                  ...(result.labelIds
+                    ? { label_ids: result.labelIds }
+                    : {}),
                 },
               }
             : current,
         );
         onCategoryChange?.(threadId, category);
         toast.success(`Marked as ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
+        if (result.gmailWarning) {
+          toast.message(result.gmailWarning);
+        }
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not update category',
@@ -648,6 +662,11 @@ export function EmailThreadPanel({
                   confidence={detail.thread.assistant_category_confidence}
                   showWhy
                 />
+                <EmailLabelChips
+                  labelIds={detail.thread.label_ids}
+                  labels={gmailLabels}
+                  max={6}
+                />
                 {reviewMode ? (
                   <span className="text-[10px] font-medium tracking-wide text-[var(--ozer-accent)] uppercase">
                     Review mode
@@ -655,6 +674,24 @@ export function EmailThreadPanel({
                 ) : null}
               </div>
             </div>
+            <EmailLabelsPicker
+              threadId={detail.thread.id}
+              labelIds={detail.thread.label_ids ?? []}
+              labels={gmailLabels}
+              onLabelsChange={(labelIds) => {
+                setDetail((current) =>
+                  current
+                    ? {
+                        ...current,
+                        thread: {
+                          ...current.thread,
+                          label_ids: labelIds,
+                        },
+                      }
+                    : current,
+                );
+              }}
+            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

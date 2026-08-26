@@ -7628,6 +7628,9 @@ export type Database = {
           auto_draft_enabled: boolean
           auto_save_gmail_drafts: boolean
           auto_triage_enabled: boolean
+          onboarding_completed_at: string | null
+          respect_existing_gmail_labels: boolean
+          sync_triage_to_gmail: boolean
           connection_id: string
           created_at: string
           ignored_domains: string[]
@@ -7649,6 +7652,9 @@ export type Database = {
           auto_draft_enabled?: boolean
           auto_save_gmail_drafts?: boolean
           auto_triage_enabled?: boolean
+          onboarding_completed_at?: string | null
+          respect_existing_gmail_labels?: boolean
+          sync_triage_to_gmail?: boolean
           connection_id: string
           created_at?: string
           ignored_domains?: string[]
@@ -7670,6 +7676,9 @@ export type Database = {
           auto_draft_enabled?: boolean
           auto_save_gmail_drafts?: boolean
           auto_triage_enabled?: boolean
+          onboarding_completed_at?: string | null
+          respect_existing_gmail_labels?: boolean
+          sync_triage_to_gmail?: boolean
           connection_id?: string
           created_at?: string
           ignored_domains?: string[]

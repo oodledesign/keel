@@ -41,8 +41,11 @@ export async function renderInviteEmail(props: Props) {
     namespace,
   });
 
-  const previewText = `Join ${props.invitedUserEmail} on ${props.productName}`;
-  const subject = t(`${namespace}:subject`);
+  const previewText = `Join ${props.teamName} on ${props.productName}`;
+  const subject = t(`${namespace}:subject`, {
+    teamName: props.teamName,
+    productName: props.productName,
+  });
 
   const heading = t(`${namespace}:heading`, {
     teamName: props.teamName,

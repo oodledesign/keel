@@ -4,7 +4,8 @@ function logoUrl() {
   const origin = (
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ozer.so'
   ).replace(/\/$/, '');
-  return `${origin}/brand/ozer-wordmark-dark.png`;
+  // Cache-bust so email clients pick up the optically aligned wordmark.
+  return `${origin}/brand/ozer-wordmark-dark.png?v=20260826`;
 }
 
 export function EmailHeader(props: React.PropsWithChildren) {

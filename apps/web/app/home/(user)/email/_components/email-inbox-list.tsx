@@ -42,6 +42,8 @@ import type {
   EmailThreadSummary,
   EmailWorkspaceOption,
 } from '../_lib/types';
+import type { EmailGmailLabel } from '../_lib/types';
+import { EmailLabelChips } from './email-label-chips';
 import { EmailCategoryBadge } from './email-category-badge';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
 
@@ -162,6 +164,9 @@ type Props = {
   loadingMore?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
+  gmailLabels?: EmailGmailLabel[];
+  labelFilter?: string | null;
+  onLabelFilterChange?: (labelId: string | null) => void;
 };
 
 export function EmailInboxList({
@@ -179,6 +184,9 @@ export function EmailInboxList({
   loadingMore = false,
   hasMore = false,
   onLoadMore,
+  gmailLabels = [],
+  labelFilter = null,
+  onLabelFilterChange,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const trimmedSearch = searchQuery.trim();
@@ -270,6 +278,33 @@ export function EmailInboxList({
             </div>
           </div>
         </div>
+        {gmailLabels.some((label) => label.type === 'user') ? (
+          <div className="mt-2">
+            <label className="sr-only" htmlFor="gmail-label-filter">
+              Filter by Gmail label
+            </label>
+            <select
+              id="gmail-label-filter"
+              value={labelFilter ?? ''}
+              onChange={(event) =>
+                onLabelFilterChange?.(event.target.value || null)
+              }
+              className="h-8 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2 text-xs text-[var(--workspace-shell-text)]"
+            >
+              <option value="">All Gmail labels</option>
+              {gmailLabels
+                .filter(
+                  (label) =>
+                    label.type === 'user' && !label.name.startsWith('Ozer/'),
+                )
+                .map((label) => (
+                  <option key={label.id} value={label.id}>
+                    {label.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+        ) : null}
         <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           {searching
             ? 'Searching…'
@@ -377,6 +412,12 @@ export function EmailInboxList({
                         <EmailCategoryBadge
                           category={thread.assistant_category}
                           confidence={thread.assistant_category_confidence}
+                        />
+                        <EmailLabelChips
+                          labelIds={thread.label_ids}
+                          labels={gmailLabels}
+                          max={2}
+                          onLabelClick={onLabelFilterChange}
                         />
                         {showUnlinked ? (
                           <span className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-300">

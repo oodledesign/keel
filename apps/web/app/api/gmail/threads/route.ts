@@ -73,6 +73,7 @@ export async function GET(request: Request) {
   const filter = url.searchParams.get('filter');
   const searchQuery = url.searchParams.get('q')?.trim() ?? '';
   const mailboxKind = parseMailboxKind(url.searchParams.get('mailbox'));
+  const labelId = url.searchParams.get('label')?.trim() || null;
 
   const { data: connection } = await auth.client
     .from('google_connections')
@@ -140,6 +141,10 @@ export async function GET(request: Request) {
     query = query.or('client_id.not.is.null,project_id.not.is.null');
   } else if (categoryFilters) {
     query = query.in('assistant_category', categoryFilters);
+  }
+
+  if (labelId) {
+    query = query.contains('label_ids', [labelId]);
   }
 
   if (cursor) {

@@ -60,6 +60,9 @@ type Props = {
   initialAutoDraftEnabled: boolean;
   initialAutoSaveGmailDrafts: boolean;
   initialAllowSendFromOzer?: boolean;
+  initialSyncTriageToGmail?: boolean;
+  initialRespectExistingGmailLabels?: boolean;
+  onOpenEmailSetup?: () => void;
   initialIgnoredSenders?: string[];
   initialIgnoredDomains?: string[];
   initialIgnoredSubjectKeywords?: string[];
@@ -254,6 +257,9 @@ export function EmailSettingsCard({
   initialAutoDraftEnabled,
   initialAutoSaveGmailDrafts,
   initialAllowSendFromOzer = false,
+  initialSyncTriageToGmail = false,
+  initialRespectExistingGmailLabels = true,
+  onOpenEmailSetup,
   initialIgnoredSenders = [],
   initialIgnoredDomains = [],
   initialIgnoredSubjectKeywords = [],
@@ -278,6 +284,12 @@ export function EmailSettingsCard({
   );
   const [allowSendFromOzer, setAllowSendFromOzer] = useState(
     initialAllowSendFromOzer,
+  );
+  const [syncTriageToGmail, setSyncTriageToGmail] = useState(
+    initialSyncTriageToGmail,
+  );
+  const [respectExistingGmailLabels, setRespectExistingGmailLabels] = useState(
+    initialRespectExistingGmailLabels,
   );
   const [rules, setRules] = useState(() =>
     rulesFromProps({
@@ -346,6 +358,8 @@ export function EmailSettingsCard({
         autoDraftEnabled,
         autoSaveGmailDrafts,
         allowSendFromOzer,
+        syncTriageToGmail,
+        respectExistingGmailLabels,
         mailboxKind,
       });
 
@@ -516,6 +530,23 @@ export function EmailSettingsCard({
           onCheckedChange={setAutoTriageEnabled}
           disabled={pending}
         />
+
+        <SettingToggle
+          id="email-sync-triage-gmail"
+          label="Apply triage in Gmail"
+          description="When Ozer sorts mail, write Ozer/* labels in Gmail and archive Waiting, FYI, and Noise. Reply Now / Reply Later stay in Inbox."
+          checked={syncTriageToGmail}
+          onCheckedChange={setSyncTriageToGmail}
+          disabled={pending}
+        />
+        <SettingToggle
+          id="email-respect-gmail-labels"
+          label="Respect my existing labels"
+          description="Skip auto-filing when a thread already has one of your Gmail labels (not Ozer/*). Manual triage in Ozer still updates Gmail."
+          checked={respectExistingGmailLabels}
+          onCheckedChange={setRespectExistingGmailLabels}
+          disabled={pending || !syncTriageToGmail}
+        />
         <SettingToggle
           id="email-auto-draft"
           label="Auto-draft replies"
@@ -667,6 +698,17 @@ export function EmailSettingsCard({
           </div>
         </div>
 
+        {onOpenEmailSetup ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+            onClick={onOpenEmailSetup}
+            disabled={pending}
+          >
+            Email setup
+          </Button>
+        ) : null}
         <Button
           type="button"
           className="ozer-gradient-btn text-[var(--ozer-white)]"

@@ -25,6 +25,7 @@ import type {
   EmailThreadSummary,
 } from '../_lib/types';
 import { EmailInboxList } from './email-inbox-list';
+import { EmailOnboardingDialog } from './email-onboarding-dialog';
 import { EmailSettingsCard } from './email-settings-card';
 import { EmailThreadPanel } from './email-thread-panel';
 
@@ -92,6 +93,7 @@ function buildThreadsUrl(input: {
   searchQuery?: string;
   cursor?: string | null;
   mailboxKind?: 'business' | 'personal';
+  labelId?: string | null;
 }) {
   const params = new URLSearchParams({ limit: '25' });
   params.set('mailbox', input.mailboxKind ?? 'personal');
@@ -104,6 +106,10 @@ function buildThreadsUrl(input: {
 
   if (trimmedSearch) {
     params.set('q', trimmedSearch);
+  }
+
+  if (input.labelId) {
+    params.set('label', input.labelId);
   }
 
   if (input.cursor) {
@@ -124,12 +130,16 @@ export function EmailPageClient({ initialData }: Props) {
   const [hasMore, setHasMore] = useState(initialData.hasMoreThreads);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showEmailOnboarding, setShowEmailOnboarding] = useState(
+    Boolean(initialData.needsEmailOnboarding),
+  );
   const [reviewMode, setReviewMode] = useState(false);
   const [syncing, startSyncTransition] = useTransition();
   const [, startCategoryTransition] = useTransition();
   const [inboxFilter, setInboxFilter] = useState<EmailInboxFilter>(() =>
     parseInboxFilter(searchParams.get('filter')),
   );
+  const [labelFilter, setLabelFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searching, setSearching] = useState(false);
@@ -148,8 +158,9 @@ export function EmailPageClient({ initialData }: Props) {
         searchQuery: debouncedSearch,
         cursor,
         mailboxKind,
+        labelId: labelFilter,
       }),
-    [inboxFilter, debouncedSearch, mailboxKind],
+    [inboxFilter, debouncedSearch, mailboxKind, labelFilter],
   );
 
   useEffect(() => {
@@ -278,6 +289,7 @@ export function EmailPageClient({ initialData }: Props) {
 
     if (connected === '1') {
       toast.success('Gmail connected — syncing inbox…');
+      setShowEmailOnboarding(true);
       router.replace(emailHomePath);
 
       startSyncTransition(async () => {
@@ -369,6 +381,7 @@ export function EmailPageClient({ initialData }: Props) {
         filter: inboxFilter,
         searchQuery: debouncedSearch,
         mailboxKind,
+        labelId: labelFilter,
       }),
     )
       .then((data) => {
@@ -394,7 +407,7 @@ export function EmailPageClient({ initialData }: Props) {
           setSearching(false);
         }
       });
-  }, [debouncedSearch, inboxFilter, mailboxKind]);
+  }, [debouncedSearch, inboxFilter, mailboxKind, labelFilter]);
 
   const selectThread = useCallback(
     (threadId: string) => {
@@ -664,6 +677,11 @@ export function EmailPageClient({ initialData }: Props) {
               initialData.settings.autoSaveGmailDrafts
             }
             initialAllowSendFromOzer={initialData.settings.allowSendFromOzer}
+            initialSyncTriageToGmail={initialData.settings.syncTriageToGmail}
+            initialRespectExistingGmailLabels={
+              initialData.settings.respectExistingGmailLabels
+            }
+            onOpenEmailSetup={() => setShowEmailOnboarding(true)}
             initialIgnoredSenders={initialData.settings.ignoredSenders}
             initialIgnoredDomains={initialData.settings.ignoredDomains}
             initialIgnoredSubjectKeywords={
@@ -679,6 +697,24 @@ export function EmailPageClient({ initialData }: Props) {
         </div>
       ) : null}
 
+      <EmailOnboardingDialog
+        open={showEmailOnboarding}
+        onOpenChange={setShowEmailOnboarding}
+        mailboxKind={mailboxKind}
+        onCompleted={() => {
+          setShowEmailOnboarding(false);
+          router.refresh();
+          startSyncTransition(async () => {
+            try {
+              await runSync();
+            } catch (syncError) {
+              toast.error(formatEmailApiError(syncError));
+            }
+          });
+        }}
+      />
+
+
       <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
         <div
           className={cn(
@@ -693,6 +729,9 @@ export function EmailPageClient({ initialData }: Props) {
             onThreadCategoryChange={handleThreadCategoryChange}
             filter={inboxFilter}
             onFilterChange={changeInboxFilter}
+            gmailLabels={initialData.gmailLabels ?? []}
+            labelFilter={labelFilter}
+            onLabelFilterChange={setLabelFilter}
             searchQuery={searchQuery}
             onSearchQueryChange={handleSearchQueryChange}
             workspaces={initialData.workspaces}
@@ -714,6 +753,7 @@ export function EmailPageClient({ initialData }: Props) {
             threadId={selectedThreadId}
             connected={connected}
             workspaces={initialData.workspaces}
+            gmailLabels={initialData.gmailLabels ?? []}
             mailboxKind={mailboxKind}
             accountSlug={initialData.accountSlug}
             preferredAccountId={initialData.preferredAccountId}

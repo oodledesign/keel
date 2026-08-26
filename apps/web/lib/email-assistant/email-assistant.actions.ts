@@ -1,26 +1,11 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-
-import { z } from 'zod';
-
-import { enhanceAction } from '@kit/next/actions';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import {
-  addEmailTriageRule,
-  addEmailTriageRuleFromThread,
-  removeEmailTriageRule,
-} from '~/lib/email-assistant/email-triage-rules';
-import {
-  ignoreEmailRuleAndDismissSuggestions,
-  removeIgnoredEmailRule,
-} from '~/lib/email-assistant/ignored-senders';
-import {
-  ignoreEmailThreadNeedsReply,
-  markEmailThreadNeedsReply,
-  setEmailThreadCategory,
-} from '~/lib/email-assistant/set-thread-category';
+  listAllMailboxGmailLabels,
+  listMailboxGmailLabels,
+  modifyThreadGmailLabels,
+} from '~/lib/email-assistant/modify-thread-gmail-labels';
+import { syncCategoryToGmail } from '~/lib/email-assistant/sync-category-to-gmail';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 
 import { EMAIL_THREAD_CATEGORIES } from './email-thread-categories';
@@ -34,6 +19,19 @@ const IgnoreEmailNeedsReplySchema = z.object({
 const MarkEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),
   accountSlug: z.string().min(1).optional(),
+});
+
+
+const ModifyEmailThreadLabelsSchema = z.object({
+  threadId: z.string().uuid(),
+  addLabelIds: z.array(z.string().min(1)).optional(),
+  removeLabelIds: z.array(z.string().min(1)).optional(),
+  accountSlug: z.string().min(1).optional(),
+});
+
+const ListGmailLabelsSchema = z.object({
+  mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  includeSystem: z.boolean().optional(),
 });
 
 const SetEmailThreadCategorySchema = z.object({
@@ -99,9 +97,20 @@ export const ignoreEmailNeedsReplyAction = enhanceAction(
       data.accountId,
     );
 
+    const gmailSync = await syncCategoryToGmail({
+      userId: user.id,
+      threadId: data.threadId,
+      category: 'noise',
+    });
+
     revalidateNeedsReplyPaths(data.accountSlug);
 
-    return { ok: true as const };
+    return {
+      ok: true as const,
+      gmailSynced: gmailSync.ok,
+      gmailWarning: gmailSync.warning,
+      labelIds: gmailSync.labelIds,
+    };
   },
   {
     auth: true,
@@ -114,9 +123,20 @@ export const markEmailNeedsReplyAction = enhanceAction(
     const client = getSupabaseServerClient();
     await markEmailThreadNeedsReply(client, user.id, data.threadId);
 
+    const gmailSync = await syncCategoryToGmail({
+      userId: user.id,
+      threadId: data.threadId,
+      category: 'reply_now',
+    });
+
     revalidateNeedsReplyPaths(data.accountSlug);
 
-    return { ok: true as const };
+    return {
+      ok: true as const,
+      gmailSynced: gmailSync.ok,
+      gmailWarning: gmailSync.warning,
+      labelIds: gmailSync.labelIds,
+    };
   },
   {
     auth: true,
@@ -136,13 +156,80 @@ export const setEmailThreadCategoryAction = enhanceAction(
       { confidence: 1 },
     );
 
+    const gmailSync = await syncCategoryToGmail({
+      userId: user.id,
+      threadId: data.threadId,
+      category: data.category,
+    });
+
     revalidateNeedsReplyPaths(data.accountSlug);
 
-    return { ok: true as const, category: data.category };
+    return {
+      ok: true as const,
+      category: data.category,
+      gmailWarning: gmailSync.warning,
+      gmailSynced: gmailSync.ok,
+      labelIds: gmailSync.labelIds,
+    };
   },
   {
     auth: true,
     schema: SetEmailThreadCategorySchema,
+  },
+);
+
+
+export const modifyEmailThreadLabelsAction = enhanceAction(
+  async (data, user) => {
+    const result = await modifyThreadGmailLabels({
+      userId: user.id,
+      threadId: data.threadId,
+      addLabelIds: data.addLabelIds,
+      removeLabelIds: data.removeLabelIds,
+    });
+
+    if (!result.ok) {
+      throw new Error(result.warning ?? 'Failed to update Gmail labels');
+    }
+
+    revalidateNeedsReplyPaths(data.accountSlug);
+
+    return {
+      ok: true as const,
+      labelIds: result.labelIds,
+      warning: result.warning,
+    };
+  },
+  {
+    auth: true,
+    schema: ModifyEmailThreadLabelsSchema,
+  },
+);
+
+export const listGmailLabelsAction = enhanceAction(
+  async (data, user) => {
+    const labels = data.includeSystem
+      ? await listAllMailboxGmailLabels({
+          userId: user.id,
+          mailboxKind: data.mailboxKind,
+        })
+      : await listMailboxGmailLabels({
+          userId: user.id,
+          mailboxKind: data.mailboxKind,
+        });
+
+    return {
+      ok: true as const,
+      labels: labels.map((label) => ({
+        id: label.id,
+        name: label.name,
+        type: label.type,
+      })),
+    };
+  },
+  {
+    auth: true,
+    schema: ListGmailLabelsSchema,
   },
 );
 

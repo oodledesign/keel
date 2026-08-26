@@ -21,7 +21,7 @@ import { Textarea } from '@kit/ui/textarea';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
-import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
+import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
 import {
   loadStoredPlan,
   plannerScopeKey,
@@ -196,7 +196,7 @@ export function ReplanDialog({
         userContext,
       });
 
-      const saveResult = await savePlannerPlanAction({
+      const saveResult = await savePlannerPlanClient({
         scopeKey: plannerScopeKey(scope),
         planDate: dateYmd,
         mode: 'day',

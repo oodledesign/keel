@@ -17,6 +17,7 @@
     "./mime": "./src/mime.ts",
     "./sync": "./src/sync.ts",
     "./drafts": "./src/drafts.ts",
+    "./labels": "./src/labels.ts",
     "./send-as": "./src/send-as.ts"
   },
   "dependencies": {

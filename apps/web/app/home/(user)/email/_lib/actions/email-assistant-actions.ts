@@ -134,6 +134,8 @@ export async function saveEmailAssistantSettings(input: {
   autoDraftEnabled: boolean;
   autoSaveGmailDrafts: boolean;
   allowSendFromOzer?: boolean;
+  syncTriageToGmail?: boolean;
+  respectExistingGmailLabels?: boolean;
   mailboxKind?: 'business' | 'personal';
 }) {
   const client = getSupabaseServerClient();
@@ -171,6 +173,8 @@ export async function saveEmailAssistantSettings(input: {
       auto_draft_enabled: input.autoDraftEnabled,
       auto_save_gmail_drafts: input.autoSaveGmailDrafts,
       allow_send_from_ozer: input.allowSendFromOzer ?? false,
+      sync_triage_to_gmail: input.syncTriageToGmail ?? false,
+      respect_existing_gmail_labels: input.respectExistingGmailLabels ?? true,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'connection_id' },
@@ -228,4 +232,63 @@ export async function disconnectGmailConnection(input?: {
 
   revalidateEmailPage();
   return { success: true as const, error: null };
+}
+
+
+export async function completeEmailOnboarding(input: {
+  mailboxKind?: 'business' | 'personal';
+  syncTriageToGmail: boolean;
+  respectExistingGmailLabels: boolean;
+  autoDraftEnabled: boolean;
+  autoSaveGmailDrafts: boolean;
+  allowSendFromOzer: boolean;
+  skipped?: boolean;
+}) {
+  const client = getSupabaseServerClient();
+  const user = await requireEmailAssistantAccess();
+  const mailboxKind = input.mailboxKind ?? 'personal';
+
+  const { data: connection, error: connectionError } = await client
+    .from('google_connections')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('mailbox_kind', mailboxKind)
+    .maybeSingle();
+
+  if (connectionError) {
+    return { success: false as const, error: connectionError.message };
+  }
+
+  const connectionId = (connection as { id?: string } | null)?.id;
+
+  if (!connectionId) {
+    return {
+      success: false as const,
+      error: 'Connect Gmail before completing setup',
+    };
+  }
+
+  const { error } = await client.from('email_assistant_settings').upsert(
+    {
+      user_id: user.id,
+      connection_id: connectionId,
+      sync_triage_to_gmail: input.skipped ? false : input.syncTriageToGmail,
+      respect_existing_gmail_labels: input.respectExistingGmailLabels,
+      auto_draft_enabled: input.skipped ? false : input.autoDraftEnabled,
+      auto_save_gmail_drafts: input.skipped
+        ? false
+        : input.autoDraftEnabled && input.autoSaveGmailDrafts,
+      allow_send_from_ozer: input.skipped ? false : input.allowSendFromOzer,
+      onboarding_completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'connection_id' },
+  );
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateEmailPage();
+  return { success: true as const };
 }

@@ -25,6 +25,7 @@ interface JoinTeamAccountPageProps {
     type?: 'invite' | 'magic-link';
     email?: string;
     is_new_user?: string;
+    error?: string;
   }>;
 }
 
@@ -39,6 +40,16 @@ export const generateMetadata = async () => {
 async function JoinTeamAccountPage(props: JoinTeamAccountPageProps) {
   const searchParams = await props.searchParams;
   const token = searchParams.invite_token;
+  const joinError = searchParams.error?.trim();
+
+  // Explicit error from /join/accept (expired, invalid, processing failure)
+  if (joinError && !token) {
+    return (
+      <AuthLayoutShell Logo={AppLogo}>
+        <InviteJoinError message={joinError} />
+      </AuthLayoutShell>
+    );
+  }
 
   // no token, redirect to 404
   if (!token) {
@@ -96,7 +107,9 @@ async function JoinTeamAccountPage(props: JoinTeamAccountPageProps) {
   if (!isInvitationValid) {
     return (
       <AuthLayoutShell Logo={AppLogo}>
-        <InviteNotFoundOrExpired />
+        <InviteJoinError
+          message={`This invitation was sent to ${invitation.email}. You're signed in as ${auth.data.email}. Sign out and continue with the invited email, or ask for a new invite.`}
+        />
       </AuthLayoutShell>
     );
   }
@@ -182,14 +195,16 @@ export default withI18n(JoinTeamAccountPage);
 
 function InviteNotFoundOrExpired() {
   return (
-    <div className={'flex flex-col space-y-4'}>
-      <Heading level={6}>
-        <Trans i18nKey={'teams:inviteNotFoundOrExpired'} />
-      </Heading>
+    <InviteJoinError message="This invitation has expired or is no longer valid. Ask the workspace admin to send a new invite." />
+  );
+}
 
-      <p className={'text-muted-foreground text-sm'}>
-        <Trans i18nKey={'teams:inviteNotFoundOrExpiredDescription'} />
-      </p>
+function InviteJoinError({ message }: { message: string }) {
+  return (
+    <div className={'flex flex-col space-y-4'}>
+      <Heading level={6}>Couldn’t join this workspace</Heading>
+
+      <p className={'text-muted-foreground text-sm'}>{message}</p>
 
       <Button asChild className={'w-full'} variant={'outline'}>
         <Link href={pathsConfig.app.home}>

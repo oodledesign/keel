@@ -48,6 +48,9 @@ export function mapEmailThreadRow(
     subject: (row.subject as string | null) ?? null,
     snippet: (row.snippet as string | null) ?? null,
     participants: parseEmailParticipants(row.participants),
+    label_ids: Array.isArray(row.label_ids)
+      ? (row.label_ids as unknown[]).filter((id): id is string => typeof id === 'string')
+      : [],
     is_unread: Boolean(row.is_unread),
     last_message_at: (row.last_message_at as string | null) ?? null,
     assistant_category: category,

@@ -48,6 +48,7 @@ export type EmailThreadSummary = {
   subject: string | null;
   snippet: string | null;
   participants: EmailParticipant[];
+  label_ids: string[];
   is_unread: boolean;
   last_message_at: string | null;
   assistant_category: EmailThreadCategory | null;
@@ -109,6 +110,12 @@ export type EmailDraftRow = {
   updated_at: string;
 };
 
+export type EmailGmailLabel = {
+  id: string;
+  name: string;
+  type: 'system' | 'user';
+};
+
 export type EmailWorkspaceOption = {
   id: string;
   slug: string;
@@ -120,6 +127,7 @@ export type EmailPageInitialData = {
   preferredAccountId: string | null;
   accountSlug: string | null;
   connection: { googleEmail: string; connectedAt: string } | null;
+  needsEmailOnboarding: boolean;
   settings: {
     styleNotes: string;
     signature: string;
@@ -129,6 +137,9 @@ export type EmailPageInitialData = {
     autoDraftEnabled: boolean;
     autoSaveGmailDrafts: boolean;
     allowSendFromOzer: boolean;
+    syncTriageToGmail: boolean;
+    respectExistingGmailLabels: boolean;
+    onboardingCompletedAt: string | null;
     ignoredSenders: string[];
     ignoredDomains: string[];
     ignoredSubjectKeywords: string[];
@@ -138,6 +149,7 @@ export type EmailPageInitialData = {
   };
   threads: EmailThreadSummary[];
   hasMoreThreads: boolean;
+  gmailLabels: EmailGmailLabel[];
   workspaces: EmailWorkspaceOption[];
 };
 

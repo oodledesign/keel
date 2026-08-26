@@ -25,6 +25,9 @@ async function AuthCallbackErrorPage(props: AuthCallbackErrorPageProps) {
   const { error, callback, code } = await props.searchParams;
   const signInPath = pathsConfig.auth.signIn;
   const redirectPath = callback ?? pathsConfig.auth.callback;
+  const looksLikeI18nKey = Boolean(
+    error?.startsWith('auth:') || error?.startsWith('common:'),
+  );
 
   return (
     <AuthFormCard className="max-w-md">
@@ -35,7 +38,11 @@ async function AuthCallbackErrorPage(props: AuthCallbackErrorPageProps) {
           </AlertTitle>
 
           <AlertDescription>
-            <Trans i18nKey={error ?? 'auth:authenticationErrorAlertBody'} />
+            {looksLikeI18nKey || !error ? (
+              <Trans i18nKey={error ?? 'auth:authenticationErrorAlertBody'} />
+            ) : (
+              error
+            )}
           </AlertDescription>
         </Alert>
 

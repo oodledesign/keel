@@ -28,6 +28,10 @@ import type { MailboxKind } from './mailbox-kind';
 import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
 import { categoryForOwnerLatestMessage } from './owner-latest-message-category';
+import {
+  type AutoSyncGmailSettings,
+  autoSyncCategoryToGmail,
+} from './auto-sync-category-to-gmail';
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
 import { resolveEmailAssistantBillingAccountId } from './resolve-email-assistant-billing-account';
 import { suggestPipelineLeadForThread } from './suggest-pipeline-lead';
@@ -86,6 +90,7 @@ type ThreadRow = {
   assistant_processed_message_id: string | null;
   assistant_extract_message_id: string | null;
   link_source: string | null;
+  label_ids: string[] | null;
 };
 
 type MessageRow = {
@@ -102,6 +107,8 @@ type AssistantSettings = {
   auto_triage_enabled: boolean;
   auto_draft_enabled: boolean;
   auto_save_gmail_drafts: boolean;
+  sync_triage_to_gmail: boolean;
+  respect_existing_gmail_labels: boolean;
   triageRules: EmailTriageRules;
 };
 
@@ -137,7 +144,7 @@ export async function runEmailAssistantPipeline(
   const { data: settingsRow, error: settingsError } = await admin
     .from('email_assistant_settings')
     .select(
-      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
+      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, sync_triage_to_gmail, respect_existing_gmail_labels, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
     )
     .eq('connection_id', owner.connectionId)
     .maybeSingle();
@@ -151,6 +158,8 @@ export async function runEmailAssistantPipeline(
     auto_triage_enabled?: boolean | null;
     auto_draft_enabled?: boolean | null;
     auto_save_gmail_drafts?: boolean | null;
+    sync_triage_to_gmail?: boolean | null;
+    respect_existing_gmail_labels?: boolean | null;
     ignored_senders?: string[] | null;
     ignored_domains?: string[] | null;
     ignored_subject_keywords?: string[] | null;
@@ -163,7 +172,15 @@ export async function runEmailAssistantPipeline(
     auto_triage_enabled: settingsRowTyped?.auto_triage_enabled ?? true,
     auto_draft_enabled: settingsRowTyped?.auto_draft_enabled ?? true,
     auto_save_gmail_drafts: settingsRowTyped?.auto_save_gmail_drafts ?? false,
+    sync_triage_to_gmail: settingsRowTyped?.sync_triage_to_gmail ?? false,
+    respect_existing_gmail_labels:
+      settingsRowTyped?.respect_existing_gmail_labels ?? true,
     triageRules: normalizeEmailTriageRules(settingsRowTyped),
+  };
+
+  const gmailAutoSyncSettings: AutoSyncGmailSettings = {
+    sync_triage_to_gmail: settings.sync_triage_to_gmail,
+    respect_existing_gmail_labels: settings.respect_existing_gmail_labels,
   };
 
   if (!settings.auto_triage_enabled && !settings.auto_draft_enabled) {
@@ -192,7 +209,7 @@ export async function runEmailAssistantPipeline(
   const { data: threadRows, error: threadsError } = await admin
     .from('email_threads')
     .select(
-      'id, subject, assistant_category, assistant_processed_message_id, assistant_extract_message_id, link_source',
+      'id, subject, assistant_category, assistant_processed_message_id, assistant_extract_message_id, link_source, label_ids',
     )
     .eq('user_id', userId)
     .eq('connection_id', owner.connectionId)
@@ -268,6 +285,32 @@ export async function runEmailAssistantPipeline(
         result.errors.push(ruleUpdateError.message);
       } else {
         result.classified += 1;
+
+        try {
+          const syncResult = await autoSyncCategoryToGmail({
+            userId,
+            threadId: thread.id,
+            category,
+            mailboxKind,
+            settings: gmailAutoSyncSettings,
+            labelIds: thread.label_ids,
+          });
+          if (!syncResult.ok && syncResult.warning) {
+            result.errors.push(syncResult.warning);
+          } else if (
+            syncResult.ok &&
+            !syncResult.skipped &&
+            syncResult.labelIds
+          ) {
+            thread.label_ids = syncResult.labelIds;
+          }
+        } catch (syncError) {
+          result.errors.push(
+            syncError instanceof Error
+              ? syncError.message
+              : 'Gmail category sync failed',
+          );
+        }
       }
 
       result.skipped += 1;
@@ -296,6 +339,33 @@ export async function runEmailAssistantPipeline(
 
           if (fixCategoryError) {
             result.errors.push(fixCategoryError.message);
+          } else {
+
+            try {
+              const syncResult = await autoSyncCategoryToGmail({
+                userId,
+                threadId: thread.id,
+                category: ownerCategory.category,
+                mailboxKind,
+                settings: gmailAutoSyncSettings,
+                labelIds: thread.label_ids,
+              });
+              if (!syncResult.ok && syncResult.warning) {
+                result.errors.push(syncResult.warning);
+              } else if (
+                syncResult.ok &&
+                !syncResult.skipped &&
+                syncResult.labelIds
+              ) {
+                thread.label_ids = syncResult.labelIds;
+              }
+            } catch (syncError) {
+              result.errors.push(
+                syncError instanceof Error
+                  ? syncError.message
+                  : 'Gmail category sync failed',
+              );
+            }
           }
         }
       }
@@ -518,6 +588,34 @@ export async function runEmailAssistantPipeline(
     }
 
     result.classified += 1;
+
+    if (category) {
+      try {
+        const syncResult = await autoSyncCategoryToGmail({
+          userId,
+          threadId: thread.id,
+          category,
+          mailboxKind,
+          settings: gmailAutoSyncSettings,
+          labelIds: thread.label_ids,
+        });
+        if (!syncResult.ok && syncResult.warning) {
+          result.errors.push(syncResult.warning);
+        } else if (
+          syncResult.ok &&
+          !syncResult.skipped &&
+          syncResult.labelIds
+        ) {
+          thread.label_ids = syncResult.labelIds;
+        }
+      } catch (syncError) {
+        result.errors.push(
+          syncError instanceof Error
+            ? syncError.message
+            : 'Gmail category sync failed',
+        );
+      }
+    }
 
     if (
       !skipAutoLink &&

@@ -25,8 +25,8 @@ export function getOzerEmailAssetUrls() {
   const origin = siteOrigin();
   return {
     /** Light wordmark for plum headers (PNG — safer than SVG in email clients). */
-    wordmarkOnDark: `${origin}/brand/ozer-wordmark-dark.png`,
-    wordmarkOnLight: `${origin}/brand/ozer-wordmark.png`,
+    wordmarkOnDark: `${origin}/brand/ozer-wordmark-dark.png?v=20260826`,
+    wordmarkOnLight: `${origin}/brand/ozer-wordmark.png?v=20260826`,
     icon: `${origin}/brand/ozer-icon.png`,
     marketing: origin,
   };

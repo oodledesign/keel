@@ -33,7 +33,7 @@ import { useCommandUndoStack } from '~/lib/hooks/use-command-undo-stack';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
-import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
+import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
 import {
   type PlanDocument,
   attachGoogleEventIdsToPlan,
@@ -179,7 +179,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
         userContext: existing?.userContext,
       });
 
-      const result = await savePlannerPlanAction({
+      const result = await savePlannerPlanClient({
         scopeKey: plannerScopeKey(initialData.scope),
         planDate: dateYmd,
         mode: 'day',

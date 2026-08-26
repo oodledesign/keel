@@ -21,7 +21,7 @@ export const MARKETING_EMAIL_URLS = {
   marketing: marketingOrigin,
   support: `mailto:${supportEmail}`,
   info: `mailto:${supportEmail}`,
-  logo: `${appOrigin}/brand/ozer-wordmark-dark.png`,
+  logo: `${appOrigin}/brand/ozer-wordmark-dark.png?v=20260826`,
 } as const;
 
 type ShellOptions = {

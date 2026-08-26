@@ -1,8 +1,14 @@
+'use client';
+
 import Image from 'next/image';
+import { useTransition } from 'react';
+
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { Heading } from '@kit/ui/heading';
 import { If } from '@kit/ui/if';
 import { Separator } from '@kit/ui/separator';
+import { toast } from '@kit/ui/sonner';
 import { Trans } from '@kit/ui/trans';
 
 import { acceptInvitationAction } from '../../server/actions/team-invitations-server-actions';
@@ -28,6 +34,26 @@ export function AcceptInvitationContainer(props: {
     nextPath: string;
   };
 }) {
+  const [pending, startTransition] = useTransition();
+
+  function onSubmit(formData: FormData) {
+    startTransition(async () => {
+      try {
+        await acceptInvitationAction(formData);
+      } catch (error) {
+        if (isRedirectError(error)) {
+          throw error;
+        }
+
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'We could not add you to the workspace. Please try again.',
+        );
+      }
+    });
+  }
+
   return (
     <div className={'flex flex-col items-center space-y-4'}>
       <Heading className={'text-center'} level={4}>
@@ -64,7 +90,7 @@ export function AcceptInvitationContainer(props: {
         <form
           data-test={'join-team-form'}
           className={'w-full'}
-          action={acceptInvitationAction}
+          action={onSubmit}
         >
           <input type="hidden" name={'inviteToken'} value={props.inviteToken} />
 
@@ -77,6 +103,7 @@ export function AcceptInvitationContainer(props: {
           <InvitationSubmitButton
             email={props.email}
             accountName={props.invitation.account.name}
+            pending={pending}
           />
         </form>
 

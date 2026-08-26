@@ -391,13 +391,17 @@ class AccountInvitationsService {
     }
 
     // if the invitation email does not match the user email, throw an error
-    if (invitation.data?.email !== params.userEmail) {
+    const inviteEmail = invitation.data?.email?.toLowerCase() ?? '';
+    const userEmail = params.userEmail?.toLowerCase() ?? '';
+    if (!inviteEmail || inviteEmail !== userEmail) {
       logger.error({
         ...ctx,
         error: 'Invitation email does not match user email',
       });
 
-      throw new Error('Invitation email does not match user email');
+      throw new Error(
+        'This invitation was sent to a different email address. Sign in with the invited email, or ask for a new invite.',
+      );
     }
 
     const { error, data } = await adminClient.rpc('accept_invitation', {
@@ -414,7 +418,19 @@ class AccountInvitationsService {
         'Failed to accept invitation to team',
       );
 
-      throw error;
+      const message = error.message ?? '';
+      if (
+        message.includes('Invalid or expired') ||
+        message.includes('expired invitation')
+      ) {
+        throw new Error(
+          'This invitation has expired or is no longer valid. Ask the workspace admin to send a new invite.',
+        );
+      }
+
+      throw new Error(
+        'We could not add you to the workspace. Please try again, or ask the workspace admin to resend the invite.',
+      );
     }
 
     logger.info(ctx, 'Successfully accepted invitation to team');

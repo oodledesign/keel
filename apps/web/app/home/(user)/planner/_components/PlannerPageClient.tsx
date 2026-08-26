@@ -9,7 +9,7 @@ import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-cont
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
-import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
+import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
 import {
   type PlanDocument,
   attachGoogleEventIdsToPlan,
@@ -169,7 +169,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
         userContext: existing?.userContext,
       });
 
-      const result = await savePlannerPlanAction({
+      const result = await savePlannerPlanClient({
         scopeKey: plannerScopeKey(initialData.scope),
         planDate: dateYmd,
         mode,
@@ -342,7 +342,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
           userContext: payload.user_context,
         });
 
-        const result = await savePlannerPlanAction({
+        const result = await savePlannerPlanClient({
           scopeKey: plannerScopeKey(initialData.scope),
           planDate: dateYmd,
           mode,

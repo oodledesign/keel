@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" role="img" aria-label="Ozer">
+  <!-- Icon optically centred on the wordmark midline (y=24). -->
   <g fill="#FF5C34" transform="translate(22 24)">
     <ellipse cx="0" cy="-9" rx="5.5" ry="9" transform="rotate(0)" />
     <ellipse cx="0" cy="-9" rx="5.5" ry="9" transform="rotate(72)" />
@@ -7,9 +8,12 @@
     <ellipse cx="0" cy="-9" rx="5.5" ry="9" transform="rotate(288)" />
     <circle cx="0" cy="0" r="5.5" />
   </g>
+  <!-- Text vertically centred with the icon (not baseline-aligned low). -->
   <text
     x="46"
-    y="33"
+    y="24"
+    dominant-baseline="central"
+    dy="-0.04em"
     fill="#2A1720"
     font-family="'Cabinet Grotesk', 'General Sans', system-ui, sans-serif"
     font-size="32"

@@ -1,6 +1,16 @@
 export { GmailApiError, gmailFetch, gmailFetchPaginated } from './client';
 export { createDraft, sendDraft, updateDraft } from './drafts';
 export {
+  applyLabelIdChanges,
+  ensureLabel,
+  isManualPickerLabel,
+  isSystemLabelId,
+  isUserVisibleLabel,
+  listLabels,
+  modifyThread,
+  type GmailLabel,
+} from './labels';
+export {
   getGmailDefaultSendAs,
   getGmailDefaultSignature,
   type ResolvedEmailSignature,

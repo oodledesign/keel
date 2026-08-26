@@ -8,8 +8,11 @@ import { Trans } from '@kit/ui/trans';
 export function InvitationSubmitButton(props: {
   accountName: string;
   email: string;
+  /** When the parent drives pending via useTransition */
+  pending?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const pending = props.pending ?? formPending;
 
   return (
     <Button type={'submit'} className={'w-full'} disabled={pending}>

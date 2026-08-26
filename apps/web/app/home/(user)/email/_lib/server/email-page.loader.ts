@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { isUserVisibleLabel, listLabels } from '@kit/gmail';
+
 import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -15,7 +17,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 
 import type { EmailPageInitialData, EmailThreadSummary } from '../types';
 
-const THREAD_SELECT = `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, assistant_category_reason, assistant_category_confidence, follow_up_at, follow_up_note, link_confidence, link_suggestion, pipeline_lead_suggestion, pipeline_lead_confidence, pipeline_deal_id, ${EMAIL_THREAD_LINK_SELECT}`;
+const THREAD_SELECT = `id, gmail_thread_id, subject, snippet, participants, label_ids, is_unread, last_message_at, assistant_category, assistant_category_reason, assistant_category_confidence, follow_up_at, follow_up_note, link_confidence, link_suggestion, pipeline_lead_suggestion, pipeline_lead_confidence, pipeline_deal_id, ${EMAIL_THREAD_LINK_SELECT}`;
 
 function inferSignatureIsHtml(
   signature: string | null | undefined,
@@ -68,7 +70,7 @@ export const loadEmailPageData = cache(
         ? client
             .from('email_assistant_settings')
             .select(
-              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, allow_send_from_ozer, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
+              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, allow_send_from_ozer, sync_triage_to_gmail, respect_existing_gmail_labels, onboarding_completed_at, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
             )
             .eq('connection_id', connectionId)
             .maybeSingle()
@@ -93,6 +95,9 @@ export const loadEmailPageData = cache(
       auto_draft_enabled?: boolean | null;
       auto_save_gmail_drafts?: boolean | null;
       allow_send_from_ozer?: boolean | null;
+      sync_triage_to_gmail?: boolean | null;
+      respect_existing_gmail_labels?: boolean | null;
+      onboarding_completed_at?: string | null;
       ignored_senders?: string[] | null;
       ignored_domains?: string[] | null;
       ignored_subject_keywords?: string[] | null;
@@ -105,10 +110,35 @@ export const loadEmailPageData = cache(
     const hasMoreInitial = threadRows.length > 25;
     const pageRows = hasMoreInitial ? threadRows.slice(0, 25) : threadRows;
 
+    let gmailLabels: Array<{
+      id: string;
+      name: string;
+      type: 'system' | 'user';
+    }> = [];
+
+    if (connection) {
+      try {
+        const labels = await listLabels(user.id, mailboxKind);
+        gmailLabels = labels
+          .filter(isUserVisibleLabel)
+          .map((label) => ({
+            id: label.id,
+            name: label.name,
+            type: label.type,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+      } catch {
+        gmailLabels = [];
+      }
+    }
+
     return {
       mailboxKind,
       preferredAccountId: options?.preferredAccountId ?? null,
       accountSlug: options?.accountSlug ?? null,
+      needsEmailOnboarding: Boolean(
+        connection?.google_email && !settingsRow?.onboarding_completed_at,
+      ),
       connection: connection?.google_email
         ? {
             googleEmail: connection.google_email,
@@ -127,6 +157,10 @@ export const loadEmailPageData = cache(
         autoDraftEnabled: settingsRow?.auto_draft_enabled ?? true,
         autoSaveGmailDrafts: settingsRow?.auto_save_gmail_drafts ?? false,
         allowSendFromOzer: settingsRow?.allow_send_from_ozer ?? false,
+        syncTriageToGmail: settingsRow?.sync_triage_to_gmail ?? false,
+        respectExistingGmailLabels:
+          settingsRow?.respect_existing_gmail_labels ?? true,
+        onboardingCompletedAt: settingsRow?.onboarding_completed_at ?? null,
         ignoredSenders: (settingsRow?.ignored_senders ?? []).filter(Boolean),
         ignoredDomains: (settingsRow?.ignored_domains ?? []).filter(Boolean),
         ignoredSubjectKeywords: (
@@ -145,6 +179,7 @@ export const loadEmailPageData = cache(
         ),
       ),
       hasMoreThreads: hasMoreInitial,
+      gmailLabels,
       workspaces: workspaces.map((workspace) => ({
         id: workspace.id,
         slug: workspace.slug,
