@@ -12,6 +12,11 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
 import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
+import {
+  DEFAULT_IG_DM_FLOW,
+  type IgDmFlowConfig,
+  parseIgDmFlow,
+} from '~/lib/instagram-autoreply/dm-flow-types';
 
 import type { upsertIgTriggerActionSchema } from '../_lib/schema/instagram-autoreply.schema';
 
@@ -45,6 +50,26 @@ export function InstagramTriggerEditor({
   const [publicTier, setPublicTier] = useState(
     trigger?.public_reply_ai_tier ?? 'standard',
   );
+  const initialFlow =
+    parseIgDmFlow(trigger?.dm_flow) ?? DEFAULT_IG_DM_FLOW;
+  const [dmUseFlow, setDmUseFlow] = useState(Boolean(trigger?.dm_flow));
+  const [confirmMessage, setConfirmMessage] = useState(
+    initialFlow.steps[0]?.message ?? DEFAULT_IG_DM_FLOW.steps[0]!.message,
+  );
+  const [confirmButton, setConfirmButton] = useState(
+    initialFlow.steps[0]?.buttons[0]?.label ??
+      DEFAULT_IG_DM_FLOW.steps[0]!.buttons[0]!.label,
+  );
+  const [linkMessage, setLinkMessage] = useState(
+    initialFlow.steps[1]?.message ?? DEFAULT_IG_DM_FLOW.steps[1]!.message,
+  );
+  const [linkButton, setLinkButton] = useState(
+    initialFlow.steps[1]?.buttons[0]?.label ??
+      DEFAULT_IG_DM_FLOW.steps[1]!.buttons[0]!.label,
+  );
+  const [linkUrl, setLinkUrl] = useState(
+    initialFlow.steps[1]?.buttons[0]?.url ?? 'https://ozer.so',
+  );
   const [dmEnabled, setDmEnabled] = useState(trigger?.dm_enabled ?? true);
   const [dmMode, setDmMode] = useState(trigger?.dm_mode ?? 'static');
   const [dmTemplate, setDmTemplate] = useState(trigger?.dm_template ?? '');
@@ -66,6 +91,31 @@ export function InstagramTriggerEditor({
               .split(',')
               .map((k) => k.trim())
               .filter(Boolean);
+
+            let dmFlow: IgDmFlowConfig | null = null;
+            if (dmEnabled && dmUseFlow) {
+              dmFlow = {
+                steps: [
+                  {
+                    id: 'confirm',
+                    message: confirmMessage.trim(),
+                    buttons: [{ label: confirmButton.trim(), type: 'postback' }],
+                  },
+                  {
+                    id: 'deliver',
+                    message: linkMessage.trim(),
+                    buttons: [
+                      {
+                        label: linkButton.trim(),
+                        type: 'url',
+                        url: linkUrl.trim(),
+                      },
+                    ],
+                  },
+                ],
+              };
+            }
+
             await onSave({
               accountId,
               triggerId: trigger?.id,
@@ -81,6 +131,8 @@ export function InstagramTriggerEditor({
               dm_mode: dmMode,
               dm_template: dmTemplate || null,
               dm_ai_tier: dmTier,
+              dm_use_flow: dmEnabled && dmUseFlow,
+              dm_flow: dmFlow,
               create_deal_on_match: createDeal,
               deal_stage: dealStage,
               is_active: trigger?.is_active ?? true,
@@ -172,29 +224,95 @@ export function InstagramTriggerEditor({
         </div>
         {dmEnabled ? (
           <>
-            <select
-              className="w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-transparent px-3 py-2 text-sm"
-              value={dmMode}
-              onChange={(e) => setDmMode(e.target.value as typeof dmMode)}
-            >
-              <option value="static">Static template</option>
-              <option value="ai_generated">AI generated</option>
-            </select>
-            {dmMode === 'static' ? (
-              <Textarea
-                value={dmTemplate}
-                onChange={(e) => setDmTemplate(e.target.value)}
-                placeholder="Hey! Thanks for reaching out..."
-              />
-            ) : (
+            <div className="space-y-2">
+              <Label htmlFor="dm-type">DM type</Label>
               <select
+                id="dm-type"
                 className="w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-transparent px-3 py-2 text-sm"
-                value={dmTier}
-                onChange={(e) => setDmTier(e.target.value as typeof dmTier)}
+                value={dmUseFlow ? 'flow' : 'simple'}
+                onChange={(e) => setDmUseFlow(e.target.value === 'flow')}
               >
-                <option value="standard">Standard (Haiku, 5 credits)</option>
-                <option value="enhanced">Enhanced (Sonnet, 10 credits)</option>
+                <option value="simple">Single message (text or AI)</option>
+                <option value="flow">
+                  Interactive flow (confirm button → link)
+                </option>
               </select>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Interactive flows send a confirm button first; the link is only
+                sent after they tap it (helps filter bots).
+              </p>
+            </div>
+
+            {dmUseFlow ? (
+              <div className="space-y-4 rounded-md border border-dashed border-[color:var(--workspace-shell-border)] p-4">
+                <p className="text-sm font-medium">Step 1 — Confirm</p>
+                <Textarea
+                  value={confirmMessage}
+                  onChange={(e) => setConfirmMessage(e.target.value)}
+                  placeholder="Hey! Want us to send it here?"
+                  required
+                />
+                <Input
+                  value={confirmButton}
+                  onChange={(e) => setConfirmButton(e.target.value)}
+                  placeholder="Button label (e.g. Yes please)"
+                  maxLength={20}
+                  required
+                />
+
+                <p className="text-sm font-medium">Step 2 — Send link</p>
+                <Textarea
+                  value={linkMessage}
+                  onChange={(e) => setLinkMessage(e.target.value)}
+                  placeholder="Great. Here you go 👇"
+                  required
+                />
+                <Input
+                  value={linkButton}
+                  onChange={(e) => setLinkButton(e.target.value)}
+                  placeholder="Link button label"
+                  maxLength={20}
+                  required
+                />
+                <Input
+                  type="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://..."
+                  required
+                />
+              </div>
+            ) : (
+              <>
+                <select
+                  className="w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-transparent px-3 py-2 text-sm"
+                  value={dmMode}
+                  onChange={(e) => setDmMode(e.target.value as typeof dmMode)}
+                >
+                  <option value="static">Static template</option>
+                  <option value="ai_generated">AI generated</option>
+                </select>
+                {dmMode === 'static' ? (
+                  <Textarea
+                    value={dmTemplate}
+                    onChange={(e) => setDmTemplate(e.target.value)}
+                    placeholder="Hey! Thanks for reaching out..."
+                  />
+                ) : (
+                  <select
+                    className="w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-transparent px-3 py-2 text-sm"
+                    value={dmTier}
+                    onChange={(e) => setDmTier(e.target.value as typeof dmTier)}
+                  >
+                    <option value="standard">
+                      Standard (Haiku, 5 credits)
+                    </option>
+                    <option value="enhanced">
+                      Enhanced (Sonnet, 10 credits)
+                    </option>
+                  </select>
+                )}
+              </>
             )}
           </>
         ) : null}

@@ -66,6 +66,36 @@ export async function postPrivateCommentReply(
   message: string,
   accessToken: string,
 ): Promise<void> {
+  await sendIgMessage(igBusinessAccountId, accessToken, {
+    recipient: { comment_id: commentId },
+    message: { text: message },
+  });
+}
+
+type IgMessagePayload = {
+  recipient: { id: string } | { comment_id: string };
+  message:
+    | { text: string }
+    | {
+        attachment: {
+          type: 'template';
+          payload: {
+            template_type: 'button';
+            text: string;
+            buttons: Array<
+              | { type: 'postback'; title: string; payload: string }
+              | { type: 'web_url'; title: string; url: string }
+            >;
+          };
+        };
+      };
+};
+
+async function sendIgMessage(
+  igBusinessAccountId: string,
+  accessToken: string,
+  body: IgMessagePayload,
+): Promise<void> {
   const url = new URL(`${IG_GRAPH}/${igBusinessAccountId}/messages`);
   const res = await fetch(url.toString(), {
     method: 'POST',
@@ -73,13 +103,60 @@ export async function postPrivateCommentReply(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({
-      recipient: { comment_id: commentId },
-      message: { text: message },
-    }),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (!res.ok) {
     throw parseGraphError(data);
   }
+}
+
+export async function postPrivateCommentButtonTemplate(
+  igBusinessAccountId: string,
+  commentId: string,
+  text: string,
+  buttons: Array<
+    | { type: 'postback'; title: string; payload: string }
+    | { type: 'web_url'; title: string; url: string }
+  >,
+  accessToken: string,
+): Promise<void> {
+  await sendIgMessage(igBusinessAccountId, accessToken, {
+    recipient: { comment_id: commentId },
+    message: {
+      attachment: {
+        type: 'template',
+        payload: {
+          template_type: 'button',
+          text,
+          buttons,
+        },
+      },
+    },
+  });
+}
+
+export async function sendDirectButtonTemplate(
+  igBusinessAccountId: string,
+  recipientIgId: string,
+  text: string,
+  buttons: Array<
+    | { type: 'postback'; title: string; payload: string }
+    | { type: 'web_url'; title: string; url: string }
+  >,
+  accessToken: string,
+): Promise<void> {
+  await sendIgMessage(igBusinessAccountId, accessToken, {
+    recipient: { id: recipientIgId },
+    message: {
+      attachment: {
+        type: 'template',
+        payload: {
+          template_type: 'button',
+          text,
+          buttons,
+        },
+      },
+    },
+  });
 }

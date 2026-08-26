@@ -25,6 +25,7 @@ function makeTrigger(overrides: Partial<IgTriggerRow> = {}): IgTriggerRow {
     dm_mode: 'static',
     dm_template: null,
     dm_ai_tier: 'standard',
+    dm_flow: null,
     voice_settings_override: null,
     create_deal_on_match: false,
     deal_stage: 'lead',

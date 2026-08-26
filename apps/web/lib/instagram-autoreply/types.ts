@@ -1,3 +1,5 @@
+import type { IgDmFlowConfig } from './dm-flow-types';
+
 export type IgVoiceSettings = {
   tone: 'friendly' | 'professional' | 'casual' | 'playful';
   emoji_usage: 'none' | 'light' | 'heavy';
@@ -52,6 +54,7 @@ export type IgTriggerRow = {
   dm_mode: IgReplyMode;
   dm_template: string | null;
   dm_ai_tier: IgAiTier | null;
+  dm_flow: IgDmFlowConfig | null;
   voice_settings_override: IgVoiceSettings | null;
   create_deal_on_match: boolean;
   deal_stage: string | null;
@@ -87,6 +90,19 @@ export type IgCommentEventRow = {
   pipeline_deal_id: string | null;
   error_message: string | null;
   created_at: string;
+};
+
+export type IgDmSessionRow = {
+  id: string;
+  ig_account_id: string;
+  account_id: string;
+  trigger_id: string;
+  comment_event_id: string | null;
+  commenter_ig_id: string;
+  current_step_id: string;
+  status: 'active' | 'completed';
+  created_at: string;
+  updated_at: string;
 };
 
 export function parseIgVoiceSettings(value: unknown): IgVoiceSettings {

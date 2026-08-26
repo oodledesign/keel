@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import type { Json } from '@kit/supabase/database';
+
 import pathsConfig from '~/config/paths.config';
 import {
   insufficientCreditsResponse,
@@ -186,8 +188,9 @@ export const upsertIgTrigger = enhanceAction(
       public_reply_ai_tier: input.public_reply_ai_tier,
       dm_enabled: input.dm_enabled,
       dm_mode: input.dm_mode,
-      dm_template: input.dm_template?.trim() || null,
+      dm_template: input.dm_use_flow ? null : input.dm_template?.trim() || null,
       dm_ai_tier: input.dm_ai_tier,
+      dm_flow: (input.dm_use_flow ? input.dm_flow : null) as Json,
       voice_settings_override: input.voice_settings_override ?? null,
       create_deal_on_match: input.create_deal_on_match,
       deal_stage: input.deal_stage || 'lead',

@@ -10,6 +10,11 @@ import {
   postPrivateCommentReply,
   postPublicCommentReply,
 } from './graph-api';
+import {
+  getEntryStepForTrigger,
+  sendFlowStepToComment,
+  triggerUsesInteractiveDm,
+} from './dm-flow';
 import { findMatchingTrigger } from './match-trigger';
 import { decryptIgToken } from './token-crypto';
 import {
@@ -189,55 +194,116 @@ export async function processInstagramCommentEvent(
   }
 
   if (matchedTrigger.dm_enabled) {
-    const reply = await generateIgReply({
-      client: admin,
-      accountId: params.igAccount.account_id,
-      voiceSettings,
-      commentText,
-      commenterUsername,
-      channel: 'dm',
-      mode: matchedTrigger.dm_mode,
-      aiTier: matchedTrigger.dm_ai_tier,
-      staticTemplate: matchedTrigger.dm_template,
-    });
+    if (triggerUsesInteractiveDm(matchedTrigger)) {
+      const entryStep = getEntryStepForTrigger(matchedTrigger);
+      if (!entryStep) {
+        errors.push('DM: Invalid interactive flow configuration');
+        await admin
+          .from('ig_comment_events')
+          .update({ dm_status: 'failed', error_message: 'Invalid DM flow' })
+          .eq('id', eventId);
+      } else if (!commenterIgId) {
+        errors.push('DM: Missing commenter Instagram ID for interactive flow');
+        await admin
+          .from('ig_comment_events')
+          .update({
+            dm_status: 'failed',
+            error_message: 'Missing commenter ID',
+          })
+          .eq('id', eventId);
+      } else {
+        try {
+          await sendFlowStepToComment({
+            igBusinessAccountId: params.igAccount.ig_business_account_id,
+            commentId,
+            accessToken,
+            triggerId: matchedTrigger.id,
+            step: entryStep,
+          });
 
-    if (!reply.ok) {
-      errors.push(`DM: ${reply.message}`);
-      await admin
-        .from('ig_comment_events')
-        .update({
-          dm_status: reply.reason === 'skipped' ? 'skipped' : 'failed',
-        })
-        .eq('id', eventId);
+          await admin.from('ig_dm_sessions').insert({
+            ig_account_id: params.igAccount.id,
+            account_id: params.igAccount.account_id,
+            trigger_id: matchedTrigger.id,
+            comment_event_id: eventId,
+            commenter_ig_id: commenterIgId,
+            current_step_id: entryStep.id,
+            status: 'active',
+          });
+
+          await admin
+            .from('ig_comment_events')
+            .update({
+              dm_status: 'sent',
+              dm_sent_at: new Date().toISOString(),
+              dm_content: entryStep.message,
+            })
+            .eq('id', eventId);
+        } catch (error) {
+          const windowExpired = isDmWindowExpiredError(error);
+          const msg =
+            error instanceof Error ? error.message : 'Interactive DM failed';
+          errors.push(`DM: ${msg}`);
+          await admin
+            .from('ig_comment_events')
+            .update({
+              dm_status: windowExpired ? 'window_expired' : 'failed',
+              error_message: msg,
+            })
+            .eq('id', eventId);
+        }
+      }
     } else {
-      try {
-        await postPrivateCommentReply(
-          params.igAccount.ig_business_account_id,
-          commentId,
-          reply.text,
-          accessToken,
-        );
+      const reply = await generateIgReply({
+        client: admin,
+        accountId: params.igAccount.account_id,
+        voiceSettings,
+        commentText,
+        commenterUsername,
+        channel: 'dm',
+        mode: matchedTrigger.dm_mode,
+        aiTier: matchedTrigger.dm_ai_tier,
+        staticTemplate: matchedTrigger.dm_template,
+      });
+
+      if (!reply.ok) {
+        errors.push(`DM: ${reply.message}`);
         await admin
           .from('ig_comment_events')
           .update({
-            dm_status: 'sent',
-            dm_sent_at: new Date().toISOString(),
-            dm_content: reply.text,
-            dm_ai_credits_spent: reply.creditsSpent || null,
+            dm_status: reply.reason === 'skipped' ? 'skipped' : 'failed',
           })
           .eq('id', eventId);
-      } catch (error) {
-        const windowExpired = isDmWindowExpiredError(error);
-        const msg = error instanceof Error ? error.message : 'DM failed';
-        errors.push(`DM: ${msg}`);
-        await admin
-          .from('ig_comment_events')
-          .update({
-            dm_status: windowExpired ? 'window_expired' : 'failed',
-            dm_content: reply.text,
-            dm_ai_credits_spent: reply.creditsSpent || null,
-          })
-          .eq('id', eventId);
+      } else {
+        try {
+          await postPrivateCommentReply(
+            params.igAccount.ig_business_account_id,
+            commentId,
+            reply.text,
+            accessToken,
+          );
+          await admin
+            .from('ig_comment_events')
+            .update({
+              dm_status: 'sent',
+              dm_sent_at: new Date().toISOString(),
+              dm_content: reply.text,
+              dm_ai_credits_spent: reply.creditsSpent || null,
+            })
+            .eq('id', eventId);
+        } catch (error) {
+          const windowExpired = isDmWindowExpiredError(error);
+          const msg = error instanceof Error ? error.message : 'DM failed';
+          errors.push(`DM: ${msg}`);
+          await admin
+            .from('ig_comment_events')
+            .update({
+              dm_status: windowExpired ? 'window_expired' : 'failed',
+              dm_content: reply.text,
+              dm_ai_credits_spent: reply.creditsSpent || null,
+            })
+            .eq('id', eventId);
+        }
       }
     }
   }

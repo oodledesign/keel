@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -5235,6 +5235,8 @@ export type Database = {
           landlord_share_enabled: boolean
           landlord_share_token: string | null
           latitude: number | null
+          let_contract_length_months: number | null
+          let_type: string | null
           location_copy: string | null
           longitude: number | null
           marketing_sections: Json
@@ -5321,6 +5323,8 @@ export type Database = {
           landlord_share_enabled?: boolean
           landlord_share_token?: string | null
           latitude?: number | null
+          let_contract_length_months?: number | null
+          let_type?: string | null
           location_copy?: string | null
           longitude?: number | null
           marketing_sections?: Json
@@ -5407,6 +5411,8 @@ export type Database = {
           landlord_share_enabled?: boolean
           landlord_share_token?: string | null
           latitude?: number | null
+          let_contract_length_months?: number | null
+          let_type?: string | null
           location_copy?: string | null
           longitude?: number | null
           marketing_sections?: Json
@@ -7628,9 +7634,6 @@ export type Database = {
           auto_draft_enabled: boolean
           auto_save_gmail_drafts: boolean
           auto_triage_enabled: boolean
-          onboarding_completed_at: string | null
-          respect_existing_gmail_labels: boolean
-          sync_triage_to_gmail: boolean
           connection_id: string
           created_at: string
           ignored_domains: string[]
@@ -7652,9 +7655,6 @@ export type Database = {
           auto_draft_enabled?: boolean
           auto_save_gmail_drafts?: boolean
           auto_triage_enabled?: boolean
-          onboarding_completed_at?: string | null
-          respect_existing_gmail_labels?: boolean
-          sync_triage_to_gmail?: boolean
           connection_id: string
           created_at?: string
           ignored_domains?: string[]
@@ -7676,9 +7676,6 @@ export type Database = {
           auto_draft_enabled?: boolean
           auto_save_gmail_drafts?: boolean
           auto_triage_enabled?: boolean
-          onboarding_completed_at?: string | null
-          respect_existing_gmail_labels?: boolean
-          sync_triage_to_gmail?: boolean
           connection_id?: string
           created_at?: string
           ignored_domains?: string[]
@@ -9593,7 +9590,7 @@ export type Database = {
           access_token: string
           account_id: string
           created_at: string
-          facebook_page_id: string
+          facebook_page_id: string | null
           id: string
           ig_business_account_id: string
           ig_username: string | null
@@ -9606,7 +9603,7 @@ export type Database = {
           access_token: string
           account_id: string
           created_at?: string
-          facebook_page_id: string
+          facebook_page_id?: string | null
           id?: string
           ig_business_account_id: string
           ig_username?: string | null
@@ -9619,7 +9616,7 @@ export type Database = {
           access_token?: string
           account_id?: string
           created_at?: string
-          facebook_page_id?: string
+          facebook_page_id?: string | null
           id?: string
           ig_business_account_id?: string
           ig_username?: string | null
@@ -9652,6 +9649,88 @@ export type Database = {
           },
         ]
       }
+      ig_dm_sessions: {
+        Row: {
+          account_id: string
+          comment_event_id: string | null
+          commenter_ig_id: string
+          created_at: string
+          current_step_id: string
+          id: string
+          ig_account_id: string
+          status: string
+          trigger_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          comment_event_id?: string | null
+          commenter_ig_id: string
+          created_at?: string
+          current_step_id: string
+          id?: string
+          ig_account_id: string
+          status?: string
+          trigger_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          comment_event_id?: string | null
+          commenter_ig_id?: string
+          created_at?: string
+          current_step_id?: string
+          id?: string
+          ig_account_id?: string
+          status?: string
+          trigger_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_dm_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_dm_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_dm_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_dm_sessions_comment_event_id_fkey"
+            columns: ["comment_event_id"]
+            isOneToOne: false
+            referencedRelation: "ig_comment_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_dm_sessions_ig_account_id_fkey"
+            columns: ["ig_account_id"]
+            isOneToOne: false
+            referencedRelation: "ig_connected_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_dm_sessions_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "ig_triggers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ig_triggers: {
         Row: {
           account_id: string
@@ -9660,6 +9739,7 @@ export type Database = {
           deal_stage: string | null
           dm_ai_tier: string | null
           dm_enabled: boolean
+          dm_flow: Json | null
           dm_mode: string
           dm_template: string | null
           id: string
@@ -9684,6 +9764,7 @@ export type Database = {
           deal_stage?: string | null
           dm_ai_tier?: string | null
           dm_enabled?: boolean
+          dm_flow?: Json | null
           dm_mode?: string
           dm_template?: string | null
           id?: string
@@ -9708,6 +9789,7 @@ export type Database = {
           deal_stage?: string | null
           dm_ai_tier?: string | null
           dm_enabled?: boolean
+          dm_flow?: Json | null
           dm_mode?: string
           dm_template?: string | null
           id?: string
@@ -11041,6 +11123,7 @@ export type Database = {
           file_path: string | null
           id: string
           meeting_date: string | null
+          portal_visible: boolean
           project_id: string | null
           public_share_enabled: boolean
           public_share_show_tasks: boolean
@@ -11067,6 +11150,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           meeting_date?: string | null
+          portal_visible?: boolean
           project_id?: string | null
           public_share_enabled?: boolean
           public_share_show_tasks?: boolean
@@ -11093,6 +11177,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           meeting_date?: string | null
+          portal_visible?: boolean
           project_id?: string | null
           public_share_enabled?: boolean
           public_share_show_tasks?: boolean
@@ -11660,6 +11745,123 @@ export type Database = {
             columns: ["billing_customer_id"]
             isOneToOne: false
             referencedRelation: "billing_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_project_cost_lines: {
+        Row: {
+          actual_pence: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          estimate_pence: number | null
+          id: string
+          owner_account_id: string
+          partner_account_id: string
+          project_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          share_id: string
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          actual_pence?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimate_pence?: number | null
+          id?: string
+          owner_account_id: string
+          partner_account_id: string
+          project_id: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          share_id: string
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          actual_pence?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimate_pence?: number | null
+          id?: string
+          owner_account_id?: string
+          partner_account_id?: string
+          project_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          share_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_project_cost_lines_owner_account_id_fkey"
+            columns: ["owner_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_project_cost_lines_owner_account_id_fkey"
+            columns: ["owner_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_project_cost_lines_owner_account_id_fkey"
+            columns: ["owner_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_project_cost_lines_partner_account_id_fkey"
+            columns: ["partner_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_project_cost_lines_partner_account_id_fkey"
+            columns: ["partner_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_project_cost_lines_partner_account_id_fkey"
+            columns: ["partner_account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_project_cost_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_project_cost_lines_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "client_workspace_shares"
             referencedColumns: ["id"]
           },
         ]
@@ -17431,6 +17633,10 @@ export type Database = {
         Args: { target_account_id: string }
         Returns: boolean
       }
+      has_client_workspace_project_access: {
+        Args: { target_project_id: string }
+        Returns: boolean
+      }
       has_more_elevated_role: {
         Args: {
           role_name: string
@@ -17496,6 +17702,10 @@ export type Database = {
       }
       is_portal_assigned_task: {
         Args: { target_task_id: string }
+        Returns: boolean
+      }
+      is_portal_visible_meeting: {
+        Args: { target_transcript_id: string }
         Returns: boolean
       }
       is_portal_visible_project: {

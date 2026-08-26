@@ -7,6 +7,7 @@ import {
   type MetaCommentWebhookValue,
   processInstagramCommentEvent,
 } from '~/lib/instagram-autoreply/process-comment-event';
+import { processInstagramMessagingPostback } from '~/lib/instagram-autoreply/process-messaging-postback';
 import type { IgConnectedAccountRow } from '~/lib/instagram-autoreply/types';
 import { verifyMetaWebhookSignature } from '~/lib/instagram-autoreply/webhook-verify';
 
@@ -19,6 +20,11 @@ type MetaWebhookEntry = {
   changes?: Array<{
     field?: string;
     value?: MetaCommentWebhookValue & { verb?: string };
+  }>;
+  messaging?: Array<{
+    sender?: { id?: string };
+    recipient?: { id?: string };
+    postback?: { payload?: string; title?: string };
   }>;
 };
 
@@ -105,6 +111,21 @@ export async function POST(request: Request) {
       } catch (error) {
         console.error(
           '[instagram-webhook] process failed',
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
+
+    for (const messaging of entry.messaging ?? []) {
+      if (!messaging.postback?.payload) continue;
+      try {
+        await processInstagramMessagingPostback(admin, {
+          igAccount: igAccount as IgConnectedAccountRow,
+          messaging,
+        });
+      } catch (error) {
+        console.error(
+          '[instagram-webhook] postback failed',
           error instanceof Error ? error.message : error,
         );
       }

@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS public.ig_triggers (
   dm_ai_tier text DEFAULT 'standard'
     CHECK (dm_ai_tier IN ('standard', 'enhanced')),
 
+  dm_flow jsonb,
+
   voice_settings_override jsonb,
 
   create_deal_on_match boolean NOT NULL DEFAULT false,

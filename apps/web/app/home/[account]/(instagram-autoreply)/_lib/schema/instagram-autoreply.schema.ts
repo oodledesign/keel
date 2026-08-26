@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { assertSafeTriggerRegex } from '~/lib/instagram-autoreply/match-trigger';
+import { igDmFlowConfigSchema } from '~/lib/instagram-autoreply/dm-flow-types';
 
 const voiceSettingsSchema = z.object({
   tone: z.enum(['friendly', 'professional', 'casual', 'playful']),
@@ -43,12 +44,21 @@ export const upsertIgTriggerActionSchema = z
     dm_mode: z.enum(['static', 'ai_generated']).default('static'),
     dm_template: z.string().max(2000).nullable().optional(),
     dm_ai_tier: z.enum(['standard', 'enhanced']).default('standard'),
+    dm_use_flow: z.boolean().default(false),
+    dm_flow: igDmFlowConfigSchema.nullable().optional(),
     voice_settings_override: voiceSettingsSchema.nullable().optional(),
     create_deal_on_match: z.boolean().default(false),
     deal_stage: z.string().default('lead'),
     is_active: z.boolean().default(true),
   })
   .superRefine((data, ctx) => {
+    if (data.dm_enabled && data.dm_use_flow && !data.dm_flow) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Interactive DM flow requires at least one step',
+        path: ['dm_flow'],
+      });
+    }
     if (data.match_type !== 'regex') return;
     for (const keyword of data.keywords) {
       try {
