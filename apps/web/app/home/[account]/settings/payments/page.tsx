@@ -9,8 +9,10 @@ import {
   getTeamAccountAccess,
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { BUSINESS_WORKSPACE_SPACE_TYPES } from '../../_lib/server/workspace-route-guard';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import {
+  WORK_DESIGN_SETTINGS_PROFILES,
+  redirectIfProfileNotIn,
+} from '../../_lib/server/workspace-route-guard';
 import { PaymentSettingsForm } from './_components/payment-settings-form';
 
 export const generateMetadata = async () => ({ title: 'Payment settings' });
@@ -24,7 +26,7 @@ export default async function PaymentSettingsPage(
 ) {
   const { account } = await props.params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, BUSINESS_WORKSPACE_SPACE_TYPES);
+  redirectIfProfileNotIn(workspace, account, WORK_DESIGN_SETTINGS_PROFILES);
 
   const access = getTeamAccountAccess(
     workspace.account as {

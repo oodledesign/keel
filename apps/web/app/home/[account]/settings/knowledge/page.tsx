@@ -1,9 +1,16 @@
+import { redirect } from 'next/navigation';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import pathsConfig from '~/config/paths.config';
 import { getBrainIndexStats } from '~/lib/brain/indexer';
 
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import {
+  KNOWLEDGE_SETTINGS_PROFILES,
+  redirectIfProfileNotIn,
+} from '../../_lib/server/workspace-route-guard';
 import { KnowledgeBaseSettings } from '../_components/knowledge-base-settings';
 
 interface KnowledgeSettingsPageProps {
@@ -17,6 +24,8 @@ export const generateMetadata = async () => ({
 async function KnowledgeSettingsPage({ params }: KnowledgeSettingsPageProps) {
   const { account: accountSlug } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
+  redirectIfProfileNotIn(workspace, accountSlug, KNOWLEDGE_SETTINGS_PROFILES);
+
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -26,7 +35,9 @@ async function KnowledgeSettingsPage({ params }: KnowledgeSettingsPageProps) {
   );
 
   if (!access.canViewDashboard) {
-    return null;
+    redirect(
+      pathsConfig.app.accountSettings.replace('[account]', accountSlug),
+    );
   }
 
   const admin = getSupabaseServerAdminClient();

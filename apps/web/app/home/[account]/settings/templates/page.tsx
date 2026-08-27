@@ -13,8 +13,8 @@ import {
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
-  BUSINESS_WORKSPACE_SPACE_TYPES,
-  redirectIfSpaceNotIn,
+  WORK_DESIGN_SETTINGS_PROFILES,
+  redirectIfProfileNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { WorkspaceTemplatesSettingsClient } from './_components/workspace-templates-settings-client';
 
@@ -29,7 +29,7 @@ interface PageProps {
 export default async function WorkspaceTemplatesSettingsPage(props: PageProps) {
   const { account } = await props.params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, BUSINESS_WORKSPACE_SPACE_TYPES);
+  redirectIfProfileNotIn(workspace, account, WORK_DESIGN_SETTINGS_PROFILES);
 
   const access = getTeamAccountAccess(
     workspace.account as {

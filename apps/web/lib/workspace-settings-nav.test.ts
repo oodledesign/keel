@@ -9,19 +9,62 @@ import {
 describe('buildWorkspaceSettingsNav', () => {
   const ownerAccess = getTeamAccountAccess({ role: 'owner' });
 
-  it('includes business workspace sections', () => {
+  it('includes full business workspace sections for work_design', () => {
     const items = buildWorkspaceSettingsNav({
       accountSlug: 'oodle',
       workspaceProfile: 'work_design',
-      moduleSettings: { videos: true },
+      moduleSettings: { finances: true, tasks: true },
       access: ownerAccess,
     });
 
-    expect(items.map((item) => item.id)).toContain('general');
-    expect(items.map((item) => item.id)).toContain('payments');
-    expect(items.map((item) => item.id)).toContain('brand');
-    expect(items.map((item) => item.id)).toContain('knowledge');
-    expect(items.map((item) => item.id)).toContain('videos');
+    const ids = items.map((item) => item.id);
+    expect(ids).toContain('general');
+    expect(ids).toContain('payments');
+    expect(ids).toContain('services');
+    expect(ids).toContain('brand');
+    expect(ids).toContain('templates');
+    expect(ids).toContain('knowledge');
+    expect(ids).toContain('task-automation');
+  });
+
+  it('limits commercial property workspaces to agency-relevant settings', () => {
+    const items = buildWorkspaceSettingsNav({
+      accountSlug: 'bracketts',
+      workspaceProfile: 'commercial_property',
+      moduleSettings: {},
+      access: ownerAccess,
+    });
+
+    const ids = items.map((item) => item.id);
+    expect(ids).toEqual([
+      'general',
+      'notifications',
+      'focus',
+      'activity',
+      'brand',
+      'brand-voice',
+    ]);
+    expect(ids).not.toContain('payments');
+    expect(ids).not.toContain('services');
+    expect(ids).not.toContain('templates');
+    expect(ids).not.toContain('knowledge');
+    expect(ids).not.toContain('finances');
+  });
+
+  it('excludes invoice and brain settings for landlord property workspaces', () => {
+    const items = buildWorkspaceSettingsNav({
+      accountSlug: 'landlord-co',
+      workspaceProfile: 'work_property',
+      moduleSettings: { finances: true },
+      access: ownerAccess,
+    });
+
+    const ids = items.map((item) => item.id);
+    expect(ids).toContain('finances');
+    expect(ids).not.toContain('payments');
+    expect(ids).not.toContain('services');
+    expect(ids).not.toContain('templates');
+    expect(ids).not.toContain('knowledge');
   });
 
   it('marks general as exact match only', () => {

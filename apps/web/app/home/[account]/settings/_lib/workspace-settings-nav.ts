@@ -8,8 +8,7 @@ import {
 } from '~/home/[account]/_lib/server/account-modules';
 import {
   type WorkspaceProfile,
-  isBusinessProfile,
-  spaceTypeFromProfile,
+  isGroupProfile,
 } from '~/home/[account]/_lib/workspace-profile';
 
 export type WorkspaceSettingsNavIcon = 'calendar-off';
@@ -27,6 +26,41 @@ function settingsPath(template: string, accountSlug: string): string {
   return template.replace('[account]', accountSlug);
 }
 
+function appendBillingNavItem(
+  items: WorkspaceSettingsNavItem[],
+  accountSlug: string,
+  access: TeamAccountAccess,
+) {
+  if (access.canViewBilling && featureFlagsConfig.enableTeamAccountBilling) {
+    items.push({
+      id: 'billing',
+      label: 'Billing',
+      href: settingsPath(pathsConfig.app.accountBilling, accountSlug),
+    });
+  }
+}
+
+function appendBrandNavItems(
+  items: WorkspaceSettingsNavItem[],
+  accountSlug: string,
+) {
+  items.push(
+    {
+      id: 'brand',
+      label: 'Brand',
+      href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
+    },
+    {
+      id: 'brand-voice',
+      label: 'Brand voice',
+      href: settingsPath(
+        pathsConfig.app.accountBrandVoiceSettings,
+        accountSlug,
+      ),
+    },
+  );
+}
+
 export function buildWorkspaceSettingsNav(input: {
   accountSlug: string;
   workspaceProfile: WorkspaceProfile;
@@ -34,7 +68,6 @@ export function buildWorkspaceSettingsNav(input: {
   access: TeamAccountAccess;
 }): WorkspaceSettingsNavItem[] {
   const { accountSlug, workspaceProfile, moduleSettings, access } = input;
-  const spaceType = spaceTypeFromProfile(workspaceProfile);
   const items: WorkspaceSettingsNavItem[] = [
     {
       id: 'general',
@@ -66,25 +99,16 @@ export function buildWorkspaceSettingsNav(input: {
     },
   ];
 
-  if (isBusinessProfile(workspaceProfile)) {
-    items.push({
-      id: 'payments',
-      label: 'Payments',
-      href: settingsPath(pathsConfig.app.accountPaymentSettings, accountSlug),
-    });
+  if (workspaceProfile === 'commercial_property') {
+    appendBrandNavItems(items, accountSlug);
+    appendBillingNavItem(items, accountSlug, access);
+    return items;
+  }
 
-    items.push({
-      id: 'services',
-      label: 'Services',
-      href: settingsPath(pathsConfig.app.accountServicesSettings, accountSlug),
-    });
+  if (workspaceProfile === 'work_property') {
+    appendBrandNavItems(items, accountSlug);
 
-    const financesEnabled =
-      spaceType === 'property'
-        ? isPropertyNavModuleEnabled(moduleSettings, 'finances')
-        : isWorkNavModuleEnabled(moduleSettings, 'finances');
-
-    if (financesEnabled) {
+    if (isPropertyNavModuleEnabled(moduleSettings, 'finances')) {
       items.push({
         id: 'finances',
         label: 'Finances',
@@ -95,44 +119,58 @@ export function buildWorkspaceSettingsNav(input: {
       });
     }
 
-    if (isBusinessProfile(workspaceProfile)) {
-      items.push({
-        id: 'brand',
-        label: 'Brand',
-        href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
-      });
+    appendBillingNavItem(items, accountSlug, access);
+    return items;
+  }
 
-      items.push({
-        id: 'brand-voice',
-        label: 'Brand voice',
+  if (workspaceProfile === 'work_design') {
+    items.push(
+      {
+        id: 'payments',
+        label: 'Payments',
+        href: settingsPath(pathsConfig.app.accountPaymentSettings, accountSlug),
+      },
+      {
+        id: 'services',
+        label: 'Services',
         href: settingsPath(
-          pathsConfig.app.accountBrandVoiceSettings,
+          pathsConfig.app.accountServicesSettings,
+          accountSlug,
+        ),
+      },
+    );
+
+    if (isWorkNavModuleEnabled(moduleSettings, 'finances')) {
+      items.push({
+        id: 'finances',
+        label: 'Finances',
+        href: settingsPath(
+          pathsConfig.app.accountFinancesSettings,
           accountSlug,
         ),
       });
+    }
 
+    appendBrandNavItems(items, accountSlug);
+
+    items.push({
+      id: 'templates',
+      label: 'Templates',
+      href: settingsPath(
+        pathsConfig.app.accountContentTemplatesSettings,
+        accountSlug,
+      ),
+    });
+
+    if (isWorkModuleEnabled(moduleSettings, 'tasks')) {
       items.push({
-        id: 'templates',
-        label: 'Templates',
+        id: 'task-automation',
+        label: 'Task automation',
         href: settingsPath(
-          pathsConfig.app.accountContentTemplatesSettings,
+          pathsConfig.app.accountTaskAutomationSettings,
           accountSlug,
         ),
       });
-
-      if (
-        spaceType === 'work' &&
-        isWorkModuleEnabled(moduleSettings, 'tasks')
-      ) {
-        items.push({
-          id: 'task-automation',
-          label: 'Task automation',
-          href: settingsPath(
-            pathsConfig.app.accountTaskAutomationSettings,
-            accountSlug,
-          ),
-        });
-      }
     }
 
     items.push({
@@ -141,14 +179,11 @@ export function buildWorkspaceSettingsNav(input: {
       href: settingsPath(pathsConfig.app.accountBrainKnowledge, accountSlug),
     });
 
-    if (access.canViewBilling && featureFlagsConfig.enableTeamAccountBilling) {
-      items.push({
-        id: 'billing',
-        label: 'Billing',
-        href: settingsPath(pathsConfig.app.accountBilling, accountSlug),
-      });
-    }
-  } else if (spaceType === 'community' || spaceType === 'family') {
+    appendBillingNavItem(items, accountSlug, access);
+    return items;
+  }
+
+  if (isGroupProfile(workspaceProfile)) {
     if (access.canViewDashboard) {
       items.push({
         id: 'knowledge',
@@ -157,13 +192,7 @@ export function buildWorkspaceSettingsNav(input: {
       });
     }
 
-    if (access.canViewBilling && featureFlagsConfig.enableTeamAccountBilling) {
-      items.push({
-        id: 'billing',
-        label: 'Billing',
-        href: settingsPath(pathsConfig.app.accountBilling, accountSlug),
-      });
-    }
+    appendBillingNavItem(items, accountSlug, access);
   }
 
   return items;

@@ -12,8 +12,8 @@ import {
 } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
-  BUSINESS_WORKSPACE_SPACE_TYPES,
-  redirectIfSpaceNotIn,
+  FINANCES_SETTINGS_PROFILES,
+  redirectIfProfileNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { spaceTypeFromProfile } from '../../_lib/workspace-profile';
 import { loadFinancesSettingsAction } from '../../finances/_lib/server/finances-actions';
@@ -30,7 +30,7 @@ export default async function FinancesSettingsPage(
 ) {
   const { account } = await props.params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, BUSINESS_WORKSPACE_SPACE_TYPES);
+  redirectIfProfileNotIn(workspace, account, FINANCES_SETTINGS_PROFILES);
 
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
   const access = getTeamAccountAccess(
