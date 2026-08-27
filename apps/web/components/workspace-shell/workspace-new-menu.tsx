@@ -44,6 +44,7 @@ type WorkspaceNewMenuProps =
       variant: 'team';
       account: string;
       spaceType?: WorkspaceSpaceType;
+      canMutateCommercial?: boolean;
     }
   | {
       variant: 'personal';
@@ -72,7 +73,11 @@ const DESKTOP_NEW_MENU_ROW_CLASS =
 function getNewMenuItems(props: WorkspaceNewMenuProps) {
   const items =
     props.variant === 'team'
-      ? getTeamItems(props.account, props.spaceType ?? 'work')
+      ? getTeamItems(
+          props.account,
+          props.spaceType ?? 'work',
+          props.canMutateCommercial ?? true,
+        )
       : getPersonalItems();
 
   return prioritizeNewMenuItems(items);
@@ -148,6 +153,7 @@ function NewMenuItemRow({
       return (
         <Link
           href={item.href}
+          prefetch={false}
           onClick={onNavigate}
           className={DESKTOP_NEW_MENU_ROW_CLASS}
         >
@@ -158,7 +164,12 @@ function NewMenuItemRow({
     }
 
     return (
-      <Link href={item.href} onClick={onNavigate} className="flex items-center">
+      <Link
+        href={item.href}
+        prefetch={false}
+        onClick={onNavigate}
+        className="flex items-center"
+      >
         <item.icon className={iconClassName} />
         {item.label}
       </Link>
@@ -353,6 +364,7 @@ function accountPath(account: string, template: string) {
 function getTeamItems(
   account: string,
   spaceType: WorkspaceSpaceType,
+  canMutateCommercial = true,
 ): NewMenuItem[] {
   if (spaceType === 'community') {
     return [
@@ -460,7 +472,7 @@ function getTeamItems(
   }
 
   if (spaceType === 'commercial-property') {
-    return [
+    const items: NewMenuItem[] = [
       {
         key: 'disposal',
         label: 'New disposal',
@@ -498,6 +510,13 @@ function getTeamItems(
         href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
       },
     ];
+
+    if (!canMutateCommercial) {
+      const blocked = new Set(['disposal', 'instruction', 'requirement']);
+      return items.filter((item) => !blocked.has(item.key));
+    }
+
+    return items;
   }
 
   return [

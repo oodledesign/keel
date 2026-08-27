@@ -39,6 +39,7 @@ import {
   normalizeStaffEmail,
   staffSourceLabel,
 } from '~/lib/signatures/staff-source';
+import { enableSignaturesManualMode as persistSignaturesManualMode } from '~/lib/signatures/workspace-settings';
 
 import {
   bulkUpdateStaffActionSchema,
@@ -50,6 +51,7 @@ import {
   deleteSignatureAssetActionSchema,
   disconnectGoogleActionSchema,
   disconnectM365ActionSchema,
+  enableSignaturesManualModeActionSchema,
   importSignatureStaffActionSchema,
   pushAllActionSchema,
   pushStaffActionSchema,
@@ -139,6 +141,32 @@ export const syncSignaturesStaff = enhanceAction(
     return result;
   },
   { schema: syncStaffActionSchema },
+);
+
+export const enableSignaturesManualMode = enhanceAction(
+  async (input, user) => {
+    const { accountSlug } = await assertSignaturesAdmin(
+      input.accountId,
+      user.id,
+    );
+    await persistSignaturesManualMode(input.accountId);
+
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesStaff, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesTemplates, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountSignaturesIntegrations, accountSlug),
+    );
+
+    return { ok: true as const };
+  },
+  { schema: enableSignaturesManualModeActionSchema },
 );
 
 export const pushAllSignaturesAction = enhanceAction(

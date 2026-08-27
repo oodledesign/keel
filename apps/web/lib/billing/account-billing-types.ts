@@ -25,6 +25,7 @@ export const BILLING_EMAIL_KINDS = [
   'payment_recovered',
   'subscription_canceled',
   'renewal_notice',
+  'subscription_welcome',
 ] as const;
 
 export type BillingEmailKind = (typeof BILLING_EMAIL_KINDS)[number];

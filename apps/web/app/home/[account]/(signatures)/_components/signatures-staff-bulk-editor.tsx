@@ -220,8 +220,8 @@ export function SignaturesStaffBulkEditor({
   if (!staff.length) {
     return (
       <div className="text-muted-foreground rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm">
-        No staff yet. Sync from Microsoft 365 or Google Workspace, add people
-        manually, or import a CSV.
+        No staff yet. Add people manually, import a CSV, or connect a mail
+        provider to sync from your directory.
       </div>
     );
   }

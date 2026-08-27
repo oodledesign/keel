@@ -113,6 +113,8 @@
   "seatKindBillableDescription": "Negotiator / editor — paid seat",
   "seatKindSupportLabel": "Support",
   "seatKindSupportDescription": "View and notes — free seat",
+  "seatKindPlatformAdminLabel": "Platform admin",
+  "seatKindPlatformAdminDescription": "Ozer platform admin — free seat, not billed",
   "inviteProjectPlaceholder": "Add to a project (optional)",
   "inviteProjectNone": "No project",
   "firstNamePlaceholder": "First name",

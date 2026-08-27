@@ -21,6 +21,7 @@ import type {
   CommercialListingMedia,
   CommercialPortalPublication,
 } from '../_lib/server/listings.service';
+import { useDisposalAccess } from './disposal-access-context';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import { confirmPublishIfNotReady } from './marketing-readiness-card';
 
@@ -57,6 +58,7 @@ export function ListingPortalSyncCard({
   accountId: string;
   media?: CommercialListingMedia[];
 }) {
+  const { canEditDisposals } = useDisposalAccess();
   const router = useRouter();
   const [pendingPortal, setPendingPortal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -65,6 +67,7 @@ export function ListingPortalSyncCard({
   const eachPublication = publications.find((pub) => pub.portal === 'each');
 
   const republish = (portal: 'property_hive' | 'rightmove' | 'each') => {
+    if (!canEditDisposals) return;
     const readiness = getMarketingReadiness({ listing, media, publications });
     if (!confirmPublishIfNotReady(readiness)) return;
 
@@ -117,6 +120,7 @@ export function ListingPortalSyncCard({
           accountId={accountId}
           listingId={listing.id}
           initialEnabled={isEachFeedIncluded(publications)}
+          disabled={!canEditDisposals}
           onBeforeEnable={() =>
             confirmPublishIfNotReady(
               getMarketingReadiness({ listing, media, publications }),
@@ -128,7 +132,9 @@ export function ListingPortalSyncCard({
           <PublicationRow
             pub={eachPublication}
             pending={pending && pendingPortal === 'each'}
-            onRepublish={() => republish('each')}
+            onRepublish={
+              canEditDisposals ? () => republish('each') : undefined
+            }
           />
         ) : null}
 
@@ -145,7 +151,7 @@ export function ListingPortalSyncCard({
                 pub={pub}
                 pending={pending && pendingPortal === pub.portal}
                 onRepublish={
-                  REPUBLISHABLE.has(pub.portal)
+                  canEditDisposals && REPUBLISHABLE.has(pub.portal)
                     ? () =>
                         republish(
                           pub.portal as 'property_hive' | 'rightmove' | 'each',

@@ -15,6 +15,7 @@ type WorkspaceTopBarBaseProps = {
     picture_url: string | null;
   };
   showNewMenu?: boolean;
+  canMutateCommercial?: boolean;
 };
 
 export function WorkspaceTopBar(

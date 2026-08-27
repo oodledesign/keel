@@ -94,8 +94,9 @@ export function SignaturesActionsBar({
     >
       {!compact && blocked ? (
         <p className="text-muted-foreground text-xs">
-          Connect Microsoft 365 or Google Workspace to sync staff and push
-          signatures.
+          Connect Microsoft 365 or Google Workspace to sync the directory and
+          push signatures. Manual staff and install links work without a
+          connection.
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">

@@ -31,6 +31,7 @@ import {
   isBillingLifecycleStripeEvent,
 } from '~/lib/billing/handle-billing-lifecycle-event';
 import { syncKeelPlanFromSubscription } from '~/lib/billing/sync-subscription-plan';
+import { enqueueSubscriptionWelcomeEmail } from '~/lib/billing/subscription-welcome-email';
 import { convertReferralOnInvoicePaid } from '~/lib/rewards/convert-referral-on-invoice-paid';
 
 /**
@@ -115,6 +116,13 @@ export const POST = enhanceRouteHandler(
           );
           const admin = getSupabaseServerAdminClient();
           await fulfillMediaSubscriptionGrant(admin, subscription);
+
+          const welcomeResult = await enqueueSubscriptionWelcomeEmail(admin, {
+            subscription,
+          });
+          if (welcomeResult.id) {
+            pendingEmailJobIds.push(welcomeResult.id);
+          }
         },
         onPaymentSucceeded: async (sessionId) => {
           const admin = getSupabaseServerAdminClient();

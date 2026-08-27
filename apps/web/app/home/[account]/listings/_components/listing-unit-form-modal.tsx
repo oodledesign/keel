@@ -241,6 +241,7 @@ function ListingUnitFormFields({
           <Input
             type="number"
             min={0}
+            step="any"
             value={form.sizeSqft}
             onChange={(e) => field('sizeSqft', e.target.value)}
             className={inputClass}

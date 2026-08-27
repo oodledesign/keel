@@ -21,6 +21,7 @@ import {
   removeListingCoAgent,
   searchCoAgentClients,
 } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
 
 export function ListingCoAgentsCard({
   accountId,
@@ -31,6 +32,8 @@ export function ListingCoAgentsCard({
   listingId: string;
   initialCoAgents: ListingCoAgent[];
 }) {
+  const { canEditDisposals } = useDisposalAccess();
+  const readOnly = !canEditDisposals;
   const [coAgents, setCoAgents] = useState(initialCoAgents);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CoAgentClientOption[]>([]);
@@ -157,7 +160,7 @@ export function ListingCoAgentsCard({
             id="co-agent-search"
             placeholder="Search agencies or contacts…"
             value={query}
-            disabled={pending}
+            disabled={pending || readOnly}
             onChange={(e) => setQuery(e.target.value)}
           />
           {query.trim() && (searching || results.length > 0) ? (
@@ -169,7 +172,7 @@ export function ListingCoAgentsCard({
                   <li key={row.id}>
                     <button
                       type="button"
-                      disabled={pending}
+                      disabled={pending || readOnly}
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--workspace-shell-sidebar-accent)]"
                       onClick={() => addExisting(row)}
                     >
@@ -206,7 +209,7 @@ export function ListingCoAgentsCard({
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="e.g. Smith & Partners"
-                disabled={pending}
+                disabled={pending || readOnly}
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -216,7 +219,7 @@ export function ListingCoAgentsCard({
                   id="co-agent-contact"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  disabled={pending}
+                  disabled={pending || readOnly}
                 />
               </div>
               <div className="space-y-1.5">
@@ -226,7 +229,7 @@ export function ListingCoAgentsCard({
                   type="email"
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
-                  disabled={pending}
+                  disabled={pending || readOnly}
                 />
               </div>
               <div className="space-y-1.5">
@@ -235,14 +238,14 @@ export function ListingCoAgentsCard({
                   id="co-agent-phone"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  disabled={pending}
+                  disabled={pending || readOnly}
                 />
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                disabled={pending}
+                disabled={pending || readOnly}
                 className={workspaceBtnPrimaryMd}
                 onClick={createAndLink}
               >
@@ -251,7 +254,7 @@ export function ListingCoAgentsCard({
               <Button
                 type="button"
                 variant="ghost"
-                disabled={pending}
+                disabled={pending || readOnly}
                 onClick={() => setShowCreate(false)}
               >
                 Cancel
@@ -262,7 +265,7 @@ export function ListingCoAgentsCard({
           <Button
             type="button"
             variant="outline"
-            disabled={pending}
+            disabled={pending || readOnly}
             onClick={() => setShowCreate(true)}
           >
             <Plus className="h-4 w-4" />
@@ -298,7 +301,7 @@ export function ListingCoAgentsCard({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  disabled={pending}
+                  disabled={pending || readOnly}
                   className="h-7 w-7 shrink-0"
                   onClick={() => remove(agent)}
                   aria-label={`Remove ${agent.clientName}`}

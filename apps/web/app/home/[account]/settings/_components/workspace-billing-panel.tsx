@@ -32,6 +32,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { PaymentRecoveryCard } from '../../_components/payment-recovery-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { ActiveAddonsBillingCard } from './active-addons-billing-card';
+import { BillingCheckoutFocus } from './billing-checkout-focus';
 import { MediaGenerateAppToggle } from './media-generate-app-toggle';
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
 import { WorkspaceMediaUnitsBillingCard } from './workspace-media-units-billing-card';
@@ -100,9 +101,21 @@ export async function WorkspaceBillingPanel({
     billingClient,
     accountId,
   );
-  const showPlanCheckout =
-    !hasBillingData && !isBusinessLite && canManageBilling;
+
+  const subscriptionIsWorkspacePlan = Boolean(
+    subscriptionProductPlan &&
+    !subscriptionProductPlan.product.id.startsWith('ozer-addon-') &&
+    !subscriptionProductPlan.product.id.startsWith('ozer-ai-credits-'),
+  );
+
   const isUpgradeIntent = searchParams.upgrade === '1';
+  const isBillingIntent = searchParams.billing === '1';
+  const needsWorkspacePlan = !subscriptionIsWorkspacePlan;
+  const showPlanCheckout =
+    canManageBilling &&
+    needsWorkspacePlan &&
+    !isBusinessLite &&
+    (!hasBillingData || isBillingIntent);
   const showLiteUpgrade =
     isBusinessLite && canManageBilling && isUpgradeIntent && !hasBillingData;
 
@@ -114,12 +127,6 @@ export async function WorkspaceBillingPanel({
     (recovered ||
       paymentUpdated ||
       isBillingRecoveryStatus(accessState.status));
-
-  const subscriptionIsWorkspacePlan = Boolean(
-    subscriptionProductPlan &&
-    !subscriptionProductPlan.product.id.startsWith('ozer-addon-') &&
-    !subscriptionProductPlan.product.id.startsWith('ozer-ai-credits-'),
-  );
 
   const hasAnyActiveAddon = Object.values(addonState.addons).some(Boolean);
   const showMediaGenerate =
@@ -166,6 +173,7 @@ export async function WorkspaceBillingPanel({
 
   return (
     <div className="flex flex-col gap-6">
+      <BillingCheckoutFocus />
       <div>
         <h2 className="text-base font-semibold">Billing</h2>
         <p className="text-muted-foreground mt-1 text-sm">
@@ -200,21 +208,25 @@ export async function WorkspaceBillingPanel({
         />
 
         <If condition={showPlanCheckout}>
-          <OzerWorkspaceCheckoutForm
-            customerId={customerId}
-            accountId={accountId}
-            workspaceProfile={workspace.workspaceProfile}
-            upgradeFromLite={isUpgradeIntent && isBusinessLite}
-          />
+          <div id="workspace-plan-checkout">
+            <OzerWorkspaceCheckoutForm
+              customerId={customerId}
+              accountId={accountId}
+              workspaceProfile={workspace.workspaceProfile}
+              upgradeFromLite={isUpgradeIntent && isBusinessLite}
+            />
+          </div>
         </If>
 
         <If condition={showLiteUpgrade && !showPlanCheckout}>
-          <OzerWorkspaceCheckoutForm
-            customerId={customerId}
-            accountId={accountId}
-            workspaceProfile={workspace.workspaceProfile}
-            upgradeFromLite
-          />
+          <div id="workspace-plan-checkout">
+            <OzerWorkspaceCheckoutForm
+              customerId={customerId}
+              accountId={accountId}
+              workspaceProfile={workspace.workspaceProfile}
+              upgradeFromLite
+            />
+          </div>
         </If>
 
         <If

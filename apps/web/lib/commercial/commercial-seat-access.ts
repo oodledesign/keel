@@ -50,6 +50,20 @@ export async function assertCommercialBillableMember(params: {
   }
 }
 
+/** Support seats are view + notes only; billable and platform seats can mutate. */
+export async function canCommercialMutateDisposals(params: {
+  client: SupabaseClient;
+  accountId: string;
+  userId: string;
+}): Promise<boolean> {
+  const kind = await getMembershipSeatKind(
+    params.client,
+    params.accountId,
+    params.userId,
+  );
+  return kind !== 'support';
+}
+
 export async function getCommercialBillableSeatCount(
   client: SupabaseClient,
   accountId: string,

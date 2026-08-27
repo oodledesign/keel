@@ -38,6 +38,7 @@ import {
 
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { updateListing } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
 
 function toDateInput(value: string | null) {
   if (!value) return '';
@@ -59,6 +60,8 @@ export function ListingAdvancedAttrsCard({
   accountId: string;
   listing: CommercialListing;
 }) {
+  const { canEditDisposals } = useDisposalAccess();
+  const readOnly = !canEditDisposals;
   const [pending, startTransition] = useTransition();
   const [referenceNumber, setReferenceNumber] = useState(
     initial.referenceNumber ?? '',
@@ -93,6 +96,7 @@ export function ListingAdvancedAttrsCard({
   );
 
   const save = () => {
+    if (readOnly) return;
     startTransition(async () => {
       try {
         const plate = averageFloorPlateSqft.trim();
@@ -135,7 +139,7 @@ export function ListingAdvancedAttrsCard({
             <Input
               id="reference-number"
               value={referenceNumber}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setReferenceNumber(e.target.value)}
             />
           </div>
@@ -144,7 +148,7 @@ export function ListingAdvancedAttrsCard({
             <Input
               id="project-code"
               value={projectCode}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setProjectCode(e.target.value)}
             />
           </div>
@@ -154,7 +158,7 @@ export function ListingAdvancedAttrsCard({
               id="on-market-date"
               type="date"
               value={onMarketAt}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setOnMarketAt(e.target.value)}
             />
           </div>
@@ -164,7 +168,7 @@ export function ListingAdvancedAttrsCard({
               id="off-market-date"
               type="date"
               value={offMarketAt}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setOffMarketAt(e.target.value)}
             />
           </div>
@@ -177,7 +181,7 @@ export function ListingAdvancedAttrsCard({
                 min={0}
                 step="any"
                 value={averageFloorPlateSqft}
-                disabled={pending}
+                disabled={pending || readOnly}
                 onChange={(e) => setAverageFloorPlateSqft(e.target.value)}
               />
               <span className="flex items-center text-sm text-[var(--workspace-shell-text)]/50">
@@ -189,7 +193,7 @@ export function ListingAdvancedAttrsCard({
             <Label>Breakdown</Label>
             <Select
               value={sizeBreakdown}
-              disabled={pending}
+              disabled={pending || readOnly}
               onValueChange={(value) =>
                 setSizeBreakdown(value as ListingSizeBreakdown | 'unset')
               }
@@ -217,7 +221,7 @@ export function ListingAdvancedAttrsCard({
             <Label>Controlled by</Label>
             <Select
               value={controlledBy}
-              disabled={pending}
+              disabled={pending || readOnly}
               onValueChange={(value) =>
                 setControlledBy(value as ListingControlledBy | 'unset')
               }
@@ -245,7 +249,7 @@ export function ListingAdvancedAttrsCard({
             <Label>Accuracy</Label>
             <Select
               value={sizeAccuracy}
-              disabled={pending}
+              disabled={pending || readOnly}
               onValueChange={(value) =>
                 setSizeAccuracy(value as ListingSizeAccuracy | 'unset')
               }
@@ -273,7 +277,7 @@ export function ListingAdvancedAttrsCard({
             <Label>BREEAM rating</Label>
             <Select
               value={breeamRating}
-              disabled={pending}
+              disabled={pending || readOnly}
               onValueChange={(value) =>
                 setBreeamRating(value as BreeamRating | 'unset')
               }
@@ -302,7 +306,7 @@ export function ListingAdvancedAttrsCard({
             <Input
               id="terms-internal"
               value={termsInternal}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setTermsInternal(e.target.value)}
             />
           </div>
@@ -313,20 +317,22 @@ export function ListingAdvancedAttrsCard({
             <Input
               id="condition-description"
               value={conditionDescription}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setConditionDescription(e.target.value)}
             />
           </div>
         </div>
 
-        <Button
-          type="button"
-          disabled={pending}
-          className={workspaceBtnPrimaryMd}
-          onClick={save}
-        >
-          Save attributes
-        </Button>
+        {canEditDisposals ? (
+          <Button
+            type="button"
+            disabled={pending || readOnly}
+            className={workspaceBtnPrimaryMd}
+            onClick={save}
+          >
+            Save attributes
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -47,7 +47,7 @@ export function SignaturesStaffTable({
   pageSize,
   totalCount,
   paginationPageSizes,
-  emptyMessage = 'No staff yet. Sync from Microsoft 365 or Google Workspace, add people manually, or import a CSV from the toolbar above.',
+  emptyMessage = 'No staff yet. Add people manually, import a CSV, or connect Microsoft 365 / Google Workspace to sync from your directory.',
 }: {
   accountId: string;
   accountSlug: string;

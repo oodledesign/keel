@@ -73,7 +73,7 @@ export function BillingExemptConversionBanner({
 
         <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pl-4">
           <Button asChild size="sm" className="ozer-gradient-btn rounded-lg">
-            <Link href={`${billingPath}?billing=1`}>
+            <Link href={`${billingPath}?billing=1#workspace-plan-checkout`}>
               <CreditCard className="mr-2 h-4 w-4" aria-hidden />
               View billing
             </Link>

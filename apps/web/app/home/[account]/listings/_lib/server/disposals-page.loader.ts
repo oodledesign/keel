@@ -45,6 +45,7 @@ export type DisposalsPageData = {
   initialStatusFilter: DisposalStatusFilter;
   initialAgentUserId: string | null;
   unassignedCount: number;
+  canEditDisposals: boolean;
 };
 
 async function loadDisposalsPageDataImpl(
@@ -104,6 +105,8 @@ async function loadDisposalsPageDataImpl(
       : Promise.resolve(0),
   ]);
 
+  const canEditDisposals = workspace.canMutateCommercial;
+
   return {
     accountId,
     accountSlug: resolvedSlug,
@@ -119,6 +122,7 @@ async function loadDisposalsPageDataImpl(
     initialStatusFilter,
     initialAgentUserId,
     unassignedCount,
+    canEditDisposals,
   };
 }
 

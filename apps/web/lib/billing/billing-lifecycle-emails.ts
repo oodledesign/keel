@@ -10,6 +10,10 @@ import {
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import type { BillingEmailKind } from './account-billing-types';
+import {
+  buildSubscriptionWelcomeEmail,
+  type SubscriptionWelcomeContext,
+} from './subscription-welcome-email';
 
 type AnyClient = SupabaseClient<any>;
 
@@ -137,7 +141,23 @@ export function buildBillingLifecycleEmail(input: {
   accountName: string;
   billingUrl: string;
   trialEndsAt?: string | null;
+  workspaceUrl?: string;
+  subscriptionWelcome?: SubscriptionWelcomeContext | null;
 }): { subject: string; html: string; preview: string } {
+  if (
+    input.emailKind === 'subscription_welcome' &&
+    input.subscriptionWelcome &&
+    input.workspaceUrl
+  ) {
+    return buildSubscriptionWelcomeEmail({
+      productName: input.productName,
+      accountName: input.accountName,
+      workspaceUrl: input.workspaceUrl,
+      welcome: input.subscriptionWelcome,
+      trialEndsAt: input.trialEndsAt,
+    });
+  }
+
   const safeAccountName = input.accountName.replace(/[\r\n]+/g, ' ').trim();
   const name = escapeHtml(safeAccountName);
   const product = escapeHtml(input.productName);
@@ -316,6 +336,20 @@ export function buildBillingLifecycleEmail(input: {
         }),
       };
 
+    case 'subscription_welcome':
+      return {
+        subject: `Welcome to ${input.productName}`,
+        preview: 'Your workspace subscription is active.',
+        html: wrapOzerEmail({
+          productName: input.productName,
+          preview: 'Subscription welcome',
+          title: 'Welcome',
+          ctaLabel: 'Open workspace',
+          ctaUrl: input.workspaceUrl ?? input.billingUrl,
+          bodyHtml: `<p>Thanks for subscribing to <strong>${name}</strong>.</p>`,
+        }),
+      };
+
     default:
       return {
         subject: `${input.productName} billing update`,
@@ -342,6 +376,7 @@ export async function sendBillingLifecycleEmail(
     subscriptionId: string;
     trialEndsAt?: string | null;
     ownerEmail?: string | null;
+    subscriptionWelcome?: SubscriptionWelcomeContext | null;
   },
 ): Promise<'sent' | 'skipped'> {
   const sender = process.env.EMAIL_SENDER?.trim();
@@ -369,12 +404,19 @@ export async function sendBillingLifecycleEmail(
     siteUrl,
   ).toString();
 
+  const workspaceUrl = new URL(
+    pathsConfig.app.accountHome.replace('[account]', input.accountSlug),
+    siteUrl,
+  ).toString();
+
   const { subject, html } = buildBillingLifecycleEmail({
     emailKind: input.emailKind,
     productName,
     accountName: input.accountName,
     billingUrl,
     trialEndsAt: input.trialEndsAt,
+    workspaceUrl,
+    subscriptionWelcome: input.subscriptionWelcome,
   });
 
   await sendPlatformEmail({

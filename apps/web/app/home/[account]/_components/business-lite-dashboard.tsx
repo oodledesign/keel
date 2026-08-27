@@ -47,7 +47,7 @@ export function BusinessLiteDashboard({
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
               This workspace is set up for Ozer apps. Browse the marketplace to
-              add Signatures, Rankly, Feedflow, or Videos.
+              explore all available add-ons.
             </p>
           </div>
           <Button asChild variant="outline" className="shrink-0 rounded-xl">

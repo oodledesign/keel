@@ -11,6 +11,7 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import pathsConfig from '~/config/paths.config';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { canCommercialMutateDisposals } from '~/lib/commercial/commercial-seat-access';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
@@ -58,12 +59,18 @@ async function workspaceLoader(accountSlug: string) {
   }
 
   const accountId = (workspace.data.account as { id: string }).id;
-  const [moduleSettingsResult, defaultCurrency] = await Promise.all([
+  const [moduleSettingsResult, defaultCurrency, canMutateCommercial] =
+    await Promise.all([
     client
       .from('account_module_settings')
       .select('module_key, enabled')
       .eq('account_id', accountId),
     getWorkspaceCurrencyWithClient(client, accountId),
+    canCommercialMutateDisposals({
+      client,
+      accountId,
+      userId: user.id,
+    }),
   ]);
 
   const { data: moduleSettingsRows, error: moduleSettingsError } =
@@ -114,6 +121,7 @@ async function workspaceLoader(accountSlug: string) {
     workspaceProfile,
     businessType,
     defaultCurrency,
+    canMutateCommercial,
     user,
   };
 }

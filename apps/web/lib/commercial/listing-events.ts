@@ -13,6 +13,8 @@ function fromTable(client: SupabaseClient, table: string) {
 export type ListingEventType =
   | 'status_changed'
   | 'listing_created'
+  | 'listing_archived'
+  | 'listing_deleted'
   | 'match_added'
   | 'match_updated'
   | 'viewing_created'

@@ -65,6 +65,7 @@ import {
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import { RequirementMatchesMap } from './requirement-matches-map';
+import { useDisposalAccess } from './disposal-access-context';
 
 function suggestionKey(s: MatchSuggestion) {
   return `${s.listingId}:${s.requirementId}`;
@@ -83,6 +84,8 @@ type Props = {
   seeAllHref?: string | null;
   /** Fires when linked interest + suggested fits totals change (for Matches badges). */
   onMatchTotalsChange?: (totals: { linked: number; suggested: number }) => void;
+  /** Override disposal access context (e.g. requirement modal outside listing layout). */
+  canEditDisposals?: boolean;
 };
 
 function formatSize(min: number | null, max: number | null) {
@@ -109,7 +112,10 @@ export function CommercialInterestPanel({
   preview = false,
   seeAllHref = null,
   onMatchTotalsChange,
+  canEditDisposals: canEditDisposalsProp,
 }: Props) {
+  const { canEditDisposals: canEditFromContext } = useDisposalAccess();
+  const canEditDisposals = canEditDisposalsProp ?? canEditFromContext;
   const [matches, setMatches] = useState<CommercialInterestMatch[]>([]);
   const [suggestions, setSuggestions] = useState<MatchSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -303,6 +309,7 @@ export function CommercialInterestPanel({
     suggestions.length === 0;
 
   const onStatusChange = (matchId: string, status: InterestStatus) => {
+    if (!canEditDisposals) return;
     startTransition(async () => {
       try {
         const updated = await updateInterestMatch({
@@ -350,6 +357,7 @@ export function CommercialInterestPanel({
   };
 
   const onDelete = (matchId: string) => {
+    if (!canEditDisposals) return;
     startTransition(async () => {
       try {
         await deleteInterestMatch({ accountId, matchId });
@@ -544,7 +552,7 @@ export function CommercialInterestPanel({
             <Button
               type="button"
               size="sm"
-              disabled={pending || selectedListingIds.size === 0}
+              disabled={pending || selectedListingIds.size === 0 || !canEditDisposals}
               className={workspaceBtnPrimaryMd}
               onClick={onBulkAddSelected}
             >
@@ -788,15 +796,17 @@ export function CommercialInterestPanel({
                         Draft email
                       </Button>
                     ) : null}
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={pending}
-                      className={workspaceBtnPrimaryMd}
-                      onClick={() => onAddSuggestion(suggestion)}
-                    >
-                      Add interest
-                    </Button>
+                    {canEditDisposals ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending}
+                        className={workspaceBtnPrimaryMd}
+                        onClick={() => onAddSuggestion(suggestion)}
+                      >
+                        Add interest
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </li>
@@ -902,7 +912,7 @@ export function CommercialInterestPanel({
                   <div className="flex items-center gap-2">
                     <Select
                       value={match.status}
-                      disabled={pending}
+                      disabled={pending || !canEditDisposals}
                       onValueChange={(v) =>
                         onStatusChange(match.id, v as InterestStatus)
                       }
@@ -918,15 +928,17 @@ export function CommercialInterestPanel({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={pending}
-                      onClick={() => onDelete(match.id)}
-                    >
-                      Remove
-                    </Button>
+                    {canEditDisposals ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={pending}
+                        onClick={() => onDelete(match.id)}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </li>
@@ -973,7 +985,7 @@ export function CommercialInterestPanel({
               )}
               Find matches
             </Button>
-            {mode.kind === 'requirement' && !preview ? (
+            {mode.kind === 'requirement' && !preview && canEditDisposals ? (
               <Button
                 type="button"
                 variant="outline"
@@ -992,7 +1004,7 @@ export function CommercialInterestPanel({
               <Button asChild type="button" className={workspaceBtnPrimaryMd}>
                 <Link href={seeAllHref}>Open Interest</Link>
               </Button>
-            ) : preview ? null : (
+            ) : preview ? null : canEditDisposals ? (
               <Button
                 type="button"
                 className={workspaceBtnPrimaryMd}
@@ -1001,7 +1013,7 @@ export function CommercialInterestPanel({
                 <Plus className="h-4 w-4" />
                 Add interest
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       ) : (
@@ -1052,6 +1064,8 @@ export function CommercialInterestPanel({
                     <Label className="text-xs">Size min</Label>
                     <Input
                       type="number"
+                      min={0}
+                      step="any"
                       value={sizeMin}
                       onChange={(e) => setSizeMin(e.target.value)}
                       className="h-8"
@@ -1061,6 +1075,8 @@ export function CommercialInterestPanel({
                     <Label className="text-xs">Size max</Label>
                     <Input
                       type="number"
+                      min={0}
+                      step="any"
                       value={sizeMax}
                       onChange={(e) => setSizeMax(e.target.value)}
                       className="h-8"
@@ -1265,7 +1281,7 @@ export function CommercialInterestPanel({
               {title}
             </h3>
             <div className="flex items-center gap-1.5">
-              {mode.kind === 'requirement' ? (
+              {mode.kind === 'requirement' && canEditDisposals ? (
                 <Button
                   type="button"
                   size="sm"
@@ -1281,15 +1297,17 @@ export function CommercialInterestPanel({
                   Rank stock
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add
-              </Button>
+              {canEditDisposals ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add
+                </Button>
+              ) : null}
             </div>
           </div>
         )}
@@ -1325,14 +1343,16 @@ export function CommercialInterestPanel({
               Rank stock
             </Button>
           ) : null}
-          <Button
-            type="button"
-            className={workspaceBtnPrimaryMd}
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Add interest
-          </Button>
+          {canEditDisposals ? (
+            <Button
+              type="button"
+              className={workspaceBtnPrimaryMd}
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Add interest
+            </Button>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent>{panel}</CardContent>

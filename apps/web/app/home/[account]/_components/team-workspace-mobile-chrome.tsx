@@ -25,6 +25,8 @@ import {
   WorkspaceMobileMenu,
   useWorkspaceMobileNav,
 } from '~/components/workspace-shell/workspace-mobile-nav';
+import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
+
 import { WorkspaceMobileNewMenu } from '~/components/workspace-shell/workspace-new-menu';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
@@ -68,6 +70,9 @@ export function TeamWorkspaceMobileChrome({
   sopTracker,
   children,
 }: TeamWorkspaceMobileChromeProps) {
+  const workspace = useTeamAccountWorkspace();
+  const canMutateCommercial =
+    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ?? true;
   const pathname = usePathname();
   const noteEditorScroll = isNoteEditorRoute(pathname);
   const emailScroll = isEmailRoute(pathname);
@@ -162,6 +167,7 @@ export function TeamWorkspaceMobileChrome({
               variant="team"
               account={account}
               spaceType={spaceType}
+              canMutateCommercial={canMutateCommercial}
             />
           ) : null
         }

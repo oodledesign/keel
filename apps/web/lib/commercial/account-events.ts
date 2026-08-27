@@ -244,7 +244,11 @@ async function enrichCommercialAccountEvents(
       : undefined;
     let entityLabel: string | null = null;
     if (event.entityType === 'listing') {
-      entityLabel = listingMap.get(event.entityId) ?? null;
+      entityLabel =
+        listingMap.get(event.entityId) ??
+        (typeof event.metadata.name === 'string'
+          ? event.metadata.name
+          : null);
     } else if (event.entityType === 'client') {
       entityLabel = clientMap.get(event.entityId) ?? null;
     }

@@ -576,6 +576,7 @@ function ListingFormFields({
             <Input
               type="number"
               min={0}
+              step="any"
               value={form.sizeMinSqft}
               onChange={(e) => field('sizeMinSqft', e.target.value)}
               className={inputClass}
@@ -588,6 +589,7 @@ function ListingFormFields({
             <Input
               type="number"
               min={0}
+              step="any"
               value={form.sizeMaxSqft}
               onChange={(e) => field('sizeMaxSqft', e.target.value)}
               className={inputClass}

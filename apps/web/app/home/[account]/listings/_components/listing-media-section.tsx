@@ -57,6 +57,7 @@ import {
   updateListing,
   updateListingMedia,
 } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const ALLOWED = new Set([
@@ -153,6 +154,8 @@ export function ListingMediaSection({
   initialMedia: CommercialListingMedia[];
   initialWebsiteUrl?: string | null;
 }) {
+  const { canEditDisposals } = useDisposalAccess();
+  const readOnly = !canEditDisposals;
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -532,7 +535,7 @@ export function ListingMediaSection({
                 type="button"
                 variant="ghost"
                 size="icon"
-                disabled={pending}
+                disabled={pending || readOnly}
                 className="h-7 w-7 text-[var(--workspace-shell-text-muted)]"
                 aria-label={`Actions for ${item.fileName ?? 'media'}`}
               >
@@ -649,7 +652,7 @@ export function ListingMediaSection({
               </div>
               <Button
                 type="button"
-                disabled={pending}
+                disabled={pending || readOnly}
                 className={workspaceBtnPrimaryMd}
                 onClick={() => startUpload(section.type, section.accept)}
               >
@@ -665,7 +668,7 @@ export function ListingMediaSection({
               {items.length === 0 ? (
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={pending || readOnly}
                   onClick={() => startUpload(section.type, section.accept)}
                   className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-4 py-8 text-sm text-[var(--workspace-shell-text)]/50 transition-colors hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]/70"
                 >
@@ -707,7 +710,7 @@ export function ListingMediaSection({
             />
             <Button
               type="button"
-              disabled={pending}
+              disabled={pending || readOnly}
               className={workspaceBtnPrimaryMd}
               onClick={addVideoUrl}
             >
@@ -746,7 +749,7 @@ export function ListingMediaSection({
             />
             <Button
               type="button"
-              disabled={pending}
+              disabled={pending || readOnly}
               className={workspaceBtnPrimaryMd}
               onClick={saveWebsiteUrl}
             >
@@ -771,7 +774,7 @@ export function ListingMediaSection({
               </div>
               <Button
                 type="button"
-                disabled={pending}
+                disabled={pending || readOnly}
                 className={workspaceBtnPrimaryMd}
                 onClick={() => startUpload(section.type, section.accept)}
               >
@@ -787,7 +790,7 @@ export function ListingMediaSection({
               {items.length === 0 ? (
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={pending || readOnly}
                   onClick={() => startUpload(section.type, section.accept)}
                   className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-4 py-8 text-sm text-[var(--workspace-shell-text)]/50 transition-colors hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]/70"
                 >
@@ -919,7 +922,7 @@ export function ListingMediaSection({
             <Input
               id="media-rename"
               value={renameValue}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -933,14 +936,14 @@ export function ListingMediaSection({
             <Button
               type="button"
               variant="ghost"
-              disabled={pending}
+              disabled={pending || readOnly}
               onClick={() => setRenameTarget(null)}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={pending || !renameValue.trim()}
+              disabled={pending || readOnly || !renameValue.trim()}
               className={workspaceBtnPrimaryMd}
               onClick={saveRename}
             >

@@ -256,7 +256,7 @@ export function AdminWorkspaceMembersPanel(props: {
                   {props.isCommercial ? (
                     <Badge variant="outline" className="mt-1 capitalize">
                       {member.seatKind === 'platform'
-                        ? 'Platform (no seat)'
+                        ? 'Platform admin'
                         : `${member.seatKind} seat`}
                     </Badge>
                   ) : null}

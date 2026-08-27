@@ -77,8 +77,8 @@ export default async function SignaturesTemplatesPage({
 
       {!previewStaff && templates.length > 0 ? (
         <p className="text-muted-foreground mt-4 text-xs">
-          Sync at least one staff member to see live HTML previews on these
-          cards.
+          Add or import at least one staff member to see live HTML previews on
+          these cards.
         </p>
       ) : null}
     </ModuleDataSection>

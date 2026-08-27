@@ -15,7 +15,10 @@ import type {
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
 import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
-import { recordListingEvent } from '~/lib/commercial/listing-events';
+import {
+  recordListingEvent,
+  type ListingEventType,
+} from '~/lib/commercial/listing-events';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   pushListingToPropertyHive,
@@ -1432,6 +1435,11 @@ export function createListingsService(client: SupabaseClient) {
       listingId: string,
       accountId: string,
       input: Omit<UpdateListingInput, 'listingId' | 'accountId'>,
+      options?: {
+        actorUserId?: string | null;
+        statusEventType?: ListingEventType;
+        statusSummary?: string;
+      },
     ): Promise<CommercialListing> {
       const existing = await this.getListing(listingId, accountId);
       if (!existing) {
@@ -1522,11 +1530,15 @@ export function createListingsService(client: SupabaseClient) {
           await recordListingEvent(client, {
             accountId,
             listingId,
-            eventType: 'status_changed',
-            summary: `Status ${existing.status} → ${input.status}`,
+            actorUserId: options?.actorUserId ?? null,
+            eventType: options?.statusEventType ?? 'status_changed',
+            summary:
+              options?.statusSummary ??
+              `Status ${existing.status} → ${input.status}`,
             metadata: {
               previousStatus: existing.status,
               status: input.status,
+              name: existing.name,
             },
           });
         } catch {
@@ -1585,14 +1597,48 @@ export function createListingsService(client: SupabaseClient) {
       return { attempted: rows.length, updated };
     },
 
-    async deleteListing(listingId: string, accountId: string): Promise<void> {
+    async deleteListing(
+      listingId: string,
+      accountId: string,
+      options?: { actorUserId?: string | null },
+    ): Promise<void> {
+      const existing = await this.getListing(listingId, accountId);
+      if (!existing) {
+        throw new Error('Listing not found');
+      }
+
+      // Audit before delete — listing_events cascade away with the row;
+      // account audit feed keeps the record via dual-write.
+      try {
+        await recordListingEvent(client, {
+          accountId,
+          listingId,
+          actorUserId: options?.actorUserId ?? null,
+          eventType: 'listing_deleted',
+          summary: `Deleted “${existing.name}”`,
+          metadata: {
+            name: existing.name,
+            previousStatus: existing.status,
+          },
+        });
+      } catch {
+        /* best-effort */
+      }
+
       const { error } = await client
         .from('commercial_listings')
         .delete()
         .eq('id', listingId)
         .eq('account_id', accountId);
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error(
+          '[listings] delete failed after audit write:',
+          error.message,
+          { listingId, accountId },
+        );
+        throw new Error(error.message);
+      }
     },
 
     /**
@@ -1792,6 +1838,7 @@ export function createListingsService(client: SupabaseClient) {
     async archiveListing(input: {
       listingId: string;
       accountId: string;
+      actorUserId?: string | null;
     }): Promise<CommercialListing> {
       const existing = await this.getListing(input.listingId, input.accountId);
       if (!existing) {
@@ -1800,9 +1847,16 @@ export function createListingsService(client: SupabaseClient) {
       if (existing.status === 'withdrawn') {
         return existing;
       }
-      return this.updateListing(input.listingId, input.accountId, {
-        status: 'withdrawn',
-      });
+      return this.updateListing(
+        input.listingId,
+        input.accountId,
+        { status: 'withdrawn' },
+        {
+          actorUserId: input.actorUserId ?? null,
+          statusEventType: 'listing_archived',
+          statusSummary: `Archived “${existing.name}”`,
+        },
+      );
     },
 
     async listUnits(

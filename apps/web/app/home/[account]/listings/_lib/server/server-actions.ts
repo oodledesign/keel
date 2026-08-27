@@ -46,6 +46,15 @@ function getService() {
   return createListingsService(getSupabaseServerClient());
 }
 
+async function requireBillableDisposalActor(accountId: string) {
+  const { requireCommercialBillableActor } =
+    await import('~/lib/commercial/require-commercial-billable-actor');
+  await requireCommercialBillableActor(
+    accountId,
+    'create or edit disposals',
+  );
+}
+
 async function invalidateDisposalsData(input: {
   accountId: string;
   listingId?: string;
@@ -157,13 +166,21 @@ export const updateListing = enhanceAction(
 
 export const deleteListing = enhanceAction(
   async (input) => {
+    const client = getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await client.auth.getUser();
     const { requireCommercialBillableActor } =
       await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'create or edit disposals',
     );
-    await getService().deleteListing(input.listingId, input.accountId);
+    await createListingsService(client).deleteListing(
+      input.listingId,
+      input.accountId,
+      { actorUserId: user?.id ?? null },
+    );
     await invalidateDisposalsData({
       accountId: input.accountId,
       listingId: input.listingId,
@@ -202,15 +219,20 @@ export const duplicateListing = enhanceAction(
 
 export const archiveListing = enhanceAction(
   async (input) => {
+    const client = getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await client.auth.getUser();
     const { requireCommercialBillableActor } =
       await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'create or edit disposals',
     );
-    const listing = await getService().archiveListing({
+    const listing = await createListingsService(client).archiveListing({
       listingId: input.listingId,
       accountId: input.accountId,
+      actorUserId: user?.id ?? null,
     });
     await invalidateDisposalsData({
       accountId: input.accountId,
@@ -264,6 +286,7 @@ export const setBrochureShare = enhanceAction(
 
 export const createListingUnit = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     return getService().createUnit(input);
   },
   { schema: CreateListingUnitSchema },
@@ -271,6 +294,7 @@ export const createListingUnit = enhanceAction(
 
 export const updateListingUnit = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     const { unitId, accountId, ...rest } = input;
     return getService().updateUnit(unitId, accountId, rest);
   },
@@ -279,6 +303,7 @@ export const updateListingUnit = enhanceAction(
 
 export const deleteListingUnit = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     await getService().deleteUnit(input.unitId, input.accountId);
     return { success: true };
   },
@@ -287,6 +312,7 @@ export const deleteListingUnit = enhanceAction(
 
 export const createListingMedia = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     const media = await getService().createMedia(input);
     const [withUrl] = await getService().withSignedMediaUrls([media]);
     return withUrl ?? media;
@@ -296,6 +322,7 @@ export const createListingMedia = enhanceAction(
 
 export const setListingMediaCover = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     const media = await getService().setMediaCover(input);
     const [withUrl] = await getService().withSignedMediaUrls([media]);
     return withUrl ?? media;
@@ -305,6 +332,7 @@ export const setListingMediaCover = enhanceAction(
 
 export const updateListingMedia = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     const media = await getService().updateMedia(input);
     const [withUrl] = await getService().withSignedMediaUrls([media]);
     return withUrl ?? media;
@@ -314,6 +342,7 @@ export const updateListingMedia = enhanceAction(
 
 export const deleteListingMedia = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     await getService().deleteMedia(
       input.mediaId,
       input.accountId,
@@ -326,6 +355,7 @@ export const deleteListingMedia = enhanceAction(
 
 export const createListingEnquiry = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     return getService().createEnquiry(input);
   },
   { schema: CreateListingEnquirySchema },
@@ -333,6 +363,7 @@ export const createListingEnquiry = enhanceAction(
 
 export const updateListingEnquiry = enhanceAction(
   async (input) => {
+    await requireBillableDisposalActor(input.accountId);
     const { enquiryId, accountId, ...rest } = input;
     return getService().updateEnquiry(enquiryId, accountId, rest);
   },
@@ -350,7 +381,10 @@ export const listWorkspaceTeams = enhanceAction(
 );
 
 export const createWorkspaceTeam = enhanceAction(
-  async (input) => getService().createWorkspaceTeam(input),
+  async (input) => {
+    await requireBillableDisposalActor(input.accountId);
+    return getService().createWorkspaceTeam(input);
+  },
   { schema: CreateWorkspaceTeamSchema },
 );
 
@@ -365,7 +399,10 @@ export const getListingAssignment = enhanceAction(
 );
 
 export const updateListingAssignment = enhanceAction(
-  async (input) => getService().updateListingAssignment(input),
+  async (input) => {
+    await requireBillableDisposalActor(input.accountId);
+    return getService().updateListingAssignment(input);
+  },
   { schema: UpdateListingAssignmentSchema },
 );
 

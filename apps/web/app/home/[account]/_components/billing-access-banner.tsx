@@ -121,7 +121,7 @@ export function BillingAccessBanner({
             />
           ) : (
             <Button asChild size="sm" className="ozer-gradient-btn rounded-lg">
-              <Link href={`${billingPath}?billing=1`}>
+              <Link href={`${billingPath}?billing=1#workspace-plan-checkout`}>
                 <CreditCard className="mr-2 h-4 w-4" aria-hidden />
                 {status === 'canceled'
                   ? 'View billing'

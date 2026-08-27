@@ -111,6 +111,7 @@ interface ListingsListProps {
   initialAgentUserId: string | null;
   initialNeedsLocation: boolean;
   unassignedCount: number;
+  canEditDisposals: boolean;
 }
 
 type ViewMode = 'cards' | 'table' | 'map';
@@ -229,6 +230,7 @@ export function ListingsList({
   initialAgentUserId,
   initialNeedsLocation,
   unassignedCount,
+  canEditDisposals,
 }: ListingsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -408,15 +410,25 @@ export function ListingsList({
     [needsLocationOnly, updateListFilters],
   );
 
+  const createRequestedHandled = useRef(false);
+
   useEffect(() => {
-    if (!createRequested) return;
+    if (!createRequested || createRequestedHandled.current) return;
+    createRequestedHandled.current = true;
+    if (!canEditDisposals) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete('create');
+      const qs = next.toString();
+      router.replace(qs ? `?${qs}` : '.');
+      return;
+    }
     const sopAssist = searchParams.get('sopAssist');
     router.replace(
       buildNewDisposalPath(accountSlug, {
         sopAssist,
       }),
     );
-  }, [accountSlug, createRequested, router, searchParams]);
+  }, [accountSlug, canEditDisposals, createRequested, router, searchParams]);
 
   const fetchPage = useCallback(
     async (
@@ -777,6 +789,7 @@ export function ListingsList({
   const effectiveTotalPages = usesFullCache ? clientTotalPages : totalPages;
 
   const openCreate = () => {
+    if (!canEditDisposals) return;
     const sopAssist = searchParams.get('sopAssist');
     router.push(
       buildNewDisposalPath(accountSlug, {
@@ -912,14 +925,16 @@ export function ListingsList({
               <MapIcon className="h-4 w-4" />
             </button>
           </div>
-          <Button
-            onClick={openCreate}
-            className={workspaceBtnPrimaryMd}
-            data-tour="sop-add-disposal"
-          >
-            <Plus className="h-4 w-4" />
-            Add disposal
-          </Button>
+          {canEditDisposals ? (
+            <Button
+              onClick={openCreate}
+              className={workspaceBtnPrimaryMd}
+              data-tour="sop-add-disposal"
+            >
+              <Plus className="h-4 w-4" />
+              Add disposal
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -1043,7 +1058,7 @@ export function ListingsList({
                 : 'Needs location'
             }
           />
-          {needsLocationOnly && needsLocationCount > 0 ? (
+          {needsLocationOnly && needsLocationCount > 0 && canEditDisposals ? (
             <Button
               type="button"
               variant="outline"
@@ -1161,7 +1176,7 @@ export function ListingsList({
               >
                 Clear filters
               </Button>
-            ) : (
+            ) : canEditDisposals ? (
               <Button
                 onClick={openCreate}
                 className={`mt-4 ${workspaceBtnPrimaryMd}`}
@@ -1170,7 +1185,7 @@ export function ListingsList({
                 <Plus className="h-4 w-4" />
                 Add disposal
               </Button>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       ) : viewMode === 'map' ? (
@@ -1186,6 +1201,7 @@ export function ListingsList({
               key={listing.id}
               listing={listing}
               accountSlug={accountSlug}
+              canEditDisposals={canEditDisposals}
               onEdit={() => openEdit(listing)}
               onDelete={() => setDeleteTarget(listing)}
             />
@@ -1294,10 +1310,12 @@ export function ListingsList({
                       {formatUpdatedAt(listing.updatedAt) ?? '—'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <ListingActions
-                        onEdit={() => openEdit(listing)}
-                        onDelete={() => setDeleteTarget(listing)}
-                      />
+                      {canEditDisposals ? (
+                        <ListingActions
+                          onEdit={() => openEdit(listing)}
+                          onDelete={() => setDeleteTarget(listing)}
+                        />
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -1399,11 +1417,13 @@ export function ListingsList({
 function ListingCard({
   listing,
   accountSlug,
+  canEditDisposals,
   onEdit,
   onDelete,
 }: {
   listing: CommercialListing;
   accountSlug: string;
+  canEditDisposals: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -1467,7 +1487,13 @@ function ListingCard({
               </p>
             ) : null}
           </div>
-          <ListingActions onEdit={onEdit} onDelete={onDelete} ghostUntilHover />
+          {canEditDisposals ? (
+            <ListingActions
+              onEdit={onEdit}
+              onDelete={onDelete}
+              ghostUntilHover
+            />
+          ) : null}
         </div>
 
         {(listing.sector || size) && (

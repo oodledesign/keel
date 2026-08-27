@@ -25,6 +25,7 @@ export function ListingEachFeedToggle({
   listingId,
   initialEnabled,
   compact = false,
+  disabled = false,
   onBeforeEnable,
 }: {
   accountId: string;
@@ -32,6 +33,7 @@ export function ListingEachFeedToggle({
   initialEnabled: boolean;
   /** Tighter layout for overview header. */
   compact?: boolean;
+  disabled?: boolean;
   /** Return false to cancel enabling (e.g. marketing readiness confirm). */
   onBeforeEnable?: () => boolean;
 }) {
@@ -40,6 +42,7 @@ export function ListingEachFeedToggle({
   const [pending, startTransition] = useTransition();
 
   const onCheckedChange = (next: boolean) => {
+    if (disabled) return;
     if (next && onBeforeEnable && !onBeforeEnable()) {
       return;
     }
@@ -106,7 +109,7 @@ export function ListingEachFeedToggle({
       </div>
       <Switch
         checked={enabled}
-        disabled={pending}
+        disabled={pending || disabled}
         onCheckedChange={onCheckedChange}
         aria-label="Include listing in EACH feed"
       />

@@ -20,6 +20,8 @@ export function TeamWorkspaceTopBarClient({
     },
   );
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
+  const canMutateCommercial =
+    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ?? true;
 
   return (
     <WorkspaceTopBar
@@ -30,6 +32,7 @@ export function TeamWorkspaceTopBarClient({
       accountSlug={accountSlug}
       spaceType={spaceType}
       showNewMenu={access.canUseQuickCreate}
+      canMutateCommercial={canMutateCommercial}
     />
   );
 }

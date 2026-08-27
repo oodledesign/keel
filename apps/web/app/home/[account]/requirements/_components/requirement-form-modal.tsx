@@ -25,6 +25,8 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
+
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import {
@@ -535,6 +537,7 @@ function RequirementFormFields({
           <Input
             type="number"
             min={0}
+            step="any"
             value={form.sizeMinSqft}
             onChange={(e) => field('sizeMinSqft', e.target.value)}
             className={inputClass}
@@ -545,6 +548,7 @@ function RequirementFormFields({
           <Input
             type="number"
             min={0}
+            step="any"
             value={form.sizeMaxSqft}
             onChange={(e) => field('sizeMaxSqft', e.target.value)}
             className={inputClass}
@@ -661,6 +665,9 @@ export function RequirementFormModal({
   openPastePanel = false,
   onSaved,
 }: RequirementFormModalProps) {
+  const workspace = useTeamAccountWorkspace();
+  const canEditDisposals =
+    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ?? true;
   const draftKey = initialDraft
     ? JSON.stringify(initialDraft).slice(0, 80)
     : 'blank';
@@ -705,6 +712,7 @@ export function RequirementFormModal({
               accountId={accountId}
               mode={{ kind: 'requirement', requirementId: requirement.id }}
               compact
+              canEditDisposals={canEditDisposals}
             />
           </>
         ) : null}

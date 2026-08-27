@@ -277,7 +277,7 @@ export function SignaturesAssetsPanel({
                 </Select>
               ) : (
                 <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  Sync staff first to discover departments.
+                  Add staff first to discover departments.
                 </p>
               )}
             </div>

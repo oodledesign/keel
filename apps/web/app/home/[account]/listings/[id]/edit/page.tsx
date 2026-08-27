@@ -1,7 +1,8 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
 import { getCachedDisposalDetail } from '~/lib/cache/disposals-data-cache';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -33,6 +34,14 @@ async function EditDisposalPage({ params, searchParams }: PageProps) {
 
   if (!listing) {
     notFound();
+  }
+
+  if (!workspace.canMutateCommercial) {
+    redirect(
+      pathsConfig.app.accountListingDetail
+        .replace('[account]', slug)
+        .replace('[id]', listingId),
+    );
   }
 
   return (

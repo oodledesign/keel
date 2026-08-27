@@ -77,6 +77,7 @@ async function DisposalsListBody({
       initialAgentUserId={data.initialAgentUserId}
       initialNeedsLocation={needsLocationParam}
       unassignedCount={data.unassignedCount}
+      canEditDisposals={data.canEditDisposals}
     />
   );
 }

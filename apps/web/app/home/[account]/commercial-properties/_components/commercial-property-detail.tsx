@@ -188,6 +188,7 @@ export function CommercialPropertyDetail({
                   '[account]',
                   accountSlug,
                 )}
+                prefetch={false}
               >
                 Create disposal
               </Link>

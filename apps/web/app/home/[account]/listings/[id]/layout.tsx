@@ -30,6 +30,7 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
   );
 
   const accountId = workspace.account.id as string;
+  const canEditDisposals = workspace.canMutateCommercial;
   const listing = await createListingsService(
     getSupabaseServerClient(),
   ).getListing(listingId, accountId);
@@ -53,6 +54,7 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
           listing={listing}
           accountSlug={slug}
           accountId={accountId}
+          canEditDisposals={canEditDisposals}
         >
           {children}
         </ListingDetailShell>

@@ -36,6 +36,7 @@ type WorkspaceTopBarBaseProps = {
     picture_url: string | null;
   };
   showNewMenu?: boolean;
+  canMutateCommercial?: boolean;
 };
 
 function TopBarIconLink({
@@ -168,6 +169,7 @@ export function WorkspaceDesktopTopBar(
                 variant="team"
                 account={props.accountSlug}
                 spaceType={props.spaceType}
+                canMutateCommercial={props.canMutateCommercial ?? true}
               />
             ) : (
               <WorkspaceNewMenu variant="personal" />

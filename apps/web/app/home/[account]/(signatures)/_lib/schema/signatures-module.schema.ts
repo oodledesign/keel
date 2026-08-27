@@ -12,6 +12,10 @@ export const syncStaffActionSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+export const enableSignaturesManualModeActionSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
 export const pushAllActionSchema = z.object({
   accountId: z.string().uuid(),
 });

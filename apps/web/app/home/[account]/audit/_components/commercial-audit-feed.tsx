@@ -25,6 +25,17 @@ function formatWhen(iso: string) {
   }
 }
 
+function formatClock(iso: string) {
+  try {
+    return new Date(iso).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
 function relativeWhen(iso: string) {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return formatWhen(iso);
@@ -36,11 +47,24 @@ function relativeWhen(iso: string) {
   return formatWhen(iso);
 }
 
+function formatTimestampLabel(iso: string) {
+  const relative = relativeWhen(iso);
+  const clock = formatClock(iso);
+  if (
+    clock &&
+    (relative === 'just now' || relative.endsWith(' ago'))
+  ) {
+    return `${relative} · ${clock}`;
+  }
+  return relative;
+}
+
 function entityHref(
   accountSlug: string,
   event: CommercialAccountEvent,
 ): string | null {
   if (event.entityType === 'listing') {
+    if (event.eventType === 'listing_deleted') return null;
     return pathsConfig.app.accountListingDetail
       .replace('[account]', accountSlug)
       .replace('[id]', event.entityId);
@@ -200,7 +224,7 @@ export function CommercialAuditFeed({
                         ·
                       </span>
                       <span title={formatWhen(event.createdAt)}>
-                        {relativeWhen(event.createdAt)}
+                        {formatTimestampLabel(event.createdAt)}
                       </span>
                     </div>
                   </div>

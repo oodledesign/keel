@@ -9,6 +9,7 @@ import type {
   BillingEmailKind,
 } from './account-billing-types';
 import { sendBillingLifecycleEmail } from './billing-lifecycle-emails';
+import type { SubscriptionWelcomeContext } from './subscription-welcome-email';
 
 type AnyClient = SupabaseClient<any>;
 
@@ -131,6 +132,33 @@ export async function flushBillingEmailJob(
       (payload.subscriptionId as string | null | undefined) ??
       `account:${accountId}`;
 
+    const subscriptionWelcome =
+      emailKind === 'subscription_welcome' &&
+      typeof payload.productName === 'string' &&
+      typeof payload.planLabel === 'string' &&
+      Array.isArray(payload.gettingStartedSteps)
+        ? ({
+            productName: payload.productName,
+            planLabel: payload.planLabel,
+            billingInterval:
+              payload.billingInterval === 'month' ||
+              payload.billingInterval === 'year'
+                ? payload.billingInterval
+                : null,
+            productDescription:
+              typeof payload.productDescription === 'string'
+                ? payload.productDescription
+                : '',
+            features: (payload.features as string[] | undefined) ?? [],
+            gettingStartedSteps: payload.gettingStartedSteps as SubscriptionWelcomeContext['gettingStartedSteps'],
+            isTrial: payload.isTrial === true,
+            planFamily:
+              typeof payload.planFamily === 'string'
+                ? (payload.planFamily as SubscriptionWelcomeContext['planFamily'])
+                : 'business',
+          } satisfies SubscriptionWelcomeContext)
+        : null;
+
     const outcome = await sendBillingLifecycleEmail(admin, {
       accountId,
       emailKind,
@@ -138,6 +166,7 @@ export async function flushBillingEmailJob(
       accountSlug,
       subscriptionId,
       trialEndsAt: payload.trialEndsAt ?? null,
+      subscriptionWelcome,
     });
 
     await outbox(admin)

@@ -55,6 +55,7 @@ import {
   archiveListing,
   duplicateListing,
 } from '../_lib/server/server-actions';
+import { DisposalAccessProvider } from './disposal-access-context';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingPageSearch } from './listing-page-search';
@@ -149,11 +150,13 @@ export function ListingDetailShell({
   listing: initialListing,
   accountSlug,
   accountId,
+  canEditDisposals,
   children,
 }: {
   listing: CommercialListing;
   accountSlug: string;
   accountId: string;
+  canEditDisposals: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -291,44 +294,57 @@ export function ListingDetailShell({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="gap-2"
-            disabled={pending}
-            onSelect={(event) => {
-              event.preventDefault();
-              onDuplicate();
-            }}
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Duplicate
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="gap-2 text-rose-400 focus:text-rose-400"
-            disabled={pending || isArchived}
-            onSelect={(event) => {
-              event.preventDefault();
-              setArchiveOpen(true);
-            }}
-          >
-            <Archive className="h-3.5 w-3.5" />
-            {isArchived ? 'Archived' : 'Archive'}
-          </DropdownMenuItem>
+          {canEditDisposals ? (
+            <>
+              <DropdownMenuItem
+                className="gap-2"
+                disabled={pending}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onDuplicate();
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 text-rose-400 focus:text-rose-400"
+                disabled={pending || isArchived}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setArchiveOpen(true);
+                }}
+              >
+                <Archive className="h-3.5 w-3.5" />
+                {isArchived ? 'Archived' : 'Archive'}
+              </DropdownMenuItem>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Button
-        type="button"
-        className={workspaceBtnPrimaryMd}
-        onClick={() => setEditOpen(true)}
-      >
-        <Edit2 className="h-4 w-4" />
-        Edit
-      </Button>
+      {canEditDisposals ? (
+        <Button
+          type="button"
+          className={workspaceBtnPrimaryMd}
+          onClick={() => setEditOpen(true)}
+        >
+          <Edit2 className="h-4 w-4" />
+          Edit
+        </Button>
+      ) : null}
     </div>
   );
 
   return (
-    <div className="space-y-4">
+    <DisposalAccessProvider canEditDisposals={canEditDisposals}>
+      <div className="space-y-4">
+        {!canEditDisposals ? (
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-2.5 text-sm text-[var(--workspace-shell-text)]">
+            View-only access — support seats can browse disposals but cannot
+            edit, publish, or change settings.
+          </div>
+        ) : null}
       {isOverview ? (
         <>
           <div ref={heroSentinelRef} className="h-px w-full" aria-hidden />
@@ -507,7 +523,8 @@ export function ListingDetailShell({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </DisposalAccessProvider>
   );
 }
 

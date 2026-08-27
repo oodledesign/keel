@@ -45,6 +45,7 @@ import {
   updateListing,
   updateListingParty,
 } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
 
 export function ListingPartiesCard({
   accountId,
@@ -64,6 +65,8 @@ export function ListingPartiesCard({
   /** When true, show a role picker (used for unified People card). */
   allowRoleSelect?: boolean;
 }) {
+  const { canEditDisposals } = useDisposalAccess();
+  const readOnly = !canEditDisposals;
   const isLandlord = fixedRole === 'landlord' && !allowRoleSelect;
   const [parties, setParties] = useState(initialParties);
   const [role, setRole] = useState<ListingPartyRole>(fixedRole);
@@ -258,7 +261,7 @@ export function ListingPartiesCard({
           <label className="flex items-start gap-2.5 text-sm text-[var(--workspace-shell-text)]">
             <Checkbox
               checked={hideLandlord}
-              disabled={pending}
+              disabled={pending || readOnly}
               onCheckedChange={(value) => toggleHideLandlord(value === true)}
             />
             <span>Hide landlord on marketplace listing?</span>
@@ -300,7 +303,7 @@ export function ListingPartiesCard({
               id={`${fixedRole}-party-search`}
               placeholder="Search companies or people…"
               value={query}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setQuery(e.target.value)}
             />
             {query.trim() && (searching || results.length > 0) ? (
@@ -312,7 +315,7 @@ export function ListingPartiesCard({
                     <li key={`${row.id}:${row.contactId ?? 'c'}`}>
                       <button
                         type="button"
-                        disabled={pending}
+                        disabled={pending || readOnly}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--workspace-shell-sidebar-accent)]"
                         onClick={() => addExisting(row)}
                       >
@@ -346,26 +349,26 @@ export function ListingPartiesCard({
             <Input
               placeholder="Company or contact name"
               value={companyName}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setCompanyName(e.target.value)}
             />
             <Input
               placeholder="Contact name (optional)"
               value={contactName}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setContactName(e.target.value)}
             />
             <div className="grid gap-2 sm:grid-cols-2">
               <Input
                 placeholder="Email (optional)"
                 value={contactEmail}
-                disabled={pending}
+                disabled={pending || readOnly}
                 onChange={(e) => setContactEmail(e.target.value)}
               />
               <Input
                 placeholder="Phone (optional)"
                 value={contactPhone}
-                disabled={pending}
+                disabled={pending || readOnly}
                 onChange={(e) => setContactPhone(e.target.value)}
               />
             </div>
@@ -373,7 +376,7 @@ export function ListingPartiesCard({
               <Button
                 type="button"
                 className={workspaceBtnPrimaryMd}
-                disabled={pending || !companyName.trim()}
+                disabled={pending || readOnly || !companyName.trim()}
                 onClick={createAndLink}
               >
                 Add
@@ -381,7 +384,7 @@ export function ListingPartiesCard({
               <Button
                 type="button"
                 variant="ghost"
-                disabled={pending}
+                disabled={pending || readOnly}
                 onClick={() => setShowCreate(false)}
               >
                 Cancel
@@ -394,7 +397,7 @@ export function ListingPartiesCard({
               type="button"
               variant="outline"
               size="sm"
-              disabled={pending}
+              disabled={pending || readOnly}
               onClick={() => setShowCreate(true)}
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
@@ -474,7 +477,7 @@ export function ListingPartiesCard({
                         <label className="inline-flex items-center gap-1.5">
                           <Checkbox
                             checked={party.isPrivate}
-                            disabled={pending}
+                            disabled={pending || readOnly}
                             onCheckedChange={(value) =>
                               togglePrivate(party, value === true)
                             }
@@ -489,7 +492,7 @@ export function ListingPartiesCard({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    disabled={pending}
+                    disabled={pending || readOnly}
                     className="h-7 w-7 shrink-0"
                     onClick={() => remove(party)}
                     aria-label={`Remove ${party.clientName}`}

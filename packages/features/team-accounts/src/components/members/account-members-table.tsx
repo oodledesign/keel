@@ -214,9 +214,14 @@ function MemberCard({
 
       <div className="mt-auto flex flex-wrap items-center gap-2">
         <RoleBadge role={member.role} />
-        <If condition={Boolean(showSeatKind && seatKind && seatKind !== 'platform')}>
-          <Badge variant="outline" className="capitalize">
-            {seatKind} seat
+        <If condition={Boolean(showSeatKind && seatKind)}>
+          <Badge
+            variant="outline"
+            className={seatKind === 'platform' ? undefined : 'capitalize'}
+          >
+            {seatKind === 'platform'
+              ? t('seatKindPlatformAdminLabel', 'Platform admin')
+              : `${seatKind} seat`}
           </Badge>
         </If>
         <If condition={isPrimaryOwner}>

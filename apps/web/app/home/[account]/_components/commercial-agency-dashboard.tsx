@@ -342,7 +342,9 @@ export function CommercialAgencyDashboard({
                   interest.
                 </p>
                 <Button asChild className={`${workspaceBtnPrimaryMd} mt-4`}>
-                  <Link href={newDisposalHref}>Create disposal</Link>
+                  <Link href={newDisposalHref} prefetch={false}>
+                    Create disposal
+                  </Link>
                 </Button>
               </div>
             ) : (

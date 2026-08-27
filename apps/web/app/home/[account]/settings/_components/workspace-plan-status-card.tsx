@@ -77,7 +77,7 @@ export function WorkspacePlanStatusCard({
         {canManageBilling ? (
           <CardContent className="pt-0">
             <Button asChild variant="outline" size="sm">
-              <Link href={`${billingPath}?upgrade=1`}>
+              <Link href={`${billingPath}?upgrade=1#workspace-plan-checkout`}>
                 Upgrade to full business
               </Link>
             </Button>
@@ -126,7 +126,9 @@ export function WorkspacePlanStatusCard({
         {canManageBilling ? (
           <CardContent className="pt-0">
             <Button asChild variant="outline" size="sm">
-              <Link href={`${billingPath}?billing=1`}>Start paid plan</Link>
+              <Link href={`${billingPath}?billing=1#workspace-plan-checkout`}>
+                Start paid plan
+              </Link>
             </Button>
           </CardContent>
         ) : null}

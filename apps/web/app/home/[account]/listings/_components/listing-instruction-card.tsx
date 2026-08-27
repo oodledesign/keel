@@ -31,6 +31,7 @@ import {
 
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { updateListing } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
 
 function RadioOption({
   name,
@@ -39,6 +40,7 @@ function RadioOption({
   onChange,
   label,
   description,
+  disabled = false,
 }: {
   name: string;
   value: string;
@@ -46,15 +48,19 @@ function RadioOption({
   onChange: () => void;
   label: string;
   description?: string;
+  disabled?: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2.5 has-[:checked]:border-[color:var(--ozer-accent)] has-[:checked]:bg-[var(--ozer-accent-subtle)]">
+    <label
+      className={`flex items-start gap-2.5 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2.5 has-[:checked]:border-[color:var(--ozer-accent)] has-[:checked]:bg-[var(--ozer-accent-subtle)] ${disabled ? 'cursor-default opacity-60' : 'cursor-pointer'}`}
+    >
       <input
         type="radio"
         name={name}
         value={value}
         checked={checked}
         onChange={onChange}
+        disabled={disabled}
         className="mt-0.5"
       />
       <span className="min-w-0">
@@ -78,6 +84,8 @@ export function ListingInstructionCard({
   accountId: string;
   listing: CommercialListing;
 }) {
+  const { canEditDisposals } = useDisposalAccess();
+  const readOnly = !canEditDisposals;
   const [listing, setListing] = useState(initial);
   const [disposalType, setDisposalType] = useState<DisposalType>(
     initial.disposalType,
@@ -92,6 +100,7 @@ export function ListingInstructionCard({
   const [pending, startTransition] = useTransition();
 
   const save = () => {
+    if (readOnly) return;
     startTransition(async () => {
       try {
         const updated = await updateListing({
@@ -133,6 +142,7 @@ export function ListingInstructionCard({
                 checked={disposalType === type}
                 onChange={() => setDisposalType(type)}
                 label={DISPOSAL_TYPE_LABELS[type]}
+                disabled={readOnly}
               />
             ))}
           </div>
@@ -148,6 +158,7 @@ export function ListingInstructionCard({
               onChange={() => setIsInstructed(true)}
               label="Yes"
               description="This is an active instruction"
+              disabled={readOnly}
             />
             <RadioOption
               name="is-instructed"
@@ -156,6 +167,7 @@ export function ListingInstructionCard({
               onChange={() => setIsInstructed(false)}
               label="No"
               description="Market intel only"
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -169,6 +181,7 @@ export function ListingInstructionCard({
               checked={instructionNature === 'exclusive'}
               onChange={() => setInstructionNature('exclusive')}
               label="Exclusive instruction"
+              disabled={readOnly}
             />
             <RadioOption
               name="instruction-nature"
@@ -176,6 +189,7 @@ export function ListingInstructionCard({
               checked={instructionNature === 'joint'}
               onChange={() => setInstructionNature('joint')}
               label="Joint agent instruction"
+              disabled={readOnly}
             />
           </div>
         </div>
@@ -184,6 +198,7 @@ export function ListingInstructionCard({
           <Label htmlFor="toe">Have Terms of Engagement been agreed?</Label>
           <Select
             value={termsOfEngagement}
+            disabled={readOnly}
             onValueChange={(value) =>
               setTermsOfEngagement(value as TermsOfEngagement | 'unset')
             }
@@ -208,14 +223,16 @@ export function ListingInstructionCard({
           </Select>
         </div>
 
-        <Button
-          type="button"
-          disabled={pending}
-          className={workspaceBtnPrimaryMd}
-          onClick={save}
-        >
-          Save instruction details
-        </Button>
+        {canEditDisposals ? (
+          <Button
+            type="button"
+            disabled={pending}
+            className={workspaceBtnPrimaryMd}
+            onClick={save}
+          >
+            Save instruction details
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -8,6 +8,7 @@ import {
   isSignaturesMailConnected,
 } from '~/lib/signatures/signatures-provider';
 import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
+import { isSignaturesManualModeEnabled } from '~/lib/signatures/workspace-settings';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { isSignaturesModuleEnabled } from '../../_lib/server/account-modules';
@@ -58,11 +59,15 @@ export default async function SignaturesLayout({
   const accountId = workspace.account.id as string;
   const uxPreview = isSignaturesUxPreviewEnabled();
   let hasRealConnection = false;
+  let manualMode = false;
   let mailProvider: Awaited<ReturnType<typeof getSignaturesMailProvider>> =
     null;
 
   try {
-    hasRealConnection = await isSignaturesMailConnected(accountId);
+    [hasRealConnection, manualMode] = await Promise.all([
+      isSignaturesMailConnected(accountId),
+      isSignaturesManualModeEnabled(accountId),
+    ]);
     if (hasRealConnection) {
       mailProvider = await getSignaturesMailProvider(accountId);
     }
@@ -87,13 +92,16 @@ export default async function SignaturesLayout({
     throw err;
   }
 
-  const connected = hasRealConnection || uxPreview;
+  const connected = hasRealConnection || manualMode || uxPreview;
+  const mailActionsDisabled = !hasRealConnection;
   const connectionDescription =
     hasRealConnection && mailProvider
       ? `Connected via ${
           mailProvider === 'google' ? 'Google Workspace' : 'Microsoft 365'
         }.`
-      : undefined;
+      : manualMode && !hasRealConnection
+        ? 'Manual mode — add people and share install links.'
+        : undefined;
 
   return (
     <>
@@ -110,13 +118,14 @@ export default async function SignaturesLayout({
           accountId={accountId}
           showActions={connected}
           mailProvider={mailProvider}
-          mailActionsDisabled={uxPreview && !hasRealConnection}
+          mailActionsDisabled={mailActionsDisabled}
         />
         <SignaturesConnectionGate
           accountId={accountId}
           accountSlug={account}
           connected={connected}
-          showUxPreviewBanner={uxPreview && !hasRealConnection}
+          manualMode={manualMode && !hasRealConnection}
+          showUxPreviewBanner={uxPreview && !hasRealConnection && !manualMode}
         >
           {children}
         </SignaturesConnectionGate>

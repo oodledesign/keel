@@ -33,6 +33,7 @@ import {
   createWorkspaceTeam,
   updateListingAssignment,
 } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
 
 export type ListingBranchOption = {
   id: string;
@@ -188,6 +189,8 @@ export function ListingAssignmentCard({
   branches: ListingBranchOption[];
   assignment: ListingAssignment;
 }) {
+  const { canEditDisposals } = useDisposalAccess();
+  const readOnly = !canEditDisposals;
   const [members] = useState(initialMembers);
   const [teams, setTeams] = useState(initialTeams);
   const [branches] = useState(initialBranches);
@@ -211,6 +214,7 @@ export function ListingAssignmentCard({
       : never,
     optimistic?: (prev: ListingAssignment) => ListingAssignment,
   ) => {
+    if (readOnly) return;
     const previous = assignment;
     if (optimistic) {
       setAssignment(optimistic);
@@ -325,7 +329,7 @@ export function ListingAssignmentCard({
             label="Acting agents"
             members={members}
             excludedIds={agentIds}
-            disabled={pending}
+            disabled={pending || readOnly}
             onPick={addAgent}
           />
           <ul className="space-y-2">
@@ -341,7 +345,7 @@ export function ListingAssignmentCard({
                       type="button"
                       className="text-[var(--workspace-shell-text)]/40 hover:text-[var(--workspace-shell-text)] disabled:opacity-30"
                       aria-label={`Move ${agent.name} up`}
-                      disabled={pending || index === 0}
+                      disabled={pending || readOnly || index === 0}
                       onClick={() => moveAgent(agent.userId, -1)}
                     >
                       <ArrowUp className="h-3.5 w-3.5" />
@@ -365,7 +369,7 @@ export function ListingAssignmentCard({
                       email: agent.email,
                       pictureUrl: agent.pictureUrl,
                     }}
-                    disabled={pending}
+                    disabled={pending || readOnly}
                     onClear={() => removeAgent(agent.userId)}
                   />
                 </li>
@@ -380,7 +384,7 @@ export function ListingAssignmentCard({
             label="PA"
             members={members}
             excludedIds={assignment.paUserId ? [assignment.paUserId] : []}
-            disabled={pending}
+            disabled={pending || readOnly}
             onPick={(userId) =>
               persist({ paUserId: userId }, (prev) => ({
                 ...prev,
@@ -394,7 +398,7 @@ export function ListingAssignmentCard({
                 ? (memberById.get(assignment.paUserId) ?? null)
                 : null
             }
-            disabled={pending}
+            disabled={pending || readOnly}
             onClear={() =>
               persist({ paUserId: null }, (prev) => ({
                 ...prev,
@@ -412,7 +416,7 @@ export function ListingAssignmentCard({
             excludedIds={
               assignment.recordOwnerUserId ? [assignment.recordOwnerUserId] : []
             }
-            disabled={pending}
+            disabled={pending || readOnly}
             onPick={(userId) =>
               persist({ recordOwnerUserId: userId }, (prev) => ({
                 ...prev,
@@ -426,7 +430,7 @@ export function ListingAssignmentCard({
                 ? (memberById.get(assignment.recordOwnerUserId) ?? null)
                 : null
             }
-            disabled={pending}
+            disabled={pending || readOnly}
             onClear={() =>
               persist({ recordOwnerUserId: null }, (prev) => ({
                 ...prev,
@@ -440,7 +444,7 @@ export function ListingAssignmentCard({
           <Label htmlFor="branch-select">Office / branch</Label>
           <Select
             value={assignment.accountBranchId ?? '__none__'}
-            disabled={pending}
+            disabled={pending || readOnly}
             onValueChange={(value) =>
               persist(
                 { accountBranchId: value === '__none__' ? null : value },
@@ -486,7 +490,7 @@ export function ListingAssignmentCard({
           <Label htmlFor="team-select">Team</Label>
           <Select
             value={assignment.teamId ?? '__none__'}
-            disabled={pending}
+            disabled={pending || readOnly}
             onValueChange={(value) =>
               persist(
                 { teamId: value === '__none__' ? null : value },
@@ -523,13 +527,13 @@ export function ListingAssignmentCard({
             <Input
               placeholder="New team name…"
               value={newTeamName}
-              disabled={pending}
+              disabled={pending || readOnly}
               onChange={(e) => setNewTeamName(e.target.value)}
             />
             <Button
               type="button"
               variant="outline"
-              disabled={pending || !newTeamName.trim()}
+              disabled={pending || readOnly || !newTeamName.trim()}
               onClick={createTeam}
             >
               Add
@@ -540,7 +544,7 @@ export function ListingAssignmentCard({
         <label className="flex items-start gap-2.5 text-sm text-[var(--workspace-shell-text)]">
           <Checkbox
             checked={assignment.restrictAccessToAssigned}
-            disabled={pending}
+            disabled={pending || readOnly}
             onCheckedChange={(checked) =>
               persist(
                 { restrictAccessToAssigned: checked === true },

@@ -240,6 +240,7 @@ export function PublicRequirementFormClient({
                   id="req-size-min"
                   type="number"
                   min={0}
+                  step="any"
                   value={sizeMin}
                   onChange={(e) => setSizeMin(e.target.value)}
                 />
@@ -250,6 +251,7 @@ export function PublicRequirementFormClient({
                   id="req-size-max"
                   type="number"
                   min={0}
+                  step="any"
                   value={sizeMax}
                   onChange={(e) => setSizeMax(e.target.value)}
                 />

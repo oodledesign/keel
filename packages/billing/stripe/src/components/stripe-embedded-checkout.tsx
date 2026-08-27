@@ -22,7 +22,6 @@ const stripePromise = loadStripe(publishableKey);
  * Served from apps/web/public. Stripe Embedded Checkout does not render
  * Dashboard logo/icon assets inside the iframe, so we brand the dialog chrome.
  */
-const OZER_ICON_SRC = '/brand/ozer-icon.svg';
 const OZER_WORDMARK_SRC = '/brand/ozer-wordmark-on-light.svg';
 
 export function StripeCheckout({
@@ -75,20 +74,13 @@ function EmbeddedCheckoutPopup({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogTitle className={'sr-only'}>Ozer checkout</DialogTitle>
-        <div className="mb-3 flex items-center gap-2.5">
-          <img
-            src={OZER_ICON_SRC}
-            alt=""
-            width={28}
-            height={28}
-            className="size-7 shrink-0"
-          />
+        <div className="mb-3">
           <img
             src={OZER_WORDMARK_SRC}
             alt="Ozer"
-            width={92}
-            height={22}
-            className="h-[22px] w-auto"
+            width={120}
+            height={29}
+            className="h-[29px] w-auto"
           />
         </div>
         <div>{children}</div>

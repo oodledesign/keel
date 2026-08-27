@@ -50,6 +50,7 @@ import type {
   WorkspaceTeam,
 } from '../_lib/server/listings.service';
 import { setBrochureShare, updateListing } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
 import {
   ListingAssignmentCard,
   type ListingBranchOption,
@@ -112,6 +113,8 @@ export function ListingMarketingEditor({
   publications: CommercialPortalPublication[];
   media?: import('../_lib/server/listings.service').CommercialListingMedia[];
 }) {
+  const { canEditDisposals } = useDisposalAccess();
+  const readOnly = !canEditDisposals;
   const router = useRouter();
   const {
     reportExhausted,
@@ -448,7 +451,7 @@ export function ListingMarketingEditor({
             <div className="flex justify-end">
               <Button
                 type="button"
-                disabled={pending}
+                disabled={pending || readOnly}
                 className={workspaceBtnPrimaryMd}
                 onClick={() =>
                   saveMarketing({
@@ -498,7 +501,7 @@ export function ListingMarketingEditor({
                 </div>
                 <Switch
                   checked={parkingAvailable}
-                  disabled={pending}
+                  disabled={pending || readOnly}
                   onCheckedChange={(checked) =>
                     setForm((current) => ({
                       ...current,
@@ -518,7 +521,7 @@ export function ListingMarketingEditor({
                     inputMode="numeric"
                     placeholder="Optional"
                     value={parkingSpaces}
-                    disabled={pending}
+                    disabled={pending || readOnly}
                     onChange={(e) =>
                       setForm((current) => ({
                         ...current,
@@ -630,7 +633,7 @@ export function ListingMarketingEditor({
             <div className="flex justify-end">
               <Button
                 type="button"
-                disabled={pending}
+                disabled={pending || readOnly}
                 className={workspaceBtnPrimaryMd}
                 onClick={() => {
                   const trimmed = parkingSpaces.trim();
@@ -775,7 +778,7 @@ export function ListingMarketingEditor({
             <div className="flex justify-end">
               <Button
                 type="button"
-                disabled={pending}
+                disabled={pending || readOnly}
                 className={workspaceBtnPrimaryMd}
                 onClick={() =>
                   saveMarketing({
@@ -939,7 +942,7 @@ export function ListingMarketingEditor({
               </span>
               <Switch
                 checked={hideRent}
-                disabled={pending}
+                disabled={pending || readOnly}
                 onCheckedChange={(enabled) => {
                   setForm((current) => ({ ...current, hideRent: enabled }));
                   saveMarketing({ hideRentFromMarketing: enabled });
@@ -953,7 +956,7 @@ export function ListingMarketingEditor({
               </span>
               <Switch
                 checked={hidePrice}
-                disabled={pending}
+                disabled={pending || readOnly}
                 onCheckedChange={(enabled) => {
                   setForm((current) => ({ ...current, hidePrice: enabled }));
                   saveMarketing({ hidePriceFromMarketing: enabled });
@@ -965,6 +968,7 @@ export function ListingMarketingEditor({
               accountId={accountId}
               listingId={listing.id}
               initialEnabled={isEachFeedIncluded(publications)}
+              disabled={readOnly}
               onBeforeEnable={() =>
                 confirmPublishIfNotReady(
                   getMarketingReadiness({

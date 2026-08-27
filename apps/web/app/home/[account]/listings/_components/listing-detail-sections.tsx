@@ -56,6 +56,7 @@ import {
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
 import { CommercialInterestPanel } from './commercial-interest-panel';
+import { useDisposalAccess } from './disposal-access-context';
 import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingCirculateDialog } from './listing-circulate-dialog';
 import { ListingFormModal } from './listing-form-modal';
@@ -466,6 +467,7 @@ export function ListingMarketingSection({
   listing: CommercialListing;
   accountId: string;
 }) {
+  const { canEditDisposals } = useDisposalAccess();
   const {
     reportExhausted,
     accountId: creditsAccountId,
@@ -512,31 +514,33 @@ export function ListingMarketingSection({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={generating}
-          onClick={generateCopy}
-        >
-          {generating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          {generating ? 'Generating…' : 'Generate with AI'}
-        </Button>
-        <Button
-          onClick={() => {
-            setMarketingOverrides(null);
-            setModalOpen(true);
-          }}
-          className={workspaceBtnPrimaryMd}
-        >
-          <Edit2 className="h-4 w-4" />
-          Edit marketing
-        </Button>
-      </div>
+      {canEditDisposals ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={generating}
+            onClick={generateCopy}
+          >
+            {generating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {generating ? 'Generating…' : 'Generate with AI'}
+          </Button>
+          <Button
+            onClick={() => {
+              setMarketingOverrides(null);
+              setModalOpen(true);
+            }}
+            className={workspaceBtnPrimaryMd}
+          >
+            <Edit2 className="h-4 w-4" />
+            Edit marketing
+          </Button>
+        </div>
+      ) : null}
 
       <Card className={workspacePanelCard}>
         <CardHeader>
@@ -629,6 +633,7 @@ export function ListingInterestSection({
   listingId: string;
   enquiries: CommercialEnquiry[];
 }) {
+  const { canEditDisposals } = useDisposalAccess();
   const router = useRouter();
   const [enquiries, setEnquiries] = useState(initial);
   const [pending, startTransition] = useTransition();
@@ -741,14 +746,16 @@ export function ListingInterestSection({
               the Interest Schedule.
             </p>
           </div>
-          <Button
-            type="button"
-            className={workspaceBtnPrimaryMd}
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Add enquiry
-          </Button>
+          {canEditDisposals ? (
+            <Button
+              type="button"
+              className={workspaceBtnPrimaryMd}
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Add enquiry
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-6">
           {error ? (
@@ -768,14 +775,24 @@ export function ListingInterestSection({
                 title={`Active (${active.length})`}
                 items={active}
                 pending={pending}
-                onArchive={(id) => setStatus(id, 'archived')}
-                onDraftRequirement={draftFromEnquiry}
+                onArchive={
+                  canEditDisposals
+                    ? (id) => setStatus(id, 'archived')
+                    : undefined
+                }
+                onDraftRequirement={
+                  canEditDisposals ? draftFromEnquiry : undefined
+                }
               />
               <InterestGroup
                 title={`Archived (${archived.length})`}
                 items={archived}
                 pending={pending}
-                onRestore={(id) => setStatus(id, 'unactioned')}
+                onRestore={
+                  canEditDisposals
+                    ? (id) => setStatus(id, 'unactioned')
+                    : undefined
+                }
               />
             </>
           )}
@@ -998,6 +1015,7 @@ export function ListingAvailabilitySection({
   listingId: string;
   units: CommercialListingUnit[];
 }) {
+  const { canEditDisposals } = useDisposalAccess();
   const [units, setUnits] = useState(initialUnits);
   const [unitModalOpen, setUnitModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<CommercialListingUnit | null>(
@@ -1016,19 +1034,21 @@ export function ListingAvailabilitySection({
           <CardTitle className="text-base text-[var(--workspace-shell-text)]">
             Units
           </CardTitle>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => {
-              setEditingUnit(null);
-              setUnitModalOpen(true);
-            }}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add unit
-          </Button>
+          {canEditDisposals ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                setEditingUnit(null);
+                setUnitModalOpen(true);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add unit
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent>
           {units.length === 0 ? (
@@ -1063,40 +1083,42 @@ export function ListingAvailabilitySection({
                         .join(' · ') || '—'}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => {
-                        setEditingUnit(unit);
-                        setUnitModalOpen(true);
-                      }}
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-rose-400"
-                      onClick={() => {
-                        if (!confirm('Delete this unit?')) return;
-                        startUnitTransition(async () => {
-                          await deleteListingUnit({
-                            unitId: unit.id,
-                            accountId,
+                  {canEditDisposals ? (
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => {
+                          setEditingUnit(unit);
+                          setUnitModalOpen(true);
+                        }}
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-rose-400"
+                        onClick={() => {
+                          if (!confirm('Delete this unit?')) return;
+                          startUnitTransition(async () => {
+                            await deleteListingUnit({
+                              unitId: unit.id,
+                              accountId,
+                            });
+                            setUnits((prev) =>
+                              prev.filter((row) => row.id !== unit.id),
+                            );
                           });
-                          setUnits((prev) =>
-                            prev.filter((u) => u.id !== unit.id),
-                          );
-                        });
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -1137,6 +1159,7 @@ export function ListingManagementSection({
   accountId: string;
   accountSlug: string;
 }) {
+  const { canEditDisposals } = useDisposalAccess();
   const { listing, setListing } = useListingState(initial);
   const [sharePending, startShareTransition] = useTransition();
   const [brochurePending, startBrochureTransition] = useTransition();
@@ -1187,15 +1210,24 @@ export function ListingManagementSection({
             </p>
             <Switch
               checked={listing.landlordShareEnabled}
-              disabled={sharePending}
+              disabled={sharePending || !canEditDisposals}
               onCheckedChange={(enabled) => {
+                if (!canEditDisposals) return;
                 startShareTransition(async () => {
-                  const updated = await setLandlordShare({
-                    listingId: listing.id,
-                    accountId,
-                    enabled,
-                  });
-                  setListing(updated);
+                  try {
+                    const updated = await setLandlordShare({
+                      listingId: listing.id,
+                      accountId,
+                      enabled,
+                    });
+                    setListing(updated);
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'Could not update landlord share',
+                    );
+                  }
                 });
               }}
             />
@@ -1246,8 +1278,9 @@ export function ListingManagementSection({
               </div>
               <Switch
                 checked={listing.brochureShareEnabled}
-                disabled={brochurePending}
+                disabled={brochurePending || !canEditDisposals}
                 onCheckedChange={(enabled) => {
+                  if (!canEditDisposals) return;
                   startBrochureTransition(async () => {
                     try {
                       const updated = await setBrochureShare({
@@ -1342,10 +1375,12 @@ export function ListingManagementSection({
             <p className="mb-2 text-sm text-[var(--workspace-shell-text)]/60">
               Email matching subscribed applicants via Amazon SES.
             </p>
-            <ListingCirculateDialog
-              accountId={accountId}
-              listingId={listing.id}
-            />
+            {canEditDisposals ? (
+              <ListingCirculateDialog
+                accountId={accountId}
+                listingId={listing.id}
+              />
+            ) : null}
           </div>
         </CardContent>
       </Card>

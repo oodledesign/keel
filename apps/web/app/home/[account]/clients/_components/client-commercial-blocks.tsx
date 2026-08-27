@@ -70,7 +70,7 @@ function EmptyState({
         size="sm"
         className="mt-3 bg-[var(--ozer-accent)] text-xs hover:bg-[var(--ozer-accent-hover)]"
       >
-        <Link href={ctaHref}>
+        <Link href={ctaHref} prefetch={false}>
           <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
           {ctaLabel}
         </Link>
