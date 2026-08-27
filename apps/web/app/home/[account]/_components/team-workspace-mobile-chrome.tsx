@@ -97,11 +97,7 @@ export function TeamWorkspaceMobileChrome({
       {!noteEditorScroll ? <WorkspaceMobileScrollLock /> : null}
       <div
         data-team-workspace-shell
-        className={
-          fullHeightPageScroll
-            ? 'flex min-w-0 flex-1 flex-col'
-            : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'
-        }
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       >
         <WorkspaceMobileHeaderBar>
           <WorkspaceMobileHeaderSelector
@@ -132,7 +128,9 @@ export function TeamWorkspaceMobileChrome({
         </WorkspaceMobileHeaderBar>
 
         {fullHeightPageScroll ? (
-          <div className="min-h-0 min-w-0 flex-1 lg:pb-0">{children}</div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:pb-0">
+            {children}
+          </div>
         ) : (
           <PullToRefresh className="min-w-0 lg:pb-0">{children}</PullToRefresh>
         )}

@@ -21,8 +21,16 @@ async function EmailPageContent() {
 function EmailPage() {
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] py-0 lg:px-6">
-      <Suspense fallback={<EmailPageSkeleton />}>
-        <EmailPageContent />
+      <Suspense
+        fallback={
+          <div className="flex min-h-0 flex-1 flex-col">
+            <EmailPageSkeleton />
+          </div>
+        }
+      >
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <EmailPageContent />
+        </div>
       </Suspense>
     </PageBody>
   );

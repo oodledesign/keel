@@ -231,7 +231,7 @@ export function EmailInboxList({
     <section
       className={cn(
         panelClass,
-        'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
+        'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
       )}
     >
       <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4">

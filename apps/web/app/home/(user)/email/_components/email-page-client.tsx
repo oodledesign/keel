@@ -650,7 +650,7 @@ export function EmailPageClient({ initialData }: Props) {
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden px-3 pt-2 md:gap-4 md:px-6 md:pt-6 lg:px-8',
+        'flex min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden px-3 pt-2 md:gap-4 md:px-6 md:pt-6 lg:px-8',
       )}
     >
       <div
@@ -778,10 +778,10 @@ export function EmailPageClient({ initialData }: Props) {
       />
 
 
-      <div className="grid h-full min-h-0 min-w-0 flex-1 gap-3 overflow-hidden md:gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
+      <div className="grid min-h-0 min-w-0 flex-1 gap-3 overflow-hidden md:gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
         <div
           className={cn(
-            'flex h-full min-h-0 min-w-0 flex-col lg:sticky lg:top-0 lg:max-h-full lg:self-start',
+            'flex min-h-0 min-w-0 flex-1 flex-col lg:max-h-full lg:self-stretch',
             mobileShowThread && 'hidden lg:flex',
           )}
         >
@@ -808,7 +808,7 @@ export function EmailPageClient({ initialData }: Props) {
 
         <div
           className={cn(
-            'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
+            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
             !mobileShowThread && 'hidden lg:flex',
           )}
         >

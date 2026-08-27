@@ -677,7 +677,7 @@ export function EmailThreadPanel({
       <section
         className={cn(
           panelClass,
-          'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
         )}
       >
         <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-3 py-2 lg:px-4 lg:py-2.5">
@@ -979,22 +979,19 @@ export function EmailThreadPanel({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {/* Mobile: one scroll for messages + todos + draft. Desktop: messages scroll; side panels stay below. */}
           <div
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-3 lg:px-4',
+              'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto lg:overflow-hidden',
               MOBILE_FLOATING_CHROME_SCROLL_PB,
               'lg:pb-0',
             )}
           >
-            <ThreadMessages messages={detail.messages} />
-          </div>
+            <div className="min-h-0 px-3 py-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:px-4">
+              <ThreadMessages messages={detail.messages} />
+            </div>
 
-          <div
-            className={cn(
-              'min-h-0 space-y-4 overflow-x-hidden overflow-y-auto border-t border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4',
-              'max-h-[min(52vh,28rem)] shrink lg:max-h-[min(46vh,28rem)] lg:shrink-0',
-            )}
-          >
+            <div className="shrink-0 space-y-4 border-t border-[color:var(--workspace-shell-border)] px-3 py-3 lg:max-h-[min(28vh,16rem)] lg:overflow-y-auto lg:px-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Suggested to-dos
@@ -1137,132 +1134,133 @@ export function EmailThreadPanel({
                 </ul>
               </div>
             ) : null}
+            </div>
 
             <div
               ref={draftSectionRef}
-              className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4"
+              className="shrink-0 space-y-3 border-t border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4"
             >
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Draft reply
-              </h3>
-              <div className="flex items-center gap-2">
-                <DropdownMenu
-                  onOpenChange={(open) => {
-                    if (!open || presetsLoaded) return;
-                    void listTemplatesPickerAction({ kind: 'email_reply' })
-                      .then((rows) => {
-                        setReplyPresets(rows);
-                        setPresetsLoaded(true);
-                      })
-                      .catch(() => {
-                        setReplyPresets([]);
-                        setPresetsLoaded(true);
-                      });
-                  }}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
-                      disabled={!connected}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Insert preset
-                      <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="max-w-xs">
-                    {!presetsLoaded ? (
-                      <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
-                    ) : replyPresets.length === 0 ? (
-                      <DropdownMenuItem disabled>
-                        No presets yet — add some in Email settings
-                      </DropdownMenuItem>
-                    ) : (
-                      replyPresets.map((preset) => (
-                        <DropdownMenuItem
-                          key={`${preset.source}:${preset.id}`}
-                          onSelect={() => {
-                            const text = preset.bodyText.trim();
-                            if (!text) return;
-                            setDraftBody((prev) =>
-                              prev.trim() ? `${prev.trim()}\n\n${text}` : text,
-                            );
-                            toast.success(`Inserted “${preset.name}”`);
-                          }}
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium">
-                              {preset.name}
-                            </span>
-                            <span className="text-muted-foreground block truncate text-xs">
-                              {preset.source}
-                            </span>
-                          </span>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Draft reply
+                </h3>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu
+                    onOpenChange={(open) => {
+                      if (!open || presetsLoaded) return;
+                      void listTemplatesPickerAction({ kind: 'email_reply' })
+                        .then((rows) => {
+                          setReplyPresets(rows);
+                          setPresetsLoaded(true);
+                        })
+                        .catch(() => {
+                          setReplyPresets([]);
+                          setPresetsLoaded(true);
+                        });
+                    }}
+                  >
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
+                        disabled={!connected}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Insert preset
+                        <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="max-w-xs">
+                      {!presetsLoaded ? (
+                        <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
+                      ) : replyPresets.length === 0 ? (
+                        <DropdownMenuItem disabled>
+                          No presets yet — add some in Email settings
                         </DropdownMenuItem>
-                      ))
+                      ) : (
+                        replyPresets.map((preset) => (
+                          <DropdownMenuItem
+                            key={`${preset.source}:${preset.id}`}
+                            onSelect={() => {
+                              const text = preset.bodyText.trim();
+                              if (!text) return;
+                              setDraftBody((prev) =>
+                                prev.trim() ? `${prev.trim()}\n\n${text}` : text,
+                              );
+                              toast.success(`Inserted “${preset.name}”`);
+                            }}
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium">
+                                {preset.name}
+                              </span>
+                              <span className="text-muted-foreground block truncate text-xs">
+                                {preset.source}
+                              </span>
+                            </span>
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                    onClick={runGenerateDraft}
+                    disabled={pending || !connected}
+                  >
+                    {pending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-4 w-4" />
                     )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                  onClick={runGenerateDraft}
-                  disabled={pending || !connected}
-                >
-                  {pending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Generate
-                </Button>
+                    Generate
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <Textarea
-              ref={draftTextareaRef}
-              value={draftBody}
-              onChange={(event) => setDraftBody(event.target.value)}
-              placeholder="Generate a reply, edit it here, then save to Gmail."
-              rows={10}
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-            />
+              <Textarea
+                ref={draftTextareaRef}
+                value={draftBody}
+                onChange={(event) => setDraftBody(event.target.value)}
+                placeholder="Generate a reply, edit it here, then save to Gmail."
+                rows={6}
+                className="min-h-[8rem] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] lg:min-h-[10rem]"
+              />
 
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="button"
-                className="ozer-gradient-btn text-[var(--ozer-white)]"
-                onClick={runSaveDraft}
-                disabled={pending || !connected || !detail.draft}
-              >
-                Save to Gmail
-              </Button>
-              {allowSendFromOzer && draftBody.trim() ? (
+              <div className="flex flex-wrap items-center gap-3">
                 <Button
                   type="button"
-                  variant="outline"
-                  className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                  onClick={openSendDialog}
+                  className="ozer-gradient-btn text-[var(--ozer-white)]"
+                  onClick={runSaveDraft}
                   disabled={pending || !connected || !detail.draft}
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  Send
+                  Save to Gmail
                 </Button>
-              ) : null}
-              {detail.draft?.status === 'saved_to_gmail' ? (
-                <span className="text-xs text-[var(--ozer-accent)]">
-                  Saved to Gmail
-                </span>
-              ) : null}
+                {allowSendFromOzer && draftBody.trim() ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                    onClick={openSendDialog}
+                    disabled={pending || !connected || !detail.draft}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Send
+                  </Button>
+                ) : null}
+                {detail.draft?.status === 'saved_to_gmail' ? (
+                  <span className="text-xs text-[var(--ozer-accent)]">
+                    Saved to Gmail
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </section>
 
