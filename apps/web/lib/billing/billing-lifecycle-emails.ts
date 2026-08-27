@@ -17,6 +17,28 @@ import {
 
 type AnyClient = SupabaseClient<any>;
 
+/** Dedupe owner + payer inboxes for subscription welcome (case-insensitive). */
+export function resolveWelcomeEmailRecipients(input: {
+  ownerEmail?: string | null;
+  payerEmail?: string | null;
+}): string[] {
+  const seen = new Set<string>();
+  const recipients: string[] = [];
+
+  for (const raw of [input.payerEmail, input.ownerEmail]) {
+    const trimmed = raw?.trim();
+    if (!trimmed) continue;
+
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    recipients.push(trimmed);
+  }
+
+  return recipients;
+}
+
 export async function loadWorkspaceOwnerEmail(
   admin: AnyClient,
   accountId: string,
@@ -376,6 +398,7 @@ export async function sendBillingLifecycleEmail(
     subscriptionId: string;
     trialEndsAt?: string | null;
     ownerEmail?: string | null;
+    payerEmail?: string | null;
     subscriptionWelcome?: SubscriptionWelcomeContext | null;
   },
 ): Promise<'sent' | 'skipped'> {
@@ -395,7 +418,18 @@ export async function sendBillingLifecycleEmail(
 
   const ownerEmail =
     input.ownerEmail ?? (await loadWorkspaceOwnerEmail(admin, input.accountId));
-  if (!ownerEmail) {
+
+  const recipientEmails =
+    input.emailKind === 'subscription_welcome'
+      ? resolveWelcomeEmailRecipients({
+          ownerEmail,
+          payerEmail: input.payerEmail,
+        })
+      : ownerEmail
+        ? [ownerEmail]
+        : [];
+
+  if (recipientEmails.length === 0) {
     return 'skipped';
   }
 
@@ -419,20 +453,46 @@ export async function sendBillingLifecycleEmail(
     subscriptionWelcome: input.subscriptionWelcome,
   });
 
-  await sendPlatformEmail({
-    type: 'billing',
-    accountId: input.accountId,
-    mail: {
-      to: ownerEmail,
-      from: sender,
-      subject,
-      html,
-    },
-    metadata: {
-      notification_type: input.emailKind,
-      subscription_id: input.subscriptionId,
-    },
-  });
+  let sentCount = 0;
+  let lastError: unknown;
+
+  for (const to of recipientEmails) {
+    try {
+      await sendPlatformEmail({
+        type: 'billing',
+        accountId: input.accountId,
+        mail: {
+          to,
+          from: sender,
+          subject,
+          html,
+        },
+        metadata: {
+          notification_type: input.emailKind,
+          subscription_id: input.subscriptionId,
+          recipient_role:
+            input.emailKind === 'subscription_welcome' &&
+            ownerEmail &&
+            to.toLowerCase() === ownerEmail.toLowerCase()
+              ? 'owner'
+              : input.emailKind === 'subscription_welcome'
+                ? 'payer'
+                : undefined,
+        },
+      });
+      sentCount += 1;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (sentCount === 0) {
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+
+    return 'skipped';
+  }
 
   await markNotificationSent(admin, {
     accountId: input.accountId,

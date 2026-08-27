@@ -13,6 +13,7 @@ import {
 
 import type { BillingEmailKind } from './account-billing-types';
 import { loadAccountMeta } from './account-billing-lifecycle';
+import { loadBillingCustomerEmail } from './billing-customer-email';
 import {
   enqueueBillingEmail,
   type BillingEmailPayload,
@@ -329,6 +330,14 @@ export async function enqueueSubscriptionWelcomeEmail(
   const stripeEventId =
     input.stripeEventId ?? `subscription-welcome:${subscriptionId}`;
 
+  const payerEmail = input.subscription.target_customer_id
+    ? await loadBillingCustomerEmail(
+        admin,
+        accountId,
+        input.subscription.target_customer_id,
+      )
+    : null;
+
   return enqueueBillingEmail(admin, {
     accountId,
     emailKind,
@@ -338,6 +347,7 @@ export async function enqueueSubscriptionWelcomeEmail(
       accountName: meta.name,
       subscriptionId,
       trialEndsAt,
+      payerEmail,
       ...welcome,
     } satisfies SubscriptionWelcomeEmailPayload,
   });

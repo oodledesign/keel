@@ -25,12 +25,33 @@ const businessSubscription: UpsertSubscriptionParams = {
 describe('subscription welcome email', () => {
   let resolveSubscriptionWelcomeContext: typeof import('./subscription-welcome-email').resolveSubscriptionWelcomeContext;
   let buildSubscriptionWelcomeEmail: typeof import('./subscription-welcome-email').buildSubscriptionWelcomeEmail;
+  let resolveWelcomeEmailRecipients: typeof import('./billing-lifecycle-emails').resolveWelcomeEmailRecipients;
 
   beforeAll(async () => {
     vi.stubEnv('NEXT_PUBLIC_BILLING_PROVIDER', 'stripe');
     const mod = await import('./subscription-welcome-email');
     resolveSubscriptionWelcomeContext = mod.resolveSubscriptionWelcomeContext;
     buildSubscriptionWelcomeEmail = mod.buildSubscriptionWelcomeEmail;
+    const lifecycle = await import('./billing-lifecycle-emails');
+    resolveWelcomeEmailRecipients = lifecycle.resolveWelcomeEmailRecipients;
+  });
+
+  it('sends welcome email to payer and owner when different', () => {
+    expect(
+      resolveWelcomeEmailRecipients({
+        ownerEmail: 'owner@example.com',
+        payerEmail: 'payer@example.com',
+      }),
+    ).toEqual(['payer@example.com', 'owner@example.com']);
+  });
+
+  it('dedupes payer and owner when same inbox', () => {
+    expect(
+      resolveWelcomeEmailRecipients({
+        ownerEmail: 'Owner@Example.com',
+        payerEmail: 'owner@example.com',
+      }),
+    ).toEqual(['owner@example.com']);
   });
 
   it('returns plan details for a workspace subscription', () => {

@@ -166,6 +166,8 @@ export async function flushBillingEmailJob(
       accountSlug,
       subscriptionId,
       trialEndsAt: payload.trialEndsAt ?? null,
+      payerEmail:
+        typeof payload.payerEmail === 'string' ? payload.payerEmail : null,
       subscriptionWelcome,
     });
 
