@@ -127,7 +127,9 @@ export const loadAdminWorkspaceDetail = cache(
         const seatKind =
           (row as { seat_kind?: string }).seat_kind === 'support'
             ? 'support'
-            : 'billable';
+            : (row as { seat_kind?: string }).seat_kind === 'platform'
+              ? 'platform'
+              : 'billable';
         return {
           userId,
           name: personal?.name ?? null,
@@ -176,7 +178,9 @@ export const loadAdminWorkspaceDetail = cache(
       seatKind:
         (row as { seat_kind?: string }).seat_kind === 'support'
           ? ('support' as const)
-          : ('billable' as const),
+          : (row as { seat_kind?: string }).seat_kind === 'platform'
+            ? ('platform' as const)
+            : ('billable' as const),
       kind: 'member' as const,
       status: 'pending' as const,
       createdAt: String(row.created_at),

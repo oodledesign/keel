@@ -227,9 +227,22 @@ export const acceptInvitationAction = enhanceAction(
         };
       }
 
-      // Support seats do not bump Stripe quantity. Billable seats only bump when
-      // assigned headcount exceeds the subscribed quantity (explicit upgrade).
-      if (seatKind !== 'support') {
+      // Support and platform seats do not bump Stripe quantity. Billable seats
+      // only bump when assigned headcount exceeds the subscribed quantity.
+      const { data: acceptedUser } =
+        await adminClient.auth.admin.getUserById(user.id);
+      const acceptedIsSuperAdmin =
+        acceptedUser.user?.app_metadata?.role === 'super-admin';
+
+      if (acceptedIsSuperAdmin) {
+        await adminClient
+          .from('accounts_memberships')
+          .update({ seat_kind: 'platform' })
+          .eq('account_id', accountId)
+          .eq('user_id', user.id);
+      }
+
+      if (seatKind !== 'support' && !acceptedIsSuperAdmin) {
         const subscription =
           await perSeatBillingService.getPerSeatSubscriptionItem(accountId);
         const item = subscription?.subscription_items.find(

@@ -43,7 +43,7 @@ type AccountMembersTableProps = {
   /** members.manage — admins can update/remove lower-hierarchy members */
   canManageMembers: boolean;
   /** Commercial Property: userId → seat kind */
-  seatKindByUserId?: Record<string, 'billable' | 'support'>;
+  seatKindByUserId?: Record<string, 'billable' | 'support' | 'platform'>;
   showSeatKind?: boolean;
 };
 
@@ -159,7 +159,7 @@ function MemberCard({
   currentUserId: string;
   currentAccountId: string;
   currentRoleHierarchy: number;
-  seatKind?: 'billable' | 'support';
+  seatKind?: 'billable' | 'support' | 'platform';
   showSeatKind?: boolean;
 }) {
   const { t } = useTranslation('teams');
@@ -214,7 +214,7 @@ function MemberCard({
 
       <div className="mt-auto flex flex-wrap items-center gap-2">
         <RoleBadge role={member.role} />
-        <If condition={Boolean(showSeatKind && seatKind)}>
+        <If condition={Boolean(showSeatKind && seatKind && seatKind !== 'platform')}>
           <Badge variant="outline" className="capitalize">
             {seatKind} seat
           </Badge>

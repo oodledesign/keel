@@ -17,7 +17,6 @@ export interface OnboardingContext {
   accountName: string;
   prefillName: string | null;
   companyRole: CompanyRole | null;
-  tradeRole: string | null;
   onboardingStep: number;
   onboardingCompleted: boolean;
   hasActiveSubscription: boolean;
@@ -46,7 +45,7 @@ export const getOnboardingContext = cache(
     const { data: membership, error: memError } = await client
       .from('accounts_memberships')
       .select(
-        'account_id, onboarding_step, onboarding_completed, company_role, trade_role',
+        'account_id, onboarding_step, onboarding_completed, company_role',
       )
       .eq('user_id', user.id)
       .eq('account_id', accountId)
@@ -91,7 +90,6 @@ export const getOnboardingContext = cache(
       accountName: account.name,
       prefillName,
       companyRole: (membership.company_role as CompanyRole) ?? null,
-      tradeRole: membership.trade_role ?? null,
       onboardingStep: membership.onboarding_step ?? 1,
       onboardingCompleted: membership.onboarding_completed ?? false,
       hasActiveSubscription:

@@ -50,7 +50,7 @@ export type AdminWorkspaceMember = {
   name: string | null;
   email: string | null;
   role: string;
-  seatKind: 'billable' | 'support';
+  seatKind: 'billable' | 'support' | 'platform';
   isPrimaryOwner: boolean;
 };
 
@@ -60,7 +60,7 @@ export type AdminWorkspaceInvitation = {
   invitationId: number | null;
   email: string;
   role: string;
-  seatKind: 'billable' | 'support' | null;
+  seatKind: 'billable' | 'support' | 'platform' | null;
   kind: 'member' | 'project_guest';
   status: 'pending';
   createdAt: string;
@@ -108,6 +108,10 @@ export function AdminWorkspaceMembersPanel(props: {
 
       <div className="rounded-lg border p-4">
         <h3 className="mb-3 text-sm font-semibold">Add or invite member</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Super-admin users are added with a free platform seat and do not count
+          toward billing.
+        </p>
         <Form {...form}>
           <form
             className={
@@ -251,7 +255,9 @@ export function AdminWorkspaceMembersPanel(props: {
                   </p>
                   {props.isCommercial ? (
                     <Badge variant="outline" className="mt-1 capitalize">
-                      {member.seatKind} seat
+                      {member.seatKind === 'platform'
+                        ? 'Platform (no seat)'
+                        : `${member.seatKind} seat`}
                     </Badge>
                   ) : null}
                 </div>

@@ -45,7 +45,23 @@ export const COMMERCIAL_ILLUSTRATIVE_TIERS = [
   },
 ] as const;
 
-export type CommercialSeatKind = 'billable' | 'support';
+export type CommercialSeatKind = 'billable' | 'support' | 'platform';
+
+/** Normalise stored seat_kind values. */
+export function parseCommercialSeatKind(
+  value: string | null | undefined,
+): CommercialSeatKind {
+  if (value === 'support') return 'support';
+  if (value === 'platform') return 'platform';
+  return 'billable';
+}
+
+/** Seats that count toward plan limits or Stripe quantity. */
+export function seatKindCountsTowardLimits(
+  kind: CommercialSeatKind,
+): boolean {
+  return kind !== 'platform';
+}
 
 export function clampBillableSeats(seats: number): number {
   if (!Number.isFinite(seats)) return 1;

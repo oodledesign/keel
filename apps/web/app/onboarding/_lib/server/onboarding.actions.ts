@@ -227,24 +227,6 @@ export async function upsertUserSettings(settings: {
   return {};
 }
 
-export async function updateMembershipTradeRole(
-  accountId: string,
-  tradeRole: string,
-): Promise<{ error?: string }> {
-  const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
-
-  const { error } = await client
-    .from('accounts_memberships')
-    .update({ trade_role: tradeRole })
-    .eq('user_id', user.id)
-    .eq('account_id', accountId);
-
-  if (error) return { error: error.message };
-  revalidatePath(pathsConfig.app.onboarding);
-  return {};
-}
-
 /**
  * Create a test subscription for the account (dev/testing only).
  * Uses service_role to call upsert_subscription so the account gets status 'active' without going through Stripe.

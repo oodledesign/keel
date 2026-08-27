@@ -9,7 +9,6 @@ import { AccessibilityStep } from './_components/steps/accessibility-step';
 import { OzerContextsStep } from './_components/steps/ozer-contexts-step';
 import { PersonalDetailsStep } from './_components/steps/personal-details-step';
 import { SubscriptionStep } from './_components/steps/subscription-step';
-import { TradeStep } from './_components/steps/trade-step';
 import {
   getStepByIndex,
   getStepIndex,
@@ -45,7 +44,7 @@ function getPersonalDetailsInitial(
   return { first_name, last_name, mobile: null };
 }
 
-// Always fetch fresh onboarding context when navigating (back/forward) so green ticks and trade role are correct
+// Always fetch fresh onboarding context when navigating (back/forward) so green ticks are correct
 export const dynamic = 'force-dynamic';
 
 interface OnboardingPageProps {
@@ -57,7 +56,7 @@ export default async function OnboardingPage({
 }: OnboardingPageProps) {
   await requireUserInServerComponent();
 
-  unstable_noStore(); // Ensure fresh ctx every time (green ticks + trade role when going back)
+  unstable_noStore(); // Ensure fresh ctx every time (green ticks when going back)
   const { account_id: accountIdParam, step: stepParam } = await searchParams;
   const stepNum = stepParam ? Math.max(1, parseInt(stepParam, 10)) : 1;
 
@@ -122,17 +121,6 @@ export default async function OnboardingPage({
                 }
               : undefined
           }
-        />
-      )}
-      {stepDef?.key === 'trade' && (
-        <TradeStep
-          key={`trade-${ctx.accountId}-${ctx.tradeRole ?? 'none'}`}
-          accountId={ctx.accountId}
-          currentStep={currentStep}
-          stepDef={stepDef}
-          nextStep={nextStep}
-          canSkip={stepDef.canSkip ?? true}
-          initialTradeRole={ctx.tradeRole}
         />
       )}
       {stepDef?.key === 'personal' && (

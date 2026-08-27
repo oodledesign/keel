@@ -6,6 +6,7 @@ import {
   type CommercialSeatKind,
   freeSupportSeats,
   maxMembersForBillableSeats,
+  parseCommercialSeatKind,
   portalPublishingAllowed,
 } from '~/lib/billing/commercial-graduated-pricing';
 
@@ -27,7 +28,7 @@ export async function getMembershipSeatKind(
     .maybeSingle();
 
   const kind = (data as { seat_kind?: string | null } | null)?.seat_kind;
-  return kind === 'support' ? 'support' : 'billable';
+  return parseCommercialSeatKind(kind);
 }
 
 export async function assertCommercialBillableMember(params: {

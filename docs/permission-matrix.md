@@ -54,9 +54,9 @@ Used for onboarding flow and UI only (e.g. which steps to show). Stored as `comp
 | Company role     | Typical account role | Notes |
 |------------------|----------------------|--------|
 | **admin**        | owner                | Creates team; sees full onboarding. |
-| **staff_member** | staff                | Invited; trade role, personal details, accessibility. |
+| **staff_member** | staff                | Invited; Ozer contexts, personal details, accessibility. |
 | **contractor**   | contractor           | Invited; same steps as staff, then assigned to projects. |
-| **client**       | client               | Invited; personal details, accessibility only. |
+| **client**       | client               | Invited; same steps as staff (Ozer contexts, personal details, accessibility). |
 
 ---
 

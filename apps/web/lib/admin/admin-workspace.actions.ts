@@ -34,6 +34,7 @@ import {
   ResendAllAdminWorkspaceInvitesSchema,
   UpdateAdminWorkspaceMemberRoleSchema,
 } from './admin-workspace.schema';
+import { isUserSuperAdminById } from './is-user-super-admin';
 
 type AdminClient = SupabaseClient<Database>;
 
@@ -314,10 +315,16 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
     }
 
     const isCommercial = workspace.space_type === 'commercial-property';
-    const seatKind =
-      isCommercial && input.seatKind === 'support' ? 'support' : 'billable';
-
     const existingUserId = await resolveUserIdByEmail(admin, input.email);
+    const targetIsSuperAdmin = existingUserId
+      ? await isUserSuperAdminById(admin, existingUserId)
+      : false;
+
+    const seatKind = targetIsSuperAdmin
+      ? 'platform'
+      : isCommercial && input.seatKind === 'support'
+        ? 'support'
+        : 'billable';
 
     if (existingUserId) {
       const { data: existingMembership } = await admin

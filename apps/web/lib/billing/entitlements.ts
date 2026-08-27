@@ -312,11 +312,13 @@ export async function getMemberSeatUsage(
     client
       .from('accounts_memberships')
       .select('*', { count: 'exact', head: true })
-      .eq('account_id', accountId),
+      .eq('account_id', accountId)
+      .neq('seat_kind', 'platform'),
     client
       .from('invitations')
       .select('*', { count: 'exact', head: true })
-      .eq('account_id', accountId),
+      .eq('account_id', accountId)
+      .neq('seat_kind', 'platform'),
     exempt ? Promise.resolve(null) : loadAccountPlanLimits(client, accountId),
   ]);
 

@@ -116,10 +116,12 @@ async function TeamAccountMembersPage({
     ],
   );
 
-  const seatKindByUserId: Record<string, 'billable' | 'support'> = {};
+  const seatKindByUserId: Record<string, 'billable' | 'support' | 'platform'> =
+    {};
   for (const row of seatKindRows.data ?? []) {
+    const kind = row.seat_kind;
     seatKindByUserId[row.user_id as string] =
-      row.seat_kind === 'support' ? 'support' : 'billable';
+      kind === 'support' || kind === 'platform' ? kind : 'billable';
   }
 
   const canManageMembers =
