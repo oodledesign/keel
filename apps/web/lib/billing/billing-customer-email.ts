@@ -2,8 +2,6 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { getRewardsStripeClient } from '~/lib/rewards/stripe-client';
-
 type AnyClient = SupabaseClient<any>;
 
 /** Stripe billing contact for the workspace (usually whoever completed checkout). */
@@ -27,7 +25,11 @@ export async function loadBillingCustomerEmail(
   if (stored) return stored;
 
   try {
-    const stripe = getRewardsStripeClient();
+    const secret = process.env.STRIPE_SECRET_KEY?.trim();
+    if (!secret?.startsWith('sk_')) return null;
+
+    const { default: Stripe } = await import('stripe');
+    const stripe = new Stripe(secret);
     const customer = await stripe.customers.retrieve(customerId);
 
     if ('deleted' in customer && customer.deleted) {
