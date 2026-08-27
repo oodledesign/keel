@@ -218,7 +218,7 @@ export function PlanPicker(
                   <RadioGroup
                     value={field.value}
                     name={field.name}
-                    className="gap-y-0.5"
+                    className="gap-y-2"
                   >
                     {visibleProducts.map((product) => {
                       const plan = product.plans.find((item) => {
@@ -249,13 +249,19 @@ export function PlanPicker(
                         <RadioGroupItemLabel
                           selected={selected}
                           key={primaryLineItem.id}
-                          className="rounded-md !border-transparent"
+                          className={cn(
+                            'rounded-lg p-4 transition-all',
+                            selected
+                              ? 'border-[color:var(--ozer-accent)] bg-[var(--workspace-shell-sidebar-accent)]/60 shadow-sm ring-1 ring-[color:var(--ozer-accent)]/25'
+                              : 'border-[color:var(--workspace-shell-border)] hover:border-[color:var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)]/20',
+                          )}
                         >
-                          <div
-                            className={
-                              'flex w-full flex-col content-center gap-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0'
-                            }
-                          >
+                          <div className="flex w-full flex-col gap-y-3">
+                            <div
+                              className={
+                                'flex w-full flex-col content-center gap-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0'
+                              }
+                            >
                             <Label
                               htmlFor={plan.id}
                               className={
@@ -353,6 +359,16 @@ export function PlanPicker(
                                 </div>
                               </div>
                             </div>
+                            </div>
+
+                            {selected ? (
+                              <PlanDetails
+                                embedded
+                                selectedInterval={selectedInterval}
+                                selectedPlan={plan}
+                                selectedProduct={product}
+                              />
+                            ) : null}
                           </div>
                         </RadioGroupItemLabel>
                       );
@@ -364,14 +380,6 @@ export function PlanPicker(
               </FormItem>
             )}
           />
-
-          {selectedPlan && selectedInterval && selectedProduct ? (
-            <PlanDetails
-              selectedInterval={selectedInterval}
-              selectedPlan={selectedPlan}
-              selectedProduct={selectedProduct}
-            />
-          ) : null}
 
           <div>
             <Button
@@ -401,10 +409,12 @@ export function PlanPicker(
 }
 
 function PlanDetails({
+  embedded = false,
   selectedProduct,
   selectedInterval,
   selectedPlan,
 }: {
+  embedded?: boolean;
   selectedProduct: {
     id: string;
     name: string;
@@ -422,25 +432,25 @@ function PlanDetails({
 }) {
   const isRecurring = selectedPlan.paymentType === 'recurring';
 
-  // trick to force animation on re-render
-  // eslint-disable-next-line react-hooks/purity
-  const key = Math.random();
-
   return (
     <div
-      key={key}
-      className={
-        'fade-in animate-in flex w-full flex-col space-y-2 rounded-md border p-4'
-      }
+      className={cn(
+        'fade-in animate-in flex w-full flex-col space-y-2',
+        embedded
+          ? 'border-[color:var(--workspace-shell-border)] mt-1 border-t pt-3'
+          : 'rounded-md border p-4',
+      )}
     >
-      <div className={'flex flex-col space-y-1'}>
-        <span className={'text-sm font-semibold'}>
-          <Trans
-            i18nKey={selectedProduct.name}
-            defaults={selectedProduct.name}
-          />
-        </span>
-      </div>
+      {!embedded ? (
+        <div className={'flex flex-col space-y-1'}>
+          <span className={'text-sm font-semibold'}>
+            <Trans
+              i18nKey={selectedProduct.name}
+              defaults={selectedProduct.name}
+            />
+          </span>
+        </div>
+      ) : null}
 
       <If condition={selectedPlan.lineItems.length > 0}>
         <div className={'flex flex-col space-y-1'}>

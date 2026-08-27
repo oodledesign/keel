@@ -677,7 +677,7 @@ export function EmailThreadPanel({
       <section
         className={cn(
           panelClass,
-          'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+          'flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
         )}
       >
         <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-3 py-2 lg:px-4 lg:py-2.5">
@@ -728,6 +728,7 @@ export function EmailThreadPanel({
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 lg:mt-0.5 lg:shrink-0">
+            <div className="-mx-3 flex items-center gap-1.5 overflow-x-auto px-3 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">
             <EmailLabelsPicker
               threadId={detail.thread.id}
               labelIds={detail.thread.label_ids ?? []}
@@ -889,6 +890,7 @@ export function EmailThreadPanel({
               </DropdownMenuContent>
             </DropdownMenu>
             </div>
+            </div>
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -982,12 +984,12 @@ export function EmailThreadPanel({
           {/* Mobile: one scroll for messages + todos + draft. Desktop: messages scroll; side panels stay below. */}
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto lg:overflow-hidden',
+              'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain lg:overflow-hidden',
               MOBILE_FLOATING_CHROME_SCROLL_PB,
               'lg:pb-0',
             )}
           >
-            <div className="min-h-0 px-3 py-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:px-4">
+            <div className="shrink-0 px-3 py-3 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-y-auto lg:px-4">
               <ThreadMessages messages={detail.messages} />
             </div>
 

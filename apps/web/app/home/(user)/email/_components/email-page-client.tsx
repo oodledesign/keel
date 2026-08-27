@@ -778,10 +778,16 @@ export function EmailPageClient({ initialData }: Props) {
       />
 
 
-      <div className="grid min-h-0 min-w-0 flex-1 gap-3 overflow-hidden md:gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
+      <div
+        className={cn(
+          'flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden md:gap-4',
+          'lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-5',
+        )}
+      >
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 flex-col lg:max-h-full lg:self-stretch',
+            'flex min-h-0 min-w-0 flex-col overflow-hidden',
+            'min-h-0 flex-1 lg:min-h-0',
             mobileShowThread && 'hidden lg:flex',
           )}
         >
@@ -808,7 +814,8 @@ export function EmailPageClient({ initialData }: Props) {
 
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+            'flex min-h-0 min-w-0 flex-col overflow-hidden',
+            'min-h-0 flex-1 lg:min-h-0',
             !mobileShowThread && 'hidden lg:flex',
           )}
         >

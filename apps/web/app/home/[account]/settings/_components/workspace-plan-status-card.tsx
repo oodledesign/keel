@@ -13,6 +13,23 @@ import {
 import pathsConfig from '~/config/paths.config';
 import type { AccountBillingStatus } from '~/lib/billing/account-billing-types';
 import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
+import { formatBillingDate } from '~/lib/billing/format-billing-date';
+import { formatMinorUnits } from '~/lib/billing/plan-templates-types';
+import type { WorkspacePlanChargeEstimate } from '~/lib/billing/workspace-plan-estimate';
+
+type WorkspacePlanSummary = {
+  periodEndsAt: string | null;
+  chargeEstimate: WorkspacePlanChargeEstimate | null;
+  subscribedSeats?: number;
+  assignedBillableSeats?: number;
+  assignedSupportSeats?: number;
+  lastPayment?: {
+    amountMinor: number;
+    currency: string;
+    paidAt: string | null;
+    receiptUrl: string | null;
+  };
+};
 
 type WorkspacePlanStatusCardProps = {
   isBusinessLite: boolean;
@@ -21,11 +38,100 @@ type WorkspacePlanStatusCardProps = {
     product: { name: string };
     plan: { name: string };
   };
+  planSummary?: WorkspacePlanSummary;
   canManageBilling: boolean;
   accountSlug: string;
   billingStatus?: AccountBillingStatus | null;
   billingExempt?: boolean;
 };
+
+function PlanSummaryDetails({ summary }: { summary: WorkspacePlanSummary }) {
+  const {
+    periodEndsAt,
+    chargeEstimate,
+    subscribedSeats,
+    assignedBillableSeats,
+    assignedSupportSeats,
+    lastPayment,
+  } = summary;
+
+  const hasSeatSummary =
+    subscribedSeats != null &&
+    assignedBillableSeats != null &&
+    assignedSupportSeats != null;
+
+  return (
+    <dl className="text-muted-foreground grid gap-2 text-sm">
+      <div className="flex items-baseline justify-between gap-4">
+        <dt>Next renewal</dt>
+        <dd className="text-foreground">{formatBillingDate(periodEndsAt)}</dd>
+      </div>
+
+      {chargeEstimate ? (
+        <div className="flex items-baseline justify-between gap-4">
+          <dt>
+            {chargeEstimate.interval === 'year'
+              ? 'Estimated annual charge'
+              : 'Estimated monthly charge'}
+          </dt>
+          <dd className="text-foreground">
+            {chargeEstimate.isEstimate ? '~' : ''}
+            {formatMinorUnits(
+              chargeEstimate.amountMinor,
+              chargeEstimate.currency,
+              chargeEstimate.interval,
+            )}
+          </dd>
+        </div>
+      ) : null}
+
+      {hasSeatSummary ? (
+        <div className="flex items-baseline justify-between gap-4">
+          <dt>Seats</dt>
+          <dd className="text-foreground">
+            {assignedBillableSeats} billable assigned · {subscribedSeats}{' '}
+            subscribed
+            {(assignedSupportSeats ?? 0) > 0
+              ? ` · ${assignedSupportSeats} support`
+              : ''}
+          </dd>
+        </div>
+      ) : subscribedSeats != null && assignedBillableSeats != null ? (
+        <div className="flex items-baseline justify-between gap-4">
+          <dt>Seats</dt>
+          <dd className="text-foreground">
+            {assignedBillableSeats} assigned · {subscribedSeats} subscribed
+          </dd>
+        </div>
+      ) : null}
+
+      {lastPayment ? (
+        <div className="flex items-baseline justify-between gap-4">
+          <dt>Last payment</dt>
+          <dd className="text-foreground">
+            {formatMinorUnits(lastPayment.amountMinor, lastPayment.currency)}
+            {lastPayment.paidAt
+              ? ` · ${formatBillingDate(lastPayment.paidAt)}`
+              : ''}
+            {lastPayment.receiptUrl ? (
+              <>
+                {' · '}
+                <a
+                  href={lastPayment.receiptUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--workspace-shell-text)] underline underline-offset-2"
+                >
+                  Receipt
+                </a>
+              </>
+            ) : null}
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  );
+}
 
 function statusBadge(status: AccountBillingStatus | null | undefined) {
   if (!status) return null;
@@ -48,6 +154,7 @@ export function WorkspacePlanStatusCard({
   isBusinessLite,
   hasPaidSubscription,
   subscriptionProductPlan,
+  planSummary,
   canManageBilling,
   accountSlug,
   billingStatus,
@@ -104,6 +211,11 @@ export function WorkspacePlanStatusCard({
             )}
           </div>
         </CardHeader>
+        {planSummary ? (
+          <CardContent className="border-t pt-4">
+            <PlanSummaryDetails summary={planSummary} />
+          </CardContent>
+        ) : null}
       </Card>
     );
   }

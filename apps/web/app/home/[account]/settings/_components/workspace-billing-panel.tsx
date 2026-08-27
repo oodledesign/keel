@@ -25,7 +25,9 @@ import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
 import { hasBusinessLiteEntitlement } from '~/lib/billing/business-lite';
 import { checkAccountAccess } from '~/lib/billing/check-account-access';
 import { loadAccountPlanLimits } from '~/lib/billing/entitlements';
+import { loadPlatformBillingInvoices } from '~/lib/billing/platform-billing-invoices';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
+import { estimateWorkspacePlanCharge } from '~/lib/billing/workspace-plan-estimate';
 import { getCommercialSeatBreakdown } from '~/lib/commercial/commercial-seat-access';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -36,6 +38,7 @@ import { BillingCheckoutFocus } from './billing-checkout-focus';
 import { MediaGenerateAppToggle } from './media-generate-app-toggle';
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
 import { WorkspaceMediaUnitsBillingCard } from './workspace-media-units-billing-card';
+import { WorkspacePaymentHistoryCard } from './workspace-payment-history-card';
 import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
 
 type WorkspaceBillingPanelProps = {
@@ -158,6 +161,68 @@ export async function WorkspaceBillingPanel({
     businessMemberCount = count ?? 0;
   }
 
+  const workspaceStripeSubscriptionId =
+    subscriptionIsWorkspacePlan && subscription?.id ? subscription.id : null;
+
+  const paymentInvoices = customerId
+    ? await loadPlatformBillingInvoices(
+        customerId,
+        workspaceStripeSubscriptionId,
+      )
+    : [];
+  const latestPayment = paymentInvoices[0];
+
+  const planSummary =
+    subscriptionIsWorkspacePlan && subscription && subscriptionProductPlan
+      ? {
+          periodEndsAt: subscription.period_ends_at ?? null,
+          chargeEstimate: estimateWorkspacePlanCharge({
+            productId: subscriptionProductPlan.product.id,
+            billableSeats: isCommercial
+              ? (commercialBreakdown?.subscribedBillable ?? 1)
+              : isBusinessWorkspace
+                ? businessSubscribedSeats
+                : Math.max(
+                    1,
+                    subscription.items?.find((item) => item.type === 'per_seat')
+                      ?.quantity ?? 1,
+                  ),
+            subscriptionItems: (subscription.items ?? []).map((item) => ({
+              price_amount: item.price_amount,
+              quantity: item.quantity,
+              type: item.type,
+              interval: item.interval,
+            })),
+            currency: subscription.currency,
+            planInterval: subscriptionProductPlan.plan.interval,
+          }),
+          subscribedSeats: isCommercial
+            ? commercialBreakdown?.subscribedBillable
+            : isBusinessWorkspace
+              ? businessSubscribedSeats
+              : undefined,
+          assignedBillableSeats: isCommercial
+            ? commercialBreakdown?.billableCount
+            : isBusinessWorkspace
+              ? businessMemberCount
+              : undefined,
+          assignedSupportSeats: isCommercial
+            ? commercialBreakdown?.supportCount
+            : undefined,
+          lastPayment: latestPayment
+            ? {
+                amountMinor: latestPayment.amountPaidPence,
+                currency: latestPayment.currency,
+                paidAt: latestPayment.paidAt,
+                receiptUrl:
+                  latestPayment.invoicePdf ??
+                  latestPayment.hostedInvoiceUrl ??
+                  null,
+              }
+            : undefined,
+        }
+      : undefined;
+
   const billingDescription = isCommercial
     ? 'Workspace plan, seats, AI credits, and Stripe billing portal.'
     : isBusinessWorkspace
@@ -199,6 +264,7 @@ export async function WorkspaceBillingPanel({
           subscriptionProductPlan={
             subscriptionIsWorkspacePlan ? subscriptionProductPlan : undefined
           }
+          planSummary={planSummary}
           canManageBilling={canManageBilling}
           accountSlug={accountSlug}
           billingStatus={accessState.status}
@@ -326,6 +392,10 @@ export async function WorkspaceBillingPanel({
 
         {shouldShowBillingPortal ? (
           <BillingPortalForm accountId={accountId} account={accountSlug} />
+        ) : null}
+
+        {customerId ? (
+          <WorkspacePaymentHistoryCard invoices={paymentInvoices} />
         ) : null}
       </div>
     </div>
