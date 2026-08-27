@@ -1263,6 +1263,7 @@ export function EmailThreadPanel({
             </div>
           </div>
         </div>
+        </div>
       </section>
 
       <AlertDialog
