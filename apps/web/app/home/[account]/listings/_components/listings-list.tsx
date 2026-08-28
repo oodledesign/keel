@@ -93,6 +93,7 @@ import {
 } from '../_lib/server/server-actions';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingPublicPreviewSheet } from './listing-public-preview-sheet';
 import { ListingSectorPills } from './listing-sector-pills';
 import { ListingsMapView } from './listings-map-view';
 
@@ -196,6 +197,25 @@ function formatMoney(pence: number | null) {
   }).format(pence / 100);
 }
 
+/** Rent and/or sale price for list/card — show both when dual. */
+function formatListingMoneyParts(listing: CommercialListing): {
+  rent: string | null;
+  price: string | null;
+} {
+  return {
+    rent: formatMoney(listing.askingRentPence),
+    price: formatMoney(listing.askingPricePence),
+  };
+}
+
+function formatListingMoneyInline(listing: CommercialListing): string {
+  const { rent, price } = formatListingMoneyParts(listing);
+  const parts: string[] = [];
+  if (rent) parts.push(`${rent} pa`);
+  if (price) parts.push(price);
+  return parts.join(' · ') || '—';
+}
+
 function formatSize(listing: CommercialListing) {
   if (listing.sizeMinSqft == null && listing.sizeMaxSqft == null) return null;
   const fmt = (n: number) =>
@@ -274,6 +294,7 @@ export function ListingsList({
   const [sortMode, setSortMode] = useState<ListingSort>('updated');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialListing | null>(null);
+  const [previewListingId, setPreviewListingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CommercialListing | null>(
     null,
   );
@@ -1227,6 +1248,7 @@ export function ListingsList({
               listing={listing}
               accountSlug={accountSlug}
               canEditDisposals={canEditDisposals}
+              onPreview={() => setPreviewListingId(listing.id)}
               onEdit={() => openEdit(listing)}
               onDelete={() => setDeleteTarget(listing)}
             />
@@ -1260,8 +1282,7 @@ export function ListingsList({
             <tbody>
               {pagedVisibleListings.map((listing) => {
                 const href = listingHref(accountSlug, listing.id);
-                const rent = formatMoney(listing.askingRentPence);
-                const price = formatMoney(listing.askingPricePence);
+                const money = formatListingMoneyInline(listing);
                 const size = formatSize(listing) ?? '—';
                 const location = locationLabel(listing);
 
@@ -1315,7 +1336,7 @@ export function ListingsList({
                       {size}
                     </td>
                     <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 sm:table-cell">
-                      {rent ?? price ?? '—'}
+                      {money}
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       {(listing.matchCount ?? 0) > 0 ? (
@@ -1337,10 +1358,7 @@ export function ListingsList({
                     <td className="px-4 py-3 text-right">
                       {canEditDisposals ? (
                         <ListingActions
-                          previewHref={listingPreviewHref(
-                            accountSlug,
-                            listing.id,
-                          )}
+                          onPreview={() => setPreviewListingId(listing.id)}
                           onEdit={() => openEdit(listing)}
                           onDelete={() => setDeleteTarget(listing)}
                         />
@@ -1403,6 +1421,20 @@ export function ListingsList({
         onSaved={handleSaved}
       />
 
+      <ListingPublicPreviewSheet
+        accountId={accountId}
+        listingId={previewListingId}
+        openFullPageHref={
+          previewListingId
+            ? listingPreviewHref(accountSlug, previewListingId)
+            : null
+        }
+        open={previewListingId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewListingId(null);
+        }}
+      />
+
       <AlertDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
@@ -1447,18 +1479,19 @@ function ListingCard({
   listing,
   accountSlug,
   canEditDisposals,
+  onPreview,
   onEdit,
   onDelete,
 }: {
   listing: CommercialListing;
   accountSlug: string;
   canEditDisposals: boolean;
+  onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const href = listingHref(accountSlug, listing.id);
-  const rent = formatMoney(listing.askingRentPence);
-  const price = formatMoney(listing.askingPricePence);
+  const { rent, price } = formatListingMoneyParts(listing);
   const size = formatSize(listing);
   const location = locationLabel(listing);
   const updatedLabel = formatUpdatedAt(listing.updatedAt);
@@ -1518,7 +1551,7 @@ function ListingCard({
           </div>
           {canEditDisposals ? (
             <ListingActions
-              previewHref={listingPreviewHref(accountSlug, listing.id)}
+              onPreview={onPreview}
               onEdit={onEdit}
               onDelete={onDelete}
               ghostUntilHover
@@ -1551,14 +1584,27 @@ function ListingCard({
         ) : null}
 
         {(rent || price) && (
-          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            {rent ?? price}
+          <div className="space-y-0.5">
             {rent ? (
-              <span className="ml-1 text-xs font-normal text-[var(--workspace-shell-text)]/45">
-                pa
-              </span>
+              <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                {rent}
+                <span className="ml-1 text-xs font-normal text-[var(--workspace-shell-text)]/45">
+                  pa
+                </span>
+              </p>
             ) : null}
-          </p>
+            {price ? (
+              <p
+                className={
+                  rent
+                    ? 'text-xs font-medium text-[var(--workspace-shell-text)]/70'
+                    : 'text-sm font-semibold text-[var(--workspace-shell-text)]'
+                }
+              >
+                {price}
+              </p>
+            ) : null}
+          </div>
         )}
 
         {(listing.coAgents?.length ?? 0) > 0 ? (
@@ -1589,12 +1635,12 @@ function ListingCard({
 }
 
 function ListingActions({
-  previewHref,
+  onPreview,
   onEdit,
   onDelete,
   ghostUntilHover = false,
 }: {
-  previewHref: string;
+  onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
   ghostUntilHover?: boolean;
@@ -1613,11 +1659,9 @@ function ListingActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild className="gap-2">
-          <Link href={previewHref}>
-            <Eye className="h-3.5 w-3.5" />
-            Preview
-          </Link>
+        <DropdownMenuItem onSelect={onPreview} className="gap-2">
+          <Eye className="h-3.5 w-3.5" />
+          Preview
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onEdit} className="gap-2">
           <Edit2 className="h-3.5 w-3.5" />

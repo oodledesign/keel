@@ -279,7 +279,24 @@ export type KatoFeedListingAttrs = {
   streetViewPitch: number | null;
   streetViewZoom: number | null;
   fittedSpace: boolean | null;
+  /** From `<availabilities>` when present. */
+  disposalType: 'to_let' | 'for_sale' | 'to_let_and_for_sale' | null;
 };
+
+/** Map Agents Society `<availabilities>` to Ozer disposal type. */
+export function parseKatoDisposalType(
+  block: string,
+): KatoFeedListingAttrs['disposalType'] {
+  const avail =
+    block.match(/<availabilities>([\s\S]*?)<\/availabilities>/i)?.[1] ?? '';
+  if (!avail.trim()) return null;
+  const hasToLet = /id=["']tolet["']|>\s*To Let\s*</i.test(avail);
+  const hasForSale = /id=["']forsale["']|>\s*For Sale\s*</i.test(avail);
+  if (hasToLet && hasForSale) return 'to_let_and_for_sale';
+  if (hasToLet) return 'to_let';
+  if (hasForSale) return 'for_sale';
+  return null;
+}
 
 function isOnApplicationFlag(block: string): boolean {
   if (/\bon\s+application\b|\bpoa\b|\broa\b/i.test(block)) return true;
@@ -372,6 +389,7 @@ export function parseKatoFeedListingAttrs(xml: string): KatoFeedListingAttrs[] {
       fittedSpace:
         parseFittedSpace(xmlText(block, 'fitted')) ??
         parseFittedSpace(xmlText(block, 'fitted_comment')),
+      disposalType: parseKatoDisposalType(block),
     });
   });
   return rows;

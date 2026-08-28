@@ -44,7 +44,12 @@ type ListingPublicPreviewProps = {
   sector: string | null;
   units: ListingPreviewUnit[];
   externalLinks: ListingPreviewExternalLink[];
-  backHref: string;
+  /** Full-page preview: link back to the disposal detail. */
+  backHref?: string;
+  /** Sheet embed: close the overlay instead of navigating. */
+  onClose?: () => void;
+  /** Optional deep-link to the full preview route. */
+  openFullPageHref?: string;
 };
 
 function formatMoneyPence(pence: number | null): string | null {
@@ -208,6 +213,8 @@ export function ListingPublicPreview({
   units,
   externalLinks,
   backHref,
+  onClose,
+  openFullPageHref,
 }: ListingPublicPreviewProps) {
   const { listing, agents, images, floorplans, accountName, brand } = data;
   const address = formatBrochureAddress(listing);
@@ -264,9 +271,24 @@ export function ListingPublicPreview({
               </a>
             </Button>
           ))}
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={backHref}>Back to disposal</Link>
-          </Button>
+          {openFullPageHref ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={openFullPageHref}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open full page
+              </Link>
+            </Button>
+          ) : null}
+          {backHref ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={backHref}>Back to disposal</Link>
+            </Button>
+          ) : null}
+          {onClose ? (
+            <Button variant="ghost" size="sm" type="button" onClick={onClose}>
+              Close
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -558,11 +580,13 @@ export function ListingPublicPreview({
             )}
           </Section>
 
-          <div className="pt-2">
-            <Link href={backHref} className={workspaceBtnPrimaryMd}>
-              Back to disposal
-            </Link>
-          </div>
+          {backHref ? (
+            <div className="pt-2">
+              <Link href={backHref} className={workspaceBtnPrimaryMd}>
+                Back to disposal
+              </Link>
+            </div>
+          ) : null}
         </div>
       </article>
     </div>

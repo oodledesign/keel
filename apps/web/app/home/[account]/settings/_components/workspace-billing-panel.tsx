@@ -6,7 +6,6 @@ import { resolveProductPlan } from '@kit/billing-gateway';
 import {
   BillingPortalCard,
   CurrentLifetimeOrderCard,
-  CurrentSubscriptionCard,
 } from '@kit/billing-gateway/components';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
@@ -24,6 +23,7 @@ import { hasBusinessLiteEntitlement } from '~/lib/billing/business-lite';
 import { checkAccountAccess } from '~/lib/billing/check-account-access';
 import { loadAccountPlanLimits } from '~/lib/billing/entitlements';
 import { loadPlatformBillingInvoices } from '~/lib/billing/platform-billing-invoices';
+import { loadPlatformSubscriptionDiscount } from '~/lib/billing/platform-subscription-discount';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
 import { estimateWorkspacePlanCharge } from '~/lib/billing/workspace-plan-estimate';
 import { getCommercialSeatBreakdown } from '~/lib/commercial/commercial-seat-access';
@@ -162,18 +162,26 @@ export async function WorkspaceBillingPanel({
   const workspaceStripeSubscriptionId =
     subscriptionIsWorkspacePlan && subscription?.id ? subscription.id : null;
 
-  const paymentInvoices = customerId
-    ? await loadPlatformBillingInvoices(
-        customerId,
-        workspaceStripeSubscriptionId,
-      )
-    : [];
+  const [paymentInvoices, subscriptionDiscount] = await Promise.all([
+    customerId
+      ? loadPlatformBillingInvoices(
+          customerId,
+          workspaceStripeSubscriptionId,
+        )
+      : Promise.resolve([]),
+    subscriptionIsWorkspacePlan
+      ? loadPlatformSubscriptionDiscount(workspaceStripeSubscriptionId)
+      : Promise.resolve(null),
+  ]);
   const latestPayment = paymentInvoices[0];
 
   const planSummary =
     subscriptionIsWorkspacePlan && subscription && subscriptionProductPlan
       ? {
           periodEndsAt: subscription.period_ends_at ?? null,
+          trialEndsAt: subscription.trial_ends_at ?? null,
+          cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+          subscriptionStatus: subscription.status ?? null,
           chargeEstimate: estimateWorkspacePlanCharge({
             productId: subscriptionProductPlan.product.id,
             billableSeats: isCommercial
@@ -194,6 +202,7 @@ export async function WorkspaceBillingPanel({
             currency: subscription.currency,
             planInterval: subscriptionProductPlan.plan.interval,
           }),
+          discount: subscriptionDiscount,
           subscribedSeats: isCommercial
             ? commercialBreakdown?.subscribedBillable
             : isBusinessWorkspace
@@ -361,19 +370,6 @@ export async function WorkspaceBillingPanel({
               canManageBilling={canManageBilling}
             />
           </>
-        ) : null}
-
-        {subscription &&
-        subscriptionIsWorkspacePlan &&
-        subscriptionProductPlan ? (
-          <CurrentSubscriptionCard
-            subscription={{
-              ...subscription,
-              items: subscription.items ?? [],
-            }}
-            product={subscriptionProductPlan.product}
-            plan={subscriptionProductPlan.plan}
-          />
         ) : null}
 
         {order && orderProductPlan ? (

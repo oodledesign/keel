@@ -200,8 +200,25 @@ describe('parseKatoFeedListingAttrs', () => {
       landSizeMetric: 'hectare',
       streetViewPanoId: 'GccqfMmpoeMvRRKkXIsx6w',
       fittedSpace: false,
+      disposalType: null,
     });
     expect(row?.onMarketAt).toMatch(/^2025-02-03T/);
     expect(mapKatoMeasurementStandard('Gross Internal Area')).toBe('gia');
+  });
+
+  it('maps dual To Let + For Sale availabilities', () => {
+    const xml = `
+      <properties>
+        <property>
+          <object_id>277302</object_id>
+          <availabilities>
+            <type id="tolet">To Let</type>
+            <type id="forsale">For Sale</type>
+          </availabilities>
+        </property>
+      </properties>
+    `;
+    const [row] = parseKatoFeedListingAttrs(xml);
+    expect(row?.disposalType).toBe('to_let_and_for_sale');
   });
 });

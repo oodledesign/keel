@@ -129,8 +129,10 @@ function fitMapToListings(
 function moneyLabel(listing: CommercialListing) {
   const rent = formatMoney(listing.askingRentPence);
   const price = formatMoney(listing.askingPricePence);
-  if (rent) return `${rent} pa`;
-  return price;
+  const parts: string[] = [];
+  if (rent) parts.push(`${rent} pa`);
+  if (price) parts.push(price);
+  return parts.join(' · ') || null;
 }
 
 interface ListingsMapViewProps {
@@ -430,13 +432,16 @@ export function ListingsMapView({
                       {DISPOSAL_TYPE_LABELS[popupListing.disposalType]}
                     </span>
 
-                    {(moneyLabel(popupListing) || formatSize(popupListing)) && (
-                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        {[moneyLabel(popupListing), formatSize(popupListing)]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                    )}
+                    {(() => {
+                      const money = moneyLabel(popupListing);
+                      const size = formatSize(popupListing);
+                      if (!money && !size) return null;
+                      return (
+                        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          {[money, size].filter(Boolean).join(' · ')}
+                        </p>
+                      );
+                    })()}
 
                     <div className="flex items-center justify-between gap-2 pt-0.5">
                       {(popupListing.actingAgents?.length ?? 0) > 0 ? (

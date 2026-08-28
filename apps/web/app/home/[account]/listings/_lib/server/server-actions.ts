@@ -525,3 +525,49 @@ export const updateListingParty = enhanceAction(
   },
   { schema: UpdateListingPartySchema },
 );
+
+/** Staff marketing preview payload for the disposals-list sheet. */
+export const loadListingPublicPreviewAction = enhanceAction(
+  async (input) => {
+    const { loadListingBrochureData } =
+      await import('~/lib/commercial/brochure-pdf/load-listing-brochure-data');
+    const { buildListingPreviewExternalLinks } =
+      await import('../listing-preview-links');
+
+    const service = getService();
+    const [listing, brochure, units, publications] = await Promise.all([
+      service.getListing(input.listingId, input.accountId),
+      loadListingBrochureData(input.listingId, input.accountId),
+      service.listUnits(input.listingId, { accountId: input.accountId }),
+      service.listPublicationsForListing(input.listingId),
+    ]);
+
+    if (!listing || !brochure || listing.accountId !== input.accountId) {
+      throw new Error('Listing preview not found');
+    }
+
+    const scopedPublications = publications.filter(
+      (publication) => publication.accountId === input.accountId,
+    );
+
+    return {
+      data: brochure,
+      sector: listing.sector,
+      units: units.map((unit) => ({
+        id: unit.id,
+        label: unit.label,
+        floorOrUnit: unit.floorOrUnit,
+        sizeSqft: unit.sizeSqft,
+        askingRentPence: unit.askingRentPence,
+        status: unit.status,
+      })),
+      externalLinks: buildListingPreviewExternalLinks({
+        brochureShareEnabled: listing.brochureShareEnabled,
+        brochureShareToken: listing.brochureShareToken,
+        websiteUrl: listing.websiteUrl,
+        publications: scopedPublications,
+      }),
+    };
+  },
+  { schema: GetListingSchema },
+);

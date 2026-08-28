@@ -29,6 +29,7 @@ export type IngestKatoListingEnrichmentSummary = {
   streetViewUpdated: number;
   fittedUpdated: number;
   unitsFittedUpdated: number;
+  disposalUpdated: number;
 };
 
 type ListingEnrichmentRow = {
@@ -51,6 +52,7 @@ type ListingEnrichmentRow = {
   on_market_at: string | null;
   street_view_pano_id: string | null;
   fitted_space: boolean | null;
+  disposal_type: string | null;
 };
 
 type MarketingSection = {
@@ -84,7 +86,7 @@ export async function ingestKatoListingEnrichment(
   const { data: listings, error: listingError } = await client
     .from('commercial_listings')
     .select(
-      'id, external_id, name, address_line_1, town, postcode, epc_band, epc_rating, hide_rent_from_marketing, hide_price_from_marketing, rates_payable_per_sqft, measurement_standard, marketing_sections, insurance_type, possession, land_size_min, on_market_at, street_view_pano_id, fitted_space',
+      'id, external_id, name, address_line_1, town, postcode, epc_band, epc_rating, hide_rent_from_marketing, hide_price_from_marketing, rates_payable_per_sqft, measurement_standard, marketing_sections, insurance_type, possession, land_size_min, on_market_at, street_view_pano_id, fitted_space, disposal_type',
     )
     .eq('account_id', input.accountId)
     .not('external_id', 'is', null);
@@ -244,6 +246,7 @@ export async function ingestKatoListingEnrichment(
     streetViewUpdated: 0,
     fittedUpdated: 0,
     unitsFittedUpdated,
+    disposalUpdated: 0,
   };
 
   for (const row of parseKatoFeedListingAttrs(input.xml)) {
@@ -388,6 +391,14 @@ export async function ingestKatoListingEnrichment(
       listing.fitted_space = row.fittedSpace;
       summary.fittedUpdated += 1;
       notes.push(row.fittedSpace ? 'fitted' : 'unfitted');
+    }
+
+    // Kato availabilities are source of truth for matched external listings.
+    if (row.disposalType && listing.disposal_type !== row.disposalType) {
+      patch.disposal_type = row.disposalType;
+      listing.disposal_type = row.disposalType;
+      summary.disposalUpdated += 1;
+      notes.push(row.disposalType);
     }
 
     if (Object.keys(patch).length === 0) continue;
