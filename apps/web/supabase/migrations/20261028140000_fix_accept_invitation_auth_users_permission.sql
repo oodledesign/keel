@@ -1,0 +1,148 @@
+-- accept_invitation copies invitee names onto the personal account when present.
+-- Comparing against auth.users failed at runtime: service_role (RPC invoker) has
+-- no SELECT on auth.users, so named invites rolled back with 42501.
+-- Use public.accounts.email instead (personal account id = auth user id).
+
+CREATE OR REPLACE FUNCTION public.accept_invitation(token text, user_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  target_account_id uuid;
+  target_role varchar(50);
+  target_project_id uuid;
+  target_company_role text;
+  target_seat_kind text;
+  target_first_name text;
+  target_last_name text;
+BEGIN
+  SELECT
+    account_id,
+    role,
+    project_id,
+    seat_kind,
+    first_name,
+    last_name
+  INTO
+    target_account_id,
+    target_role,
+    target_project_id,
+    target_seat_kind,
+    target_first_name,
+    target_last_name
+  FROM public.invitations
+  WHERE invite_token = token
+    AND expires_at > now();
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid or expired invitation token';
+  END IF;
+
+  target_company_role := CASE
+    WHEN target_role IN ('owner', 'admin') THEN 'admin'
+    WHEN target_role = 'client' THEN 'client'
+    WHEN target_role = 'contractor' THEN 'contractor'
+    ELSE 'staff_member'
+  END;
+
+  IF target_seat_kind IS NULL OR target_seat_kind NOT IN ('billable', 'support') THEN
+    target_seat_kind := 'billable';
+  END IF;
+
+  INSERT INTO public.accounts_memberships (
+    user_id,
+    account_id,
+    account_role,
+    company_role,
+    onboarding_step,
+    onboarding_completed,
+    seat_kind
+  )
+  VALUES (
+    accept_invitation.user_id,
+    target_account_id,
+    target_role,
+    target_company_role,
+    1,
+    false,
+    target_seat_kind
+  );
+
+  IF target_first_name IS NOT NULL OR target_last_name IS NOT NULL THEN
+    INSERT INTO public.user_settings (user_id, first_name, last_name)
+    VALUES (
+      accept_invitation.user_id,
+      target_first_name,
+      target_last_name
+    )
+    ON CONFLICT ON CONSTRAINT user_settings_pkey DO UPDATE
+      SET
+        first_name = COALESCE(
+          NULLIF(trim(public.user_settings.first_name), ''),
+          EXCLUDED.first_name
+        ),
+        last_name = COALESCE(
+          NULLIF(trim(public.user_settings.last_name), ''),
+          EXCLUDED.last_name
+        );
+
+    UPDATE public.accounts
+    SET name = trim(
+      concat_ws(
+        ' ',
+        COALESCE(target_first_name, ''),
+        COALESCE(target_last_name, '')
+      )
+    )
+    WHERE id = accept_invitation.user_id
+      AND (
+        name IS NULL
+        OR trim(name) = ''
+        OR name = email
+      )
+      AND trim(
+        concat_ws(
+          ' ',
+          COALESCE(target_first_name, ''),
+          COALESCE(target_last_name, '')
+        )
+      ) <> '';
+  END IF;
+
+  IF target_project_id IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = target_project_id
+        AND p.account_id = target_account_id
+    ) THEN
+      INSERT INTO public.project_assignments (
+        project_id,
+        user_id,
+        account_id,
+        role_on_project
+      )
+      VALUES (
+        target_project_id,
+        accept_invitation.user_id,
+        target_account_id,
+        target_role
+      )
+      ON CONFLICT ON CONSTRAINT project_assignments_pkey DO UPDATE
+        SET account_id = EXCLUDED.account_id,
+            role_on_project = COALESCE(
+              EXCLUDED.role_on_project,
+              public.project_assignments.role_on_project
+            );
+    END IF;
+  END IF;
+
+  DELETE FROM public.invitations
+  WHERE invite_token = token;
+
+  RETURN target_account_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.accept_invitation(text, uuid) TO service_role;
