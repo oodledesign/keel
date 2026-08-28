@@ -31,10 +31,10 @@ import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
+  normalizeLegacySignatureChrome,
   stripEmptySignatureBlocks,
   stripTransparentBadgeImages,
-  normalizeLegacySignatureChrome,
-} from '~/lib/signatures/render-template';
+} from '~/lib/signatures/signature-render-utils';
 import {
   SIGNATURE_TEMPLATE_TOKENS,
   type SignatureBuilderDocument,
