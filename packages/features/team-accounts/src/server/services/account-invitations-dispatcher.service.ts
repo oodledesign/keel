@@ -195,6 +195,9 @@ class AccountInvitationsDispatchService {
 
     const { renderInviteEmail } = await import('@kit/email-templates');
     const { getMailer } = await import('@kit/mailers');
+    const { insertPlatformEmailLog } = await import(
+      '@kit/supabase/platform-email-log'
+    );
 
     const { html, subject } = await renderInviteEmail({
       link,
@@ -203,6 +206,9 @@ class AccountInvitationsDispatchService {
       productName: env.productName,
       teamName: team.name,
     });
+
+    let status: 'sent' | 'failed' = 'sent';
+    let errorMessage: string | null = null;
 
     try {
       // getMailer() prefers Zepto when ZEPTOMAIL_TOKEN is set
@@ -216,8 +222,25 @@ class AccountInvitationsDispatchService {
 
       logger.info(ctx, 'Invitation email successfully sent!');
     } catch (error) {
+      status = 'failed';
+      errorMessage = error instanceof Error ? error.message : String(error);
       logger.error({ error, ...ctx }, 'Failed to send invitation email');
       throw error;
+    } finally {
+      await insertPlatformEmailLog({
+        emailType: 'invitation',
+        accountId: invitation.account_id,
+        recipientEmail: invitation.email,
+        senderEmail: env.emailSender,
+        subject,
+        status,
+        errorMessage,
+        metadata: {
+          kind: 'team_invitation',
+          invitation_id: invitation.id,
+          team_name: team.name,
+        },
+      });
     }
   }
 

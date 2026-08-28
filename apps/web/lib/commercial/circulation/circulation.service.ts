@@ -272,16 +272,45 @@ export async function sendCirculationEmailViaSes(input: {
   subject: string;
   html: string;
   listUnsubscribeUrl: string;
+  accountId?: string | null;
+  metadata?: Record<string, unknown>;
 }): Promise<void> {
-  const mailer = createSesMailer();
-  await mailer.sendEmail({
-    to: input.to,
-    from: input.from,
-    subject: input.subject,
-    html: input.html,
-    replyTo: input.replyTo,
-    listUnsubscribeUrl: input.listUnsubscribeUrl,
-  });
+  const { insertPlatformEmailLog } = await import(
+    '@kit/supabase/platform-email-log'
+  );
+
+  let status: 'sent' | 'failed' = 'sent';
+  let errorMessage: string | null = null;
+
+  try {
+    const mailer = createSesMailer();
+    await mailer.sendEmail({
+      to: input.to,
+      from: input.from,
+      subject: input.subject,
+      html: input.html,
+      replyTo: input.replyTo,
+      listUnsubscribeUrl: input.listUnsubscribeUrl,
+    });
+  } catch (error) {
+    status = 'failed';
+    errorMessage = error instanceof Error ? error.message : String(error);
+    throw error;
+  } finally {
+    await insertPlatformEmailLog({
+      emailType: 'commercial_circulation',
+      accountId: input.accountId ?? null,
+      recipientEmail: input.to,
+      senderEmail: input.from,
+      subject: input.subject,
+      status,
+      errorMessage,
+      metadata: {
+        provider: 'ses',
+        ...(input.metadata ?? {}),
+      },
+    });
+  }
 }
 
 export function buildCirculationEmailHtml(input: {

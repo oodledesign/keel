@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { renderOtpEmail } from '@kit/email-templates';
 import { getMailer } from '@kit/mailers';
 import { getLogger } from '@kit/shared/logger';
+import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
 const EMAIL_SENDER = z
   .string({
@@ -53,8 +54,27 @@ class OtpEmailService {
       });
 
       logger.info({ otp }, 'OTP email sent');
+
+      await insertPlatformEmailLog({
+        emailType: 'otp',
+        recipientEmail: email,
+        senderEmail: EMAIL_SENDER,
+        subject,
+        status: 'sent',
+        metadata: { kind: 'otp' },
+      });
     } catch (error) {
       logger.error({ otp, error }, 'Error sending OTP email');
+
+      await insertPlatformEmailLog({
+        emailType: 'otp',
+        recipientEmail: email,
+        senderEmail: EMAIL_SENDER,
+        subject,
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        metadata: { kind: 'otp' },
+      });
 
       throw error;
     }

@@ -27,6 +27,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'signature_sync',
   'signature_connect',
   'commercial_match_digest',
+  'commercial_circulation',
   'user_signup',
   'invite_accepted',
   'meeting_notes',

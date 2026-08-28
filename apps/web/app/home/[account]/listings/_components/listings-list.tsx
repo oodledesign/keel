@@ -16,8 +16,10 @@ import {
   Bell,
   Building2,
   Edit2,
+  Eye,
   LayoutGrid,
   List,
+  Loader2,
   Map as MapIcon,
   MoreHorizontal,
   Plus,
@@ -218,6 +220,10 @@ function listingHref(accountSlug: string, listingId: string) {
     .replace('[id]', listingId);
 }
 
+function listingPreviewHref(accountSlug: string, listingId: string) {
+  return `${listingHref(accountSlug, listingId)}/preview`;
+}
+
 export function ListingsList({
   accountId,
   accountSlug,
@@ -366,11 +372,13 @@ export function ListingsList({
       }
 
       // Drop scoped cache immediately so map/search don't show the previous filter.
+      // Keep loading true so we show a spinner instead of a false empty state.
       if (
         patch.office !== undefined ||
         patch.status !== undefined ||
         patch.agent !== undefined
       ) {
+        setLoadingPage(true);
         setCachedListings([]);
         setPageListings([]);
         setPage(1);
@@ -493,7 +501,13 @@ export function ListingsList({
       (agentUserId ?? null) === (initialAgentUserId ?? null) &&
       officeId === (initialOfficeId ?? null) &&
       initialListings.length > 0;
-    if (isDefaultFirstPage) return;
+    if (isDefaultFirstPage) {
+      setPageListings(initialListings);
+      setCachedListings(initialListings);
+      setTotal(initialTotal);
+      setLoadingPage(false);
+      return;
+    }
 
     void fetchPage(page);
   }, [
@@ -507,7 +521,8 @@ export function ListingsList({
     initialStatusFilter,
     initialAgentUserId,
     fetchPage,
-    initialListings.length,
+    initialListings,
+    initialTotal,
   ]);
 
   useEffect(() => {
@@ -1132,9 +1147,19 @@ export function ListingsList({
       ) : null}
 
       {visibleListings.length === 0 &&
-      !loadingPage &&
-      !enrichingSearch &&
-      !enrichingMap ? (
+      (loadingPage || enrichingSearch || enrichingMap) ? (
+        <Card className={workspacePanelCard}>
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--ozer-accent)]" />
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Loading disposals…
+            </p>
+          </CardContent>
+        </Card>
+      ) : visibleListings.length === 0 &&
+        !loadingPage &&
+        !enrichingSearch &&
+        !enrichingMap ? (
         <Card className={workspacePanelCard}>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
@@ -1312,6 +1337,10 @@ export function ListingsList({
                     <td className="px-4 py-3 text-right">
                       {canEditDisposals ? (
                         <ListingActions
+                          previewHref={listingPreviewHref(
+                            accountSlug,
+                            listing.id,
+                          )}
                           onEdit={() => openEdit(listing)}
                           onDelete={() => setDeleteTarget(listing)}
                         />
@@ -1489,6 +1518,7 @@ function ListingCard({
           </div>
           {canEditDisposals ? (
             <ListingActions
+              previewHref={listingPreviewHref(accountSlug, listing.id)}
               onEdit={onEdit}
               onDelete={onDelete}
               ghostUntilHover
@@ -1559,10 +1589,12 @@ function ListingCard({
 }
 
 function ListingActions({
+  previewHref,
   onEdit,
   onDelete,
   ghostUntilHover = false,
 }: {
+  previewHref: string;
   onEdit: () => void;
   onDelete: () => void;
   ghostUntilHover?: boolean;
@@ -1581,6 +1613,12 @@ function ListingActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem asChild className="gap-2">
+          <Link href={previewHref}>
+            <Eye className="h-3.5 w-3.5" />
+            Preview
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={onEdit} className="gap-2">
           <Edit2 className="h-3.5 w-3.5" />
           Edit

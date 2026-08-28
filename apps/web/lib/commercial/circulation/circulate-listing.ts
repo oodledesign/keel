@@ -328,6 +328,12 @@ export async function circulateListing(
         subject,
         html,
         listUnsubscribeUrl: unsubscribeUrl,
+        accountId: input.accountId,
+        metadata: {
+          listing_id: (listing as { id: string }).id,
+          requirement_id: requirementId,
+          send_id: sendId,
+        },
       });
 
       sent += 1;

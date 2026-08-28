@@ -151,6 +151,9 @@ class DeletePersonalAccountService {
 
     const { renderAccountDeleteEmail } = await import('@kit/email-templates');
     const { getMailer } = await import('@kit/mailers');
+    const { insertPlatformEmailLog } = await import(
+      '@kit/supabase/platform-email-log'
+    );
 
     const mailer = await getMailer();
     const purgeDate = new Date(
@@ -166,12 +169,31 @@ class DeletePersonalAccountService {
       purgeDate,
     });
 
-    await mailer.sendEmail({
-      from: emailSettings.fromEmail,
-      html,
-      subject,
-      to: account.email,
-    });
+    let status: 'sent' | 'failed' = 'sent';
+    let errorMessage: string | null = null;
+
+    try {
+      await mailer.sendEmail({
+        from: emailSettings.fromEmail,
+        html,
+        subject,
+        to: account.email,
+      });
+    } catch (error) {
+      status = 'failed';
+      errorMessage = error instanceof Error ? error.message : String(error);
+      throw error;
+    } finally {
+      await insertPlatformEmailLog({
+        emailType: 'account_deletion',
+        recipientEmail: account.email,
+        senderEmail: emailSettings.fromEmail,
+        subject,
+        status,
+        errorMessage,
+        metadata: { kind: 'account_deletion' },
+      });
+    }
   }
 
   private getEmailSettings() {
