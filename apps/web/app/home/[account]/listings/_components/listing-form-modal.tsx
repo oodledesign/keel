@@ -830,11 +830,11 @@ function ListingFormFields({
             </Label>
             <Input
               type="number"
-              min={1}
-              max={100}
+              min={0}
+              max={999}
               value={form.epcRating}
               onChange={(e) => field('epcRating', e.target.value)}
-              placeholder="1–100"
+              placeholder="e.g. 125"
               className={inputClass}
             />
           </div>

@@ -94,7 +94,8 @@ export const CreateListingSchema = z.object({
     .optional()
     .nullable(),
   epcBand: z.string().optional().nullable(),
-  epcRating: z.number().int().optional().nullable(),
+  // Commercial (non-domestic) EPC asset ratings routinely exceed 100.
+  epcRating: z.number().int().min(0).max(999).optional().nullable(),
   possession: z.string().trim().max(200).optional().nullable(),
   buildStatus: z.string().trim().max(200).optional().nullable(),
   planningStatus: z.string().trim().max(200).optional().nullable(),
