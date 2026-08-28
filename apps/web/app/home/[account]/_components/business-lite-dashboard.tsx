@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { LayoutGrid } from 'lucide-react';
+import { BadgeCheck, LayoutGrid } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
@@ -11,6 +11,9 @@ import { workspacePanelCard } from '~/lib/workspace-ui';
 import { BusinessLiteUpgradeBanner } from './business-lite-upgrade-banner';
 
 const panelClass = `${workspacePanelCard} rounded-[24px]`;
+
+const installedAppCardClass =
+  'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-4 shadow-[0_1px_2px_rgba(42,23,32,0.04)] transition-colors hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-panel-hover)]';
 
 type BusinessLiteDashboardProps = {
   accountSlug: string;
@@ -61,14 +64,14 @@ export function BusinessLiteDashboard({
         {installedApps.length > 0 ? (
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {installedApps.map((app) => (
-              <Link
-                key={app.path}
-                href={app.path}
-                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-4 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              >
+              <Link key={app.path} href={app.path} className={installedAppCardClass}>
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--ozer-accent)]">
                     {app.Icon}
+                    <BadgeCheck
+                      className="absolute -right-1.5 -bottom-1.5 size-4 rounded-full bg-[var(--workspace-shell-panel)] fill-emerald-500 text-white dark:text-[var(--workspace-shell-panel)]"
+                      aria-hidden
+                    />
                   </span>
                   <div className="min-w-0">
                     <h3 className="font-semibold text-[var(--workspace-shell-text)]">

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-22T21:25:39.442Z",
-  "chunkCount": 130,
+  "generatedAt": "2026-08-27T11:55:53.971Z",
+  "chunkCount": 131,
   "chunks": [
     {
       "id": "42c411100896",
@@ -222,19 +222,25 @@
       "id": "135458ebf581",
       "path": "/commercial-property/seats-billing",
       "title": "Seats & billing",
-      "text": "Seats & billing\n\nCommercial property uses graduated per-seat billing for billable seats, plus a small number of free support seats at team scale.\n\nManage membership on Team (/app/[account]/members) and the plan under workspace billing settings.\n\nBillable vs support\n\n| Seat kind | Pays on Stripe | Can do |\n| --- | --- | --- |\n| Billable | Yes | Create/edit disposals, move WIP and requirement stages, configure Website & portals, run day-to-day negotiating work |\n| Support | No (within free allowance) | View workspace data and contribute notes / activity; cannot mutate stages, disposals, or publishing |\n\nSeat kind is not a role. Roles remain owner / admin / staff (permissions). On invite you pick both: e.g. staff + support for a PA, or staff + billable for a negotiator.\n\nIf a support user tries a restricted action, Ozer asks them to use a billable colleague or upgrade the seat.\n\nGraduated pricing (illustrative)\n\nBillable seats are priced graduated (exact Stripe tiers apply at checkout):"
+      "text": "Seats & billing\n\nCommercial property uses graduated per-seat billing for billable seats, plus a small number of free support seats at team scale.\n\nManage membership on Team (/app/[account]/members) and the plan under workspace billing settings.\n\nBillable vs support\n\n| Seat kind | Pays on Stripe | Can do |\n| --- | --- | --- |\n| Billable | Yes | Create/edit disposals, move WIP and requirement stages, configure Website & portals, run day-to-day negotiating work |\n| Support | No (within free allowance) | View workspace data and contribute notes / activity; cannot mutate stages, disposals, or publishing |\n| Platform | No | Ozer super-admins only — full access, does not count toward billable or support limits |\n\nSeat kind is not a role. Roles remain owner / admin / staff (permissions). On invite you pick both: e.g. staff + support for a PA, or staff + billable for a negotiator.\n\nIf a support user tries a restricted action, Ozer asks them to use a billable colleague or upgrade the seat."
     },
     {
-      "id": "4ed3f31a7377",
+      "id": "199571b8a057",
       "path": "/commercial-property/seats-billing",
       "title": "Seats & billing",
-      "text": "e seat.\n\nGraduated pricing (illustrative)\n\nBillable seats are priced graduated (exact Stripe tiers apply at checkout):\n\n1. Seat 1 → higher solo rate\n2. Seats 2–7 → mid team rate each\n3. Seats 8+ → lower scale rate each\n\nMarketing illustrations:\n\n| Example | Billable seats | Free support seats | Portal publishing (Rightmove / EG) |\n| --- | --- | --- | --- |\n| Commercial Solo | 1 | 0 | Property Hive website sync only |\n| Commercial Team | 2–7 (example card often uses 4) | 2 | Included |\n| Commercial Scale | 8+ (example card often uses 10) | 4 | Included |\n\nPortal publishing to Rightmove and EACH / EG requires at least two billable seats. Property Hive website sync remains available on Solo.\n\nCurrent public pricing: ozer.so/pricing.\n\nInvite with the right seat\n\n1. Open /app/[account]/members.\n2. Invite the colleague.\n3. Choose billable for negotiators and anyone who edits stock or stages.\n4. Choose support for PAs, trainees, or viewers within your free support allowance.\n5."
+      "text": "ublic pricing: ozer.so/pricing.\n\nInvite with the right seat\n\n1. Open /app/[account]/members.\n2. Invite the colleague.\n3. Choose billable for negotiators and anyone who edits stock or stages.\n4. Choose support for PAs, trainees, or viewers within your free support allowance.\n5. Do not assign more billable members than your subscribed quantity without updating billing.\n6. After accept, confirm their seat kind on the members list.\n\nChange seats and plan\n\n1. Open workspace Billing.\n2. Adjust billable seat quantity to match the negotiators you need.\n3. Confirm the graduated monthly estimate.\n4. Save — Stripe updates the subscription item quantity.\n5. Invite or convert members so billable headcount matches seats purchased.\n6. Recheck Website & portals unlock after moving from 1 → 2+ billable seats.\n\nPractical tips\n\n1. Keep owners/admins billable during setup.\n2. Use support seats for visibility without inflating Stripe quantity.\n3."
     },
     {
-      "id": "8d422de7341c",
+      "id": "53f5d1309f20",
       "path": "/commercial-property/seats-billing",
       "title": "Seats & billing",
-      "text": "anyone who edits stock or stages.\n4. Choose support for PAs, trainees, or viewers within your free support allowance.\n5. Do not assign more billable members than your subscribed quantity without updating billing.\n6. After accept, confirm their seat kind on the members list.\n\nChange seats and plan\n\n1. Open workspace Billing.\n2. Adjust billable seat quantity to match the negotiators you need.\n3. Confirm the graduated monthly estimate.\n4. Save — Stripe updates the subscription item quantity.\n5. Invite or convert members so billable headcount matches seats purchased.\n6. Recheck Website & portals unlock after moving from 1 → 2+ billable seats.\n\nPractical tips\n\n1. Keep owners/admins billable during setup.\n2. Use support seats for visibility without inflating Stripe quantity.\n3. Unlock Rightmove / EG only when you intentionally take a second billable seat.\n4. If publishing is blocked, count billable seats first — then credentials.\n\nRelated: Invite your team, Website & portals."
+      "text": "otiator.\n\nIf a support user tries a restricted action, Ozer asks them to use a billable colleague or upgrade the seat.\n\nGraduated pricing (illustrative)\n\nBillable seats are priced graduated (exact Stripe tiers apply at checkout):\n\n1. Seat 1 → higher solo rate\n2. Seats 2–7 → mid team rate each\n3. Seats 8+ → lower scale rate each\n\nMarketing illustrations:\n\n| Example | Billable seats | Free support seats | Portal publishing (Rightmove / EG) |\n| --- | --- | --- | --- |\n| Commercial Solo | 1 | 0 | Property Hive website sync only |\n| Commercial Team | 2–7 (example card often uses 4) | 2 | Included |\n| Commercial Scale | 8+ (example card often uses 10) | 4 | Included |\n\nPortal publishing to Rightmove and EACH / EG requires at least two billable seats. Property Hive website sync remains available on Solo.\n\nCurrent public pricing: ozer.so/pricing.\n\nInvite with the right seat\n\n1. Open /app/[account]/members.\n2. Invite the colleague.\n3."
+    },
+    {
+      "id": "c8f7c3d0fef4",
+      "path": "/commercial-property/seats-billing",
+      "title": "Seats & billing",
+      "text": "1. Keep owners/admins billable during setup.\n2. Use support seats for visibility without inflating Stripe quantity.\n3. Unlock Rightmove / EG only when you intentionally take a second billable seat.\n4. If publishing is blocked, count billable seats first — then credentials.\n\nRelated: Invite your team, Website & portals."
     },
     {
       "id": "48ccc8b15d7e",
@@ -519,6 +525,12 @@
       "text": "ose fields are available.\n4. Drag the card between stages as the deal progresses (for example Lead → Proposal → Won).\n5. When the deal is won, create a Project from the opportunity or client so delivery continues under Projects (/app/[account]/projects).\n\nSteps: keep pipeline honest\n\n1. Archive or move lost deals to a Lost stage instead of deleting history you may need.\n2. Review the board weekly in Planner downtime so stale cards don’t linger.\n3. Connect won work to invoices under Invoices once delivery is billable.\n\nWhat you’ll see\n\n- Kanban-style columns labelled by stage\n- Cards showing client / deal summary\n- Empty columns until you add opportunities\n\nTips\n\n- Align stage names with how your studio actually sells (your workspace may allow stage customisation in settings or board config).\n- One active primary opportunity per major engagement keeps reporting cleaner."
     },
     {
+      "id": "03928e5e625a",
+      "path": "/work/email-assistant",
+      "title": "Email assistant",
+      "text": "e notes — short guidance like “short UK English, no emojis, sign off with Thanks,”.\n3. Set or confirm your signature.\n4. Maintain the ignored senders / domains list for newsletters and automated mail.\n5. Visit Suggested tasks at /app/[account]/email/suggested-tasks when the assistant proposes tasks from mail, and accept into Tasks.\n\nWhat you’ll see\n\n- Inbox / needs-reply list under Emails\n- Draft pane with AI suggestion\n- Sidebar badge when counts are available\n- Empty state until Gmail is connected\n\nTips\n\n- Start with advisory drafts only; turn on auto-save of drafts once you trust the tone settings.\n- Prefer ignored domains (updates.example.com) over one-off deletes for recurring noise.\n- Keep client commitments in Projects/Tasks — email is a capture surface, not the system of record.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Emails missing from sidebar | Check add-on entitlement and refresh; confirm email assistant is available for the account |"
+    },
+    {
       "id": "1c09cec96a67",
       "path": "/work/email-assistant",
       "title": "Email assistant",
@@ -534,13 +546,7 @@
       "id": "9180e9bf7727",
       "path": "/work/email-assistant",
       "title": "Email assistant",
-      "text": "requested. Without them, triage and draft save can’t run.\n5. Return to Ozer and confirm the inbox view loads threads.\n\nSteps: triage and reply\n\n1. In Emails, review messages flagged as needing a reply (badge counts may appear on the sidebar item).\n2. Open a thread; read the suggestion / draft the assistant proposes.\n3. Edit the draft so it matches your voice and facts — never send AI text blindly.\n4. Send from Gmail or Ozer according to the controls offered, or save as a Gmail draft if auto-save is enabled.\n5. Mark noise as ignored (sender or domain) so similar mail skips the needs-reply queue next time.\n\nSteps: tune behaviour\n\n1. Open email settings from the Emails surface (or linked workspace/personal tone settings when shared).\n2. Add style notes — short guidance like “short UK English, no emojis, sign off with Thanks,”.\n3. Set or confirm your signature.\n4. Maintain the ignored senders / domains list for newsletters and automated mail.\n5."
-    },
-    {
-      "id": "e62f4cc91186",
-      "path": "/work/email-assistant",
-      "title": "Email assistant",
-      "text": "3. Set or confirm your signature.\n4. Maintain the ignored senders / domains list for newsletters and automated mail.\n5. Visit Suggested tasks at /app/[account]/email/suggested-tasks when the assistant proposes tasks from mail, and accept into Tasks.\n\nWhat you’ll see\n\n- Inbox / needs-reply list under Emails\n- Draft pane with AI suggestion\n- Sidebar badge when counts are available\n- Empty state until Gmail is connected\n\nTips\n\n- Start with advisory drafts only; turn on auto-save of drafts once you trust the tone settings.\n- Prefer ignored domains (updates.example.com) over one-off deletes for recurring noise.\n- Keep client commitments in Projects/Tasks — email is a capture surface, not the system of record.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Emails missing from sidebar | Check add-on entitlement and refresh; confirm email assistant is available for the account |"
+      "text": "requested. Without them, triage and draft save can’t run.\n5. Return to Ozer and confirm the inbox view loads threads.\n\nSteps: triage and reply\n\n1. In Emails, review messages flagged as needing a reply (badge counts may appear on the sidebar item).\n2. Open a thread; read the suggestion / draft the assistant proposes.\n3. Edit the draft so it matches your voice and facts — never send AI text blindly.\n4. Send from Gmail, or from Ozer only when you have enabled Send from Ozer in settings and confirm each send in the dialog. You can also save as a Gmail draft if auto-save is enabled.\n5. Mark noise or adjust triage categories (Reply now, Later, Waiting, FYI) so similar mail is sorted correctly next time.\n\nSteps: tune behaviour\n\n1. Open email settings from the Emails surface (or linked workspace/personal tone settings when shared).\n2. Add style notes — short guidance like “short UK English, no emojis, sign off with Thanks,”.\n3. Set or confirm your signature.\n4."
     },
     {
       "id": "d4cb37dc540b",

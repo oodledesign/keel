@@ -23,6 +23,7 @@ import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Switch } from '@kit/ui/switch';
 import { cn } from '@kit/ui/utils';
 
 import {
@@ -239,6 +240,17 @@ export function SignatureVisualEditor({
         ),
       },
     });
+  };
+
+  const setShowContactIcons = (showContactIcons: boolean) => {
+    if (!showContactIcons) {
+      const { showContactIcons: _drop, ...rest } = document;
+      void _drop;
+      onChange(rest);
+      return;
+    }
+
+    onChange({ ...document, showContactIcons: true });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -465,6 +477,21 @@ export function SignatureVisualEditor({
             </p>
           </div>
         ) : null}
+      </div>
+
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="sig-contact-icons">Contact icons</Label>
+          <p className="text-muted-foreground text-xs">
+            Show small icons beside website, email, phone, and address.
+          </p>
+        </div>
+        <Switch
+          id="sig-contact-icons"
+          checked={Boolean(document.showContactIcons)}
+          onCheckedChange={setShowContactIcons}
+          data-test="signature-contact-icons-switch"
+        />
       </div>
 
       <div className="space-y-2">

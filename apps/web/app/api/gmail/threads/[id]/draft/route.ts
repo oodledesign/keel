@@ -4,6 +4,7 @@ import { draft } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -192,7 +193,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
     return jsonErr(
       'DRAFT_FAILED',
-      error instanceof Error ? error.message : 'Draft generation failed',
+      formatUserFacingAiError(error, 'Draft generation failed'),
       500,
     );
   }

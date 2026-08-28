@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { BadgeCheck } from 'lucide-react';
+
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 
@@ -19,6 +21,12 @@ const ADDON_OPEN_PATH: Partial<Record<OzerAddonKey, string>> = {
   addon_feedflow: pathsConfig.app.accountFeedflowReviews,
   addon_media_generate: pathsConfig.app.accountMedia,
 };
+
+const installedAppCardClass =
+  'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-5 shadow-[0_1px_2px_rgba(42,23,32,0.04)] transition-colors hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-panel-hover)]';
+
+const availableAddonCardClass =
+  'flex flex-col rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 shadow-[0_1px_2px_rgba(42,23,32,0.04)]';
 
 type OzerAppsMarketplaceProps = {
   accountSlug: string;
@@ -53,7 +61,7 @@ export function OzerAppsMarketplace({
           </p>
         </div>
         {installedApps.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
+          <p className="text-muted-foreground rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-6 text-sm">
             No apps are enabled yet. Subscribe to an add-on below or turn on
             modules in workspace settings.
           </p>
@@ -63,11 +71,15 @@ export function OzerAppsMarketplace({
               <Link
                 key={app.path}
                 href={app.path}
-                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-5 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                className={installedAppCardClass}
               >
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--ozer-accent)]">
                     {app.Icon}
+                    <BadgeCheck
+                      className="absolute -right-1.5 -bottom-1.5 size-4 rounded-full bg-[var(--workspace-shell-panel)] fill-emerald-500 text-white dark:text-[var(--workspace-shell-panel)]"
+                      aria-hidden
+                    />
                   </span>
                   <div className="min-w-0">
                     <h3 className="font-semibold">{app.label}</h3>
@@ -103,14 +115,19 @@ export function OzerAppsMarketplace({
               : null;
 
             return (
-              <div
-                key={addon.key}
-                className="flex flex-col rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4"
-              >
+              <div key={addon.key} className={availableAddonCardClass}>
                 <div className="mb-2 flex items-start justify-between gap-2">
-                  <h3 className="font-semibold">{addon.name}</h3>
+                  <h3 className="flex items-center gap-1.5 font-semibold">
+                    {active ? (
+                      <BadgeCheck
+                        className="size-4 shrink-0 fill-emerald-500 text-white dark:text-[var(--workspace-shell-panel)]"
+                        aria-hidden
+                      />
+                    ) : null}
+                    {addon.name}
+                  </h3>
                   {active ? (
-                    <Badge variant="outline" className="text-emerald-400">
+                    <Badge variant="outline" className="text-emerald-600">
                       Active
                     </Badge>
                   ) : (
@@ -162,7 +179,7 @@ export function OzerAppsMarketplace({
             {comingSoon.map((addon) => (
               <div
                 key={addon.key}
-                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 opacity-90"
+                className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-4"
               >
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h3 className="font-semibold">{addon.name}</h3>

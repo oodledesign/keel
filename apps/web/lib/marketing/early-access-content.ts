@@ -291,16 +291,14 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
 
 export const EARLY_ACCESS_PERSONAS: Array<{
   accent: EarlyAccessAccent;
-  lead: string;
   title: string;
   desc: string;
   features: string[];
 }> = [
   {
     accent: 'cool-blue',
-    lead: 'Friday afternoon and you are not hunting for "where that lead went".',
     title: 'Solo designer or developer',
-    desc: 'One login for clients, invoices, and the notes you actually check.',
+    desc: 'Friday afternoon and you are not hunting for "where that lead went".',
     features: [
       'Pipeline & CRM',
       'Invoicing',
@@ -311,9 +309,8 @@ export const EARLY_ACCESS_PERSONAS: Array<{
   },
   {
     accent: 'coral',
-    lead: 'You walk into every session knowing what you agreed last time.',
     title: 'Consultant or coach',
-    desc: 'Client history and next steps in one place — not scattered across apps.',
+    desc: 'You walk into every session knowing what you agreed last time.',
     features: [
       'Pipeline & CRM',
       'Second brain',
@@ -324,9 +321,8 @@ export const EARLY_ACCESS_PERSONAS: Array<{
   },
   {
     accent: 'sage',
-    lead: 'The whole team sees the same client picture — no status meeting required.',
     title: 'Small studio, 2–5 people',
-    desc: 'Shared context without another tool nobody remembers to update.',
+    desc: 'The whole team sees the same client picture — no status meeting required.',
     features: [
       'Pipeline & CRM',
       'Tasks',
@@ -337,9 +333,8 @@ export const EARLY_ACCESS_PERSONAS: Array<{
   },
   {
     accent: 'lime',
-    lead: 'Briefs and feedback live on the deal — not buried in threads.',
     title: 'Freelance writer or marketer',
-    desc: 'A pipeline that holds the story from pitch to signed-off copy.',
+    desc: 'Briefs and feedback live on the deal — not buried in threads.',
     features: [
       'Pipeline & CRM',
       'Client portals',
@@ -350,9 +345,8 @@ export const EARLY_ACCESS_PERSONAS: Array<{
   },
   {
     accent: 'plum',
-    lead: 'Retainer work and one-off asks land in one queue — clearly scoped.',
     title: 'Virtual assistant',
-    desc: 'Credits and requests instead of an inbox of ambiguous favours.',
+    desc: 'Retainer work and one-off asks land in one queue — clearly scoped.',
     features: [
       'Client requests',
       'Tasks',

@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
 import { getAgencyBrandingByBusinessId } from '~/lib/agency-branding';
 import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 import {
   getDefaultAccountPath,
@@ -51,18 +54,35 @@ export default async function BrandSettingsPage(props: BrandSettingsPageProps) {
   }
 
   const accountId = workspace.account.id as string;
-  const [brand, branches, agencyBranding] = await Promise.all([
+  const client = getSupabaseServerClient();
+  const [brand, branches, agencyBranding, accountRow] = await Promise.all([
     loadAccountBrandResolved(accountId),
     loadAccountBranches(accountId),
     getAgencyBrandingByBusinessId(accountId),
+    client
+      .from('accounts')
+      .select('name, picture_url')
+      .eq('id', accountId)
+      .maybeSingle(),
   ]);
+
+  if (accountRow.error) {
+    throw accountRow.error;
+  }
+
   const canEditBrand = access.isOwner || access.isAdmin;
+  const accountName = accountRow.data?.name?.trim() || account;
+  const pictureUrl =
+    toSupabasePublicStorageUrl(accountRow.data?.picture_url ?? null) ??
+    toSupabasePublicStorageUrl(brand.logo_url);
 
   return (
     <div className="flex flex-col gap-6">
       <BrandSettingsForm
         accountId={accountId}
         accountSlug={account}
+        accountName={accountName}
+        pictureUrl={pictureUrl}
         initialBrand={brand}
         initialPortalSlug={agencyBranding?.slug ?? null}
         canEdit={canEditBrand}

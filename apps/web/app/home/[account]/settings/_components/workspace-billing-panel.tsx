@@ -17,8 +17,6 @@ import billingConfig from '~/config/billing.config';
 import pathsConfig from '~/config/paths.config';
 import { loadTeamAccountBillingPage } from '~/home/[account]/_lib/server/team-account-billing-page.loader';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
-import { CommercialSeatQuantityCard } from '~/home/[account]/billing/_components/commercial-seat-quantity-card';
-import { BusinessSeatQuantityCard } from '~/home/[account]/billing/_components/business-seat-quantity-card';
 import { OzerWorkspaceCheckoutForm } from '~/home/[account]/billing/_components/ozer-workspace-checkout-form';
 import { createBillingPortalSession } from '~/home/[account]/billing/_lib/server/server-actions';
 import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
@@ -265,6 +263,32 @@ export async function WorkspaceBillingPanel({
             subscriptionIsWorkspacePlan ? subscriptionProductPlan : undefined
           }
           planSummary={planSummary}
+          seatEditor={
+            subscriptionIsWorkspacePlan && isCommercial && commercialBreakdown
+              ? {
+                  mode: 'commercial',
+                  accountId,
+                  accountSlug,
+                  subscribedBillable: commercialBreakdown.subscribedBillable,
+                  assignedCount: commercialBreakdown.billableCount,
+                  supportAssigned: commercialBreakdown.supportCount,
+                  pendingBillableSeats,
+                  pendingEffectiveAt: pendingSeatsEffectiveAt,
+                }
+              : subscriptionIsWorkspacePlan &&
+                  isBusinessWorkspace &&
+                  !isBusinessLite
+                ? {
+                    mode: 'business',
+                    accountId,
+                    accountSlug,
+                    subscribedBillable: businessSubscribedSeats,
+                    assignedCount: businessMemberCount,
+                    pendingBillableSeats,
+                    pendingEffectiveAt: pendingSeatsEffectiveAt,
+                  }
+                : null
+          }
           canManageBilling={canManageBilling}
           accountSlug={accountSlug}
           billingStatus={accessState.status}
@@ -300,33 +324,6 @@ export async function WorkspaceBillingPanel({
         >
           <CannotManageBillingAlert />
         </If>
-
-        {isCommercial && commercialBreakdown && subscriptionIsWorkspacePlan ? (
-          <CommercialSeatQuantityCard
-            accountId={accountId}
-            accountSlug={accountSlug}
-            canManageBilling={canManageBilling}
-            subscribedBillable={commercialBreakdown.subscribedBillable}
-            billableAssigned={commercialBreakdown.billableCount}
-            supportAssigned={commercialBreakdown.supportCount}
-            pendingBillableSeats={pendingBillableSeats}
-            pendingEffectiveAt={pendingSeatsEffectiveAt}
-          />
-        ) : null}
-
-        {isBusinessWorkspace &&
-        !isBusinessLite &&
-        subscriptionIsWorkspacePlan ? (
-          <BusinessSeatQuantityCard
-            accountId={accountId}
-            accountSlug={accountSlug}
-            canManageBilling={canManageBilling}
-            subscribedBillable={businessSubscribedSeats}
-            membersAssigned={businessMemberCount}
-            pendingBillableSeats={pendingBillableSeats}
-            pendingEffectiveAt={pendingSeatsEffectiveAt}
-          />
-        ) : null}
 
         <ActiveAddonsBillingCard
           accountSlug={accountSlug}

@@ -11,6 +11,7 @@ import {
   getRecommendationForUser,
   updateRecommendationSnippet,
 } from '~/lib/ai-audit/db';
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     return jsonErr(
       'UNKNOWN',
-      error instanceof Error ? error.message : 'Error',
+      formatUserFacingAiError(error, 'Error'),
       500,
     );
   }

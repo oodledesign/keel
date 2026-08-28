@@ -4,6 +4,7 @@ import { type EmailActionItem, extract } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -196,7 +197,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     return jsonErr(
       'EXTRACT_FAILED',
-      error instanceof Error ? error.message : 'Extraction failed',
+      formatUserFacingAiError(error, 'Extraction failed'),
       500,
     );
   }

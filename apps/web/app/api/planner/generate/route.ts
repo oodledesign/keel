@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -141,8 +142,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error:
-          err instanceof Error ? err.message : 'Could not generate planner',
+        error: formatUserFacingAiError(
+          err,
+          'Could not generate planner',
+        ),
       },
       { status: 502 },
     );

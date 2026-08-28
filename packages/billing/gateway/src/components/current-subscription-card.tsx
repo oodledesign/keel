@@ -1,3 +1,5 @@
+'use client';
+
 import { formatDate } from 'date-fns';
 import { BadgeCheck, InfoIcon, MessageCircleWarning } from 'lucide-react';
 
@@ -12,6 +14,12 @@ import {
   CardTitle,
 } from '@kit/ui/card';
 import { If } from '@kit/ui/if';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 import { Trans } from '@kit/ui/trans';
 
 import { CurrentPlanAlert } from './current-plan-alert';
@@ -70,6 +78,36 @@ export function CurrentSubscriptionCard({
             </span>
 
             <CurrentPlanBadge status={subscription.status} />
+
+            <If condition={productLineItems.length > 0}>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground inline-flex items-center rounded-md p-1 transition-colors"
+                      aria-label="Plan pricing details"
+                    >
+                      <InfoIcon className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    align="start"
+                    className="bg-popover text-popover-foreground border-border max-w-sm border p-3 shadow-md"
+                  >
+                    <p className="mb-2 text-xs font-semibold">
+                      <Trans i18nKey="billing:detailsLabel" />
+                    </p>
+                    <LineItemDetails
+                      lineItems={productLineItems}
+                      currency={subscription.currency}
+                      selectedInterval={firstLineItem.interval}
+                    />
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </If>
           </div>
 
           <div>
@@ -91,18 +129,6 @@ export function CurrentSubscriptionCard({
             <CurrentPlanAlert status={subscription.status} />
           </div>
         </If>
-
-        <div className="flex flex-col gap-y-1 border-y border-dashed py-4">
-          <span className="font-semibold">
-            <Trans i18nKey="billing:detailsLabel" />
-          </span>
-
-          <LineItemDetails
-            lineItems={productLineItems}
-            currency={subscription.currency}
-            selectedInterval={firstLineItem.interval}
-          />
-        </div>
 
         <If condition={subscription.status === 'trialing'}>
           {() => (

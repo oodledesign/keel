@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { extractRecipe } from '~/lib/ai/recipe-extract';
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -129,7 +130,9 @@ export async function POST(request: NextRequest) {
         raw,
       );
 
-    const message = isSafeMessage ? raw : 'Could not extract recipe';
+    const message = isSafeMessage
+      ? raw
+      : formatUserFacingAiError(err, 'Could not extract recipe');
     const status = isSafeMessage ? 422 : 502;
 
     return NextResponse.json({ error: message }, { status });

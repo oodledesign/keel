@@ -172,7 +172,7 @@ export function OzerAddonCheckoutSection({
                   className={`rounded-xl border p-4 text-left transition ${
                     selected
                       ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent)]/5'
-                      : 'border-[color:var(--workspace-shell-border)] bg-black/10 hover:border-[color:var(--workspace-shell-border)]'
+                      : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] hover:border-[var(--ozer-accent)]/30 hover:bg-[var(--workspace-shell-panel-hover)]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -195,7 +195,7 @@ export function OzerAddonCheckoutSection({
             })}
           </div>
         ) : selectedAddon ? (
-          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold">{selectedAddon.name}</p>

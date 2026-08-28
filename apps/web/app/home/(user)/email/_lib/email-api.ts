@@ -1,3 +1,8 @@
+import {
+  AI_PROVIDER_UNAVAILABLE_MESSAGE,
+  isAiProviderQuotaOrBillingError,
+} from '~/lib/ai/format-ai-provider-error';
+
 type ApiSuccess<T> = { ok: true; data: T };
 type ApiFailure = {
   ok: false;
@@ -37,6 +42,15 @@ export function formatEmailApiError(error: unknown): string {
     )
   ) {
     return 'Connection interrupted while syncing. Tap Sync again — large inboxes can take a minute.';
+  }
+
+  // Provider quota/billing dumps (e.g. Google Gemini docs URLs) must never show in toasts.
+  if (isAiProviderQuotaOrBillingError(error)) {
+    return AI_PROVIDER_UNAVAILABLE_MESSAGE;
+  }
+
+  if (/https?:\/\//i.test(message)) {
+    return 'Something went wrong with AI. Please try again.';
   }
 
   return message;

@@ -1,3 +1,5 @@
+import { Check } from 'lucide-react';
+
 import { cn } from '@kit/ui/utils';
 
 import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
@@ -21,7 +23,6 @@ import {
 
 const section = 'relative mx-auto w-full max-w-7xl px-6';
 const featureTourSection = 'relative mx-auto w-full max-w-[88rem] px-6';
-const viewportSection = 'flex min-h-screen w-full flex-col justify-center';
 
 function PillChain() {
   return (
@@ -77,11 +78,11 @@ function SectionHeading({
 export function EarlyAccessLanding() {
   return (
     <main className={cn('relative', marketingShellClass)}>
-      <header className={cn(viewportSection)}>
+      <header>
         <div
           className={cn(
             section,
-            'flex flex-col pt-14 pb-14 text-center md:pt-20 md:pb-20',
+            'flex flex-col pt-14 pb-16 text-center md:pt-20 md:pb-24',
           )}
         >
           <div className="mx-auto max-w-[46rem]">
@@ -119,8 +120,8 @@ export function EarlyAccessLanding() {
         </div>
       </header>
 
-      <section className={cn(viewportSection)}>
-        <div className={cn(section, 'py-16')}>
+      <section>
+        <div className={cn(section, 'py-16 md:py-20')}>
           <div
             className={cn(
               'mx-auto max-w-3xl rounded-[1.75rem] px-8 py-11 text-center md:px-10',
@@ -163,7 +164,7 @@ export function EarlyAccessLanding() {
         </div>
       </section>
 
-      <section className={cn(viewportSection)}>
+      <section>
         <div className={cn(section, 'py-16 md:py-24')}>
           <SectionHeading
             eyebrow="Everything included"
@@ -183,7 +184,7 @@ export function EarlyAccessLanding() {
         </div>
       </section>
 
-      <section className={cn(viewportSection)}>
+      <section>
         <div className={cn(section, 'py-16 md:py-24')}>
           <SectionHeading
             eyebrow="Who it's for"
@@ -205,10 +206,7 @@ export function EarlyAccessLanding() {
                   )}
                   aria-hidden
                 />
-                <p className="mb-2 text-sm leading-snug text-[var(--workspace-shell-text)]">
-                  {persona.lead}
-                </p>
-                <p className="font-heading mb-1 text-base font-semibold text-[var(--workspace-shell-text)] lg:text-lg">
+                <p className="font-heading mb-2 text-base font-semibold text-[var(--workspace-shell-text)] lg:text-lg">
                   {persona.title}
                 </p>
                 <p
@@ -222,11 +220,8 @@ export function EarlyAccessLanding() {
                       key={feature}
                       className="flex items-start gap-2 text-xs leading-snug text-[var(--workspace-shell-text)] lg:text-[13px]"
                     >
-                      <span
-                        className={cn(
-                          'mt-1.5 size-1.5 shrink-0 rounded-full',
-                          EARLY_ACCESS_ACCENT_CLASS[persona.accent],
-                        )}
+                      <Check
+                        className="mt-0.5 size-3.5 shrink-0 text-[var(--ozer-accent)]"
                         aria-hidden
                       />
                       {feature}
@@ -239,8 +234,8 @@ export function EarlyAccessLanding() {
         </div>
       </section>
 
-      <section className={cn(viewportSection)}>
-        <div className={cn(section, 'py-16')}>
+      <section>
+        <div className={cn(section, 'py-16 md:py-20')}>
           <div
             className={cn(
               marketingCard,
@@ -271,19 +266,11 @@ export function EarlyAccessLanding() {
         title="Questions people ask"
         headingId="early-access-faq-heading"
         headingAlign="center"
-        sectionClassName={cn(
-          viewportSection,
-          'border-t border-[color:var(--workspace-shell-border)] py-20',
-        )}
+        sectionClassName="border-t border-[color:var(--workspace-shell-border)] py-16 md:py-24"
       />
 
-      <section
-        className={cn(
-          viewportSection,
-          'border-t border-[color:var(--workspace-shell-border)]',
-        )}
-      >
-        <div className={cn(section, 'py-10 text-center md:py-14')}>
+      <section className="border-t border-[color:var(--workspace-shell-border)]">
+        <div className={cn(section, 'py-16 text-center md:py-20')}>
           <h2 className="font-heading mb-8 text-3xl leading-tight font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
             Ready to feel on top of it again?
           </h2>

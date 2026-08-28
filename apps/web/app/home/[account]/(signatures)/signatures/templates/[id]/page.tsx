@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { loadResolvedSignatureAssets } from '~/lib/signatures/signature-assets';
+import { loadSignaturesWorkspaceSettings } from '~/lib/signatures/workspace-settings';
 
 import { ModuleDataSection } from '../../../../_components/module-data-section';
 import { SignatureTemplateEditor } from '../../../_components/signature-template-editor';
@@ -21,10 +22,11 @@ export default async function SignatureTemplateDetailPage({
   const { account, id } = await params;
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const [template, previewStaff, brand] = await Promise.all([
+  const [template, previewStaff, brand, workspaceSettings] = await Promise.all([
     loadTemplateDetail(accountId, id),
     loadTemplatePreviewStaff(accountId),
     loadAccountBrandResolved(accountId),
+    loadSignaturesWorkspaceSettings(accountId),
   ]);
 
   if (!template) {
@@ -52,6 +54,8 @@ export default async function SignatureTemplateDetailPage({
           secondaryColor: brand.secondary_color,
           accentColor: brand.accent_color,
           logoUrl: brand.logo_url,
+          companyLogoUrl: workspaceSettings.company_logo_url,
+          companyIconUrl: workspaceSettings.company_icon_url,
           websiteUrl: brand.website_url,
           address: brand.address,
         }}

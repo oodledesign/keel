@@ -22,6 +22,7 @@ import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../_lib/role-access';
+import { isBusinessProfile } from '../_lib/workspace-profile';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { CommercialNavModulesSettingsForm } from './_components/commercial-nav-modules-settings-form';
 import { WorkspaceContactSettingsForm } from './_components/workspace-contact-settings-form';
@@ -186,6 +187,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
             account={account}
             paths={paths}
             features={features}
+            showLogo={!isBusinessProfile(workspace.workspaceProfile)}
           />
         )}
       </div>

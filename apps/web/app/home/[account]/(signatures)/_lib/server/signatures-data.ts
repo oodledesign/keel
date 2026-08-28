@@ -40,7 +40,8 @@ export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures minimal template
 
 /**
  * Executive banner — portrait left, brand-coloured panel right (email-safe tables + inline CSS).
- * Workspace brand: {{brand_primary_color}}, {{brand_secondary_color}}, {{brand_accent_color}}, {{brand_logo_url}} (Settings → Brand).
+ * Workspace brand: {{brand_primary_color}}, {{brand_secondary_color}}, {{brand_accent_color}} (Settings → Brand).
+ * Company logo: {{company_logo_url}} (Signatures → Custom data, falls back to Brand business logo).
  * Company contact: {{website}} (Settings → Brand), {{address}} (branch or brand fallback).
  * Placeholders: {{photo_url}}, {{full_name}}, {{credentials}}, {{job_title}}, {{email}},
  * {{award_badge_url}}, plus {{phone_direct}}, {{phone_mobile}}, {{department}}, {{branch}}.
@@ -64,7 +65,7 @@ export const DEFAULT_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures — executive ba
             </div>
           </td>
           <td style="vertical-align:top;text-align:right;width:132px;padding:0;line-height:0;">
-            <img src="{{brand_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;margin-left:auto;border:0;" />
+            <img src="{{company_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;margin-left:auto;border:0;" />
           </td>
         </tr>
       </table>

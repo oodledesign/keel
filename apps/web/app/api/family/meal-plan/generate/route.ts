@@ -11,6 +11,7 @@ import type {
 import { chunkDates } from '~/home/(user)/life/family/_lib/server/family-meal.dates';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { generateMealPlan } from '~/lib/ai/meal-plan-generate';
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -234,8 +235,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error:
-          err instanceof Error ? err.message : 'Could not generate meal plan',
+        error: formatUserFacingAiError(
+          err,
+          'Could not generate meal plan',
+        ),
       },
       { status: 502 },
     );

@@ -8,6 +8,8 @@ import {
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
+  useTransform,
+  type MotionValue,
 } from 'framer-motion';
 
 import { cn } from '@kit/ui/utils';
@@ -32,16 +34,31 @@ const FEATURE_SWITCH_FADE_S = 0.32;
 
 type FeatureBlock = (typeof EARLY_ACCESS_FEATURE_BLOCKS)[number];
 
-function FeatureTourCard({ block }: { block: FeatureBlock }) {
+function FeatureTourCard({
+  block,
+  scrollYProgress,
+  activeIndex,
+}: {
+  block: FeatureBlock;
+  scrollYProgress?: MotionValue<number>;
+  activeIndex?: number;
+}) {
   return (
     <div
       className={cn(
         marketingCard,
-        'flex h-full max-h-[calc(100vh-5.5rem)] flex-col overflow-hidden rounded-[1.25rem] p-5 md:p-6 lg:p-8',
+        'relative flex h-full max-h-[calc(100vh-5.5rem)] flex-col overflow-hidden rounded-[1.25rem]',
         block.soon && 'opacity-95',
       )}
     >
-      <div className="grid h-full min-h-0 items-stretch gap-6 lg:grid-cols-[minmax(0,11fr)_minmax(0,13fr)] lg:gap-8">
+      {scrollYProgress != null && activeIndex != null ? (
+        <FeatureStepProgress
+          scrollYProgress={scrollYProgress}
+          activeIndex={activeIndex}
+        />
+      ) : null}
+
+      <div className="grid h-full min-h-0 flex-1 items-stretch gap-6 p-5 md:p-6 lg:grid-cols-[minmax(0,11fr)_minmax(0,13fr)] lg:gap-8 lg:p-8">
         <div className="flex min-h-0 min-w-0 flex-col">
           <span className="mb-2 inline-flex items-center gap-2 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
             <span
@@ -114,7 +131,77 @@ function FeatureTourCard({ block }: { block: FeatureBlock }) {
   );
 }
 
-function FeatureTourSlidePanel({ activeId }: { activeId: string }) {
+function featureStepBounds(activeIndex: number) {
+  if (FEATURE_COUNT <= 1) {
+    return { start: 0, end: 1 };
+  }
+
+  const start =
+    activeIndex === 0 ? 0 : (activeIndex - 0.5) / (FEATURE_COUNT - 1);
+  const end =
+    activeIndex === FEATURE_COUNT - 1
+      ? 1
+      : (activeIndex + 0.5) / (FEATURE_COUNT - 1);
+
+  return { start, end };
+}
+
+function FeatureStepProgress({
+  scrollYProgress,
+  activeIndex,
+}: {
+  scrollYProgress: MotionValue<number>;
+  activeIndex: number;
+}) {
+  const { start, end } = featureStepBounds(activeIndex);
+  const scaleX = useTransform(scrollYProgress, (progress) => {
+    const range = Math.max(end - start, 0.0001);
+
+    return Math.min(1, Math.max(0, (progress - start) / range));
+  });
+
+  const isLast = activeIndex >= FEATURE_COUNT - 1;
+  const nextLabel = isLast
+    ? null
+    : EARLY_ACCESS_FEATURE_BLOCKS[activeIndex + 1]?.eyebrow;
+
+  return (
+    <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-5 pt-4 pb-3 md:px-6 lg:px-8">
+      <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-medium tracking-[0.04em] text-[var(--workspace-shell-text-muted)] uppercase">
+        <span>
+          {activeIndex + 1} / {FEATURE_COUNT}
+        </span>
+        {nextLabel ? <span>Next · {nextLabel}</span> : <span>End</span>}
+      </div>
+      <div
+        className="h-1 overflow-hidden rounded-full bg-[var(--workspace-shell-sidebar-accent)]"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={
+          nextLabel
+            ? `Scroll progress to ${nextLabel}`
+            : 'Scroll progress through features'
+        }
+      >
+        <motion.div
+          className="h-full origin-left rounded-full bg-[var(--ozer-accent)]"
+          style={{ scaleX }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FeatureTourSlidePanel({
+  activeId,
+  activeIndex,
+  scrollYProgress,
+}: {
+  activeId: string;
+  activeIndex: number;
+  scrollYProgress: MotionValue<number>;
+}) {
   const activeBlock =
     EARLY_ACCESS_FEATURE_BLOCKS.find((block) => block.id === activeId) ??
     EARLY_ACCESS_FEATURE_BLOCKS[0];
@@ -138,7 +225,11 @@ function FeatureTourSlidePanel({ activeId }: { activeId: string }) {
           }}
           className="absolute inset-0"
         >
-          <FeatureTourCard block={activeBlock} />
+          <FeatureTourCard
+            block={activeBlock}
+            scrollYProgress={scrollYProgress}
+            activeIndex={activeIndex}
+          />
         </motion.article>
       </AnimatePresence>
     </div>
@@ -228,6 +319,10 @@ function ScrollPinnedFeatureTour() {
   const [activeId, setActiveId] = useState(
     EARLY_ACCESS_FEATURE_BLOCKS[0]?.id ?? '',
   );
+  const activeIndex = Math.max(
+    0,
+    EARLY_ACCESS_FEATURE_BLOCKS.findIndex((block) => block.id === activeId),
+  );
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -299,7 +394,11 @@ function ScrollPinnedFeatureTour() {
             <FeatureTourNav activeId={activeId} onNavigate={scrollToFeature} />
           </div>
 
-          <FeatureTourSlidePanel activeId={activeId} />
+          <FeatureTourSlidePanel
+            activeId={activeId}
+            activeIndex={activeIndex}
+            scrollYProgress={scrollYProgress}
+          />
         </div>
       </div>
     </div>

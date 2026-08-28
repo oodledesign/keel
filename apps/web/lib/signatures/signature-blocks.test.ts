@@ -141,4 +141,86 @@ describe('signatureBlocksToHtml / htmlToSignatureBlocks', () => {
       colorEnd: '#2A1720',
     });
   });
+
+  it('round-trips contact icons and emits icon image markup', () => {
+    const doc = {
+      ...createMinimalSignatureDocument(),
+      showContactIcons: true as const,
+      blocks: [
+        createSignatureBlock('email'),
+        createSignatureBlock('phone_direct'),
+        createSignatureBlock('phone_mobile'),
+        createSignatureBlock('website'),
+        createSignatureBlock('address'),
+      ],
+    };
+    const html = signatureBlocksToHtml(doc);
+
+    expect(html).toContain('icons="1"');
+    expect(html).toContain('/brand/signature-icons/email.png');
+    expect(html).toContain('/brand/signature-icons/phone.png');
+    expect(html).toContain('/brand/signature-icons/mobile.png');
+    expect(html).toContain('/brand/signature-icons/website.png');
+    expect(html).toContain('/brand/signature-icons/address.png');
+
+    const parsed = htmlToSignatureBlocks(html);
+    expect(parsed?.showContactIcons).toBe(true);
+  });
+
+  it('omits contact icons by default', () => {
+    const html = signatureBlocksToHtml(createMinimalSignatureDocument());
+    expect(html).not.toContain('icons="1"');
+    expect(html).not.toContain('/brand/signature-icons/');
+    expect(htmlToSignatureBlocks(html)?.showContactIcons).toBeUndefined();
+  });
+
+  it('prefixes icon URLs with NEXT_PUBLIC_SITE_URL when set', () => {
+    const original = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://app.example.com';
+    try {
+      const html = signatureBlocksToHtml({
+        ...createMinimalSignatureDocument(),
+        showContactIcons: true,
+        blocks: [createSignatureBlock('email')],
+      });
+      expect(html).toContain(
+        'https://app.example.com/brand/signature-icons/email.png',
+      );
+    } finally {
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_SITE_URL;
+      } else {
+        process.env.NEXT_PUBLIC_SITE_URL = original;
+      }
+    }
+  });
+
+  it('parses icons attr regardless of order relative to bg', () => {
+    const name = createSignatureBlock('email');
+    const html = [
+      `<!-- ozer-sig-builder:v1 layout="stacked" icons="1" bg="solid:#2A1720" -->`,
+      `<!-- /ozer-sig-builder -->`,
+      `<!-- ozer-block id="${name.id}" type="email" -->`,
+      `<!-- /ozer-block -->`,
+    ].join('\n');
+
+    const parsed = htmlToSignatureBlocks(html);
+    expect(parsed?.showContactIcons).toBe(true);
+    expect(parsed?.background).toEqual({
+      mode: 'solid',
+      color: '#2A1720',
+    });
+  });
+
+  it('emits company logo and photo badge tokens from the visual builder', () => {
+    const doc = {
+      ...createMinimalSignatureDocument(),
+      blocks: [createSignatureBlock('photo'), createSignatureBlock('logo')],
+    };
+    const html = signatureBlocksToHtml(doc);
+
+    expect(html).toContain('{{company_logo_url}}');
+    expect(html).toContain('{{company_icon_badge_url}}');
+    expect(html).toContain('{{photo_url}}');
+  });
 });

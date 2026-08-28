@@ -44,6 +44,7 @@ const OPTIONAL_TEMPLATE_KEYS = [
   'website',
   'address',
   'company_logo_url',
+  'company_icon_badge_url',
   'brand_logo_url',
   'award_badge_url',
   'award_badges',
@@ -53,7 +54,7 @@ const OPTIONAL_TEMPLATE_KEYS = [
   'brand_accent_color',
 ] as const;
 
-const TRANSPARENT_PIXEL_GIF =
+export const TRANSPARENT_PIXEL_GIF =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 type TokenKey = (typeof TOKEN_KEYS)[number];
@@ -66,6 +67,10 @@ export type RenderTemplateOptions = {
   signatureCustomTextHtml?: string | null;
   brand?: AccountBrandResolved | null;
   branch?: AccountBranch | null;
+  /** Signatures workspace company logo (full wordmark). */
+  companyLogoUrl?: string | null;
+  /** Signatures workspace company icon (square mark). */
+  companyIconUrl?: string | null;
 };
 
 function tokenValue(staff: SignaturesStaffRow, key: TokenKey): string {
@@ -90,7 +95,42 @@ export function applySignatureContactFields(
 }
 
 function brandLogoUrl(brand: AccountBrandResolved | null | undefined) {
-  return brand?.logo_url?.trim() ? brand.logo_url : TRANSPARENT_PIXEL_GIF;
+  return brand?.logo_url?.trim() ? brand.logo_url.trim() : TRANSPARENT_PIXEL_GIF;
+}
+
+/** Company logo with brand business logo fallback. */
+export function resolveCompanyLogoUrl(
+  companyLogoUrl: string | null | undefined,
+  brand: AccountBrandResolved | null | undefined,
+): string {
+  const company = companyLogoUrl?.trim();
+  if (company) return company;
+  return brandLogoUrl(brand);
+}
+
+/**
+ * Photo / badge URLs for the visual photo block.
+ * - Has staff photo → photo shows person; badge shows company icon (if any).
+ * - No staff photo → photo slot shows company icon (if any); badge hidden.
+ */
+export function resolvePhotoAndBadgeUrls(input: {
+  staffPhotoUrl: string | null | undefined;
+  companyIconUrl: string | null | undefined;
+}): { photoUrl: string; badgeUrl: string } {
+  const photo = input.staffPhotoUrl?.trim() || '';
+  const icon = input.companyIconUrl?.trim() || '';
+
+  if (photo) {
+    return {
+      photoUrl: photo,
+      badgeUrl: icon || TRANSPARENT_PIXEL_GIF,
+    };
+  }
+
+  return {
+    photoUrl: icon || TRANSPARENT_PIXEL_GIF,
+    badgeUrl: TRANSPARENT_PIXEL_GIF,
+  };
 }
 
 /** Replace `{{field}}` placeholders and wrap with a dark-text / system-font shell for email clients. */
@@ -103,14 +143,22 @@ export function renderTemplate(
   const effectiveStaff = applySignatureContactFields(staff, branch);
   const address =
     branch?.address?.trim() || options?.brand?.address?.trim() || '';
-  const logo = brandLogoUrl(options?.brand);
+  const brandLogo = brandLogoUrl(options?.brand);
+  const companyLogo = resolveCompanyLogoUrl(
+    options?.companyLogoUrl,
+    options?.brand,
+  );
+  const { photoUrl, badgeUrl } = resolvePhotoAndBadgeUrls({
+    staffPhotoUrl: effectiveStaff.photo_url,
+    companyIconUrl: options?.companyIconUrl,
+  });
 
   let html = htmlTemplate;
   for (const key of TOKEN_KEYS) {
     const re = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
     let val = tokenValue(effectiveStaff, key);
-    if (key === 'photo_url' && !val) {
-      val = TRANSPARENT_PIXEL_GIF;
+    if (key === 'photo_url') {
+      val = photoUrl;
     }
     html = html.replace(re, val);
   }
@@ -118,8 +166,12 @@ export function renderTemplate(
   for (const key of OPTIONAL_TEMPLATE_KEYS) {
     const re = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
     let replacement = '';
-    if (key === 'company_logo_url' || key === 'brand_logo_url') {
-      replacement = logo;
+    if (key === 'company_logo_url') {
+      replacement = companyLogo;
+    } else if (key === 'brand_logo_url') {
+      replacement = brandLogo;
+    } else if (key === 'company_icon_badge_url') {
+      replacement = badgeUrl;
     } else if (key === 'award_badge_url') {
       replacement = options?.awardBadgeUrl?.trim() || TRANSPARENT_PIXEL_GIF;
     } else if (key === 'award_badges') {

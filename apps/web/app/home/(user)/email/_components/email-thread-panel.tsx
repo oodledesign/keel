@@ -73,7 +73,7 @@ import {
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
 import { EMAIL_CATEGORY_STYLES } from '../_lib/email-category-styles';
-import { EmailApiError, emailApiFetch } from '../_lib/email-api';
+import { EmailApiError, emailApiFetch, formatEmailApiError } from '../_lib/email-api';
 import type {
   EmailGmailLabel,
   EmailActionItemRow,
@@ -354,9 +354,7 @@ export function EmailThreadPanel({
           });
           return;
         }
-        toast.error(
-          error instanceof Error ? error.message : 'Extraction failed',
-        );
+        toast.error(formatEmailApiError(error) || 'Extraction failed');
       }
     });
   }
@@ -406,9 +404,7 @@ export function EmailThreadPanel({
           });
           return;
         }
-        toast.error(
-          error instanceof Error ? error.message : 'Draft generation failed',
-        );
+        toast.error(formatEmailApiError(error) || 'Draft generation failed');
       }
     });
   }

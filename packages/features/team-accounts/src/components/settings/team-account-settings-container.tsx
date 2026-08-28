@@ -29,24 +29,31 @@ export function TeamAccountSettingsContainer(props: {
   features: {
     enableTeamDeletion: boolean;
   };
+
+  /** When false, hide the logo card (e.g. logo lives under Brand settings). Default true. */
+  showLogo?: boolean;
 }) {
+  const showLogo = props.showLogo !== false;
+
   return (
     <div className={'flex w-full flex-col space-y-4'}>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <Trans i18nKey={'teams:settings.teamLogo'} />
-          </CardTitle>
+      {showLogo ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <Trans i18nKey={'teams:settings.teamLogo'} />
+            </CardTitle>
 
-          <CardDescription>
-            <Trans i18nKey={'teams:settings.teamLogoDescription'} />
-          </CardDescription>
-        </CardHeader>
+            <CardDescription>
+              <Trans i18nKey={'teams:settings.teamLogoDescription'} />
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent>
-          <UpdateTeamAccountImage account={props.account} />
-        </CardContent>
-      </Card>
+          <CardContent>
+            <UpdateTeamAccountImage account={props.account} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

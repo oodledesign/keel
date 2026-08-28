@@ -64,7 +64,12 @@ export type SignatureTemplatePreviewBrand = {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
+  /** Brand business logo (workspace avatar). */
   logoUrl: string | null;
+  /** Signatures company logo (full); preview falls back to logoUrl. */
+  companyLogoUrl?: string | null;
+  /** Signatures company icon for photo badge / substitute. */
+  companyIconUrl?: string | null;
   websiteUrl: string | null;
   address: string | null;
 };
@@ -115,6 +120,16 @@ export function SignatureTemplateEditor({
   const previewBodyHtml = useMemo(() => {
     const staff = previewStaff;
     let output = previewHtml;
+    const staffPhoto = staff?.photo_url?.trim() || '';
+    const companyIcon = previewBrand?.companyIconUrl?.trim() || '';
+    const photoUrl = staffPhoto || companyIcon || TRANSPARENT_PIXEL;
+    const badgeUrl =
+      staffPhoto && companyIcon ? companyIcon : TRANSPARENT_PIXEL;
+    const companyLogo =
+      previewBrand?.companyLogoUrl?.trim() ||
+      previewBrand?.logoUrl?.trim() ||
+      TRANSPARENT_PIXEL;
+    const brandLogo = previewBrand?.logoUrl?.trim() || TRANSPARENT_PIXEL;
 
     for (const token of SIGNATURE_TEMPLATE_TOKENS) {
       let value = '';
@@ -122,14 +137,20 @@ export function SignatureTemplateEditor({
         value = String(staff[token as keyof SignatureStaff] ?? '');
       }
 
-      if (token === 'award_badges') {
+      if (token === 'photo_url') {
+        value = photoUrl;
+      } else if (token === 'company_icon_badge_url') {
+        value = badgeUrl;
+      } else if (token === 'award_badges') {
         value = previewAssetHtml?.awardBadgesHtml ?? '';
       } else if (token === 'signature_custom_text') {
         value = previewAssetHtml?.signatureCustomTextHtml ?? '';
       } else if (token === 'award_badge_url') {
         value = previewAssetHtml?.awardBadgeUrl?.trim() || TRANSPARENT_PIXEL;
-      } else if (token === 'brand_logo_url' || token === 'company_logo_url') {
-        value = previewBrand?.logoUrl?.trim() || TRANSPARENT_PIXEL;
+      } else if (token === 'company_logo_url') {
+        value = companyLogo;
+      } else if (token === 'brand_logo_url') {
+        value = brandLogo;
       } else if (token === 'brand_primary_color') {
         value = previewBrand?.primaryColor?.trim() || '#0D2344';
       } else if (token === 'brand_secondary_color') {

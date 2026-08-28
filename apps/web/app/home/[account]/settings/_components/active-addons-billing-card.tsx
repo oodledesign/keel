@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { BadgeCheck } from 'lucide-react';
+
 import { Badge } from '@kit/ui/badge';
 import {
   Card,
@@ -62,14 +64,15 @@ export function ActiveAddonsBillingCard({
               className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-4 py-3"
             >
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  <BadgeCheck className="h-5 w-5 shrink-0 fill-green-500 text-white dark:text-stone-900" />
                   {addon.name}
                 </p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
+                <p className="text-muted-foreground mt-0.5 text-xs pl-7">
                   {addon.description}
                 </p>
               </div>
-              <Badge variant="outline" className="shrink-0">
+              <Badge variant="success" className="shrink-0">
                 Active
               </Badge>
             </li>

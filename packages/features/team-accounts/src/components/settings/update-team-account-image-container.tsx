@@ -57,6 +57,8 @@ export function UpdateTeamAccountImage(props: {
     name: string;
     pictureUrl: string | null;
   };
+  heading?: string;
+  description?: string;
 }) {
   const router = useRouter();
   const { t } = useTranslation('teams');
@@ -105,11 +107,13 @@ export function UpdateTeamAccountImage(props: {
     >
       <div className={'flex flex-col space-y-1'}>
         <span className={'text-sm'}>
-          <Trans i18nKey={'account:profilePictureHeading'} />
+          {props.heading ?? <Trans i18nKey={'account:profilePictureHeading'} />}
         </span>
 
         <span className={'text-xs'}>
-          <Trans i18nKey={'account:profilePictureSubheading'} />
+          {props.description ?? (
+            <Trans i18nKey={'account:profilePictureSubheading'} />
+          )}
         </span>
       </div>
     </ImageUploader>

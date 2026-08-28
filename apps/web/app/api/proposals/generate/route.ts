@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { streamProposalHtml } from '~/lib/ai/proposal-generate';
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -136,8 +137,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error:
-          err instanceof Error ? err.message : 'Could not generate proposal',
+        error: formatUserFacingAiError(
+          err,
+          'Could not generate proposal',
+        ),
       },
       { status: 502 },
     );

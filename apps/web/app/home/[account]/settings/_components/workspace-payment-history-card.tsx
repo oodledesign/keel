@@ -63,9 +63,14 @@ export function WorkspacePaymentHistoryCard({
                       )}
                     </td>
                     <td className="px-2 py-3">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-2">
                         {invoice.invoicePdf ? (
-                          <Button asChild variant="ghost" size="sm">
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]/80"
+                          >
                             <a
                               href={invoice.invoicePdf}
                               target="_blank"
@@ -76,7 +81,11 @@ export function WorkspacePaymentHistoryCard({
                           </Button>
                         ) : null}
                         {invoice.hostedInvoiceUrl ? (
-                          <Button asChild variant="ghost" size="sm">
+                          <Button
+                            asChild
+                            size="sm"
+                            className="ozer-gradient-btn h-8 px-3 text-[var(--ozer-white)]"
+                          >
                             <a
                               href={invoice.hostedInvoiceUrl}
                               target="_blank"

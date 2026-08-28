@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+
 import Link from 'next/link';
 
 import { Badge } from '@kit/ui/badge';
@@ -6,6 +10,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@kit/ui/card';
@@ -16,6 +21,11 @@ import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
 import { formatBillingDate } from '~/lib/billing/format-billing-date';
 import { formatMinorUnits } from '~/lib/billing/plan-templates-types';
 import type { WorkspacePlanChargeEstimate } from '~/lib/billing/workspace-plan-estimate';
+
+import {
+  EditWorkspaceSeatsDialog,
+  type EditWorkspaceSeatsDialogProps,
+} from './edit-workspace-seats-dialog';
 
 type WorkspacePlanSummary = {
   periodEndsAt: string | null;
@@ -31,6 +41,11 @@ type WorkspacePlanSummary = {
   };
 };
 
+type SeatEditorConfig = Omit<
+  EditWorkspaceSeatsDialogProps,
+  'open' | 'onOpenChange'
+>;
+
 type WorkspacePlanStatusCardProps = {
   isBusinessLite: boolean;
   hasPaidSubscription: boolean;
@@ -39,6 +54,7 @@ type WorkspacePlanStatusCardProps = {
     plan: { name: string };
   };
   planSummary?: WorkspacePlanSummary;
+  seatEditor?: SeatEditorConfig | null;
   canManageBilling: boolean;
   accountSlug: string;
   billingStatus?: AccountBillingStatus | null;
@@ -136,7 +152,7 @@ function PlanSummaryDetails({ summary }: { summary: WorkspacePlanSummary }) {
 function statusBadge(status: AccountBillingStatus | null | undefined) {
   if (!status) return null;
   if (status === 'active' || status === 'trialing') {
-    return <Badge variant="outline">Active</Badge>;
+    return <Badge variant="success">Active</Badge>;
   }
   if (status === 'past_due_grace') {
     return <Badge variant="outline">Payment retrying</Badge>;
@@ -155,11 +171,13 @@ export function WorkspacePlanStatusCard({
   hasPaidSubscription,
   subscriptionProductPlan,
   planSummary,
+  seatEditor = null,
   canManageBilling,
   accountSlug,
   billingStatus,
   billingExempt = false,
 }: WorkspacePlanStatusCardProps) {
+  const [seatsOpen, setSeatsOpen] = useState(false);
   const billingPath = pathsConfig.app.accountBilling.replace(
     '[account]',
     accountSlug,
@@ -195,28 +213,52 @@ export function WorkspacePlanStatusCard({
   }
 
   if (hasPaidSubscription && subscriptionProductPlan) {
+    const showEditSeats = Boolean(canManageBilling && seatEditor);
+
     return (
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-base">Workspace plan</CardTitle>
-              <CardDescription>
-                {subscriptionProductPlan.product.name} ·{' '}
-                {subscriptionProductPlan.plan.name}
-              </CardDescription>
+      <>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">Workspace plan</CardTitle>
+                <CardDescription>
+                  {subscriptionProductPlan.product.name} ·{' '}
+                  {subscriptionProductPlan.plan.name}
+                </CardDescription>
+              </div>
+              {statusBadge(billingStatus) ?? (
+                <Badge variant="success">Active</Badge>
+              )}
             </div>
-            {statusBadge(billingStatus) ?? (
-              <Badge variant="outline">Active</Badge>
-            )}
-          </div>
-        </CardHeader>
-        {planSummary ? (
-          <CardContent className="border-t pt-4">
-            <PlanSummaryDetails summary={planSummary} />
-          </CardContent>
+          </CardHeader>
+          {planSummary ? (
+            <CardContent className="border-t pt-4">
+              <PlanSummaryDetails summary={planSummary} />
+            </CardContent>
+          ) : null}
+          {showEditSeats ? (
+            <CardFooter className="border-t pt-4">
+              <Button
+                type="button"
+                size="lg"
+                className="ozer-gradient-btn w-full text-[var(--ozer-white)]"
+                onClick={() => setSeatsOpen(true)}
+              >
+                Edit seats
+              </Button>
+            </CardFooter>
+          ) : null}
+        </Card>
+
+        {seatEditor ? (
+          <EditWorkspaceSeatsDialog
+            {...seatEditor}
+            open={seatsOpen}
+            onOpenChange={setSeatsOpen}
+          />
         ) : null}
-      </Card>
+      </>
     );
   }
 

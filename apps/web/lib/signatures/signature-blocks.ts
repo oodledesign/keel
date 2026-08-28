@@ -47,6 +47,11 @@ export type SignatureBuilderDocument = {
   version: typeof SIGNATURE_BUILDER_VERSION;
   layout: SignatureLayout;
   background?: SignatureBackground;
+  /**
+   * When true, email / phone / website / address lines show a small icon
+   * to the left of the value (email-safe hosted PNGs).
+   */
+  showContactIcons?: boolean;
   blocks: SignatureBlock[];
 };
 
@@ -142,7 +147,7 @@ export const SIGNATURE_BLOCK_LIBRARY: SignatureBlockDefinition[] = [
   {
     type: 'logo',
     label: 'Company logo',
-    description: 'Brand logo image',
+    description: 'Company logo (falls back to brand logo)',
     max: 1,
   },
   {
@@ -432,6 +437,63 @@ export function parseBackgroundAttr(
   return { ...DEFAULT_SIGNATURE_BACKGROUND, mode: 'none' };
 }
 
+function serializeContactIconsAttr(showContactIcons?: boolean): string {
+  return showContactIcons ? ' icons="1"' : '';
+}
+
+function parseContactIconsAttr(value: string | undefined): boolean {
+  return value === '1' || value === 'true';
+}
+
+function signatureIconUrl(
+  name: 'email' | 'phone' | 'mobile' | 'website' | 'address',
+): string {
+  const path = `/brand/signature-icons/${name}.png`;
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
+  return base ? `${base}${path}` : path;
+}
+
+const CONTACT_ICON_BY_TYPE: Partial<
+  Record<SignatureBlockType, 'email' | 'phone' | 'mobile' | 'website' | 'address'>
+> = {
+  email: 'email',
+  phone_direct: 'phone',
+  phone_mobile: 'mobile',
+  website: 'website',
+  address: 'address',
+};
+
+/** Wrap contact-line content with a left icon when enabled. */
+function withContactIcon(
+  blockType: SignatureBlockType,
+  inner: string,
+  showContactIcons: boolean | undefined,
+  palette: SignatureTextPalette,
+): string {
+  if (!showContactIcons) {
+    return inner;
+  }
+
+  const iconName = CONTACT_ICON_BY_TYPE[blockType];
+  if (!iconName) {
+    return inner;
+  }
+
+  const src = signatureIconUrl(iconName);
+  return [
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">`,
+    `<tr>`,
+    `<td style="padding:0 8px 0 0;vertical-align:top;width:16px;">`,
+    `<img src="${src}" alt="" width="14" height="14" style="display:block;width:14px;height:14px;border:0;" />`,
+    `</td>`,
+    `<td style="padding:0;vertical-align:top;font-size:13px;line-height:1.5;color:${palette.primary};">`,
+    inner,
+    `</td>`,
+    `</tr>`,
+    `</table>`,
+  ].join('');
+}
+
 function canvasShellStyles(background: SignatureBackground): {
   bgcolor: string | null;
   style: string;
@@ -479,10 +541,20 @@ function canvasShellStyles(background: SignatureBackground): {
 function blockInnerHtml(
   block: SignatureBlock,
   palette: SignatureTextPalette,
+  showContactIcons?: boolean,
 ): string {
   switch (block.type) {
     case 'photo':
-      return `<img src="{{photo_url}}" alt="{{full_name}}" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:999px;object-fit:cover;border:0;" />`;
+      // Nested table + negative margin badge — email-safe enough for Gmail/Apple Mail.
+      // company_icon_badge_url is transparent when there is no staff photo (icon fills photo_url instead).
+      return [
+        `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">`,
+        `<tr><td style="padding:0;vertical-align:top;width:80px;">`,
+        `<img src="{{photo_url}}" alt="{{full_name}}" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:999px;object-fit:cover;border:0;" />`,
+        `<img src="{{company_icon_badge_url}}" alt="" width="24" height="24" style="display:block;width:24px;height:24px;margin:-28px 0 0 56px;border-radius:999px;border:2px solid #ffffff;object-fit:cover;" />`,
+        `</td></tr>`,
+        `</table>`,
+      ].join('');
     case 'name': {
       // Same font-size as the name so credentials wrap as part of that line;
       // lighter weight keeps them secondary. Leading space lives in the span.
@@ -497,21 +569,46 @@ function blockInnerHtml(
       // Legacy standalone block — prefer name.includeCredentials going forward.
       return `<div style="font-size:13px;line-height:1.4;color:${palette.muted};">{{credentials}}</div>`;
     case 'email':
-      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};"><a href="mailto:{{email}}" style="color:${palette.link};text-decoration:underline;">{{email}}</a></div>`;
+      return withContactIcon(
+        block.type,
+        `<a href="mailto:{{email}}" style="color:${palette.link};text-decoration:underline;">{{email}}</a>`,
+        showContactIcons,
+        palette,
+      );
     case 'phone_direct':
-      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">{{phone_direct}}</div>`;
+      return withContactIcon(
+        block.type,
+        `{{phone_direct}}`,
+        showContactIcons,
+        palette,
+      );
     case 'phone_mobile':
-      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">{{phone_mobile}}</div>`;
+      return withContactIcon(
+        block.type,
+        `{{phone_mobile}}`,
+        showContactIcons,
+        palette,
+      );
     case 'website':
-      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};"><a href="{{website}}" style="color:${palette.link};text-decoration:underline;">{{website}}</a></div>`;
+      return withContactIcon(
+        block.type,
+        `<a href="{{website}}" style="color:${palette.link};text-decoration:underline;">{{website}}</a>`,
+        showContactIcons,
+        palette,
+      );
     case 'address':
-      return `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">{{address}}</div>`;
+      return withContactIcon(
+        block.type,
+        `{{address}}`,
+        showContactIcons,
+        palette,
+      );
     case 'department':
       return `<div style="font-size:13px;line-height:1.5;color:${palette.muted};">{{department}}</div>`;
     case 'branch':
       return `<div style="font-size:13px;line-height:1.5;color:${palette.muted};">{{branch}}</div>`;
     case 'logo':
-      return `<img src="{{brand_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;border:0;" />`;
+      return `<img src="{{company_logo_url}}" alt="" width="120" style="display:block;max-width:120px;height:auto;border:0;" />`;
     case 'award_badge':
       return `{{award_badges}}`;
     case 'divider':
@@ -544,12 +641,20 @@ function blockOpenComment(block: SignatureBlock): string {
 function wrapBlock(
   block: SignatureBlock,
   palette: SignatureTextPalette,
+  showContactIcons: boolean | undefined,
   padding = '0 0 6px 0',
 ): string {
+  const content = blockInnerHtml(block, palette, showContactIcons);
+  // Contact lines keep a styled wrapper when icons are off; icon rows supply their own.
+  const cellInner =
+    !showContactIcons && CONTACT_ICON_BY_TYPE[block.type]
+      ? `<div style="font-size:13px;line-height:1.5;color:${palette.primary};">${content}</div>`
+      : content;
+
   return [
     blockOpenComment(block),
     `<tr><td style="padding:${padding};vertical-align:top;">`,
-    blockInnerHtml(block, palette),
+    cellInner,
     `</td></tr>`,
     `<!-- /ozer-block -->`,
   ].join('\n');
@@ -558,6 +663,7 @@ function wrapBlock(
 function renderBlockTable(
   blocks: SignatureBlock[],
   palette: SignatureTextPalette,
+  showContactIcons?: boolean,
 ): string {
   if (blocks.length === 0) {
     return '';
@@ -569,6 +675,7 @@ function renderBlockTable(
       wrapBlock(
         block,
         palette,
+        showContactIcons,
         index === blocks.length - 1 ? '0' : '0 0 6px 0',
       ),
     ),
@@ -581,7 +688,8 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
   const background = resolveSignatureBackground(doc.background);
   const palette = paletteForBackground(background);
   const shell = canvasShellStyles(background);
-  const header = `<!-- ozer-sig-builder:v${doc.version} layout="${doc.layout}"${serializeBackgroundAttr(background)} -->`;
+  const showContactIcons = Boolean(doc.showContactIcons);
+  const header = `<!-- ozer-sig-builder:v${doc.version} layout="${doc.layout}"${serializeBackgroundAttr(background)}${serializeContactIconsAttr(showContactIcons)} -->`;
   const footer = `<!-- /ozer-sig-builder -->`;
   const note = shell.forceCanvas
     ? `<!-- Ozer Signatures — visual builder (forced canvas colours) -->`
@@ -613,7 +721,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
       ? [
           blockOpenComment(photo),
           `<td style="padding:${photoPad};vertical-align:top;width:80px;">`,
-          blockInnerHtml(photo, palette),
+          blockInnerHtml(photo, palette, showContactIcons),
           `</td>`,
           `<!-- /ozer-block -->`,
         ].join('\n')
@@ -623,7 +731,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
       `<tr>`,
       photoCell,
       `<td style="padding:${contentPad};vertical-align:top;color:${palette.primary};">`,
-      renderBlockTable(rest, palette),
+      renderBlockTable(rest, palette, showContactIcons),
       `</td>`,
       `</tr>`,
     ]
@@ -632,7 +740,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
   } else {
     body = [
       `<tr><td style="padding:${stackedPad};vertical-align:top;color:${palette.primary};">`,
-      renderBlockTable(doc.blocks, palette),
+      renderBlockTable(doc.blocks, palette, showContactIcons),
       `</td></tr>`,
     ].join('\n');
   }
@@ -641,7 +749,7 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
 }
 
 const BUILDER_OPEN =
-  /<!--\s*ozer-sig-builder:v(\d+)\s+layout="(stacked|photo_left)"(?:\s+bg="([^"]*)")?\s*-->/i;
+  /<!--\s*ozer-sig-builder:v(\d+)\s+([^>]*?)\s*-->/i;
 const BUILDER_CLOSE = /<!--\s*\/ozer-sig-builder\s*-->/i;
 const BLOCK_OPEN = /<!--\s*ozer-block\s+([^>]*?)\s*-->/gi;
 
@@ -678,17 +786,23 @@ export function htmlToSignatureBlocks(
   }
 
   const version = Number(open[1]);
-  const layout = open[2] as SignatureLayout;
-  const background = parseBackgroundAttr(open[3]);
-  if (version !== SIGNATURE_BUILDER_VERSION) {
+  const attrs = parseBlockOpenAttrs(open[2] ?? '');
+  const layout = attrs.layout as SignatureLayout | undefined;
+  if (
+    version !== SIGNATURE_BUILDER_VERSION ||
+    (layout !== 'stacked' && layout !== 'photo_left')
+  ) {
     return null;
   }
 
+  const background = parseBackgroundAttr(attrs.bg);
+  const showContactIcons = parseContactIconsAttr(attrs.icons);
+
   const blocks: SignatureBlock[] = [];
   for (const match of html.matchAll(BLOCK_OPEN)) {
-    const attrs = parseBlockOpenAttrs(match[1] ?? '');
-    const id = attrs.id;
-    const type = attrs.type as SignatureBlockType | undefined;
+    const blockAttrs = parseBlockOpenAttrs(match[1] ?? '');
+    const id = blockAttrs.id;
+    const type = blockAttrs.type as SignatureBlockType | undefined;
 
     if (!id || !type || !KNOWN_TYPES.has(type)) {
       continue;
@@ -698,11 +812,11 @@ export function htmlToSignatureBlocks(
       id,
       type,
       ...(type === 'custom_text'
-        ? { text: unescapeHtmlAttr(attrs.text ?? '') }
+        ? { text: unescapeHtmlAttr(blockAttrs.text ?? '') }
         : {}),
       ...(type === 'name' &&
-      (attrs.include_credentials === '1' ||
-        attrs.include_credentials === 'true')
+      (blockAttrs.include_credentials === '1' ||
+        blockAttrs.include_credentials === 'true')
         ? { includeCredentials: true }
         : {}),
     });
@@ -718,6 +832,7 @@ export function htmlToSignatureBlocks(
     version: SIGNATURE_BUILDER_VERSION,
     layout,
     background,
+    ...(showContactIcons ? { showContactIcons: true } : {}),
     blocks: normalized,
   };
 }
@@ -754,7 +869,9 @@ export const SIGNATURE_TEMPLATE_TOKENS = [
   'branch',
   'address',
   'photo_url',
+  'company_icon_badge_url',
   'website',
+  'company_logo_url',
   'brand_logo_url',
   'award_badge_url',
   'award_badges',

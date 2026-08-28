@@ -2,17 +2,17 @@
 
 import { useState } from 'react';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Loader2 } from 'lucide-react';
 
+import { UpdateTeamAccountImage } from '@kit/team-accounts/components';
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
-import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 
@@ -37,21 +37,21 @@ function normalizePortalSlug(input: string): string {
 export function BrandSettingsForm({
   accountId,
   accountSlug,
+  accountName,
+  pictureUrl,
   initialBrand,
   initialPortalSlug,
   canEdit,
 }: {
   accountId: string;
   accountSlug: string;
+  accountName: string;
+  pictureUrl: string | null;
   initialBrand: AccountBrandResolved;
   initialPortalSlug?: string | null;
   canEdit: boolean;
 }) {
   const router = useRouter();
-  const settingsHref = pathsConfig.app.accountSettings.replace(
-    '[account]',
-    accountSlug,
-  );
 
   const [primary, setPrimary] = useState(initialBrand.primary_color);
   const [secondary, setSecondary] = useState(initialBrand.secondary_color);
@@ -88,23 +88,46 @@ export function BrandSettingsForm({
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       {!canEdit ? (
         <p className="text-muted-foreground rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm">
-          Only workspace owners and admins can edit brand colours.
+          Only workspace owners and admins can edit brand settings.
         </p>
       ) : null}
 
-      <p className="text-muted-foreground rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm">
-        Upload your business logo under{' '}
-        <Link
-          href={settingsHref}
-          className="text-[var(--ozer-accent)] hover:underline"
-        >
-          General settings
-        </Link>
-        . It appears in the sidebar workspace switcher, emails, and signature
-        templates.
-      </p>
-
       <div className="grid gap-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
+        <div className="space-y-2">
+          {canEdit ? (
+            <UpdateTeamAccountImage
+              account={{
+                id: accountId,
+                name: accountName,
+                pictureUrl,
+              }}
+              heading="Business logo"
+              description="Shown in the sidebar workspace switcher, emails, and signature templates."
+            />
+          ) : (
+            <div className="space-y-2">
+              <Label>Business logo</Label>
+              <p className="text-muted-foreground text-xs">
+                Shown in the sidebar workspace switcher, emails, and signature
+                templates.
+              </p>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-16 w-16 rounded-lg">
+                  <AvatarImage src={pictureUrl ?? undefined} alt="" />
+                  <AvatarFallback className="rounded-lg text-sm">
+                    {accountName.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {!pictureUrl ? (
+                  <p className="text-muted-foreground text-sm">
+                    No logo uploaded.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="brand-portal-slug">Client portal slug</Label>
           <p className="text-muted-foreground text-xs">

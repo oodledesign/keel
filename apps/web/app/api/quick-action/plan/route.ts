@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -70,8 +71,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.error('[quick-action] plan', error);
-    const message =
-      error instanceof Error ? error.message : 'Failed to plan quick action';
+    const message = formatUserFacingAiError(
+      error,
+      'Failed to plan quick action',
+    );
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
