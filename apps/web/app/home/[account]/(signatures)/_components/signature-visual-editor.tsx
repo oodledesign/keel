@@ -253,6 +253,17 @@ export function SignatureVisualEditor({
     onChange({ ...document, showContactIcons: true });
   };
 
+  const setShowPhotoBadge = (enabled: boolean) => {
+    if (enabled) {
+      const { showPhotoBadge: _drop, ...rest } = document;
+      void _drop;
+      onChange(rest);
+      return;
+    }
+
+    onChange({ ...document, showPhotoBadge: false });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) {
@@ -491,6 +502,22 @@ export function SignatureVisualEditor({
           checked={Boolean(document.showContactIcons)}
           onCheckedChange={setShowContactIcons}
           data-test="signature-contact-icons-switch"
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="sig-photo-badge">Photo company icon</Label>
+          <p className="text-muted-foreground text-xs">
+            Show the company icon on the profile photo (corner badge, or fills
+            the slot when there is no photo).
+          </p>
+        </div>
+        <Switch
+          id="sig-photo-badge"
+          checked={document.showPhotoBadge !== false}
+          onCheckedChange={setShowPhotoBadge}
+          data-test="signature-photo-badge-switch"
         />
       </div>
 

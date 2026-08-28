@@ -227,6 +227,7 @@ export async function loadPublicSignaturePreview(
   const renderOptions = await loadSignatureRenderOptions(
     share.account_id,
     staffRow,
+    template.html_template as string,
   );
   const signatureHtml = renderTemplate(
     template.html_template as string,

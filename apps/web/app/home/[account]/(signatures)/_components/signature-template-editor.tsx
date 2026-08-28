@@ -31,10 +31,16 @@ import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
+  stripEmptySignatureBlocks,
+  stripTransparentBadgeImages,
+  normalizeLegacySignatureChrome,
+} from '~/lib/signatures/render-template';
+import {
   SIGNATURE_TEMPLATE_TOKENS,
   type SignatureBuilderDocument,
   createMinimalSignatureDocument,
   htmlToSignatureBlocks,
+  isPhotoBadgeEnabled,
   signatureBlocksToHtml,
 } from '~/lib/signatures/signature-blocks';
 import { buildSignaturePreviewDocument } from '~/lib/signatures/signature-preview-document';
@@ -121,7 +127,13 @@ export function SignatureTemplateEditor({
     const staff = previewStaff;
     let output = previewHtml;
     const staffPhoto = staff?.photo_url?.trim() || '';
-    const companyIcon = previewBrand?.companyIconUrl?.trim() || '';
+    const showPhotoBadge = isPhotoBadgeEnabled(
+      htmlToSignatureBlocks(previewHtml)?.showPhotoBadge,
+    );
+    const companyIcon =
+      showPhotoBadge && previewBrand?.companyIconUrl?.trim()
+        ? previewBrand.companyIconUrl.trim()
+        : '';
     const photoUrl = staffPhoto || companyIcon || TRANSPARENT_PIXEL;
     const badgeUrl =
       staffPhoto && companyIcon ? companyIcon : TRANSPARENT_PIXEL;
@@ -130,6 +142,11 @@ export function SignatureTemplateEditor({
       previewBrand?.logoUrl?.trim() ||
       TRANSPARENT_PIXEL;
     const brandLogo = previewBrand?.logoUrl?.trim() || TRANSPARENT_PIXEL;
+    const website = previewBrand?.websiteUrl?.trim() || '';
+    const address =
+      (staff as { address?: string | null } | null)?.address?.trim() ||
+      previewBrand?.address?.trim() ||
+      '';
 
     for (const token of SIGNATURE_TEMPLATE_TOKENS) {
       let value = '';
@@ -158,12 +175,9 @@ export function SignatureTemplateEditor({
       } else if (token === 'brand_accent_color') {
         value = previewBrand?.accentColor?.trim() || '#e63329';
       } else if (token === 'website') {
-        value = previewBrand?.websiteUrl?.trim() || '';
+        value = website;
       } else if (token === 'address') {
-        value =
-          (staff as { address?: string | null } | null)?.address?.trim() ||
-          previewBrand?.address?.trim() ||
-          '';
+        value = address;
       } else if (token === 'credentials') {
         value = staff?.credentials?.trim() ?? '';
       }
@@ -173,6 +187,20 @@ export function SignatureTemplateEditor({
         value,
       );
     }
+
+    output = stripEmptySignatureBlocks(output, {
+      phone_direct: staff?.phone_direct,
+      phone_mobile: staff?.phone_mobile,
+      email: staff?.email,
+      website,
+      address,
+      department: staff?.department,
+      branch: staff?.branch,
+      title: staff?.job_title,
+      credentials: staff?.credentials,
+    });
+    output = stripTransparentBadgeImages(output);
+    output = normalizeLegacySignatureChrome(output);
 
     return `<div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
   }, [previewHtml, previewStaff, previewAssetHtml, previewBrand]);

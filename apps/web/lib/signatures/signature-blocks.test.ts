@@ -174,6 +174,26 @@ describe('signatureBlocksToHtml / htmlToSignatureBlocks', () => {
     expect(htmlToSignatureBlocks(html)?.showContactIcons).toBeUndefined();
   });
 
+  it('uses light contact icons on a dark canvas', () => {
+    const html = signatureBlocksToHtml({
+      ...createMinimalSignatureDocument(),
+      showContactIcons: true,
+      background: { mode: 'solid', color: '#2A1720' },
+      blocks: [createSignatureBlock('email')],
+    });
+    expect(html).toContain('/brand/signature-icons/email-light.png');
+  });
+
+  it('round-trips photo badge off', () => {
+    const html = signatureBlocksToHtml({
+      ...createMinimalSignatureDocument(),
+      showPhotoBadge: false,
+    });
+    expect(html).toContain('photo_badge="0"');
+    expect(html).not.toContain('{{company_icon_badge_url}}');
+    expect(htmlToSignatureBlocks(html)?.showPhotoBadge).toBe(false);
+  });
+
   it('prefixes icon URLs with NEXT_PUBLIC_SITE_URL when set', () => {
     const original = process.env.NEXT_PUBLIC_SITE_URL;
     process.env.NEXT_PUBLIC_SITE_URL = 'https://app.example.com';

@@ -688,7 +688,11 @@ export async function pushSignatureToGoogleStaff(
     return { success: false, error: msg };
   }
 
-  const renderOptions = await loadSignatureRenderOptions(accountId, staff);
+  const renderOptions = await loadSignatureRenderOptions(
+    accountId,
+    staff,
+    templateHtml,
+  );
   const renderedHtml = renderTemplate(templateHtml, staff, renderOptions);
 
   let graphError: string | null = null;

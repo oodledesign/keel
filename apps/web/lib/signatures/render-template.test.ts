@@ -5,8 +5,13 @@ import {
   renderTemplate,
   resolveCompanyLogoUrl,
   resolvePhotoAndBadgeUrls,
+  stripTransparentBadgeImages,
   type SignaturesStaffRow,
 } from './render-template';
+import {
+  createSignatureBlock,
+  signatureBlocksToHtml,
+} from './signature-blocks';
 
 const staffBase: SignaturesStaffRow = {
   id: 'staff-1',
@@ -76,6 +81,19 @@ describe('resolvePhotoAndBadgeUrls', () => {
     });
   });
 
+  it('ignores company icon when showPhotoBadge is false', () => {
+    expect(
+      resolvePhotoAndBadgeUrls({
+        staffPhotoUrl: 'https://cdn.example.com/photo.jpg',
+        companyIconUrl: 'https://cdn.example.com/icon.png',
+        showPhotoBadge: false,
+      }),
+    ).toEqual({
+      photoUrl: 'https://cdn.example.com/photo.jpg',
+      badgeUrl: TRANSPARENT_PIXEL_GIF,
+    });
+  });
+
   it('uses transparent placeholders when neither photo nor icon exist', () => {
     expect(
       resolvePhotoAndBadgeUrls({
@@ -133,5 +151,33 @@ describe('renderTemplate company assets', () => {
     });
 
     expect(html).toContain(brand.logo_url);
+  });
+
+  it('strips empty contact blocks from builder HTML', () => {
+    const template = signatureBlocksToHtml({
+      version: 1,
+      layout: 'stacked',
+      showContactIcons: true,
+      blocks: [
+        createSignatureBlock('phone_direct'),
+        createSignatureBlock('email'),
+        createSignatureBlock('website'),
+      ],
+    });
+
+    const html = renderTemplate(template, staffBase, {
+      brand: { ...brand, website_url: 'https://example.com' },
+    });
+
+    expect(html).not.toContain('type="phone_direct"');
+    expect(html).toContain('ada@example.com');
+    expect(html).toContain('https://example.com');
+  });
+
+  it('strips transparent badge images', () => {
+    const html = stripTransparentBadgeImages(
+      `<img src="${TRANSPARENT_PIXEL_GIF}" alt="" width="24" height="24" />`,
+    );
+    expect(html).toBe('');
   });
 });

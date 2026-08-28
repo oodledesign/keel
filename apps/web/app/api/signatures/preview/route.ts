@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
     const renderOptions = await loadSignatureRenderOptions(
       accountId,
       staffRow as SignaturesStaffRow,
+      templateRow.html_template as string,
     );
     const html = renderTemplate(
       templateRow.html_template as string,
