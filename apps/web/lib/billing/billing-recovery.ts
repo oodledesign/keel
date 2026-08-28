@@ -1,5 +1,3 @@
-import 'server-only';
-
 import type { AccountBillingStatus } from './account-billing-types';
 
 /** Statuses that recover to `active` on successful invoice payment. */
