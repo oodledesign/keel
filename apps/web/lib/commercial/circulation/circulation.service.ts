@@ -229,6 +229,269 @@ class CommercialCirculationService {
     );
   }
 
+  async listPreferences(
+    accountId: string,
+    emails?: string[],
+  ): Promise<
+    Map<
+      string,
+      {
+        email: string;
+        marketingStatus: MarketingStatus;
+        autoSendEnabled: boolean;
+        lastDigestFingerprint: string | null;
+        lastDigestSentAt: string | null;
+        publicAccessToken: string | null;
+      }
+    >
+  > {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    let query = db
+      .from('commercial_marketing_preferences')
+      .select(
+        'email, marketing_status, auto_send_enabled, last_digest_fingerprint, last_digest_sent_at, public_access_token',
+      )
+      .eq('account_id', accountId)
+      .eq('purpose', PURPOSE);
+
+    if (emails && emails.length > 0) {
+      query = query.in('email', [
+        ...new Set(emails.map(normalizeEmail).filter(Boolean)),
+      ]);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const map = new Map<
+      string,
+      {
+        email: string;
+        marketingStatus: MarketingStatus;
+        autoSendEnabled: boolean;
+        lastDigestFingerprint: string | null;
+        lastDigestSentAt: string | null;
+        publicAccessToken: string | null;
+      }
+    >();
+
+    for (const row of (data ?? []) as Array<{
+      email: string;
+      marketing_status: string;
+      auto_send_enabled?: boolean | null;
+      last_digest_fingerprint?: string | null;
+      last_digest_sent_at?: string | null;
+      public_access_token?: string | null;
+    }>) {
+      const status = row.marketing_status;
+      if (
+        status !== 'subscribed' &&
+        status !== 'unsubscribed' &&
+        status !== 'suppressed'
+      ) {
+        continue;
+      }
+      const email = normalizeEmail(row.email);
+      map.set(email, {
+        email,
+        marketingStatus: status,
+        autoSendEnabled: row.auto_send_enabled !== false,
+        lastDigestFingerprint: row.last_digest_fingerprint ?? null,
+        lastDigestSentAt: row.last_digest_sent_at ?? null,
+        publicAccessToken: row.public_access_token ?? null,
+      });
+    }
+
+    return map;
+  }
+
+  async getOrCreateSettings(accountId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { data: existing, error } = await db
+      .from('commercial_circulation_settings')
+      .select('*')
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (existing) {
+      return existing as { account_id: string; auto_send_enabled: boolean };
+    }
+
+    const { data, error: insertError } = await db
+      .from('commercial_circulation_settings')
+      .insert({ account_id: accountId, auto_send_enabled: true })
+      .select('*')
+      .single();
+
+    if (insertError) throw new Error(insertError.message);
+    return data as { account_id: string; auto_send_enabled: boolean };
+  }
+
+  async setAutoSendEnabled(accountId: string, enabled: boolean) {
+    await this.getOrCreateSettings(accountId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { data, error } = await db
+      .from('commercial_circulation_settings')
+      .update({ auto_send_enabled: enabled })
+      .eq('account_id', accountId)
+      .select('*')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data as { account_id: string; auto_send_enabled: boolean };
+  }
+
+  async setContactAutoSend(input: {
+    accountId: string;
+    email: string;
+    enabled: boolean;
+  }) {
+    const email = normalizeEmail(input.email);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { data, error } = await db
+      .from('commercial_marketing_preferences')
+      .update({ auto_send_enabled: input.enabled })
+      .eq('account_id', input.accountId)
+      .eq('email', email)
+      .eq('purpose', PURPOSE)
+      .select('id')
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) {
+      throw new Error('No circulation preference found for that address');
+    }
+  }
+
+  async ensurePublicAccessToken(accountId: string, email: string) {
+    const normalized = normalizeEmail(email);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { data: existing, error } = await db
+      .from('commercial_marketing_preferences')
+      .select('id, public_access_token')
+      .eq('account_id', accountId)
+      .eq('email', normalized)
+      .eq('purpose', PURPOSE)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!existing) return null;
+    if (existing.public_access_token) {
+      return existing.public_access_token as string;
+    }
+
+    const token = randomBytes(24).toString('hex');
+    const { data, error: updateError } = await db
+      .from('commercial_marketing_preferences')
+      .update({ public_access_token: token })
+      .eq('id', existing.id)
+      .select('public_access_token')
+      .single();
+
+    if (updateError) throw new Error(updateError.message);
+    return (data?.public_access_token as string | undefined) ?? token;
+  }
+
+  async recordDigestSent(input: {
+    accountId: string;
+    email: string;
+    fingerprint: string;
+  }) {
+    const email = normalizeEmail(input.email);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { error } = await db
+      .from('commercial_marketing_preferences')
+      .update({
+        last_digest_fingerprint: input.fingerprint,
+        last_digest_sent_at: new Date().toISOString(),
+      })
+      .eq('account_id', input.accountId)
+      .eq('email', email)
+      .eq('purpose', PURPOSE);
+
+    if (error) throw new Error(error.message);
+  }
+
+  async loadPreferenceByPublicToken(token: string) {
+    const trimmed = token.trim();
+    if (trimmed.length < 16) return null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { data, error } = await db
+      .from('commercial_marketing_preferences')
+      .select(
+        'account_id, email, marketing_status, auto_send_enabled, public_access_token',
+      )
+      .eq('public_access_token', trimmed)
+      .eq('purpose', PURPOSE)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+
+    const status = data.marketing_status as MarketingStatus;
+    return {
+      accountId: data.account_id as string,
+      email: normalizeEmail(String(data.email ?? '')),
+      marketingStatus: status,
+      autoSendEnabled: data.auto_send_enabled !== false,
+      publicAccessToken: String(data.public_access_token ?? trimmed),
+    };
+  }
+
+  async updatePublicPreference(input: {
+    accountId: string;
+    email: string;
+    unsubscribed?: boolean;
+    notifyOnNewMatch?: boolean;
+  }) {
+    const email = normalizeEmail(input.email);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+
+    if (input.unsubscribed) {
+      await this.unsubscribe(input.accountId, email);
+    } else if (input.unsubscribed === false) {
+      const { data: existing } = await db
+        .from('commercial_marketing_preferences')
+        .select('id, marketing_status')
+        .eq('account_id', input.accountId)
+        .eq('email', email)
+        .eq('purpose', PURPOSE)
+        .maybeSingle();
+
+      if (existing && existing.marketing_status !== 'suppressed') {
+        const { error } = await db
+          .from('commercial_marketing_preferences')
+          .update({
+            marketing_status: 'subscribed',
+            unsubscribed_at: null,
+            consented_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+        if (error) throw new Error(error.message);
+      }
+    }
+
+    if (input.notifyOnNewMatch != null) {
+      const { error } = await db
+        .from('commercial_marketing_preferences')
+        .update({ auto_send_enabled: input.notifyOnNewMatch })
+        .eq('account_id', input.accountId)
+        .eq('email', email)
+        .eq('purpose', PURPOSE);
+      if (error) throw new Error(error.message);
+    }
+  }
+
   async getOrCreateRequirementForm(accountId: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;

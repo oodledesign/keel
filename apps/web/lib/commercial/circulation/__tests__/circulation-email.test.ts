@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildCirculationDigestEmailHtml,
   buildCirculationEmailHtml,
   contrastTextOn,
   escapeCirculationHtml,
@@ -63,5 +64,49 @@ describe('contrastTextOn', () => {
 describe('escapeCirculationHtml', () => {
   it('escapes markup', () => {
     expect(escapeCirculationHtml('<b>x</b>')).toBe('&lt;b&gt;x&lt;/b&gt;');
+  });
+});
+
+describe('buildCirculationDigestEmailHtml', () => {
+  const html = buildCirculationDigestEmailHtml({
+    brand,
+    listings: [
+      {
+        name: 'Unit 4, Medway Park',
+        summary: '2,400 sq ft warehouse to let.',
+        address: 'Medway Park, Maidstone',
+        viewUrl: 'https://app.example.com/share/brochure/tok',
+        sizeLabel: '2,400 sq ft',
+        disposalTypeLabel: 'To let',
+      },
+      {
+        name: '12 High Street',
+        summary: 'Retail unit.',
+        address: 'Maidstone',
+        viewUrl: null,
+        sizeLabel: '800 sq ft',
+        disposalTypeLabel: 'For sale',
+      },
+    ],
+    unsubscribeUrl: 'https://app.example.com/unsubscribe/circulation?token=abc',
+    manageUrl: 'https://app.example.com/share/matches/tok123',
+    contactName: 'Sam Applicant',
+  });
+
+  it('lists every matching property under the workspace brand', () => {
+    expect(html).toContain('2 properties that match your requirement');
+    expect(html).toContain('Unit 4, Medway Park');
+    expect(html).toContain('12 High Street');
+    expect(html).toContain('Bracketts');
+    expect(html).toContain('https://cdn.example.com/bracketts-logo.png');
+    expect(html).not.toMatch(/ozer\.so/i);
+  });
+
+  it('includes unsubscribe and the public preferences page', () => {
+    expect(html).toContain(
+      'https://app.example.com/unsubscribe/circulation?token=abc',
+    );
+    expect(html).toContain('https://app.example.com/share/matches/tok123');
+    expect(html).toContain('Manage preferences');
   });
 });

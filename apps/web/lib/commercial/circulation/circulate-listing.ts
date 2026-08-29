@@ -335,6 +335,76 @@ export async function listCirculationSends(
   }));
 }
 
+export type AccountCirculationSendLog = CirculationSendLog & {
+  sendKind: 'listing' | 'digest';
+  listingId: string | null;
+  listingIds: string[];
+};
+
+export async function listAccountCirculationSends(
+  client: SupabaseClient,
+  input: { accountId: string; limit?: number },
+): Promise<AccountCirculationSendLog[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = client as any;
+  const { data: sends, error } = await db
+    .from('commercial_circulation_sends')
+    .select(
+      'id, listing_id, listing_ids, send_kind, subject, send_trigger, from_email, from_name, recipient_count, created_at',
+    )
+    .eq('account_id', input.accountId)
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? 30);
+
+  if (error) throw new Error(error.message);
+  const sendRows = (sends ?? []) as Array<Record<string, unknown>>;
+  if (sendRows.length === 0) return [];
+
+  const sendIds = sendRows.map((row) => row.id as string);
+  const { data: recipients, error: recError } = await db
+    .from('commercial_circulation_recipients')
+    .select(
+      'id, send_id, email, status, skip_reason, error_message, ses_message_id, created_at',
+    )
+    .eq('account_id', input.accountId)
+    .in('send_id', sendIds)
+    .order('created_at', { ascending: true });
+
+  if (recError) throw new Error(recError.message);
+
+  const bySend = new Map<string, CirculationSendLog['recipients']>();
+  for (const row of (recipients ?? []) as Array<Record<string, unknown>>) {
+    const sendId = row.send_id as string;
+    const list = bySend.get(sendId) ?? [];
+    list.push({
+      id: row.id as string,
+      email: row.email as string,
+      status: row.status as string,
+      skipReason: (row.skip_reason as string | null) ?? null,
+      errorMessage: (row.error_message as string | null) ?? null,
+      sesMessageId: (row.ses_message_id as string | null) ?? null,
+      createdAt: row.created_at as string,
+    });
+    bySend.set(sendId, list);
+  }
+
+  return sendRows.map((row) => ({
+    id: row.id as string,
+    listingId: (row.listing_id as string | null) ?? null,
+    listingIds: Array.isArray(row.listing_ids)
+      ? (row.listing_ids as string[])
+      : [],
+    sendKind: (row.send_kind as 'listing' | 'digest') ?? 'listing',
+    subject: row.subject as string,
+    sendTrigger: (row.send_trigger as CirculationSendTrigger) ?? 'manual',
+    fromEmail: (row.from_email as string | null) ?? null,
+    fromName: (row.from_name as string | null) ?? null,
+    recipientCount: Number(row.recipient_count ?? 0),
+    createdAt: row.created_at as string,
+    recipients: bySend.get(row.id as string) ?? [],
+  }));
+}
+
 export async function circulateListing(
   client: SupabaseClient,
   input: {

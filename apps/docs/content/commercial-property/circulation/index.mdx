@@ -20,13 +20,32 @@ flowchart LR
 
 1. Publish a requirement form embed (tokenised).
 2. Submissions create or update requirements and marketing preferences.
-3. On a disposal, open **Circulate** (Interest or Management), review matches, and send.
-4. Optionally enable **Auto-circulate new matches** so subscribed applicants are mailed when the daily cron finds new fits.
-5. Applicants unsubscribe via the link in every email. Emails use the workspace brand (name, logo, colours), not Ozer.
+3. When a disposal **goes live** (instructed / marketing / under offer), each matching subscribed person gets **one** branded email of **all** properties that currently match them — not only the new listing.
+4. Open **Circulation** in the sidebar to see the list, pause auto-send, run a send, and read the log. Per-disposal **Circulate** on Interest / Management is still there for a one-off blast of a single listing.
+5. Applicants open a private `/share/matches/[token]` page (workspace brand, not Ozer) to see current matches and manage unsubscribe / “email me when something new matches”.
 
 Compliance background: [Circulation & email compliance](/commercial-property/circulation/compliance).
 
 SES setup checklist for engineers: `apps/web/lib/commercial/circulation/SES_CHECKLIST.md` in the monorepo.
+
+## Circulation workspace
+
+Open **Circulation** in a commercial-property workspace to:
+
+- Turn workspace auto-send on or off
+- See who is on the list, last sent, and pause/resume a person
+- Trigger a manual run or dry-run
+- Read the send log (digest + per-listing Circulate)
+
+## Public matches page
+
+Every circulation email includes unsubscribe plus **Manage preferences**. That tokenised page (`/share/matches/[token]`) uses the workspace logo and colours. Applicants can:
+
+- See live matching disposals (and open the brochure when one is published)
+- Toggle “email me when something new matches”
+- Unsubscribe / resubscribe
+
+No Ozer login is required.
 
 ## Set up the website embed
 
@@ -36,6 +55,13 @@ SES setup checklist for engineers: `apps/web/lib/commercial/circulation/SES_CHEC
 4. Submissions arrive as requirements with source `website_embed` and lawful basis `website_requirement_form`.
 
 Public form URL pattern: `/share/requirement-form/[token]`.
+
+## Automatic digest (new listing → matching people)
+
+- Workspace auto-send is **on by default**. Turn it off on **Circulation**.
+- Per-disposal **Include in automatic match emails** is on for new listings and when a listing goes live. Turn it off to exclude that disposal from automatic triggers.
+- Each contact receives at most one digest per run. If they were just mailed the **same set** of listings, the send is skipped.
+- Daily cron `GET /api/cron/commercial-match-digest` (Bearer `CRON_SECRET`) is the fallback if a publish hook is missed. It also still sends the desk (owner/admin) match digest.
 
 ## Circulate a disposal
 

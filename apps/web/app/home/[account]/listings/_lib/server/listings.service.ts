@@ -8,6 +8,8 @@ import { randomBytes } from 'crypto';
 
 import { getLogger } from '@kit/shared/logger';
 
+import { listingBecameLiveForCirculation } from '~/lib/commercial/circulation/digest-fingerprint';
+import { scheduleCirculationOnListingPublished } from '~/lib/commercial/circulation/trigger-on-publish';
 import type {
   DisposalType,
   ListingLetType,
@@ -16,8 +18,8 @@ import type {
 } from '~/lib/commercial/commercial-constants';
 import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
 import {
-  recordListingEvent,
   type ListingEventType,
+  recordListingEvent,
 } from '~/lib/commercial/listing-events';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
@@ -1430,6 +1432,12 @@ export function createListingsService(client: SupabaseClient) {
       } catch {
         /* best-effort */
       }
+      if (listingBecameLiveForCirculation(null, listing.status)) {
+        scheduleCirculationOnListingPublished({
+          accountId: input.accountId,
+          listingId: listing.id,
+        });
+      }
       return listing;
     },
 
@@ -1546,6 +1554,12 @@ export function createListingsService(client: SupabaseClient) {
         } catch {
           /* best-effort */
         }
+      }
+      if (listingBecameLiveForCirculation(existing.status, listing.status)) {
+        scheduleCirculationOnListingPublished({
+          accountId,
+          listingId,
+        });
       }
       return listing;
     },
