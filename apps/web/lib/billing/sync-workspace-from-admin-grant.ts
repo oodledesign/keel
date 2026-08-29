@@ -62,7 +62,8 @@ export async function seedWorkspaceModulesForProfile(
     await setModuleEnabled(admin, accountId, moduleKey, true);
   }
 
-  // Surveys nav maps to the proposals module key.
+  // Surveys nav checks `proposals` via resolveAccountModuleKey; keep it
+  // enabled even though the canonical surveyor order uses `surveys`.
   if (profile === 'building_surveyor') {
     await setModuleEnabled(admin, accountId, 'proposals', true);
   }

@@ -40,8 +40,8 @@ import { toast } from '@kit/ui/sonner';
 
 import { createAdminWorkspaceAction } from '~/lib/admin/admin-workspace.actions';
 import {
-  ADMIN_WORKSPACE_PROFILE_LABELS,
   ADMIN_WORKSPACE_PROFILES,
+  ADMIN_WORKSPACE_PROFILE_LABELS,
   type CreateAdminWorkspaceInput,
   CreateAdminWorkspaceSchema,
 } from '~/lib/admin/admin-workspace.schema';

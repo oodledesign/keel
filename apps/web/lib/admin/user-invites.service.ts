@@ -272,11 +272,8 @@ async function applyWorkspacePlanForInvite(
   }
 
   if (workspace.profile === 'building_surveyor') {
-    await seedWorkspaceModulesForProfile(
-      admin,
-      accountId,
-      'building_surveyor',
-    );
+    await seedWorkspaceModulesForProfile(admin, accountId, 'building_surveyor');
+    await ensureEstablishedWorkspaceMembersOnboarded(admin, accountId);
     return;
   }
 
