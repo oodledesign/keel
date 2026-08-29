@@ -46,8 +46,7 @@ export function buildBuildingSurveyorSpaceNavChildren(
 ): NavChild[] {
   const ms = moduleSettings;
   const home = createPath(pathsConfig.app.accountHome, account);
-  const pipelineBoardName =
-    options?.pipelineBoardName?.trim() || 'Enquiries';
+  const pipelineBoardName = options?.pipelineBoardName?.trim() || 'Enquiries';
 
   const registry: Record<string, () => NavChild | null> = {
     dashboard: () =>

@@ -106,7 +106,9 @@ export function SurveyPhotosPanel({
         });
       }
       toast.success(
-        files.length === 1 ? 'Photo uploaded' : `${files.length} photos uploaded`,
+        files.length === 1
+          ? 'Photo uploaded'
+          : `${files.length} photos uploaded`,
       );
       await loadPhotos();
     } catch (error) {
@@ -145,6 +147,7 @@ export function SurveyPhotosPanel({
         accountId,
         accountSlug,
         docId,
+        proposalId,
       });
       setPhotos((prev) => prev.filter((photo) => photo.id !== docId));
       toast.success('Photo removed');

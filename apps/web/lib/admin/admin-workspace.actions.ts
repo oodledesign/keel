@@ -246,7 +246,7 @@ export const createAdminWorkspaceAction = enhanceAction(
       user_id: ownerUserId,
       account_slug: slug,
       account_space_type: spaceType,
-      account_business_type: businessType,
+      account_business_type: businessType ?? undefined,
       account_complete_onboarding: true,
     });
 

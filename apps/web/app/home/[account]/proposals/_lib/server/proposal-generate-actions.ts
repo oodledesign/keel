@@ -46,6 +46,7 @@ const generateProposalSchema = z
     { message: 'Provide at least one transcript or note/file for context' },
   );
 
+/** Same invoices.edit gate as the proposal writer — survey reports reuse that permission. */
 async function assertInvoicesEditPermission(accountId: string, userId: string) {
   const client = getSupabaseServerClient();
   const api = createTeamAccountsApi(client);

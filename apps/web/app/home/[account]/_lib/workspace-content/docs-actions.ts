@@ -250,12 +250,17 @@ export const deleteWorkspaceDocAction = enhanceAction(
     const client = getSupabaseServerClient();
     const admin = getSupabaseServerAdminClient();
 
-    const { data: doc, error: fetchError } = await client
+    let fetchQuery = client
       .from('docs')
       .select('kind, file_path, storage_path, storage_bucket')
       .eq('id', data.docId)
-      .eq('account_id', data.accountId)
-      .maybeSingle();
+      .eq('account_id', data.accountId);
+    if (data.proposalId) {
+      // proposal_id may lag generated Database types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fetchQuery = (fetchQuery as any).eq('proposal_id', data.proposalId);
+    }
+    const { data: doc, error: fetchError } = await fetchQuery.maybeSingle();
 
     if (fetchError) throw fetchError;
     const row = doc as {
@@ -266,11 +271,17 @@ export const deleteWorkspaceDocAction = enhanceAction(
     } | null;
     if (!row) return { ok: true };
 
-    const { error } = await client
+    let deleteQuery = client
       .from('docs')
       .delete()
       .eq('id', data.docId)
       .eq('account_id', data.accountId);
+    if (data.proposalId) {
+      // proposal_id may lag generated Database types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      deleteQuery = (deleteQuery as any).eq('proposal_id', data.proposalId);
+    }
+    const { error } = await deleteQuery;
 
     if (error) throw error;
 
@@ -290,6 +301,7 @@ export const deleteWorkspaceDocAction = enhanceAction(
       accountId: z.string().uuid(),
       accountSlug: z.string().min(1),
       docId: z.string().uuid(),
+      proposalId: z.string().uuid().optional(),
     }),
   },
 );

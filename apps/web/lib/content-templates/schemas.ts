@@ -33,6 +33,7 @@ export const UpsertAccountTemplateSchema = z.object({
     'proposal_email',
     'contract_email',
     'invoice_email',
+    'survey_report_html',
   ]),
   name: z.string().min(1).max(120),
   description: z.string().max(500).optional().nullable(),

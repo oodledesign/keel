@@ -37,7 +37,10 @@ export function SurveyorDashboard({
   openEnquiryCount,
   recentSurveys,
 }: SurveyorDashboardData) {
-  const enquiriesHref = accountPath(accountSlug, pathsConfig.app.accountPipeline);
+  const enquiriesHref = accountPath(
+    accountSlug,
+    pathsConfig.app.accountPipeline,
+  );
   const surveysHref = accountPath(accountSlug, pathsConfig.app.accountSurveys);
   const transcriptsHref = accountPath(
     accountSlug,
@@ -95,7 +98,10 @@ export function SurveyorDashboard({
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold">Recent surveys</h3>
-            <Link href={surveysHref} className={`text-sm ${workspaceLinkAccent}`}>
+            <Link
+              href={surveysHref}
+              className={`text-sm ${workspaceLinkAccent}`}
+            >
               View all
             </Link>
           </div>
@@ -117,7 +123,9 @@ export function SurveyorDashboard({
                     <span>
                       <span className="font-medium">{survey.title}</span>
                       {survey.clientName ? (
-                        <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
+                        <span
+                          className={`mt-0.5 block text-xs ${workspaceTextMuted}`}
+                        >
                           {survey.clientName}
                         </span>
                       ) : null}
@@ -207,7 +215,9 @@ function QuickLink({
           <Icon className="mt-0.5 h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
           <div>
             <p className="text-sm font-semibold">{label}</p>
-            <p className={`mt-1 text-xs ${workspaceTextMuted}`}>{description}</p>
+            <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+              {description}
+            </p>
           </div>
         </CardContent>
       </Card>

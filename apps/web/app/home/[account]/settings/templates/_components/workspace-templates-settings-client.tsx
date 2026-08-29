@@ -30,6 +30,7 @@ const KIND_LABELS: Record<AccountTemplateKind, string> = {
   proposal_email: 'Proposal email',
   contract_email: 'Contract email',
   invoice_email: 'Invoice email',
+  survey_report_html: 'Survey report',
 };
 
 type Props = {
@@ -69,7 +70,7 @@ export function WorkspaceTemplatesSettingsClient({
     [systemTemplates, kind],
   );
 
-  const isHtml = kind === 'proposal_html';
+  const isHtml = kind === 'proposal_html' || kind === 'survey_report_html';
   const isEmail =
     kind === 'proposal_email' ||
     kind === 'contract_email' ||

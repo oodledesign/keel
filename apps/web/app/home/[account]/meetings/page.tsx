@@ -30,10 +30,7 @@ export const generateMetadata = async ({ params }: MeetingsPageProps) => {
 async function MeetingsPage({ params }: MeetingsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, [
-    'work',
-    'building-surveyor',
-  ]);
+  redirectIfSpaceNotIn(workspace, accountSlug, ['work', 'building-surveyor']);
 
   const access = getTeamAccountAccess(
     workspace.account as {

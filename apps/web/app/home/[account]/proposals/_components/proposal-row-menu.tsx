@@ -24,12 +24,12 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
-import { uniqueEmails } from '~/lib/email/unique-emails';
 import {
+  type ProposalDocumentKind,
   documentEditPath,
   documentKindCopy,
-  type ProposalDocumentKind,
 } from '~/lib/building-surveyor/document-kind';
+import { uniqueEmails } from '~/lib/email/unique-emails';
 
 import { DEFAULT_PROPOSAL_EMAIL_SUBJECT } from '../_lib/doc-smart-fields';
 import { getErrorMessage } from '../_lib/error-message';

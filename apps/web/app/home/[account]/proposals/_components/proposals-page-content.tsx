@@ -38,12 +38,11 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
-
 import {
+  type ProposalDocumentKind,
   documentEditPath,
   documentKindCopy,
   titleForRecipient,
-  type ProposalDocumentKind,
 } from '~/lib/building-surveyor/document-kind';
 
 import { getErrorMessage } from '../_lib/error-message';
@@ -427,7 +426,9 @@ export function ProposalsPageContent({
         title: deal
           ? titleForRecipient(
               documentKind,
-              deal.contactName || deal.companyName || copy.dealLabel.toLowerCase(),
+              deal.contactName ||
+                deal.companyName ||
+                copy.dealLabel.toLowerCase(),
             )
           : undefined,
       });
@@ -483,6 +484,11 @@ export function ProposalsPageContent({
       const transcripts = aiTranscripts
         .filter((t) => aiSelectedTranscriptIds.includes(t.id))
         .map((t) => ({ title: t.title, content: t.content }));
+      if (transcripts.some((t) => t.content.length > 40_000)) {
+        toast.message(
+          'A transcript is longer than 40,000 characters, so only the start was used for the draft.',
+        );
+      }
 
       const selectedRefs = aiNotesFiles
         .filter((item) =>

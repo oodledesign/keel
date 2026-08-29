@@ -117,9 +117,7 @@ export function documentEditPath(
     kind === 'survey_report'
       ? pathsConfig.app.accountSurveyEdit
       : pathsConfig.app.accountProposalEdit;
-  return template
-    .replace('[account]', accountSlug)
-    .replace('[id]', documentId);
+  return template.replace('[account]', accountSlug).replace('[id]', documentId);
 }
 
 export function documentListPath(

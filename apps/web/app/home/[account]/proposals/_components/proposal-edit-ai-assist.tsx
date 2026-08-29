@@ -33,10 +33,9 @@ import {
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
-
 import {
-  documentKindCopy,
   type ProposalDocumentKind,
+  documentKindCopy,
 } from '~/lib/building-surveyor/document-kind';
 
 import { getErrorMessage } from '../_lib/error-message';
@@ -273,9 +272,7 @@ export function ProposalEditAiAssist({
     }
 
     if (contentHtml.trim()) {
-      const ok = window.confirm(
-        copy.replaceConfirm,
-      );
+      const ok = window.confirm(copy.replaceConfirm);
       if (!ok) return;
     }
 
@@ -306,6 +303,11 @@ export function ProposalEditAiAssist({
       const selectedTranscripts = transcripts
         .filter((t) => selectedTranscriptIds.includes(t.id))
         .map((t) => ({ title: t.title, content: t.content }));
+      if (selectedTranscripts.some((t) => t.content.length > 40_000)) {
+        toast.message(
+          'A transcript is longer than 40,000 characters, so only the start was used for the draft.',
+        );
+      }
 
       const selectedRefs = notesFiles
         .filter((item) =>

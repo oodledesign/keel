@@ -63,7 +63,16 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     key: 'windows',
     heading: 'Windows',
     group: 'Outside',
-    keywords: ['window', 'glazing', 'sash', 'casement', 'double glazed'],
+    keywords: [
+      'window',
+      'windows',
+      'glazing',
+      'sash',
+      'casement',
+      'double glazed',
+      'cill',
+      'window cill',
+    ],
   },
   {
     key: 'outside_doors',
@@ -117,7 +126,13 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     key: 'built_in_fittings',
     heading: 'Built-in fittings',
     group: 'Inside',
-    keywords: ['kitchen', 'fitted', 'cupboard', 'wardrobe'],
+    keywords: [
+      'fitted kitchen',
+      'fitted',
+      'cupboard',
+      'wardrobe',
+      'kitchen unit',
+    ],
   },
   {
     key: 'woodwork',
@@ -135,14 +150,7 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     key: 'electricity',
     heading: 'Electricity',
     group: 'Services',
-    keywords: [
-      'electric',
-      'consumer unit',
-      'fuse',
-      'socket',
-      'wiring',
-      'rcd',
-    ],
+    keywords: ['electric', 'consumer unit', 'fuse', 'socket', 'wiring', 'rcd'],
   },
   {
     key: 'gas_oil',
@@ -250,10 +258,9 @@ export function buildingSurveySectionListForPrompt(): string {
  * Route transcript paragraphs into section keys using keyword scores.
  * Used when the LLM path is unavailable, and as a safety net after generation.
  */
-export function routeTranscriptToSections(transcript: string): Record<
-  string,
-  string
-> {
+export function routeTranscriptToSections(
+  transcript: string,
+): Record<string, string> {
   const buckets: Record<string, string[]> = {};
   for (const section of BUILDING_SURVEY_SECTIONS) {
     buckets[section.key] = [];
@@ -293,9 +300,7 @@ export function routeTranscriptToSections(transcript: string): Record<
   return result;
 }
 
-export function htmlFromRoutedSections(
-  routed: Record<string, string>,
-): string {
+export function htmlFromRoutedSections(routed: Record<string, string>): string {
   return BUILDING_SURVEY_SECTIONS.map((section) => {
     const body = routed[section.key]?.trim();
     const paragraph = body

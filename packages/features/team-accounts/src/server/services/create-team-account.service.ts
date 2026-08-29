@@ -36,9 +36,9 @@ class CreateTeamAccountService {
     const { error, data } = await client.rpc('create_team_account', {
       account_name: params.name,
       user_id: params.userId,
-      account_slug: params.slug ?? null,
+      account_slug: params.slug,
       account_space_type: params.spaceType ?? 'work',
-      account_business_type: params.businessType ?? null,
+      account_business_type: params.businessType ?? 'other',
       // Must be passed explicitly: a 5-arg + 6-arg overload pair makes PostgREST
       // return HTTP 300 (PGRST203) when only the shared params are sent.
       account_complete_onboarding: false,

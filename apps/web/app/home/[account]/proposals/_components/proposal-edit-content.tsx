@@ -18,15 +18,14 @@ import { DocumentRichTextEditor } from '~/components/document-rich-text';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import {
+  type ProposalDocumentKind,
+  documentKindCopy,
+  documentListPath,
+} from '~/lib/building-surveyor/document-kind';
+import {
   useFormDirtyState,
   useUnsavedChangesWarning,
 } from '~/lib/hooks/use-unsaved-changes-warning';
-
-import {
-  documentKindCopy,
-  documentListPath,
-  type ProposalDocumentKind,
-} from '~/lib/building-surveyor/document-kind';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { updateProposal } from '../_lib/server/server-actions';

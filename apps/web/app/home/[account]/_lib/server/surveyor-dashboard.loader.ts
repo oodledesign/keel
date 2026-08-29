@@ -36,6 +36,8 @@ async function loadSurveyorDashboardDataImpl(
   redirectIfSpaceNotIn(workspace, accountSlug, ['building-surveyor']);
 
   const accountId = workspace.account.id as string;
+  // `kind` / surveyor columns may lag generated Database types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = getSupabaseServerClient() as any;
 
   const [dealsResult, surveysResult] = await Promise.all([
@@ -58,7 +60,9 @@ async function loadSurveyorDashboardDataImpl(
   const deals = (dealsResult.data ?? []) as Array<{ stage: string }>;
   const enquiryCount = deals.filter((deal) => deal.stage === 'enquiry').length;
   const bookedCount = deals.filter((deal) => deal.stage === 'booked').length;
-  const surveyedCount = deals.filter((deal) => deal.stage === 'surveyed').length;
+  const surveyedCount = deals.filter(
+    (deal) => deal.stage === 'surveyed',
+  ).length;
   const openEnquiryCount = deals.filter((deal) =>
     (BUILDING_SURVEYOR_PIPELINE_STAGES as readonly string[]).includes(
       deal.stage,

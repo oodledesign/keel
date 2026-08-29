@@ -29,6 +29,7 @@ const KIND_LABELS: Record<ContentTemplateKind, string> = {
   contract_email: 'Contract email',
   invoice_email: 'Invoice email',
   email_reply: 'Email reply',
+  survey_report_html: 'Survey report HTML',
 };
 
 function slugify(value: string) {
