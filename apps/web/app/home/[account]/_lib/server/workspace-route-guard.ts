@@ -38,6 +38,12 @@ export const COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'commercial-property',
 ];
 
+/** Public form generator (pipeline leads + listing enquiries). */
+export const FORMS_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
+  'work',
+  'commercial-property',
+];
+
 /**
  * Paid / granted Apps (Signatures, Rankly, Feedflow, Videos, Generate, Apps hub).
  * Commercial Property agencies can keep Business Lite add-ons after conversion.
@@ -75,8 +81,6 @@ export function redirectIfProfileNotIn(
   allowed: WorkspaceProfile[],
 ) {
   if (!allowed.includes(workspace.workspaceProfile)) {
-    redirect(
-      pathsConfig.app.accountSettings.replace('[account]', accountSlug),
-    );
+    redirect(pathsConfig.app.accountSettings.replace('[account]', accountSlug));
   }
 }

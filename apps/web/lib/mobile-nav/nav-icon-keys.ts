@@ -11,6 +11,7 @@ export type MobileNavIconKey =
   | 'home'
   | 'tasks'
   | 'pipeline'
+  | 'forms'
   | 'email'
   | 'planner'
   | 'today'
@@ -59,6 +60,7 @@ const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   planner: 'planner',
   schedule: 'schedule',
   pipeline: 'pipeline',
+  forms: 'forms',
   clients: 'clients',
   meetings: 'meetings',
   websites: 'websites',
@@ -95,6 +97,7 @@ const MOBILE_NAV_ICON_KEY_SET = new Set<string>([
   'home',
   'tasks',
   'pipeline',
+  'forms',
   'email',
   'planner',
   'today',

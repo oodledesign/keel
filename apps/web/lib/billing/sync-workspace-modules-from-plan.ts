@@ -10,6 +10,7 @@ const BUSINESS_CORE_MODULE_KEYS = [
   'tasks',
   'schedule',
   'pipeline',
+  'forms',
   'clients',
   'websites',
   'support_tickets',

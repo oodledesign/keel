@@ -19,6 +19,7 @@ export type AccountModuleKey =
   | 'invoices'
   | 'team'
   | 'pipeline'
+  | 'forms'
   | 'notes'
   | 'docs'
   | 'sops'

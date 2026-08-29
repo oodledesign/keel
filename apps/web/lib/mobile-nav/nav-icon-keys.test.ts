@@ -50,6 +50,7 @@ describe('rewriteHrefToWorkspaceSlug', () => {
 describe('resolveNavIconKey', () => {
   it('resolves canonical workspace module paths', () => {
     expect(resolveNavIconKey('/app/oodle/tasks')).toBe('tasks');
+    expect(resolveNavIconKey('/app/oodle/forms')).toBe('forms');
     expect(resolveNavIconKey('/app/oodle/notes')).toBe('notes');
     expect(resolveNavIconKey('/app/oodle/planner/day')).toBe('today');
     expect(resolveNavIconKey('/app/oodle/planner/plan')).toBe('planner');
