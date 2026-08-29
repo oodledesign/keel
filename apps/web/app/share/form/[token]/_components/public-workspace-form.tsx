@@ -227,11 +227,7 @@ function PublicField({
         )}
       </Label>
       {field.type === 'select' ? (
-        <Select
-          value={textValue}
-          onValueChange={onChange}
-          disabled={disabled}
-        >
+        <Select value={textValue} onValueChange={onChange} disabled={disabled}>
           <SelectTrigger id={inputId}>
             <SelectValue placeholder="Choose one" />
           </SelectTrigger>

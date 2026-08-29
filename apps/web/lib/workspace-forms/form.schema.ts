@@ -54,7 +54,9 @@ export const PublishWorkspaceFormSchema = z.object({
 
 export const PublicWorkspaceFormSubmitSchema = z.object({
   token: z.string().min(16).max(128),
-  values: z.record(z.string(), z.union([z.string(), z.boolean()])).default({}),
+  values: z
+    .record(z.string().max(80), z.union([z.string().max(2000), z.boolean()]))
+    .default({}),
   listingId: z.string().uuid().optional().nullable(),
   propertyId: z.string().uuid().optional().nullable(),
   /** Honeypot — bots fill this; humans leave empty. */

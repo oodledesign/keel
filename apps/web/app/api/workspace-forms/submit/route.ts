@@ -4,6 +4,7 @@ import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { clientIpFromRequest, isRateLimited } from '~/lib/rate-limit/in-memory';
+import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 import { PublicWorkspaceFormSubmitSchema } from '~/lib/workspace-forms/form.schema';
 import {
   loadPublicWorkspaceFormByToken,
@@ -57,13 +58,11 @@ export const POST = enhanceRouteHandler(
         { headers: CORS_HEADERS },
       );
     } catch (error) {
+      const status = error instanceof FormSubmitError ? error.statusCode : 500;
       const message =
-        error instanceof Error ? error.message : 'Could not send your enquiry.';
-      const status = message.startsWith('This form needs a listing')
-        ? 400
-        : message.startsWith('Please enter')
-          ? 400
-          : 500;
+        error instanceof FormSubmitError
+          ? error.message
+          : 'Could not send your enquiry. Please try again.';
 
       if (status === 500) {
         console.error(
@@ -73,12 +72,7 @@ export const POST = enhanceRouteHandler(
       }
 
       return NextResponse.json(
-        {
-          error:
-            status === 500
-              ? 'Could not send your enquiry. Please try again.'
-              : message,
-        },
+        { error: message },
         { status, headers: CORS_HEADERS },
       );
     }

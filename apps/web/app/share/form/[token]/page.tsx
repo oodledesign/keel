@@ -1,7 +1,5 @@
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { loadPublicWorkspaceFormByToken } from '~/lib/workspace-forms/public-form';
+import { loadCachedPublicWorkspaceForm } from '~/lib/workspace-forms/public-form';
 
 import { PublicWorkspaceForm } from './_components/public-workspace-form';
 
@@ -18,8 +16,7 @@ interface PublicFormPageProps {
 
 export const generateMetadata = async ({ params }: PublicFormPageProps) => {
   const { token } = await params;
-  const admin = getSupabaseServerAdminClient();
-  const form = await loadPublicWorkspaceFormByToken(admin, token);
+  const form = await loadCachedPublicWorkspaceForm(token);
   return {
     title: form ? `${form.name} · ${form.accountName}` : 'Form not found',
     robots: { index: false, follow: false },
@@ -32,8 +29,7 @@ async function PublicWorkspaceFormPage({
 }: PublicFormPageProps) {
   const { token } = await params;
   const query = await searchParams;
-  const admin = getSupabaseServerAdminClient();
-  const form = await loadPublicWorkspaceFormByToken(admin, token);
+  const form = await loadCachedPublicWorkspaceForm(token);
   const embed = query.embed === '1' || query.embed === 'true';
 
   if (!form) {
@@ -57,7 +53,7 @@ async function PublicWorkspaceFormPage({
       style={{ background: form.brand.secondary_color || '#FBF6EC' }}
     >
       <PublicWorkspaceForm
-        token={form.shareToken}
+        token={token}
         accountName={form.accountName}
         formName={form.name}
         description={form.description}

@@ -228,11 +228,7 @@ export function extractContactFromValues(
     if (field.type === 'checkbox') {
       const checked =
         raw === true || raw === 'true' || raw === 'on' || raw === '1';
-      if (field.key === 'name' || field.type === 'name') {
-        contactName = checked ? field.label : contactName;
-      } else {
-        extras[field.key] = checked;
-      }
+      extras[field.key] = checked;
       continue;
     }
 

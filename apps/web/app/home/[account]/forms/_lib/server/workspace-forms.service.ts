@@ -116,26 +116,20 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
       const forms = ((data ?? []) as FormRow[]).map((row) => mapForm(row));
       if (forms.length === 0) return [];
 
-      const { data: counts, error: countError } = await fromTable(
-        client,
-        'workspace_form_submissions',
-      )
-        .select('form_id')
-        .eq('account_id', accountId)
-        .in(
-          'form_id',
-          forms.map((form) => form.id),
-        );
+      const counts = await Promise.all(
+        forms.map(async (form) => {
+          const { count } = await fromTable(
+            client,
+            'workspace_form_submissions',
+          )
+            .select('id', { count: 'exact', head: true })
+            .eq('account_id', accountId)
+            .eq('form_id', form.id);
+          return [form.id, count ?? 0] as const;
+        }),
+      );
 
-      if (countError) {
-        return forms;
-      }
-
-      const tally = new Map<string, number>();
-      for (const row of (counts ?? []) as Array<{ form_id: string }>) {
-        tally.set(row.form_id, (tally.get(row.form_id) ?? 0) + 1);
-      }
-
+      const tally = new Map(counts);
       return forms.map((form) => ({
         ...form,
         submissionCount: tally.get(form.id) ?? 0,
@@ -261,7 +255,6 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         submit_label: input.submitLabel?.trim() || 'Submit',
         success_message: input.successMessage?.trim() || null,
         fields,
-        updated_at: new Date().toISOString(),
       };
 
       if (input.status) updates.status = input.status;
@@ -294,7 +287,6 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         .update({
           enabled: input.enabled,
           status: input.enabled ? 'published' : 'draft',
-          updated_at: new Date().toISOString(),
         })
         .eq('id', input.formId)
         .eq('account_id', input.accountId)

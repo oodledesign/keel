@@ -1,9 +1,14 @@
 import 'server-only';
 
+import { cache } from 'react';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 
 import {
   type FormContactValues,
@@ -123,6 +128,11 @@ export async function loadPublicWorkspaceFormByToken(
     brand,
   };
 }
+
+export const loadCachedPublicWorkspaceForm = cache(async (token: string) => {
+  const admin = getSupabaseServerAdminClient();
+  return loadPublicWorkspaceFormByToken(admin, token);
+});
 
 async function resolveListingForAccount(
   admin: SupabaseClient,
@@ -244,13 +254,13 @@ export async function submitPublicWorkspaceForm(
   );
 
   if (form.destination === 'listing_enquiry' && !listing) {
-    throw new Error(
+    throw new FormSubmitError(
       'This form needs a listing. Add ?listing= to the URL or choose a default listing in the form settings.',
     );
   }
 
   if (!contact.contactName && !contact.contactEmail) {
-    throw new Error('Please enter your name or email.');
+    throw new FormSubmitError('Please enter your name or email.');
   }
 
   let pipelineDealId: string | null = null;
@@ -288,7 +298,19 @@ export async function submitPublicWorkspaceForm(
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message ?? 'Could not store submission');
+    if (pipelineDealId) {
+      await fromTable(admin, 'pipeline_deals')
+        .delete()
+        .eq('id', pipelineDealId)
+        .eq('account_id', form.accountId);
+    }
+    if (commercialEnquiryId) {
+      await fromTable(admin, 'commercial_enquiries')
+        .delete()
+        .eq('id', commercialEnquiryId)
+        .eq('account_id', form.accountId);
+    }
+    throw new FormSubmitError('Could not store submission', 500);
   }
 
   return {
