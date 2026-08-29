@@ -293,6 +293,8 @@ export async function submitPublicWorkspaceForm(
   let requirementId: string | null = null;
   let clientId: string | null = null;
 
+  let successMessage = form.successMessage;
+
   if (form.destination === 'mailing_list') {
     const spec = extractMailingListSpec(contact);
     const mailing = await submitMailingListSignup({
@@ -304,6 +306,10 @@ export async function submitPublicWorkspaceForm(
     });
     clientId = mailing.clientId;
     requirementId = mailing.requirementId;
+    if (!mailing.subscribed) {
+      successMessage =
+        'We have your details, but this email is unsubscribed from the mailing list. Contact the workspace if you want emails again.';
+    }
   } else if (form.destination === 'listing_enquiry' && listing) {
     commercialEnquiryId = await createListingEnquiry(
       admin,
@@ -360,6 +366,6 @@ export async function submitPublicWorkspaceForm(
     requirementId,
     clientId,
     listingId: listing?.id ?? null,
-    successMessage: form.successMessage,
+    successMessage,
   };
 }

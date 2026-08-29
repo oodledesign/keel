@@ -227,6 +227,7 @@ export async function unsubscribeWorkspaceMailingListByToken(
   const { data } = await db
     .select('id, account_id, email')
     .eq('unsubscribe_token', token)
+    .eq('purpose', PURPOSE)
     .maybeSingle();
 
   if (!data) return null;
@@ -305,6 +306,7 @@ export async function submitMailingListSignup(input: {
   clientId: string;
   requirementId: string | null;
   preferenceId: string;
+  subscribed: boolean;
 }> {
   const email = normalizeCirculationEmail(input.contact.contactEmail);
   const clientId = await upsertWorkspaceContactFromForm(
@@ -355,6 +357,7 @@ export async function submitMailingListSignup(input: {
         accountId: input.accountId,
         offices: [],
         consentCopyVersion: CONSENT_COPY_VERSION,
+        consentSource: 'workspace_form',
       },
       submission,
     );
@@ -367,15 +370,21 @@ export async function submitMailingListSignup(input: {
       requirementPatch.use_class = input.spec.useClass;
     }
 
-    await fromTable(input.admin, 'commercial_requirements')
+    const { error: patchError } = await fromTable(
+      input.admin,
+      'commercial_requirements',
+    )
       .update(requirementPatch)
       .eq('id', requirementId)
       .eq('account_id', input.accountId);
+
+    if (patchError) throw new Error(patchError.message);
   }
 
   return {
     clientId,
     requirementId,
     preferenceId: preference.id,
+    subscribed: preference.marketingStatus === 'subscribed',
   };
 }

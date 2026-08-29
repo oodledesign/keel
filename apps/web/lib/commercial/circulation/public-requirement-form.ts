@@ -30,6 +30,7 @@ export type PublicRequirementUpsertContext = {
   accountId: string;
   offices?: PublicRequirementOffice[];
   consentCopyVersion?: string;
+  consentSource?: string;
 };
 
 export type RequirementFormSubmission = {
@@ -124,12 +125,16 @@ export async function upsertRequirementFromPublicForm(
     'consentCopyVersion' in form && form.consentCopyVersion
       ? form.consentCopyVersion
       : CONSENT_COPY_VERSION;
+  const consentSource =
+    'consentSource' in form && form.consentSource
+      ? form.consentSource
+      : 'website_embed';
 
   const preference = await circulation.ensureSubscribedPreference({
     accountId: form.accountId,
     email,
     lawfulBasis: 'website_requirement_form',
-    consentSource: 'website_embed',
+    consentSource,
     consentCopyVersion,
   });
 
