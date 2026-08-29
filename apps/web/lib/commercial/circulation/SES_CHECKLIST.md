@@ -13,7 +13,7 @@ AWS_SECRET_ACCESS_KEY=
 # Optional override if SES region differs from AWS_REGION
 # SES_REGION=eu-west-2
 
-# HMAC secret for circulation unsubscribe tokens (falls back to service role key)
+# HMAC secret for circulation unsubscribe tokens (required in production)
 CIRCULATION_UNSUBSCRIBE_SECRET=
 
 NEXT_PUBLIC_SITE_URL=https://app.ozer.so
