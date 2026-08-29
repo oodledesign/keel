@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -20,6 +20,7 @@ import type { CirculationCandidate } from '~/lib/commercial/circulation/circulat
 
 import {
   circulateListingAction,
+  getCirculationIdentityAction,
   listListingCirculationCandidates,
 } from '../_lib/server/circulation-actions';
 
@@ -42,17 +43,24 @@ export function ListingCirculateDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [fromEmail, setFromEmail] = useState(defaultFromEmail ?? '');
   const [fromName, setFromName] = useState(defaultFromName ?? '');
+  const [dryRun, setDryRun] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
+  function loadMatches() {
     setLoading(true);
-    listListingCirculationCandidates({ accountId, listingId })
-      .then((rows) => {
+    Promise.all([
+      listListingCirculationCandidates({ accountId, listingId }),
+      getCirculationIdentityAction({ accountId }).catch(() => null),
+    ])
+      .then(([rows, identity]) => {
         setCandidates(rows);
         setSelected(
           new Set(rows.filter((r) => r.subscribed).map((r) => r.requirementId)),
         );
+        if (identity) {
+          setFromName((current) => current || identity.fromName || '');
+          setFromEmail((current) => current || identity.fromEmail || '');
+        }
       })
       .catch((err) => {
         toast.error(
@@ -60,7 +68,7 @@ export function ListingCirculateDialog({
         );
       })
       .finally(() => setLoading(false));
-  }, [open, accountId, listingId]);
+  }
 
   function toggle(id: string, enabled: boolean) {
     setSelected((prev) => {
@@ -73,7 +81,9 @@ export function ListingCirculateDialog({
 
   function send() {
     if (!fromEmail.trim()) {
-      toast.error('Set a From email on a verified SES domain');
+      toast.error(
+        'Set a From email on a verified SES domain (or save a contact email in Brand settings)',
+      );
       return;
     }
     startTransition(async () => {
@@ -85,9 +95,12 @@ export function ListingCirculateDialog({
           fromEmail: fromEmail.trim(),
           fromName: fromName.trim() || undefined,
           replyTo: fromEmail.trim(),
+          dryRun,
         });
         toast.success(
-          `Circulation sent: ${result.sent} delivered, ${result.skipped} skipped, ${result.failed} failed`,
+          dryRun
+            ? `Dry run: ${result.dryRunEligible} would be mailed (nothing sent)`
+            : `Circulation sent: ${result.sent} delivered, ${result.skipped} skipped, ${result.failed} failed`,
         );
         setOpen(false);
       } catch (err) {
@@ -97,20 +110,31 @@ export function ListingCirculateDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) loadMatches();
+      }}
+    >
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="outline">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          data-test="circulation-open-button"
+        >
           Circulate
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Circulate matching requirements</DialogTitle>
+          <DialogTitle>Send to matching requirements</DialogTitle>
         </DialogHeader>
 
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Sends via Amazon SES to subscribed applicants. Preview the list, then
-          confirm.
+          Sends via Amazon SES as this workspace — logo, colours, and From name
+          come from Brand settings. Recipients who unsubscribed are blocked.
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -140,7 +164,7 @@ export function ListingCirculateDialog({
             </p>
           ) : candidates.length === 0 ? (
             <p className="p-2 text-sm text-[var(--workspace-shell-text-muted)]">
-              No matching subscribed requirements found.
+              No matching requirements with an email address.
             </p>
           ) : (
             candidates.map((c) => (
@@ -150,7 +174,7 @@ export function ListingCirculateDialog({
               >
                 <Checkbox
                   checked={selected.has(c.requirementId)}
-                  disabled={!c.subscribed}
+                  disabled={c.blocked}
                   onCheckedChange={(v) => toggle(c.requirementId, Boolean(v))}
                 />
                 <span className="min-w-0 flex-1 text-sm">
@@ -165,7 +189,11 @@ export function ListingCirculateDialog({
                   ) : null}
                   <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
                     {c.email} · score {c.score}
-                    {!c.subscribed ? ' · not subscribed' : ''}
+                    {c.blocked
+                      ? ` · ${c.consentStatus}`
+                      : c.subscribed
+                        ? ' · subscribed'
+                        : ' · no preference on file'}
                   </span>
                 </span>
               </label>
@@ -173,13 +201,29 @@ export function ListingCirculateDialog({
           )}
         </div>
 
+        <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
+          <Checkbox
+            checked={dryRun}
+            onCheckedChange={(v) => setDryRun(Boolean(v))}
+            data-test="circulation-dry-run-checkbox"
+          />
+          Dry run — log recipients without calling SES
+        </label>
+
         <DialogFooter>
           <Button
             type="button"
             disabled={pending || selected.size === 0}
+            data-test="circulation-send-button"
             onClick={send}
           >
-            {pending ? 'Sending…' : `Send to ${selected.size}`}
+            {pending
+              ? dryRun
+                ? 'Logging…'
+                : 'Sending…'
+              : dryRun
+                ? `Dry-run ${selected.size}`
+                : `Send to ${selected.size}`}
           </Button>
         </DialogFooter>
       </DialogContent>

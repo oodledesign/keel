@@ -13,7 +13,7 @@ AWS_SECRET_ACCESS_KEY=
 # Optional override if SES region differs from AWS_REGION
 # SES_REGION=eu-west-2
 
-# HMAC secret for circulation unsubscribe tokens (falls back to service role key)
+# HMAC secret for circulation unsubscribe tokens (required in production)
 CIRCULATION_UNSUBSCRIBE_SECRET=
 
 NEXT_PUBLIC_SITE_URL=https://app.ozer.so
@@ -45,7 +45,9 @@ SES sandbox only delivers to verified emails. For production:
 |---------|------|
 | SES raw mailer (+ List-Unsubscribe) | `packages/mailers/ses` |
 | Force SES for circulation | `apps/web/lib/commercial/circulation/circulation.service.ts` → `sendCirculationEmailViaSes` |
+| Workspace-branded HTML | `apps/web/lib/commercial/circulation/circulation-email.ts` |
 | Circulate action | `apps/web/app/home/[account]/listings/_lib/server/circulation-actions.ts` |
+| Auto-circulate cron | `apps/web/app/api/cron/commercial-match-digest` → `runCommercialAutoCirculation` |
 | Bounce/complaint (future) | Mirror Zepto webhook pattern into `commercial_marketing_preferences.marketing_status = suppressed` |
 
 Do **not** route circulation through `getMailer()` while `ZEPTOMAIL_TOKEN` is set — that prefers Zepto and violates Zepto’s marketing ToS.

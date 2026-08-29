@@ -233,6 +233,8 @@ export const SetBrochureShareSchema = z.object({
   enabled: z.boolean(),
 });
 
+export const SetAutoCirculateMatchesSchema = SetBrochureShareSchema;
+
 export const MEDIA_TYPES = [
   'image',
   'brochure',
