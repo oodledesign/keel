@@ -5,6 +5,7 @@ import {
   CheckSquare,
   ClipboardList,
   FileText,
+  FormInput,
   LayoutDashboard,
   LineChart,
   ListChecks,
@@ -81,6 +82,14 @@ export function buildCommercialPropertySpaceNavChildren(
             path: createPath(pathsConfig.app.accountPipeline, account),
             Icon: <ClipboardList className={iconClasses} />,
             tourId: 'nav-wip',
+          }
+        : null,
+    forms: () =>
+      access.canViewDashboard && isEnabled(ms, 'forms')
+        ? {
+            label: 'Forms',
+            path: createPath(pathsConfig.app.accountForms, account),
+            Icon: <FormInput className={iconClasses} />,
           }
         : null,
     clients: () =>

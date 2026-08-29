@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileSignature,
   FileText,
+  FormInput,
   Globe,
   Image,
   Instagram,
@@ -243,6 +244,15 @@ function buildWorkNavItemsForKeys(
             label: 'Pipeline',
             path: createPath(pathsConfig.app.accountPipeline, account),
             Icon: <Kanban className={iconClasses} />,
+          }
+        : null,
+    forms: () =>
+      access.canViewDashboard && isWorkNavModuleEnabled(ms, 'forms')
+        ? {
+            label: 'Forms',
+            path: createPath(pathsConfig.app.accountForms, account),
+            Icon: <FormInput className={iconClasses} />,
+            description: 'Public forms, share links, and website embeds.',
           }
         : null,
     clients: () =>
