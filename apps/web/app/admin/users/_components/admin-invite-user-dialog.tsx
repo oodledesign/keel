@@ -60,6 +60,7 @@ const WORKSPACE_OPTIONS: Array<{
   },
   { profile: 'work_property', label: 'Property' },
   { profile: 'commercial_property', label: 'Commercial Property' },
+  { profile: 'building_surveyor', label: 'Building Surveyor' },
   { profile: 'family', label: 'Family' },
   { profile: 'community', label: 'Community' },
 ];

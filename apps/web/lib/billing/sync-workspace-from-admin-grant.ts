@@ -3,6 +3,10 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
+import {
+  type WorkspaceProfile,
+  moduleKeysForProfile,
+} from '~/home/[account]/_lib/workspace-profile';
 
 import { markBusinessUpgradedFromLite } from './business-lite';
 import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
@@ -45,6 +49,22 @@ export async function ensureEstablishedWorkspaceMembersOnboarded(
       '[admin-grant] ensureEstablishedWorkspaceMembersOnboarded:',
       error.message,
     );
+  }
+}
+
+/** Seed canonical modules for a profile (used when no paid plan sync runs). */
+export async function seedWorkspaceModulesForProfile(
+  admin: SupabaseClient,
+  accountId: string,
+  profile: WorkspaceProfile,
+): Promise<void> {
+  for (const moduleKey of moduleKeysForProfile(profile)) {
+    await setModuleEnabled(admin, accountId, moduleKey, true);
+  }
+
+  // Surveys nav maps to the proposals module key.
+  if (profile === 'building_surveyor') {
+    await setModuleEnabled(admin, accountId, 'proposals', true);
   }
 }
 

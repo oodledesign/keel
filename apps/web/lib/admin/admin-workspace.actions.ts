@@ -22,6 +22,7 @@ import { logAdminAction } from '~/lib/admin/log-admin-action';
 import { findPlanByProductAndPlanId } from '~/lib/billing/ozer-plan-catalog';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,
+  seedWorkspaceModulesForProfile,
   syncWorkspaceStateAfterAdminPlan,
 } from '~/lib/billing/sync-workspace-from-admin-grant';
 
@@ -152,6 +153,13 @@ async function applyWorkspaceDefaults(
   }
 
   if (profile === 'family' || profile === 'building_surveyor') {
+    if (profile === 'building_surveyor') {
+      await seedWorkspaceModulesForProfile(
+        looseAdmin,
+        accountId,
+        'building_surveyor',
+      );
+    }
     await ensureEstablishedWorkspaceMembersOnboarded(looseAdmin, accountId);
     return;
   }

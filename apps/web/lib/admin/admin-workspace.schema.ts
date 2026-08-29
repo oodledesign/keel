@@ -21,6 +21,18 @@ export const ADMIN_WORKSPACE_PROFILES = [
 
 export type AdminWorkspaceProfile = (typeof ADMIN_WORKSPACE_PROFILES)[number];
 
+export const ADMIN_WORKSPACE_PROFILE_LABELS: Record<
+  AdminWorkspaceProfile,
+  string
+> = {
+  work_design: 'Business',
+  work_property: 'Property',
+  commercial_property: 'Commercial Property',
+  building_surveyor: 'Building Surveyor',
+  family: 'Family',
+  community: 'Community',
+};
+
 export const CreateAdminWorkspaceSchema = z.object({
   name: z.string().trim().min(1).max(80),
   ownerEmail: z.string().email(),

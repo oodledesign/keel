@@ -40,6 +40,8 @@ import { toast } from '@kit/ui/sonner';
 
 import { createAdminWorkspaceAction } from '~/lib/admin/admin-workspace.actions';
 import {
+  ADMIN_WORKSPACE_PROFILE_LABELS,
+  ADMIN_WORKSPACE_PROFILES,
   type CreateAdminWorkspaceInput,
   CreateAdminWorkspaceSchema,
 } from '~/lib/admin/admin-workspace.schema';
@@ -155,13 +157,11 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="work_design">Business</SelectItem>
-                      <SelectItem value="work_property">Property</SelectItem>
-                      <SelectItem value="commercial_property">
-                        Commercial Property
-                      </SelectItem>
-                      <SelectItem value="family">Family</SelectItem>
-                      <SelectItem value="community">Community</SelectItem>
+                      {ADMIN_WORKSPACE_PROFILES.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {ADMIN_WORKSPACE_PROFILE_LABELS[value]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

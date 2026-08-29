@@ -22,6 +22,7 @@ import {
 import { syncAddonModulesFromEntitlements } from '~/lib/billing/sync-addon-modules-from-entitlements';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,
+  seedWorkspaceModulesForProfile,
   syncWorkspaceStateAfterAdminGrant,
   syncWorkspaceStateAfterAdminPlan,
 } from '~/lib/billing/sync-workspace-from-admin-grant';
@@ -266,10 +267,16 @@ async function applyWorkspacePlanForInvite(
   workspace: NonNullable<AdminUserInviteAccessConfig['workspaces']>[number],
   grantedBy: string,
 ): Promise<void> {
-  if (
-    workspace.profile === 'family' ||
-    workspace.profile === 'building_surveyor'
-  ) {
+  if (workspace.profile === 'family') {
+    return;
+  }
+
+  if (workspace.profile === 'building_surveyor') {
+    await seedWorkspaceModulesForProfile(
+      admin,
+      accountId,
+      'building_surveyor',
+    );
     return;
   }
 
@@ -649,7 +656,10 @@ export async function fulfillAdminUserInvite(
     }
 
     const useWork = (config.workspaces ?? []).some(
-      (ws) => ws.profile === 'work_design' || ws.profile === 'work_property',
+      (ws) =>
+        ws.profile === 'work_design' ||
+        ws.profile === 'work_property' ||
+        ws.profile === 'building_surveyor',
     );
     const useFamily = (config.workspaces ?? []).some(
       (ws) => ws.profile === 'family',
