@@ -16,6 +16,10 @@ import type {
   PublishWorkspaceFormInput,
   UpdateWorkspaceFormInput,
 } from '~/lib/workspace-forms/form.schema';
+import {
+  defaultMailingListFormFields,
+  ensureMailingListFields,
+} from '~/lib/workspace-forms/mailing-list-fields';
 import { parseFormFields } from '~/lib/workspace-forms/public-form';
 
 function fromTable(client: SupabaseClient, table: string) {
@@ -55,6 +59,8 @@ export type WorkspaceFormSubmissionRecord = {
   listingId: string | null;
   pipelineDealId: string | null;
   commercialEnquiryId: string | null;
+  requirementId: string | null;
+  clientId: string | null;
   payload: Record<string, unknown>;
   createdAt: string;
 };
@@ -101,6 +107,22 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     updatedAt: row.updated_at,
     submissionCount,
   };
+}
+
+async function isCommercialAccount(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<boolean> {
+  const { data } = await client
+    .from('accounts')
+    .select('space_type')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  return (
+    (data as { space_type?: string | null } | null)?.space_type ===
+    'commercial-property'
+  );
 }
 
 export function createWorkspaceFormsService(client: SupabaseClient) {
@@ -166,7 +188,7 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         'workspace_form_submissions',
       )
         .select(
-          'id, form_id, contact_name, contact_email, contact_phone, listing_id, pipeline_deal_id, commercial_enquiry_id, payload, created_at',
+          'id, form_id, contact_name, contact_email, contact_phone, listing_id, pipeline_deal_id, commercial_enquiry_id, requirement_id, client_id, payload, created_at',
         )
         .eq('account_id', accountId)
         .eq('form_id', formId)
@@ -185,6 +207,8 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         pipelineDealId: (row.pipeline_deal_id as string | null) ?? null,
         commercialEnquiryId:
           (row.commercial_enquiry_id as string | null) ?? null,
+        requirementId: (row.requirement_id as string | null) ?? null,
+        clientId: (row.client_id as string | null) ?? null,
         payload:
           row.payload && typeof row.payload === 'object'
             ? (row.payload as Record<string, unknown>)
@@ -213,10 +237,13 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
     async createForm(
       input: CreateWorkspaceFormInput,
     ): Promise<WorkspaceFormRecord> {
+      const commercial = await isCommercialAccount(client, input.accountId);
       const fields =
-        input.destination === 'listing_enquiry'
-          ? ensureListingField(defaultWorkspaceFormFields())
-          : defaultWorkspaceFormFields();
+        input.destination === 'mailing_list'
+          ? defaultMailingListFormFields({ commercial })
+          : input.destination === 'listing_enquiry'
+            ? ensureListingField(defaultWorkspaceFormFields())
+            : defaultWorkspaceFormFields();
 
       const { data, error } = await fromTable(client, 'workspace_forms')
         .insert({
@@ -242,10 +269,13 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
     async updateForm(
       input: UpdateWorkspaceFormInput,
     ): Promise<WorkspaceFormRecord> {
+      const commercial = await isCommercialAccount(client, input.accountId);
       const fields =
-        input.destination === 'listing_enquiry'
-          ? ensureListingField(input.fields)
-          : input.fields;
+        input.destination === 'mailing_list'
+          ? ensureMailingListFields(input.fields, { commercial })
+          : input.destination === 'listing_enquiry'
+            ? ensureListingField(input.fields)
+            : input.fields;
 
       const updates: Record<string, unknown> = {
         name: input.name.trim(),

@@ -43,7 +43,7 @@ export const COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'commercial-property',
 ];
 
-/** Public form generator (pipeline leads + listing enquiries). */
+/** Public form generator (pipeline, mailing list, listing enquiries). */
 export const FORMS_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'work',
   'commercial-property',

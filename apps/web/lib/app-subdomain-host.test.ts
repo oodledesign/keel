@@ -146,6 +146,12 @@ describe('resolveAppSubdomainRedirect', () => {
         new URL('https://www.ozer.so/unsubscribe/circulation'),
       ),
     ).toBe('https://app.ozer.so/unsubscribe/circulation');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/unsubscribe/mailing-list'),
+      ),
+    ).toBeNull();
   });
 
   it('serves landlord listing share links on the app host without redirecting to /app', () => {

@@ -15,6 +15,7 @@ import {
   decryptCommercialSecret,
   encryptCommercialSecret,
 } from './commercial-crypto';
+import { OZER_LISTING_ID_META_KEY } from './property-hive-custom-fields';
 
 export type PropertyHiveCredentials = {
   siteUrl: string;
@@ -83,6 +84,8 @@ export type PropertyHivePayload = {
   features?: string[];
   office_id?: string;
   commercial_tenure?: string;
+  /** Ozer listing UUID for WP/Property Hive custom-field mapping. */
+  ozer_listing_id?: string;
 };
 
 type PublicationStatus = 'draft' | 'published' | 'unpublished' | 'error';
@@ -170,6 +173,7 @@ export function mapListingToPropertyHivePayload(
     features: keyPointsToFeatures(listing.key_points),
     available_date: listing.available_from ?? undefined,
     commercial_tenure: listing.tenure ?? undefined,
+    [OZER_LISTING_ID_META_KEY]: listing.id,
   };
 
   if (listing.size_min_sqft != null) {

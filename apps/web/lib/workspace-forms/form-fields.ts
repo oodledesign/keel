@@ -16,6 +16,7 @@ export type WorkspaceFormFieldType =
 export const WORKSPACE_FORM_DESTINATIONS = [
   'pipeline',
   'listing_enquiry',
+  'mailing_list',
 ] as const;
 
 export type WorkspaceFormDestination =
@@ -46,6 +47,7 @@ export const WORKSPACE_FORM_DESTINATION_LABELS: Record<
 > = {
   pipeline: 'Create pipeline enquiry',
   listing_enquiry: 'Create enquiry for a listing',
+  mailing_list: 'Subscribe to mailing list',
 };
 
 export const WORKSPACE_FORM_FIELD_TYPE_LABELS: Record<
@@ -69,6 +71,17 @@ const SEMANTIC_KEYS = new Set([
   'phone',
   'message',
   'listing_id',
+  'company_name',
+  'sector',
+  'tenure',
+  'location_text',
+  'search_radius_miles',
+  'size_min_sqft',
+  'size_max_sqft',
+  'use_class',
+  'budget_min',
+  'budget_max',
+  'marketing_opt_in',
 ]);
 
 export function defaultWorkspaceFormFields(): WorkspaceFormField[] {

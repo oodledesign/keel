@@ -26,6 +26,12 @@ export type PublicRequirementForm = {
   offices: PublicRequirementOffice[];
 };
 
+export type PublicRequirementUpsertContext = {
+  accountId: string;
+  offices?: PublicRequirementOffice[];
+  consentCopyVersion?: string;
+};
+
 export type RequirementFormSubmission = {
   contactName: string;
   contactEmail: string;
@@ -108,18 +114,23 @@ export async function loadPublicRequirementFormByToken(
  */
 export async function upsertRequirementFromPublicForm(
   admin: SupabaseClient,
-  form: PublicRequirementForm,
+  form: PublicRequirementForm | PublicRequirementUpsertContext,
   submission: RequirementFormSubmission,
 ): Promise<{ requirementId: string; created: boolean }> {
   const email = submission.contactEmail.trim().toLowerCase();
   const circulation = createCommercialCirculationService(admin);
+  const offices = form.offices ?? [];
+  const consentCopyVersion =
+    'consentCopyVersion' in form && form.consentCopyVersion
+      ? form.consentCopyVersion
+      : CONSENT_COPY_VERSION;
 
   const preference = await circulation.ensureSubscribedPreference({
     accountId: form.accountId,
     email,
     lawfulBasis: 'website_requirement_form',
     consentSource: 'website_embed',
-    consentCopyVersion: form.consentCopyVersion,
+    consentCopyVersion,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,7 +147,7 @@ export async function upsertRequirementFromPublicForm(
 
   const branchId: string | null = submission.branchId?.trim() || null;
   if (branchId) {
-    const office = form.offices.find((item) => item.id === branchId);
+    const office = offices.find((item) => item.id === branchId);
     if (!office) {
       throw new Error('Unknown office');
     }

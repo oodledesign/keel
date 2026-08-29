@@ -47,6 +47,7 @@ export {
   upsertRequirementFromPublicForm,
   type PublicRequirementForm,
   type PublicRequirementOffice,
+  type PublicRequirementUpsertContext,
   type RequirementFormSubmission,
 } from './public-requirement-form';
 export {

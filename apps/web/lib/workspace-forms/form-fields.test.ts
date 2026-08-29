@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  WORKSPACE_FORM_DESTINATIONS,
   createWorkspaceFormField,
   defaultWorkspaceFormFields,
   ensureListingField,
@@ -10,6 +11,14 @@ import {
 } from './form-fields';
 
 describe('workspace form fields', () => {
+  it('includes mailing_list alongside pipeline and listing enquiry', () => {
+    expect(WORKSPACE_FORM_DESTINATIONS).toEqual([
+      'pipeline',
+      'listing_enquiry',
+      'mailing_list',
+    ]);
+  });
+
   it('defaults to name, email, phone, and message', () => {
     expect(defaultWorkspaceFormFields().map((field) => field.key)).toEqual([
       'name',

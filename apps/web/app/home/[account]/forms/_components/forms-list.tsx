@@ -35,8 +35,8 @@ export function FormsList({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className={`max-w-2xl text-sm ${workspaceTextMuted}`}>
           Create a form, share a public link, or embed it on your website.
-          Submissions create a pipeline enquiry or a listing enquiry in this
-          workspace.
+          Submissions can create a pipeline enquiry, a listing enquiry, or a
+          mailing-list contact.
         </p>
         <CreateFormDialog
           accountId={accountId}

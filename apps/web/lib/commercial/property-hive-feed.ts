@@ -13,6 +13,7 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import { filterOnMarketListingsForPortalFeed } from '~/lib/commercial/each-feed-inclusion';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
+import { renderPropertyHiveOzerListingFields } from '~/lib/commercial/property-hive-custom-fields';
 
 const FEED_TOKEN_META_KEY = 'xml_feed_token';
 
@@ -597,6 +598,7 @@ function renderPropertyXml(
           el('band', listing.epc_band) + el('value', listing.epc_rating ?? ''),
         )
       : '<current_energy_ratings/>',
+    renderPropertyHiveOzerListingFields(listing.id),
     '</property>',
   ].join('');
 }

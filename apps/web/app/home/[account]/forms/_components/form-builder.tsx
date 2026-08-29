@@ -28,7 +28,9 @@ import {
   type WorkspaceFormField,
   type WorkspaceFormFieldType,
   createWorkspaceFormField,
+  ensureListingField,
 } from '~/lib/workspace-forms/form-fields';
+import { ensureMailingListFields } from '~/lib/workspace-forms/mailing-list-fields';
 import {
   workspaceBtnPrimary,
   workspacePanelCard,
@@ -178,9 +180,20 @@ export function FormBuilder({
             <Label>Destination</Label>
             <Select
               value={destination}
-              onValueChange={(value) =>
-                setDestination(value as WorkspaceFormDestination)
-              }
+              onValueChange={(value) => {
+                const next = value as WorkspaceFormDestination;
+                setDestination(next);
+                if (next === 'mailing_list') {
+                  setFields((current) =>
+                    ensureMailingListFields(current, {
+                      commercial: showListingDestination,
+                    }),
+                  );
+                }
+                if (next === 'listing_enquiry') {
+                  setFields((current) => ensureListingField(current));
+                }
+              }}
             >
               <SelectTrigger data-test="form-destination">
                 <SelectValue />
@@ -188,6 +201,9 @@ export function FormBuilder({
               <SelectContent>
                 <SelectItem value="pipeline">
                   {WORKSPACE_FORM_DESTINATION_LABELS.pipeline}
+                </SelectItem>
+                <SelectItem value="mailing_list">
+                  {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
                 </SelectItem>
                 {showListingDestination || destination === 'listing_enquiry' ? (
                   <SelectItem value="listing_enquiry">
@@ -209,9 +225,14 @@ export function FormBuilder({
           />
         </div>
 
-        {destination === 'listing_enquiry' ? (
+        {destination === 'listing_enquiry' ||
+        (destination === 'mailing_list' && showListingDestination) ? (
           <div className="grid gap-1.5">
-            <Label>Default listing</Label>
+            <Label>
+              {destination === 'mailing_list'
+                ? 'Default listing (optional)'
+                : 'Default listing'}
+            </Label>
             <Select
               value={listingId || 'none'}
               onValueChange={(value) =>
@@ -233,7 +254,9 @@ export function FormBuilder({
               </SelectContent>
             </Select>
             <p className={`text-xs ${workspaceTextMuted}`}>
-              Property-page embeds can still override this with
+              {destination === 'mailing_list'
+                ? 'Optional. Property Hive templates can bind this form to a disposal with'
+                : 'Property-page embeds can still override this with'}
               <code className="mx-1">?listing=</code>
               or <code>data-listing</code>.
             </p>
@@ -397,6 +420,7 @@ export function FormBuilder({
         listingId={listingId || null}
         pending={pending}
         onToggle={togglePublished}
+        showPropertyHiveSnippet={showListingDestination}
       />
 
       <FormSubmissionsList

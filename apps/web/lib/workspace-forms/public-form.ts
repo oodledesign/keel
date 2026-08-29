@@ -19,6 +19,11 @@ import {
   resolveBoundListingId,
 } from './form-fields';
 import type { PublicWorkspaceFormSubmitInput } from './form.schema';
+import {
+  extractMailingListSpec,
+  isMailingListOptedIn,
+} from './mailing-list-fields';
+import { submitMailingListSignup } from './workspace-mailing-list';
 
 /** Tables not yet in generated Database types. */
 function fromTable(client: SupabaseClient, table: string) {
@@ -41,6 +46,7 @@ export type PublicWorkspaceForm = {
   successMessage: string;
   fields: WorkspaceFormField[];
   brand: AccountBrandResolved;
+  commercialProperty: boolean;
 };
 
 type FormRow = {
@@ -101,7 +107,7 @@ export async function loadPublicWorkspaceFormByToken(
   const [{ data: account }, brand] = await Promise.all([
     admin
       .from('accounts')
-      .select('name, slug')
+      .select('name, slug, space_type')
       .eq('id', row.account_id)
       .maybeSingle(),
     loadAccountBrandResolved(row.account_id),
@@ -114,6 +120,9 @@ export async function loadPublicWorkspaceFormByToken(
       (account as { name?: string | null } | null)?.name?.trim() || 'Workspace',
     accountSlug:
       (account as { slug?: string | null } | null)?.slug?.trim() || null,
+    commercialProperty:
+      (account as { space_type?: string | null } | null)?.space_type ===
+      'commercial-property',
     name: row.name,
     description: row.description,
     destination: row.destination,
@@ -123,7 +132,9 @@ export async function loadPublicWorkspaceFormByToken(
     submitLabel: row.submit_label?.trim() || 'Submit',
     successMessage:
       row.success_message?.trim() ||
-      'Thank you — we have received your enquiry.',
+      (row.destination === 'mailing_list'
+        ? 'Thank you — you are on the mailing list.'
+        : 'Thank you — we have received your enquiry.'),
     fields: parseFormFields(row.fields),
     brand,
   };
@@ -230,6 +241,8 @@ export type PublicFormSubmitResult = {
   submissionId: string;
   pipelineDealId: string | null;
   commercialEnquiryId: string | null;
+  requirementId: string | null;
+  clientId: string | null;
   listingId: string | null;
   successMessage: string;
 };
@@ -263,10 +276,35 @@ export async function submitPublicWorkspaceForm(
     throw new FormSubmitError('Please enter your name or email.');
   }
 
+  if (form.destination === 'mailing_list' && !contact.contactEmail) {
+    throw new FormSubmitError(
+      'Please enter your email to join the mailing list.',
+    );
+  }
+
+  if (form.destination === 'mailing_list' && !isMailingListOptedIn(contact)) {
+    throw new FormSubmitError(
+      'Please confirm you want to receive emails from this workspace.',
+    );
+  }
+
   let pipelineDealId: string | null = null;
   let commercialEnquiryId: string | null = null;
+  let requirementId: string | null = null;
+  let clientId: string | null = null;
 
-  if (form.destination === 'listing_enquiry' && listing) {
+  if (form.destination === 'mailing_list') {
+    const spec = extractMailingListSpec(contact);
+    const mailing = await submitMailingListSignup({
+      admin,
+      accountId: form.accountId,
+      contact,
+      spec,
+      commercial: form.commercialProperty,
+    });
+    clientId = mailing.clientId;
+    requirementId = mailing.requirementId;
+  } else if (form.destination === 'listing_enquiry' && listing) {
     commercialEnquiryId = await createListingEnquiry(
       admin,
       form,
@@ -293,6 +331,8 @@ export async function submitPublicWorkspaceForm(
       listing_id: listing?.id ?? null,
       pipeline_deal_id: pipelineDealId,
       commercial_enquiry_id: commercialEnquiryId,
+      requirement_id: requirementId,
+      client_id: clientId,
     })
     .select('id')
     .single();
@@ -317,6 +357,8 @@ export async function submitPublicWorkspaceForm(
     submissionId: String((data as { id: string }).id),
     pipelineDealId,
     commercialEnquiryId,
+    requirementId,
+    clientId,
     listingId: listing?.id ?? null,
     successMessage: form.successMessage,
   };

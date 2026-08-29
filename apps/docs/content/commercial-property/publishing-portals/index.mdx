@@ -30,6 +30,8 @@ Preferred path: Kato-compatible **XML feed** that Property Hive pulls on a sched
 8. Run a test publish for a marketing disposal from the test controls on the same page.
 9. If you rotate the feed token, paste the new URL into Property Hive immediately or imports will stop.
 
+Each property in the feed includes the Ozer listing UUID as custom field **`ozer_listing_id`** (Kato child element and a `custom_fields` pair). In Property Hive Import, map that field to a custom field with the same meta key so a single-property template can embed an Ozer form with `?listing=` or `data-listing`. A ready-made WordPress snippet is on the form share panel.
+
 ## Rightmove
 
 1. Confirm the workspace has **two or more billable seats**.

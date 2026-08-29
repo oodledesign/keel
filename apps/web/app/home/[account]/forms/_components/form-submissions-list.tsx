@@ -28,6 +28,19 @@ function recordHref(
       .replace('[id]', submission.listingId)}/interest`;
   }
 
+  if (submission.clientId) {
+    return pathsConfig.app.accountClientDetail
+      .replace('[account]', accountSlug)
+      .replace('[clientId]', submission.clientId);
+  }
+
+  if (submission.requirementId) {
+    return pathsConfig.app.accountRequirements.replace(
+      '[account]',
+      accountSlug,
+    );
+  }
+
   if (submission.pipelineDealId) {
     return pathsConfig.app.accountPipeline.replace('[account]', accountSlug);
   }
@@ -42,8 +55,8 @@ export function FormSubmissionsList({ accountSlug, submissions }: Props) {
         Submissions
       </h2>
       <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-        Open the pipeline enquiry or listing interest record created from each
-        submission.
+        Open the contact, mailing-list, pipeline, or listing record created from
+        each submission.
       </p>
 
       {submissions.length === 0 ? (
@@ -66,9 +79,13 @@ export function FormSubmissionsList({ accountSlug, submissions }: Props) {
                 const href = recordHref(accountSlug, submission);
                 const label = submission.commercialEnquiryId
                   ? 'Listing enquiry'
-                  : submission.pipelineDealId
-                    ? 'Pipeline enquiry'
-                    : 'Stored only';
+                  : submission.clientId
+                    ? 'Mailing-list contact'
+                    : submission.requirementId
+                      ? 'Requirement'
+                      : submission.pipelineDealId
+                        ? 'Pipeline enquiry'
+                        : 'Stored only';
 
                 return (
                   <tr

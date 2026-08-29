@@ -9,6 +9,8 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
+import { OZER_LISTING_ID_META_KEY } from '~/lib/commercial/property-hive-custom-fields';
+import type { WorkspaceFormDestination } from '~/lib/workspace-forms/form-fields';
 import {
   workspacePanelCard,
   workspaceText,
@@ -18,10 +20,11 @@ import {
 type Props = {
   shareToken: string;
   enabled: boolean;
-  destination: 'pipeline' | 'listing_enquiry';
+  destination: WorkspaceFormDestination;
   listingId: string | null;
   pending: boolean;
   onToggle: (enabled: boolean) => void;
+  showPropertyHiveSnippet?: boolean;
 };
 
 function copy(text: string, label: string) {
@@ -36,14 +39,17 @@ export function FormSharePanel({
   listingId,
   pending,
   onToggle,
+  showPropertyHiveSnippet = false,
 }: Props) {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const publicPath = pathsConfig.app.formShare.replace('[token]', shareToken);
   const publicUrl = `${origin}${publicPath}`;
-  const listingUrl =
-    destination === 'listing_enquiry'
-      ? `${publicUrl}?listing=${listingId || 'LISTING_ID'}`
-      : publicUrl;
+  const bindsListing =
+    destination === 'listing_enquiry' ||
+    (destination === 'mailing_list' && showPropertyHiveSnippet);
+  const listingUrl = bindsListing
+    ? `${publicUrl}?listing=${listingId || 'LISTING_ID'}`
+    : publicUrl;
 
   const iframeSnippet = useMemo(
     () =>
@@ -55,9 +61,7 @@ export function FormSharePanel({
     () =>
       [
         `<div data-ozer-form="${shareToken}"${
-          destination === 'listing_enquiry'
-            ? ` data-listing="${listingId || 'LISTING_ID'}"`
-            : ''
+          bindsListing ? ` data-listing="${listingId || 'LISTING_ID'}"` : ''
         }></div>`,
         `<script>`,
         `(function(){`,
@@ -72,7 +76,19 @@ export function FormSharePanel({
         `})();`,
         `</script>`,
       ].join('\n'),
-    [destination, listingId, publicUrl, shareToken],
+    [bindsListing, listingId, publicUrl, shareToken],
+  );
+
+  const propertyHiveSnippet = useMemo(
+    () =>
+      [
+        `<?php`,
+        `// Single property template — meta key ${OZER_LISTING_ID_META_KEY} from the Ozer Property Hive feed.`,
+        `$ozer_listing_id = get_post_meta( get_the_ID(), '${OZER_LISTING_ID_META_KEY}', true );`,
+        `?>`,
+        `<iframe src="${publicUrl}?listing=<?php echo rawurlencode( $ozer_listing_id ); ?>" title="Ozer form" style="width:100%;min-height:720px;border:0;"></iframe>`,
+      ].join('\n'),
+    [publicUrl],
   );
 
   return (
@@ -83,9 +99,16 @@ export function FormSharePanel({
             Share and embed
           </h2>
           <p className={`text-sm ${workspaceTextMuted}`}>
-            Visitors can submit without an Ozer login. Listing embeds accept
-            <code className="mx-1 text-xs">?listing=</code>
-            or a <code className="text-xs">data-listing</code> attribute.
+            Visitors can submit without an Ozer login.
+            {bindsListing ? (
+              <>
+                {' '}
+                Bind a disposal with
+                <code className="mx-1 text-xs">?listing=</code>,
+                <code className="mx-1 text-xs">?property=</code>, or a{' '}
+                <code className="text-xs">data-listing</code> attribute.
+              </>
+            ) : null}
           </p>
         </div>
         <Switch
@@ -151,6 +174,34 @@ export function FormSharePanel({
               Copy script
             </Button>
           </div>
+          {showPropertyHiveSnippet ? (
+            <div className="grid gap-1.5">
+              <Label>WordPress / Property Hive property template</Label>
+              <p className={`text-xs ${workspaceTextMuted}`}>
+                The feed sends the Ozer listing UUID as custom field{' '}
+                <code>{OZER_LISTING_ID_META_KEY}</code>. In Property Hive
+                Import, map that XML field to a custom field with the same meta
+                key, then paste this on the single property template.
+              </p>
+              <Textarea
+                readOnly
+                value={propertyHiveSnippet}
+                rows={6}
+                className="font-mono text-xs"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-fit"
+                onClick={() =>
+                  copy(propertyHiveSnippet, 'Property Hive snippet')
+                }
+              >
+                Copy WordPress snippet
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : (
         <p className={`text-sm ${workspaceTextMuted}`}>
