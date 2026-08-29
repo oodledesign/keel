@@ -333,6 +333,11 @@ function resolveLandingPath(
       return pathsConfig.app.accountWebsites.replace('[account]', primarySlug);
     case 'apps':
       return pathsConfig.app.accountApps.replace('[account]', primarySlug);
+    case 'campaigns':
+      return pathsConfig.app.accountEmailCampaigns.replace(
+        '[account]',
+        primarySlug,
+      );
     default:
       return pathsConfig.app.accountHome.replace('[account]', primarySlug);
   }

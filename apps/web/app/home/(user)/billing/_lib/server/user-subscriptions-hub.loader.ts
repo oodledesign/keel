@@ -111,6 +111,7 @@ export const loadUserSubscriptionsHub = cache(
       addon_rankly: 'Rankly',
       addon_feedflow: 'Feedflow',
       addon_videos: 'Videos',
+      addon_campaigns: 'Campaigns',
     };
 
     return teamAccounts.map((account) => {

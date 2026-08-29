@@ -20,6 +20,7 @@ const ADDON_OPEN_PATH: Partial<Record<OzerAddonKey, string>> = {
   addon_videos: pathsConfig.app.accountVideos,
   addon_feedflow: pathsConfig.app.accountFeedflowReviews,
   addon_media_generate: pathsConfig.app.accountMedia,
+  addon_campaigns: pathsConfig.app.accountEmailCampaigns,
 };
 
 const installedAppCardClass =

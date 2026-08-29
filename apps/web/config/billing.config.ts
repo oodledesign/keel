@@ -932,5 +932,63 @@ export default createBillingSchema({
         'Works without a monthly media plan',
       ],
     },
+    {
+      id: 'ozer-addon-campaigns',
+      name: 'Campaigns',
+      description:
+        'Workspace-branded email campaigns. Tiers by mailing-list size and monthly send allowance.',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
+      plans: [
+        {
+          id: 'campaigns-starter-monthly',
+          name: 'Campaigns Starter Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.addon_campaigns_starter_monthly,
+              name: '500 contacts · 2,000 emails / month',
+              cost: 19,
+              type: 'flat',
+            },
+          ],
+        },
+        {
+          id: 'campaigns-growth-monthly',
+          name: 'Campaigns Growth Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.addon_campaigns_growth_monthly,
+              name: '2,500 contacts · 10,000 emails / month',
+              cost: 49,
+              type: 'flat',
+            },
+          ],
+        },
+        {
+          id: 'campaigns-pro-monthly',
+          name: 'Campaigns Pro Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.addon_campaigns_pro_monthly,
+              name: '10,000 contacts · 50,000 emails / month',
+              cost: 99,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Mailing-list audience (respects unsubscribe)',
+        'In-app email builder with workspace branding',
+        'Send via Amazon SES as the workspace, not Ozer',
+        'Send log: sent, failed, unsubscribes',
+      ],
+    },
   ],
 });

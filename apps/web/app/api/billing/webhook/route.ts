@@ -22,6 +22,7 @@ import {
   fulfillAiCreditPackFromSubscription,
   fulfillAiCreditPackOrder,
 } from '~/lib/billing/fulfill-ai-credit-pack';
+import { fulfillCampaignSubscriptionGrant } from '~/lib/billing/fulfill-campaign-credits';
 import {
   fulfillMediaSubscriptionGrant,
   fulfillMediaTopupOrder,
@@ -116,6 +117,7 @@ export const POST = enhanceRouteHandler(
           );
           const admin = getSupabaseServerAdminClient();
           await fulfillMediaSubscriptionGrant(admin, subscription);
+          await fulfillCampaignSubscriptionGrant(admin, subscription);
 
           const welcomeResult = await enqueueSubscriptionWelcomeEmail(admin, {
             subscription,
@@ -192,6 +194,7 @@ export const POST = enhanceRouteHandler(
           const admin = getSupabaseServerAdminClient();
           await fulfillAiCreditPackFromSubscription(admin, payload);
           await fulfillMediaSubscriptionGrant(admin, payload);
+          await fulfillCampaignSubscriptionGrant(admin, payload);
         },
         onEvent: async (rawEvent) => {
           const event = rawEvent as Stripe.Event;

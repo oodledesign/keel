@@ -1,0 +1,12 @@
+{
+  "title": "Campaigns",
+  "description": "Email your mailing-list subscribers as your workspace, not Ozer.",
+  "module": {
+    "disabled": {
+      "title": "Campaigns isn’t enabled",
+      "description": "Subscribe to the Campaigns add-on to build and send workspace-branded emails.",
+      "linkSettings": "Account settings",
+      "linkBilling": "Billing"
+    }
+  }
+}

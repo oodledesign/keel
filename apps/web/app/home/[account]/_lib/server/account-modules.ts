@@ -31,6 +31,7 @@ export type AccountModuleKey =
   | 'videos'
   | 'site_studio'
   | 'media_generate'
+  | 'campaigns'
   | 'properties'
   | 'calendar'
   | 'shopping'
@@ -200,6 +201,13 @@ export function isMediaGenerateModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,
 ) {
   return isWorkModuleEnabled(moduleSettings, 'media_generate');
+}
+
+/** Email campaigns add-on (`account_module_settings.module_key = 'campaigns'`). */
+export function isCampaignsModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'campaigns');
 }
 
 /** Instagram auto-reply add-on (`account_module_settings.module_key = 'instagram_autoreply'`). */

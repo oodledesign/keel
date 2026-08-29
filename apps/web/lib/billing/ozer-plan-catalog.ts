@@ -15,13 +15,18 @@ export type OzerPlanFamily =
   | 'addon_site_studio'
   | 'addon_email_assistant'
   | 'addon_portal_publishing'
-  | 'addon_media_generate';
+  | 'addon_media_generate'
+  | 'addon_campaigns';
 
 export type OzerPlanLimits = {
   maxMembers: number | null;
   maxProperties: number | null;
   maxVideos: number | null;
   maxMailboxes?: number | null;
+  /** Campaigns add-on: billed mailing-list size. */
+  maxContacts?: number | null;
+  /** Campaigns add-on: monthly email-send units. */
+  maxEmails?: number | null;
 };
 
 export type OzerPlanDefinition = {
@@ -324,6 +329,48 @@ const ADDONS: OzerPlanDefinition[] = [
     entitlementKey: 'addon_media_generate',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null },
   },
+  {
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-starter-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.addon_campaigns_starter_monthly,
+    family: 'addon_campaigns',
+    entitlementKey: 'addon_campaigns',
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxContacts: 500,
+      maxEmails: 2000,
+    },
+  },
+  {
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-growth-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.addon_campaigns_growth_monthly,
+    family: 'addon_campaigns',
+    entitlementKey: 'addon_campaigns',
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxContacts: 2500,
+      maxEmails: 10000,
+    },
+  },
+  {
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-pro-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.addon_campaigns_pro_monthly,
+    family: 'addon_campaigns',
+    entitlementKey: 'addon_campaigns',
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxContacts: 10000,
+      maxEmails: 50000,
+    },
+  },
 ];
 
 export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [
@@ -415,7 +462,8 @@ export type OzerAddonKey =
   | 'addon_videos'
   | 'addon_site_studio'
   | 'addon_portal_publishing'
-  | 'addon_media_generate';
+  | 'addon_media_generate'
+  | 'addon_campaigns';
 
 /** Personal-account add-ons (entitlement on the user's personal account id). */
 export type OzerPersonalAddonKey = 'addon_email_assistant';
@@ -504,6 +552,14 @@ export const OZER_ADDON_CATALOG: Array<{
       'AI image and video generation billed in media units — separate from Ozer AI text credits.',
     fromPriceGbp: 5,
   },
+  {
+    key: 'addon_campaigns',
+    productId: 'ozer-addon-campaigns',
+    name: 'Campaigns',
+    description:
+      'Workspace-branded email campaigns to your mailing list. Priced by contact list size and emails sent.',
+    fromPriceGbp: 19,
+  },
 ];
 
 /**
@@ -513,6 +569,7 @@ export const OZER_ADDON_CATALOG: Array<{
 export const LAUNCHED_WORKSPACE_ADDON_KEYS: OzerAddonKey[] = [
   'addon_signatures',
   'addon_media_generate',
+  'addon_campaigns',
 ];
 
 /**

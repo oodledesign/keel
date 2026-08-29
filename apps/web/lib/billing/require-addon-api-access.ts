@@ -20,6 +20,8 @@ const ADDON_MESSAGES: Record<string, string> = {
     'Site Studio add-on required. Subscribe from Billing in this workspace.',
   addon_portal_publishing:
     'Portal Publishing add-on required. Subscribe from Billing in this workspace.',
+  addon_campaigns:
+    'Campaigns add-on required. Subscribe from Billing in this workspace.',
 };
 
 export async function denyUnlessAddonAccess(

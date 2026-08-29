@@ -39,6 +39,7 @@ const LEGACY_WORKSPACE_MODULE_PATHS: Record<string, string> = {
   community_notes: pathsConfig.app.accountCommunityNotes,
   rankly: pathsConfig.app.accountRanklyDashboard,
   signatures: pathsConfig.app.accountSignaturesDashboard,
+  campaigns: pathsConfig.app.accountEmailCampaigns,
   reviews: pathsConfig.app.accountFeedflowReviews,
   social: pathsConfig.app.accountFeedflowSocialAccounts,
 };

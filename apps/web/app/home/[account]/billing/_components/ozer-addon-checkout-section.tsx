@@ -68,6 +68,9 @@ function addonKeyFromHighlight(
   ) {
     return 'addon_media_generate';
   }
+  if (value === 'campaigns' || value === 'email_campaigns') {
+    return 'addon_campaigns';
+  }
   return null;
 }
 

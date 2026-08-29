@@ -296,6 +296,7 @@ export const adminApplyPlanLimitsAction = enhanceAction(
         entitlementKey: plan.entitlementKey,
         aiCreditsGranted: usage.aiCredits,
         mediaUnitsGranted: usage.mediaUnits,
+        campaignSendUnitsGranted: usage.campaignSendUnits,
       },
     });
 
@@ -307,6 +308,7 @@ export const adminApplyPlanLimitsAction = enhanceAction(
       success: true,
       aiCreditsGranted: usage.aiCredits,
       mediaUnitsGranted: usage.mediaUnits,
+      campaignSendUnitsGranted: usage.campaignSendUnits,
     };
   },
   {

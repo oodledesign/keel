@@ -3,8 +3,10 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { syncAccountCreditLimit } from '~/lib/ai/tiers';
+import { campaignTierForPlanId } from '~/lib/billing/campaign-pricing';
 import { MEDIA_SUBSCRIPTION_TIERS } from '~/lib/billing/media-unit-pricing';
 import type { OzerPlanDefinition } from '~/lib/billing/ozer-plan-catalog';
+import { grantCampaignCredits } from '~/lib/campaign-credits/ledger';
 import { grantMediaCredits } from '~/lib/media-credits/ledger';
 
 function addMonths(date: Date, months: number): Date {
@@ -49,9 +51,11 @@ export async function applyAdminPlanUsageGrants(
 ): Promise<{
   aiCredits: number | null;
   mediaUnits: number | null;
+  campaignSendUnits: number | null;
 }> {
   let aiCredits: number | null = null;
   let mediaUnits: number | null = null;
+  let campaignSendUnits: number | null = null;
 
   const isAiPlan =
     plan.family === 'business' ||
@@ -117,5 +121,56 @@ export async function applyAdminPlanUsageGrants(
     mediaUnits = media.units;
   }
 
-  return { aiCredits, mediaUnits };
+  const campaign = campaignTierForPlanId(plan.planId);
+  if (campaign) {
+    const periodStart = new Date();
+    const periodEnd = addMonths(periodStart, 1);
+    const cycleEndIso = periodEnd.toISOString().slice(0, 10);
+    const idempotencyKey = `admin_campaigns:${accountId}:${plan.planId}:${cycleEndIso}`;
+
+    await grantCampaignCredits(
+      accountId,
+      campaign.sendUnits,
+      'monthly_grant',
+      periodEnd,
+      idempotencyKey,
+    );
+
+    await admin.rpc('ensure_campaign_credit_pool', {
+      p_account_id: accountId,
+    });
+
+    await admin
+      .from('campaign_credit_pools')
+      .update({
+        monthly_allowance: campaign.sendUnits,
+        max_contacts: campaign.maxContacts,
+        plan_tier: campaign.planTier,
+        cycle_start: periodStart.toISOString().slice(0, 10),
+        cycle_end: cycleEndIso,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('account_id', accountId);
+
+    await admin.from('account_module_settings').upsert(
+      {
+        account_id: accountId,
+        module_key: 'campaigns',
+        enabled: true,
+      },
+      { onConflict: 'account_id,module_key' },
+    );
+    await admin.from('account_module_settings').upsert(
+      {
+        account_id: accountId,
+        module_key: 'apps',
+        enabled: true,
+      },
+      { onConflict: 'account_id,module_key' },
+    );
+
+    campaignSendUnits = campaign.sendUnits;
+  }
+
+  return { aiCredits, mediaUnits, campaignSendUnits };
 }

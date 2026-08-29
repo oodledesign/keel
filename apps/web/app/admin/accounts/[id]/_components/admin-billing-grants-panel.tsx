@@ -37,6 +37,7 @@ const ADDON_ENTITLEMENTS = [
   { key: 'addon_feedflow', label: 'Feedflow' },
   { key: 'addon_videos', label: 'Videos' },
   { key: 'addon_media_generate', label: 'Media Generate' },
+  { key: 'addon_campaigns', label: 'Campaigns' },
 ];
 
 const QUICK_PLANS = [
@@ -102,6 +103,21 @@ const QUICK_PLANS = [
     label: 'Media Generate Agency',
     productId: 'ozer-addon-media-agency',
     planId: 'media-agency-monthly',
+  },
+  {
+    label: 'Campaigns Starter',
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-starter-monthly',
+  },
+  {
+    label: 'Campaigns Growth',
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-growth-monthly',
+  },
+  {
+    label: 'Campaigns Pro',
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-pro-monthly',
   },
 ];
 
@@ -173,6 +189,7 @@ export function AdminBillingGrantsPanel(props: {
           success?: boolean;
           aiCreditsGranted?: number | null;
           mediaUnitsGranted?: number | null;
+          campaignSendUnitsGranted?: number | null;
         };
         const parts = ['Plan limits applied'];
         if (result.aiCreditsGranted) {
@@ -181,6 +198,11 @@ export function AdminBillingGrantsPanel(props: {
         if (result.mediaUnitsGranted) {
           parts.push(
             `${result.mediaUnitsGranted.toLocaleString()} media units`,
+          );
+        }
+        if (result.campaignSendUnitsGranted) {
+          parts.push(
+            `${result.campaignSendUnitsGranted.toLocaleString()} campaign sends`,
           );
         }
         toast.success(parts.join(' · '));

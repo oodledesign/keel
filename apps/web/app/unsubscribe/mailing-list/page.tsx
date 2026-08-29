@@ -1,6 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
+import { markCampaignRecipientsUnsubscribed } from '~/lib/campaigns/campaigns.service';
 import { unsubscribeWorkspaceMailingListByToken } from '~/lib/workspace-forms/workspace-mailing-list';
 
 export const metadata = {
@@ -28,6 +29,11 @@ export default async function MailingListUnsubscribePage({
         error = 'This unsubscribe link is missing or invalid.';
       } else {
         email = result.email;
+        await markCampaignRecipientsUnsubscribed(
+          admin,
+          result.accountId,
+          result.email,
+        );
         const { data: account } = await admin
           .from('accounts')
           .select('name')

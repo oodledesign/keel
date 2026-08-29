@@ -66,6 +66,7 @@ export const ADMIN_INVITE_ADDON_OPTIONS: Array<{
   { key: 'addon_feedflow', label: 'Feedflow' },
   { key: 'addon_videos', label: 'Videos' },
   { key: 'addon_portal_publishing', label: 'Portal Publishing' },
+  { key: 'addon_campaigns', label: 'Campaigns' },
 ];
 
 export const ADMIN_INVITE_LANDING_MODULES = [
@@ -73,6 +74,7 @@ export const ADMIN_INVITE_LANDING_MODULES = [
   { key: 'signatures', label: 'Signatures' },
   { key: 'websites', label: 'Websites / Site Studio' },
   { key: 'apps', label: 'Apps' },
+  { key: 'campaigns', label: 'Campaigns' },
 ] as const;
 
 const workspaceSelectionSchema = z.object({
@@ -97,10 +99,11 @@ export const CreateAdminUserInviteSchema = z
         'addon_feedflow',
         'addon_videos',
         'addon_portal_publishing',
+        'addon_campaigns',
       ]),
     ),
     landingModule: z
-      .enum(['dashboard', 'signatures', 'websites', 'apps'])
+      .enum(['dashboard', 'signatures', 'websites', 'apps', 'campaigns'])
       .optional(),
   })
   .superRefine((data, ctx) => {

@@ -19,6 +19,7 @@ const ADDON_ENTITLEMENT_MODULES: Record<OzerAddonKey, string[]> = {
   // Media generate: enable-on-entitlement handled below (never sync-disable —
   // that would wipe PAYG enablement without a subscription).
   addon_media_generate: [],
+  addon_campaigns: ['campaigns'],
 };
 
 function isEntitlementActive(row: {
@@ -85,6 +86,7 @@ export async function syncAddonModulesFromEntitlements(
     'addon_rankly',
     'addon_feedflow',
     'addon_videos',
+    'addon_campaigns',
   ]);
 
   for (const [entitlementKey, moduleKeys] of Object.entries(

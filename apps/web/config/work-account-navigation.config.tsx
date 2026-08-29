@@ -41,6 +41,7 @@ import {
 } from '~/config/workspace-module-order';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
+  isCampaignsModuleEnabled,
   isFeedflowModuleEnabled,
   isInstagramAutoreplyModuleEnabled,
   isMediaGenerateModuleEnabled,
@@ -107,6 +108,15 @@ export function buildWorkAppLinks(
       path: createPath(pathsConfig.app.accountSignaturesDashboard, account),
       Icon: <PenLine className={iconClasses} />,
       description: 'Branded email signatures for your team.',
+    });
+  }
+
+  if (isCampaignsModuleEnabled(ms)) {
+    children.push({
+      label: 'Campaigns',
+      path: createPath(pathsConfig.app.accountEmailCampaigns, account),
+      Icon: <Mail className={iconClasses} />,
+      description: 'Email campaigns to your mailing list.',
     });
   }
 

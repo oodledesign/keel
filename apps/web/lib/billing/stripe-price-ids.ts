@@ -158,6 +158,19 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_MEDIA_TOPUP_LARGE',
     'price_ozer_media_topup_large',
   ),
+  /** Campaigns add-on — placeholders until live Stripe prices exist. */
+  addon_campaigns_starter_monthly: price(
+    'STRIPE_PRICE_ADDON_CAMPAIGNS_STARTER_MONTHLY',
+    'price_ozer_addon_campaigns_starter_monthly',
+  ),
+  addon_campaigns_growth_monthly: price(
+    'STRIPE_PRICE_ADDON_CAMPAIGNS_GROWTH_MONTHLY',
+    'price_ozer_addon_campaigns_growth_monthly',
+  ),
+  addon_campaigns_pro_monthly: price(
+    'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY',
+    'price_ozer_addon_campaigns_pro_monthly',
+  ),
 } as const;
 
 export const OZER_BILLING_CURRENCY =
