@@ -39,7 +39,15 @@ import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
 
+import {
+  documentEditPath,
+  documentKindCopy,
+  titleForRecipient,
+  type ProposalDocumentKind,
+} from '~/lib/building-surveyor/document-kind';
+
 import { getErrorMessage } from '../_lib/error-message';
+import { generateSurveyReportHtmlAction } from '../_lib/server/proposal-generate-actions';
 import {
   createProposal,
   getProposal,
@@ -104,6 +112,7 @@ export function ProposalsPageContent({
   canViewProposals,
   canEditProposals,
   deals,
+  documentKind = 'proposal',
 }: {
   accountSlug: string;
   accountId: string;
@@ -113,7 +122,9 @@ export function ProposalsPageContent({
   canEditProposals: boolean;
   canManageProposalStatus: boolean;
   deals: DealOption[];
+  documentKind?: ProposalDocumentKind;
 }) {
+  const copy = documentKindCopy(documentKind);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -174,12 +185,15 @@ export function ProposalsPageContent({
 
   const fetchCounts = useCallback(async () => {
     try {
-      const result = await getProposalTabCountsAction({ accountId });
+      const result = await getProposalTabCountsAction({
+        accountId,
+        kind: documentKind,
+      });
       setCounts(result as typeof counts);
     } catch {
       /* ignore */
     }
-  }, [accountId]);
+  }, [accountId, documentKind]);
 
   const fetchProposals = useCallback(async () => {
     setLoading(true);
@@ -195,6 +209,7 @@ export function ProposalsPageContent({
         pageSize,
         query: searchDebounced || undefined,
         status: statusMap[tab],
+        kind: documentKind,
       });
       if (result?.data !== undefined) {
         setProposals((result.data ?? []) as unknown as ProposalRow[]);
@@ -207,7 +222,7 @@ export function ProposalsPageContent({
     } finally {
       setLoading(false);
     }
-  }, [accountId, page, pageSize, searchDebounced, tab]);
+  }, [accountId, documentKind, page, pageSize, searchDebounced, tab]);
 
   useEffect(() => {
     void fetchProposals();
@@ -266,13 +281,25 @@ export function ProposalsPageContent({
   }, [accountId, deals]);
 
   useEffect(() => {
-    if (!canEditProposals || searchParams.get('create') !== 'proposal') return;
+    const createParam = searchParams.get('create');
+    const shouldOpenCreate =
+      documentKind === 'survey_report'
+        ? createParam === '1' || createParam === 'survey'
+        : createParam === 'proposal';
+    if (!canEditProposals || !shouldOpenCreate) return;
     void openCreateSheet();
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
     const qs = nextParams.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname);
-  }, [canEditProposals, openCreateSheet, pathname, router, searchParams]);
+  }, [
+    canEditProposals,
+    documentKind,
+    openCreateSheet,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   useEffect(() => {
     if (!aiDialogOpen) return;
@@ -339,7 +366,13 @@ export function ProposalsPageContent({
     try {
       const [clientsResult, proposalsResult] = await Promise.all([
         listClients({ accountId, page: 1, pageSize: 100 }),
-        listProposals({ accountId, page: 1, pageSize: 50, status: 'all' }),
+        listProposals({
+          accountId,
+          page: 1,
+          pageSize: 50,
+          status: 'all',
+          kind: documentKind,
+        }),
       ]);
 
       const raw = clientsResult as { data?: unknown } | unknown[];
@@ -367,7 +400,7 @@ export function ProposalsPageContent({
     } finally {
       setAiLoadingData(false);
     }
-  }, [accountId, deals]);
+  }, [accountId, deals, documentKind]);
 
   const handleCreateProposal = async () => {
     if (!canEditProposals) return;
@@ -377,7 +410,7 @@ export function ProposalsPageContent({
       toast.error(
         createMode === 'client'
           ? 'Please select a client'
-          : 'Please select a lead',
+          : `Please select a ${copy.dealLabel.toLowerCase()}`,
       );
       return;
     }
@@ -389,18 +422,18 @@ export function ProposalsPageContent({
         accountId,
         client_id: clientId ?? null,
         deal_id: dealId ?? null,
+        kind: documentKind,
         recipient_name: deal?.contactName || null,
         title: deal
-          ? `Proposal for ${deal.contactName || deal.companyName || 'lead'}`
+          ? titleForRecipient(
+              documentKind,
+              deal.contactName || deal.companyName || copy.dealLabel.toLowerCase(),
+            )
           : undefined,
       });
       if (proposal?.id) {
         setCreateSheetOpen(false);
-        router.push(
-          pathsConfig.app.accountProposalEdit
-            .replace('[account]', accountSlug)
-            .replace('[id]', proposal.id),
-        );
+        router.push(documentEditPath(accountSlug, proposal.id, documentKind));
       }
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -474,66 +507,90 @@ export function ProposalsPageContent({
         }));
       }
 
-      const response = await fetch('/api/proposals/generate', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
+      let contentHtml = '';
+      if (documentKind === 'survey_report') {
+        const result = await generateSurveyReportHtmlAction({
           accountId,
-          recipientName,
-          recipientCompany,
+          propertyLabel:
+            deal?.companyName?.trim() ||
+            deal?.contactName?.trim() ||
+            recipientName,
+          clientName: recipientName,
           accountName,
-          senderName,
+          surveyorName: senderName,
           transcripts,
           contextNotes,
-          referenceProposalHtml,
-          dealValue: deal?.value ?? null,
-        }),
-      });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        if (
-          handleAiCreditsFailure(reportExhausted, {
-            accountId: creditsAccountId || accountId,
-            billingHref,
-            status: response.status,
-            body: payload,
-            message: payload?.error,
-          })
-        ) {
-          return;
-        }
-        throw new Error(payload?.error ?? 'Generation failed');
-      }
-
-      if (!response.body) {
-        throw new Error('Empty generation stream');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let contentHtml = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        contentHtml += chunk;
+        });
+        contentHtml = result.contentHtml.trim();
         setAiStreamPreview(contentHtml);
+        if (result.source === 'keyword_fallback') {
+          toast.message(
+            result.fallbackReason ??
+              'Drafted from keyword routing because the AI path was unavailable.',
+          );
+        }
+      } else {
+        const response = await fetch('/api/proposals/generate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            accountId,
+            recipientName,
+            recipientCompany,
+            accountName,
+            senderName,
+            transcripts,
+            contextNotes,
+            referenceProposalHtml,
+            dealValue: deal?.value ?? null,
+          }),
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          if (
+            handleAiCreditsFailure(reportExhausted, {
+              accountId: creditsAccountId || accountId,
+              billingHref,
+              status: response.status,
+              body: payload,
+              message: payload?.error,
+            })
+          ) {
+            return;
+          }
+          throw new Error(payload?.error ?? 'Generation failed');
+        }
+
+        if (!response.body) {
+          throw new Error('Empty generation stream');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          contentHtml += chunk;
+          setAiStreamPreview(contentHtml);
+        }
       }
 
       contentHtml = contentHtml.trim();
       if (!contentHtml) {
-        throw new Error('AI returned empty proposal content');
+        throw new Error(`AI returned empty ${copy.singular} content`);
       }
 
       const proposal = await createProposal({
         accountId,
         client_id: clientId ?? null,
         deal_id: dealId ?? null,
-        title: `Proposal for ${recipientName}`,
+        kind: documentKind,
+        title: titleForRecipient(documentKind, recipientName),
         content_html: contentHtml,
         recipient_name: recipientName,
         context_refs: selectedRefs,
@@ -542,11 +599,7 @@ export function ProposalsPageContent({
 
       setAiDialogOpen(false);
       if (proposal?.id) {
-        router.push(
-          pathsConfig.app.accountProposalEdit
-            .replace('[account]', accountSlug)
-            .replace('[id]', proposal.id),
-        );
+        router.push(documentEditPath(accountSlug, proposal.id, documentKind));
       }
     } catch (error) {
       const message = getErrorMessage(error);
@@ -565,10 +618,8 @@ export function ProposalsPageContent({
     }
   };
 
-  const editPathBase = pathsConfig.app.accountProposalEdit.replace(
-    '[account]',
-    accountSlug,
-  );
+  const editPathFor = (id: string) =>
+    documentEditPath(accountSlug, id, documentKind);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
     { key: 'unapproved', label: 'Unapproved', count: counts.unapproved },
@@ -580,7 +631,7 @@ export function ProposalsPageContent({
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-8">
         <p className="text-[var(--workspace-shell-text-muted)]">
-          You don&apos;t have access to proposals in this account.
+          {copy.accessDenied}
         </p>
       </div>
     );
@@ -626,7 +677,7 @@ export function ProposalsPageContent({
                 onClick={() => void openAiDialog()}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                AI generate
+                {copy.aiGenerateLabel}
               </Button>
               <Button
                 size="sm"
@@ -634,7 +685,7 @@ export function ProposalsPageContent({
                 onClick={() => void openCreateSheet()}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Create proposal
+                {copy.createLabel}
               </Button>
             </If>
           </div>
@@ -644,7 +695,7 @@ export function ProposalsPageContent({
           <div className="relative max-w-sm min-w-[220px] flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
-              placeholder="Search title or recipient..."
+              placeholder={copy.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -663,7 +714,7 @@ export function ProposalsPageContent({
           ) : proposals.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-[var(--workspace-shell-text-muted)]">
               <FileText className="mb-3 h-10 w-10 opacity-50" />
-              No proposals in this tab.
+              {copy.emptyList}
             </div>
           ) : (
             <table className="w-full text-left text-sm">
@@ -686,10 +737,10 @@ export function ProposalsPageContent({
                   >
                     <td className="py-3 pr-4">
                       <Link
-                        href={editPathBase.replace('[id]', row.id)}
+                        href={editPathFor(row.id)}
                         className="font-medium text-[var(--workspace-shell-text)] hover:underline"
                       >
-                        {row.title?.trim() || 'Untitled proposal'}
+                        {row.title?.trim() || copy.untitled}
                       </Link>
                     </td>
                     <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
@@ -715,6 +766,7 @@ export function ProposalsPageContent({
                         accountSlug={accountSlug}
                         proposal={row}
                         canEditProposals={canEditProposals}
+                        documentKind={documentKind}
                         onChanged={fetchProposals}
                       />
                     </td>
@@ -727,7 +779,7 @@ export function ProposalsPageContent({
           {!loading && total > 0 ? (
             <div className="mt-4 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
               <span>
-                Page {page} of {totalPages} ({total} proposals)
+                Page {page} of {totalPages} ({total} {copy.plural})
               </span>
               <div className="flex gap-2">
                 <Button
@@ -755,7 +807,7 @@ export function ProposalsPageContent({
       <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Create proposal</SheetTitle>
+            <SheetTitle>{copy.createSheetTitle}</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="inline-flex gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1 text-xs">
@@ -779,7 +831,7 @@ export function ProposalsPageContent({
                     : 'text-[var(--workspace-shell-text-muted)]'
                 }`}
               >
-                Lead
+                {copy.dealLabel}
               </button>
             </div>
 
@@ -801,16 +853,16 @@ export function ProposalsPageContent({
               </div>
             ) : (
               <div>
-                <Label>Lead</Label>
+                <Label>{copy.dealLabel}</Label>
                 <select
                   value={selectedDealId}
                   onChange={(e) => setSelectedDealId(e.target.value)}
                   className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
                 >
-                  <option value="">Select lead</option>
+                  <option value="">{copy.dealPlaceholder}</option>
                   {deals.map((deal) => (
                     <option key={deal.id} value={deal.id}>
-                      {deal.contactName || deal.companyName || 'Lead'} —{' '}
+                      {deal.contactName || deal.companyName || copy.dealLabel} —{' '}
                       {formatPence(Math.round(deal.value * 100))}
                     </option>
                   ))}
@@ -835,7 +887,7 @@ export function ProposalsPageContent({
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Generate proposal with AI</DialogTitle>
+            <DialogTitle>{copy.aiDialogTitle}</DialogTitle>
           </DialogHeader>
           {aiLoadingData ? (
             <p className="text-muted-foreground text-sm">Loading…</p>
@@ -862,7 +914,7 @@ export function ProposalsPageContent({
                       : ''
                   }`}
                 >
-                  Lead
+                  {copy.dealLabel}
                 </button>
               </div>
 
@@ -884,16 +936,16 @@ export function ProposalsPageContent({
                 </div>
               ) : (
                 <div>
-                  <Label>Lead</Label>
+                  <Label>{copy.dealLabel}</Label>
                   <select
                     value={aiDealId}
                     onChange={(e) => setAiDealId(e.target.value)}
                     className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
                   >
-                    <option value="">Select lead</option>
+                    <option value="">{copy.dealPlaceholder}</option>
                     {deals.map((deal) => (
                       <option key={deal.id} value={deal.id}>
-                        {deal.contactName || deal.companyName || 'Lead'}
+                        {deal.contactName || deal.companyName || copy.dealLabel}
                       </option>
                     ))}
                   </select>
@@ -970,7 +1022,7 @@ export function ProposalsPageContent({
               </div>
 
               <div>
-                <Label>Reference proposal (optional)</Label>
+                <Label>{copy.referenceLabel}</Label>
                 <select
                   value={aiReferenceProposalId}
                   onChange={(e) => setAiReferenceProposalId(e.target.value)}
@@ -979,7 +1031,7 @@ export function ProposalsPageContent({
                   <option value="">None</option>
                   {aiReferenceProposals.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.title?.trim() || 'Untitled proposal'}
+                      {p.title?.trim() || copy.untitled}
                     </option>
                   ))}
                 </select>
@@ -990,7 +1042,7 @@ export function ProposalsPageContent({
                 disabled={aiGenerating}
                 onClick={() => void handleAiGenerate()}
               >
-                {aiGenerating ? 'Generating…' : 'Generate proposal'}
+                {aiGenerating ? 'Generating…' : copy.generateButton}
               </Button>
 
               {aiStreamPreview ? (

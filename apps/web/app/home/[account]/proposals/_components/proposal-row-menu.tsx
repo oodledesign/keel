@@ -24,8 +24,12 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
-import pathsConfig from '~/config/paths.config';
 import { uniqueEmails } from '~/lib/email/unique-emails';
+import {
+  documentEditPath,
+  documentKindCopy,
+  type ProposalDocumentKind,
+} from '~/lib/building-surveyor/document-kind';
 
 import { DEFAULT_PROPOSAL_EMAIL_SUBJECT } from '../_lib/doc-smart-fields';
 import { getErrorMessage } from '../_lib/error-message';
@@ -40,6 +44,7 @@ export function ProposalRowMenu({
   accountSlug,
   proposal,
   canEditProposals,
+  documentKind = 'proposal',
   onChanged,
 }: {
   accountId: string;
@@ -52,12 +57,14 @@ export function ProposalRowMenu({
     email_subject?: string | null;
   };
   canEditProposals: boolean;
+  documentKind?: ProposalDocumentKind;
   onChanged?: () => void;
 }) {
   const router = useRouter();
+  const copy = documentKindCopy(documentKind);
   const [loading, setLoading] = useState<string | null>(null);
   const [resendOpen, setResendOpen] = useState(false);
-  const proposalTitle = proposal.title?.trim() || 'Untitled proposal';
+  const proposalTitle = proposal.title?.trim() || copy.untitled;
   const resendRecipients = uniqueEmails(proposal.sent_to_email);
   const resendSubject = (
     proposal.email_subject?.trim() || DEFAULT_PROPOSAL_EMAIL_SUBJECT
@@ -81,9 +88,7 @@ export function ProposalRowMenu({
     }
   };
 
-  const editPath = pathsConfig.app.accountProposalEdit
-    .replace('[account]', accountSlug)
-    .replace('[id]', proposal.id);
+  const editPath = documentEditPath(accountSlug, proposal.id, documentKind);
 
   return (
     <>
@@ -118,7 +123,7 @@ export function ProposalRowMenu({
                       accountId,
                       proposalId: proposal.id,
                     }),
-                  'Proposal duplicated',
+                  `${copy.singular.charAt(0).toUpperCase()}${copy.singular.slice(1)} duplicated`,
                 )
               }
             >
@@ -152,7 +157,7 @@ export function ProposalRowMenu({
                     'delete',
                     () =>
                       deleteProposal({ accountId, proposalId: proposal.id }),
-                    'Proposal deleted',
+                    `${copy.singular.charAt(0).toUpperCase()}${copy.singular.slice(1)} deleted`,
                   )
                 }
               >
@@ -167,7 +172,7 @@ export function ProposalRowMenu({
       <ConfirmSendEmailDialog
         open={resendOpen}
         onOpenChange={setResendOpen}
-        title="Resend this proposal?"
+        title={`Resend this ${copy.singular}?`}
         documentLabel={proposalTitle}
         recipients={resendRecipients}
         subject={resendSubject}
@@ -181,7 +186,9 @@ export function ProposalRowMenu({
                 accountId,
                 proposalId: proposal.id,
               });
-              toast.success('Proposal resent');
+              toast.success(
+                `${copy.singular.charAt(0).toUpperCase()}${copy.singular.slice(1)} resent`,
+              );
               setResendOpen(false);
               onChanged?.();
               router.refresh();

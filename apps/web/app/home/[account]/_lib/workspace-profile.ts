@@ -1,4 +1,5 @@
 import {
+  BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER,
   COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER,
   COMMUNITY_WORKSPACE_MODULE_ORDER,
   FAMILY_WORKSPACE_MODULE_ORDER,
@@ -11,7 +12,8 @@ export type WorkspaceSpaceType =
   | 'family'
   | 'community'
   | 'property'
-  | 'commercial-property';
+  | 'commercial-property'
+  | 'building-surveyor';
 
 export function normalizeSpaceType(
   raw: string | null | undefined,
@@ -20,6 +22,7 @@ export function normalizeSpaceType(
   if (raw === 'community') return 'community';
   if (raw === 'property') return 'property';
   if (raw === 'commercial-property') return 'commercial-property';
+  if (raw === 'building-surveyor') return 'building-surveyor';
   return 'work';
 }
 
@@ -28,6 +31,7 @@ export type WorkspaceProfile =
   | 'work_design'
   | 'work_property'
   | 'commercial_property'
+  | 'building_surveyor'
   | 'family'
   | 'community';
 
@@ -60,6 +64,7 @@ export function resolveWorkspaceProfile(input: {
   if (space === 'family') return 'family';
   if (space === 'community') return 'community';
   if (space === 'commercial-property') return 'commercial_property';
+  if (space === 'building-surveyor') return 'building_surveyor';
 
   const biz = normalizeBusinessType(input.business_type);
   if (space === 'property' || biz === 'property') {
@@ -76,6 +81,8 @@ export function moduleKeysForProfile(
   switch (profile) {
     case 'commercial_property':
       return COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER;
+    case 'building_surveyor':
+      return BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER;
     case 'work_property':
       return PROPERTY_WORKSPACE_MODULE_ORDER;
     case 'family':
@@ -99,6 +106,8 @@ export function workspaceTypeLabel(profile: WorkspaceProfile): string {
   switch (profile) {
     case 'commercial_property':
       return 'Commercial Property';
+    case 'building_surveyor':
+      return 'Building Surveyor';
     case 'work_property':
       return 'Property';
     case 'family':
@@ -114,10 +123,11 @@ export function workspaceTypeLabel(profile: WorkspaceProfile): string {
 /** Map profile back to accounts.space_type for new workspaces. */
 export function spaceTypeForProfile(
   profile: WorkspaceProfile,
-): 'work' | 'family' | 'community' | 'commercial-property' {
+): 'work' | 'family' | 'community' | 'commercial-property' | 'building-surveyor' {
   if (profile === 'family') return 'family';
   if (profile === 'community') return 'community';
   if (profile === 'commercial_property') return 'commercial-property';
+  if (profile === 'building_surveyor') return 'building-surveyor';
   return 'work';
 }
 
@@ -134,6 +144,7 @@ export function spaceTypeFromProfile(
   profile: WorkspaceProfile,
 ): WorkspaceSpaceType {
   if (profile === 'commercial_property') return 'commercial-property';
+  if (profile === 'building_surveyor') return 'building-surveyor';
   if (profile === 'work_property') return 'property';
   if (profile === 'family') return 'family';
   if (profile === 'community') return 'community';
@@ -144,8 +155,15 @@ export function isBusinessProfile(profile: WorkspaceProfile): boolean {
   return (
     profile === 'work_design' ||
     profile === 'work_property' ||
-    profile === 'commercial_property'
+    profile === 'commercial_property' ||
+    profile === 'building_surveyor'
   );
+}
+
+export function isBuildingSurveyorProfile(
+  profile: WorkspaceProfile,
+): boolean {
+  return profile === 'building_surveyor';
 }
 
 export function isGroupProfile(profile: WorkspaceProfile): boolean {

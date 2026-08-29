@@ -41,6 +41,7 @@ export const ozerWorkspaceSpaceColors = {
   work: ozerColors.info,
   property: ozerColors.accent,
   'commercial-property': '#0F766E',
+  'building-surveyor': '#41606F',
   family: '#059669',
   community: ozerColors.gold,
 } as const;

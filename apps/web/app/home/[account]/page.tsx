@@ -19,6 +19,7 @@ import { DashboardPageContent } from './_components/dashboard-page-content';
 import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
 import { PropertyBusinessDashboard } from './_components/property-business-dashboard';
+import { SurveyorDashboard } from './_components/surveyor-dashboard';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
 import { recommendDashboardPreset } from './_lib/recommend-dashboard-preset';
 import {
@@ -32,6 +33,7 @@ import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
 import { loadWorkspaceDashboardPreset } from './_lib/server/dashboard-preset.loader';
 import { loadFamilyDashboardData } from './_lib/server/family-dashboard.loader';
 import { loadPropertyDashboardData } from './_lib/server/property-dashboard.loader';
+import { loadSurveyorDashboardData } from './_lib/server/surveyor-dashboard.loader';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
 
@@ -86,6 +88,11 @@ async function CommercialDashboardContent({ account }: { account: string }) {
       matchDigest={commercialData.matchDigest}
     />
   );
+}
+
+async function SurveyorDashboardContent({ account }: { account: string }) {
+  const data = await loadSurveyorDashboardData(account);
+  return <SurveyorDashboard {...data} />;
 }
 
 async function FamilyDashboardContent({ account }: { account: string }) {
@@ -218,6 +225,24 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           <Suspense fallback={null}></Suspense>
           <Suspense fallback={<BusinessDashboardSkeleton />}>
             <CommercialDashboardContent account={account} />
+          </Suspense>
+        </PageBody>
+      </>
+    );
+  }
+
+  if (spaceType === 'building-surveyor') {
+    return (
+      <>
+        <TeamAccountLayoutPageHeader
+          account={account}
+          title={accountLabel}
+          description="Enquiries, transcripts, and building survey reports."
+        />
+        <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
+          <Suspense fallback={null}></Suspense>
+          <Suspense fallback={<BusinessDashboardSkeleton />}>
+            <SurveyorDashboardContent account={account} />
           </Suspense>
         </PageBody>
       </>

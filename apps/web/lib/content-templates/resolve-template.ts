@@ -15,6 +15,7 @@ import {
   DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
   DEFAULT_PROPOSAL_EMAIL_SUBJECT,
 } from '~/home/[account]/proposals/_lib/doc-smart-fields';
+import { buildingSurveyBlankHtml } from '~/lib/building-surveyor/report-sections';
 
 import {
   mapAccountTemplate,
@@ -73,6 +74,17 @@ function codeFallback(kind: ContentTemplateKind): ResolvedTemplate | null {
       signature: null,
     };
   }
+  if (kind === 'survey_report_html') {
+    return {
+      source: 'code',
+      id: null,
+      name: 'RICS Home Survey headings',
+      subject: null,
+      bodyHtml: buildingSurveyBlankHtml(),
+      bodyText: '',
+      signature: null,
+    };
+  }
   return null;
 }
 
@@ -93,7 +105,8 @@ export async function resolveDefaultTemplate(
     (input.kind === 'proposal_html' ||
       input.kind === 'proposal_email' ||
       input.kind === 'contract_email' ||
-      input.kind === 'invoice_email')
+      input.kind === 'invoice_email' ||
+      input.kind === 'survey_report_html')
   ) {
     const { data } = await client
       .from('account_content_templates')
@@ -266,7 +279,8 @@ export async function listTemplatesForPicker(
     (input.kind === 'proposal_html' ||
       input.kind === 'proposal_email' ||
       input.kind === 'contract_email' ||
-      input.kind === 'invoice_email')
+      input.kind === 'invoice_email' ||
+      input.kind === 'survey_report_html')
   ) {
     const { data: accountRows } = await client
       .from('account_content_templates')

@@ -104,8 +104,8 @@ export const resendProposalAction = enhanceAction(
 );
 
 export const getProposalTabCountsAction = enhanceAction(
-  async (input) => getProposalTabCounts(input.accountId),
-  { schema: ListProposalsSchema.pick({ accountId: true }) },
+  async (input) => getProposalTabCounts(input.accountId, input.kind),
+  { schema: ListProposalsSchema.pick({ accountId: true, kind: true }) },
 );
 
 export const markProposalReadByTokenAction = enhanceAction(

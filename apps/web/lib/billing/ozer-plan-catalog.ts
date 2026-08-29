@@ -364,6 +364,8 @@ export function requiredEntitlementForProfile(
       return 'workspace_property';
     case 'commercial_property':
       return 'workspace_commercial_property';
+    case 'building_surveyor':
+      return null;
     default:
       return null;
   }

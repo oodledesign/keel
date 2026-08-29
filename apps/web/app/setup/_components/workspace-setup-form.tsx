@@ -7,6 +7,7 @@ import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import {
   Briefcase,
   Building2,
+  ClipboardCheck,
   Heart,
   Sparkles,
   UsersRound,
@@ -44,6 +45,7 @@ const DEFAULT_NAMES: Record<WorkspaceProfile, string> = {
   work_design: 'My Business',
   work_property: 'My Properties',
   commercial_property: 'Commercial Property',
+  building_surveyor: 'Building Surveyor',
   family: 'Our Family',
   community: 'Our Group',
 };
@@ -104,6 +106,7 @@ function initialDrafts(intent?: SetupIntent): DraftWorkspace[] {
   const drafts: DraftWorkspace[] = [
     newDraft('work_design'),
     newDraft('commercial_property'),
+    newDraft('building_surveyor'),
     newDraft('family'),
     newDraft('community'),
   ];
@@ -317,17 +320,20 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
               draft.profile === 'work_design' ||
               draft.profile === 'work_property';
             const isCommercial = draft.profile === 'commercial_property';
+            const isSurveyor = draft.profile === 'building_surveyor';
             const color = workspaceColorForSpaceType(
               spaceTypeFromProfile(draft.profile),
             );
             const Icon =
               draft.profile === 'work_property' || isCommercial
                 ? Building2
-                : draft.profile === 'family'
-                  ? Heart
-                  : draft.profile === 'community'
-                    ? UsersRound
-                    : Briefcase;
+                : isSurveyor
+                  ? ClipboardCheck
+                  : draft.profile === 'family'
+                    ? Heart
+                    : draft.profile === 'community'
+                      ? UsersRound
+                      : Briefcase;
 
             return (
               <div
@@ -361,9 +367,11 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                           ? 'Business'
                           : isCommercial
                             ? 'Commercial Property'
-                            : draft.profile === 'family'
-                              ? 'Family'
-                              : 'Community'}
+                            : isSurveyor
+                              ? 'Building Surveyor'
+                              : draft.profile === 'family'
+                                ? 'Family'
+                                : 'Community'}
                       </span>
                     </span>
                     <span className="mt-1 block text-sm text-[var(--workspace-shell-text-muted)]">
@@ -374,9 +382,11 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                           )
                         : isCommercial
                           ? commercialCardBlurb()
-                          : draft.profile === 'family'
-                            ? 'Free — household tasks, calendar and meal planning'
-                            : communityCardBlurb()}
+                          : isSurveyor
+                            ? 'Enquiry → booking → building survey reports from site transcripts'
+                            : draft.profile === 'family'
+                              ? 'Free — household tasks, calendar and meal planning'
+                              : communityCardBlurb()}
                     </span>
                   </span>
                   <span

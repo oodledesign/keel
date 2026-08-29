@@ -51,7 +51,7 @@ type Props = {
   accountSlug: string;
   accountId: string;
   initialClients?: ClientOption[];
-  variant?: 'work' | 'commercial';
+  variant?: 'work' | 'commercial' | 'surveyor';
   listings?: PipelineListingOption[];
   stageConfig?: PipelineStageConfigItem[];
   boardName?: string;
@@ -107,6 +107,10 @@ export function WorkspacePipelineBoardWrapper({
       return;
     }
 
+    if (variant === 'surveyor') {
+      return;
+    }
+
     setWonDeal(deal);
   };
 
@@ -137,7 +141,7 @@ export function WorkspacePipelineBoardWrapper({
           workspaceAccountSlug={accountSlug}
           workspaceAccountId={accountId}
           initialClients={initialClients}
-          variant="work"
+          variant={variant === 'surveyor' ? 'surveyor' : 'work'}
           hideBoardTitle={hideBoardTitle}
         />
       )}

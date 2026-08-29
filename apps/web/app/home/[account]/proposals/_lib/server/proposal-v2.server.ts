@@ -23,12 +23,19 @@ function adminDb() {
   return getSupabaseServerAdminClient() as any;
 }
 
-export async function getProposalTabCounts(accountId: string) {
+export async function getProposalTabCounts(
+  accountId: string,
+  kind?: 'proposal' | 'survey_report',
+) {
   const client = db();
-  const { data, error } = await client
+  let query = client
     .from('proposals')
     .select('status')
     .eq('account_id', accountId);
+  if (kind) {
+    query = query.eq('kind', kind);
+  }
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   let unapproved = 0;
@@ -62,6 +69,8 @@ export async function duplicateProposal(accountId: string, proposalId: string) {
     currency: source.currency,
     expires_at: source.expires_at,
     private_note: source.private_note,
+    kind:
+      (source as { kind?: 'proposal' | 'survey_report' }).kind ?? 'proposal',
   });
 
   await db()
@@ -234,11 +243,13 @@ export async function approveProposalByToken(input: {
     payload: { source: 'portal' },
   });
 
-  await handleProposalApproved(proposal.id);
+  if (updated.kind !== 'survey_report') {
+    await handleProposalApproved(proposal.id);
 
-  const { maybeAutoSendContractAfterApproval } =
-    await import('./proposal-automation');
-  await maybeAutoSendContractAfterApproval(proposal.id);
+    const { maybeAutoSendContractAfterApproval } =
+      await import('./proposal-automation');
+    await maybeAutoSendContractAfterApproval(proposal.id);
+  }
 
   try {
     await sendProposalApprovedOwnerNotification({
@@ -342,10 +353,13 @@ export async function handleProposalApproved(proposalId: string) {
   const admin = adminDb();
   const { data: proposal } = await admin
     .from('proposals')
-    .select('id, account_id, client_id, deal_id')
+    .select('id, account_id, client_id, deal_id, kind')
     .eq('id', proposalId)
     .maybeSingle();
-  if (!proposal || proposal.client_id || !proposal.deal_id) {
+  if (!proposal || proposal.kind === 'survey_report') {
+    return;
+  }
+  if (proposal.client_id || !proposal.deal_id) {
     return;
   }
 

@@ -16,7 +16,10 @@ export async function loadProposalsPageData(accountSlug: string) {
     redirect(pathsConfig.app.home);
   }
 
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, [
+    'work',
+    'building-surveyor',
+  ]);
 
   const account = workspace.account as {
     id: string;
@@ -26,10 +29,9 @@ export async function loadProposalsPageData(accountSlug: string) {
     company_role?: string | null;
   };
   const access = getTeamAccountAccess(account);
-  const proposalsModuleEnabled = isWorkModuleEnabled(
-    workspace.moduleSettings,
-    'invoices',
-  );
+  const proposalsModuleEnabled =
+    isWorkModuleEnabled(workspace.moduleSettings, 'invoices') ||
+    isWorkModuleEnabled(workspace.moduleSettings, 'proposals');
 
   return {
     accountId: account.id,

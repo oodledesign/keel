@@ -40,13 +40,15 @@ export type AccountModuleKey =
   | 'leases'
   | 'reports'
   | 'proposals'
-  | 'instagram_autoreply';
+  | 'instagram_autoreply'
+  | 'surveys';
 
 /** Nav label "Projects" maps to module_key `jobs` in account_module_settings. */
 export function resolveAccountModuleKey(navKey: string): string {
   if (navKey === 'projects') return 'jobs';
   if (navKey === 'proposals' || navKey === 'contracts') return 'invoices';
   if (navKey === 'meetings') return 'clients';
+  if (navKey === 'surveys') return 'proposals';
   return navKey;
 }
 

@@ -48,6 +48,7 @@ export const ListProposalsSchema = z.object({
     .optional(),
   clientId: z.string().uuid().optional(),
   dealId: z.string().uuid().optional(),
+  kind: z.enum(['proposal', 'survey_report']).optional(),
   dateFrom: optionalNullableString,
   dateTo: optionalNullableString,
 });
@@ -71,6 +72,7 @@ export const CreateProposalSchema = clientOrDealRefine(
     expires_at: optionalNullableString,
     private_note: optionalNullableString,
     context_refs: z.array(ProposalContextRefSchema).optional(),
+    kind: z.enum(['proposal', 'survey_report']).optional(),
   }),
 );
 

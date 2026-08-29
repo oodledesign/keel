@@ -3,6 +3,10 @@ import { Settings } from 'lucide-react';
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 
 import {
+  buildBuildingSurveyorSettingsChildren,
+  buildBuildingSurveyorSpaceNavChildren,
+} from '~/config/building-surveyor-account-navigation.config';
+import {
   buildCommercialPropertySettingsChildren,
   buildCommercialPropertySpaceNavChildren,
 } from '~/config/commercial-property-account-navigation.config';
@@ -93,6 +97,13 @@ const getRoutes = (
         ms,
         { pipelineBoardName: userFeatures?.pipelineBoardName },
       ) as NavRouteChild[];
+    } else if (profile === 'building_surveyor') {
+      applicationChildren = buildBuildingSurveyorSpaceNavChildren(
+        account,
+        access,
+        ms,
+        { pipelineBoardName: userFeatures?.pipelineBoardName },
+      ) as NavRouteChild[];
     } else if (profile === 'family') {
       applicationChildren = buildFamilySpaceNavChildren(
         account,
@@ -117,6 +128,8 @@ const getRoutes = (
         ? buildPropertySettingsChildren(account, access)
         : profile === 'commercial_property'
           ? buildCommercialPropertySettingsChildren(account, access)
+          : profile === 'building_surveyor'
+            ? buildBuildingSurveyorSettingsChildren(account, access)
           : profile === 'family'
             ? buildFamilySettingsChildren(account, access)
             : profile === 'community'

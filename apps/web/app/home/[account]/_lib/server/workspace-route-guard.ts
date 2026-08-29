@@ -32,6 +32,11 @@ export const BUSINESS_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'work',
   'property',
   'commercial-property',
+  'building-surveyor',
+];
+
+export const BUILDING_SURVEYOR_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
+  'building-surveyor',
 ];
 
 export const COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [

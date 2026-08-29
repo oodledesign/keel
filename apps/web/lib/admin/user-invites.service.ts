@@ -266,7 +266,10 @@ async function applyWorkspacePlanForInvite(
   workspace: NonNullable<AdminUserInviteAccessConfig['workspaces']>[number],
   grantedBy: string,
 ): Promise<void> {
-  if (workspace.profile === 'family') {
+  if (
+    workspace.profile === 'family' ||
+    workspace.profile === 'building_surveyor'
+  ) {
     return;
   }
 

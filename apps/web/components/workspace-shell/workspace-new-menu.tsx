@@ -471,6 +471,53 @@ function getTeamItems(
     ];
   }
 
+  if (spaceType === 'building-surveyor') {
+    return [
+      {
+        key: 'enquiry',
+        label: 'New enquiry',
+        icon: Kanban,
+        href: `${accountPath(account, pathsConfig.app.accountPipeline)}?create=lead`,
+      },
+      {
+        key: 'client',
+        label: 'New client',
+        icon: UserRoundPlus,
+        href: `${accountPath(account, pathsConfig.app.accountClients)}?create=client`,
+      },
+      {
+        key: 'survey',
+        label: 'New survey',
+        icon: FileText,
+        href: `${accountPath(account, pathsConfig.app.accountSurveys)}?create=1`,
+      },
+      {
+        key: 'transcript',
+        label: 'Paste transcript',
+        icon: FileText,
+        href: `${accountPath(account, pathsConfig.app.accountMeetings)}?create=1`,
+      },
+      {
+        key: 'task',
+        label: 'New Task',
+        icon: CheckSquare,
+        action: 'create-task',
+      },
+      {
+        key: 'note',
+        label: 'New Note',
+        icon: StickyNote,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
+      },
+      {
+        key: 'file',
+        label: 'Upload file',
+        icon: FileStack,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}?upload=1`,
+      },
+    ];
+  }
+
   if (spaceType === 'commercial-property') {
     const items: NewMenuItem[] = [
       {

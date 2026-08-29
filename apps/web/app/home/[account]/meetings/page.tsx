@@ -16,14 +16,24 @@ interface MeetingsPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async () => ({
-  title: 'Meetings',
-});
+export const generateMetadata = async ({ params }: MeetingsPageProps) => {
+  const accountSlug = (await params).account;
+  const workspace = await loadTeamWorkspace(accountSlug);
+  return {
+    title:
+      workspace.workspaceProfile === 'building_surveyor'
+        ? 'Transcripts'
+        : 'Meetings',
+  };
+};
 
 async function MeetingsPage({ params }: MeetingsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, [
+    'work',
+    'building-surveyor',
+  ]);
 
   const access = getTeamAccountAccess(
     workspace.account as {

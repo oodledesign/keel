@@ -133,6 +133,12 @@ function CreateOrganizationAccountForm(props: { onClose: () => void }) {
                       <SelectItem value={'family'}>Family</SelectItem>
                       <SelectItem value={'community'}>Community</SelectItem>
                       <SelectItem value={'property'}>Property</SelectItem>
+                      <SelectItem value={'commercial-property'}>
+                        Commercial Property
+                      </SelectItem>
+                      <SelectItem value={'building-surveyor'}>
+                        Building Surveyor
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 

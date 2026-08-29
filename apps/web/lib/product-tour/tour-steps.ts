@@ -232,7 +232,13 @@ export function resolveTeamProductTourId(
 ): Exclude<DriveableProductTourId, 'personal'> | null {
   if (profile === 'commercial_property') return 'commercial_property';
   if (profile === 'work_property') return 'work_property';
-  if (profile === 'family' || profile === 'community') return null;
+  if (
+    profile === 'family' ||
+    profile === 'community' ||
+    profile === 'building_surveyor'
+  ) {
+    return null;
+  }
   // Default work / design teams (and unknown work-like profiles).
   return 'work_design';
 }

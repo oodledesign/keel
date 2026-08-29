@@ -14,6 +14,7 @@ export const ADMIN_WORKSPACE_PROFILES = [
   'work_design',
   'work_property',
   'commercial_property',
+  'building_surveyor',
   'family',
   'community',
 ] as const;

@@ -19,6 +19,7 @@ export const ADMIN_INVITE_WORKSPACE_PROFILES = [
   'work_design',
   'work_property',
   'commercial_property',
+  'building_surveyor',
   'family',
   'community',
 ] as const;
@@ -50,6 +51,7 @@ export const DEFAULT_WORKSPACE_NAMES: Record<
   work_design: 'My Business',
   work_property: 'My Properties',
   commercial_property: 'Commercial Property',
+  building_surveyor: 'Building Surveyor',
   family: 'Our Family',
   community: 'Our Group',
 };
@@ -196,6 +198,8 @@ export function summarizeAccessConfig(
       parts.push('Property workspace');
     } else if (ws.profile === 'commercial_property') {
       parts.push('Commercial Property workspace');
+    } else if (ws.profile === 'building_surveyor') {
+      parts.push('Building Surveyor workspace');
     } else if (ws.profile === 'family') {
       parts.push('Family workspace');
     } else if (ws.profile === 'community') {

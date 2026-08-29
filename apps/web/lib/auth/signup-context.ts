@@ -42,6 +42,7 @@ const PROFILE_LABEL: Record<WorkspaceProfile, string> = {
   work_design: 'business',
   work_property: 'property',
   commercial_property: 'commercial property',
+  building_surveyor: 'building surveyor',
   family: 'family',
   community: 'community',
 };

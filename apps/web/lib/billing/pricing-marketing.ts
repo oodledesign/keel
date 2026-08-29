@@ -243,7 +243,8 @@ export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
       profile === 'family' ||
       profile === 'work_design' ||
       profile === 'work_property' ||
-      profile === 'commercial_property'
+      profile === 'commercial_property' ||
+      profile === 'building_surveyor'
         ? profile
         : undefined,
     productId,

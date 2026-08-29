@@ -10,29 +10,23 @@ import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-l
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
-import { ProposalEditContent } from '../../_components/proposal-edit-content';
-import { loadProposalsPageData } from '../../_lib/server/proposals-page.loader';
-import { getProposal } from '../../_lib/server/server-actions';
+import { ProposalEditContent } from '../../../proposals/_components/proposal-edit-content';
+import { loadProposalsPageData } from '../../../proposals/_lib/server/proposals-page.loader';
+import { getProposal } from '../../../proposals/_lib/server/server-actions';
 
-interface ProposalEditPageProps {
+interface SurveyEditPageProps {
   params: Promise<{ account: string; id: string }>;
 }
 
 export const generateMetadata = async () => {
-  return { title: `Edit proposal` };
+  return { title: 'Edit survey' };
 };
 
-async function ProposalEditPage({ params }: ProposalEditPageProps) {
+async function SurveyEditPage({ params }: SurveyEditPageProps) {
   const { account: accountSlug, id } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, [
-    'work',
-    'building-surveyor',
-  ]);
-  if (
-    !isWorkModuleEnabled(workspace.moduleSettings, 'invoices') &&
-    !isWorkModuleEnabled(workspace.moduleSettings, 'proposals')
-  ) {
+  redirectIfSpaceNotIn(workspace, accountSlug, ['building-surveyor']);
+  if (!isWorkModuleEnabled(workspace.moduleSettings, 'proposals')) {
     notFound();
   }
 
@@ -55,12 +49,17 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
   }
   if (!proposal) notFound();
 
+  const kind = (proposal as { kind?: string }).kind;
+  if (kind && kind !== 'survey_report') {
+    notFound();
+  }
+
   const [brand, pipeline] = await Promise.all([
     loadAccountBrandResolved(accountId),
     loadPipelineDataForAccount(accountId),
   ]);
   const title =
-    (proposal as { title?: string | null }).title?.trim() || 'Proposal';
+    (proposal as { title?: string | null }).title?.trim() || 'Building survey';
   const accountName =
     (workspace.account as { name?: string | null }).name?.trim() || accountSlug;
   const senderName =
@@ -89,6 +88,7 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
           brandLogoUrl={brand.logo_url}
           canEditProposals={canEditProposals}
           canManageProposalStatus={canManageProposalStatus}
+          documentKind="survey_report"
           deals={pipeline.deals.map((d) => ({
             id: d.id,
             contactName: d.contactName,
@@ -101,4 +101,4 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
   );
 }
 
-export default ProposalEditPage;
+export default SurveyEditPage;

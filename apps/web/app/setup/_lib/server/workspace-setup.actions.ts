@@ -167,7 +167,10 @@ export async function completeWorkspaceSetup(
   }
 
   const useWork = selections.some(
-    (s) => s.profile === 'work_design' || s.profile === 'work_property',
+    (s) =>
+      s.profile === 'work_design' ||
+      s.profile === 'work_property' ||
+      s.profile === 'building_surveyor',
   );
   const useFamily = selections.some((s) => s.profile === 'family');
   const useCommunity = selections.some((s) => s.profile === 'community');

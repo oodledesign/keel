@@ -34,7 +34,13 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
 
+import {
+  documentKindCopy,
+  type ProposalDocumentKind,
+} from '~/lib/building-surveyor/document-kind';
+
 import { getErrorMessage } from '../_lib/error-message';
+import { generateSurveyReportHtmlAction } from '../_lib/server/proposal-generate-actions';
 import { getProposal, listProposals } from '../_lib/server/server-actions';
 
 type DealOption = {
@@ -57,6 +63,7 @@ type Props = {
   contentHtml: string;
   deals: DealOption[];
   disabled?: boolean;
+  documentKind?: ProposalDocumentKind;
   onContentApplied: (html: string) => void;
 };
 
@@ -100,8 +107,10 @@ export function ProposalEditAiAssist({
   contentHtml,
   deals,
   disabled,
+  documentKind = 'proposal',
   onContentApplied,
 }: Props) {
+  const copy = documentKindCopy(documentKind);
   const {
     reportExhausted,
     accountId: creditsAccountId,
@@ -156,7 +165,13 @@ export function ProposalEditAiAssist({
     try {
       const [clientsResult, proposalsResult] = await Promise.all([
         listClients({ accountId, page: 1, pageSize: 100 }),
-        listProposals({ accountId, page: 1, pageSize: 50, status: 'all' }),
+        listProposals({
+          accountId,
+          page: 1,
+          pageSize: 50,
+          status: 'all',
+          kind: documentKind,
+        }),
       ]);
 
       const raw = clientsResult as { data?: unknown } | unknown[];
@@ -184,7 +199,7 @@ export function ProposalEditAiAssist({
     } finally {
       setLoadingData(false);
     }
-  }, [accountId, clientId, dealId, deals]);
+  }, [accountId, clientId, dealId, deals, documentKind]);
 
   useEffect(() => {
     if (!generateOpen) return;
@@ -259,7 +274,7 @@ export function ProposalEditAiAssist({
 
     if (contentHtml.trim()) {
       const ok = window.confirm(
-        'Replace the current proposal content with a new AI draft?',
+        copy.replaceConfirm,
       );
       if (!ok) return;
     }
@@ -315,58 +330,77 @@ export function ProposalEditAiAssist({
         }));
       }
 
-      const response = await fetch('/api/proposals/generate', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
+      let html = '';
+      if (documentKind === 'survey_report') {
+        const result = await generateSurveyReportHtmlAction({
           accountId,
-          recipientName: name,
-          recipientCompany: company,
+          propertyLabel: company || name,
+          clientName: name,
           accountName,
-          senderName,
+          surveyorName: senderName,
           transcripts: selectedTranscripts,
           contextNotes,
-          referenceProposalHtml,
-          dealValue: dealValue ?? deal?.value ?? null,
-        }),
-      });
-
-      // Stream into preview as chunks arrive
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        if (
-          handleAiCreditsFailure(reportExhausted, {
-            accountId: creditsAccountId || accountId,
-            billingHref,
-            status: response.status,
-            body: payload,
-            message: payload?.error,
-          })
-        ) {
-          return;
-        }
-        throw new Error(payload?.error ?? 'Generation failed');
-      }
-      if (!response.body) throw new Error('Empty generation stream');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let html = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        html += decoder.decode(value, { stream: true });
+        });
+        html = result.contentHtml.trim();
         setPreview(html);
+        if (result.source === 'keyword_fallback') {
+          toast.message(
+            result.fallbackReason ??
+              'Drafted from keyword routing because the AI path was unavailable.',
+          );
+        }
+      } else {
+        const response = await fetch('/api/proposals/generate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            accountId,
+            recipientName: name,
+            recipientCompany: company,
+            accountName,
+            senderName,
+            transcripts: selectedTranscripts,
+            contextNotes,
+            referenceProposalHtml,
+            dealValue: dealValue ?? deal?.value ?? null,
+          }),
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          if (
+            handleAiCreditsFailure(reportExhausted, {
+              accountId: creditsAccountId || accountId,
+              billingHref,
+              status: response.status,
+              body: payload,
+              message: payload?.error,
+            })
+          ) {
+            return;
+          }
+          throw new Error(payload?.error ?? 'Generation failed');
+        }
+        if (!response.body) throw new Error('Empty generation stream');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          html += decoder.decode(value, { stream: true });
+          setPreview(html);
+        }
       }
 
       html = html.trim();
-      if (!html) throw new Error('AI returned empty proposal content');
+      if (!html) throw new Error(`AI returned empty ${copy.singular} content`);
 
       onContentApplied(html);
       setGenerateOpen(false);
-      toast.success('AI draft applied — review and save');
+      toast.success(copy.draftApplied);
     } catch (error) {
       const message = getErrorMessage(error);
       if (
@@ -517,13 +551,13 @@ export function ProposalEditAiAssist({
       <ContentTemplatePickerDialog
         open={templateOpen}
         onOpenChange={setTemplateOpen}
-        kind="proposal_html"
+        kind={copy.templateKind}
         accountId={accountId}
-        title="Apply proposal template"
+        title={copy.templatePickerTitle}
         onSelect={(template) => {
           if (contentHtml.trim()) {
             const ok = window.confirm(
-              'Replace the current proposal content with this template?',
+              `Replace the current ${copy.singular} content with this template?`,
             );
             if (!ok) return;
           }
@@ -535,7 +569,7 @@ export function ProposalEditAiAssist({
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Generate proposal with AI</DialogTitle>
+            <DialogTitle>{copy.aiDialogTitle}</DialogTitle>
           </DialogHeader>
           {loadingData ? (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -569,7 +603,7 @@ export function ProposalEditAiAssist({
                       : 'text-[var(--workspace-shell-text-muted)]'
                   }`}
                 >
-                  Lead
+                  {copy.dealLabel}
                 </button>
               </div>
 
@@ -591,16 +625,16 @@ export function ProposalEditAiAssist({
                 </div>
               ) : (
                 <div>
-                  <Label>Lead</Label>
+                  <Label>{copy.dealLabel}</Label>
                   <select
                     value={aiDealId}
                     onChange={(e) => setAiDealId(e.target.value)}
                     className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
                   >
-                    <option value="">Select lead</option>
+                    <option value="">{copy.dealPlaceholder}</option>
                     {deals.map((deal) => (
                       <option key={deal.id} value={deal.id}>
-                        {deal.contactName || deal.companyName || 'Lead'}
+                        {deal.contactName || deal.companyName || copy.dealLabel}
                       </option>
                     ))}
                   </select>
@@ -674,7 +708,7 @@ export function ProposalEditAiAssist({
               </div>
 
               <div>
-                <Label>Reference proposal (optional)</Label>
+                <Label>{copy.referenceLabel}</Label>
                 <select
                   value={referenceProposalId}
                   onChange={(e) => setReferenceProposalId(e.target.value)}
@@ -683,7 +717,7 @@ export function ProposalEditAiAssist({
                   <option value="">None</option>
                   {referenceProposals.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.title?.trim() || 'Untitled proposal'}
+                      {p.title?.trim() || copy.untitled}
                     </option>
                   ))}
                 </select>
@@ -694,7 +728,7 @@ export function ProposalEditAiAssist({
                 disabled={busy}
                 onClick={() => void handleGenerate()}
               >
-                {busy ? 'Generating…' : 'Generate into editor'}
+                {busy ? 'Generating…' : copy.generateButton}
               </Button>
 
               {preview ? (

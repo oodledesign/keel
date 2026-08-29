@@ -11,6 +11,7 @@ import {
   editProposalHtml,
   generateProposalHtml,
 } from '~/lib/ai/proposal-generate';
+import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
 import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 const transcriptSchema = z.object({
@@ -111,6 +112,60 @@ export const generateProposalHtmlAction = enhanceAction(
     return { contentHtml };
   },
   { schema: generateProposalSchema },
+);
+
+const generateSurveyReportSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    propertyLabel: z.string().min(1).max(500),
+    clientName: z.string().max(500).nullable().optional(),
+    accountName: z.string().min(1).max(500),
+    surveyorName: z.string().min(1).max(500),
+    transcripts: z.array(transcriptSchema).max(20).default([]),
+    contextNotes: z
+      .array(
+        z.object({
+          title: z.string().min(1).max(500),
+          content: z.string().min(1).max(120_000),
+          type: z.enum(['note', 'file']),
+        }),
+      )
+      .max(20)
+      .optional(),
+  })
+  .refine(
+    (data) =>
+      data.transcripts.length > 0 || (data.contextNotes?.length ?? 0) > 0,
+    { message: 'Provide at least one site transcript or note/file' },
+  );
+
+export const generateSurveyReportHtmlAction = enhanceAction(
+  async (input, user) => {
+    await assertInvoicesEditPermission(input.accountId, user.id);
+
+    const client = getSupabaseServerClient();
+    const result = await generateSurveyReportHtml(
+      {
+        propertyLabel: input.propertyLabel.trim(),
+        clientName: input.clientName?.trim() || null,
+        accountName: input.accountName.trim(),
+        surveyorName: input.surveyorName.trim(),
+        transcripts: input.transcripts.map((t) => ({
+          title: t.title.trim(),
+          content: t.content.trim(),
+        })),
+        contextNotes: input.contextNotes?.map((n) => ({
+          title: n.title.trim(),
+          content: n.content.trim(),
+          type: n.type,
+        })),
+      },
+      { accountId: input.accountId, supabase: client },
+    );
+
+    return result;
+  },
+  { schema: generateSurveyReportSchema },
 );
 
 const editProposalSchema = z.object({

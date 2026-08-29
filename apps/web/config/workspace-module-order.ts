@@ -32,6 +32,7 @@ export const WORKSPACE_MODULE_ORDER = [
   'viewings',
   'leases',
   'reports',
+  'surveys',
   'calendar',
   'shopping',
   'meal_plan',
@@ -147,6 +148,23 @@ export const COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER = [
 
 export type CommercialPropertyWorkspaceModuleOrderKey =
   (typeof COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER)[number];
+
+/** building-surveyor — enquiry / survey / report workspace. */
+export const BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER = [
+  'dashboard',
+  'pipeline',
+  'clients',
+  'meetings',
+  'surveys',
+  'notes',
+  'docs',
+  'tasks',
+  'team',
+  'settings',
+] as const;
+
+export type BuildingSurveyorWorkspaceModuleOrderKey =
+  (typeof BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER)[number];
 
 /** Family workspace sidebar order (`account_module_settings`). */
 export const FAMILY_WORKSPACE_MODULE_ORDER = [

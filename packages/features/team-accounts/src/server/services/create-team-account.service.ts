@@ -14,7 +14,13 @@ class CreateTeamAccountService {
     name: string;
     userId: string;
     slug?: string;
-    spaceType?: 'work' | 'family' | 'community' | 'property';
+    spaceType?:
+      | 'work'
+      | 'family'
+      | 'community'
+      | 'property'
+      | 'commercial-property'
+      | 'building-surveyor';
     businessType?: 'design' | 'property' | 'other' | null;
   }) {
     const client = getSupabaseServerAdminClient();

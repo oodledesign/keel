@@ -22,11 +22,18 @@ import {
   useUnsavedChangesWarning,
 } from '~/lib/hooks/use-unsaved-changes-warning';
 
+import {
+  documentKindCopy,
+  documentListPath,
+  type ProposalDocumentKind,
+} from '~/lib/building-surveyor/document-kind';
+
 import { getErrorMessage } from '../_lib/error-message';
 import { updateProposal } from '../_lib/server/server-actions';
 import { ProposalEditAiAssist } from './proposal-edit-ai-assist';
 import { ProposalRowMenu } from './proposal-row-menu';
 import { ProposalSendPanel } from './proposal-send-panel';
+import { SurveyPhotosPanel } from './survey-photos-panel';
 
 type ClientInfo = {
   id: string;
@@ -122,6 +129,7 @@ export function ProposalEditContent({
   canEditProposals,
   canManageProposalStatus,
   deals,
+  documentKind = 'proposal',
 }: {
   accountSlug: string;
   accountId: string;
@@ -132,13 +140,12 @@ export function ProposalEditContent({
   canEditProposals: boolean;
   canManageProposalStatus: boolean;
   deals: DealOption[];
+  documentKind?: ProposalDocumentKind;
 }) {
   const router = useRouter();
+  const copy = documentKindCopy(documentKind);
   const proposal = initialProposal as unknown as ProposalData;
-  const proposalsPath = pathsConfig.app.accountProposals.replace(
-    '[account]',
-    accountSlug,
-  );
+  const proposalsPath = documentListPath(accountSlug, documentKind);
 
   const isDraft = proposal.status === 'draft';
   const isLocked = proposal.status !== 'draft';
@@ -240,7 +247,7 @@ export function ProposalEditContent({
         email_body: emailBody.trim() || null,
         email_signature: emailSignature.trim() || null,
       });
-      toast.success('Proposal saved');
+      toast.success(copy.savedToast);
       markClean();
       router.refresh();
     } catch (err) {
@@ -264,6 +271,7 @@ export function ProposalEditContent({
     router,
     title,
     totalPenceInput,
+    copy.savedToast,
   ]);
 
   const canvasClassName =
@@ -284,7 +292,7 @@ export function ProposalEditContent({
           >
             <Link href={proposalsPath}>
               <ArrowLeft className="mr-1 h-4 w-4" />
-              Back to proposals
+              {copy.backLabel}
             </Link>
           </Button>
 
@@ -329,6 +337,7 @@ export function ProposalEditContent({
                     contentHtml={contentHtml}
                     deals={deals}
                     disabled={saving}
+                    documentKind={documentKind}
                     onContentApplied={setContentHtml}
                   />
                 ) : null}
@@ -353,7 +362,7 @@ export function ProposalEditContent({
                     onClick={() => setShowSendPanel(true)}
                   >
                     <Send className="mr-2 h-4 w-4" />
-                    Send proposal
+                    {copy.sendLabel}
                   </Button>
                 ) : null}
               </>
@@ -369,6 +378,7 @@ export function ProposalEditContent({
                 sent_to_email: proposal.sent_to_email,
                 email_subject: proposal.email_subject,
               }}
+              documentKind={documentKind}
               canEditProposals={canEditProposals}
             />
           </div>
@@ -377,7 +387,7 @@ export function ProposalEditContent({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
-              {title.trim() || 'Untitled proposal'}
+              {title.trim() || copy.untitled}
               {proposal.total_pence != null
                 ? ` · ${formatPence(proposal.total_pence, proposal.currency ?? 'GBP')}`
                 : ''}
@@ -425,10 +435,10 @@ export function ProposalEditContent({
       {isLocked ? (
         <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           {proposal.status === 'approved'
-            ? 'This proposal has been approved and is locked.'
+            ? `This ${copy.singular} has been approved and is locked.`
             : proposal.status === 'declined'
-              ? 'This proposal was declined and is no longer editable.'
-              : 'This proposal has been sent. Content is read-only — use the menu to resend or export.'}
+              ? `This ${copy.singular} was declined and is no longer editable.`
+              : `This ${copy.singular} has been sent. Content is read-only — use the menu to resend or export.`}
         </div>
       ) : null}
 
@@ -436,7 +446,7 @@ export function ProposalEditContent({
         <ProposalSendPanel
           accountId={accountId}
           proposalId={proposal.id}
-          proposalTitle={title.trim() || 'Proposal'}
+          proposalTitle={title.trim() || copy.defaultTitle}
           totalPence={
             poundsInputToPence(totalPenceInput) ?? proposal.total_pence
           }
@@ -469,13 +479,13 @@ export function ProposalEditContent({
               <div>
                 {readOnly ? (
                   <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">
-                    {title.trim() || 'Untitled proposal'}
+                    {title.trim() || copy.untitled}
                   </h2>
                 ) : (
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Proposal title"
+                    placeholder={`${copy.defaultTitle} title`}
                     className={`text-2xl font-bold ${inputClassName}`}
                   />
                 )}
@@ -524,27 +534,37 @@ export function ProposalEditContent({
 
               <div>
                 <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">
-                  Proposal content
+                  {copy.contentLabel}
                 </Label>
                 <DocumentRichTextEditor
                   value={contentHtml}
                   onChange={setContentHtml}
                   readOnly={readOnly}
                   minHeight={360}
-                  placeholder="Write your proposal…"
+                  placeholder={copy.editorPlaceholder}
                 />
               </div>
             </div>
           </div>
 
           <aside className="space-y-4">
+            {documentKind === 'survey_report' ? (
+              <SurveyPhotosPanel
+                accountId={accountId}
+                accountSlug={accountSlug}
+                proposalId={proposal.id}
+                clientId={proposal.client_id}
+                canEdit={canModify}
+              />
+            ) : null}
+
             {(proposal.context_refs?.length ?? 0) > 0 ? (
               <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
                 <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                   Referenced notes and files
                 </h2>
                 <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  Context used when building this proposal.
+                  {copy.referencedContext}
                 </p>
                 <ul className="mt-3 space-y-2">
                   {(proposal.context_refs ?? []).map((ref) => (
@@ -576,7 +596,7 @@ export function ProposalEditContent({
                 onChange={(e) => setPrivateNote(e.target.value)}
                 disabled={readOnly}
                 rows={5}
-                placeholder="Internal notes about this proposal"
+                placeholder={copy.privateNotePlaceholder}
                 className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
               />
             </section>
@@ -611,7 +631,7 @@ export function ProposalEditContent({
                   Email templates
                 </h2>
                 <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  Used when sending this proposal.
+                  {copy.emailTemplatesHint}
                 </p>
                 <div className="mt-4 space-y-3">
                   <div>

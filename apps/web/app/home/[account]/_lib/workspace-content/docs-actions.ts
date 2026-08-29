@@ -121,6 +121,8 @@ const RegisterUploadSchema = z.object({
   filePath: z.string().min(1),
   mimeType: z.string().nullable().optional(),
   fileSizeBytes: z.number().int().nonnegative().optional(),
+  proposalId: z.string().uuid().optional(),
+  pinnedSectionKey: z.string().max(80).nullable().optional(),
 });
 
 export const registerUploadedWorkspaceDocAction = enhanceAction(
@@ -147,6 +149,8 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
         file_url: null,
         user_id: user.id,
         created_by: user.id,
+        proposal_id: data.proposalId ?? null,
+        pinned_section_key: data.pinnedSectionKey ?? null,
         ...linkCols,
       } as never)
       .select('id')
@@ -286,6 +290,64 @@ export const deleteWorkspaceDocAction = enhanceAction(
       accountId: z.string().uuid(),
       accountSlug: z.string().min(1),
       docId: z.string().uuid(),
+    }),
+  },
+);
+
+export const listProposalDocsAction = enhanceAction(
+  async (data) => {
+    const client = getSupabaseServerClient() as any;
+    const { data: rows, error } = await client
+      .from('docs')
+      .select(
+        'id, title, mime_type, file_path, storage_path, created_at, pinned_section_key, kind',
+      )
+      .eq('account_id', data.accountId)
+      .eq('proposal_id', data.proposalId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return {
+      items: ((rows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: row.id as string,
+        title: (row.title as string | null) ?? 'Untitled file',
+        mimeType: (row.mime_type as string | null) ?? null,
+        createdAt: (row.created_at as string | null) ?? null,
+        pinnedSectionKey: (row.pinned_section_key as string | null) ?? null,
+        kind: (row.kind as string | null) ?? 'uploaded',
+      })),
+    };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      proposalId: z.string().uuid(),
+    }),
+  },
+);
+
+export const updateProposalDocPinAction = enhanceAction(
+  async (data) => {
+    const client = getSupabaseServerClient() as any;
+    const { error } = await client
+      .from('docs')
+      .update({
+        pinned_section_key: data.pinnedSectionKey,
+      })
+      .eq('id', data.docId)
+      .eq('account_id', data.accountId)
+      .eq('proposal_id', data.proposalId);
+
+    if (error) throw error;
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      proposalId: z.string().uuid(),
+      docId: z.string().uuid(),
+      pinnedSectionKey: z.string().max(80).nullable(),
     }),
   },
 );

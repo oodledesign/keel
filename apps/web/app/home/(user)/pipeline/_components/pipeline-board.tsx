@@ -62,6 +62,12 @@ import pathsConfig from '~/config/paths.config';
 import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import {
+  BUILDING_SURVEYOR_PIPELINE_BOARD_STAGES,
+  BUILDING_SURVEYOR_PIPELINE_LOST_STAGE,
+  BUILDING_SURVEYOR_PIPELINE_WON_STAGE,
+  isBuildingSurveyorTerminalStage,
+} from '~/lib/building-surveyor/pipeline-stages';
+import {
   COMMERCIAL_PIPELINE_LOST_STAGE,
   COMMERCIAL_PIPELINE_WON_STAGE,
   DISPOSAL_TYPE_BADGE_CLASS,
@@ -166,6 +172,31 @@ const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
       tint: 'rgba(100,116,139,0.08)',
     },
     enquiry: { dot: '#3B82F6', bar: '#3B82F6', tint: 'rgba(59,130,246,0.08)' },
+    quoted: {
+      dot: '#F97316',
+      bar: '#F97316',
+      tint: 'rgba(249,115,22,0.08)',
+    },
+    accepted: {
+      dot: '#A855F7',
+      bar: '#A855F7',
+      tint: 'rgba(168,85,247,0.08)',
+    },
+    booked: {
+      dot: '#FF5C34',
+      bar: '#FF5C34',
+      tint: 'rgba(255, 92, 52, 0.08)',
+    },
+    surveyed: {
+      dot: '#EAB308',
+      bar: '#EAB308',
+      tint: 'rgba(234,179,8,0.08)',
+    },
+    reported: {
+      dot: '#FF5C34',
+      bar: '#FF5C34',
+      tint: 'rgba(255, 92, 52, 0.16)',
+    },
     viewing: {
       dot: '#A855F7',
       bar: '#A855F7',
@@ -243,7 +274,7 @@ type Props = {
   workspaceAccountSlug?: string;
   workspaceAccountId?: string;
   initialClients?: ClientOption[];
-  variant?: 'work' | 'commercial';
+  variant?: 'work' | 'commercial' | 'surveyor';
   listings?: PipelineListingOption[];
   /** Commercial stage overrides (rename/hide). */
   stageConfig?: PipelineStageConfigItem[];
@@ -281,6 +312,7 @@ export function PipelineBoard({
   const [isPending, startTransition] = useTransition();
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
   const isCommercial = variant === 'commercial';
+  const isSurveyor = variant === 'surveyor';
 
   const clearCreateQuery = useCallback(() => {
     if (!createRequested) return;
@@ -290,9 +322,25 @@ export function PipelineBoard({
   }, [createRequested, router]);
 
   const terminalWonStage =
-    variant === 'commercial' ? COMMERCIAL_PIPELINE_WON_STAGE : 'won';
+    variant === 'commercial'
+      ? COMMERCIAL_PIPELINE_WON_STAGE
+      : variant === 'surveyor'
+        ? BUILDING_SURVEYOR_PIPELINE_WON_STAGE
+        : 'won';
 
   const STAGES = useMemo(() => {
+    if (variant === 'surveyor') {
+      return BUILDING_SURVEYOR_PIPELINE_BOARD_STAGES.map((stage) => ({
+        key: stage.key,
+        label: stage.label,
+        icon:
+          stage.key === BUILDING_SURVEYOR_PIPELINE_WON_STAGE
+            ? Trophy
+            : stage.key === BUILDING_SURVEYOR_PIPELINE_LOST_STAGE
+              ? X
+              : ArrowRight,
+      }));
+    }
     if (variant !== 'commercial') {
       return WORK_STAGES.map((stage) => ({
         key: stage.key,
@@ -401,7 +449,9 @@ export function PipelineBoard({
   const activeCount = filteredDeals.filter((d) =>
     variant === 'commercial'
       ? !isCommercialTerminalStage(d.stage)
-      : d.stage !== 'won' && d.stage !== 'lost',
+      : variant === 'surveyor'
+        ? !isBuildingSurveyorTerminalStage(d.stage)
+        : d.stage !== 'won' && d.stage !== 'lost',
   ).length;
 
   const exportDealsCsv = useCallback(() => {
@@ -438,7 +488,11 @@ export function PipelineBoard({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = isCommercial ? 'wip.csv' : 'deals.csv';
+    a.download = isCommercial
+      ? 'wip.csv'
+      : isSurveyor
+        ? 'enquiries.csv'
+        : 'deals.csv';
     a.click();
     URL.revokeObjectURL(url);
   }, [filteredDeals, listingById, STAGES, isCommercial]);
@@ -493,6 +547,7 @@ export function PipelineBoard({
         } else if (
           newStage === 'won' ||
           newStage === COMMERCIAL_PIPELINE_WON_STAGE ||
+          newStage === BUILDING_SURVEYOR_PIPELINE_WON_STAGE ||
           newStage === 'completed' ||
           newStage === 'completed_exchanged' ||
           newStage === 'signed'
@@ -533,7 +588,7 @@ export function PipelineBoard({
           <span className="hidden sm:block sm:flex-1" />
         )}
         <div className="flex flex-wrap items-center gap-3">
-          {!isCommercial ? (
+          {!isCommercial && !isSurveyor ? (
             <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
               <button
                 type="button"

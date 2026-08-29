@@ -106,6 +106,7 @@ class ProposalsService {
       status,
       clientId,
       dealId,
+      kind,
       dateFrom,
       dateTo,
     } = params;
@@ -135,6 +136,9 @@ class ProposalsService {
     }
     if (dealId) {
       q = q.eq('deal_id', dealId);
+    }
+    if (kind) {
+      q = q.eq('kind', kind);
     }
     if (dateFrom) {
       q = q.gte('sent_at', dateFrom);
@@ -234,9 +238,13 @@ class ProposalsService {
       ? normalizeWorkspaceCurrency(input.currency)
       : await getWorkspaceCurrencyWithClient(this.db, input.accountId);
 
+    const documentKind = input.kind ?? 'proposal';
     const [htmlDefault, emailDefault] = await Promise.all([
       resolveDefaultTemplate(this.db, {
-        kind: 'proposal_html',
+        kind:
+          documentKind === 'survey_report'
+            ? 'survey_report_html'
+            : 'proposal_html',
         accountId: input.accountId,
       }),
       resolveDefaultTemplate(this.db, {
@@ -251,7 +259,10 @@ class ProposalsService {
         account_id: input.accountId,
         client_id: input.client_id ?? null,
         deal_id: input.deal_id ?? null,
-        title: input.title ?? 'Proposal',
+        kind: documentKind,
+        title:
+          input.title ??
+          (documentKind === 'survey_report' ? 'Building survey' : 'Proposal'),
         content_html: input.content_html ?? htmlDefault?.bodyHtml ?? '',
         status: 'draft',
         recipient_name: input.recipient_name ?? null,
@@ -385,7 +396,7 @@ class ProposalsService {
 
     const { data: proposal, error: fetchError } = await this.db
       .from('proposals')
-      .select('id, status, public_token')
+      .select('id, status, public_token, kind')
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
       .single();
@@ -487,12 +498,14 @@ class ProposalsService {
       // Keep the proposal in sent state even if email delivery fails.
     }
 
-    try {
-      const { createDraftContractForProposal } =
-        await import('./proposal-automation');
-      await createDraftContractForProposal(input.proposalId);
-    } catch (error) {
-      console.error('[proposals] draft contract on send failed', error);
+    if (proposal.kind !== 'survey_report') {
+      try {
+        const { createDraftContractForProposal } =
+          await import('./proposal-automation');
+        await createDraftContractForProposal(input.proposalId);
+      } catch (error) {
+        console.error('[proposals] draft contract on send failed', error);
+      }
     }
 
     return updated;

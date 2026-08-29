@@ -151,7 +151,7 @@ async function applyWorkspaceDefaults(
     if (error) throw new Error(error.message);
   }
 
-  if (profile === 'family') {
+  if (profile === 'family' || profile === 'building_surveyor') {
     await ensureEstablishedWorkspaceMembersOnboarded(looseAdmin, accountId);
     return;
   }

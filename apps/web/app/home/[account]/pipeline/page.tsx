@@ -9,6 +9,8 @@ import { createClientsService } from '~/home/[account]/clients/_lib/server/clien
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import { createRequirementsService } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
+import { DEFAULT_BUILDING_SURVEYOR_BOARD_NAME } from '~/lib/building-surveyor/pipeline-stages';
+import { isBuildingSurveyorTerminalStage } from '~/lib/building-surveyor/pipeline-stages';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import { isCommercialTerminalStage } from '~/lib/commercial/pipeline-stage-config';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -45,7 +47,11 @@ async function TeamAccountPipelinePage({
 }: TeamAccountPipelinePageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work', 'commercial-property']);
+  redirectIfSpaceNotIn(workspace, accountSlug, [
+    'work',
+    'commercial-property',
+    'building-surveyor',
+  ]);
 
   if (!isWorkModuleEnabled(workspace.moduleSettings, 'pipeline')) {
     redirect(getDefaultAccountPath(accountSlug));
@@ -83,6 +89,7 @@ async function TeamAccountPipelinePage({
     client_type: row.client_type ?? null,
   }));
   const isCommercial = workspace.workspaceProfile === 'commercial_property';
+  const isSurveyor = workspace.workspaceProfile === 'building_surveyor';
 
   let listings: PipelineListingOption[] = [];
   let stageConfig = undefined;
@@ -196,13 +203,22 @@ async function TeamAccountPipelinePage({
     if (isCommercial) {
       return !isCommercialTerminalStage(d.stage);
     }
+    if (isSurveyor) {
+      return !isBuildingSurveyorTerminalStage(d.stage);
+    }
     return d.stage !== 'won' && d.stage !== 'lost';
   });
   const totalValue = activeDeals.reduce((sum, d) => sum + (d.value || 0), 0);
-  const headerTitle = isCommercial ? boardName : 'Pipeline';
+  const headerTitle = isCommercial
+    ? boardName
+    : isSurveyor
+      ? DEFAULT_BUILDING_SURVEYOR_BOARD_NAME
+      : 'Pipeline';
   const headerDescription = isCommercial
     ? undefined
-    : `${activeDeals.length} active leads · ${formatCurrency(totalValue)} total value`;
+    : isSurveyor
+      ? `${activeDeals.length} open enquiries · ${formatCurrency(totalValue)} quoted`
+      : `${activeDeals.length} active leads · ${formatCurrency(totalValue)} total value`;
 
   return (
     <>
@@ -220,7 +236,9 @@ async function TeamAccountPipelinePage({
           accountSlug={accountSlug}
           accountId={accountId}
           initialClients={initialClients}
-          variant={isCommercial ? 'commercial' : 'work'}
+          variant={
+            isCommercial ? 'commercial' : isSurveyor ? 'surveyor' : 'work'
+          }
           listings={listings}
           stageConfig={stageConfig}
           boardName={boardName}

@@ -89,7 +89,14 @@ export const CreateTeamSchema = z
   .object({
     name: TeamNameSchema,
     spaceType: z
-      .enum(['work', 'family', 'community', 'property'])
+      .enum([
+        'work',
+        'family',
+        'community',
+        'property',
+        'commercial-property',
+        'building-surveyor',
+      ])
       .default('work'),
     // Transform empty strings to undefined before validation
     slug: z.preprocess(
