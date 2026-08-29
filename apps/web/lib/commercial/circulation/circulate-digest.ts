@@ -118,7 +118,7 @@ export async function circulateContactDigests(
   const listingIds = [
     ...new Set(eligible.flatMap((row) => row.listings.map((l) => l.listingId))),
   ];
-  const subject = digestSubject(identity.agencyName, listingIds.length);
+  const subject = `Matching opportunities from ${identity.agencyName}`;
   const fromName = identity.fromName;
   const replyTo = identity.replyTo || fromEmail;
   const fromHeader = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
@@ -164,7 +164,7 @@ export async function circulateContactDigests(
       siteUrl: input.siteUrl,
       fromHeader,
       replyTo,
-      subject,
+      agencyName: identity.agencyName,
       emailBrand,
       dryRun: Boolean(input.dryRun),
       triggerListingId: input.triggerListingId ?? null,
@@ -203,7 +203,7 @@ async function sendOneDigest(input: {
   siteUrl: string;
   fromHeader: string;
   replyTo: string;
-  subject: string;
+  agencyName: string;
   emailBrand: CirculationEmailBrand;
   dryRun: boolean;
   triggerListingId: string | null;
@@ -215,6 +215,7 @@ async function sendOneDigest(input: {
 }> {
   const { contact, accountId, sendId } = input;
   const listings = contact.listings.slice(0, MAX_LISTINGS_PER_EMAIL);
+  const subject = digestSubject(input.agencyName, listings.length);
   const fingerprint = matchDigestFingerprint(
     listings.map((listing) => listing.listingId),
   );
@@ -286,7 +287,7 @@ async function sendOneDigest(input: {
       to: contact.email,
       from: input.fromHeader,
       replyTo: input.replyTo,
-      subject: input.subject,
+      subject,
       html,
       listUnsubscribeUrl: unsubscribeUrl,
       accountId,

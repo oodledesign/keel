@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { circulateContactDigests } from '~/lib/commercial/circulation/circulate-digest';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
+import { ACTIVE_LISTING_STATUSES_FOR_MATCH } from '~/lib/commercial/match-scoring';
 
 const MAX_ACCOUNTS = 80;
 
@@ -17,6 +18,8 @@ async function loadCirculationAccountIds(
   const { data, error } = await db
     .from('commercial_listings')
     .select('account_id')
+    .eq('auto_circulate_matches', true)
+    .in('status', [...ACTIVE_LISTING_STATUSES_FOR_MATCH])
     .limit(2000);
 
   if (error) {
@@ -103,9 +106,6 @@ export async function runCirculationForPublishedListing(
   admin: SupabaseClient,
   input: { accountId: string; listingId: string },
 ): Promise<void> {
-  const { ACTIVE_LISTING_STATUSES_FOR_MATCH } =
-    await import('~/lib/commercial/match-scoring');
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = admin as any;
   const { data: listing, error } = await db

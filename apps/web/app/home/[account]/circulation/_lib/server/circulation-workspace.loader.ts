@@ -27,15 +27,17 @@ export async function loadCirculationWorkspaceData(
     resolveCirculationIdentity(client, accountId),
   ]);
 
-  for (const contact of contacts) {
-    if (contact.consentStatus === 'unknown' || contact.publicAccessToken) {
-      continue;
-    }
-    contact.publicAccessToken = await circulation.ensurePublicAccessToken(
-      accountId,
-      contact.email,
-    );
-  }
+  await Promise.all(
+    contacts.map(async (contact) => {
+      if (contact.consentStatus === 'unknown' || contact.publicAccessToken) {
+        return;
+      }
+      contact.publicAccessToken = await circulation.ensurePublicAccessToken(
+        accountId,
+        contact.email,
+      );
+    }),
+  );
 
   return {
     autoSendEnabled: settings.auto_send_enabled,

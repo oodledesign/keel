@@ -264,6 +264,12 @@ export async function listContactMatches(
   if (reqError) throw new Error(reqError.message);
 
   const listings = (listingRows ?? []) as ListingRow[];
+  if (listings.length >= 250) {
+    console.warn(
+      '[circulation] listing match set hit the 250-row cap',
+      input.accountId,
+    );
+  }
   const requirements = ((reqRows ?? []) as RequirementRow[]).filter((row) => {
     const email = normalizeCirculationEmail(String(row.contact_email ?? ''));
     if (!email) return false;

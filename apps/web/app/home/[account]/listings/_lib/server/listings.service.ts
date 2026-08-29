@@ -8,10 +8,8 @@ import { randomBytes } from 'crypto';
 
 import { getLogger } from '@kit/shared/logger';
 
-import {
-  listingBecameLiveForCirculation,
-  scheduleCirculationOnListingPublished,
-} from '~/lib/commercial/circulation/trigger-on-publish';
+import { listingBecameLiveForCirculation } from '~/lib/commercial/circulation/digest-fingerprint';
+import { scheduleCirculationOnListingPublished } from '~/lib/commercial/circulation/trigger-on-publish';
 import type {
   DisposalType,
   ListingLetType,
@@ -1558,17 +1556,6 @@ export function createListingsService(client: SupabaseClient) {
         }
       }
       if (listingBecameLiveForCirculation(existing.status, listing.status)) {
-        if (!listing.autoCirculateMatches) {
-          try {
-            await fromTable(client, 'commercial_listings')
-              .update({ auto_circulate_matches: true })
-              .eq('id', listingId)
-              .eq('account_id', accountId);
-            listing.autoCirculateMatches = true;
-          } catch {
-            /* best-effort — still try to mail */
-          }
-        }
         scheduleCirculationOnListingPublished({
           accountId,
           listingId,
