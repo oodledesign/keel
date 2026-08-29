@@ -47,7 +47,10 @@ SES sandbox only delivers to verified emails. For production:
 | Force SES for circulation | `apps/web/lib/commercial/circulation/circulation.service.ts` → `sendCirculationEmailViaSes` |
 | Workspace-branded HTML | `apps/web/lib/commercial/circulation/circulation-email.ts` |
 | Circulate action | `apps/web/app/home/[account]/listings/_lib/server/circulation-actions.ts` |
-| Auto-circulate cron | `apps/web/app/api/cron/commercial-match-digest` → `runCommercialAutoCirculation` |
+| Auto-circulate cron | `apps/web/app/api/cron/commercial-match-digest` → `runCommercialAutoCirculation` (contact digest) |
+| Publish trigger | listing status → live → `scheduleCirculationOnListingPublished` |
+| Workspace admin | `/app/[account]/circulation` |
+| Public matches page | `/share/matches/[token]` |
 | Bounce/complaint (future) | Mirror Zepto webhook pattern into `commercial_marketing_preferences.marketing_status = suppressed` |
 
 Do **not** route circulation through `getMailer()` while `ZEPTOMAIL_TOKEN` is set — that prefers Zepto and violates Zepto’s marketing ToS.

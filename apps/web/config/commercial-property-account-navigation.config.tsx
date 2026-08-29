@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LineChart,
   ListChecks,
+  Mail,
   ScrollText,
   Settings,
   StickyNote,
@@ -122,6 +123,15 @@ export function buildCommercialPropertySpaceNavChildren(
             tourId: 'nav-requirements',
           }
         : null,
+    circulation: () =>
+      access.canViewDashboard
+        ? {
+            label: 'Circulation',
+            path: createPath(pathsConfig.app.accountCirculation, account),
+            Icon: <Mail className={iconClasses} />,
+            tourId: 'nav-circulation',
+          }
+        : null,
     viewings: () =>
       access.canViewDashboard && isEnabled(ms, 'viewings')
         ? {
@@ -206,6 +216,18 @@ export function buildCommercialPropertySpaceNavChildren(
   items.push(...buildWorkAppLinks(account, ms));
 
   if (access.canViewDashboard) {
+    const circulationFactory = registry.circulation;
+    const circulation = circulationFactory ? circulationFactory() : null;
+    if (circulation) {
+      const requirementsIndex = items.findIndex(
+        (item) => item.tourId === 'nav-requirements',
+      );
+      if (requirementsIndex >= 0) {
+        items.splice(requirementsIndex + 1, 0, circulation);
+      } else {
+        items.push(circulation);
+      }
+    }
     items.push({
       label: 'Audit',
       path: createPath(pathsConfig.app.accountAudit, account),

@@ -1387,15 +1387,26 @@ export function ListingManagementSection({
             <p className="mb-2 text-sm text-[var(--workspace-shell-text)]/60">
               Email matching applicants via Amazon SES as this workspace, not
               Ozer. From name, logo, and colours come from Brand settings.
+              Manage the list and send log under{' '}
+              <Link
+                href={pathsConfig.app.accountCirculation.replace(
+                  '[account]',
+                  accountSlug,
+                )}
+                className="underline underline-offset-2"
+              >
+                Circulation
+              </Link>
+              .
             </p>
             <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
               <div>
                 <p className="text-sm text-[var(--workspace-shell-text)]">
-                  Auto-circulate new matches
+                  Include in automatic match emails
                 </p>
                 <p className="text-xs text-[var(--workspace-shell-text)]/60">
-                  Daily cron mails subscribed applicants who have not already
-                  received this disposal.
+                  When this disposal goes live, matching people get one digest
+                  of all properties that currently fit them.
                 </p>
               </div>
               <Switch
