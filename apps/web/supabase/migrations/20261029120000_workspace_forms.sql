@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS ix_workspace_form_submissions_enquiry
   WHERE commercial_enquiry_id IS NOT NULL;
 
 COMMENT ON TABLE public.workspace_form_submissions IS
-  'Public form submissions plus links to the pipeline deal or listing enquiry they created.';
+  'Append-only public form submissions plus links to the pipeline deal or listing enquiry they created. Members can SELECT; writes go through the service role.';
 
 DROP TRIGGER IF EXISTS workspace_forms_set_timestamps ON public.workspace_forms;
 CREATE TRIGGER workspace_forms_set_timestamps
@@ -88,8 +88,9 @@ REVOKE ALL ON public.workspace_form_submissions FROM anon, authenticated, servic
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_forms
   TO authenticated, service_role;
+GRANT SELECT ON public.workspace_form_submissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_form_submissions
-  TO authenticated, service_role;
+  TO service_role;
 
 DROP POLICY IF EXISTS workspace_forms_select ON public.workspace_forms;
 CREATE POLICY workspace_forms_select ON public.workspace_forms
@@ -127,25 +128,10 @@ CREATE POLICY workspace_form_submissions_select
 
 DROP POLICY IF EXISTS workspace_form_submissions_insert
   ON public.workspace_form_submissions;
-CREATE POLICY workspace_form_submissions_insert
-  ON public.workspace_form_submissions
-  FOR INSERT TO authenticated
-  WITH CHECK (public.is_account_member(account_id));
-
 DROP POLICY IF EXISTS workspace_form_submissions_update
   ON public.workspace_form_submissions;
-CREATE POLICY workspace_form_submissions_update
-  ON public.workspace_form_submissions
-  FOR UPDATE TO authenticated
-  USING (public.is_account_member(account_id))
-  WITH CHECK (public.is_account_member(account_id));
-
 DROP POLICY IF EXISTS workspace_form_submissions_delete
   ON public.workspace_form_submissions;
-CREATE POLICY workspace_form_submissions_delete
-  ON public.workspace_form_submissions
-  FOR DELETE TO authenticated
-  USING (public.is_account_member(account_id));
 
 DROP POLICY IF EXISTS workspace_form_submissions_service_role
   ON public.workspace_form_submissions;
