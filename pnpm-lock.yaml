@@ -453,6 +453,9 @@ importers:
       '@kit/scheduling':
         specifier: workspace:*
         version: link:../../packages/scheduling
+      '@kit/ses':
+        specifier: workspace:*
+        version: link:../../packages/mailers/ses
       '@kit/shared':
         specifier: workspace:*
         version: link:../../packages/shared

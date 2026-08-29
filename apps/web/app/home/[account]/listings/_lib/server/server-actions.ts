@@ -30,6 +30,7 @@ import {
   RemoveListingPartySchema,
   SearchCoAgentClientsSchema,
   SearchListingPartyClientsSchema,
+  SetAutoCirculateMatchesSchema,
   SetBrochureShareSchema,
   SetLandlordShareSchema,
   SetListingMediaCoverSchema,
@@ -282,6 +283,19 @@ export const setBrochureShare = enhanceAction(
     return getService().setBrochureShare(input);
   },
   { schema: SetBrochureShareSchema },
+);
+
+export const setAutoCirculateMatches = enhanceAction(
+  async (input) => {
+    await requireBillableDisposalActor(input.accountId);
+    const listing = await getService().setAutoCirculateMatches(input);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
+    return listing;
+  },
+  { schema: SetAutoCirculateMatchesSchema },
 );
 
 export const createListingUnit = enhanceAction(

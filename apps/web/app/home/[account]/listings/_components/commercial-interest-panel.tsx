@@ -64,8 +64,9 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
-import { RequirementMatchesMap } from './requirement-matches-map';
 import { useDisposalAccess } from './disposal-access-context';
+import { ListingCirculateDialog } from './listing-circulate-dialog';
+import { RequirementMatchesMap } from './requirement-matches-map';
 
 function suggestionKey(s: MatchSuggestion) {
   return `${s.listingId}:${s.requirementId}`;
@@ -552,7 +553,9 @@ export function CommercialInterestPanel({
             <Button
               type="button"
               size="sm"
-              disabled={pending || selectedListingIds.size === 0 || !canEditDisposals}
+              disabled={
+                pending || selectedListingIds.size === 0 || !canEditDisposals
+              }
               className={workspaceBtnPrimaryMd}
               onClick={onBulkAddSelected}
             >
@@ -666,6 +669,12 @@ export function CommercialInterestPanel({
           </div>
           {!compact && suggestions.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
+              {mode.kind === 'listing' && canEditDisposals ? (
+                <ListingCirculateDialog
+                  accountId={accountId}
+                  listingId={mode.listingId}
+                />
+              ) : null}
               <Button
                 type="button"
                 size="sm"

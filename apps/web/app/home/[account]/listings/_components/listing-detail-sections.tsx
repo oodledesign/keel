@@ -51,6 +51,7 @@ import type {
 import {
   createListingEnquiry,
   deleteListingUnit,
+  setAutoCirculateMatches,
   setBrochureShare,
   setLandlordShare,
   updateListingEnquiry,
@@ -59,6 +60,7 @@ import { CommercialInterestPanel } from './commercial-interest-panel';
 import { useDisposalAccess } from './disposal-access-context';
 import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingCirculateDialog } from './listing-circulate-dialog';
+import { ListingCirculationLog } from './listing-circulation-log';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
@@ -730,6 +732,15 @@ export function ListingInterestSection({
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Match contacts, then circulate particulars from this workspace.
+        </p>
+        {canEditDisposals ? (
+          <ListingCirculateDialog accountId={accountId} listingId={listingId} />
+        ) : null}
+      </div>
+
       <CommercialInterestPanel
         accountId={accountId}
         mode={{ kind: 'listing', listingId }}
@@ -1163,6 +1174,7 @@ export function ListingManagementSection({
   const { listing, setListing } = useListingState(initial);
   const [sharePending, startShareTransition] = useTransition();
   const [brochurePending, startBrochureTransition] = useTransition();
+  const [autoCirculatePending, startAutoCirculateTransition] = useTransition();
   const [copied, setCopied] = useState(false);
   const [brochureCopied, setBrochureCopied] = useState(false);
 
@@ -1373,13 +1385,59 @@ export function ListingManagementSection({
               Circulate to requirements
             </p>
             <p className="mb-2 text-sm text-[var(--workspace-shell-text)]/60">
-              Email matching subscribed applicants via Amazon SES.
+              Email matching applicants via Amazon SES as this workspace, not
+              Ozer. From name, logo, and colours come from Brand settings.
             </p>
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
+              <div>
+                <p className="text-sm text-[var(--workspace-shell-text)]">
+                  Auto-circulate new matches
+                </p>
+                <p className="text-xs text-[var(--workspace-shell-text)]/60">
+                  Daily cron mails subscribed applicants who have not already
+                  received this disposal.
+                </p>
+              </div>
+              <Switch
+                checked={listing.autoCirculateMatches}
+                disabled={autoCirculatePending || !canEditDisposals}
+                onCheckedChange={(enabled) => {
+                  if (!canEditDisposals) return;
+                  startAutoCirculateTransition(async () => {
+                    try {
+                      const updated = await setAutoCirculateMatches({
+                        listingId: listing.id,
+                        accountId,
+                        enabled,
+                      });
+                      setListing(updated);
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not update auto-circulate',
+                      );
+                    }
+                  });
+                }}
+              />
+            </div>
             {canEditDisposals ? (
               <ListingCirculateDialog
                 accountId={accountId}
                 listingId={listing.id}
               />
+            ) : null}
+            {canEditDisposals ? (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Send log
+                </p>
+                <ListingCirculationLog
+                  accountId={accountId}
+                  listingId={listing.id}
+                />
+              </div>
             ) : null}
           </div>
         </CardContent>

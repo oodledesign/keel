@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   circulateListing,
   listCirculationCandidates,
+  listCirculationSends,
+  resolveCirculationIdentity,
 } from '~/lib/commercial/circulation/circulate-listing';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
 
@@ -37,13 +39,19 @@ const ListCandidatesSchema = z.object({
   minScore: z.number().min(0).max(100).optional(),
 });
 
+const ListingScopeSchema = z.object({
+  accountId: z.string().uuid(),
+  listingId: z.string().uuid(),
+});
+
 const CirculateSchema = z.object({
   accountId: z.string().uuid(),
   listingId: z.string().uuid(),
   requirementIds: z.array(z.string().uuid()).min(1).max(200),
-  fromEmail: z.string().email(),
+  fromEmail: z.string().email().optional(),
   fromName: z.string().max(120).optional(),
   replyTo: z.string().email().optional(),
+  dryRun: z.boolean().optional(),
 });
 
 function getClient() {
@@ -122,7 +130,44 @@ export const circulateListingAction = enhanceAction(
       fromName: input.fromName,
       replyTo: input.replyTo,
       siteUrl,
+      dryRun: input.dryRun,
+      sendTrigger: 'manual',
     });
   },
   { schema: CirculateSchema },
+);
+
+export const getCirculationIdentityAction = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
+    const identity = await resolveCirculationIdentity(
+      getClient(),
+      input.accountId,
+    );
+    return {
+      agencyName: identity.agencyName,
+      fromName: identity.fromName,
+      fromEmail: identity.fromEmail,
+      replyTo: identity.replyTo,
+    };
+  },
+  { schema: AccountIdSchema },
+);
+
+export const listListingCirculationSends = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
+    return listCirculationSends(getClient(), input);
+  },
+  { schema: ListingScopeSchema },
 );

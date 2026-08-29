@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { SendRawEmailCommand, SESClient } from '@aws-sdk/client-ses';
+import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
 import { z } from 'zod';
 
 import { Mailer, MailerSchema } from '@kit/mailers-shared';
@@ -23,6 +23,12 @@ function getSesConfiguration() {
 
 function sanitizeHeader(value: string) {
   return value.replace(/[\r\n]+/g, ' ').trim();
+}
+
+/** SES Source must be a bare address; From can still be `Name <email>`. */
+export function extractSesSourceAddress(from: string): string {
+  const match = from.match(/<([^>]+)>/);
+  return (match?.[1] ?? from).trim();
 }
 
 function buildRawEmail(config: Config) {
@@ -68,6 +74,22 @@ function buildRawEmail(config: Config) {
   ].join('\r\n');
 }
 
+let cachedSesClient: SESClient | null = null;
+
+function getSesClient() {
+  if (!cachedSesClient) {
+    const ses = getSesConfiguration();
+    cachedSesClient = new SESClient({
+      region: ses.region,
+      credentials: {
+        accessKeyId: ses.accessKeyId,
+        secretAccessKey: ses.secretAccessKey,
+      },
+    });
+  }
+  return cachedSesClient;
+}
+
 export function createSesMailer() {
   return new SesMailer();
 }
@@ -78,23 +100,16 @@ export function createSesMailer() {
  */
 class SesMailer implements Mailer {
   async sendEmail(config: Config) {
-    const ses = getSesConfiguration();
-    const client = new SESClient({
-      region: ses.region,
-      credentials: {
-        accessKeyId: ses.accessKeyId,
-        secretAccessKey: ses.secretAccessKey,
-      },
-    });
-
-    await client.send(
+    const result = await getSesClient().send(
       new SendRawEmailCommand({
-        Source: config.from,
+        Source: extractSesSourceAddress(config.from),
         Destinations: [config.to],
         RawMessage: {
           Data: Buffer.from(buildRawEmail(config), 'utf8'),
         },
       }),
     );
+
+    return { messageId: result.MessageId ?? null };
   }
 }

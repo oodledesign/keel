@@ -182,6 +182,7 @@ export type CommercialListing = {
   landlordShareEnabled: boolean;
   brochureShareToken: string | null;
   brochureShareEnabled: boolean;
+  autoCirculateMatches: boolean;
   notes: string | null;
   externalId: string | null;
   paUserId: string | null;
@@ -513,6 +514,7 @@ function mapListing(row: ListingRow): CommercialListing {
     landlordShareEnabled: Boolean(row.landlord_share_enabled),
     brochureShareToken: (row.brochure_share_token as string | null) ?? null,
     brochureShareEnabled: Boolean(row.brochure_share_enabled),
+    autoCirculateMatches: Boolean(row.auto_circulate_matches),
     notes: (row.notes as string | null) ?? null,
     externalId: (row.external_id as string | null) ?? null,
     paUserId: (row.pa_user_id as string | null) ?? null,
@@ -2522,6 +2524,35 @@ export function createListingsService(client: SupabaseClient) {
 
       if (error || !data) {
         throw new Error(error?.message ?? 'Failed to update brochure share');
+      }
+
+      return mapListing(data as ListingRow);
+    },
+
+    async setAutoCirculateMatches(input: {
+      listingId: string;
+      accountId: string;
+      enabled: boolean;
+    }): Promise<CommercialListing> {
+      const existing = await this.getListing(input.listingId, input.accountId);
+      if (!existing) {
+        throw new Error('Listing not found');
+      }
+
+      const { data, error } = await fromTable(client, 'commercial_listings')
+        .update({
+          auto_circulate_matches: input.enabled,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.listingId)
+        .eq('account_id', input.accountId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(
+          error?.message ?? 'Failed to update auto-circulate setting',
+        );
       }
 
       return mapListing(data as ListingRow);

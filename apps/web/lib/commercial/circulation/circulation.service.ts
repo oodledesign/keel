@@ -2,14 +2,14 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 import { createSesMailer } from '@kit/ses';
 
 import {
-  escapeNotificationHtml,
-  wrapNotificationEmail,
-} from '~/lib/email/wrap-notification-email';
+  type CirculationConsentStatus,
+  normalizeCirculationEmail,
+} from '~/lib/commercial/circulation/circulation-eligibility';
 
 const PURPOSE = 'matching_disposals' as const;
 const CONSENT_COPY_VERSION = 'v1';
@@ -23,7 +23,7 @@ export type LawfulBasis =
   | 'other';
 
 function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
+  return normalizeCirculationEmail(email);
 }
 
 function getUnsubscribeSecret(): string {
@@ -32,9 +32,7 @@ function getUnsubscribeSecret(): string {
 
   // Local/dev only — never ship production without an explicit secret.
   if (process.env.NODE_ENV !== 'production') {
-    return (
-      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || 'circulation-dev-secret'
-    );
+    return 'circulation-dev-secret';
   }
 
   throw new Error('CIRCULATION_UNSUBSCRIBE_SECRET is not configured');
@@ -73,7 +71,12 @@ export function decodeCirculationUnsubscribeToken(token: string): {
       .update(`${payload}:${secret}`)
       .digest('hex')
       .slice(0, 24);
-    if (sig !== expected) return null;
+    if (
+      sig.length !== expected.length ||
+      !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+    ) {
+      return null;
+    }
     return { accountId, email: normalizeEmail(email) };
   } catch {
     return null;
@@ -178,29 +181,51 @@ class CommercialCirculationService {
     return set.has(normalizeEmail(email));
   }
 
-  async getSubscribedEmails(
+  async getPreferenceStatuses(
     accountId: string,
     emails: string[],
-  ): Promise<Set<string>> {
+  ): Promise<Map<string, CirculationConsentStatus>> {
     const normalized = [...new Set(emails.map(normalizeEmail).filter(Boolean))];
-    if (normalized.length === 0) return new Set();
+    const map = new Map<string, CirculationConsentStatus>();
+    if (normalized.length === 0) return map;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
     const { data, error } = await db
       .from('commercial_marketing_preferences')
-      .select('email')
+      .select('email, marketing_status')
       .eq('account_id', accountId)
       .eq('purpose', PURPOSE)
-      .eq('marketing_status', 'subscribed')
       .in('email', normalized);
 
     if (error) throw new Error(error.message);
 
+    for (const row of (data ?? []) as Array<{
+      email: string;
+      marketing_status: string;
+    }>) {
+      const status = row.marketing_status;
+      if (
+        status === 'subscribed' ||
+        status === 'unsubscribed' ||
+        status === 'suppressed'
+      ) {
+        map.set(normalizeEmail(row.email), status);
+      }
+    }
+
+    return map;
+  }
+
+  async getSubscribedEmails(
+    accountId: string,
+    emails: string[],
+  ): Promise<Set<string>> {
+    const statuses = await this.getPreferenceStatuses(accountId, emails);
     return new Set(
-      ((data ?? []) as Array<{ email: string }>).map((r) =>
-        normalizeEmail(r.email),
-      ),
+      [...statuses.entries()]
+        .filter(([, status]) => status === 'subscribed')
+        .map(([email]) => email),
     );
   }
 
@@ -274,17 +299,17 @@ export async function sendCirculationEmailViaSes(input: {
   listUnsubscribeUrl: string;
   accountId?: string | null;
   metadata?: Record<string, unknown>;
-}): Promise<void> {
-  const { insertPlatformEmailLog } = await import(
-    '@kit/supabase/platform-email-log'
-  );
+}): Promise<{ messageId: string | null }> {
+  const { insertPlatformEmailLog } =
+    await import('@kit/supabase/platform-email-log');
 
   let status: 'sent' | 'failed' = 'sent';
   let errorMessage: string | null = null;
+  let messageId: string | null = null;
 
   try {
     const mailer = createSesMailer();
-    await mailer.sendEmail({
+    const result = await mailer.sendEmail({
       to: input.to,
       from: input.from,
       subject: input.subject,
@@ -292,6 +317,13 @@ export async function sendCirculationEmailViaSes(input: {
       replyTo: input.replyTo,
       listUnsubscribeUrl: input.listUnsubscribeUrl,
     });
+    messageId =
+      result &&
+      typeof result === 'object' &&
+      'messageId' in result &&
+      typeof result.messageId === 'string'
+        ? result.messageId
+        : null;
   } catch (error) {
     status = 'failed';
     errorMessage = error instanceof Error ? error.message : String(error);
@@ -307,42 +339,14 @@ export async function sendCirculationEmailViaSes(input: {
       errorMessage,
       metadata: {
         provider: 'ses',
+        ses_message_id: messageId,
         ...(input.metadata ?? {}),
       },
     });
   }
-}
 
-export function buildCirculationEmailHtml(input: {
-  agencyName: string;
-  listingName: string;
-  listingSummary: string;
-  address: string;
-  unsubscribeUrl: string;
-  viewUrl?: string | null;
-}): string {
-  const body = `
-    <p style="margin:0 0 12px;">${escapeNotificationHtml(input.agencyName)} thought this opportunity may match your registered requirement.</p>
-    <p style="margin:0 0 8px;"><strong>${escapeNotificationHtml(input.listingName)}</strong></p>
-    ${
-      input.address
-        ? `<p style="margin:0 0 8px;">${escapeNotificationHtml(input.address)}</p>`
-        : ''
-    }
-    <p style="margin:0 0 16px;white-space:pre-wrap;">${escapeNotificationHtml(input.listingSummary)}</p>
-    <p style="margin:0;font-size:12px;color:#666;">You are receiving this because you registered a commercial property requirement with ${escapeNotificationHtml(input.agencyName)}. <a href="${escapeNotificationHtml(input.unsubscribeUrl)}">Unsubscribe</a> from matching opportunity emails.</p>
-  `;
-
-  return wrapNotificationEmail(body, {
-    productName: input.agencyName,
-    title: input.listingName,
-    heading: input.listingName,
-    preview: `Matching opportunity: ${input.listingName}`,
-    cta: input.viewUrl
-      ? { label: 'View details', href: input.viewUrl }
-      : undefined,
-    footerNote: 'Matching commercial opportunities only — not a newsletter.',
-  });
+  return { messageId };
 }
 
 export { PURPOSE as CIRCULATION_PURPOSE, CONSENT_COPY_VERSION };
+export { buildCirculationEmailHtml } from './circulation-email';

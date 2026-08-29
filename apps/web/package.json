@@ -87,6 +87,7 @@
     "@kit/google-auth": "workspace:*",
     "@kit/i18n": "workspace:*",
     "@kit/mailers": "workspace:*",
+    "@kit/ses": "workspace:*",
     "@kit/monitoring": "workspace:*",
     "@kit/next": "workspace:*",
     "@kit/notifications": "workspace:*",

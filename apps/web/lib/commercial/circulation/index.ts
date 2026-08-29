@@ -9,9 +9,20 @@ export {
 } from './circulation.service';
 export {
   circulateListing,
+  listAlreadySentEmails,
   listCirculationCandidates,
+  listCirculationSends,
+  resolveCirculationIdentity,
   type CirculationCandidate,
+  type CirculationIdentity,
+  type CirculationSendLog,
 } from './circulate-listing';
+export { runCommercialAutoCirculation } from './auto-circulate';
+export {
+  isCirculationAutoEligible,
+  isCirculationBlocked,
+  isCirculationManualEligible,
+} from './circulation-eligibility';
 export {
   loadPublicRequirementFormByToken,
   upsertRequirementFromPublicForm,

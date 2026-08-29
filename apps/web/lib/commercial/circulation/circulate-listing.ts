@@ -3,7 +3,20 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  type AccountBrandResolved,
+  loadAccountBrandResolved,
+} from '~/lib/brand/account-brand';
+import {
+  type CirculationConsentStatus,
+  isCirculationAutoEligible,
+  isCirculationBlocked,
+  normalizeCirculationEmail,
+} from '~/lib/commercial/circulation/circulation-eligibility';
+import {
+  type CirculationEmailBrand,
   buildCirculationEmailHtml,
+} from '~/lib/commercial/circulation/circulation-email';
+import {
   createCirculationUnsubscribeToken,
   createCommercialCirculationService,
   sendCirculationEmailViaSes,
@@ -22,6 +35,37 @@ export type CirculationCandidate = {
   score: number;
   reasons: string[];
   subscribed: boolean;
+  blocked: boolean;
+  consentStatus: CirculationConsentStatus;
+};
+
+export type CirculationIdentity = {
+  agencyName: string;
+  fromName: string;
+  fromEmail: string | null;
+  replyTo: string | null;
+  brand: AccountBrandResolved;
+};
+
+export type CirculationSendTrigger = 'manual' | 'auto' | 'dry_run';
+
+export type CirculationSendLog = {
+  id: string;
+  subject: string;
+  sendTrigger: CirculationSendTrigger;
+  fromEmail: string | null;
+  fromName: string | null;
+  recipientCount: number;
+  createdAt: string;
+  recipients: Array<{
+    id: string;
+    email: string;
+    status: string;
+    skipReason: string | null;
+    errorMessage: string | null;
+    sesMessageId: string | null;
+    createdAt: string;
+  }>;
 };
 
 function asListingSnapshot(row: Record<string, unknown>): MatchListingSnapshot {
@@ -114,22 +158,16 @@ export async function listCirculationCandidates(
   const circulation = createCommercialCirculationService(client);
   const rows = (requirements ?? []) as Array<Record<string, unknown>>;
   const emails = rows
-    .map((row) =>
-      String(row.contact_email ?? '')
-        .trim()
-        .toLowerCase(),
-    )
+    .map((row) => normalizeCirculationEmail(String(row.contact_email ?? '')))
     .filter(Boolean);
-  const subscribedSet = await circulation.getSubscribedEmails(
+  const statuses = await circulation.getPreferenceStatuses(
     input.accountId,
     emails,
   );
   const candidates: CirculationCandidate[] = [];
 
   for (const row of rows) {
-    const email = String(row.contact_email ?? '')
-      .trim()
-      .toLowerCase();
+    const email = normalizeCirculationEmail(String(row.contact_email ?? ''));
     if (!email) continue;
 
     const score = scoreListingRequirementMatch(
@@ -138,6 +176,7 @@ export async function listCirculationCandidates(
     );
     if (score.score < minScore) continue;
 
+    const consentStatus = statuses.get(email) ?? 'unknown';
     candidates.push({
       requirementId: row.id as string,
       email,
@@ -145,11 +184,155 @@ export async function listCirculationCandidates(
       companyName: (row.company_name as string | null) ?? null,
       score: score.score,
       reasons: score.reasons,
-      subscribed: subscribedSet.has(email),
+      subscribed: consentStatus === 'subscribed',
+      blocked: isCirculationBlocked(consentStatus),
+      consentStatus,
     });
   }
 
   return candidates.sort((a, b) => b.score - a.score);
+}
+
+export async function resolveCirculationIdentity(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<CirculationIdentity> {
+  const { data: account } = await client
+    .from('accounts')
+    .select('name')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  const agencyName =
+    (account as { name?: string | null } | null)?.name?.trim() || 'Agency';
+  const brand = await loadAccountBrandResolved(accountId);
+  const fromEmail = brand.contact_email?.trim() || null;
+
+  return {
+    agencyName,
+    fromName: agencyName,
+    fromEmail,
+    replyTo: fromEmail,
+    brand,
+  };
+}
+
+function toEmailBrand(identity: CirculationIdentity): CirculationEmailBrand {
+  return {
+    agencyName: identity.agencyName,
+    logoUrl: identity.brand.logo_url,
+    primaryColor: identity.brand.primary_color,
+    secondaryColor: identity.brand.secondary_color,
+    accentColor: identity.brand.accent_color,
+    websiteUrl: identity.brand.website_url,
+    address: identity.brand.address,
+    phone: identity.brand.phone,
+  };
+}
+
+export async function listAlreadySentEmails(
+  client: SupabaseClient,
+  input: { accountId: string; listingId: string },
+): Promise<Set<string>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = client as any;
+  const { data, error } = await db
+    .from('commercial_circulation_recipients')
+    .select('email, status, commercial_circulation_sends!inner(listing_id)')
+    .eq('account_id', input.accountId)
+    .eq('status', 'sent')
+    .eq('commercial_circulation_sends.listing_id', input.listingId);
+
+  if (error) {
+    const { data: sends } = await db
+      .from('commercial_circulation_sends')
+      .select('id')
+      .eq('account_id', input.accountId)
+      .eq('listing_id', input.listingId);
+
+    const sendIds = ((sends ?? []) as Array<{ id: string }>).map((s) => s.id);
+    if (sendIds.length === 0) return new Set();
+
+    const { data: recipients, error: recError } = await db
+      .from('commercial_circulation_recipients')
+      .select('email')
+      .eq('account_id', input.accountId)
+      .eq('status', 'sent')
+      .in('send_id', sendIds);
+
+    if (recError) throw new Error(recError.message);
+    return new Set(
+      ((recipients ?? []) as Array<{ email: string }>).map((r) =>
+        normalizeCirculationEmail(r.email),
+      ),
+    );
+  }
+
+  return new Set(
+    ((data ?? []) as Array<{ email: string }>).map((r) =>
+      normalizeCirculationEmail(r.email),
+    ),
+  );
+}
+
+export async function listCirculationSends(
+  client: SupabaseClient,
+  input: { accountId: string; listingId: string; limit?: number },
+): Promise<CirculationSendLog[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = client as any;
+  const { data: sends, error } = await db
+    .from('commercial_circulation_sends')
+    .select(
+      'id, subject, send_trigger, from_email, from_name, recipient_count, created_at',
+    )
+    .eq('account_id', input.accountId)
+    .eq('listing_id', input.listingId)
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? 12);
+
+  if (error) throw new Error(error.message);
+  const sendRows = (sends ?? []) as Array<Record<string, unknown>>;
+  if (sendRows.length === 0) return [];
+
+  const sendIds = sendRows.map((row) => row.id as string);
+  const { data: recipients, error: recError } = await db
+    .from('commercial_circulation_recipients')
+    .select(
+      'id, send_id, email, status, skip_reason, error_message, ses_message_id, created_at',
+    )
+    .eq('account_id', input.accountId)
+    .in('send_id', sendIds)
+    .order('created_at', { ascending: true });
+
+  if (recError) throw new Error(recError.message);
+
+  const bySend = new Map<string, CirculationSendLog['recipients']>();
+  for (const row of (recipients ?? []) as Array<Record<string, unknown>>) {
+    const sendId = row.send_id as string;
+    const list = bySend.get(sendId) ?? [];
+    list.push({
+      id: row.id as string,
+      email: row.email as string,
+      status: row.status as string,
+      skipReason: (row.skip_reason as string | null) ?? null,
+      errorMessage: (row.error_message as string | null) ?? null,
+      sesMessageId: (row.ses_message_id as string | null) ?? null,
+      createdAt: row.created_at as string,
+    });
+    bySend.set(sendId, list);
+  }
+
+  return sendRows.map((row) => ({
+    id: row.id as string,
+    subject: row.subject as string,
+    sendTrigger: (row.send_trigger as CirculationSendTrigger) ?? 'manual',
+    fromEmail: (row.from_email as string | null) ?? null,
+    fromName: (row.from_name as string | null) ?? null,
+    recipientCount: Number(row.recipient_count ?? 0),
+    createdAt: row.created_at as string,
+    recipients: bySend.get(row.id as string) ?? [],
+  }));
 }
 
 export async function circulateListing(
@@ -158,13 +341,22 @@ export async function circulateListing(
     accountId: string;
     listingId: string;
     requirementIds: string[];
-    sentBy: string;
-    fromEmail: string;
+    sentBy: string | null;
+    fromEmail?: string;
     fromName?: string;
     replyTo?: string;
     siteUrl: string;
+    dryRun?: boolean;
+    sendTrigger?: CirculationSendTrigger;
+    skipAlreadySent?: boolean;
   },
-): Promise<{ sendId: string; sent: number; skipped: number; failed: number }> {
+): Promise<{
+  sendId: string;
+  sent: number;
+  skipped: number;
+  failed: number;
+  dryRunEligible: number;
+}> {
   if (input.requirementIds.length === 0) {
     throw new Error('Select at least one recipient');
   }
@@ -185,14 +377,18 @@ export async function circulateListing(
     throw new Error(listingError?.message ?? 'Listing not found');
   }
 
-  const { data: account } = await client
-    .from('accounts')
-    .select('name')
-    .eq('id', input.accountId)
-    .maybeSingle();
-
-  const agencyName =
-    (account as { name?: string | null } | null)?.name?.trim() || 'Agency';
+  const identity = await resolveCirculationIdentity(client, input.accountId);
+  const fromEmail = input.fromEmail?.trim() || identity.fromEmail;
+  if (!fromEmail) {
+    throw new Error(
+      'Set a From email on workspace brand settings (contact email) or in the Circulate dialog. The address must be on a verified SES domain.',
+    );
+  }
+  const fromName = input.fromName?.trim() || identity.fromName;
+  const replyTo = input.replyTo?.trim() || identity.replyTo || fromEmail;
+  const sendTrigger: CirculationSendTrigger = input.dryRun
+    ? 'dry_run'
+    : (input.sendTrigger ?? 'manual');
 
   const { data: requirements, error: reqError } = await client
     .from('commercial_requirements')
@@ -213,8 +409,12 @@ export async function circulateListing(
       listing_id: input.listingId,
       sent_by: input.sentBy,
       subject,
-      template_version: 'v1',
+      template_version: 'v2-brand',
       recipient_count: 0,
+      send_trigger: sendTrigger,
+      from_email: fromEmail,
+      from_name: fromName,
+      reply_to: replyTo,
     })
     .select('id')
     .single();
@@ -229,10 +429,17 @@ export async function circulateListing(
     contact_name?: string | null;
     company_name?: string | null;
   }>;
-  const subscribedSet = await circulation.getSubscribedEmails(
+  const preferenceStatuses = await circulation.getPreferenceStatuses(
     input.accountId,
     reqRows.map((r) => String(r.contact_email ?? '')),
   );
+  const alreadySent = input.skipAlreadySent
+    ? await listAlreadySentEmails(client, {
+        accountId: input.accountId,
+        listingId: input.listingId,
+      })
+    : new Set<string>();
+  const emailBrand = toEmailBrand(identity);
 
   const listingAddr = [
     (listing as { address_line_1?: string | null }).address_line_1,
@@ -261,13 +468,12 @@ export async function circulateListing(
       ? new URL(`/share/brochure/${brochureToken}`, input.siteUrl).toString()
       : null;
 
-  const fromHeader = input.fromName
-    ? `${input.fromName} <${input.fromEmail}>`
-    : input.fromEmail;
+  const fromHeader = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
 
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  let dryRunEligible = 0;
 
   for (const req of reqRows) {
     const email = String(req.contact_email ?? '')
@@ -288,8 +494,22 @@ export async function circulateListing(
       continue;
     }
 
-    const subscribed = subscribedSet.has(email);
-    if (!subscribed) {
+    const consentStatus = preferenceStatuses.get(email) ?? 'unknown';
+    if (isCirculationBlocked(consentStatus)) {
+      skipped += 1;
+      await db.from('commercial_circulation_recipients').insert({
+        send_id: sendId,
+        account_id: input.accountId,
+        requirement_id: requirementId,
+        email,
+        status: 'skipped',
+        skip_reason:
+          consentStatus === 'suppressed' ? 'suppressed' : 'unsubscribed',
+      });
+      continue;
+    }
+
+    if (sendTrigger === 'auto' && !isCirculationAutoEligible(consentStatus)) {
       skipped += 1;
       await db.from('commercial_circulation_recipients').insert({
         send_id: sendId,
@@ -298,6 +518,19 @@ export async function circulateListing(
         email,
         status: 'skipped',
         skip_reason: 'not_subscribed',
+      });
+      continue;
+    }
+
+    if (alreadySent.has(email)) {
+      skipped += 1;
+      await db.from('commercial_circulation_recipients').insert({
+        send_id: sendId,
+        account_id: input.accountId,
+        requirement_id: requirementId,
+        email,
+        status: 'skipped',
+        skip_reason: 'already_sent',
       });
       continue;
     }
@@ -313,18 +546,33 @@ export async function circulateListing(
 
     try {
       const html = buildCirculationEmailHtml({
-        agencyName,
+        brand: emailBrand,
         listingName: (listing as { name: string }).name,
         listingSummary: summary,
         address: listingAddr,
         unsubscribeUrl,
         viewUrl,
+        contactName: req.contact_name,
       });
 
-      await sendCirculationEmailViaSes({
+      if (input.dryRun) {
+        skipped += 1;
+        dryRunEligible += 1;
+        await db.from('commercial_circulation_recipients').insert({
+          send_id: sendId,
+          account_id: input.accountId,
+          requirement_id: requirementId,
+          email,
+          status: 'skipped',
+          skip_reason: 'dry_run',
+        });
+        continue;
+      }
+
+      const { messageId } = await sendCirculationEmailViaSes({
         to: email,
         from: fromHeader,
-        replyTo: input.replyTo,
+        replyTo,
         subject,
         html,
         listUnsubscribeUrl: unsubscribeUrl,
@@ -343,6 +591,7 @@ export async function circulateListing(
         requirement_id: requirementId,
         email,
         status: 'sent',
+        ses_message_id: messageId,
       });
 
       await client
@@ -378,8 +627,10 @@ export async function circulateListing(
 
   await db
     .from('commercial_circulation_sends')
-    .update({ recipient_count: sent })
+    .update({
+      recipient_count: input.dryRun ? dryRunEligible : sent,
+    })
     .eq('id', sendId);
 
-  return { sendId, sent, skipped, failed };
+  return { sendId, sent, skipped, failed, dryRunEligible };
 }

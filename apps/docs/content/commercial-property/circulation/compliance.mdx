@@ -16,13 +16,12 @@ This is an **internal product brief** for Ozer Commercial property. It is **not 
 
 ## Email classification
 
-
-| Message | Class | Pipe |
-| --- | --- | --- |
-| “Thanks — we received your requirement” | Transactional / service | ZeptoMail |
-| One-to-one reply about a specific enquiry / listing | Transactional / service | ZeptoMail |
+| Message                                                         | Class                                         | Pipe           |
+| --------------------------------------------------------------- | --------------------------------------------- | -------------- |
+| “Thanks — we received your requirement”                         | Transactional / service                       | ZeptoMail      |
+| One-to-one reply about a specific enquiry / listing             | Transactional / service                       | ZeptoMail      |
 | “New letting that may match your registered requirement” (list) | **Marketing** (solicited / soft opt-in or LI) | **Amazon SES** |
-| General newsletter / market commentary | Marketing (usually consent) | Amazon SES |
+| General newsletter / market commentary                          | Marketing (usually consent)                   | Amazon SES     |
 
 Having a lawful basis does **not** make a circulation blast transactional. ZeptoMail’s terms forbid marketing/bulk; do not send circulation through Zepto.
 
@@ -49,19 +48,19 @@ Circulation emails should only promote **matching disposals** for the purpose `m
 
 ## Roles
 
-| Party | Role |
-| --- | --- |
-| Agency (workspace) | **Controller** of applicant data and circulation content |
-| Ozer | **Processor** hosting CRM, embed, and SES send on the agency’s behalf |
-| Amazon SES | Sub-processor for marketing/circulation delivery |
-| Zoho ZeptoMail | Sub-processor for **transactional** product email only |
+| Party              | Role                                                                  |
+| ------------------ | --------------------------------------------------------------------- |
+| Agency (workspace) | **Controller** of applicant data and circulation content              |
+| Ozer               | **Processor** hosting CRM, embed, and SES send on the agency’s behalf |
+| Amazon SES         | Sub-processor for marketing/circulation delivery                      |
+| Zoho ZeptoMail     | Sub-processor for **transactional** product email only                |
 
 Update the DPA / data-processing inventory when enabling circulation: list SES for marketing sends; do not imply Zepto covers blasts.
 
 ## Product rules (enforced in Ozer)
 
 1. Upserting a requirement **must not** re-subscribe someone who unsubscribed.
-2. Circulation recipients are filtered to `marketing_status = subscribed` (and not suppressed).
+2. Auto-circulation only mails `marketing_status = subscribed`. Manual send skips unsubscribed/suppressed and can include contacts with no preference row (unsubscribe still required).
 3. Imported historical lists default to `lawful_basis = imported_historical` and should not circulate until the agency attests or re-permissions.
 4. Every SES circulation message includes `List-Unsubscribe` and a branded unsubscribe page scoped to that workspace.
 5. Agents preview the recipient set and confirm before send (audit log stores who/what/when).
@@ -71,7 +70,7 @@ Update the DPA / data-processing inventory when enabling circulation: list SES f
 Amazon SES requires production access for unrestricted sending. Re-apply with:
 
 - Public company/product website (not behind auth or bot blocks)
-- Use case text: *UK B2B commercial property applicants who registered requirements; opt-out on every email; no purchased lists*
+- Use case text: _UK B2B commercial property applicants who registered requirements; opt-out on every email; no purchased lists_
 - Live privacy policy + unsubscribe URL
 - Verified sending domain (SPF/DKIM)
 
