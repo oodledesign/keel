@@ -67,22 +67,22 @@ export type ShoppingOfflineSnapshot = {
 
 export type ShoppingSyncStatus = 'idle' | 'offline' | 'saved' | 'syncing';
 
+export {
+  FAMILY_SHOPPING_OFFLINE_HREF,
+  SHOPPING_OFFLINE_NAV_TIMEOUT_MS,
+  isFamilyShoppingPath,
+  isNextRouterPrefetchRequest,
+  isShoppingDocumentNavigation,
+  isShoppingOfflineInterceptRequest,
+  isShoppingRscRequest,
+  isUnusableShoppingRscResponse,
+  shoppingDocumentHref,
+  shouldHardNavigateShoppingLink,
+} from '~/lib/meals/shopping-offline-paths';
+export type { ShoppingRequestLike } from '~/lib/meals/shopping-offline-paths';
+
 export function shoppingScopeKey(accountSlug?: string): string {
   return accountSlug ? `workspace:${accountSlug}` : 'personal';
-}
-
-export function isFamilyShoppingPath(pathname: string): boolean {
-  const withoutSearch = pathname.split('?')[0]?.split('#')[0] ?? pathname;
-  const path = withoutSearch.replace(/\/+$/, '') || '/';
-
-  if (
-    path === '/app/life/family/shopping' ||
-    path === '/home/life/family/shopping'
-  ) {
-    return true;
-  }
-
-  return /^\/(app|home)\/[^/]+\/shopping$/.test(path);
 }
 
 export function shoppingSyncStatus(input: {

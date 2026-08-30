@@ -10,9 +10,15 @@ import {
   createOptimisticAddItem,
   isFamilyShoppingPath,
   isNetworkLikeError,
+  isShoppingDocumentNavigation,
+  isShoppingOfflineInterceptRequest,
+  isShoppingRscRequest,
+  isUnusableShoppingRscResponse,
   remapOutboxItemId,
+  shoppingDocumentHref,
   shoppingScopeKey,
   shoppingSyncStatus,
+  shouldHardNavigateShoppingLink,
 } from '~/lib/meals/shopping-offline';
 
 function list(items: ShoppingOfflineList['items']): ShoppingOfflineList {
@@ -228,6 +234,141 @@ describe('shopping helpers', () => {
     expect(isFamilyShoppingPath('/app/planner')).toBe(false);
     expect(isFamilyShoppingPath('/app/life/family')).toBe(false);
     expect(isFamilyShoppingPath('/app/acme/meal-plan')).toBe(false);
+  });
+
+  it('matches workspace shopping paths and RSC query strings', () => {
+    expect(isFamilyShoppingPath('/app/family-smith/shopping')).toBe(true);
+    expect(isFamilyShoppingPath('/app/acme/shopping?_rsc=1abc')).toBe(true);
+    expect(
+      isFamilyShoppingPath('/home/acme/shopping?_rsc=abc&week=2026-08-24'),
+    ).toBe(true);
+    expect(isFamilyShoppingPath('/app/acme/shopping#_rsc=1')).toBe(true);
+    expect(isFamilyShoppingPath('/app/acme/shopping/extra?_rsc=1')).toBe(false);
+  });
+
+  it('classifies shopping document navigations and RSC flights for the SW', () => {
+    expect(
+      isShoppingDocumentNavigation({
+        method: 'GET',
+        mode: 'navigate',
+        destination: 'document',
+        url: 'https://app.ozer.test/app/acme/shopping',
+      }),
+    ).toBe(true);
+
+    expect(
+      isShoppingRscRequest({
+        url: 'https://app.ozer.test/app/acme/shopping?_rsc=abc',
+      }),
+    ).toBe(true);
+
+    expect(
+      isShoppingRscRequest({
+        url: 'https://app.ozer.test/app/acme/shopping',
+        headers: { RSC: '1' },
+      }),
+    ).toBe(true);
+
+    expect(
+      isShoppingOfflineInterceptRequest({
+        method: 'GET',
+        mode: 'navigate',
+        destination: 'document',
+        url: 'https://app.ozer.test/app/family-smith/shopping',
+      }),
+    ).toBe(true);
+
+    expect(
+      isShoppingOfflineInterceptRequest({
+        method: 'GET',
+        url: 'https://app.ozer.test/app/acme/shopping?_rsc=1abc',
+        headers: { RSC: '1' },
+      }),
+    ).toBe(true);
+
+    expect(
+      isShoppingOfflineInterceptRequest({
+        method: 'GET',
+        url: 'https://app.ozer.test/app/life/family/shopping?_rsc=xyz',
+      }),
+    ).toBe(true);
+
+    expect(
+      isShoppingOfflineInterceptRequest({
+        method: 'GET',
+        url: 'https://app.ozer.test/app/acme/meal-plan?_rsc=abc',
+        headers: { RSC: '1' },
+      }),
+    ).toBe(false);
+
+    expect(
+      isShoppingOfflineInterceptRequest({
+        method: 'POST',
+        url: 'https://app.ozer.test/app/acme/shopping',
+      }),
+    ).toBe(false);
+
+    expect(
+      isShoppingOfflineInterceptRequest({
+        method: 'GET',
+        url: 'https://app.ozer.test/app/acme/shopping?_nextRouterPrefetch=1',
+        headers: { 'Next-Router-Prefetch': '1' },
+      }),
+    ).toBe(false);
+  });
+
+  it('strips RSC query params so fallback stays on the shopping document URL', () => {
+    expect(
+      shoppingDocumentHref(
+        'https://app.ozer.test/app/acme/shopping?_rsc=1abc&week=2026-08-24',
+      ),
+    ).toBe('/app/acme/shopping?week=2026-08-24');
+    expect(shoppingDocumentHref('/app/life/family/shopping?_rsc=xyz')).toBe(
+      '/app/life/family/shopping',
+    );
+  });
+
+  it('treats HTML as an unusable RSC payload', () => {
+    expect(isUnusableShoppingRscResponse('text/html; charset=utf-8')).toBe(
+      true,
+    );
+    expect(isUnusableShoppingRscResponse('text/x-component')).toBe(false);
+    expect(isUnusableShoppingRscResponse(null)).toBe(true);
+  });
+
+  it('hard-navigates same-tab shopping links only', () => {
+    expect(
+      shouldHardNavigateShoppingLink({
+        href: 'https://app.ozer.test/app/acme/shopping',
+        origin: 'https://app.ozer.test',
+      }),
+    ).toBe(true);
+    expect(
+      shouldHardNavigateShoppingLink({
+        href: '/app/acme/shopping?week=2026-08-24',
+        origin: 'https://app.ozer.test',
+      }),
+    ).toBe(true);
+    expect(
+      shouldHardNavigateShoppingLink({
+        href: 'https://app.ozer.test/app/acme/meal-plan',
+        origin: 'https://app.ozer.test',
+      }),
+    ).toBe(false);
+    expect(
+      shouldHardNavigateShoppingLink({
+        href: 'https://app.ozer.test/app/acme/shopping',
+        origin: 'https://app.ozer.test',
+        metaKey: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldHardNavigateShoppingLink({
+        href: 'https://app.ozer.test/app/acme/shopping',
+        origin: 'https://app.ozer.test',
+        target: '_blank',
+      }),
+    ).toBe(false);
   });
 
   it('prefers Syncing, then Offline, then saved-on-device', () => {
