@@ -287,6 +287,7 @@ CREATE POLICY campaign_credit_transactions_select ON public.campaign_credit_tran
 CREATE OR REPLACE FUNCTION public.set_workspace_email_campaigns_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 BEGIN
   NEW.updated_at = now();
