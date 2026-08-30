@@ -18,6 +18,7 @@ import type {
 } from '~/lib/campaigns/campaign.types';
 import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { previewCampaignHtml } from '~/lib/campaigns/preview-campaign-html';
+import type { CampaignTemplateWorkspace } from '~/lib/campaigns/templates';
 import {
   workspaceBtnPrimary,
   workspacePanelCard,
@@ -33,6 +34,7 @@ import {
 } from '../_lib/server/server-actions';
 import { CampaignBodyEditor } from './campaign-body-editor';
 import { CampaignRecipientLog } from './campaign-recipient-log';
+import { CampaignTemplateGallery } from './campaign-template-gallery';
 
 export function CampaignEditor({
   accountId,
@@ -42,6 +44,7 @@ export function CampaignEditor({
   subscriberCount,
   usage,
   brand,
+  workspace,
 }: {
   accountId: string;
   accountSlug: string;
@@ -57,6 +60,7 @@ export function CampaignEditor({
     website_url?: string | null;
     contact_email: string | null;
   };
+  workspace: CampaignTemplateWorkspace;
 }) {
   const router = useRouter();
   const [name, setName] = useState(campaign.name);
@@ -69,9 +73,14 @@ export function CampaignEditor({
     'desktop',
   );
   const [scheduledAt, setScheduledAt] = useState('');
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const editable =
     campaign.status === 'draft' || campaign.status === 'scheduled';
+  const useTemplateLabel =
+    !subject.trim() && name === 'Untitled campaign'
+      ? 'Use a template'
+      : 'Change template';
 
   const previewHtml = useMemo(
     () =>
@@ -119,16 +128,44 @@ export function CampaignEditor({
           />
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="campaign-preview">Preview text</Label>
-        <Input
-          id="campaign-preview"
-          value={previewText}
-          disabled={!editable}
-          onChange={(event) => setPreviewText(event.target.value)}
-        />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-[16rem] flex-1 space-y-2">
+          <Label htmlFor="campaign-preview">Preview text</Label>
+          <Input
+            id="campaign-preview"
+            value={previewText}
+            disabled={!editable}
+            onChange={(event) => setPreviewText(event.target.value)}
+          />
+        </div>
+        {editable ? (
+          <Button
+            type="button"
+            variant="outline"
+            data-test="campaign-use-template"
+            onClick={() => setGalleryOpen(true)}
+          >
+            {useTemplateLabel}
+          </Button>
+        ) : null}
       </div>
+      <CampaignTemplateGallery
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        brand={brand}
+        workspace={workspace}
+        requireConfirm
+        onSelect={({ template, document: nextDocument }) => {
+          setDocument(nextDocument);
+          setSubject(template.subject);
+          setPreviewText(template.previewText);
+          if (name === 'Untitled campaign') {
+            setName(template.name);
+          }
+        }}
+      />
       <CampaignBodyEditor
+        key={document.blocks[0]?.id ?? 'empty'}
         document={document}
         brand={brand}
         onChange={setDocument}
@@ -294,6 +331,7 @@ export function CampaignEditor({
           <iframe
             title="Campaign preview"
             className="mx-auto h-[420px] bg-white"
+            sandbox=""
             style={{
               width: previewWidth === 'mobile' ? 375 : '100%',
               maxWidth: '100%',

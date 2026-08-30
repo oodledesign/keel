@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import { campaignTemplateWorkspaceFromProfile } from '~/lib/campaigns/templates';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
@@ -44,6 +45,9 @@ async function CampaignDetailPage({ params }: CampaignDetailPageProps) {
           subscriberCount={data.subscriberCount}
           usage={data.usage}
           brand={data.brand}
+          workspace={campaignTemplateWorkspaceFromProfile(
+            workspace.workspaceProfile,
+          )}
         />
       </PageBody>
     </>

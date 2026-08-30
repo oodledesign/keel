@@ -6,6 +6,9 @@ export const CreateCampaignSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),
   name: z.string().trim().min(1, 'Name is required').max(160),
+  subject: z.string().trim().max(300).default(''),
+  previewText: z.string().trim().max(200).optional().nullable(),
+  bodyDocument: CampaignDocumentSchema.optional(),
 });
 
 export const UpdateCampaignSchema = z.object({

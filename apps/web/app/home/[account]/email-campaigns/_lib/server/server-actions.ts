@@ -56,6 +56,9 @@ export const createCampaignAction = enhanceAction(
       accountId: data.accountId,
       userId: user.id,
       name: data.name,
+      subject: data.subject,
+      previewText: data.previewText,
+      bodyDocument: data.bodyDocument,
     });
 
     logger.info(

@@ -5,7 +5,9 @@ import { Mail } from 'lucide-react';
 import { Badge } from '@kit/ui/badge';
 
 import pathsConfig from '~/config/paths.config';
+import type { CampaignBrand } from '~/lib/campaigns/campaign-document';
 import type { EmailCampaign } from '~/lib/campaigns/campaign.types';
+import type { CampaignTemplateWorkspace } from '~/lib/campaigns/templates';
 import {
   workspacePanelCard,
   workspaceText,
@@ -27,15 +29,24 @@ export function CampaignsList({
   accountId,
   accountSlug,
   campaigns,
+  brand,
+  workspace,
 }: {
   accountId: string;
   accountSlug: string;
   campaigns: EmailCampaign[];
+  brand: CampaignBrand;
+  workspace: CampaignTemplateWorkspace;
 }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <CreateCampaignButton accountId={accountId} accountSlug={accountSlug} />
+        <CreateCampaignButton
+          accountId={accountId}
+          accountSlug={accountSlug}
+          brand={brand}
+          workspace={workspace}
+        />
       </div>
 
       {campaigns.length === 0 ? (
@@ -45,9 +56,8 @@ export function CampaignsList({
             No campaigns yet
           </h2>
           <p className={`mx-auto mt-2 max-w-md text-sm ${workspaceTextMuted}`}>
-            Build a branded email from blocks, preview it, and send to
-            subscribed mailing-list contacts. Unsubscribes are respected
-            automatically.
+            Pick a branded starter, edit the blocks, then send to your
+            mailing-list contacts. Unsubscribes are respected automatically.
           </p>
         </div>
       ) : (

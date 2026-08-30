@@ -1,6 +1,7 @@
 import { PageBody } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
+import { campaignTemplateWorkspaceFromProfile } from '~/lib/campaigns/templates';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -44,6 +45,10 @@ async function CampaignsPage({ params }: CampaignsPageProps) {
           accountId={workspace.account.id}
           accountSlug={accountSlug}
           campaigns={data.campaigns}
+          brand={data.brand}
+          workspace={campaignTemplateWorkspaceFromProfile(
+            workspace.workspaceProfile,
+          )}
         />
       </PageBody>
     </>
