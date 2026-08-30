@@ -8740,6 +8740,7 @@ export type Database = {
           diet_tags: string[]
           fat_g: number | null
           id: string
+          image_url: string | null
           ingredients: string[]
           instructions: string | null
           is_favorite: boolean
@@ -8752,6 +8753,8 @@ export type Database = {
           protein_g: number | null
           servings: number | null
           source: string
+          source_label: string | null
+          source_url: string | null
           tags: string[]
           updated_at: string
           user_id: string
@@ -8766,6 +8769,7 @@ export type Database = {
           diet_tags?: string[]
           fat_g?: number | null
           id?: string
+          image_url?: string | null
           ingredients?: string[]
           instructions?: string | null
           is_favorite?: boolean
@@ -8778,6 +8782,8 @@ export type Database = {
           protein_g?: number | null
           servings?: number | null
           source?: string
+          source_label?: string | null
+          source_url?: string | null
           tags?: string[]
           updated_at?: string
           user_id: string
@@ -8792,6 +8798,7 @@ export type Database = {
           diet_tags?: string[]
           fat_g?: number | null
           id?: string
+          image_url?: string | null
           ingredients?: string[]
           instructions?: string | null
           is_favorite?: boolean
@@ -8804,6 +8811,8 @@ export type Database = {
           protein_g?: number | null
           servings?: number | null
           source?: string
+          source_label?: string | null
+          source_url?: string | null
           tags?: string[]
           updated_at?: string
           user_id?: string

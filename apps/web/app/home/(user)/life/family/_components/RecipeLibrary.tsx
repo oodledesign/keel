@@ -35,6 +35,7 @@ import { RecipeBadges } from './RecipeBadges';
 import { RecipeDialog, type RecipeFormDraft } from './RecipeDialog';
 import { RecipeGenerateDialog } from './RecipeGenerateDialog';
 import { RecipeImportDialog } from './RecipeImportDialog';
+import { RecipeSourceLink } from './RecipeSourceLink';
 import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
 
 type Props = {
@@ -227,87 +228,110 @@ export function RecipeLibrary({
             return (
               <div
                 key={recipe.id}
-                className={cn(panelClass, 'flex flex-col p-4')}
+                className={cn(panelClass, 'flex flex-col overflow-hidden p-0')}
               >
-                <div className="flex items-start justify-between gap-2">
+                {recipe.image_url ? (
                   <Link
                     href={buildRecipeDetailPath(basePath, recipe.id)}
-                    className="min-w-0 flex-1 transition-opacity hover:opacity-90"
+                    className="block"
                   >
-                    <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                      {recipe.name}
-                    </h3>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => handleFavorite(recipe)}
-                    aria-label="Toggle favourite"
-                    className="shrink-0"
-                  >
-                    <Star
-                      className={cn(
-                        'h-4 w-4',
-                        recipe.is_favorite
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]',
-                      )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={recipe.image_url}
+                      alt=""
+                      className="h-36 w-full object-cover"
                     />
-                  </button>
-                </div>
-
-                <Link
-                  href={buildRecipeDetailPath(basePath, recipe.id)}
-                  className="mt-1 block min-w-0 flex-1 transition-opacity hover:opacity-90"
-                >
-                  {recipe.description ? (
-                    <p className="line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                      {recipe.description}
-                    </p>
-                  ) : null}
-
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--workspace-shell-text-muted)]">
-                    {time ? (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {time}
-                      </span>
-                    ) : null}
-                    {recipe.servings ? (
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5" />
-                        {recipe.servings}
-                      </span>
-                    ) : null}
+                  </Link>
+                ) : null}
+                <div className="flex flex-1 flex-col p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={buildRecipeDetailPath(basePath, recipe.id)}
+                      className="min-w-0 flex-1 transition-opacity hover:opacity-90"
+                    >
+                      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                        {recipe.name}
+                      </h3>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleFavorite(recipe)}
+                      aria-label="Toggle favourite"
+                      className="shrink-0"
+                    >
+                      <Star
+                        className={cn(
+                          'h-4 w-4',
+                          recipe.is_favorite
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]',
+                        )}
+                      />
+                    </button>
                   </div>
 
-                  <RecipeBadges
-                    className="mt-3"
-                    source={recipe.source}
-                    mealType={recipe.meal_type}
-                    tags={recipe.tags}
-                    dietTags={recipe.diet_tags}
-                    maxTags={4}
-                  />
-                </Link>
+                  <Link
+                    href={buildRecipeDetailPath(basePath, recipe.id)}
+                    className="mt-1 block min-w-0 flex-1 transition-opacity hover:opacity-90"
+                  >
+                    {recipe.description ? (
+                      <p className="line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                        {recipe.description}
+                      </p>
+                    ) : null}
 
-                <div className="mt-4 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEdit(recipe)}
-                    className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-                  >
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(recipe)}
-                    className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                      {time ? (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {time}
+                        </span>
+                      ) : null}
+                      {recipe.servings ? (
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5" />
+                          {recipe.servings}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <RecipeBadges
+                      className="mt-3"
+                      source={recipe.source}
+                      sourceLabel={recipe.source_label}
+                      sourceUrl={recipe.source_url}
+                      mealType={recipe.meal_type}
+                      tags={recipe.tags}
+                      dietTags={recipe.diet_tags}
+                      maxTags={4}
+                    />
+                  </Link>
+
+                  {recipe.source_url ? (
+                    <div className="mt-3">
+                      <RecipeSourceLink url={recipe.source_url} />
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEdit(recipe)}
+                      className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                    >
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(recipe)}
+                      className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             );

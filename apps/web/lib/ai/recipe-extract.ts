@@ -7,13 +7,19 @@ import { load } from 'cheerio';
 
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 import {
+  collectRecipeImageCandidates,
+  collectRecipeSourceLabel,
+} from '~/lib/ai/recipe-extract-images';
+import {
   type ExtractedRecipeDraft,
+  attachExtractSource,
   emptyRecipeDraft,
   isInstagramRecipeUrl,
   isPrivateOrLocalUrl,
   mapSchemaOrgRecipe,
   normalizeExtractedRecipeDraft,
   normalizeUrl,
+  parseInstagramOembedJson,
 } from '~/lib/ai/recipe-extract-utils';
 import {
   FEATURE_CONFIG,
@@ -35,9 +41,11 @@ export type {
 } from './recipe-extract-types';
 export {
   ExtractedRecipeDraftSchema,
+  attachExtractSource,
   isInstagramRecipeUrl,
   isoDurationToMinutes,
   mapSchemaOrgRecipe,
+  parseInstagramOembedJson,
 } from '~/lib/ai/recipe-extract-utils';
 
 const RECIPE_EXTRACT_FEATURE = 'recipe_extract' as const;
@@ -195,7 +203,10 @@ export async function extractRecipeFromImage(
   };
 }
 
-async function fetchInstagramCaption(url: string): Promise<string | null> {
+async function fetchInstagramOembed(url: string): Promise<{
+  caption: string | null;
+  thumbnailUrl: string | null;
+}> {
   const endpoint = `https://www.instagram.com/api/v1/oembed/?url=${encodeURIComponent(url)}`;
   try {
     const response = await fetch(endpoint, {
@@ -205,18 +216,10 @@ async function fetchInstagramCaption(url: string): Promise<string | null> {
       },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) return null;
-    const json = (await response.json()) as {
-      title?: unknown;
-      author_name?: unknown;
-    };
-    const title = typeof json.title === 'string' ? json.title.trim() : '';
-    const author =
-      typeof json.author_name === 'string' ? json.author_name.trim() : '';
-    if (!title) return null;
-    return author ? `${title}\n\n— ${author}` : title;
+    if (!response.ok) return { caption: null, thumbnailUrl: null };
+    return parseInstagramOembedJson(await response.json());
   } catch {
-    return null;
+    return { caption: null, thumbnailUrl: null };
   }
 }
 
@@ -311,20 +314,37 @@ export async function extractRecipeFromUrl(
   }
 
   if (isInstagramRecipeUrl(url)) {
-    const caption = await fetchInstagramCaption(url);
-    if (!caption) {
+    const oembed = await fetchInstagramOembed(url);
+    if (!oembed.caption) {
       throw new Error(
         'Could not read this Instagram caption. Paste the recipe text instead, or try a link where the method is written in the caption.',
       );
     }
-    const extracted = await extractRecipeFromText(caption, meter);
-    return { recipe: extracted.recipe, method: 'instagram_caption' };
+    const extracted = await extractRecipeFromText(oembed.caption, meter);
+    return {
+      recipe: attachExtractSource(extracted.recipe, {
+        sourceUrl: url,
+        candidates: oembed.thumbnailUrl
+          ? [{ url: oembed.thumbnailUrl, source: 'oembed' }]
+          : [],
+      }),
+      method: 'instagram_caption',
+    };
   }
 
   const html = await fetchPageHtml(url);
+  const candidates = collectRecipeImageCandidates(html, url);
+  const siteLabel = collectRecipeSourceLabel(html, url);
   const fromSchema = findSchemaOrgRecipe(html);
   if (fromSchema) {
-    return { recipe: fromSchema, method: 'schema_org' };
+    return {
+      recipe: attachExtractSource(fromSchema, {
+        sourceUrl: url,
+        candidates,
+        siteLabel,
+      }),
+      method: 'schema_org',
+    };
   }
 
   const readable = htmlToReadableText(html);
@@ -333,7 +353,14 @@ export async function extractRecipeFromUrl(
   }
 
   const extracted = await extractRecipeFromText(readable, meter);
-  return { recipe: extracted.recipe, method: 'llm_text' };
+  return {
+    recipe: attachExtractSource(extracted.recipe, {
+      sourceUrl: url,
+      candidates,
+      siteLabel,
+    }),
+    method: 'llm_text',
+  };
 }
 
 export async function extractRecipe(

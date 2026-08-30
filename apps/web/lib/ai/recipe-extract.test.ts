@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  collectRecipeImageCandidates,
+  collectRecipeSourceLabel,
+} from '~/lib/ai/recipe-extract-images';
+import {
+  attachExtractSource,
+  emptyRecipeDraft,
   isInstagramRecipeUrl,
+  isPrivateOrLocalUrl,
   isoDurationToMinutes,
   mapSchemaOrgRecipe,
+  parseInstagramOembedJson,
 } from '~/lib/ai/recipe-extract-utils';
+import {
+  recipeOriginLabel,
+  tidyHostnameLabel,
+} from '~/lib/ai/recipe-source-label';
 
 describe('isoDurationToMinutes', () => {
   it('parses common ISO-8601 cook times', () => {
@@ -18,6 +30,15 @@ describe('isoDurationToMinutes', () => {
     expect(isoDurationToMinutes(null)).toBeNull();
     expect(isoDurationToMinutes('45 minutes')).toBeNull();
     expect(isoDurationToMinutes('')).toBeNull();
+  });
+});
+
+describe('isPrivateOrLocalUrl', () => {
+  it('rejects short-form private IPs that Linux would resolve', () => {
+    expect(isPrivateOrLocalUrl('http://127.1/cover.jpg')).toBe(true);
+    expect(isPrivateOrLocalUrl('http://10.1/cover.jpg')).toBe(true);
+    expect(isPrivateOrLocalUrl('http://192.168.1/cover.jpg')).toBe(true);
+    expect(isPrivateOrLocalUrl('https://cdn.example.com/og.jpg')).toBe(false);
   });
 });
 
@@ -72,5 +93,191 @@ describe('mapSchemaOrgRecipe', () => {
     expect(draft?.tags).toEqual(
       expect.arrayContaining(['Mediterranean', 'Dinner']),
     );
+  });
+});
+
+describe('Instagram oembed extract', () => {
+  it('attaches thumbnail_url and source_url to the review draft', () => {
+    const oembed = parseInstagramOembedJson({
+      title: 'One-pan lemon pasta',
+      author_name: 'dan',
+      thumbnail_url: 'https://scontent.cdninstagram.com/v/t51.123/cover.jpg',
+    });
+
+    expect(oembed.caption).toContain('One-pan lemon pasta');
+    expect(oembed.thumbnailUrl).toBe(
+      'https://scontent.cdninstagram.com/v/t51.123/cover.jpg',
+    );
+
+    const draft = attachExtractSource(emptyRecipeDraft(), {
+      sourceUrl: 'https://www.instagram.com/reel/AbCdEf123/',
+      candidates: oembed.thumbnailUrl
+        ? [{ url: oembed.thumbnailUrl, source: 'oembed' }]
+        : [],
+    });
+
+    expect(draft.source).toBe('instagram');
+    expect(draft.source_label).toBe('Instagram');
+    expect(draft.source_url).toBe('https://www.instagram.com/reel/AbCdEf123/');
+    expect(draft.image_url).toBe(oembed.thumbnailUrl);
+    expect(draft.image_candidates).toEqual([
+      { url: oembed.thumbnailUrl, source: 'oembed' },
+    ]);
+  });
+
+  it('still saves the source link when oembed has no thumbnail', () => {
+    const oembed = parseInstagramOembedJson({
+      title: 'Caption only',
+      author_name: 'dan',
+    });
+
+    const draft = attachExtractSource(emptyRecipeDraft(), {
+      sourceUrl: 'https://www.instagram.com/p/AbCdEf123/',
+      candidates: oembed.thumbnailUrl
+        ? [{ url: oembed.thumbnailUrl, source: 'oembed' }]
+        : [],
+    });
+
+    expect(draft.source).toBe('instagram');
+    expect(draft.source_label).toBe('Instagram');
+    expect(draft.source_url).toBe('https://www.instagram.com/p/AbCdEf123/');
+    expect(draft.image_url).toBeNull();
+    expect(draft.image_candidates).toEqual([]);
+  });
+});
+
+describe('collectRecipeImageCandidates', () => {
+  it('lists og:image and schema.org Recipe.image (plus large content images)', () => {
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <meta property="og:image" content="https://cdn.example.com/og-cover.jpg" />
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "Recipe",
+              "name": "Lemon chicken",
+              "image": "https://cdn.example.com/schema-hero.jpg"
+            }
+          </script>
+        </head>
+        <body>
+          <article>
+            <img src="/photos/plating.jpg" width="1200" height="800" />
+            <img src="/favicon.ico" width="32" height="32" />
+          </article>
+        </body>
+      </html>`;
+
+    const candidates = collectRecipeImageCandidates(
+      html,
+      'https://example.com/recipes/lemon-chicken',
+    );
+
+    expect(candidates).toEqual(
+      expect.arrayContaining([
+        {
+          source: 'og',
+          url: 'https://cdn.example.com/og-cover.jpg',
+        },
+        {
+          source: 'schema',
+          url: 'https://cdn.example.com/schema-hero.jpg',
+        },
+        {
+          source: 'content',
+          url: 'https://example.com/photos/plating.jpg',
+        },
+      ]),
+    );
+    expect(candidates.some((item) => item.url.includes('favicon'))).toBe(false);
+    expect(candidates[0]?.source).toBe('og');
+  });
+});
+
+describe('recipe source labels', () => {
+  it('tidies hostnames into a human site name', () => {
+    expect(tidyHostnameLabel('nyt.com')).toBe('NYT');
+    expect(tidyHostnameLabel('www.deliciousmagazine.co.uk')).toBe('Delicious');
+    expect(tidyHostnameLabel('bbc.co.uk')).toBe('BBC');
+  });
+
+  it('prefers og:site_name then schema publisher over the hostname', () => {
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <meta property="og:site_name" content="BBC Good Food" />
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "Recipe",
+              "name": "Lemon chicken",
+              "publisher": { "@type": "Organization", "name": "Not Used When Og Present" }
+            }
+          </script>
+        </head>
+        <body></body>
+      </html>`;
+
+    expect(
+      collectRecipeSourceLabel(html, 'https://www.bbcgoodfood.com/recipes/x'),
+    ).toBe('BBC Good Food');
+  });
+
+  it('uses schema.org publisher when og:site_name is missing', () => {
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "Recipe",
+              "name": "Lemon chicken",
+              "publisher": { "@type": "Organization", "name": "Serious Eats" }
+            }
+          </script>
+        </head>
+        <body></body>
+      </html>`;
+
+    expect(
+      collectRecipeSourceLabel(html, 'https://www.seriouseats.com/lemon'),
+    ).toBe('Serious Eats');
+  });
+
+  it('attaches website source + label for a page URL', () => {
+    const draft = attachExtractSource(emptyRecipeDraft(), {
+      sourceUrl: 'https://www.bbcgoodfood.com/recipes/lemon-chicken',
+      siteLabel: 'BBC Good Food',
+    });
+
+    expect(draft.source).toBe('website');
+    expect(draft.source_label).toBe('BBC Good Food');
+    expect(
+      recipeOriginLabel({
+        source: draft.source,
+        sourceLabel: draft.source_label,
+        sourceUrl: draft.source_url,
+      }),
+    ).toBe('BBC Good Food');
+  });
+
+  it('never shows an AI chip for Instagram or website origins', () => {
+    expect(
+      recipeOriginLabel({
+        source: 'instagram',
+        sourceLabel: 'Instagram',
+        sourceUrl: 'https://www.instagram.com/reel/x/',
+      }),
+    ).toBe('Instagram');
+    expect(
+      recipeOriginLabel({
+        source: 'website',
+        sourceLabel: 'ai',
+        sourceUrl: 'https://nyt.com/recipes/x',
+      }),
+    ).toBe('NYT');
+    expect(recipeOriginLabel({ source: 'ai' })).toBe('AI generated');
+    expect(recipeOriginLabel({ source: 'manual' })).toBeNull();
   });
 });
