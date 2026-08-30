@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { collectRecipeImageCandidates } from '~/lib/ai/recipe-extract-images';
 import {
+  attachExtractSource,
+  emptyRecipeDraft,
   isInstagramRecipeUrl,
   isoDurationToMinutes,
   mapSchemaOrgRecipe,
+  parseInstagramOembedJson,
 } from '~/lib/ai/recipe-extract-utils';
 
 describe('isoDurationToMinutes', () => {
@@ -72,5 +76,100 @@ describe('mapSchemaOrgRecipe', () => {
     expect(draft?.tags).toEqual(
       expect.arrayContaining(['Mediterranean', 'Dinner']),
     );
+  });
+});
+
+describe('Instagram oembed extract', () => {
+  it('attaches thumbnail_url and source_url to the review draft', () => {
+    const oembed = parseInstagramOembedJson({
+      title: 'One-pan lemon pasta',
+      author_name: 'dan',
+      thumbnail_url: 'https://scontent.cdninstagram.com/v/t51.123/cover.jpg',
+    });
+
+    expect(oembed.caption).toContain('One-pan lemon pasta');
+    expect(oembed.thumbnailUrl).toBe(
+      'https://scontent.cdninstagram.com/v/t51.123/cover.jpg',
+    );
+
+    const draft = attachExtractSource(emptyRecipeDraft(), {
+      sourceUrl: 'https://www.instagram.com/reel/AbCdEf123/',
+      candidates: oembed.thumbnailUrl
+        ? [{ url: oembed.thumbnailUrl, source: 'oembed' }]
+        : [],
+    });
+
+    expect(draft.source_url).toBe('https://www.instagram.com/reel/AbCdEf123/');
+    expect(draft.image_url).toBe(oembed.thumbnailUrl);
+    expect(draft.image_candidates).toEqual([
+      { url: oembed.thumbnailUrl, source: 'oembed' },
+    ]);
+  });
+
+  it('still saves the source link when oembed has no thumbnail', () => {
+    const oembed = parseInstagramOembedJson({
+      title: 'Caption only',
+      author_name: 'dan',
+    });
+
+    const draft = attachExtractSource(emptyRecipeDraft(), {
+      sourceUrl: 'https://www.instagram.com/p/AbCdEf123/',
+      candidates: oembed.thumbnailUrl
+        ? [{ url: oembed.thumbnailUrl, source: 'oembed' }]
+        : [],
+    });
+
+    expect(draft.source_url).toBe('https://www.instagram.com/p/AbCdEf123/');
+    expect(draft.image_url).toBeNull();
+    expect(draft.image_candidates).toEqual([]);
+  });
+});
+
+describe('collectRecipeImageCandidates', () => {
+  it('lists og:image and schema.org Recipe.image (plus large content images)', () => {
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <meta property="og:image" content="https://cdn.example.com/og-cover.jpg" />
+          <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "Recipe",
+              "name": "Lemon chicken",
+              "image": "https://cdn.example.com/schema-hero.jpg"
+            }
+          </script>
+        </head>
+        <body>
+          <article>
+            <img src="/photos/plating.jpg" width="1200" height="800" />
+            <img src="/favicon.ico" width="32" height="32" />
+          </article>
+        </body>
+      </html>`;
+
+    const candidates = collectRecipeImageCandidates(
+      html,
+      'https://example.com/recipes/lemon-chicken',
+    );
+
+    expect(candidates).toEqual(
+      expect.arrayContaining([
+        {
+          source: 'og',
+          url: 'https://cdn.example.com/og-cover.jpg',
+        },
+        {
+          source: 'schema',
+          url: 'https://cdn.example.com/schema-hero.jpg',
+        },
+        {
+          source: 'content',
+          url: 'https://example.com/photos/plating.jpg',
+        },
+      ]),
+    );
+    expect(candidates.some((item) => item.url.includes('favicon'))).toBe(false);
+    expect(candidates[0]?.source).toBe('og');
   });
 });

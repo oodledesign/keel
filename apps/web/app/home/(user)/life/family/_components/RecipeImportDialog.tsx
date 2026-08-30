@@ -22,6 +22,7 @@ import { cn } from '@kit/ui/utils';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import type { RecipeMealType } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
+import type { RecipeImageCandidate } from '~/lib/ai/recipe-extract-utils';
 
 import type { RecipeFormDraft } from './RecipeDialog';
 import { ACCENT } from './meal-ui';
@@ -173,6 +174,9 @@ export function RecipeImportDialog({
           cook_minutes: number | null;
           servings: number | null;
           is_favorite?: boolean;
+          source_url?: string | null;
+          image_url?: string | null;
+          image_candidates?: RecipeImageCandidate[];
         };
         error?: string;
       } | null;
@@ -204,6 +208,10 @@ export function RecipeImportDialog({
         cook_minutes: body.recipe.cook_minutes,
         servings: body.recipe.servings,
         is_favorite: false,
+        source_url:
+          body.recipe.source_url ?? (source === 'url' ? payload : null),
+        image_url: body.recipe.image_url ?? null,
+        image_candidates: body.recipe.image_candidates ?? [],
       };
 
       toast.success('Recipe ready to review');

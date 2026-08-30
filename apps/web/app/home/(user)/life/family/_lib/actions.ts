@@ -8,10 +8,19 @@ import type { Database } from '@kit/supabase/database';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  fetchPublicRecipeImage,
+  parseRecipeImageDataUrl,
+} from '~/lib/meals/fetch-recipe-image';
+import {
   ingredientsChanged,
   refreshRecipeNutrition,
 } from '~/lib/meals/recipe-nutrition';
 import { refreshRecipePrepStep } from '~/lib/meals/recipe-prep';
+import {
+  isStoredRecipeImageUrl,
+  removeRecipeCover,
+  storeRecipeCoverBytes,
+} from '~/lib/meals/store-recipe-photo';
 import { syncRecipeStructure } from '~/lib/meals/sync-recipe-structure';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -35,6 +44,7 @@ import {
   SetMealEntrySchema,
   type ToggleRecipeFavoriteInput,
   ToggleRecipeFavoriteSchema,
+  toRecipeWriteValues,
 } from './schema/family-meal.schema';
 import {
   resolveMealPlanScope,
@@ -241,6 +251,51 @@ export async function saveMealPreferencesAction(
   }
 }
 
+async function resolveRecipeCoverUrl(input: {
+  ownerAccountId: string;
+  recipeId: string;
+  existingImageUrl: string | null;
+  input: RecipeInput;
+}): Promise<string | null> {
+  const uploaded = input.input.image_data
+    ? parseRecipeImageDataUrl(input.input.image_data)
+    : null;
+
+  if (uploaded) {
+    return storeRecipeCoverBytes({
+      ownerAccountId: input.ownerAccountId,
+      recipeId: input.recipeId,
+      existingImageUrl: input.existingImageUrl,
+      bytes: uploaded.bytes,
+      contentType: uploaded.contentType,
+    });
+  }
+
+  const remote = input.input.remote_image_url ?? null;
+  if (remote) {
+    const fetched = await fetchPublicRecipeImage(remote);
+    if (!fetched) return input.existingImageUrl;
+    return storeRecipeCoverBytes({
+      ownerAccountId: input.ownerAccountId,
+      recipeId: input.recipeId,
+      existingImageUrl: input.existingImageUrl,
+      bytes: fetched.bytes,
+      contentType: fetched.contentType,
+    });
+  }
+
+  const keep = input.input.image_url ?? null;
+  if (keep && isStoredRecipeImageUrl(keep)) {
+    return keep;
+  }
+
+  if (input.existingImageUrl) {
+    await removeRecipeCover(input.existingImageUrl);
+  }
+
+  return null;
+}
+
 export async function upsertRecipeAction(
   input: RecipeInput,
 ): Promise<ActionResult<{ id: string }>> {
@@ -251,10 +306,11 @@ export async function upsertRecipeAction(
 
     let previousIngredients: string[] | null = null;
     let previousPrepHash: string | null = null;
+    let previousImageUrl: string | null = null;
     if (parsed.id) {
       let previousQuery = client
         .from('family_recipes')
-        .select('ingredients, prep_ingredients_hash')
+        .select('ingredients, prep_ingredients_hash, image_url')
         .eq('id', parsed.id);
 
       if (scope.kind === 'workspace') {
@@ -266,26 +322,20 @@ export async function upsertRecipeAction(
       }
 
       const { data: previous } = await previousQuery.maybeSingle();
-      previousIngredients =
-        (previous as { ingredients?: string[] } | null)?.ingredients ?? null;
-      previousPrepHash =
-        (previous as { prep_ingredients_hash?: string | null } | null)
-          ?.prep_ingredients_hash ?? null;
+      const previousRow = previous as {
+        ingredients?: string[];
+        prep_ingredients_hash?: string | null;
+        image_url?: string | null;
+      } | null;
+      previousIngredients = previousRow?.ingredients ?? null;
+      previousPrepHash = previousRow?.prep_ingredients_hash ?? null;
+      previousImageUrl = previousRow?.image_url ?? null;
     }
 
     const values = {
       user_id: scope.userId,
       account_id: scope.kind === 'workspace' ? scope.accountId : null,
-      name: parsed.name,
-      description: parsed.description ?? null,
-      ingredients: parsed.ingredients,
-      instructions: parsed.instructions ?? null,
-      tags: parsed.tags,
-      meal_type: parsed.meal_type,
-      prep_minutes: parsed.prep_minutes ?? null,
-      cook_minutes: parsed.cook_minutes ?? null,
-      servings: parsed.servings ?? null,
-      is_favorite: parsed.is_favorite,
+      ...toRecipeWriteValues(parsed),
       ...(parsed.id
         ? {}
         : { source: parsed.source === 'ai' ? 'ai' : 'manual' }),
@@ -319,6 +369,38 @@ export async function upsertRecipeAction(
         .single();
       if (error) return fail(error);
       recipeId = (data as { id: string }).id;
+    }
+
+    try {
+      const nextImageUrl = await resolveRecipeCoverUrl({
+        ownerAccountId:
+          scope.kind === 'workspace' ? scope.accountId : scope.userId,
+        recipeId,
+        existingImageUrl: previousImageUrl,
+        input: parsed,
+      });
+
+      if (nextImageUrl !== previousImageUrl) {
+        const { error: imageError } = await client
+          .from('family_recipes')
+          .update({
+            image_url: nextImageUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', recipeId);
+
+        if (imageError) {
+          console.error(
+            '[family-meal] cover persist failed:',
+            imageError.message,
+          );
+        }
+      }
+    } catch (coverError) {
+      console.error(
+        '[family-meal] cover persist failed:',
+        coverError instanceof Error ? coverError.message : coverError,
+      );
     }
 
     try {
@@ -392,6 +474,23 @@ export async function deleteRecipeAction(
     const client = getSupabaseServerClient();
     const scope = await resolveMealPlanScope(parsed.accountSlug);
 
+    let existingQuery = client
+      .from('family_recipes')
+      .select('image_url')
+      .eq('id', parsed.recipeId);
+
+    if (scope.kind === 'workspace') {
+      existingQuery = existingQuery.eq('account_id', scope.accountId);
+    } else {
+      existingQuery = existingQuery
+        .eq('user_id', scope.userId)
+        .is('account_id', null);
+    }
+
+    const { data: existing } = await existingQuery.maybeSingle();
+    const existingImageUrl =
+      (existing as { image_url?: string | null } | null)?.image_url ?? null;
+
     let deleteQuery = client
       .from('family_recipes')
       .delete()
@@ -406,6 +505,16 @@ export async function deleteRecipeAction(
     }
 
     const { error } = await deleteQuery;
+    if (!error && existingImageUrl) {
+      try {
+        await removeRecipeCover(existingImageUrl);
+      } catch (coverError) {
+        console.error(
+          '[family-meal] cover remove failed:',
+          coverError instanceof Error ? coverError.message : coverError,
+        );
+      }
+    }
     if (error) return fail(error);
     revalidateRecipePaths(scope, parsed.recipeId);
     return ok(undefined);

@@ -37,6 +37,30 @@ export const AccountSlugFieldSchema = z.object({
   accountSlug: z.string().min(1).optional(),
 });
 
+const emptyToNull = (value: unknown) => {
+  if (value == null) return null;
+  if (typeof value === 'string' && !value.trim()) return null;
+  return value;
+};
+
+export const RecipeHttpUrlSchema = z.preprocess(
+  emptyToNull,
+  z
+    .string()
+    .trim()
+    .max(2_000)
+    .refine((value) => {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }, 'Must be an http or https URL')
+    .nullable()
+    .optional(),
+);
+
 export type RecipeRow = {
   id: string;
   user_id: string;
@@ -52,6 +76,8 @@ export type RecipeRow = {
   servings: number | null;
   is_favorite: boolean;
   source: 'manual' | 'ai';
+  source_url: string | null;
+  image_url: string | null;
   calories_per_serving: number | null;
   protein_g: number | null;
   carbs_g: number | null;
@@ -103,8 +129,32 @@ export const RecipeInputSchema = AccountSlugFieldSchema.extend({
   servings: z.number().int().min(1).max(50).optional().nullable(),
   is_favorite: z.boolean().default(false),
   source: z.enum(['manual', 'ai']).optional(),
+  source_url: RecipeHttpUrlSchema,
+  /** Existing account_image URL to keep when editing. */
+  image_url: z.string().trim().max(2_000).nullable().optional(),
+  /** Remote candidate (Instagram thumbnail / page image) to copy into storage. */
+  remote_image_url: RecipeHttpUrlSchema,
+  /** User-uploaded data URL to copy into storage. */
+  image_data: z.string().max(6_000_000).nullable().optional(),
 });
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
+
+/** Persistable family_recipes columns from a reviewed RecipeInput (no image copy). */
+export function toRecipeWriteValues(parsed: RecipeInput) {
+  return {
+    name: parsed.name,
+    description: parsed.description ?? null,
+    ingredients: parsed.ingredients,
+    instructions: parsed.instructions ?? null,
+    tags: parsed.tags,
+    meal_type: parsed.meal_type,
+    prep_minutes: parsed.prep_minutes ?? null,
+    cook_minutes: parsed.cook_minutes ?? null,
+    servings: parsed.servings ?? null,
+    is_favorite: parsed.is_favorite,
+    source_url: parsed.source_url ?? null,
+  };
+}
 
 export const MealPreferencesInputSchema = AccountSlugFieldSchema.extend({
   dietary_requirements: z

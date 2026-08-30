@@ -6,8 +6,26 @@ import {
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
 import { getObjectSchemaTypes } from '~/lib/crawl/json-ld';
 
+export const RECIPE_IMAGE_CANDIDATE_SOURCES = [
+  'oembed',
+  'og',
+  'schema',
+  'content',
+] as const;
+
+export type RecipeImageCandidateSource =
+  (typeof RECIPE_IMAGE_CANDIDATE_SOURCES)[number];
+
+export const RecipeImageCandidateSchema = z.object({
+  url: z.string().trim().url().max(2_000),
+  source: z.enum(RECIPE_IMAGE_CANDIDATE_SOURCES),
+});
+
+export type RecipeImageCandidate = z.infer<typeof RecipeImageCandidateSchema>;
+
 /**
  * Draft matching `family_recipes` insertable fields (review/edit only — never auto-saved).
+ * `image_candidates` are review-only; only the chosen cover is persisted after save.
  */
 export const ExtractedRecipeDraftSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -21,6 +39,9 @@ export const ExtractedRecipeDraftSchema = z.object({
   servings: z.number().int().min(1).max(50).nullable(),
   is_favorite: z.literal(false),
   source: z.literal('ai'),
+  source_url: z.string().trim().url().max(2_000).nullable(),
+  image_url: z.string().trim().url().max(2_000).nullable(),
+  image_candidates: z.array(RecipeImageCandidateSchema).max(12),
 });
 
 export type ExtractedRecipeDraft = z.infer<typeof ExtractedRecipeDraftSchema>;
@@ -38,6 +59,9 @@ export function emptyRecipeDraft(): ExtractedRecipeDraft {
     servings: null,
     is_favorite: false,
     source: 'ai',
+    source_url: null,
+    image_url: null,
+    image_candidates: [],
   };
 }
 
@@ -195,6 +219,15 @@ export function normalizeExtractedRecipeDraft(
     .slice(0, 20);
   const meal_type = normalizeMealType(r.meal_type ?? r.mealType);
 
+  const imageCandidates = parseImageCandidates(
+    r.image_candidates ?? r.imageCandidates,
+  );
+  const sourceUrl = parsePublicHttpUrl(r.source_url ?? r.sourceUrl);
+  const imageUrl =
+    parsePublicHttpUrl(r.image_url ?? r.imageUrl) ??
+    imageCandidates[0]?.url ??
+    null;
+
   const draft: ExtractedRecipeDraft = {
     name: name.slice(0, 160),
     description,
@@ -207,6 +240,9 @@ export function normalizeExtractedRecipeDraft(
     servings: parseServings(r.servings),
     is_favorite: false,
     source: 'ai',
+    source_url: sourceUrl,
+    image_url: imageUrl,
+    image_candidates: imageCandidates,
   };
 
   const parsed = ExtractedRecipeDraftSchema.safeParse(draft);
@@ -253,6 +289,104 @@ export function mapSchemaOrgRecipe(
 
 export function normalizeUrl(url: string): string {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+/** Public http(s) URL, or null when missing / private / invalid. */
+export function parsePublicHttpUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  try {
+    const parsed = new URL(normalizeUrl(value.trim()));
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    if (isPrivateOrLocalUrl(parsed.href)) return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+export function parseImageCandidates(value: unknown): RecipeImageCandidate[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const candidates: RecipeImageCandidate[] = [];
+
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Record<string, unknown>;
+    const url = parsePublicHttpUrl(record.url);
+    const source = RECIPE_IMAGE_CANDIDATE_SOURCES.find(
+      (entry) => entry === record.source,
+    );
+    if (!url || !source || seen.has(url)) continue;
+    seen.add(url);
+    candidates.push({ url, source });
+    if (candidates.length >= 12) break;
+  }
+
+  return candidates;
+}
+
+export function attachExtractSource(
+  draft: ExtractedRecipeDraft,
+  input: {
+    sourceUrl: string;
+    candidates?: RecipeImageCandidate[];
+  },
+): ExtractedRecipeDraft {
+  const sourceUrl = parsePublicHttpUrl(input.sourceUrl);
+  const candidates = parseImageCandidates(input.candidates ?? []);
+  return {
+    ...draft,
+    source_url: sourceUrl,
+    image_url: candidates[0]?.url ?? null,
+    image_candidates: candidates,
+  };
+}
+
+export function parseInstagramOembedJson(json: unknown): {
+  caption: string | null;
+  thumbnailUrl: string | null;
+} {
+  if (!json || typeof json !== 'object') {
+    return { caption: null, thumbnailUrl: null };
+  }
+
+  const record = json as Record<string, unknown>;
+  const title = typeof record.title === 'string' ? record.title.trim() : '';
+  const author =
+    typeof record.author_name === 'string' ? record.author_name.trim() : '';
+  const thumbnailUrl = parsePublicHttpUrl(
+    record.thumbnail_url ?? record.thumbnailUrl,
+  );
+
+  if (!title) {
+    return { caption: null, thumbnailUrl };
+  }
+
+  return {
+    caption: author ? `${title}\n\n— ${author}` : title,
+    thumbnailUrl,
+  };
+}
+
+export function schemaOrgImageUrls(value: unknown): string[] {
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => schemaOrgImageUrls(item));
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return schemaOrgImageUrls(
+      record.url ?? record.contentUrl ?? record.thumbnailUrl,
+    );
+  }
+
+  return [];
 }
 
 export function isPrivateOrLocalUrl(url: string): boolean {

@@ -27,6 +27,7 @@ import { RecipeBadges } from './RecipeBadges';
 import { RecipeCookLogPanel } from './RecipeCookLogPanel';
 import { RecipeDialog } from './RecipeDialog';
 import { RecipeMethodPanel } from './RecipeMethodPanel';
+import { RecipeSourceLink } from './RecipeSourceLink';
 import { panelClass, totalTimeLabel } from './meal-ui';
 
 type Props = {
@@ -160,6 +161,17 @@ export function RecipeDetailPage({
         </div>
       </div>
 
+      {recipe.image_url ? (
+        <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={recipe.image_url}
+            alt=""
+            className="max-h-80 w-full object-cover"
+          />
+        </div>
+      ) : null}
+
       <header className="space-y-3">
         <RecipeBadges
           source={recipe.source}
@@ -175,6 +187,8 @@ export function RecipeDetailPage({
             {recipe.description}
           </p>
         ) : null}
+
+        <RecipeSourceLink url={recipe.source_url} className="text-sm" />
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--workspace-shell-text-muted)]">
           {time ? (
