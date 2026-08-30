@@ -183,3 +183,33 @@ export async function grantCampaignCredits(
 
   return data as CampaignCreditBatch;
 }
+
+export async function updateCampaignCreditPoolMetadata(
+  accountId: string,
+  values: {
+    monthly_allowance: number;
+    max_contacts: number;
+    plan_tier: string;
+    cycle_start: string;
+    cycle_end: string;
+  },
+): Promise<void> {
+  await rpc('ensure_campaign_credit_pool', {
+    p_account_id: accountId,
+  });
+
+  const { error } = await fromTable('campaign_credit_pools')
+    .update({
+      monthly_allowance: values.monthly_allowance,
+      max_contacts: values.max_contacts,
+      plan_tier: values.plan_tier,
+      cycle_start: values.cycle_start,
+      cycle_end: values.cycle_end,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('account_id', accountId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}

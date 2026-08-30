@@ -7,7 +7,10 @@ import { getLogger } from '@kit/shared/logger';
 
 import { CAMPAIGN_SUBSCRIPTION_TIERS } from '~/lib/billing/campaign-pricing';
 import { OZER_STRIPE_PRICES } from '~/lib/billing/stripe-price-ids';
-import { grantCampaignCredits } from '~/lib/campaign-credits/ledger';
+import {
+  grantCampaignCredits,
+  updateCampaignCreditPoolMetadata,
+} from '~/lib/campaign-credits/ledger';
 
 const CAMPAIGN_MONTHLY_BY_PRICE: Record<
   string,
@@ -87,25 +90,13 @@ export async function fulfillCampaignSubscriptionGrant(
     idempotencyKey,
   );
 
-  const untypedAdmin = admin as unknown as {
-    from: (table: string) => {
-      update: (values: Record<string, unknown>) => {
-        eq: (column: string, value: string) => Promise<{ error: unknown }>;
-      };
-    };
-  };
-
-  await untypedAdmin
-    .from('campaign_credit_pools')
-    .update({
-      monthly_allowance: sendUnits,
-      max_contacts: maxContacts,
-      plan_tier: planTier,
-      cycle_start: periodStart.toISOString().slice(0, 10),
-      cycle_end: cycleEndIso,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('account_id', accountId);
+  await updateCampaignCreditPoolMetadata(accountId, {
+    monthly_allowance: sendUnits,
+    max_contacts: maxContacts,
+    plan_tier: planTier,
+    cycle_start: periodStart.toISOString().slice(0, 10),
+    cycle_end: cycleEndIso,
+  });
 
   await admin.from('account_module_settings').upsert(
     {

@@ -6,7 +6,10 @@ import { syncAccountCreditLimit } from '~/lib/ai/tiers';
 import { campaignTierForPlanId } from '~/lib/billing/campaign-pricing';
 import { MEDIA_SUBSCRIPTION_TIERS } from '~/lib/billing/media-unit-pricing';
 import type { OzerPlanDefinition } from '~/lib/billing/ozer-plan-catalog';
-import { grantCampaignCredits } from '~/lib/campaign-credits/ledger';
+import {
+  grantCampaignCredits,
+  updateCampaignCreditPoolMetadata,
+} from '~/lib/campaign-credits/ledger';
 import { grantMediaCredits } from '~/lib/media-credits/ledger';
 
 function addMonths(date: Date, months: number): Date {
@@ -136,33 +139,13 @@ export async function applyAdminPlanUsageGrants(
       idempotencyKey,
     );
 
-    const untypedAdmin = admin as unknown as {
-      rpc: (
-        fn: string,
-        args: Record<string, unknown>,
-      ) => Promise<{ error: unknown }>;
-      from: (table: string) => {
-        update: (values: Record<string, unknown>) => {
-          eq: (column: string, value: string) => Promise<{ error: unknown }>;
-        };
-      };
-    };
-
-    await untypedAdmin.rpc('ensure_campaign_credit_pool', {
-      p_account_id: accountId,
+    await updateCampaignCreditPoolMetadata(accountId, {
+      monthly_allowance: campaign.sendUnits,
+      max_contacts: campaign.maxContacts,
+      plan_tier: campaign.planTier,
+      cycle_start: periodStart.toISOString().slice(0, 10),
+      cycle_end: cycleEndIso,
     });
-
-    await untypedAdmin
-      .from('campaign_credit_pools')
-      .update({
-        monthly_allowance: campaign.sendUnits,
-        max_contacts: campaign.maxContacts,
-        plan_tier: campaign.planTier,
-        cycle_start: periodStart.toISOString().slice(0, 10),
-        cycle_end: cycleEndIso,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('account_id', accountId);
 
     await admin.from('account_module_settings').upsert(
       {

@@ -289,7 +289,7 @@ class CampaignsService {
 
     const fromName = input.workspaceName.trim() || fromEmail;
 
-    const { error: statusError } = await fromTable(
+    const { data: claimed, error: statusError } = await fromTable(
       this.client,
       'email_campaigns',
     )
@@ -303,9 +303,13 @@ class CampaignsService {
       })
       .eq('id', campaign.id)
       .eq('account_id', input.accountId)
-      .in('status', ['draft', 'scheduled']);
+      .in('status', ['draft', 'scheduled'])
+      .select('id');
 
     if (statusError) throw new Error(statusError.message);
+    if (!claimed?.length) {
+      throw new Error('This campaign is already being processed');
+    }
 
     const rows = subscribers.map((subscriber) => ({
       campaign_id: campaign.id,
@@ -422,24 +426,50 @@ class CampaignsService {
       unsubscribe_token: string | null;
     }>;
 
+    const preferenceIds = [
+      ...new Set(
+        pending
+          .map((recipient) => recipient.preference_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+
+    const prefById = new Map<
+      string,
+      { marketing_status?: string; unsubscribe_token?: string }
+    >();
+
+    if (preferenceIds.length > 0) {
+      const { data: prefs, error: prefsError } = await fromTable(
+        this.client,
+        'workspace_mailing_preferences',
+      )
+        .select('id, marketing_status, unsubscribe_token')
+        .eq('account_id', input.accountId)
+        .in('id', preferenceIds);
+
+      if (prefsError) throw new Error(prefsError.message);
+
+      for (const row of (prefs ?? []) as Array<{
+        id: string;
+        marketing_status?: string;
+        unsubscribe_token?: string;
+      }>) {
+        prefById.set(row.id, row);
+      }
+    }
+
     let failed = 0;
     let skipped = 0;
 
     for (const recipient of pending) {
       const preference = recipient.preference_id
-        ? await fromTable(this.client, 'workspace_mailing_preferences')
-            .select('marketing_status, unsubscribe_token')
-            .eq('id', recipient.preference_id)
-            .eq('account_id', input.accountId)
-            .maybeSingle()
-        : { data: null };
+        ? (prefById.get(recipient.preference_id) ?? null)
+        : null;
 
-      const status = (preference.data as { marketing_status?: string } | null)
-        ?.marketing_status;
+      const status = preference?.marketing_status;
       const token =
-        recipient.unsubscribe_token ||
-        (preference.data as { unsubscribe_token?: string } | null)
-          ?.unsubscribe_token;
+        recipient.unsubscribe_token || preference?.unsubscribe_token;
 
       if (status && status !== 'subscribed') {
         await fromTable(this.client, 'email_campaign_recipients')
@@ -640,11 +670,15 @@ export async function processDueCampaignSends(client: SupabaseClient): Promise<{
     id: string;
     account_id: string;
   }>) {
-    await service.processPending({
-      accountId: row.account_id,
-      campaignId: row.id,
-    });
-    continued += 1;
+    try {
+      await service.processPending({
+        accountId: row.account_id,
+        campaignId: row.id,
+      });
+      continued += 1;
+    } catch {
+      // Leave status as sending so the next cron tick retries this campaign.
+    }
   }
 
   return { started, continued };
