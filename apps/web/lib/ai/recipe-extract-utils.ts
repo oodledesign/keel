@@ -4,6 +4,7 @@ import {
   RECIPE_MEAL_TYPES,
   type RecipeMealType,
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
+import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
 import { getObjectSchemaTypes } from '~/lib/crawl/json-ld';
 
 export const RECIPE_IMAGE_CANDIDATE_SOURCES = [
@@ -38,7 +39,8 @@ export const ExtractedRecipeDraftSchema = z.object({
   cook_minutes: z.number().int().min(0).max(1_440).nullable(),
   servings: z.number().int().min(1).max(50).nullable(),
   is_favorite: z.literal(false),
-  source: z.literal('ai'),
+  source: z.enum(['ai', 'instagram', 'website']),
+  source_label: z.string().trim().max(80).nullable(),
   source_url: z.string().trim().url().max(2_000).nullable(),
   image_url: z.string().trim().url().max(2_000).nullable(),
   image_candidates: z.array(RecipeImageCandidateSchema).max(12),
@@ -59,6 +61,7 @@ export function emptyRecipeDraft(): ExtractedRecipeDraft {
     servings: null,
     is_favorite: false,
     source: 'ai',
+    source_label: null,
     source_url: null,
     image_url: null,
     image_candidates: [],
@@ -239,7 +242,8 @@ export function normalizeExtractedRecipeDraft(
     cook_minutes: parseOptionalInt(r.cook_minutes ?? r.cookMinutes),
     servings: parseServings(r.servings),
     is_favorite: false,
-    source: 'ai',
+    source: parseExtractSource(r.source),
+    source_label: parseSourceLabel(r.source_label ?? r.sourceLabel),
     source_url: sourceUrl,
     image_url: imageUrl,
     image_candidates: imageCandidates,
@@ -327,17 +331,37 @@ export function parseImageCandidates(value: unknown): RecipeImageCandidate[] {
   return candidates;
 }
 
+export function parseExtractSource(
+  value: unknown,
+): 'ai' | 'instagram' | 'website' {
+  if (value === 'instagram' || value === 'website' || value === 'ai') {
+    return value;
+  }
+  return 'ai';
+}
+
+export function parseSourceLabel(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const trimmed = value.trim().slice(0, 80);
+  if (/^ai(\s+generated)?$/i.test(trimmed)) return null;
+  return trimmed;
+}
+
 export function attachExtractSource(
   draft: ExtractedRecipeDraft,
   input: {
     sourceUrl: string;
     candidates?: RecipeImageCandidate[];
+    siteLabel?: string | null;
   },
 ): ExtractedRecipeDraft {
   const sourceUrl = parsePublicHttpUrl(input.sourceUrl);
   const candidates = parseImageCandidates(input.candidates ?? []);
+  const origin = resolveExtractOrigin(sourceUrl, input.siteLabel);
   return {
     ...draft,
+    source: origin?.source ?? draft.source,
+    source_label: origin?.source_label ?? draft.source_label,
     source_url: sourceUrl,
     image_url: candidates[0]?.url ?? null,
     image_candidates: candidates,

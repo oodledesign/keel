@@ -175,6 +175,8 @@ export function RecipeDetailPage({
       <header className="space-y-3">
         <RecipeBadges
           source={recipe.source}
+          sourceLabel={recipe.source_label}
+          sourceUrl={recipe.source_url}
           mealType={recipe.meal_type}
           tags={recipe.tags}
           dietTags={recipe.diet_tags}

@@ -8753,6 +8753,7 @@ export type Database = {
           protein_g: number | null
           servings: number | null
           source: string
+          source_label: string | null
           source_url: string | null
           tags: string[]
           updated_at: string
@@ -8781,6 +8782,7 @@ export type Database = {
           protein_g?: number | null
           servings?: number | null
           source?: string
+          source_label?: string | null
           source_url?: string | null
           tags?: string[]
           updated_at?: string
@@ -8809,6 +8811,7 @@ export type Database = {
           protein_g?: number | null
           servings?: number | null
           source?: string
+          source_label?: string | null
           source_url?: string | null
           tags?: string[]
           updated_at?: string

@@ -6,7 +6,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { load } from 'cheerio';
 
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
-import { collectRecipeImageCandidates } from '~/lib/ai/recipe-extract-images';
+import {
+  collectRecipeImageCandidates,
+  collectRecipeSourceLabel,
+} from '~/lib/ai/recipe-extract-images';
 import {
   type ExtractedRecipeDraft,
   attachExtractSource,
@@ -331,12 +334,14 @@ export async function extractRecipeFromUrl(
 
   const html = await fetchPageHtml(url);
   const candidates = collectRecipeImageCandidates(html, url);
+  const siteLabel = collectRecipeSourceLabel(html, url);
   const fromSchema = findSchemaOrgRecipe(html);
   if (fromSchema) {
     return {
       recipe: attachExtractSource(fromSchema, {
         sourceUrl: url,
         candidates,
+        siteLabel,
       }),
       method: 'schema_org',
     };
@@ -352,6 +357,7 @@ export async function extractRecipeFromUrl(
     recipe: attachExtractSource(extracted.recipe, {
       sourceUrl: url,
       candidates,
+      siteLabel,
     }),
     method: 'llm_text',
   };

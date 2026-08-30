@@ -1,10 +1,47 @@
 -- Optional import provenance + cover image for family recipes.
 -- Cover bytes live in the existing public account_image bucket
 -- ({account_id|user_id}/recipe-{recipe_id}); image_url is the copied public URL.
+-- URL imports are instagram/website (never 'ai'); source_label is the origin chip.
 
 ALTER TABLE public.family_recipes
   ADD COLUMN IF NOT EXISTS source_url text,
-  ADD COLUMN IF NOT EXISTS image_url text;
+  ADD COLUMN IF NOT EXISTS image_url text,
+  ADD COLUMN IF NOT EXISTS source_label text;
+
+DO $$
+DECLARE
+  cons record;
+BEGIN
+  FOR cons IN
+    SELECT con.conname
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+    WHERE nsp.nspname = 'public'
+      AND rel.relname = 'family_recipes'
+      AND con.contype = 'c'
+      AND pg_get_constraintdef(con.oid) ILIKE '%source%manual%ai%'
+      AND pg_get_constraintdef(con.oid) NOT ILIKE '%source_url%'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.family_recipes DROP CONSTRAINT IF EXISTS %I',
+      cons.conname
+    );
+  END LOOP;
+END $$;
+
+ALTER TABLE public.family_recipes
+  DROP CONSTRAINT IF EXISTS family_recipes_source_check;
+
+ALTER TABLE public.family_recipes
+  ADD CONSTRAINT family_recipes_source_check
+  CHECK (source IN ('manual', 'ai', 'instagram', 'website'));
+
+COMMENT ON COLUMN public.family_recipes.source IS
+  'Origin kind: manual, ai (paste/photo extract or generated), instagram, or website.';
+
+COMMENT ON COLUMN public.family_recipes.source_label IS
+  'Human origin chip: Instagram, og:site_name / publisher, or a tidy hostname.';
 
 ALTER TABLE public.family_recipes
   DROP CONSTRAINT IF EXISTS family_recipes_source_url_http;

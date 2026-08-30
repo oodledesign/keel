@@ -1,5 +1,12 @@
+import 'server-only';
+
 import { load } from 'cheerio';
 
+import {
+  cleanSiteLabel,
+  schemaOrgPublisherName,
+  tidySiteLabelFromUrl,
+} from '~/lib/ai/recipe-source-label';
 import { extractPageJsonLd, getObjectSchemaTypes } from '~/lib/crawl/json-ld';
 
 import {
@@ -118,4 +125,44 @@ export function collectRecipeImageCandidates(
   });
 
   return candidates.slice(0, MAX_CANDIDATES);
+}
+
+/**
+ * Prefer og:site_name, then schema.org publisher / WebSite name,
+ * then a tidy hostname. Server-only HTML parse (cheerio).
+ */
+export function collectRecipeSourceLabel(
+  html: string,
+  pageUrl: string,
+): string {
+  const $ = load(html);
+  const ogSite =
+    $('meta[property="og:site_name"]').attr('content') ??
+    $('meta[name="og:site_name"]').attr('content');
+  const fromOg = ogSite ? cleanSiteLabel(ogSite) : null;
+  if (fromOg) return fromOg;
+
+  const { schemaObjects } = extractPageJsonLd($);
+
+  for (const item of schemaObjects) {
+    if (!getObjectSchemaTypes(item).includes('Recipe')) continue;
+    const publisher = schemaOrgPublisherName(item.publisher);
+    if (publisher) return publisher;
+  }
+
+  for (const item of schemaObjects) {
+    const types = getObjectSchemaTypes(item);
+    if (types.includes('WebSite')) {
+      const siteName = cleanSiteLabel(
+        typeof item.name === 'string' ? item.name : '',
+      );
+      if (siteName) return siteName;
+    }
+    if (types.includes('Organization')) {
+      const org = schemaOrgPublisherName(item);
+      if (org) return org;
+    }
+  }
+
+  return tidySiteLabelFromUrl(pageUrl);
 }

@@ -6,6 +6,9 @@ export type MealType = (typeof MEAL_TYPES)[number];
 export const RECIPE_MEAL_TYPES = [...MEAL_TYPES, 'any'] as const;
 export type RecipeMealType = (typeof RECIPE_MEAL_TYPES)[number];
 
+export const RECIPE_SOURCES = ['manual', 'ai', 'instagram', 'website'] as const;
+export type RecipeSource = (typeof RECIPE_SOURCES)[number];
+
 /** Generator priorities the user can toggle (healthy, quick, cheap, etc.). */
 export const PRIORITY_OPTIONS = [
   'healthy',
@@ -75,7 +78,8 @@ export type RecipeRow = {
   cook_minutes: number | null;
   servings: number | null;
   is_favorite: boolean;
-  source: 'manual' | 'ai';
+  source: RecipeSource;
+  source_label: string | null;
   source_url: string | null;
   image_url: string | null;
   calories_per_serving: number | null;
@@ -128,7 +132,8 @@ export const RecipeInputSchema = AccountSlugFieldSchema.extend({
   cook_minutes: z.number().int().min(0).max(1_440).optional().nullable(),
   servings: z.number().int().min(1).max(50).optional().nullable(),
   is_favorite: z.boolean().default(false),
-  source: z.enum(['manual', 'ai']).optional(),
+  source: z.enum(RECIPE_SOURCES).optional(),
+  source_label: z.string().trim().max(80).nullable().optional(),
   source_url: RecipeHttpUrlSchema,
   /** Existing account_image URL to keep when editing. */
   image_url: z.string().trim().max(2_000).nullable().optional(),
@@ -153,6 +158,7 @@ export function toRecipeWriteValues(parsed: RecipeInput) {
     servings: parsed.servings ?? null,
     is_favorite: parsed.is_favorite,
     source_url: parsed.source_url ?? null,
+    source_label: parsed.source_label?.trim() || null,
   };
 }
 

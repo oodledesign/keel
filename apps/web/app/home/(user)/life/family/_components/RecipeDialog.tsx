@@ -20,6 +20,7 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import type { RecipeImageCandidate } from '~/lib/ai/recipe-extract-utils';
+import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
 
 import { upsertRecipeAction } from '../_lib/actions';
 import {
@@ -27,7 +28,9 @@ import {
   type RecipeInput,
   type RecipeMealType,
   type RecipeRow,
+  type RecipeSource,
 } from '../_lib/schema/family-meal.schema';
+import { RecipeBadges } from './RecipeBadges';
 import {
   ACCENT,
   dietaryChoices,
@@ -49,6 +52,8 @@ export type RecipeFormDraft = {
   cook_minutes: number | null;
   servings: number | null;
   is_favorite?: boolean;
+  source?: RecipeSource;
+  source_label?: string | null;
   source_url?: string | null;
   image_url?: string | null;
   image_candidates?: RecipeImageCandidate[];
@@ -82,6 +87,8 @@ function toForm(recipe: RecipeRow | null, draft?: RecipeFormDraft | null) {
     cook_minutes: source?.cook_minutes?.toString() ?? '',
     servings: source?.servings?.toString() ?? '',
     is_favorite: source?.is_favorite ?? false,
+    source: source?.source ?? null,
+    source_label: source?.source_label ?? null,
     source_url: source?.source_url ?? '',
     image_url: source?.image_url ?? candidates[0]?.url ?? null,
     image_data: null as string | null,
@@ -103,6 +110,16 @@ function fileToDataUrl(file: File): Promise<string> {
 
 function isStoredCoverUrl(url: string | null | undefined) {
   return Boolean(url?.includes('/account_image/'));
+}
+
+function resolveImportSource(
+  source: RecipeSource | null | undefined,
+  sourceUrl: string | null,
+): RecipeSource {
+  if (source === 'instagram' || source === 'website' || source === 'ai') {
+    return source;
+  }
+  return resolveExtractOrigin(sourceUrl, null)?.source ?? 'ai';
 }
 
 export function RecipeDialog({
@@ -230,7 +247,16 @@ function RecipeForm({
       is_favorite: form.is_favorite,
       source_url: sourceUrl,
       ...coverPayload,
-      ...(isImportReview ? { source: 'ai' as const } : {}),
+      ...(isImportReview
+        ? {
+            source: resolveImportSource(form.source, sourceUrl),
+            source_label:
+              form.source_label ??
+              resolveExtractOrigin(sourceUrl, form.source_label)
+                ?.source_label ??
+              null,
+          }
+        : {}),
     };
 
     startTransition(async () => {
@@ -264,6 +290,17 @@ function RecipeForm({
             : 'Build your library so the planner can reuse meals you love.'}
         </DialogDescription>
       </DialogHeader>
+
+      {isImportReview ||
+      recipe?.source === 'instagram' ||
+      recipe?.source === 'website' ||
+      recipe?.source === 'ai' ? (
+        <RecipeBadges
+          source={form.source ?? recipe?.source}
+          sourceLabel={form.source_label}
+          sourceUrl={form.source_url.trim() || null}
+        />
+      ) : null}
 
       <div className="space-y-4">
         <div className="space-y-1.5">

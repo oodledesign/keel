@@ -21,8 +21,12 @@ import { cn } from '@kit/ui/utils';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
-import type { RecipeMealType } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
+import type {
+  RecipeMealType,
+  RecipeSource,
+} from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
 import type { RecipeImageCandidate } from '~/lib/ai/recipe-extract-utils';
+import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
 
 import type { RecipeFormDraft } from './RecipeDialog';
 import { ACCENT } from './meal-ui';
@@ -47,6 +51,33 @@ const SOURCE_TABS: Array<{
 ];
 
 const MAX_IMAGE_BYTES = 4_000_000;
+
+function resolveImportedDraftOrigin(
+  recipe: {
+    source?: RecipeSource;
+    source_label?: string | null;
+    source_url?: string | null;
+  },
+  importSource: ImportSource,
+  payload: string,
+): { source: RecipeSource; source_label: string | null } {
+  if (recipe.source === 'instagram' || recipe.source === 'website') {
+    return {
+      source: recipe.source,
+      source_label: recipe.source_label ?? null,
+    };
+  }
+
+  if (importSource === 'url' || recipe.source_url) {
+    const origin = resolveExtractOrigin(
+      recipe.source_url ?? payload,
+      recipe.source_label,
+    );
+    if (origin) return origin;
+  }
+
+  return { source: 'ai', source_label: recipe.source_label ?? null };
+}
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -174,6 +205,8 @@ export function RecipeImportDialog({
           cook_minutes: number | null;
           servings: number | null;
           is_favorite?: boolean;
+          source?: RecipeSource;
+          source_label?: string | null;
           source_url?: string | null;
           image_url?: string | null;
           image_candidates?: RecipeImageCandidate[];
@@ -212,6 +245,7 @@ export function RecipeImportDialog({
           body.recipe.source_url ?? (source === 'url' ? payload : null),
         image_url: body.recipe.image_url ?? null,
         image_candidates: body.recipe.image_candidates ?? [],
+        ...resolveImportedDraftOrigin(body.recipe, source, payload),
       };
 
       toast.success('Recipe ready to review');

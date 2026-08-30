@@ -345,9 +345,7 @@ export async function upsertRecipeAction(
       user_id: scope.userId,
       account_id: scope.kind === 'workspace' ? scope.accountId : null,
       ...toRecipeWriteValues(parsed),
-      ...(parsed.id
-        ? {}
-        : { source: parsed.source === 'ai' ? 'ai' : 'manual' }),
+      ...(parsed.id ? {} : { source: parsed.source ?? 'manual' }),
       updated_at: new Date().toISOString(),
     };
 
