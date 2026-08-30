@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { CampaignDocumentSchema } from '~/lib/campaigns/campaign-document';
+
 export const CreateCampaignSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),
@@ -13,7 +15,7 @@ export const UpdateCampaignSchema = z.object({
   name: z.string().trim().min(1).max(160),
   subject: z.string().trim().max(300),
   previewText: z.string().trim().max(200).optional().nullable(),
-  htmlBody: z.string().min(1).max(200_000),
+  bodyDocument: CampaignDocumentSchema,
 });
 
 export const SendCampaignSchema = z.object({

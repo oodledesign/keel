@@ -9,6 +9,12 @@ import {
   isInsufficientCampaignCreditsError,
   refundCampaignCredits,
 } from '~/lib/campaign-credits/ledger';
+import {
+  campaignDocumentHasContent,
+  parseCampaignDocument,
+  resolveCampaignDocument,
+} from '~/lib/campaigns/campaign-document';
+import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
 import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
@@ -48,6 +54,7 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     subject: String(row.subject ?? ''),
     previewText: (row.preview_text as string | null) ?? null,
     htmlBody: String(row.html_body ?? ''),
+    bodyDocument: parseCampaignDocument(row.body_document),
     fromName: (row.from_name as string | null) ?? null,
     fromEmail: (row.from_email as string | null) ?? null,
     replyTo: (row.reply_to as string | null) ?? null,
@@ -107,7 +114,16 @@ class CampaignsService {
     subject?: string;
     previewText?: string | null;
     htmlBody?: string;
+    bodyDocument?: unknown;
   }): Promise<EmailCampaign> {
+    const brand = await loadAccountBrandResolved(input.accountId);
+    const document = resolveCampaignDocument(
+      input.bodyDocument,
+      input.htmlBody ?? '',
+      brand,
+    );
+    const htmlBody = compileCampaignDocument(document, brand);
+
     const { data, error } = await fromTable(
       this.client,
       WORKSPACE_EMAIL_CAMPAIGNS,
@@ -118,7 +134,8 @@ class CampaignsService {
         name: input.name.trim(),
         subject: input.subject?.trim() ?? '',
         preview_text: input.previewText?.trim() || null,
-        html_body: input.htmlBody ?? '<p>Write your email…</p>',
+        html_body: htmlBody,
+        body_document: document,
         status: 'draft',
       })
       .select('*')
@@ -138,6 +155,7 @@ class CampaignsService {
     subject?: string;
     previewText?: string | null;
     htmlBody?: string;
+    bodyDocument?: unknown;
   }): Promise<EmailCampaign> {
     const existing = await this.get(input.accountId, input.campaignId);
     if (existing.status !== 'draft' && existing.status !== 'scheduled') {
@@ -150,7 +168,16 @@ class CampaignsService {
     if (input.previewText !== undefined) {
       patch.preview_text = input.previewText?.trim() || null;
     }
-    if (input.htmlBody !== undefined) patch.html_body = input.htmlBody;
+    if (input.bodyDocument !== undefined || input.htmlBody !== undefined) {
+      const brand = await loadAccountBrandResolved(input.accountId);
+      const document = resolveCampaignDocument(
+        input.bodyDocument ?? existing.bodyDocument,
+        input.htmlBody ?? existing.htmlBody,
+        brand,
+      );
+      patch.body_document = document;
+      patch.html_body = compileCampaignDocument(document, brand);
+    }
 
     const { data, error } = await fromTable(
       this.client,
@@ -639,7 +666,10 @@ class CampaignsService {
     if (!campaign.subject.trim()) {
       throw new Error('Add a subject before sending');
     }
-    if (!campaign.htmlBody.replace(/<[^>]+>/g, '').trim()) {
+    const hasContent = campaign.bodyDocument
+      ? campaignDocumentHasContent(campaign.bodyDocument)
+      : Boolean(campaign.htmlBody.replace(/<[^>]+>/g, '').trim());
+    if (!hasContent) {
       throw new Error('Write the email body before sending');
     }
   }

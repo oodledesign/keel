@@ -9,6 +9,8 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
+import type { CampaignDocument } from '~/lib/campaigns/campaign-document';
+import { resolveCampaignDocument } from '~/lib/campaigns/campaign-document';
 import type {
   CampaignCreditPool,
   EmailCampaign,
@@ -49,7 +51,10 @@ export function CampaignEditor({
   usage: CampaignCreditPool;
   brand: {
     primary_color: string;
+    secondary_color?: string | null;
+    accent_color?: string | null;
     logo_url: string | null;
+    website_url?: string | null;
     contact_email: string | null;
   };
 }) {
@@ -57,7 +62,12 @@ export function CampaignEditor({
   const [name, setName] = useState(campaign.name);
   const [subject, setSubject] = useState(campaign.subject);
   const [previewText, setPreviewText] = useState(campaign.previewText ?? '');
-  const [htmlBody, setHtmlBody] = useState(campaign.htmlBody);
+  const [document, setDocument] = useState<CampaignDocument>(() =>
+    resolveCampaignDocument(campaign.bodyDocument, campaign.htmlBody, brand),
+  );
+  const [previewWidth, setPreviewWidth] = useState<'desktop' | 'mobile'>(
+    'desktop',
+  );
   const [scheduledAt, setScheduledAt] = useState('');
   const [pending, startTransition] = useTransition();
   const editable =
@@ -67,13 +77,13 @@ export function CampaignEditor({
     () =>
       previewCampaignHtml({
         brand,
-        htmlBody,
+        document,
         merge: mergeValuesForRecipient({
           displayName: 'Alex Taylor',
           email: 'alex@example.com',
         }),
       }),
-    [brand, htmlBody],
+    [brand, document],
   );
 
   const save = () =>
@@ -84,206 +94,212 @@ export function CampaignEditor({
       name,
       subject,
       previewText,
-      htmlBody,
+      bodyDocument: document,
     });
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="campaign-name">Internal name</Label>
-              <Input
-                id="campaign-name"
-                value={name}
-                disabled={!editable}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="campaign-subject">Subject</Label>
-              <Input
-                id="campaign-subject"
-                value={subject}
-                disabled={!editable}
-                onChange={(event) => setSubject(event.target.value)}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="campaign-preview">Preview text</Label>
-            <Input
-              id="campaign-preview"
-              value={previewText}
-              disabled={!editable}
-              onChange={(event) => setPreviewText(event.target.value)}
-            />
-          </div>
-          <CampaignBodyEditor
-            initialHtml={campaign.htmlBody}
-            onChange={setHtmlBody}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="campaign-name">Internal name</Label>
+          <Input
+            id="campaign-name"
+            value={name}
             disabled={!editable}
+            onChange={(event) => setName(event.target.value)}
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="campaign-subject">Subject</Label>
+          <Input
+            id="campaign-subject"
+            value={subject}
+            disabled={!editable}
+            onChange={(event) => setSubject(event.target.value)}
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="campaign-preview">Preview text</Label>
+        <Input
+          id="campaign-preview"
+          value={previewText}
+          disabled={!editable}
+          onChange={(event) => setPreviewText(event.target.value)}
+        />
+      </div>
+      <CampaignBodyEditor
+        document={document}
+        brand={brand}
+        onChange={setDocument}
+        disabled={!editable}
+        previewWidth={previewWidth}
+        onPreviewWidthChange={setPreviewWidth}
+      />
 
-        <div className="space-y-4">
-          <div className={`${workspacePanelCard} space-y-3 p-4`}>
-            <h3 className={`font-semibold ${workspaceText}`}>Send</h3>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <div className={`${workspacePanelCard} space-y-3 p-4`}>
+          <h3 className={`font-semibold ${workspaceText}`}>Send</h3>
+          <p className={`text-sm ${workspaceTextMuted}`}>
+            {subscriberCount.toLocaleString()} subscribed contacts ·{' '}
+            {usage.balance.toLocaleString()} send units left
+          </p>
+          {!brand.contact_email ? (
             <p className={`text-sm ${workspaceTextMuted}`}>
-              {subscriberCount.toLocaleString()} subscribed contacts ·{' '}
-              {usage.balance.toLocaleString()} send units left
+              Set Brand contact email before sending. From identity is the
+              workspace, not Ozer.
             </p>
-            {!brand.contact_email ? (
-              <p className={`text-sm ${workspaceTextMuted}`}>
-                Set Brand contact email before sending. From identity is the
-                workspace, not Ozer.
-              </p>
-            ) : (
-              <p className={`text-sm ${workspaceTextMuted}`}>
-                From {brand.contact_email}
-              </p>
-            )}
+          ) : (
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              From {brand.contact_email}
+            </p>
+          )}
 
-            {editable ? (
-              <div className="flex flex-col gap-2">
-                <Button
-                  className={workspaceBtnPrimary}
+          {editable ? (
+            <div className="flex flex-col gap-2">
+              <Button
+                className={workspaceBtnPrimary}
+                disabled={pending}
+                data-test="campaign-send"
+                onClick={() => {
+                  startTransition(async () => {
+                    try {
+                      await save();
+                      const result = await sendCampaignAction({
+                        accountId,
+                        accountSlug,
+                        campaignId: campaign.id,
+                      });
+                      toast.success(
+                        result.remaining > 0
+                          ? `Sending… ${result.remaining} left in the queue`
+                          : 'Campaign sent',
+                      );
+                      router.refresh();
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not send',
+                      );
+                    }
+                  });
+                }}
+              >
+                {pending ? 'Working…' : 'Send now'}
+              </Button>
+              <div className="flex gap-2">
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
                   disabled={pending}
+                  onChange={(event) => setScheduledAt(event.target.value)}
+                />
+                <Button
+                  variant="outline"
+                  disabled={pending || !scheduledAt}
+                  data-test="campaign-schedule"
                   onClick={() => {
                     startTransition(async () => {
                       try {
                         await save();
-                        const result = await sendCampaignAction({
+                        await scheduleCampaignAction({
+                          accountId,
+                          accountSlug,
+                          campaignId: campaign.id,
+                          scheduledAt: new Date(scheduledAt).toISOString(),
+                        });
+                        toast.success('Campaign scheduled');
+                        router.refresh();
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : 'Could not schedule',
+                        );
+                      }
+                    });
+                  }}
+                >
+                  Schedule
+                </Button>
+              </div>
+              {campaign.status === 'scheduled' ? (
+                <Button
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => {
+                    startTransition(async () => {
+                      try {
+                        await cancelScheduleCampaignAction({
                           accountId,
                           accountSlug,
                           campaignId: campaign.id,
                         });
-                        toast.success(
-                          result.remaining > 0
-                            ? `Sending… ${result.remaining} left in the queue`
-                            : 'Campaign sent',
-                        );
+                        toast.success('Schedule cancelled');
                         router.refresh();
                       } catch (error) {
                         toast.error(
                           error instanceof Error
                             ? error.message
-                            : 'Could not send',
+                            : 'Could not cancel',
                         );
                       }
                     });
                   }}
                 >
-                  {pending ? 'Working…' : 'Send now'}
+                  Cancel schedule
                 </Button>
-                <div className="flex gap-2">
-                  <Input
-                    type="datetime-local"
-                    value={scheduledAt}
-                    disabled={pending}
-                    onChange={(event) => setScheduledAt(event.target.value)}
-                  />
-                  <Button
-                    variant="outline"
-                    disabled={pending || !scheduledAt}
-                    onClick={() => {
-                      startTransition(async () => {
-                        try {
-                          await save();
-                          await scheduleCampaignAction({
-                            accountId,
-                            accountSlug,
-                            campaignId: campaign.id,
-                            scheduledAt: new Date(scheduledAt).toISOString(),
-                          });
-                          toast.success('Campaign scheduled');
-                          router.refresh();
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : 'Could not schedule',
-                          );
-                        }
-                      });
-                    }}
-                  >
-                    Schedule
-                  </Button>
-                </div>
-                {campaign.status === 'scheduled' ? (
-                  <Button
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => {
-                      startTransition(async () => {
-                        try {
-                          await cancelScheduleCampaignAction({
-                            accountId,
-                            accountSlug,
-                            campaignId: campaign.id,
-                          });
-                          toast.success('Schedule cancelled');
-                          router.refresh();
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : 'Could not cancel',
-                          );
-                        }
-                      });
-                    }}
-                  >
-                    Cancel schedule
-                  </Button>
-                ) : null}
-                <Button
-                  variant="secondary"
-                  disabled={pending}
-                  onClick={() => {
-                    startTransition(async () => {
-                      try {
-                        await save();
-                        toast.success('Draft saved');
-                        router.refresh();
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : 'Could not save',
-                        );
-                      }
-                    });
-                  }}
-                >
-                  Save draft
-                </Button>
-              </div>
-            ) : (
-              <p className={`text-sm ${workspaceTextMuted}`}>
-                This campaign is {campaign.status}.
-                {campaign.scheduledAt
-                  ? ` Scheduled for ${new Date(campaign.scheduledAt).toLocaleString()}.`
-                  : ''}
-              </p>
-            )}
-          </div>
-
-          <div className={`${workspacePanelCard} overflow-hidden`}>
-            <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-              <h3 className={`font-semibold ${workspaceText}`}>Preview</h3>
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                Sample: Alex Taylor · branded with workspace logo and colours
-              </p>
+              ) : null}
+              <Button
+                variant="secondary"
+                disabled={pending}
+                data-test="campaign-save-draft"
+                onClick={() => {
+                  startTransition(async () => {
+                    try {
+                      await save();
+                      toast.success('Draft saved');
+                      router.refresh();
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not save',
+                      );
+                    }
+                  });
+                }}
+              >
+                Save draft
+              </Button>
             </div>
-            <iframe
-              title="Campaign preview"
-              className="h-[420px] w-full bg-white"
-              srcDoc={previewHtml}
-            />
+          ) : (
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              This campaign is {campaign.status}.
+              {campaign.scheduledAt
+                ? ` Scheduled for ${new Date(campaign.scheduledAt).toLocaleString()}.`
+                : ''}
+            </p>
+          )}
+        </div>
+
+        <div className={`${workspacePanelCard} overflow-hidden`}>
+          <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+            <h3 className={`font-semibold ${workspaceText}`}>Preview</h3>
+            <p className={`text-xs ${workspaceTextMuted}`}>
+              Sample: Alex Taylor · branded with workspace logo and colours
+            </p>
           </div>
+          <iframe
+            title="Campaign preview"
+            className="mx-auto h-[420px] bg-white"
+            style={{
+              width: previewWidth === 'mobile' ? 375 : '100%',
+              maxWidth: '100%',
+            }}
+            srcDoc={previewHtml}
+          />
         </div>
       </div>
 

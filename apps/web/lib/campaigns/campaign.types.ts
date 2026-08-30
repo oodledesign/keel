@@ -1,3 +1,5 @@
+import type { CampaignDocument } from './campaign-document';
+
 export type EmailCampaignStatus =
   | 'draft'
   | 'scheduled'
@@ -14,6 +16,7 @@ export type EmailCampaign = {
   subject: string;
   previewText: string | null;
   htmlBody: string;
+  bodyDocument: CampaignDocument | null;
   fromName: string | null;
   fromEmail: string | null;
   replyTo: string | null;

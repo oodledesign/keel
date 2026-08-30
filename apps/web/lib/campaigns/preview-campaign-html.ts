@@ -1,19 +1,35 @@
+import type { CampaignBrand, CampaignDocument } from './campaign-document';
+import { isCampaignDocumentHtml } from './campaign-document';
+import { compileCampaignDocument } from './compile-campaign-document';
 import {
-  applyCampaignMergeFields,
   type CampaignMergeValues,
+  applyCampaignMergeFields,
 } from './merge-fields';
+
+const PREVIEW_UNSUBSCRIBE = '#unsubscribe';
 
 /** Client-safe preview. Send path uses the server renderer + real unsubscribe tokens. */
 export function previewCampaignHtml(input: {
-  brand: {
-    primary_color: string;
-    logo_url: string | null;
-    contact_email: string | null;
-  };
-  htmlBody: string;
+  brand: CampaignBrand & { contact_email?: string | null };
+  htmlBody?: string;
+  document?: CampaignDocument | null;
   merge: CampaignMergeValues;
 }): string {
-  const merged = applyCampaignMergeFields(input.htmlBody, input.merge);
+  const compiled = input.document
+    ? compileCampaignDocument(input.document, input.brand, {
+        unsubscribeUrl: PREVIEW_UNSUBSCRIBE,
+      })
+    : (input.htmlBody ?? '');
+
+  const merged = applyCampaignMergeFields(compiled, input.merge).replaceAll(
+    '{{unsubscribe_url}}',
+    PREVIEW_UNSUBSCRIBE,
+  );
+
+  if (isCampaignDocumentHtml(compiled) || input.document) {
+    return merged;
+  }
+
   const primary = input.brand.primary_color || '#0D2344';
   const logo = input.brand.logo_url
     ? `<img src="${input.brand.logo_url}" alt="" height="40" style="display:block;max-height:40px;width:auto;border:0;" />`

@@ -45,8 +45,9 @@ export function CampaignsList({
             No campaigns yet
           </h2>
           <p className={`mx-auto mt-2 max-w-md text-sm ${workspaceTextMuted}`}>
-            Write a branded email, preview it, and send to subscribed
-            mailing-list contacts. Unsubscribes are respected automatically.
+            Build a branded email from blocks, preview it, and send to
+            subscribed mailing-list contacts. Unsubscribes are respected
+            automatically.
           </p>
         </div>
       ) : (
@@ -71,7 +72,9 @@ export function CampaignsList({
                       {campaign.subject || 'No subject yet'}
                     </p>
                   </div>
-                  <Badge variant="outline">{STATUS_LABEL[campaign.status]}</Badge>
+                  <Badge variant="outline">
+                    {STATUS_LABEL[campaign.status]}
+                  </Badge>
                 </div>
                 {campaign.status === 'sent' || campaign.status === 'sending' ? (
                   <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
