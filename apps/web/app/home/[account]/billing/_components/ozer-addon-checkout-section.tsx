@@ -233,7 +233,7 @@ export function OzerAddonCheckoutSection({
               pending={pending}
               config={{
                 ...filteredConfig,
-                products: pickerProducts,
+                products: pickerProducts as typeof billingConfig.products,
               }}
               canStartTrial={false}
               onSubmit={({ planId, productId }) => {

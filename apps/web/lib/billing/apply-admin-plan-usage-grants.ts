@@ -136,11 +136,23 @@ export async function applyAdminPlanUsageGrants(
       idempotencyKey,
     );
 
-    await admin.rpc('ensure_campaign_credit_pool', {
+    const untypedAdmin = admin as unknown as {
+      rpc: (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ error: unknown }>;
+      from: (table: string) => {
+        update: (values: Record<string, unknown>) => {
+          eq: (column: string, value: string) => Promise<{ error: unknown }>;
+        };
+      };
+    };
+
+    await untypedAdmin.rpc('ensure_campaign_credit_pool', {
       p_account_id: accountId,
     });
 
-    await admin
+    await untypedAdmin
       .from('campaign_credit_pools')
       .update({
         monthly_allowance: campaign.sendUnits,

@@ -21,32 +21,33 @@ async function CampaignDetailPage({ params }: CampaignDetailPageProps) {
   const { account, campaignId } = await params;
   const workspace = await loadTeamWorkspace(account);
 
+  let data: Awaited<ReturnType<typeof loadCampaignDetail>>;
   try {
-    const data = await loadCampaignDetail(workspace.account.id, campaignId);
-
-    return (
-      <>
-        <TeamAccountLayoutPageHeader
-          account={account}
-          title={data.campaign.name}
-          description={data.campaign.subject || 'Draft campaign'}
-        />
-        <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
-          <CampaignEditor
-            accountId={workspace.account.id}
-            accountSlug={account}
-            campaign={data.campaign}
-            recipients={data.recipients}
-            subscriberCount={data.subscriberCount}
-            usage={data.usage}
-            brand={data.brand}
-          />
-        </PageBody>
-      </>
-    );
+    data = await loadCampaignDetail(workspace.account.id, campaignId);
   } catch {
     notFound();
   }
+
+  return (
+    <>
+      <TeamAccountLayoutPageHeader
+        account={account}
+        title={data.campaign.name}
+        description={data.campaign.subject || 'Draft campaign'}
+      />
+      <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
+        <CampaignEditor
+          accountId={workspace.account.id}
+          accountSlug={account}
+          campaign={data.campaign}
+          recipients={data.recipients}
+          subscriberCount={data.subscriberCount}
+          usage={data.usage}
+          brand={data.brand}
+        />
+      </PageBody>
+    </>
+  );
 }
 
 export default withI18n(CampaignDetailPage);

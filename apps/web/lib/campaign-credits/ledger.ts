@@ -50,6 +50,17 @@ function db() {
   return getSupabaseServerAdminClient();
 }
 
+function fromTable(table: string) {
+  // Tables land after typegen; keep the ledger usable before then.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (db() as any).from(table);
+}
+
+function rpc(name: string, args: Record<string, unknown>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (db() as any).rpc(name, args);
+}
+
 function parseInsufficientError(
   message: string,
 ): InsufficientCampaignCreditsError | null {
@@ -64,13 +75,11 @@ function parseInsufficientError(
 export async function getCampaignUsage(accountId: string): Promise<{
   pool: CampaignCreditPool;
 }> {
-  const supabase = db();
-  await supabase.rpc('ensure_campaign_credit_pool', {
+  await rpc('ensure_campaign_credit_pool', {
     p_account_id: accountId,
   });
 
-  const { data, error } = await supabase
-    .from('campaign_credit_pools')
+  const { data, error } = await fromTable('campaign_credit_pools')
     .select(
       'account_id, balance, monthly_allowance, max_contacts, plan_tier, cycle_start, cycle_end',
     )
@@ -100,8 +109,7 @@ export async function debitCampaignCredits(
   amount: number,
   campaignId: string,
 ): Promise<DebitResult> {
-  const supabase = db();
-  const { data, error } = await supabase.rpc('debit_campaign_credits', {
+  const { data, error } = await rpc('debit_campaign_credits', {
     p_account_id: accountId,
     p_amount: amount,
     p_campaign_id: campaignId,
@@ -127,8 +135,7 @@ export async function refundCampaignCredits(
 ): Promise<{ refunded: number }> {
   if (amount <= 0) return { refunded: 0 };
 
-  const supabase = db();
-  const { data, error } = await supabase.rpc('refund_campaign_credits', {
+  const { data, error } = await rpc('refund_campaign_credits', {
     p_campaign_id: campaignId,
     p_amount: amount,
     p_reason: reason ?? null,
@@ -148,11 +155,10 @@ export async function grantCampaignCredits(
   expiresAt: Date | string,
   stripeEventId?: string | null,
 ): Promise<CampaignCreditBatch> {
-  const supabase = db();
   const expiresAtIso =
     typeof expiresAt === 'string' ? expiresAt : expiresAt.toISOString();
 
-  const { data, error } = await supabase.rpc('grant_campaign_credits', {
+  const { data, error } = await rpc('grant_campaign_credits', {
     p_account_id: accountId,
     p_amount: amount,
     p_source_type: sourceType,
@@ -162,8 +168,9 @@ export async function grantCampaignCredits(
 
   if (error) {
     if (stripeEventId && /unique|duplicate/i.test(error.message)) {
-      const { data: existing, error: selectError } = await supabase
-        .from('campaign_credit_batches')
+      const { data: existing, error: selectError } = await fromTable(
+        'campaign_credit_batches',
+      )
         .select('*')
         .eq('stripe_event_id', stripeEventId)
         .maybeSingle();

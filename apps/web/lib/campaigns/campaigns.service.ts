@@ -434,9 +434,8 @@ class CampaignsService {
             .maybeSingle()
         : { data: null };
 
-      const status = (
-        preference.data as { marketing_status?: string } | null
-      )?.marketing_status;
+      const status = (preference.data as { marketing_status?: string } | null)
+        ?.marketing_status;
       const token =
         recipient.unsubscribe_token ||
         (preference.data as { unsubscribe_token?: string } | null)
@@ -502,8 +501,7 @@ class CampaignsService {
         await fromTable(this.client, 'email_campaign_recipients')
           .update({
             status: 'failed',
-            error_message:
-              err instanceof Error ? err.message : 'Send failed',
+            error_message: err instanceof Error ? err.message : 'Send failed',
           })
           .eq('id', recipient.id);
         failed += 1;

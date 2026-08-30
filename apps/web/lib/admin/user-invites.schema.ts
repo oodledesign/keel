@@ -56,8 +56,20 @@ export const DEFAULT_WORKSPACE_NAMES: Record<
   community: 'Our Group',
 };
 
+export const ADMIN_INVITE_ADDON_KEYS = [
+  'addon_signatures',
+  'addon_site_studio',
+  'addon_rankly',
+  'addon_feedflow',
+  'addon_videos',
+  'addon_portal_publishing',
+  'addon_campaigns',
+] as const satisfies readonly OzerAddonKey[];
+
+export type AdminInviteAddonKey = (typeof ADMIN_INVITE_ADDON_KEYS)[number];
+
 export const ADMIN_INVITE_ADDON_OPTIONS: Array<{
-  key: OzerAddonKey;
+  key: AdminInviteAddonKey;
   label: string;
 }> = [
   { key: 'addon_signatures', label: 'Signatures' },
@@ -91,17 +103,7 @@ export const CreateAdminUserInviteSchema = z
     billingExempt: z.boolean(),
     personalAddons: z.array(z.enum(['addon_email_assistant'])),
     workspaces: z.array(workspaceSelectionSchema),
-    addons: z.array(
-      z.enum([
-        'addon_signatures',
-        'addon_site_studio',
-        'addon_rankly',
-        'addon_feedflow',
-        'addon_videos',
-        'addon_portal_publishing',
-        'addon_campaigns',
-      ]),
-    ),
+    addons: z.array(z.enum(ADMIN_INVITE_ADDON_KEYS)),
     landingModule: z
       .enum(['dashboard', 'signatures', 'websites', 'apps', 'campaigns'])
       .optional(),

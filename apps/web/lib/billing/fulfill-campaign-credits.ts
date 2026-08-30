@@ -87,7 +87,15 @@ export async function fulfillCampaignSubscriptionGrant(
     idempotencyKey,
   );
 
-  await admin
+  const untypedAdmin = admin as unknown as {
+    from: (table: string) => {
+      update: (values: Record<string, unknown>) => {
+        eq: (column: string, value: string) => Promise<{ error: unknown }>;
+      };
+    };
+  };
+
+  await untypedAdmin
     .from('campaign_credit_pools')
     .update({
       monthly_allowance: sendUnits,
