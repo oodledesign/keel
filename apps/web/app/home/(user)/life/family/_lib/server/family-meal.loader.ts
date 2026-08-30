@@ -24,6 +24,7 @@ import {
   weekDatesFrom,
 } from './family-meal.dates';
 import { type MealPlanScope, resolveMealPlanScope } from './family-meal.scope';
+import { createFamilyShoppingService } from './family-shopping.service';
 
 function defaultPreferences(
   userId: string,
@@ -103,15 +104,19 @@ export const loadFamilyMealData = cache(
 
     const accountId = scope.kind === 'workspace' ? scope.accountId : null;
 
-    const [recipesResult, preferencesResult, entriesResult] = await Promise.all(
-      [
+    const shoppingService = createFamilyShoppingService(
+      getSupabaseServerClient(),
+    );
+
+    const [recipesResult, preferencesResult, entriesResult, shoppingList] =
+      await Promise.all([
         recipesQuery(scope)
           .order('is_favorite', { ascending: false })
           .order('updated_at', { ascending: false }),
         preferencesQuery(scope).maybeSingle(),
         entriesQuery(scope, rangeStart, rangeEnd),
-      ],
-    );
+        shoppingService.findListForWeek(scope, weekStart).catch(() => null),
+      ]);
 
     const recipes = (recipesResult.data ?? []) as RecipeRow[];
     const preferences =
@@ -131,6 +136,7 @@ export const loadFamilyMealData = cache(
       weekStart,
       weekDates,
       entries,
+      hasShoppingListForWeek: Boolean(shoppingList),
     };
   },
 );

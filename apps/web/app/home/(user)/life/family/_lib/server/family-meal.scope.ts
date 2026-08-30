@@ -8,10 +8,7 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-import {
-  buildRecipeDetailPath,
-  buildRecipesListPath,
-} from '../family-meal.paths';
+import { buildRecipeDetailPath } from '../family-meal.paths';
 
 export type MealPlanScope =
   | {
@@ -37,6 +34,16 @@ export function revalidateMealPlanPaths(scope: MealPlanScope) {
 
   // Public /app/* URLs rewrite to /home/* — invalidate both route caches.
   revalidatePath(scope.basePath);
+}
+
+export function revalidateShoppingPaths(scope: MealPlanScope) {
+  if (scope.kind === 'workspace') {
+    revalidatePath(`/home/${scope.accountSlug}/shopping`);
+    revalidatePath(`/app/${scope.accountSlug}/shopping`);
+  } else {
+    revalidatePath('/home/life/family/shopping');
+    revalidatePath('/app/life/family/shopping');
+  }
 }
 
 export {

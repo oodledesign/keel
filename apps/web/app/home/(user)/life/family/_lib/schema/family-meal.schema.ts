@@ -306,4 +306,5 @@ export type FamilyMealData = {
   weekStart: string;
   weekDates: string[];
   entries: MealEntryRow[];
+  hasShoppingListForWeek: boolean;
 };

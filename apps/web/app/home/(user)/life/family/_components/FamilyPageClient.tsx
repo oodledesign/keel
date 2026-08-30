@@ -138,6 +138,7 @@ export function FamilyPageClient({
             preferences={initialData.preferences}
             basePath={initialData.basePath}
             accountSlug={initialData.accountSlug}
+            hasShoppingListForWeek={initialData.hasShoppingListForWeek}
             onChanged={refresh}
           />
 
