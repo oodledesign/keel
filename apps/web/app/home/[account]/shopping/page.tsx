@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import { ShoppingListPanel } from '~/home/(user)/life/family/_components/ShoppingListPanel';
+import { loadFamilyShoppingList } from '~/home/(user)/life/family/_lib/server/family-shopping.loader';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -16,7 +18,10 @@ import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 
 interface FamilyShoppingPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ week?: string; create?: string }>;
 }
+
+export const dynamic = 'force-dynamic';
 
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
@@ -24,8 +29,12 @@ export const generateMetadata = async () => {
   return { title: `${title} – Shopping` };
 };
 
-async function FamilyShoppingPage({ params }: FamilyShoppingPageProps) {
+async function FamilyShoppingPage({
+  params,
+  searchParams,
+}: FamilyShoppingPageProps) {
   const { account: slug } = await params;
+  const { week, create } = await searchParams;
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(workspace, slug, ['family']);
   const access = getTeamAccountAccess(
@@ -43,18 +52,27 @@ async function FamilyShoppingPage({ params }: FamilyShoppingPageProps) {
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 
+  const weekStart = /^\d{4}-\d{2}-\d{2}$/.test(week ?? '') ? week : undefined;
+  const data = await loadFamilyShoppingList({
+    accountSlug: slug,
+    weekStart,
+  });
+
   return (
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Shopping"
-        description="Shared lists and groceries for your family space."
+        description="Merged groceries from this week's meal plan."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <p className="text-muted-foreground max-w-xl text-sm">
-          Shopping lists are coming soon. You will be able to build and share
-          lists with everyone in this space.
-        </p>
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
+        <ShoppingListPanel
+          list={data.list}
+          weekStart={data.weekStart}
+          mealPlanHref={`/app/${slug}/meal-plan?view=week&week=${data.weekStart}`}
+          accountSlug={slug}
+          startAdding={create === 'item'}
+        />
       </PageBody>
     </>
   );

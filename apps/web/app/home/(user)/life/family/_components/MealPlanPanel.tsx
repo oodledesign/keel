@@ -4,14 +4,32 @@ import { useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ChevronLeft, ChevronRight, Sparkles, Wand2, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ShoppingCart,
+  Sparkles,
+  Wand2,
+  X,
+} from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { clearMealEntryAction, setMealEntryAction } from '../_lib/actions';
+import { buildShoppingPath } from '../_lib/family-meal.paths';
 import type {
   MealEntryRow,
   MealPlanView,
@@ -27,6 +45,7 @@ import {
   toYmd,
   weekdayLabel,
 } from '../_lib/server/family-meal.dates';
+import { generateShoppingListAction } from '../_lib/shopping-actions';
 import { MealDayEditDialog } from './MealDayEditDialog';
 import { MealPlanGenerateDialog } from './MealPlanGenerateDialog';
 import { ACCENT, panelClass, titleCase } from './meal-ui';
@@ -42,6 +61,7 @@ type Props = {
   preferences: MealPreferencesRow;
   basePath: string;
   accountSlug?: string;
+  hasShoppingListForWeek?: boolean;
   onChanged: () => void;
 };
 
@@ -76,6 +96,7 @@ export function MealPlanPanel({
   preferences,
   basePath,
   accountSlug,
+  hasShoppingListForWeek = false,
   onChanged,
 }: Props) {
   const router = useRouter();
@@ -89,6 +110,8 @@ export function MealPlanPanel({
     open: boolean;
     mode: 'fill' | 'generate';
   }>({ open: false, mode: 'fill' });
+  const [replaceShoppingOpen, setReplaceShoppingOpen] = useState(false);
+  const [isGeneratingShopping, setIsGeneratingShopping] = useState(false);
 
   const today = toYmd(new Date());
 
@@ -213,6 +236,54 @@ export function MealPlanPanel({
     setGenerateDialog({ open: true, mode });
   }
 
+  async function generateShoppingList(replaceExisting: boolean) {
+    setIsGeneratingShopping(true);
+    try {
+      const result = await generateShoppingListAction({
+        weekStart,
+        replaceExisting,
+        ...scopeFields,
+      });
+      if (!result.success) throw new Error(result.error);
+
+      if (result.data.status === 'exists') {
+        setReplaceShoppingOpen(true);
+        return;
+      }
+
+      if (result.data.status === 'empty') {
+        const skipped = result.data.skippedMeals;
+        toast.info(
+          skipped.length > 0
+            ? `No ingredients for: ${skipped.join(', ')}`
+            : 'No ingredients this week — add recipes to meals first.',
+        );
+        return;
+      }
+
+      toast.success(
+        result.data.replaced
+          ? 'Replaced the shopping list for this week'
+          : 'Shopping list ready',
+      );
+      router.push(buildShoppingPath(accountSlug, weekStart));
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not generate shopping list',
+      );
+    } finally {
+      setIsGeneratingShopping(false);
+    }
+  }
+
+  function requestShoppingList() {
+    if (hasShoppingListForWeek) {
+      setReplaceShoppingOpen(true);
+      return;
+    }
+    void generateShoppingList(false);
+  }
+
   const hasDietary = preferences.dietary_requirements.length > 0;
   const hasPriorities = preferences.priorities.length > 0;
   const periodTitle =
@@ -279,7 +350,16 @@ export function MealPlanPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={requestShoppingList}
+            disabled={isGeneratingShopping}
+            data-test="generate-shopping-list"
+          >
+            <ShoppingCart className="mr-1.5 h-4 w-4" />
+            Generate shopping list
+          </Button>
           <Button
             variant="outline"
             onClick={() => openGenerator('fill')}
@@ -573,6 +653,40 @@ export function MealPlanPanel({
         accountSlug={accountSlug}
         onSaved={onChanged}
       />
+
+      <AlertDialog
+        open={replaceShoppingOpen}
+        onOpenChange={setReplaceShoppingOpen}
+      >
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[var(--workspace-shell-text)]">
+              Replace this week&apos;s shopping list?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
+              A list already exists for this week. Replacing it rebuilds the
+              ingredients from the current meal plan and clears ticked items.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[color:var(--workspace-shell-border)]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              style={{ backgroundColor: ACCENT }}
+              className="text-[var(--workspace-shell-text)] hover:opacity-90"
+              disabled={isGeneratingShopping}
+              onClick={(event) => {
+                event.preventDefault();
+                setReplaceShoppingOpen(false);
+                void generateShoppingList(true);
+              }}
+            >
+              Replace list
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
