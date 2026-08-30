@@ -73,7 +73,10 @@ class CampaignsService {
   constructor(private readonly client: SupabaseClient) {}
 
   async list(accountId: string): Promise<EmailCampaign[]> {
-    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
       .select('*')
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
@@ -83,7 +86,10 @@ class CampaignsService {
   }
 
   async get(accountId: string, campaignId: string): Promise<EmailCampaign> {
-    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
       .select('*')
       .eq('account_id', accountId)
       .eq('id', campaignId)
@@ -102,7 +108,10 @@ class CampaignsService {
     previewText?: string | null;
     htmlBody?: string;
   }): Promise<EmailCampaign> {
-    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
       .insert({
         account_id: input.accountId,
         created_by: input.userId,
@@ -143,7 +152,10 @@ class CampaignsService {
     }
     if (input.htmlBody !== undefined) patch.html_body = input.htmlBody;
 
-    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
       .update(patch)
       .eq('id', input.campaignId)
       .eq('account_id', input.accountId)
@@ -205,7 +217,10 @@ class CampaignsService {
       throw new Error('Schedule time must be in the future');
     }
 
-    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
       .update({
         status: 'scheduled',
         scheduled_at: when.toISOString(),
@@ -231,7 +246,10 @@ class CampaignsService {
       throw new Error('Only scheduled campaigns can be unscheduled');
     }
 
-    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
       .update({ status: 'draft', scheduled_at: null })
       .eq('id', campaignId)
       .eq('account_id', accountId)
@@ -705,7 +723,10 @@ export async function markCampaignRecipientsUnsubscribed(
     .eq('account_id', accountId);
 
   for (const row of (campaigns ?? []) as Array<{ id: string }>) {
-    const { count } = await fromTable(client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
+    const { count } = await fromTable(
+      client,
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
+    )
       .select('id', { count: 'exact', head: true })
       .eq('campaign_id', row.id)
       .not('unsubscribed_at', 'is', null);
