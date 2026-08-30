@@ -101,7 +101,7 @@ comment on column public.account_plan_limits.max_portal_storage_bytes is
   'Max client portal storage in bytes; NULL = unlimited / not enforced.';
 
 comment on column public.account_plan_limits.client_request_credit_allowance is
-  'Monthly client-request credit allotment; NULL = unlimited / not enforced.';
+  'Monthly client-request credit allotment; NULL = zero / feature not available (unlike other max_* columns where NULL = unlimited).';
 
 comment on column public.account_plan_limits.meeting_coaching_enabled is
   'When true, meeting coaching and auto task extraction are included.';

@@ -17,6 +17,7 @@ import {
 } from '~/lib/admin/user-invites.schema';
 import {
   type OzerAddonKey,
+  accountPlanLimitColumnsFromCatalog,
   findPlanByProductAndPlanId,
 } from '~/lib/billing/ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from '~/lib/billing/sync-addon-modules-from-entitlements';
@@ -172,9 +173,7 @@ async function applyPlanPreset(
       plan_product_id: plan.productId,
       plan_id: plan.planId,
       plan_family: plan.family,
-      max_members: plan.limits.maxMembers,
-      max_properties: plan.limits.maxProperties,
-      max_videos: plan.limits.maxVideos,
+      ...accountPlanLimitColumnsFromCatalog(plan.limits),
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'account_id' },

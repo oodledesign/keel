@@ -12,7 +12,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { logAdminAction } from '~/lib/admin/log-admin-action';
 
 import { applyAdminPlanUsageGrants } from './apply-admin-plan-usage-grants';
-import { findPlanByProductAndPlanId } from './ozer-plan-catalog';
+import {
+  accountPlanLimitColumnsFromCatalog,
+  findPlanByProductAndPlanId,
+} from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,
@@ -272,10 +275,10 @@ export const adminApplyPlanLimitsAction = enhanceAction(
         plan_product_id: plan.productId,
         plan_id: plan.planId,
         plan_family: plan.family,
-        max_members: maxMembers,
-        max_properties: plan.limits.maxProperties,
-        max_videos: plan.limits.maxVideos,
-        max_project_guests: maxProjectGuests,
+        ...accountPlanLimitColumnsFromCatalog(plan.limits, {
+          maxMembers,
+          maxProjectGuests,
+        }),
         updated_at: new Date().toISOString(),
       } as never,
       { onConflict: 'account_id' },

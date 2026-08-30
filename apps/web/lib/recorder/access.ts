@@ -14,14 +14,14 @@ import {
 /**
  * Recorder minutes are per-user (not shared across a team).
  *
- * - limited (2h/mo): personal-only, or Business Lite only
- * - unlimited: Solo / Team / Scale Business, Community, Property, billing-exempt
+ * - limited (5h/mo): personal-only, or Free (Business Lite) only
+ * - unlimited: Pro / Solo / Team / Scale Business, Community, Property, billing-exempt
  */
 export type RecorderAccessTier = 'limited' | 'unlimited';
 
 export const RECORDER_LIMITS = {
   limited: {
-    maxDurationSecondsPerMonth: 2 * 60 * 60,
+    maxDurationSecondsPerMonth: 5 * 60 * 60,
   },
   unlimited: {
     maxDurationSecondsPerMonth: null,
@@ -31,7 +31,7 @@ export const RECORDER_LIMITS = {
   { maxDurationSecondsPerMonth: number | null }
 >;
 
-/** Full paid workspaces unlock unlimited recorder time (not Business Lite). */
+/** Full paid workspaces unlock unlimited recorder time (not Free / Business Lite). */
 const UNLIMITED_RECORDER_ENTITLEMENTS = [
   'workspace_business',
   'workspace_community',

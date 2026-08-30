@@ -147,11 +147,11 @@ export function pricingFaqs() {
     },
     {
       question: 'What happens when the team grows?',
-      answer: `Business uses graduated seats from ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for seats 2–5, then £16 for seats 6+. Shared AI credits and project guests (3 per seat) scale with the seats you buy. Client portals stay unlimited.`,
+      answer: `Pro uses graduated seats from ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for seats 2–5, then £16 for seats 6+. Shared AI credits and project guests (3 per seat) scale with the seats you buy. Client portals stay unlimited.`,
     },
     {
       question: 'Is there a free trial?',
-      answer: `Personal and family are free forever. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Paid workspaces include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace — no credit card required.`,
+      answer: `Personal and family are free forever. Free is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Paid workspaces include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace — no credit card required.`,
     },
     {
       question: 'How do I cancel?',

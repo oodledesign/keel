@@ -16,7 +16,10 @@ import {
   clampBillableSeats as clampCommercialBillableSeats,
   maxMembersForBillableSeats as commercialMaxMembersForBillableSeats,
 } from './commercial-graduated-pricing';
-import { findPlanByStripePriceId } from './ozer-plan-catalog';
+import {
+  accountPlanLimitColumnsFromCatalog,
+  findPlanByStripePriceId,
+} from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';
 
@@ -142,10 +145,10 @@ export async function syncKeelPlanFromSubscription(
           plan_product_id: plan.productId,
           plan_id: plan.planId,
           plan_family: plan.family,
-          max_members: maxMembers,
-          max_properties: plan.limits.maxProperties,
-          max_videos: plan.limits.maxVideos,
-          max_project_guests: maxProjectGuests,
+          ...accountPlanLimitColumnsFromCatalog(plan.limits, {
+            maxMembers,
+            maxProjectGuests,
+          }),
           updated_at: new Date().toISOString(),
         } as never,
         { onConflict: 'account_id' },
@@ -253,9 +256,7 @@ export async function syncKeelPlanFromSubscription(
           plan_product_id: firstWorkspacePlan.productId,
           plan_id: firstWorkspacePlan.planId,
           plan_family: firstWorkspacePlan.family,
-          max_members: firstWorkspacePlan.limits.maxMembers,
-          max_properties: firstWorkspacePlan.limits.maxProperties,
-          max_videos: firstWorkspacePlan.limits.maxVideos,
+          ...accountPlanLimitColumnsFromCatalog(firstWorkspacePlan.limits),
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'account_id' },

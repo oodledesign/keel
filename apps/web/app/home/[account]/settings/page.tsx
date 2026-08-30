@@ -146,8 +146,8 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
             <h2 className="text-base font-semibold">Desktop recorder</h2>
             <p className="text-muted-foreground mt-1 text-sm">
               API tokens and monthly usage limits are managed in your personal
-              settings. Business Solo and above include unlimited recorder time;
-              Personal and Business Lite include 2 hours per person per month.
+              settings. Pro and above include unlimited recorder time; Personal
+              and Free include 5 hours per person per month.
             </p>
           </div>
           <Link

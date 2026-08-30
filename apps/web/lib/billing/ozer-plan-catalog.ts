@@ -27,7 +27,67 @@ export type OzerPlanLimits = {
   maxContacts?: number | null;
   /** Campaigns add-on: monthly email-send units. */
   maxEmails?: number | null;
+  /** NULL = unlimited / not enforced (same as other max_* caps). */
+  maxActiveClients?: number | null;
+  maxInvoicesPerMonth?: number | null;
+  maxOpenTasks?: number | null;
+  maxBookingsPerMonth?: number | null;
+  maxPortalStorageBytes?: number | null;
+  /**
+   * Monthly client-request credit allotment.
+   * NULL means zero / feature not available — NOT unlimited.
+   * Do not pass this through helpers that treat NULL as unlimited.
+   */
+  clientRequestCreditAllowance?: number | null;
+  meetingCoachingEnabled?: boolean;
 };
+
+/** Binary MiB/GiB — matches existing `N * 1024 * 1024` storage limits in the app. */
+export const PORTAL_STORAGE_BYTES = {
+  /** 250 MiB */
+  free: 250 * 1024 * 1024,
+  /** 25 GiB */
+  pro: 25 * 1024 * 1024 * 1024,
+} as const;
+
+/**
+ * Map catalog limits → `account_plan_limits` columns for upserts.
+ * `clientRequestCreditAllowance` stays NULL when unset (= zero credits later).
+ */
+export function accountPlanLimitColumnsFromCatalog(
+  limits: OzerPlanLimits,
+  overrides?: {
+    maxMembers?: number | null;
+    maxProjectGuests?: number | null;
+  },
+): {
+  max_members: number | null;
+  max_properties: number | null;
+  max_videos: number | null;
+  max_project_guests: number | null;
+  max_active_clients: number | null;
+  max_invoices_per_month: number | null;
+  max_open_tasks: number | null;
+  max_bookings_per_month: number | null;
+  max_portal_storage_bytes: number | null;
+  client_request_credit_allowance: number | null;
+  meeting_coaching_enabled: boolean;
+} {
+  return {
+    max_members: overrides?.maxMembers ?? limits.maxMembers,
+    max_properties: limits.maxProperties,
+    max_videos: limits.maxVideos,
+    max_project_guests: overrides?.maxProjectGuests ?? null,
+    max_active_clients: limits.maxActiveClients ?? null,
+    max_invoices_per_month: limits.maxInvoicesPerMonth ?? null,
+    max_open_tasks: limits.maxOpenTasks ?? null,
+    max_bookings_per_month: limits.maxBookingsPerMonth ?? null,
+    max_portal_storage_bytes: limits.maxPortalStorageBytes ?? null,
+    client_request_credit_allowance:
+      limits.clientRequestCreditAllowance ?? null,
+    meeting_coaching_enabled: limits.meetingCoachingEnabled ?? false,
+  };
+}
 
 export type OzerPlanDefinition = {
   productId: string;
@@ -67,7 +127,18 @@ const BUSINESS_LITE: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.business_lite_monthly,
     family: 'business_lite',
     entitlementKey: 'workspace_business_lite',
-    limits: { maxMembers: 3, maxProperties: null, maxVideos: null },
+    limits: {
+      maxMembers: 2,
+      maxProperties: null,
+      maxVideos: null,
+      maxActiveClients: 3,
+      maxInvoicesPerMonth: 5,
+      maxOpenTasks: 20,
+      maxBookingsPerMonth: 5,
+      maxPortalStorageBytes: PORTAL_STORAGE_BYTES.free,
+      clientRequestCreditAllowance: null,
+      meetingCoachingEnabled: false,
+    },
     workspaceProfiles: ['work_design'],
   },
 ];
@@ -80,7 +151,18 @@ const BUSINESS: OzerPlanDefinition[] = [
     family: 'business',
     entitlementKey: 'workspace_business',
     // Dynamic: sync derives max_members / guests / AI from Stripe quantity
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxActiveClients: null,
+      maxInvoicesPerMonth: null,
+      maxOpenTasks: null,
+      maxBookingsPerMonth: null,
+      maxPortalStorageBytes: PORTAL_STORAGE_BYTES.pro,
+      clientRequestCreditAllowance: null,
+      meetingCoachingEnabled: true,
+    },
     workspaceProfiles: ['work_design'],
   },
   {
@@ -89,7 +171,18 @@ const BUSINESS: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.business_yearly,
     family: 'business',
     entitlementKey: 'workspace_business',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxActiveClients: null,
+      maxInvoicesPerMonth: null,
+      maxOpenTasks: null,
+      maxBookingsPerMonth: null,
+      maxPortalStorageBytes: PORTAL_STORAGE_BYTES.pro,
+      clientRequestCreditAllowance: null,
+      meetingCoachingEnabled: true,
+    },
     workspaceProfiles: ['work_design'],
   },
 ];

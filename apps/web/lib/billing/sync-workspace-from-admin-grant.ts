@@ -12,6 +12,7 @@ import { markBusinessUpgradedFromLite } from './business-lite';
 import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
 import {
   type OzerPlanDefinition,
+  accountPlanLimitColumnsFromCatalog,
   findPlanByProductAndPlanId,
 } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
@@ -152,9 +153,9 @@ async function ensureCommercialPropertyPlanLimits(
       plan_product_id: resolved.productId,
       plan_id: resolved.planId,
       plan_family: resolved.family,
-      max_members: maxMembers,
-      max_properties: resolved.limits.maxProperties,
-      max_videos: resolved.limits.maxVideos,
+      ...accountPlanLimitColumnsFromCatalog(resolved.limits, {
+        maxMembers,
+      }),
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'account_id' },

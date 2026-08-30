@@ -354,19 +354,18 @@ export function WorkspacePlanStatusCard({
             <div>
               <CardTitle className="text-base">Workspace plan</CardTitle>
               <CardDescription>
-                Business Lite is free — enough to run Signatures and team
-                settings. Upgrade when you need clients, projects, and
-                invoicing.
+                Free is free — enough to run Signatures and team settings.
+                Upgrade when you need clients, projects, and invoicing.
               </CardDescription>
             </div>
-            <Badge variant="outline">Business Lite</Badge>
+            <Badge variant="outline">Free</Badge>
           </div>
         </CardHeader>
         {canManageBilling ? (
           <CardContent className="pt-0">
             <Button asChild variant="outline" size="sm">
               <Link href={`${billingPath}?upgrade=1#workspace-plan-checkout`}>
-                Upgrade to full business
+                Upgrade to Pro
               </Link>
             </Button>
           </CardContent>
