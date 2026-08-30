@@ -55,7 +55,9 @@ function shouldBypassServiceWorker(request, url) {
 }
 
 function isFamilyShoppingPath(pathname) {
-  const path = (pathname.split('?')[0] || pathname).replace(/\/+$/, '') || '/';
+  const path =
+    (pathname.split('?')[0] || pathname).split('#')[0].replace(/\/+$/, '') ||
+    '/';
 
   if (
     path === '/app/life/family/shopping' ||
@@ -85,7 +87,8 @@ function isShoppingDocumentRequest(request, url) {
   return request.mode === 'navigate' || request.destination === 'document';
 }
 
-// Keep in sync with isShoppingOfflineInterceptRequest in shopping-offline.ts
+// Keep in sync with shopping-offline-paths.ts:
+// isFamilyShoppingPath, isShoppingOfflineInterceptRequest, shoppingDocumentHref.
 function isShoppingOfflineInterceptRequest(request, url) {
   if (request.method !== 'GET') return false;
   if (!isFamilyShoppingPath(url.pathname)) return false;
@@ -101,18 +104,56 @@ function shoppingDocumentHref(url) {
 }
 
 function fetchWithTimeout(request, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), ms);
-    fetch(request)
-      .then((response) => {
-        clearTimeout(timer);
-        resolve(response);
-      })
-      .catch((error) => {
-        clearTimeout(timer);
-        reject(error);
+  const isNavigate =
+    request.mode === 'navigate' || request.destination === 'document';
+
+  // Do not reconstruct document navigations — cloning can drop credentials.
+  if (isNavigate) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('timeout')), ms);
+      fetch(request)
+        .then((response) => {
+          clearTimeout(timer);
+          resolve(response);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+
+  const controller = new AbortController();
+  const incoming = request.signal;
+  if (incoming) {
+    if (incoming.aborted) {
+      controller.abort();
+    } else {
+      incoming.addEventListener('abort', () => controller.abort(), {
+        once: true,
       });
-  });
+    }
+  }
+
+  const timer = setTimeout(() => controller.abort(), ms);
+
+  try {
+    return fetch(new Request(request, { signal: controller.signal })).finally(
+      () => clearTimeout(timer),
+    );
+  } catch {
+    return new Promise((resolve, reject) => {
+      fetch(request)
+        .then((response) => {
+          clearTimeout(timer);
+          resolve(response);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
 }
 
 async function offlineShoppingDocument() {
@@ -158,6 +199,8 @@ async function networkFirstShopping(event, request, url) {
       return offlineShoppingDocument();
     }
 
+    // Document fallback is handled above. For RSC, navigate the tab to the
+    // shopping URL (the page-side fetch patch also location.assign's).
     await navigateClientToShopping(event, url);
     throw new TypeError('Failed to fetch');
   }

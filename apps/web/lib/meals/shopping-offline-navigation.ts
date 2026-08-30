@@ -105,6 +105,7 @@ function shoppingAnchor(event: Event): HTMLAnchorElement | null {
 }
 
 function onShoppingLinkClick(event: MouseEvent): void {
+  // Fast path for modified clicks; shouldHardNavigateShoppingLink re-checks.
   if (isModifiedClick(event)) return;
 
   const anchor = shoppingAnchor(event);
@@ -138,7 +139,18 @@ function onServiceWorkerMessage(event: MessageEvent): void {
 }
 
 function hang(): Promise<Response> {
-  return new Promise(() => undefined);
+  return new Promise<Response>(() => undefined);
+}
+
+function incomingSignal(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): AbortSignal | undefined {
+  if (init?.signal) return init.signal;
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    return input.signal;
+  }
+  return undefined;
 }
 
 /**
@@ -171,32 +183,54 @@ export function installShoppingOfflineNavigation(): () => void {
       return originalFetch(input, init);
     }
 
-    let timer = 0;
+    const controller = new AbortController();
+    const callerSignal = incomingSignal(input, init);
+    if (callerSignal) {
+      if (callerSignal.aborted) {
+        controller.abort();
+      } else {
+        callerSignal.addEventListener('abort', () => controller.abort(), {
+          once: true,
+        });
+      }
+    }
+
+    let timer: ReturnType<typeof window.setTimeout> | null = window.setTimeout(
+      () => {
+        controller.abort();
+      },
+      SHOPPING_OFFLINE_NAV_TIMEOUT_MS,
+    );
 
     try {
-      const response = await Promise.race([
-        originalFetch(input, init),
-        new Promise<never>((_, reject) => {
-          timer = window.setTimeout(() => {
-            reject(new TypeError('Failed to fetch'));
-          }, SHOPPING_OFFLINE_NAV_TIMEOUT_MS);
-        }),
-      ]);
+      const response = await originalFetch(input, {
+        ...init,
+        signal: controller.signal,
+      });
 
-      window.clearTimeout(timer);
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
 
       if (
         isShoppingRscRequest(request) &&
         (response.status >= 500 ||
           isUnusableShoppingRscResponse(response.headers.get('content-type')))
       ) {
+        // RSC is unusable (offline HTML, 5xx). Hard-nav so the SW can
+        // serve the offline document. SW may also call client.navigate.
         assignShoppingDocument(url.href, window.location.origin);
         return hang();
       }
 
       return response;
-    } catch {
-      window.clearTimeout(timer);
+    } catch (error) {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+
+      if (callerSignal?.aborted) {
+        throw error;
+      }
+
       assignShoppingDocument(url.href, window.location.origin);
       return hang();
     }

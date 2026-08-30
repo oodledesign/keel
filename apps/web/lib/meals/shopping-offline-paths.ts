@@ -70,11 +70,11 @@ export function isNextRouterPrefetchRequest(
 }
 
 export function isShoppingRscRequest(request: ShoppingRequestLike): boolean {
-  if (!isFamilyShoppingPath(requestUrl(request.url).pathname)) {
+  const url = requestUrl(request.url);
+  if (!isFamilyShoppingPath(url.pathname)) {
     return false;
   }
 
-  const url = requestUrl(request.url);
   return (
     url.searchParams.has('_rsc') || headerValue(request.headers, 'RSC') === '1'
   );
@@ -84,7 +84,9 @@ export function isShoppingDocumentNavigation(
   request: ShoppingRequestLike,
 ): boolean {
   if ((request.method ?? 'GET').toUpperCase() !== 'GET') return false;
-  if (!isFamilyShoppingPath(requestUrl(request.url).pathname)) return false;
+
+  const url = requestUrl(request.url);
+  if (!isFamilyShoppingPath(url.pathname)) return false;
 
   return request.mode === 'navigate' || request.destination === 'document';
 }
@@ -93,12 +95,16 @@ export function isShoppingDocumentNavigation(
  * Shopping GETs the service worker should handle: document navigations and
  * App Router RSC flights. Prefetches stay bypassed. Do not use this to cache
  * the authenticated /app shell.
+ *
+ * Canonical source for sw.js `isShoppingOfflineInterceptRequest`.
  */
 export function isShoppingOfflineInterceptRequest(
   request: ShoppingRequestLike,
 ): boolean {
   if ((request.method ?? 'GET').toUpperCase() !== 'GET') return false;
-  if (!isFamilyShoppingPath(requestUrl(request.url).pathname)) return false;
+
+  const url = requestUrl(request.url);
+  if (!isFamilyShoppingPath(url.pathname)) return false;
   if (isNextRouterPrefetchRequest(request)) return false;
 
   return isShoppingDocumentNavigation(request) || isShoppingRscRequest(request);
