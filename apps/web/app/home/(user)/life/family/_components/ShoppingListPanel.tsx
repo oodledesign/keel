@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { Copy, Plus, ShoppingCart } from 'lucide-react';
 
@@ -17,15 +16,10 @@ import {
   SHOPPING_CATEGORY_LABELS,
   SHOPPING_CATEGORY_ORDER,
 } from '~/lib/meals/shopping-list-merge';
+import { shoppingSyncStatusLabel } from '~/lib/meals/shopping-offline';
 
-import type {
-  ShoppingListItemRow,
-  ShoppingListWithItems,
-} from '../_lib/schema/family-shopping.schema';
-import {
-  addShoppingItemAction,
-  toggleShoppingItemAction,
-} from '../_lib/shopping-actions';
+import type { ShoppingListWithItems } from '../_lib/schema/family-shopping.schema';
+import { useShoppingListOffline } from '../_lib/use-shopping-list-offline';
 import { ACCENT, panelClass } from './meal-ui';
 
 const CATEGORY_ORDER = SHOPPING_CATEGORY_ORDER;
@@ -61,66 +55,35 @@ function weekRangeLabel(weekStart: string): string {
 }
 
 export function ShoppingListPanel({
-  list,
+  list: serverList,
   weekStart,
   mealPlanHref,
   accountSlug,
   startAdding = false,
 }: Props) {
-  const router = useRouter();
-  const scopeFields = accountSlug ? { accountSlug } : {};
+  const { list, status, toggleItem, addItem } = useShoppingListOffline({
+    list: serverList,
+    weekStart,
+    accountSlug,
+    mealPlanHref,
+  });
   const [adding, setAdding] = useState(startAdding);
   const [draft, setDraft] = useState('');
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
 
-  const grouped = useMemo(() => {
-    const items = list?.items ?? [];
-    return CATEGORY_ORDER.map((category) => ({
-      category,
-      items: items.filter((item) => item.category === category),
-    })).filter((group) => group.items.length > 0);
-  }, [list?.items]);
+  const grouped = CATEGORY_ORDER.map((category) => ({
+    category,
+    items: (list?.items ?? []).filter((item) => item.category === category),
+  })).filter((group) => group.items.length > 0);
 
   const remaining = list?.items.filter((item) => !item.checked).length ?? 0;
   const total = list?.items.length ?? 0;
-
-  async function handleToggle(item: ShoppingListItemRow, checked: boolean) {
-    setPendingId(item.id);
-    try {
-      const result = await toggleShoppingItemAction({
-        itemId: item.id,
-        checked,
-        ...scopeFields,
-      });
-      if (!result.success) throw new Error(result.error);
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update item');
-    } finally {
-      setPendingId(null);
-    }
-  }
+  const statusLabel = shoppingSyncStatusLabel(status);
 
   async function handleAdd() {
-    const text = draft.trim();
-    if (!text) return;
-    setIsAdding(true);
-    try {
-      const result = await addShoppingItemAction({
-        listId: list?.id,
-        weekStart: list?.week_start ?? weekStart,
-        text,
-        ...scopeFields,
-      });
-      if (!result.success) throw new Error(result.error);
+    const added = await addItem(draft);
+    if (added) {
       setDraft('');
       setAdding(false);
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not add item');
-    } finally {
-      setIsAdding(false);
     }
   }
 
@@ -170,6 +133,17 @@ export function ShoppingListPanel({
           </p>
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {remaining} to buy · {total} items
+            {statusLabel ? (
+              <>
+                {' · '}
+                <span
+                  data-test="shopping-sync-status"
+                  className="text-[var(--workspace-shell-text)]"
+                >
+                  {statusLabel}
+                </span>
+              </>
+            ) : null}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -217,7 +191,7 @@ export function ShoppingListPanel({
           <Button
             size="sm"
             onClick={() => void handleAdd()}
-            disabled={isAdding || !draft.trim()}
+            disabled={!draft.trim()}
             style={{ backgroundColor: ACCENT }}
             className="h-9 text-[var(--workspace-shell-text)] hover:opacity-90"
           >
@@ -258,9 +232,8 @@ export function ShoppingListPanel({
                     >
                       <Checkbox
                         checked={checked}
-                        disabled={pendingId === item.id}
                         onCheckedChange={(value) =>
-                          void handleToggle(item, value === true)
+                          void toggleItem(item.id, value === true)
                         }
                         className="mt-0.5"
                         data-test={`shopping-item-${item.id}`}

@@ -257,7 +257,12 @@ class FamilyShoppingService {
 
   async addItem(
     scope: MealPlanScope,
-    input: { listId?: string; weekStart?: string; text: string },
+    input: {
+      listId?: string;
+      weekStart?: string;
+      text: string;
+      clientItemId?: string;
+    },
   ): Promise<ShoppingListItemRow> {
     const weekStart = input.weekStart;
     let list: ShoppingListRow | null = null;
@@ -293,6 +298,14 @@ class FamilyShoppingService {
     }
 
     const existingItems = await this.loadItems(list.id);
+
+    if (input.clientItemId) {
+      const alreadyAdded = existingItems.find(
+        (item) => item.id === input.clientItemId,
+      );
+      if (alreadyAdded) return alreadyAdded;
+    }
+
     const nextOrder =
       existingItems.reduce((max, item) => Math.max(max, item.sort_order), -1) +
       1;
@@ -300,6 +313,7 @@ class FamilyShoppingService {
     const { data, error } = await db
       .from('family_shopping_list_items')
       .insert({
+        ...(input.clientItemId ? { id: input.clientItemId } : {}),
         list_id: list.id,
         sort_order: nextOrder,
         name: parsed.name,
@@ -313,7 +327,15 @@ class FamilyShoppingService {
       .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (isUniqueViolation(error) && input.clientItemId) {
+        const existing = (await this.loadItems(list.id)).find(
+          (item) => item.id === input.clientItemId,
+        );
+        if (existing) return existing;
+      }
+      throw error;
+    }
     return mapItem(data as Record<string, unknown>);
   }
 
@@ -531,6 +553,13 @@ class FamilyShoppingService {
       ),
     };
   }
+}
+
+function isUniqueViolation(error: { message: string; code?: string }): boolean {
+  return (
+    error.code === '23505' ||
+    /duplicate key|unique constraint/i.test(error.message)
+  );
 }
 
 function ingredientsForRecipe(

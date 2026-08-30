@@ -103,6 +103,7 @@ export async function addShoppingItemAction(
       listId: parsed.listId,
       weekStart: parsed.weekStart,
       text: parsed.text,
+      clientItemId: parsed.clientItemId,
     });
     revalidateShoppingPaths(scope);
     return ok({ item });

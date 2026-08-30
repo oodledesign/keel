@@ -63,5 +63,6 @@ export const AddShoppingItemSchema = AccountSlugFieldSchema.extend({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
   text: z.string().trim().min(1).max(200),
+  clientItemId: z.string().uuid().optional(),
 });
 export type AddShoppingItemInput = z.infer<typeof AddShoppingItemSchema>;

@@ -1,5 +1,10 @@
-const CACHE = 'ozer-static-v7';
-const PRECACHE = ['/manifest.webmanifest', '/images/brand/pwa-icon-512.png'];
+const CACHE = 'ozer-static-v8';
+const PRECACHE = [
+  '/manifest.webmanifest',
+  '/images/brand/pwa-icon-512.png',
+  '/family-shopping-offline.html',
+  '/family-shopping-offline.js',
+];
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
@@ -48,11 +53,56 @@ function shouldBypassServiceWorker(request, url) {
   return false;
 }
 
+function isFamilyShoppingPath(pathname) {
+  const path = (pathname.split('?')[0] || pathname).replace(/\/+$/, '') || '/';
+
+  if (
+    path === '/app/life/family/shopping' ||
+    path === '/home/life/family/shopping'
+  ) {
+    return true;
+  }
+
+  return /^\/(app|home)\/[^/]+\/shopping$/.test(path);
+}
+
+function isShoppingDocumentRequest(request, url) {
+  if (request.method !== 'GET') return false;
+  if (request.mode !== 'navigate' && request.destination !== 'document') {
+    return false;
+  }
+  return isFamilyShoppingPath(url.pathname);
+}
+
+async function networkFirstShoppingDocument(request) {
+  try {
+    return await fetch(request);
+  } catch {
+    // Do not cache the authenticated shopping shell. If they opened the list
+    // before, IndexedDB has it; this lightweight page reads that snapshot.
+    const fallback = await caches.match('/family-shopping-offline.html');
+    if (fallback) return fallback;
+
+    return new Response('Shopping is unavailable offline.', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   if (url.origin !== self.location.origin) return;
+
+  // Shopping only: network first, then a dedicated offline document.
+  // Everything else under /app and /home still bypasses.
+  if (isShoppingDocumentRequest(request, url)) {
+    event.respondWith(networkFirstShoppingDocument(request));
+    return;
+  }
+
   if (shouldBypassServiceWorker(request, url)) return;
 
   if (
