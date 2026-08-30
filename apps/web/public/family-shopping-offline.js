@@ -120,6 +120,8 @@ function applyOutbox(list, mutations) {
         return current;
       }
 
+      // Fallback page cannot import the meal parser; new rows sit in Other
+      // until the React app reapplies the outbox or the item syncs.
       const nextOrder =
         current.items.reduce((max, item) => Math.max(max, item.sort_order), -1) +
         1;

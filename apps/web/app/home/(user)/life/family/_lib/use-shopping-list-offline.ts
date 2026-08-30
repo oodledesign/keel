@@ -47,6 +47,7 @@ export function useShoppingListOffline(input: {
 
   const outboxRef = useRef(outbox);
   const flushingRef = useRef(false);
+  const writingIdsRef = useRef(new Set<string>());
   const inputRef = useRef(input);
 
   outboxRef.current = outbox;
@@ -124,6 +125,10 @@ export function useShoppingListOffline(input: {
       while (outboxRef.current.length > 0) {
         const next = outboxRef.current[0];
         if (!next) break;
+        // Do not flush a mutation until its IndexedDB write has finished,
+        // otherwise a successful sync can delete nothing and the row is
+        // written afterwards (duplicate add / extra toggle on reload).
+        if (writingIdsRef.current.has(next.id)) break;
 
         const result = await applyServerMutation(next);
 
@@ -145,6 +150,8 @@ export function useShoppingListOffline(input: {
       }
 
       if (synced > 0 && outboxRef.current.length === 0) {
+        // revalidatePath in the actions is not enough after an offline queue
+        // drain — the client still holds the optimistic list until refresh.
         router.refresh();
       }
     } finally {
@@ -220,6 +227,7 @@ export function useShoppingListOffline(input: {
 
   const enqueue = useCallback(
     async (mutation: ShoppingOutboxMutation) => {
+      writingIdsRef.current.add(mutation.id);
       setOutbox((current) => {
         const next = [...current, mutation];
         outboxRef.current = next;
@@ -229,6 +237,8 @@ export function useShoppingListOffline(input: {
         await enqueueShoppingOutbox(mutation);
       } catch {
         // Keep the in-memory queue even if IDB is unavailable (private mode).
+      } finally {
+        writingIdsRef.current.delete(mutation.id);
       }
       void flush();
     },

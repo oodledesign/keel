@@ -1,5 +1,7 @@
 'use server';
 
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
@@ -71,6 +73,7 @@ export async function generateShoppingListAction(
 
     return ok(result);
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return fail(err);
   }
 }
@@ -87,6 +90,7 @@ export async function toggleShoppingItemAction(
     revalidateShoppingPaths(scope);
     return ok(undefined);
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return fail(err);
   }
 }
@@ -108,6 +112,7 @@ export async function addShoppingItemAction(
     revalidateShoppingPaths(scope);
     return ok({ item });
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     return fail(err);
   }
 }
