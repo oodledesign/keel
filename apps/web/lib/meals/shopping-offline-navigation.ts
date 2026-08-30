@@ -195,12 +195,9 @@ export function installShoppingOfflineNavigation(): () => void {
       }
     }
 
-    let timer: ReturnType<typeof window.setTimeout> | null = window.setTimeout(
-      () => {
-        controller.abort();
-      },
-      SHOPPING_OFFLINE_NAV_TIMEOUT_MS,
-    );
+    let timer: number | null = window.setTimeout(() => {
+      controller.abort();
+    }, SHOPPING_OFFLINE_NAV_TIMEOUT_MS);
 
     try {
       const response = await originalFetch(input, {
