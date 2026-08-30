@@ -24,6 +24,8 @@ export type OzerPlanLimits = {
   maxProperties: number | null;
   maxVideos: number | null;
   maxMailboxes?: number | null;
+  /** NULL = unlimited / not enforced. Free sets 1. */
+  maxProjectGuests?: number | null;
   /** Campaigns add-on: billed mailing-list size. */
   maxContacts?: number | null;
   /** Campaigns add-on: monthly email-send units. */
