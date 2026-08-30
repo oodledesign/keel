@@ -1,11 +1,15 @@
 -- Email campaigns add-on: drafts, send log, and send-unit ledger.
 -- Enable/disable uses account_module_settings.module_key = 'campaigns'
 -- Entitlement key: addon_campaigns. Ledger writes are service_role only.
+--
+-- Table names are workspace_email_campaigns / workspace_email_campaign_recipients
+-- so this add-on can live beside the existing admin marketing tables
+-- public.email_campaigns and public.email_campaign_metrics (do not drop or alter those).
 
 -- ---------------------------------------------------------------------------
--- email_campaigns
+-- workspace_email_campaigns
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.email_campaigns (
+CREATE TABLE IF NOT EXISTS public.workspace_email_campaigns (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id uuid NOT NULL REFERENCES public.accounts (id) ON DELETE CASCADE,
   created_by uuid REFERENCES auth.users (id) ON DELETE SET NULL,
@@ -35,30 +39,30 @@ CREATE TABLE IF NOT EXISTS public.email_campaigns (
   last_error text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT email_campaigns_name_len CHECK (char_length(name) BETWEEN 1 AND 160),
-  CONSTRAINT email_campaigns_subject_len CHECK (char_length(subject) <= 300)
+  CONSTRAINT workspace_email_campaigns_name_len CHECK (char_length(name) BETWEEN 1 AND 160),
+  CONSTRAINT workspace_email_campaigns_subject_len CHECK (char_length(subject) <= 300)
 );
 
-COMMENT ON TABLE public.email_campaigns IS
+COMMENT ON TABLE public.workspace_email_campaigns IS
   'Workspace-branded marketing campaigns. Audience is workspace_mailing_preferences subscribers.';
 
-CREATE INDEX IF NOT EXISTS ix_email_campaigns_account_created
-  ON public.email_campaigns (account_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_workspace_email_campaigns_account_created
+  ON public.workspace_email_campaigns (account_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS ix_email_campaigns_due
-  ON public.email_campaigns (scheduled_at)
+CREATE INDEX IF NOT EXISTS ix_workspace_email_campaigns_due
+  ON public.workspace_email_campaigns (scheduled_at)
   WHERE status = 'scheduled';
 
-CREATE INDEX IF NOT EXISTS ix_email_campaigns_sending
-  ON public.email_campaigns (account_id)
+CREATE INDEX IF NOT EXISTS ix_workspace_email_campaigns_sending
+  ON public.workspace_email_campaigns (account_id)
   WHERE status = 'sending';
 
 -- ---------------------------------------------------------------------------
--- email_campaign_recipients
+-- workspace_email_campaign_recipients
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.email_campaign_recipients (
+CREATE TABLE IF NOT EXISTS public.workspace_email_campaign_recipients (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  campaign_id uuid NOT NULL REFERENCES public.email_campaigns (id) ON DELETE CASCADE,
+  campaign_id uuid NOT NULL REFERENCES public.workspace_email_campaigns (id) ON DELETE CASCADE,
   account_id uuid NOT NULL REFERENCES public.accounts (id) ON DELETE CASCADE,
   preference_id uuid REFERENCES public.workspace_mailing_preferences (id) ON DELETE SET NULL,
   client_id uuid REFERENCES public.clients (id) ON DELETE SET NULL,
@@ -75,17 +79,17 @@ CREATE TABLE IF NOT EXISTS public.email_campaign_recipients (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.email_campaign_recipients IS
-  'Per-recipient send log for email_campaigns. Counts toward campaign send usage.';
+COMMENT ON TABLE public.workspace_email_campaign_recipients IS
+  'Per-recipient send log for workspace_email_campaigns. Counts toward campaign send usage.';
 
-CREATE INDEX IF NOT EXISTS ix_email_campaign_recipients_campaign_status
-  ON public.email_campaign_recipients (campaign_id, status);
+CREATE INDEX IF NOT EXISTS ix_workspace_email_campaign_recipients_campaign_status
+  ON public.workspace_email_campaign_recipients (campaign_id, status);
 
-CREATE INDEX IF NOT EXISTS ix_email_campaign_recipients_account_email
-  ON public.email_campaign_recipients (account_id, email);
+CREATE INDEX IF NOT EXISTS ix_workspace_email_campaign_recipients_account_email
+  ON public.workspace_email_campaign_recipients (account_id, email);
 
-CREATE UNIQUE INDEX IF NOT EXISTS ux_email_campaign_recipients_campaign_email
-  ON public.email_campaign_recipients (campaign_id, email);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_workspace_email_campaign_recipients_campaign_email
+  ON public.workspace_email_campaign_recipients (campaign_id, email);
 
 -- ---------------------------------------------------------------------------
 -- campaign_credit_pools (cached spendable send units; never write from app)
@@ -108,6 +112,7 @@ CREATE TABLE IF NOT EXISTS public.campaign_credit_pools (
 COMMENT ON TABLE public.campaign_credit_pools IS
   'Cached sum of spendable campaign send units. max_contacts is the billed list-size cap (0 = unlimited for admin grants).';
 
+DROP TRIGGER IF EXISTS campaign_credit_pools_set_timestamps ON public.campaign_credit_pools;
 CREATE TRIGGER campaign_credit_pools_set_timestamps
 BEFORE INSERT OR UPDATE ON public.campaign_credit_pools
 FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamps();
@@ -150,7 +155,7 @@ CREATE TABLE IF NOT EXISTS public.campaign_credit_transactions (
   batch_id uuid REFERENCES public.campaign_credit_batches (id) ON DELETE SET NULL,
   type text NOT NULL,
   amount integer NOT NULL,
-  related_campaign_id uuid REFERENCES public.email_campaigns (id) ON DELETE SET NULL,
+  related_campaign_id uuid REFERENCES public.workspace_email_campaigns (id) ON DELETE SET NULL,
   stripe_event_id text,
   reason text,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -178,21 +183,21 @@ CREATE INDEX IF NOT EXISTS ix_campaign_credit_transactions_campaign
 -- ---------------------------------------------------------------------------
 -- RLS
 -- ---------------------------------------------------------------------------
-ALTER TABLE public.email_campaigns ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.email_campaign_recipients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workspace_email_campaigns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workspace_email_campaign_recipients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campaign_credit_pools ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campaign_credit_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campaign_credit_transactions ENABLE ROW LEVEL SECURITY;
 
-REVOKE ALL ON public.email_campaigns FROM anon, authenticated, service_role;
-REVOKE ALL ON public.email_campaign_recipients FROM anon, authenticated, service_role;
+REVOKE ALL ON public.workspace_email_campaigns FROM anon, authenticated, service_role;
+REVOKE ALL ON public.workspace_email_campaign_recipients FROM anon, authenticated, service_role;
 REVOKE ALL ON public.campaign_credit_pools FROM anon, authenticated, service_role;
 REVOKE ALL ON public.campaign_credit_batches FROM anon, authenticated, service_role;
 REVOKE ALL ON public.campaign_credit_transactions FROM anon, authenticated, service_role;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.email_campaigns
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_email_campaigns
   TO authenticated, service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.email_campaign_recipients
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_email_campaign_recipients
   TO authenticated, service_role;
 GRANT SELECT ON public.campaign_credit_pools TO authenticated;
 GRANT SELECT ON public.campaign_credit_batches TO authenticated;
@@ -201,50 +206,61 @@ GRANT ALL ON public.campaign_credit_pools TO service_role;
 GRANT ALL ON public.campaign_credit_batches TO service_role;
 GRANT ALL ON public.campaign_credit_transactions TO service_role;
 
-CREATE POLICY email_campaigns_select ON public.email_campaigns
+DROP POLICY IF EXISTS workspace_email_campaigns_select ON public.workspace_email_campaigns;
+CREATE POLICY workspace_email_campaigns_select ON public.workspace_email_campaigns
   FOR SELECT TO authenticated
   USING (public.is_account_member(account_id));
 
-CREATE POLICY email_campaigns_insert ON public.email_campaigns
+DROP POLICY IF EXISTS workspace_email_campaigns_insert ON public.workspace_email_campaigns;
+CREATE POLICY workspace_email_campaigns_insert ON public.workspace_email_campaigns
   FOR INSERT TO authenticated
   WITH CHECK (public.is_account_member(account_id));
 
-CREATE POLICY email_campaigns_update ON public.email_campaigns
+DROP POLICY IF EXISTS workspace_email_campaigns_update ON public.workspace_email_campaigns;
+CREATE POLICY workspace_email_campaigns_update ON public.workspace_email_campaigns
   FOR UPDATE TO authenticated
   USING (public.is_account_member(account_id))
   WITH CHECK (public.is_account_member(account_id));
 
-CREATE POLICY email_campaigns_delete ON public.email_campaigns
+DROP POLICY IF EXISTS workspace_email_campaigns_delete ON public.workspace_email_campaigns;
+CREATE POLICY workspace_email_campaigns_delete ON public.workspace_email_campaigns
   FOR DELETE TO authenticated
   USING (public.is_account_member(account_id));
 
-CREATE POLICY email_campaigns_service_role ON public.email_campaigns
+DROP POLICY IF EXISTS workspace_email_campaigns_service_role ON public.workspace_email_campaigns;
+CREATE POLICY workspace_email_campaigns_service_role ON public.workspace_email_campaigns
   FOR ALL TO service_role
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY email_campaign_recipients_select ON public.email_campaign_recipients
+DROP POLICY IF EXISTS workspace_email_campaign_recipients_select ON public.workspace_email_campaign_recipients;
+CREATE POLICY workspace_email_campaign_recipients_select ON public.workspace_email_campaign_recipients
   FOR SELECT TO authenticated
   USING (public.is_account_member(account_id));
 
-CREATE POLICY email_campaign_recipients_insert ON public.email_campaign_recipients
+DROP POLICY IF EXISTS workspace_email_campaign_recipients_insert ON public.workspace_email_campaign_recipients;
+CREATE POLICY workspace_email_campaign_recipients_insert ON public.workspace_email_campaign_recipients
   FOR INSERT TO authenticated
   WITH CHECK (public.is_account_member(account_id));
 
-CREATE POLICY email_campaign_recipients_update ON public.email_campaign_recipients
+DROP POLICY IF EXISTS workspace_email_campaign_recipients_update ON public.workspace_email_campaign_recipients;
+CREATE POLICY workspace_email_campaign_recipients_update ON public.workspace_email_campaign_recipients
   FOR UPDATE TO authenticated
   USING (public.is_account_member(account_id))
   WITH CHECK (public.is_account_member(account_id));
 
-CREATE POLICY email_campaign_recipients_delete ON public.email_campaign_recipients
+DROP POLICY IF EXISTS workspace_email_campaign_recipients_delete ON public.workspace_email_campaign_recipients;
+CREATE POLICY workspace_email_campaign_recipients_delete ON public.workspace_email_campaign_recipients
   FOR DELETE TO authenticated
   USING (public.is_account_member(account_id));
 
-CREATE POLICY email_campaign_recipients_service_role ON public.email_campaign_recipients
+DROP POLICY IF EXISTS workspace_email_campaign_recipients_service_role ON public.workspace_email_campaign_recipients;
+CREATE POLICY workspace_email_campaign_recipients_service_role ON public.workspace_email_campaign_recipients
   FOR ALL TO service_role
   USING (true)
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS campaign_credit_pools_select ON public.campaign_credit_pools;
 CREATE POLICY campaign_credit_pools_select ON public.campaign_credit_pools
   FOR SELECT TO authenticated
   USING (
@@ -252,6 +268,7 @@ CREATE POLICY campaign_credit_pools_select ON public.campaign_credit_pools
     OR public.is_super_admin()
   );
 
+DROP POLICY IF EXISTS campaign_credit_batches_select ON public.campaign_credit_batches;
 CREATE POLICY campaign_credit_batches_select ON public.campaign_credit_batches
   FOR SELECT TO authenticated
   USING (
@@ -259,6 +276,7 @@ CREATE POLICY campaign_credit_batches_select ON public.campaign_credit_batches
     OR public.is_super_admin()
   );
 
+DROP POLICY IF EXISTS campaign_credit_transactions_select ON public.campaign_credit_transactions;
 CREATE POLICY campaign_credit_transactions_select ON public.campaign_credit_transactions
   FOR SELECT TO authenticated
   USING (
@@ -266,7 +284,7 @@ CREATE POLICY campaign_credit_transactions_select ON public.campaign_credit_tran
     OR public.is_super_admin()
   );
 
-CREATE OR REPLACE FUNCTION public.set_email_campaigns_updated_at()
+CREATE OR REPLACE FUNCTION public.set_workspace_email_campaigns_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -276,11 +294,11 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS email_campaigns_set_updated_at ON public.email_campaigns;
-CREATE TRIGGER email_campaigns_set_updated_at
-  BEFORE UPDATE ON public.email_campaigns
+DROP TRIGGER IF EXISTS workspace_email_campaigns_set_updated_at ON public.workspace_email_campaigns;
+CREATE TRIGGER workspace_email_campaigns_set_updated_at
+  BEFORE UPDATE ON public.workspace_email_campaigns
   FOR EACH ROW
-  EXECUTE FUNCTION public.set_email_campaigns_updated_at();
+  EXECUTE FUNCTION public.set_workspace_email_campaigns_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- Ledger RPCs (service_role)

@@ -29,6 +29,11 @@ export type {
   EmailCampaignStatus,
 } from './campaign.types';
 
+/** Add-on tables. Distinct from admin marketing `email_campaigns`. */
+const WORKSPACE_EMAIL_CAMPAIGNS = 'workspace_email_campaigns';
+const WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS =
+  'workspace_email_campaign_recipients';
+
 function fromTable(client: SupabaseClient, table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (client as any).from(table);
@@ -68,7 +73,7 @@ class CampaignsService {
   constructor(private readonly client: SupabaseClient) {}
 
   async list(accountId: string): Promise<EmailCampaign[]> {
-    const { data, error } = await fromTable(this.client, 'email_campaigns')
+    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
       .select('*')
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
@@ -78,7 +83,7 @@ class CampaignsService {
   }
 
   async get(accountId: string, campaignId: string): Promise<EmailCampaign> {
-    const { data, error } = await fromTable(this.client, 'email_campaigns')
+    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
       .select('*')
       .eq('account_id', accountId)
       .eq('id', campaignId)
@@ -97,7 +102,7 @@ class CampaignsService {
     previewText?: string | null;
     htmlBody?: string;
   }): Promise<EmailCampaign> {
-    const { data, error } = await fromTable(this.client, 'email_campaigns')
+    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
       .insert({
         account_id: input.accountId,
         created_by: input.userId,
@@ -138,7 +143,7 @@ class CampaignsService {
     }
     if (input.htmlBody !== undefined) patch.html_body = input.htmlBody;
 
-    const { data, error } = await fromTable(this.client, 'email_campaigns')
+    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
       .update(patch)
       .eq('id', input.campaignId)
       .eq('account_id', input.accountId)
@@ -158,7 +163,7 @@ class CampaignsService {
   ): Promise<EmailCampaignRecipient[]> {
     const { data, error } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select(
         'id, campaign_id, email, display_name, status, skip_reason, error_message, ses_message_id, sent_at, unsubscribed_at',
@@ -200,7 +205,7 @@ class CampaignsService {
       throw new Error('Schedule time must be in the future');
     }
 
-    const { data, error } = await fromTable(this.client, 'email_campaigns')
+    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
       .update({
         status: 'scheduled',
         scheduled_at: when.toISOString(),
@@ -226,7 +231,7 @@ class CampaignsService {
       throw new Error('Only scheduled campaigns can be unscheduled');
     }
 
-    const { data, error } = await fromTable(this.client, 'email_campaigns')
+    const { data, error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
       .update({ status: 'draft', scheduled_at: null })
       .eq('id', campaignId)
       .eq('account_id', accountId)
@@ -291,7 +296,7 @@ class CampaignsService {
 
     const { data: claimed, error: statusError } = await fromTable(
       this.client,
-      'email_campaigns',
+      WORKSPACE_EMAIL_CAMPAIGNS,
     )
       .update({
         status: 'sending',
@@ -345,11 +350,11 @@ class CampaignsService {
 
     const { error: insertError } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     ).insert(rows);
 
     if (insertError) {
-      await fromTable(this.client, 'email_campaigns')
+      await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
         .update({ status: 'failed', last_error: insertError.message })
         .eq('id', campaign.id);
       throw new Error(insertError.message);
@@ -362,7 +367,7 @@ class CampaignsService {
         campaign.id,
       );
     } catch (error) {
-      await fromTable(this.client, 'email_campaigns')
+      await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
         .update({
           status: 'failed',
           last_error: isInsufficientCampaignCreditsError(error)
@@ -405,7 +410,7 @@ class CampaignsService {
 
     const { data, error } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select(
         'id, email, display_name, preference_id, unsubscribe_token, status',
@@ -472,7 +477,7 @@ class CampaignsService {
         recipient.unsubscribe_token || preference?.unsubscribe_token;
 
       if (status && status !== 'subscribed') {
-        await fromTable(this.client, 'email_campaign_recipients')
+        await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
           .update({
             status: 'skipped',
             skip_reason: 'unsubscribed',
@@ -483,7 +488,7 @@ class CampaignsService {
       }
 
       if (!token) {
-        await fromTable(this.client, 'email_campaign_recipients')
+        await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
           .update({
             status: 'skipped',
             skip_reason: 'missing_unsubscribe_token',
@@ -518,7 +523,7 @@ class CampaignsService {
           },
         });
 
-        await fromTable(this.client, 'email_campaign_recipients')
+        await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
           .update({
             status: 'sent',
             ses_message_id: messageId,
@@ -528,7 +533,7 @@ class CampaignsService {
           .eq('id', recipient.id);
         // counted from the table after the batch
       } catch (err) {
-        await fromTable(this.client, 'email_campaign_recipients')
+        await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
           .update({
             status: 'failed',
             error_message: err instanceof Error ? err.message : 'Send failed',
@@ -545,7 +550,7 @@ class CampaignsService {
 
     const { count: remainingCount } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select('id', { count: 'exact', head: true })
       .eq('campaign_id', campaign.id)
@@ -555,7 +560,7 @@ class CampaignsService {
 
     const { count: sentCount } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select('id', { count: 'exact', head: true })
       .eq('campaign_id', campaign.id)
@@ -563,7 +568,7 @@ class CampaignsService {
 
     const { count: failedCount } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select('id', { count: 'exact', head: true })
       .eq('campaign_id', campaign.id)
@@ -571,7 +576,7 @@ class CampaignsService {
 
     const { count: skippedCount } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select('id', { count: 'exact', head: true })
       .eq('campaign_id', campaign.id)
@@ -579,7 +584,7 @@ class CampaignsService {
 
     const { count: unsubscribedCount } = await fromTable(
       this.client,
-      'email_campaign_recipients',
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select('id', { count: 'exact', head: true })
       .eq('campaign_id', campaign.id)
@@ -588,7 +593,7 @@ class CampaignsService {
     const finished = remaining === 0;
     const { data: updated, error: updateError } = await fromTable(
       this.client,
-      'email_campaigns',
+      WORKSPACE_EMAIL_CAMPAIGNS,
     )
       .update({
         sent_count: sentCount ?? 0,
@@ -630,7 +635,7 @@ export async function processDueCampaignSends(client: SupabaseClient): Promise<{
   let started = 0;
   let continued = 0;
 
-  const { data: due } = await fromTable(client, 'email_campaigns')
+  const { data: due } = await fromTable(client, WORKSPACE_EMAIL_CAMPAIGNS)
     .select('id, account_id')
     .eq('status', 'scheduled')
     .lte('scheduled_at', new Date().toISOString())
@@ -651,7 +656,7 @@ export async function processDueCampaignSends(client: SupabaseClient): Promise<{
       });
       started += 1;
     } catch (error) {
-      await fromTable(client, 'email_campaigns')
+      await fromTable(client, WORKSPACE_EMAIL_CAMPAIGNS)
         .update({
           status: 'failed',
           last_error:
@@ -661,7 +666,7 @@ export async function processDueCampaignSends(client: SupabaseClient): Promise<{
     }
   }
 
-  const { data: sending } = await fromTable(client, 'email_campaigns')
+  const { data: sending } = await fromTable(client, WORKSPACE_EMAIL_CAMPAIGNS)
     .select('id, account_id')
     .eq('status', 'sending')
     .limit(10);
@@ -689,23 +694,23 @@ export async function markCampaignRecipientsUnsubscribed(
   accountId: string,
   email: string,
 ): Promise<void> {
-  await fromTable(client, 'email_campaign_recipients')
+  await fromTable(client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
     .update({ unsubscribed_at: new Date().toISOString() })
     .eq('account_id', accountId)
     .eq('email', email)
     .is('unsubscribed_at', null);
 
-  const { data: campaigns } = await fromTable(client, 'email_campaigns')
+  const { data: campaigns } = await fromTable(client, WORKSPACE_EMAIL_CAMPAIGNS)
     .select('id')
     .eq('account_id', accountId);
 
   for (const row of (campaigns ?? []) as Array<{ id: string }>) {
-    const { count } = await fromTable(client, 'email_campaign_recipients')
+    const { count } = await fromTable(client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
       .select('id', { count: 'exact', head: true })
       .eq('campaign_id', row.id)
       .not('unsubscribed_at', 'is', null);
 
-    await fromTable(client, 'email_campaigns')
+    await fromTable(client, WORKSPACE_EMAIL_CAMPAIGNS)
       .update({ unsubscribed_count: count ?? 0 })
       .eq('id', row.id);
   }
