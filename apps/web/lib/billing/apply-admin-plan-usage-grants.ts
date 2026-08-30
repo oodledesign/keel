@@ -62,6 +62,7 @@ export async function applyAdminPlanUsageGrants(
 
   const isAiPlan =
     plan.family === 'business' ||
+    plan.family === 'business_starter' ||
     plan.family === 'business_lite' ||
     plan.family === 'commercial_property' ||
     plan.planId.startsWith('business-') ||

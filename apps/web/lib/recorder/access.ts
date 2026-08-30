@@ -34,6 +34,7 @@ export const RECORDER_LIMITS = {
 /** Full paid workspaces unlock unlimited recorder time (not Free / Business Lite). */
 const UNLIMITED_RECORDER_ENTITLEMENTS = [
   'workspace_business',
+  'workspace_business_starter',
   'workspace_community',
   'workspace_property',
 ] as const;

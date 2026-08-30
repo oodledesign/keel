@@ -173,6 +173,10 @@ export async function syncWorkspaceStateAfterAdminGrant(
       await markBusinessUpgradedFromLite(admin, accountId);
       await syncFullBusinessModules(admin, accountId);
       break;
+    case 'workspace_business_starter':
+      await markBusinessUpgradedFromLite(admin, accountId);
+      await syncFullBusinessModules(admin, accountId);
+      break;
     case 'workspace_business_lite':
       await syncBusinessLiteModules(admin, accountId);
       break;
@@ -195,7 +199,7 @@ export async function syncWorkspaceStateAfterAdminPlan(
   accountId: string,
   plan: OzerPlanDefinition,
 ): Promise<void> {
-  if (plan.family === 'business') {
+  if (plan.family === 'business' || plan.family === 'business_starter') {
     await markBusinessUpgradedFromLite(admin, accountId);
     await syncFullBusinessModules(admin, accountId);
   } else if (plan.family === 'business_lite') {

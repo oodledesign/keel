@@ -6,6 +6,7 @@ export type OzerPlanFamily =
   | 'community'
   | 'business'
   | 'business_lite'
+  | 'business_starter'
   | 'property'
   | 'commercial_property'
   | 'addon_rankly'
@@ -46,6 +47,8 @@ export type OzerPlanLimits = {
 export const PORTAL_STORAGE_BYTES = {
   /** 250 MiB */
   free: 250 * 1024 * 1024,
+  /** 10 GiB */
+  starter: 10 * 1024 * 1024 * 1024,
   /** 25 GiB */
   pro: 25 * 1024 * 1024 * 1024,
 } as const;
@@ -136,6 +139,30 @@ const BUSINESS_LITE: OzerPlanDefinition[] = [
       maxOpenTasks: 20,
       maxBookingsPerMonth: 5,
       maxPortalStorageBytes: PORTAL_STORAGE_BYTES.free,
+      clientRequestCreditAllowance: null,
+      meetingCoachingEnabled: false,
+    },
+    workspaceProfiles: ['work_design'],
+  },
+];
+
+const BUSINESS_STARTER: OzerPlanDefinition[] = [
+  {
+    productId: 'ozer-business-starter',
+    planId: 'business-starter-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.business_starter_monthly,
+    family: 'business_starter',
+    entitlementKey: 'workspace_business_starter',
+    // Dynamic: sync derives max_members / guests from Stripe quantity
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxActiveClients: null,
+      maxInvoicesPerMonth: null,
+      maxOpenTasks: null,
+      maxBookingsPerMonth: null,
+      maxPortalStorageBytes: PORTAL_STORAGE_BYTES.starter,
       clientRequestCreditAllowance: null,
       meetingCoachingEnabled: false,
     },
@@ -469,6 +496,7 @@ const ADDONS: OzerPlanDefinition[] = [
 export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [
   ...COMMUNITY,
   ...BUSINESS_LITE,
+  ...BUSINESS_STARTER,
   ...BUSINESS,
   ...PROPERTY,
   ...COMMERCIAL_PROPERTY,

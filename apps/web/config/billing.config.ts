@@ -93,6 +93,46 @@ export default createBillingSchema({
       ],
     },
     {
+      id: 'ozer-business-starter',
+      name: 'Starter',
+      description:
+        'Clients, projects, invoices, and AI for solo freelancers — £14 for the first seat, £9 for each additional seat',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
+      plans: [
+        {
+          id: 'business-starter-monthly',
+          name: 'Starter Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          trialDays: TRIAL_DAYS,
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.business_starter_monthly,
+              name: 'Billable seat',
+              cost: 14,
+              type: 'per_seat',
+              unit: 'seat',
+              description:
+                'Graduated: £14 for seat 1, £9 for every additional seat',
+              tiers: [
+                { upTo: 1, cost: 14 },
+                { upTo: 'unlimited', cost: 9 },
+              ],
+            },
+          ],
+        },
+      ],
+      features: [
+        '£14/mo for seat 1, then £9 per extra seat',
+        'Clients, projects, invoices & pipeline',
+        'Unlimited active clients, invoices & open tasks',
+        '10 GB client portal storage',
+        'Meeting Assistant — unlimited',
+        '1 project guest per billable seat',
+      ],
+    },
+    {
       id: 'ozer-business',
       name: 'Pro',
       highlighted: true,

@@ -156,6 +156,7 @@ export async function canAccessPaidWorkspace(
     billingExempt,
     entitlement,
     businessLiteEntitlement,
+    businessStarterEntitlement,
     billing,
     subscription,
   ] = await Promise.all([
@@ -174,6 +175,15 @@ export async function canAccessPaidWorkspace(
           .select('id')
           .eq('account_id', accountId)
           .eq('entitlement_key', 'workspace_business_lite')
+          .or(`expires_at.is.null,expires_at.gt.${now}`)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    profile === 'work_design'
+      ? client
+          .from('account_entitlements')
+          .select('id')
+          .eq('account_id', accountId)
+          .eq('entitlement_key', 'workspace_business_starter')
           .or(`expires_at.is.null,expires_at.gt.${now}`)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
@@ -204,6 +214,10 @@ export async function canAccessPaidWorkspace(
   }
 
   if (entitlement.data) {
+    return true;
+  }
+
+  if (profile === 'work_design' && businessStarterEntitlement.data) {
     return true;
   }
 

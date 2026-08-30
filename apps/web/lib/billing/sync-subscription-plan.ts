@@ -118,7 +118,8 @@ export async function syncKeelPlanFromSubscription(
     );
 
     if (plan.workspaceProfiles?.length) {
-      const isGraduatedBusiness = plan.family === 'business';
+      const isGraduatedBusiness =
+        plan.family === 'business' || plan.family === 'business_starter';
       const isCommercial = plan.family === 'commercial_property';
       const billableQuantity =
         isGraduatedBusiness || isCommercial
@@ -134,7 +135,10 @@ export async function syncKeelPlanFromSubscription(
         maxMembers = commercialMaxMembersForBillableSeats(billableQuantity);
       } else if (billableQuantity != null && isGraduatedBusiness) {
         maxMembers = businessMaxMembersForBillableSeats(billableQuantity);
-        maxProjectGuests = maxProjectGuestsForBillableSeats(billableQuantity);
+        maxProjectGuests =
+          plan.family === 'business_starter'
+            ? billableQuantity // 1 guest per seat on Starter
+            : maxProjectGuestsForBillableSeats(billableQuantity);
       } else if (plan.family === 'business_lite') {
         maxProjectGuests = 1;
       }
@@ -155,13 +159,14 @@ export async function syncKeelPlanFromSubscription(
       );
       workspacePlanSynced = true;
 
-      if (plan.family === 'business') {
+      if (plan.family === 'business' || plan.family === 'business_starter') {
         await markBusinessUpgradedFromLite(admin, accountId);
         await syncFullBusinessModules(admin, accountId);
       }
 
       if (
         plan.family === 'business' ||
+        plan.family === 'business_starter' ||
         plan.family === 'business_lite' ||
         plan.family === 'commercial_property'
       ) {
@@ -178,7 +183,7 @@ export async function syncKeelPlanFromSubscription(
           )?.credits_monthly_limit ?? null;
 
         // Business seat bumps: raise limit + grant delta (refillRemaining false).
-        // Lite / Commercial / first grant: refill the period pool.
+        // Lite / Starter / Commercial / first grant: refill the period pool.
         const refillRemaining =
           plan.family !== 'business' ||
           previousLimit == null ||
