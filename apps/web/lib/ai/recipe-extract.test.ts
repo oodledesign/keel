@@ -5,6 +5,7 @@ import {
   attachExtractSource,
   emptyRecipeDraft,
   isInstagramRecipeUrl,
+  isPrivateOrLocalUrl,
   isoDurationToMinutes,
   mapSchemaOrgRecipe,
   parseInstagramOembedJson,
@@ -22,6 +23,15 @@ describe('isoDurationToMinutes', () => {
     expect(isoDurationToMinutes(null)).toBeNull();
     expect(isoDurationToMinutes('45 minutes')).toBeNull();
     expect(isoDurationToMinutes('')).toBeNull();
+  });
+});
+
+describe('isPrivateOrLocalUrl', () => {
+  it('rejects short-form private IPs that Linux would resolve', () => {
+    expect(isPrivateOrLocalUrl('http://127.1/cover.jpg')).toBe(true);
+    expect(isPrivateOrLocalUrl('http://10.1/cover.jpg')).toBe(true);
+    expect(isPrivateOrLocalUrl('http://192.168.1/cover.jpg')).toBe(true);
+    expect(isPrivateOrLocalUrl('https://cdn.example.com/og.jpg')).toBe(false);
   });
 });
 

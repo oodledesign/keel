@@ -422,6 +422,12 @@ export function isPrivateOrLocalUrl(url: string): boolean {
       }
     }
 
+    // Short-form dotted IPs (127.1, 10.1, 192.168.1) resolve to private
+    // ranges on Linux and must not be fetched.
+    if (/^\d+(\.\d+){0,2}$/.test(host)) {
+      return true;
+    }
+
     // Dotted-decimal IPv4
     if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
       const [a, b] = host.split('.').map(Number);

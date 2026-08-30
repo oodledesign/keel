@@ -239,6 +239,9 @@ function RecipeForm({
         toast.error(result.error);
         return;
       }
+      if (result.data.coverWarning) {
+        toast.warning(result.data.coverWarning);
+      }
       toast.success(recipe ? 'Recipe updated' : 'Recipe added');
       onClose();
       onSaved();
@@ -290,6 +293,7 @@ function RecipeForm({
           <Label htmlFor="recipe-source-url">Source link</Label>
           <Input
             id="recipe-source-url"
+            data-test="recipe-source-url"
             type="url"
             inputMode="url"
             value={form.source_url}
@@ -298,7 +302,7 @@ function RecipeForm({
             }
             placeholder="https://… (optional)"
           />
-          {form.source_url.trim() ? (
+          {/^https?:\/\//i.test(form.source_url.trim()) ? (
             <a
               href={form.source_url.trim()}
               target="_blank"
@@ -585,6 +589,7 @@ function RecipeCoverFields({
           type="button"
           variant="outline"
           size="sm"
+          data-test="recipe-cover-upload"
           onClick={() => fileInputRef.current?.click()}
         >
           <ImageIcon className="mr-1.5 h-3.5 w-3.5" />
@@ -595,6 +600,7 @@ function RecipeCoverFields({
             type="button"
             variant="ghost"
             size="sm"
+            data-test="recipe-cover-skip"
             onClick={() => onChange({ image_url: null, image_data: null })}
           >
             <X className="mr-1.5 h-3.5 w-3.5" />

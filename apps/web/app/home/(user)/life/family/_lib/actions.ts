@@ -256,49 +256,58 @@ async function resolveRecipeCoverUrl(input: {
   recipeId: string;
   existingImageUrl: string | null;
   input: RecipeInput;
-}): Promise<string | null> {
+}): Promise<{ imageUrl: string | null; warning: string | null }> {
   const uploaded = input.input.image_data
     ? parseRecipeImageDataUrl(input.input.image_data)
     : null;
 
   if (uploaded) {
-    return storeRecipeCoverBytes({
+    const imageUrl = await storeRecipeCoverBytes({
       ownerAccountId: input.ownerAccountId,
       recipeId: input.recipeId,
       existingImageUrl: input.existingImageUrl,
       bytes: uploaded.bytes,
       contentType: uploaded.contentType,
     });
+    return { imageUrl, warning: null };
   }
 
   const remote = input.input.remote_image_url ?? null;
   if (remote) {
     const fetched = await fetchPublicRecipeImage(remote);
-    if (!fetched) return input.existingImageUrl;
-    return storeRecipeCoverBytes({
+    if (!fetched) {
+      return {
+        imageUrl: input.existingImageUrl,
+        warning: input.existingImageUrl
+          ? 'Could not copy the new cover photo — kept the previous one.'
+          : 'Could not copy the cover photo — recipe saved without one.',
+      };
+    }
+    const imageUrl = await storeRecipeCoverBytes({
       ownerAccountId: input.ownerAccountId,
       recipeId: input.recipeId,
       existingImageUrl: input.existingImageUrl,
       bytes: fetched.bytes,
       contentType: fetched.contentType,
     });
+    return { imageUrl, warning: null };
   }
 
   const keep = input.input.image_url ?? null;
   if (keep && isStoredRecipeImageUrl(keep)) {
-    return keep;
+    return { imageUrl: keep, warning: null };
   }
 
   if (input.existingImageUrl) {
     await removeRecipeCover(input.existingImageUrl);
   }
 
-  return null;
+  return { imageUrl: null, warning: null };
 }
 
 export async function upsertRecipeAction(
   input: RecipeInput,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; coverWarning?: string | null }>> {
   try {
     const parsed = RecipeInputSchema.parse(input);
     const client = getSupabaseServerClient();
@@ -371,14 +380,18 @@ export async function upsertRecipeAction(
       recipeId = (data as { id: string }).id;
     }
 
+    let coverWarning: string | null = null;
+
     try {
-      const nextImageUrl = await resolveRecipeCoverUrl({
+      const cover = await resolveRecipeCoverUrl({
         ownerAccountId:
           scope.kind === 'workspace' ? scope.accountId : scope.userId,
         recipeId,
         existingImageUrl: previousImageUrl,
         input: parsed,
       });
+      coverWarning = cover.warning;
+      const nextImageUrl = cover.imageUrl;
 
       if (nextImageUrl !== previousImageUrl) {
         const { error: imageError } = await client
@@ -401,6 +414,9 @@ export async function upsertRecipeAction(
         '[family-meal] cover persist failed:',
         coverError instanceof Error ? coverError.message : coverError,
       );
+      coverWarning =
+        coverWarning ??
+        'Could not save the cover photo — recipe saved without a new one.';
     }
 
     try {
@@ -460,7 +476,7 @@ export async function upsertRecipeAction(
     }
 
     revalidateRecipePaths(scope, recipeId);
-    return ok({ id: recipeId });
+    return ok({ id: recipeId, coverWarning });
   } catch (err) {
     return fail(err);
   }

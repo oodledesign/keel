@@ -9,7 +9,7 @@ export function RecipeSourceLink({
   url: string | null | undefined;
   className?: string;
 }) {
-  if (!url) return null;
+  if (!url || !/^https?:\/\//i.test(url)) return null;
 
   return (
     <a

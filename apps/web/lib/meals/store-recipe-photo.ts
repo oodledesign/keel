@@ -1,10 +1,12 @@
 import 'server-only';
 
+import { nanoid } from 'nanoid';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
-const AVATARS_BUCKET = 'account_image';
+const ACCOUNT_IMAGE_BUCKET = 'account_image';
 
 export function isStoredRecipeImageUrl(url: string | null | undefined) {
   return Boolean(url?.includes('/account_image/'));
@@ -37,7 +39,7 @@ export async function storeRecipeCoverBytes(input: {
   contentType: string;
 }): Promise<string> {
   const admin = getSupabaseServerAdminClient();
-  const bucket = admin.storage.from(AVATARS_BUCKET);
+  const bucket = admin.storage.from(ACCOUNT_IMAGE_BUCKET);
   const existingPath = storagePathFromRecipeImageUrl(input.existingImageUrl);
   const nextPath = recipeCoverPath(input.ownerAccountId, input.recipeId);
 
@@ -63,7 +65,6 @@ export async function storeRecipeCoverBytes(input: {
     throw new Error('Upload succeeded but public URL could not be generated.');
   }
 
-  const { nanoid } = await import('nanoid');
   return `${publicUrl}?v=${nanoid(16)}`;
 }
 
@@ -72,5 +73,5 @@ export async function removeRecipeCover(existingImageUrl: string | null) {
   if (!existingPath) return;
 
   const admin = getSupabaseServerAdminClient();
-  await admin.storage.from(AVATARS_BUCKET).remove([existingPath]);
+  await admin.storage.from(ACCOUNT_IMAGE_BUCKET).remove([existingPath]);
 }
