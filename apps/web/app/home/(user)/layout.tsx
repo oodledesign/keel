@@ -1,4 +1,4 @@
-import { use } from 'react';
+import { Suspense, use } from 'react';
 
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { cookies } from 'next/headers';
@@ -42,6 +42,7 @@ import {
 } from '~/lib/server/workspace-setup-guard';
 import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
 
+import { FeedflowQueryErrorToast } from '../_components/feedflow-query-error-toast';
 import { HomeMenuNavigation } from './_components/home-menu-navigation';
 import { HomeMobileNavigation } from './_components/home-mobile-navigation';
 import { HomeSidebar } from './_components/home-sidebar';
@@ -66,6 +67,9 @@ function UserHomeLayout({ children }: React.PropsWithChildren) {
     return (
       <>
         <AdminImpersonationExitHost />
+        <Suspense fallback={null}>
+          <FeedflowQueryErrorToast />
+        </Suspense>
         <SidebarLayout layoutState={state}>{children}</SidebarLayout>
       </>
     );
@@ -74,6 +78,9 @@ function UserHomeLayout({ children }: React.PropsWithChildren) {
   return (
     <>
       <AdminImpersonationExitHost />
+      <Suspense fallback={null}>
+        <FeedflowQueryErrorToast />
+      </Suspense>
       <HeaderLayout>{children}</HeaderLayout>
     </>
   );

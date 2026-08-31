@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
@@ -71,11 +70,9 @@ export function FeedflowSocialPanel(props: {
       <div className="flex flex-wrap gap-2">
         {props.instagramEnabled ? (
           <Button asChild variant="default" size="sm">
-            <Link
-              href={oauthStartUrl('instagram', props.accountId, returnPath)}
-            >
+            <a href={oauthStartUrl('instagram', props.accountId, returnPath)}>
               Connect Instagram
-            </Link>
+            </a>
           </Button>
         ) : (
           <p className="text-muted-foreground text-sm">
@@ -90,9 +87,9 @@ export function FeedflowSocialPanel(props: {
         )}
         {props.tiktokEnabled ? (
           <Button asChild variant="secondary" size="sm">
-            <Link href={oauthStartUrl('tiktok', props.accountId, returnPath)}>
+            <a href={oauthStartUrl('tiktok', props.accountId, returnPath)}>
               Connect TikTok
-            </Link>
+            </a>
           </Button>
         ) : (
           <p className="text-muted-foreground text-sm">
@@ -102,9 +99,9 @@ export function FeedflowSocialPanel(props: {
         )}
         {props.googleConfigured ? (
           <Button asChild variant="outline" size="sm">
-            <Link href={oauthStartUrl('google', props.accountId, returnPath)}>
+            <a href={oauthStartUrl('google', props.accountId, returnPath)}>
               Google Business (preview)
-            </Link>
+            </a>
           </Button>
         ) : null}
       </div>
