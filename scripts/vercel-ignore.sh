@@ -13,7 +13,7 @@
 # Dashboard equivalent (only needed if vercel.json is not honored):
 #   Settings → Git → Ignored Build Step → Custom, same one-liner as above.
 #
-# Optional overrides (local testing):
+# Local test overrides only (never set these in the Vercel project):
 #   VERCEL_IGNORE_FILES=$'apps/docs/foo.md' bash scripts/vercel-ignore.sh web
 #   VERCEL_IGNORE_COMPARE='HEAD^ HEAD' bash scripts/vercel-ignore.sh docs
 
@@ -119,6 +119,7 @@ SITES_PATHS=(
   "packages/site-blocks-core/"
   "packages/site-blocks-workspaces/"
   "tooling/typescript/"
+  "patches/"
   "${WORKSPACE_PATHS[@]}"
 )
 
@@ -145,6 +146,9 @@ first_match() {
 
 case "$APP" in
 web)
+  # Conservative: skip only when every changed path is docs/sites. Production
+  # main is included — a docs-only commit should not redeploy ozer — but any
+  # uncertainty (git failure, mixed/unknown paths) already proceeded above.
   if all_match "${WEB_SKIP_ONLY[@]}"; then
     skip "diff is only apps/docs and/or apps/sites"
   fi
@@ -164,8 +168,4 @@ sites)
   ;;
 esac
 
-# Never skip if control flow is wrong — especially a production web deploy.
-if [[ "$APP" == "web" && ( "${VERCEL_ENV:-}" == "production" || "${VERCEL_GIT_COMMIT_REF:-}" == "main" ) ]]; then
-  proceed "fallback: build production web rather than skip"
-fi
 proceed "fallback: unsure, building"

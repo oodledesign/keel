@@ -20,7 +20,7 @@ This does **not** cancel builds that are already queued. Only new deployments af
 |---------|------------------------------|-----------|
 | **ozer** | `apps/web`, `packages/`, `pnpm-lock.yaml`, root workspace config (`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `.npmrc`), or anything else outside docs/sites | Diff is **only** `apps/docs` and/or `apps/sites` |
 | **ozer-docs** | `apps/docs`, `tooling/typescript`, `patches/`, lockfile, or root workspace config | Only web / sites / other unrelated paths |
-| **ozer-sites** | `apps/sites`, `packages/site-blocks-core`, `packages/site-blocks-workspaces`, `tooling/typescript`, lockfile, or root workspace config | Only web / docs / other unrelated paths |
+| **ozer-sites** | `apps/sites`, `packages/site-blocks-core`, `packages/site-blocks-workspaces`, `tooling/typescript`, `patches/`, lockfile, or root workspace config | Only web / docs / other unrelated paths |
 
 If `git diff` fails (first commit, missing `HEAD^`, shallow clone), the script **proceeds** rather than skip. Production `main` deploys of **ozer** also proceed if the script cannot be sure it is safe to skip.
 
