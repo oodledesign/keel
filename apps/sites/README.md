@@ -12,6 +12,8 @@ Public renderer for **Publish to Ozer Sites** (Prompts F1 / F2).
 
 Project: **`ozer-sites`** (team `oodle-designs-projects`), Git root `apps/sites`, same `oodledesign/keel` repo as `ozer`.
 
+`ignoreCommand` skips ozer-sites when the push did not touch this app or `@kit/site-blocks-*`. See [vercel-ignore-builds.md](../../docs/vercel-ignore-builds.md). Dashboard fallback: **Settings → Git → Ignored Build Step** → `bash ../../scripts/vercel-ignore.sh sites`.
+
 Env (already set on the project for production / preview / development):
 
 - `NEXT_PUBLIC_SUPABASE_URL`

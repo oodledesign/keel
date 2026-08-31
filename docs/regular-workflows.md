@@ -55,6 +55,8 @@ SUPABASE_PROJECT_REF=oteonnhmnqqfllesxnih SUPABASE_DB_PASSWORD=your_password pnp
 
 **Automatic:** Pushing to the branch connected to your Vercel project (e.g. `main` or `staging`) triggers a new deployment. No extra command.
 
+Each of **ozer**, **ozer-docs**, and **ozer-sites** skips the build when that app’s tree did not change. See [vercel-ignore-builds.md](./vercel-ignore-builds.md). Already-queued deployments are not cancelled.
+
 **Manual redeploy (same commit):**
 
 1. Vercel Dashboard → your project → **Deployments**.

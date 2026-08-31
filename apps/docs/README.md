@@ -36,6 +36,8 @@ Legacy flat URLs (e.g. `/getting-started`) permanently redirect to `/work/...`.
 2. Attach the domain **`docs.ozer.so`**.
 3. On the marketing/`web` project, set `NEXT_PUBLIC_DOCS_URL=https://docs.ozer.so` so `/docs` redirects and in-app links point here.
 
+`ignoreCommand` skips ozer-docs when the push did not touch docs (or its workspace inputs). See [vercel-ignore-builds.md](../../docs/vercel-ignore-builds.md). Dashboard fallback: **Settings → Git → Ignored Build Step** → `bash ../../scripts/vercel-ignore.sh docs`.
+
 Local default for that env var is `http://localhost:3012`.
 
 ## Notes
