@@ -5,21 +5,23 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { assertFeedflowWriteAccess } from '~/lib/feedflow/assert-feedflow-write';
 import { getOptionalTikTok } from '~/lib/feedflow/env';
+import {
+  feedflowAppUrl,
+  feedflowErrorRedirect,
+  safeFeedflowReturnPath,
+} from '~/lib/feedflow/oauth-redirect';
 import { signFeedflowOAuthState } from '~/lib/feedflow/oauth-state';
 import { denyUnlessFeedflowAddon } from '~/lib/feedflow/require-feedflow-api-access';
 import { buildTikTokAuthUrl } from '~/lib/feedflow/tiktok';
 
 export const dynamic = 'force-dynamic';
 
-function absoluteUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
-}
-
 export async function GET(request: NextRequest) {
   const accountId = request.nextUrl.searchParams.get('account_id');
   const returnParam = request.nextUrl.searchParams.get('return');
   const clientIdParam = request.nextUrl.searchParams.get('client_id');
+  const earlyReturn =
+    safeFeedflowReturnPath(returnParam) ?? pathsConfig.app.home;
 
   if (!accountId?.match(/^[0-9a-f-]{36}$/i)) {
     return NextResponse.json(
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       request.nextUrl.pathname + request.nextUrl.search,
     );
     return NextResponse.redirect(
-      absoluteUrl(`${pathsConfig.auth.signIn}?next=${next}`),
+      feedflowAppUrl(request, `${pathsConfig.auth.signIn}?next=${next}`),
     );
   }
 
@@ -47,27 +49,23 @@ export async function GET(request: NextRequest) {
     ({ slug } = await assertFeedflowWriteAccess(accountId, user.id));
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Forbidden';
-    return NextResponse.redirect(
-      absoluteUrl(
-        `${pathsConfig.app.home}?feedflow_error=${encodeURIComponent(msg)}`,
-      ),
-    );
+    return feedflowErrorRedirect(request, earlyReturn, msg);
   }
 
   const addonDenied = await denyUnlessFeedflowAddon(client, user.id, accountId);
   if (addonDenied) {
-    return NextResponse.redirect(
-      absoluteUrl(
-        `${pathsConfig.app.home}?feedflow_error=${encodeURIComponent('Feedflow add-on required')}`,
-      ),
+    return feedflowErrorRedirect(
+      request,
+      earlyReturn,
+      'Feedflow add-on required',
     );
   }
 
   if (!getOptionalTikTok()) {
-    return NextResponse.redirect(
-      absoluteUrl(
-        `${pathsConfig.app.home}?feedflow_error=${encodeURIComponent('TikTok is not configured')}`,
-      ),
+    return feedflowErrorRedirect(
+      request,
+      earlyReturn,
+      'TikTok is not configured',
     );
   }
 
@@ -76,30 +74,26 @@ export async function GET(request: NextRequest) {
       '[account]',
       slug,
     );
-  const returnPath =
-    returnParam && returnParam.startsWith('/') ? returnParam : defaultReturn;
+  const returnPath = safeFeedflowReturnPath(returnParam) ?? defaultReturn;
 
   const clientUuid =
     clientIdParam && /^[0-9a-f-]{36}$/i.test(clientIdParam)
       ? clientIdParam
       : null;
 
-  const state = signFeedflowOAuthState({
-    provider: 'tiktok',
-    accountId,
-    userId: user.id,
-    exp: Date.now() + 10 * 60 * 1000,
-    returnPath,
-    clientId: clientUuid,
-  });
-
   try {
+    const state = signFeedflowOAuthState({
+      provider: 'tiktok',
+      accountId,
+      userId: user.id,
+      exp: Date.now() + 10 * 60 * 1000,
+      returnPath,
+      clientId: clientUuid,
+    });
     const url = buildTikTokAuthUrl(state);
     return NextResponse.redirect(url);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'OAuth start failed';
-    return NextResponse.redirect(
-      absoluteUrl(`${returnPath}?feedflow_error=${encodeURIComponent(msg)}`),
-    );
+    return feedflowErrorRedirect(request, returnPath, msg);
   }
 }

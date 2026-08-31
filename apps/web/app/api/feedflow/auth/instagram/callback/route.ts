@@ -9,16 +9,16 @@ import {
   exchangeLongLivedInstagram,
   fetchInstagramBusinessAccount,
 } from '~/lib/feedflow/instagram';
+import {
+  feedflowAppUrl,
+  feedflowErrorRedirect,
+  safeFeedflowReturnPath,
+} from '~/lib/feedflow/oauth-redirect';
 import { verifyFeedflowOAuthState } from '~/lib/feedflow/oauth-state';
 import { ingestInstagramAccount } from '~/lib/feedflow/posts';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const dynamic = 'force-dynamic';
-
-function absoluteUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
-}
 
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
@@ -33,36 +33,43 @@ export async function GET(request: NextRequest) {
   } = await client.auth.getUser();
 
   if (!user) {
-    return NextResponse.redirect(absoluteUrl(pathsConfig.auth.signIn));
+    return NextResponse.redirect(
+      feedflowAppUrl(request, pathsConfig.auth.signIn),
+    );
   }
 
-  const payload = stateToken ? verifyFeedflowOAuthState(stateToken) : null;
+  let payload = null;
+  try {
+    payload = stateToken ? verifyFeedflowOAuthState(stateToken) : null;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Invalid OAuth state';
+    return feedflowErrorRedirect(request, pathsConfig.app.home, msg);
+  }
 
-  const fallback = absoluteUrl(pathsConfig.app.home);
+  const returnPath =
+    safeFeedflowReturnPath(payload?.returnPath) ?? pathsConfig.app.home;
 
   if (
     !payload ||
     payload.userId !== user.id ||
     payload.provider !== 'instagram'
   ) {
-    return NextResponse.redirect(
-      `${fallback}?feedflow_error=${encodeURIComponent('Invalid or expired OAuth state')}`,
+    return feedflowErrorRedirect(
+      request,
+      returnPath,
+      'Invalid or expired OAuth state',
     );
   }
 
-  const returnBase = payload.returnPath.startsWith('/')
-    ? absoluteUrl(payload.returnPath)
-    : fallback;
-
   if (oauthError) {
-    return NextResponse.redirect(
-      `${returnBase}?feedflow_error=${encodeURIComponent(oauthError)}`,
-    );
+    return feedflowErrorRedirect(request, returnPath, oauthError);
   }
 
   if (!code) {
-    return NextResponse.redirect(
-      `${returnBase}?feedflow_error=${encodeURIComponent('Missing authorization code')}`,
+    return feedflowErrorRedirect(
+      request,
+      returnPath,
+      'Missing authorization code',
     );
   }
 
@@ -119,10 +126,10 @@ export async function GET(request: NextRequest) {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Instagram connect failed';
-    return NextResponse.redirect(
-      `${returnBase}?feedflow_error=${encodeURIComponent(msg)}`,
-    );
+    return feedflowErrorRedirect(request, returnPath, msg);
   }
 
-  return NextResponse.redirect(`${returnBase}?feedflow_connected=instagram`);
+  const done = new URL(returnPath, request.nextUrl.origin);
+  done.searchParams.set('feedflow_connected', 'instagram');
+  return NextResponse.redirect(done);
 }

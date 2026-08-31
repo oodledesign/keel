@@ -4,8 +4,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import { canUseAddon } from '~/lib/billing/entitlements';
 
+/**
+ * Same gate as the Feedflow layout: workspace membership + addon access.
+ * Super-admin and admin grants count via {@link canUseAddon}. Do not require
+ * `account_module_settings.feedflow` — that row is often still off when Dan
+ * tests via super-admin bypass, and the previous check bounced Connect to /app.
+ */
 export async function assertFeedflowWriteAccess(
   accountId: string,
   userId: string,
@@ -26,17 +32,14 @@ export async function assertFeedflowWriteAccess(
     throw new Error('Not a member of this account');
   }
 
-  const { data: rows } = await client
-    .from('account_module_settings')
-    .select('module_key, enabled')
-    .eq('account_id', accountId);
-
-  const moduleSettings = Object.fromEntries(
-    (rows ?? []).map((row) => [row.module_key, row.enabled]),
-  ) as Record<string, boolean>;
-
-  if (!isWorkModuleEnabled(moduleSettings, 'feedflow')) {
-    throw new Error('Feedflow is disabled for this account');
+  const allowed = await canUseAddon(
+    client,
+    userId,
+    accountId,
+    'addon_feedflow',
+  );
+  if (!allowed) {
+    throw new Error('Feedflow add-on required');
   }
 
   const { data: account, error } = await client
