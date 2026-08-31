@@ -23,6 +23,7 @@ import {
 } from '~/lib/commercial/listing-events';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
+  persistPropertyHivePublicationError,
   pushListingToPropertyHive,
   unpublishListingFromPropertyHive,
 } from '~/lib/commercial/property-hive-sync';
@@ -62,15 +63,37 @@ async function syncPropertyHiveOnStatusChange(input: {
     try {
       await pushListingToPropertyHive(input.accountId, input.listingId);
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Property Hive sync failed';
       logger.error(
         {
           name: 'commercial.listings.pushPropertyHive',
           accountId: input.accountId,
           listingId: input.listingId,
-          error: err instanceof Error ? err.message : String(err),
+          error: message,
         },
         'Property Hive push failed after status→marketing',
       );
+      try {
+        await persistPropertyHivePublicationError({
+          accountId: input.accountId,
+          listingId: input.listingId,
+          lastError: message,
+        });
+      } catch (persistErr) {
+        logger.error(
+          {
+            name: 'commercial.listings.persistPropertyHiveError',
+            accountId: input.accountId,
+            listingId: input.listingId,
+            error:
+              persistErr instanceof Error
+                ? persistErr.message
+                : String(persistErr),
+          },
+          'Could not persist Property Hive push error on the portal card',
+        );
+      }
     }
     return;
   }
@@ -79,15 +102,37 @@ async function syncPropertyHiveOnStatusChange(input: {
     try {
       await unpublishListingFromPropertyHive(input.accountId, input.listingId);
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Property Hive unpublish failed';
       logger.error(
         {
           name: 'commercial.listings.unpublishPropertyHive',
           accountId: input.accountId,
           listingId: input.listingId,
-          error: err instanceof Error ? err.message : String(err),
+          error: message,
         },
         'Property Hive unpublish failed after off-market status',
       );
+      try {
+        await persistPropertyHivePublicationError({
+          accountId: input.accountId,
+          listingId: input.listingId,
+          lastError: message,
+        });
+      } catch (persistErr) {
+        logger.error(
+          {
+            name: 'commercial.listings.persistPropertyHiveError',
+            accountId: input.accountId,
+            listingId: input.listingId,
+            error:
+              persistErr instanceof Error
+                ? persistErr.message
+                : String(persistErr),
+          },
+          'Could not persist Property Hive unpublish error on the portal card',
+        );
+      }
     }
   }
 }

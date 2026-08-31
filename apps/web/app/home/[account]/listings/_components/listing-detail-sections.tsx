@@ -1202,11 +1202,13 @@ export function ListingManagementSection({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <ListingPortalSyncCard
-        listing={listing}
-        publications={publications}
-        accountId={accountId}
-      />
+      <div data-tour="sop-listing-portal">
+        <ListingPortalSyncCard
+          listing={listing}
+          publications={publications}
+          accountId={accountId}
+        />
+      </div>
 
       <Card className={workspacePanelCard}>
         <CardHeader>

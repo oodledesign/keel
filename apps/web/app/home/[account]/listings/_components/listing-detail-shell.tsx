@@ -447,15 +447,6 @@ export function ListingDetailShell({
               <div key={item.key} className="space-y-0.5">
                 <Link
                   href={href}
-                  data-tour={
-                    item.key === 'marketing'
-                      ? 'sop-listing-marketing'
-                      : item.key === 'media'
-                        ? 'sop-listing-media'
-                        : item.key === 'management'
-                          ? 'sop-listing-portal'
-                          : undefined
-                  }
                   className={cn(
                     'inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     active

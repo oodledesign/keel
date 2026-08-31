@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { isBlockedLogoHostname } from '~/lib/clients/client-logo-icons';
@@ -93,6 +94,10 @@ type PublicationStatus = 'draft' | 'published' | 'unpublished' | 'error';
 /** Untyped until `pnpm supabase:web:typegen` includes commercial_* tables. */
 function db(): SupabaseClient {
   return getSupabaseServerClient() as unknown as SupabaseClient;
+}
+
+function adminDb(): SupabaseClient {
+  return getSupabaseServerAdminClient() as unknown as SupabaseClient;
 }
 
 function normalizeSiteUrl(siteUrl: string): string {
@@ -283,7 +288,7 @@ async function loadListing(
 async function getExistingPublication(accountId: string, listingId: string) {
   const { data } = await db()
     .from('commercial_portal_publications')
-    .select('id, external_id, status')
+    .select('id, external_id, external_url, status')
     .eq('account_id', accountId)
     .eq('listing_id', listingId)
     .eq('portal', 'property_hive')
@@ -292,6 +297,7 @@ async function getExistingPublication(accountId: string, listingId: string) {
   return data as {
     id: string;
     external_id: string | null;
+    external_url: string | null;
     status: string;
   } | null;
 }
@@ -306,25 +312,68 @@ async function upsertPublication(input: {
   metadata?: Record<string, unknown>;
 }) {
   const now = new Date().toISOString();
+  const payload = {
+    account_id: input.accountId,
+    listing_id: input.listingId,
+    portal: 'property_hive',
+    external_id: input.externalId ?? null,
+    external_url: input.externalUrl ?? null,
+    status: input.status,
+    last_sync_at: now,
+    last_error: input.lastError ?? null,
+    metadata: input.metadata ?? {},
+    updated_at: now,
+  };
+
   const { error } = await db()
     .from('commercial_portal_publications')
-    .upsert(
-      {
-        account_id: input.accountId,
-        listing_id: input.listingId,
-        portal: 'property_hive',
-        external_id: input.externalId ?? null,
-        external_url: input.externalUrl ?? null,
-        status: input.status,
-        last_sync_at: now,
-        last_error: input.lastError ?? null,
-        metadata: input.metadata ?? {},
-        updated_at: now,
-      },
-      { onConflict: 'listing_id,portal' },
-    );
+    .upsert(payload, { onConflict: 'listing_id,portal' });
 
-  if (error) throw new Error(error.message);
+  if (!error) return;
+
+  const adminWrite = await adminDb()
+    .from('commercial_portal_publications')
+    .upsert(payload, { onConflict: 'listing_id,portal' });
+
+  if (adminWrite.error) throw new Error(adminWrite.error.message);
+}
+
+/**
+ * Persist a Property Hive failure on the Management portal card even when the
+ * live push already threw (or RLS blocked the session upsert).
+ */
+export async function persistPropertyHivePublicationError(input: {
+  accountId: string;
+  listingId: string;
+  lastError: string;
+}): Promise<void> {
+  const existing = await getExistingPublication(input.accountId, input.listingId);
+  const now = new Date().toISOString();
+  const payload = {
+    account_id: input.accountId,
+    listing_id: input.listingId,
+    portal: 'property_hive',
+    external_id: existing?.external_id ?? null,
+    external_url: existing?.external_url ?? null,
+    status: 'error' as const,
+    last_sync_at: now,
+    last_error: input.lastError,
+    updated_at: now,
+  };
+
+  const sessionWrite = await db()
+    .from('commercial_portal_publications')
+    .upsert(payload, { onConflict: 'listing_id,portal' });
+
+  if (!sessionWrite.error) return;
+
+  const adminWrite = await adminDb()
+    .from('commercial_portal_publications')
+    .upsert(payload, { onConflict: 'listing_id,portal' });
+
+  if (adminWrite.error) {
+    throw new Error(adminWrite.error.message);
+  }
 }
 
 function basicAuthHeader(username: string, applicationPassword: string) {

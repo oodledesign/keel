@@ -251,13 +251,13 @@ function ListingFormFields({
         />
         <div className="space-y-1.5">
           <Label className="text-[var(--workspace-shell-text)]/70">
-            Name *
+            {isPage ? 'Name' : 'Name *'}
           </Label>
           <Input
             value={form.name}
             onChange={(e) => field('name', e.target.value)}
             placeholder="e.g. 10 Example Street – Ground Floor"
-            required
+            required={!isPage}
             className={inputClass}
           />
         </div>
