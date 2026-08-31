@@ -32,6 +32,7 @@ import {
 } from '~/lib/server/workspace-setup-guard';
 import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
 
+import { FeedflowQueryErrorToast } from '../_components/feedflow-query-error-toast';
 import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
 import { BillingAccessBannerHost } from './_components/billing-access-banner-host';
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
@@ -84,6 +85,9 @@ function TeamWorkspaceLayout({ children, params }: TeamWorkspaceLayoutProps) {
     return (
       <>
         <AdminImpersonationExitHost />
+        <Suspense fallback={null}>
+          <FeedflowQueryErrorToast />
+        </Suspense>
         <SidebarLayout account={account} layoutState={state}>
           {children}
         </SidebarLayout>
@@ -94,6 +98,9 @@ function TeamWorkspaceLayout({ children, params }: TeamWorkspaceLayoutProps) {
   return (
     <>
       <AdminImpersonationExitHost />
+      <Suspense fallback={null}>
+        <FeedflowQueryErrorToast />
+      </Suspense>
       <HeaderLayout account={account} layoutState={state}>
         {children}
       </HeaderLayout>

@@ -27,6 +27,7 @@ import {
 } from '~/lib/app-subdomain-host';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import {
+  appendMissingSearchParams,
   isExplicitPersonalHomeRequest,
   isPersonalDashboardRoot,
 } from '~/lib/dashboard-shortcuts/personal-home-url';
@@ -299,7 +300,12 @@ async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
       const landingPath = await getUserDefaultLandingPath(supabase, user.id);
 
       if (landingPath !== pathsConfig.app.home) {
-        return NextResponse.redirect(new URL(landingPath, origin).href);
+        const target = appendMissingSearchParams(
+          new URL(landingPath, origin),
+          req.nextUrl.searchParams,
+          { prefix: 'feedflow_' },
+        );
+        return NextResponse.redirect(target.href);
       }
     } catch {
       // Fall through to personal home.
