@@ -208,10 +208,10 @@ export function OzerWorkspaceCheckoutForm(params: {
               ) : (
                 <>
                   <li>
-                    Starter: 1 project guest per seat · Pro:{' '}
+                    Starter: 1 project guest per seat, same AI credit pool. Pro:{' '}
                     {maxProjectGuestsForBillableSeats(billableSeats)} guests and{' '}
                     {aiCreditsForBillableSeats(billableSeats).toLocaleString()}{' '}
-                    shared AI credits
+                    shared AI credits (drafts, coaching, summaries)
                   </li>
                   <li>Unlimited client portal access</li>
                 </>

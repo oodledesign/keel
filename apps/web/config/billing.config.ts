@@ -11,6 +11,13 @@ const provider = BillingProviderSchema.parse(
 
 const TRIAL_DAYS = 14;
 
+/**
+ * Business AI is one shared workspace pool (Free 200; Pro scales with seats).
+ * Email drafts, summaries, coaching, and auto tasks draw from that pool.
+ * `client_request_credit_allowance` is unused for platform pricing — do not
+ * invent Starter/Pro request-credit numbers on plan cards or marketing.
+ */
+
 export default createBillingSchema({
   provider,
   products: [
@@ -193,7 +200,7 @@ export default createBillingSchema({
         '£29/mo for seat 1, then £22 per extra seat',
         'Unlimited clients, invoices, tasks & scheduling',
         'Shared AI credits that scale with seats',
-        'Planner, email assistant, meeting coaching & auto tasks',
+        'Planner, email assistant, coaching & auto tasks (same AI pool)',
         'Meeting recording & transcription — unlimited',
         'Second brain indexes meeting transcripts',
         '3 project guests per billable seat',

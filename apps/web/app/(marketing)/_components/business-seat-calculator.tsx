@@ -255,9 +255,12 @@ export function BusinessSeatCalculator({
 
           <ul className="space-y-2 text-sm text-[var(--ozer-plum-700)]">
             {aiCredits != null ? (
-              <li>{aiCredits.toLocaleString()} shared AI credits / month</li>
+              <li>
+                {aiCredits.toLocaleString()} shared AI credits / month — drafts,
+                summaries, and coaching
+              </li>
             ) : (
-              <li>Clients, projects, invoices, and pipeline</li>
+              <li>Shared AI credit pool — same workspace meter as Pro</li>
             )}
             <li>
               {projectGuests} project guest

@@ -148,7 +148,7 @@ export function pricingFaqs() {
     },
     {
       question: 'What happens when the team grows?',
-      answer: `Starter is ${formatGbp(starter?.monthlyPriceGbp ?? 14)} for seat 1, then £9 for every extra seat. Pro is ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for every extra seat. Shared AI credits and project guests scale with the seats you buy on Pro. Client portals stay unlimited.`,
+      answer: `Starter is ${formatGbp(starter?.monthlyPriceGbp ?? 14)} for seat 1, then £9 for every extra seat. Pro is ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for every extra seat. One shared AI credit pool covers drafts, summaries, coaching, and other model use — it scales with seats on Pro. Client portals stay unlimited.`,
     },
     {
       question: 'Is there a free trial?',

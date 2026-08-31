@@ -107,7 +107,10 @@ export function BusinessSeatQuantityCard({
         </div>
 
         <ul className="text-muted-foreground space-y-1 text-sm">
-          <li>{credits.toLocaleString()} shared AI credits / month</li>
+          <li>
+            {credits.toLocaleString()} shared AI credits / month — drafts,
+            summaries, and coaching
+          </li>
           <li>
             {guests} project guest{guests === 1 ? '' : 's'}
           </li>

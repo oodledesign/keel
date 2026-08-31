@@ -57,7 +57,8 @@ export const PORTAL_STORAGE_BYTES = {
 
 /**
  * Map catalog limits → `account_plan_limits` columns for upserts.
- * `clientRequestCreditAllowance` stays NULL when unset (= zero credits later).
+ * `clientRequestCreditAllowance` stays NULL — unused for platform pricing.
+ * Businesses manage their own client-request library; do not invent a quota.
  */
 export function accountPlanLimitColumnsFromCatalog(
   limits: OzerPlanLimits,
