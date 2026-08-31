@@ -303,6 +303,7 @@ async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
         const target = appendMissingSearchParams(
           new URL(landingPath, origin),
           req.nextUrl.searchParams,
+          { prefix: 'feedflow_' },
         );
         return NextResponse.redirect(target.href);
       }

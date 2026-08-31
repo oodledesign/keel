@@ -20,11 +20,7 @@ export function FeedflowQueryErrorToast() {
       return;
     }
     shown.current = error;
-    try {
-      toast.error(decodeURIComponent(error));
-    } catch {
-      toast.error(error);
-    }
+    toast.error(error);
   }, [error]);
 
   return null;

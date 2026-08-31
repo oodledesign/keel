@@ -100,8 +100,12 @@ export function rewriteHrefToWorkspaceSlug(
 export function appendMissingSearchParams(
   target: URL,
   searchParams: Pick<URLSearchParams, 'forEach'>,
+  options?: { prefix?: string },
 ): URL {
   searchParams.forEach((value, key) => {
+    if (options?.prefix && !key.startsWith(options.prefix)) {
+      return;
+    }
     if (!target.searchParams.has(key)) {
       target.searchParams.set(key, value);
     }
