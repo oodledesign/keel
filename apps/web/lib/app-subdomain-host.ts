@@ -92,6 +92,7 @@ const MARKETING_ROUTE_PREFIXES = [
   '/privacy-policy',
   '/terms-of-service',
   '/cookie-policy',
+  '/data-deletion',
   '/trust',
 ] as const;
 

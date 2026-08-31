@@ -18,6 +18,7 @@ export const ALWAYS_INDEXABLE_PATHS = [
   '/privacy-policy',
   '/terms-of-service',
   '/dpa',
+  '/data-deletion',
 ] as const;
 
 export function isAlwaysIndexablePath(pathname: string): boolean {

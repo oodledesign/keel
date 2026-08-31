@@ -42,6 +42,7 @@ const STATIC_MARKETING_PATHS: Array<{
   { path: '/terms-of-service', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/dpa', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/cookie-policy', priority: 0.3, changeFrequency: 'yearly' },
+  { path: '/data-deletion', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/trust', priority: 0.4, changeFrequency: 'monthly' },
 ];
 

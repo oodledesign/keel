@@ -36,6 +36,16 @@ describe('resolveAppSubdomainRedirect', () => {
     expect(
       resolveAppSubdomainRedirect(new URL('https://app.ozer.so/pricing')),
     ).toBe('https://www.ozer.so/pricing');
+
+    expect(
+      resolveAppSubdomainRedirect(new URL('https://app.ozer.so/data-deletion')),
+    ).toBe('https://www.ozer.so/data-deletion');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/data-deletion/status?code=abc'),
+      ),
+    ).toBe('https://www.ozer.so/data-deletion/status?code=abc');
   });
 
   it('serves brand assets on the app host without redirecting to /app', () => {

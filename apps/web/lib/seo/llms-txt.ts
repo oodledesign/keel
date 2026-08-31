@@ -61,6 +61,7 @@ export async function buildLlmsTxt(): Promise<string> {
     `- [Terms of service](${url(base, '/terms-of-service')})`,
     `- [Data Processing Agreement](${url(base, '/dpa')})`,
     `- [Cookie policy](${url(base, '/cookie-policy')})`,
+    `- [Data deletion](${url(base, '/data-deletion')})`,
     '',
     ...(contentLines.length > 0
       ? ['## Published content', ...contentLines, '']

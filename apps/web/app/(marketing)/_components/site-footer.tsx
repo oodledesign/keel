@@ -111,6 +111,7 @@ export function SiteFooter() {
         { href: '/terms-of-service', label: 'Terms of Service' },
         { href: '/trust', label: 'Security' },
         { href: '/cookie-policy', label: 'Cookie' },
+        { href: '/data-deletion', label: 'Data deletion' },
       ]}
     />
   );

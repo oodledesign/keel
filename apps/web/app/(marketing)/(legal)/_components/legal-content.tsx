@@ -67,3 +67,7 @@ export async function CookiePolicyContent() {
 export async function DpaContent() {
   return <LegalMarkdown filename="ozer-dpa.md" />;
 }
+
+export async function DataDeletionContent() {
+  return <LegalMarkdown filename="data-deletion.md" />;
+}

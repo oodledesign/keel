@@ -247,6 +247,6 @@ Primary customer data storage is in AWS EU West (Ireland). Where a sub-processor
 
 Feature-specific retention periods are stated in the sections above. Ending a subscription does not delete your workspace. On account deletion we remove customer data across our systems within 30 days (database rows are removed immediately; a scheduled job deletes remaining Storage objects at the end of that window). We email the account owner before remaining files are permanently deleted and cannot be recovered, except records we must keep for legal reasons (for example, billing records retained for 6 years for tax purposes).
 
-You may access, rectify, erase, restrict, object, or port your data, and lodge a complaint with the ICO (UK) or your local supervisory authority. Contact: privacy@ozer.so.
+You may access, rectify, erase, restrict, object, or port your data, and lodge a complaint with the ICO (UK) or your local supervisory authority. Contact: privacy@ozer.so. Step-by-step instructions for deleting your account, disconnecting Instagram / TikTok / Google, and Meta’s data-deletion callback are on our [Data deletion](/data-deletion) page.
 
 Business customers processing personal data through Ozer should also review our [Data Processing Agreement](/dpa).
