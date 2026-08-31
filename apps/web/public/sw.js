@@ -1,10 +1,11 @@
-const CACHE = 'ozer-static-v8';
+const CACHE = 'ozer-static-v9';
 const PRECACHE = [
   '/manifest.webmanifest',
   '/images/brand/pwa-icon-512.png',
   '/family-shopping-offline.html',
   '/family-shopping-offline.js',
 ];
+const SHOPPING_NAV_TIMEOUT_MS = 4000;
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
@@ -54,7 +55,9 @@ function shouldBypassServiceWorker(request, url) {
 }
 
 function isFamilyShoppingPath(pathname) {
-  const path = (pathname.split('?')[0] || pathname).replace(/\/+$/, '') || '/';
+  const path =
+    (pathname.split('?')[0] || pathname).split('#')[0].replace(/\/+$/, '') ||
+    '/';
 
   if (
     path === '/app/life/family/shopping' ||
@@ -66,27 +69,140 @@ function isFamilyShoppingPath(pathname) {
   return /^\/(app|home)\/[^/]+\/shopping$/.test(path);
 }
 
-function isShoppingDocumentRequest(request, url) {
-  if (request.method !== 'GET') return false;
-  if (request.mode !== 'navigate' && request.destination !== 'document') {
-    return false;
-  }
-  return isFamilyShoppingPath(url.pathname);
+function isNextRouterPrefetch(request, url) {
+  return (
+    url.searchParams.has('_nextRouterPrefetch') ||
+    request.headers.get('Next-Router-Prefetch') === '1'
+  );
 }
 
-async function networkFirstShoppingDocument(request) {
+function isShoppingRscRequest(request, url) {
+  if (!isFamilyShoppingPath(url.pathname)) return false;
+  return url.searchParams.has('_rsc') || request.headers.get('RSC') === '1';
+}
+
+function isShoppingDocumentRequest(request, url) {
+  if (request.method !== 'GET') return false;
+  if (!isFamilyShoppingPath(url.pathname)) return false;
+  return request.mode === 'navigate' || request.destination === 'document';
+}
+
+// Keep in sync with shopping-offline-paths.ts:
+// isFamilyShoppingPath, isShoppingOfflineInterceptRequest, shoppingDocumentHref.
+function isShoppingOfflineInterceptRequest(request, url) {
+  if (request.method !== 'GET') return false;
+  if (!isFamilyShoppingPath(url.pathname)) return false;
+  if (isNextRouterPrefetch(request, url)) return false;
+  return isShoppingDocumentRequest(request, url) || isShoppingRscRequest(request, url);
+}
+
+function shoppingDocumentHref(url) {
+  const next = new URL(url.href);
+  next.searchParams.delete('_rsc');
+  next.searchParams.delete('_nextRouterPrefetch');
+  return `${next.pathname}${next.search}${next.hash}`;
+}
+
+function fetchWithTimeout(request, ms) {
+  const isNavigate =
+    request.mode === 'navigate' || request.destination === 'document';
+
+  // Do not reconstruct document navigations — cloning can drop credentials.
+  if (isNavigate) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('timeout')), ms);
+      fetch(request)
+        .then((response) => {
+          clearTimeout(timer);
+          resolve(response);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+
+  const controller = new AbortController();
+  const incoming = request.signal;
+  if (incoming) {
+    if (incoming.aborted) {
+      controller.abort();
+    } else {
+      incoming.addEventListener('abort', () => controller.abort(), {
+        once: true,
+      });
+    }
+  }
+
+  const timer = setTimeout(() => controller.abort(), ms);
+
   try {
-    return await fetch(request);
+    return fetch(new Request(request, { signal: controller.signal })).finally(
+      () => clearTimeout(timer),
+    );
+  } catch {
+    return new Promise((resolve, reject) => {
+      fetch(request)
+        .then((response) => {
+          clearTimeout(timer);
+          resolve(response);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+}
+
+async function offlineShoppingDocument() {
+  const fallback = await caches.match('/family-shopping-offline.html');
+  if (fallback) return fallback;
+
+  return new Response('Shopping is unavailable offline.', {
+    status: 503,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}
+
+async function navigateClientToShopping(event, url) {
+  const href = shoppingDocumentHref(url);
+  const client = event.clientId
+    ? await self.clients.get(event.clientId)
+    : null;
+
+  if (client && 'navigate' in client) {
+    try {
+      await client.navigate(href);
+      return;
+    } catch {
+      // Safari may reject WindowClient.navigate; tell the page instead.
+    }
+  }
+
+  if (client) {
+    client.postMessage({ type: 'OZER_SHOPPING_OFFLINE', url: href });
+  }
+}
+
+async function networkFirstShopping(event, request, url) {
+  try {
+    const response = await fetchWithTimeout(request, SHOPPING_NAV_TIMEOUT_MS);
+    if (response && response.ok) return response;
+    if (response && response.status < 500) return response;
+    throw new Error('unavailable');
   } catch {
     // Do not cache the authenticated shopping shell. If they opened the list
     // before, IndexedDB has it; this lightweight page reads that snapshot.
-    const fallback = await caches.match('/family-shopping-offline.html');
-    if (fallback) return fallback;
+    if (isShoppingDocumentRequest(request, url)) {
+      return offlineShoppingDocument();
+    }
 
-    return new Response('Shopping is unavailable offline.', {
-      status: 503,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    });
+    // Document fallback is handled above. For RSC, navigate the tab to the
+    // shopping URL (the page-side fetch patch also location.assign's).
+    await navigateClientToShopping(event, url);
+    throw new TypeError('Failed to fetch');
   }
 }
 
@@ -96,10 +212,10 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin !== self.location.origin) return;
 
-  // Shopping only: network first, then a dedicated offline document.
-  // Everything else under /app and /home still bypasses.
-  if (isShoppingDocumentRequest(request, url)) {
-    event.respondWith(networkFirstShoppingDocument(request));
+  // Shopping only: network first (including RSC), then the offline document.
+  // Everything else under /app and /home still bypasses — do not cache the shell.
+  if (isShoppingOfflineInterceptRequest(request, url)) {
+    event.respondWith(networkFirstShopping(event, request, url));
     return;
   }
 

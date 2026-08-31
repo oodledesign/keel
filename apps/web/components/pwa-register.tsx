@@ -2,11 +2,19 @@
 
 import { useEffect } from 'react';
 
+import { installShoppingOfflineNavigation } from '~/lib/meals/shopping-offline-navigation';
+
 let reloadingForServiceWorkerUpdate = false;
 
 export function PwaRegister() {
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
+    const uninstallShoppingOffline = installShoppingOfflineNavigation();
+
+    if (!('serviceWorker' in navigator)) {
+      return () => {
+        uninstallShoppingOffline();
+      };
+    }
 
     void navigator.serviceWorker
       .register('/sw.js')
@@ -32,6 +40,7 @@ export function PwaRegister() {
     );
 
     return () => {
+      uninstallShoppingOffline();
       navigator.serviceWorker.removeEventListener(
         'controllerchange',
         onControllerChange,

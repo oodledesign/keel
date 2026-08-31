@@ -266,7 +266,7 @@ export function MealPlanPanel({
           ? 'Replaced the shopping list for this week'
           : 'Shopping list ready',
       );
-      router.push(buildShoppingPath(accountSlug, weekStart));
+      window.location.assign(buildShoppingPath(accountSlug, weekStart));
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : 'Could not generate shopping list',
