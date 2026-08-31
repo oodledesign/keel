@@ -246,7 +246,7 @@ export function FeatureLandingPage({
       ) : null}
 
       <section
-        id="early-access"
+        id="get-started"
         className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-6 pt-4 pb-20"
       >
         <div className={`${marketingPanelDeep} p-8 text-center md:p-12`}>

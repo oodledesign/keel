@@ -91,7 +91,7 @@ const FEATURE_MATRIX: Array<{
   },
   {
     feature: 'Monthly AI credits',
-    hint: 'One shared workspace pool. Pro scales with seats. No separate client-request pile.',
+    hint: 'One shared workspace pool for drafts, summaries, coaching, and other model use. Pro scales with seats.',
     lite: '200',
     starter: 'Same workspace pool',
     pro: 'From 3,000',

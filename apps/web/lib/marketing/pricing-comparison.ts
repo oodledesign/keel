@@ -115,7 +115,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Monthly AI credits',
-            hint: 'One shared workspace pool for email drafts, summaries, coaching, and other model use. Pro scales with seats (3,000 + 1,500 per extra seat). Starter uses the same pool — we do not publish a separate credit pile.',
+            hint: 'One shared workspace pool for email drafts, summaries, coaching, and other model use. Pro scales with seats (3,000 + 1,500 per extra seat). Starter uses the same pool.',
             values: v('200', 'Same workspace pool', 'From 3,000 (scales)'),
           },
         ],
