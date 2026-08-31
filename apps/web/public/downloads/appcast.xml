@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>Ozer Assistant</title>
-    <link>https://www.ozer.so/downloads/appcast.xml</link>
-    <description>Updates for Ozer Assistant</description>
-    <language>en</language>
-    <!--
-      Placeholder channel until the next notarized build.
-
-      Add an <item> with enclosure url, length, sparkle:version,
-      sparkle:shortVersionString, sparkle:minimumSystemVersion (15.0),
-      and sparkle:edSignature. Do not commit the Sparkle private key.
-
-      Enclosure URL: https://www.ozer.so/downloads/OzerAssistant-1.0.zip
-      Stable latest: https://www.ozer.so/downloads/OzerAssistant-latest.zip
-    -->
-  </channel>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Ozer Assistant</title>
+        <link>https://www.ozer.so/downloads/appcast.xml</link>
+        <description>Most recent updates to Ozer Assistant.</description>
+        <language>en</language>
+        <item>
+            <title>Version 1.0 (17)</title>
+            <link>https://www.ozer.so/downloads/OzerAssistant-1.0.zip</link>
+            <sparkle:version>17</sparkle:version>
+            <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description><![CDATA[
+                <p>Adds automatic updates (Sparkle) so Ozer Assistant can check for new versions daily.</p>
+            ]]></description>
+            <pubDate>Mon, 31 Aug 2026 12:04:09 +0000</pubDate>
+            <enclosure url="https://www.ozer.so/downloads/OzerAssistant-1.0.zip"
+                       sparkle:edSignature="ldRXgdJICxmzYYPzT6doDayyCF+TPCIjpLXCNPsPknPa7tcRECphVReIETJpBZn+T+4JQeLcZ6XCn4a+qQoECA=="
+                       length="3308669"
+                       type="application/octet-stream" />
+        </item>
+    </channel>
 </rss>
