@@ -1,0 +1,67 @@
+export const NATIVE_WORKSPACE_PROFILES = [
+  'personal',
+  'family',
+  'work_design',
+  'community',
+  'commercial_property',
+  'building_surveyor',
+] as const;
+
+export type NativeWorkspaceProfile = (typeof NATIVE_WORKSPACE_PROFILES)[number];
+
+export type NativeWorkspace = {
+  id: string;
+  slug: string;
+  name: string;
+  profile: NativeWorkspaceProfile;
+  isPersonal: boolean;
+};
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: string) {
+  return UUID_RE.test(value);
+}
+
+export function toNativeWorkspaceProfile(
+  profile:
+    | NativeWorkspaceProfile
+    | 'work_property'
+    | 'personal'
+    | 'family'
+    | 'community'
+    | 'commercial_property'
+    | 'building_surveyor'
+    | 'work_design',
+): NativeWorkspaceProfile {
+  if (profile === 'personal' || profile === 'family') return profile;
+  if (profile === 'community') return 'community';
+  if (profile === 'commercial_property') return 'commercial_property';
+  if (profile === 'building_surveyor') return 'building_surveyor';
+  return 'work_design';
+}
+
+export function findNativeWorkspace(
+  workspaces: NativeWorkspace[],
+  workspaceRef: string,
+): NativeWorkspace | null {
+  const ref = workspaceRef.trim();
+  if (!ref) return null;
+
+  return (
+    workspaces.find((workspace) => workspace.slug === ref) ??
+    (isUuid(ref)
+      ? (workspaces.find((workspace) => workspace.id === ref) ?? null)
+      : null)
+  );
+}
+
+export function publicNativeWorkspace(workspace: NativeWorkspace) {
+  return {
+    id: workspace.id,
+    slug: workspace.slug,
+    name: workspace.name,
+    profile: workspace.profile,
+  };
+}

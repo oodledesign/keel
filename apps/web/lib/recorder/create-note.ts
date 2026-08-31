@@ -31,12 +31,20 @@ export type RecorderNoteItem = {
 export async function createRecorderNote(params: {
   userId: string;
   content: string;
+  title?: string | null;
   accountId?: string | null;
   clientId?: string | null;
   projectId?: string | null;
   createdAt?: string | null;
   source?: string | null;
-}): Promise<{ id: string; detail_path: string }> {
+}): Promise<{
+  id: string;
+  detail_path: string;
+  title: string;
+  content: string;
+  created_at: string | null;
+  updated_at: string | null;
+}> {
   const content = params.content.trim();
   if (!content) {
     throw new Error('Note content is required');
@@ -79,7 +87,7 @@ export async function createRecorderNote(params: {
     }
   }
 
-  const title = firstLineTitle(content);
+  const title = params.title?.trim() || firstLineTitle(content);
   const { data, error } = await admin
     .from('notes')
     .insert({
@@ -95,7 +103,7 @@ export async function createRecorderNote(params: {
       created_by: params.userId,
       ...(params.createdAt ? { created_at: params.createdAt } : {}),
     })
-    .select('id, account_id')
+    .select('id, account_id, title, content, created_at, updated_at')
     .single();
 
   if (error || !data?.id) {
@@ -122,6 +130,10 @@ export async function createRecorderNote(params: {
   return {
     id: data.id as string,
     detail_path: detailPath,
+    title: ((data.title as string | null)?.trim() || title) as string,
+    content: (data.content as string | null) ?? content,
+    created_at: (data.created_at as string | null) ?? null,
+    updated_at: (data.updated_at as string | null) ?? null,
   };
 }
 
@@ -166,7 +178,7 @@ export async function listRecorderNotes(params: {
   const isPersonal = Boolean(account?.is_personal_account);
   const slug = (account?.slug as string | null) ?? null;
 
-  return (data ?? []).map((row) => {
+  return (data ?? []).map((row: Record<string, unknown>) => {
     const id = row.id as string;
     const detailPath = isPersonal
       ? pathsConfig.app.personalNoteDetail.replace('[noteId]', id)

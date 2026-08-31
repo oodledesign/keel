@@ -58,7 +58,13 @@ const authConfig = AuthConfigSchema.parse({
     magicLinkSignIn: process.env.NEXT_PUBLIC_AUTH_MAGIC_LINK !== 'false',
     magicLinkSignUp: false,
     otp: process.env.NEXT_PUBLIC_AUTH_OTP === 'true',
-    oAuth: ['google'],
+    // Apple: set NEXT_PUBLIC_AUTH_APPLE=true after configuring the Apple
+    // Services ID in the Supabase Auth provider. Public id (not a secret):
+    // NEXT_PUBLIC_APPLE_SERVICE_ID. Do not put the Apple private key here.
+    oAuth:
+      process.env.NEXT_PUBLIC_AUTH_APPLE === 'true'
+        ? ['google', 'apple']
+        : ['google'],
   },
 } satisfies z.infer<typeof AuthConfigSchema>);
 
