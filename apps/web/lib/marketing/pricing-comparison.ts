@@ -131,7 +131,7 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Jobs & projects',
             href: '/features/project-management',
-            values: v(true, true, true),
+            values: v('Within client cap', true, true),
           },
           {
             feature: 'Open tasks',
