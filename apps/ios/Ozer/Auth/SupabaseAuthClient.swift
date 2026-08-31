@@ -31,7 +31,7 @@ actor SupabaseAuthClient {
         pendingPKCE = pkce
 
         var components = URLComponents(
-            url: AppConfiguration.supabaseURL.appending(path: "/auth/v1/authorize"),
+            url: AppConfiguration.supabaseURL.appending(path: "auth/v1/authorize"),
             resolvingAgainstBaseURL: false
         )
         components?.queryItems = [
@@ -68,7 +68,7 @@ actor SupabaseAuthClient {
             ],
         ]
 
-        var request = try authRequest(path: "/auth/v1/otp")
+        var request = try authRequest(path: "auth/v1/otp")
         request.httpMethod = "POST"
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         _ = try await send(request, expecting: [200, 201, 204])
@@ -113,7 +113,7 @@ actor SupabaseAuthClient {
 
     func signOut(accessToken: String) async {
         guard AppConfiguration.isSupabaseConfigured else { return }
-        var request = (try? authRequest(path: "/auth/v1/logout")) ?? URLRequest(
+        var request = (try? authRequest(path: "auth/v1/logout")) ?? URLRequest(
             url: AppConfiguration.supabaseURL
         )
         request.httpMethod = "POST"
@@ -122,7 +122,7 @@ actor SupabaseAuthClient {
     }
 
     private func postToken(grantType: String, body: [String: String]) async throws -> AuthSession {
-        var request = try authRequest(path: "/auth/v1/token")
+        var request = try authRequest(path: "auth/v1/token")
         request.httpMethod = "POST"
         var components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "grant_type", value: grantType)]

@@ -37,7 +37,7 @@ actor NativeAPIClient {
 
     func today(workspace: WorkspaceKind, accessToken: String) async throws -> TodayPayload {
         var components = URLComponents(
-            url: AppConfiguration.apiBaseURL.appending(path: "/api/native/v1/today"),
+            url: AppConfiguration.apiBaseURL.appending(path: "api/native/v1/today"),
             resolvingAgainstBaseURL: false
         )
         components?.queryItems = [
