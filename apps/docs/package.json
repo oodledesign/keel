@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next --turbopack --port 3012",
     "build": "next build --webpack",
-    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind",
+    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind || echo '[docs] pagefind skipped (no static HTML in this build)'",
     "start": "next start --port 3012",
     "typecheck": "tsc --noEmit",
     "clean": "git clean -xdf .next .turbo node_modules public/_pagefind"

@@ -385,7 +385,10 @@ export class StripeBillingStrategyService implements BillingStrategyProviderServ
 
     const priceId = item.price.id;
     const currentQuantity = item.quantity ?? 1;
-    const periodEnd = subscription.current_period_end;
+    const periodEnd =
+      createStripeSubscriptionPayloadBuilderService().getPeriodEndsAt(
+        subscription,
+      );
 
     let scheduleId =
       typeof subscription.schedule === 'string'
