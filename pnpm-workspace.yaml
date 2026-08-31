@@ -1,5 +1,8 @@
 packages:
   - apps/*
+  # Native Xcode project — not a Node package. Do not let pnpm/turbo compile Swift.
+  - '!apps/ios'
+  - '!apps/ios/**'
   - packages/**
   - tooling/*
 

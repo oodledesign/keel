@@ -93,9 +93,13 @@ fi
 echo "[vercel-ignore] changed files:"
 printf '%s\n' "$CHANGED_FILES" | sed 's/^/[vercel-ignore]   /'
 
+# Paths that must never enqueue ozer (apps/web). Native/docs/sites-only
+# commits should not compile Next.js. Keep this list skip-only (not
+# "build when") so an apps/ios Swift change cannot trigger web.
 WEB_SKIP_ONLY=(
   "apps/docs/"
   "apps/sites/"
+  "apps/ios/"
 )
 
 # Shared workspace / install inputs that affect every Vercel app.
@@ -146,11 +150,12 @@ first_match() {
 
 case "$APP" in
 web)
-  # Conservative: skip only when every changed path is docs/sites. Production
-  # main is included — a docs-only commit should not redeploy ozer — but any
-  # uncertainty (git failure, mixed/unknown paths) already proceeded above.
+  # Conservative: skip only when every changed path is docs/sites/ios.
+  # Production main is included — a docs- or Swift-only commit should not
+  # redeploy ozer — but any uncertainty (git failure, mixed/unknown paths)
+  # already proceeded above.
   if all_match "${WEB_SKIP_ONLY[@]}"; then
-    skip "diff is only apps/docs and/or apps/sites"
+    skip "diff is only apps/docs, apps/sites, and/or apps/ios"
   fi
   proceed "web-relevant path changed (apps/web, packages/, lockfile, or workspace config)"
   ;;

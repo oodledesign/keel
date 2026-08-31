@@ -1,0 +1,21 @@
+// Shared build settings + public config keys.
+// https:// must be written as https:/$()/ because // starts a comment in xcconfig.
+//
+// Put secrets in Local.xcconfig (gitignored). Never commit a real anon key.
+
+PRODUCT_BUNDLE_IDENTIFIER = so.ozer.app
+PRODUCT_NAME = Ozer
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+TARGETED_DEVICE_FAMILY = 1
+SWIFT_VERSION = 5.0
+
+// Dan picks 463T9J3286 or 842M7N9D4D locally in Xcode Signing.
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
+
+OZER_API_BASE = https:/$()/app.ozer.so
+OZER_SUPABASE_URL = https:/$()/igewpbdkvvhclfprteca.supabase.co
+OZER_SUPABASE_ANON_KEY =
