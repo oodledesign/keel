@@ -5,6 +5,7 @@ enum AppConfiguration {
         url(for: "OZER_API_BASE", fallback: "https://app.ozer.so")
     }
 
+    /// Public project URL (not a secret). Same default as Config/Shared.xcconfig.
     static var supabaseURL: URL {
         url(for: "OZER_SUPABASE_URL", fallback: "https://igewpbdkvvhclfprteca.supabase.co")
     }

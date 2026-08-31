@@ -5,6 +5,7 @@ enum AppScreen: Hashable {
     case tasks
     case notes
     case people
+    /// Menu only — not one of the three tab-bar pin slots.
     case shopping
 
     init(feature: FeatureStub) {
