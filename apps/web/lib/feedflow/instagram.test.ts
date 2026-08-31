@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   INSTAGRAM_FEEDFLOW_SCOPE,
   buildInstagramAuthUrl,
-  displayMediaForPost,
   parseInstagramRateLimit,
 } from './instagram';
+import { displayMediaForPost } from './instagram-display';
 
 describe('buildInstagramAuthUrl', () => {
   afterEach(() => {

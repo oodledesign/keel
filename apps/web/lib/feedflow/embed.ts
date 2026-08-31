@@ -1,5 +1,5 @@
 import type { UnifiedPost } from '~/lib/feedflow/feed-types';
-import { displayMediaForPost } from '~/lib/feedflow/instagram';
+import { displayMediaForPost } from '~/lib/feedflow/instagram-display';
 
 export const FEEDFLOW_EMBED_KEY_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
@@ -238,6 +238,7 @@ export function renderFeedflowEmbedHtml(input: {
     function reportHeight() {
       var height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
       if (window.parent && window.parent !== window) {
+        // '*' is intentional: the parent is an arbitrary customer site. Payload is height only.
         window.parent.postMessage({ source: 'feedflow-embed', widget: ${JSON.stringify(input.embedKey)}, height: height }, '*');
       }
     }

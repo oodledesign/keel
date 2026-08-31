@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createFeedflowAdminClient } from '~/lib/feedflow/admin';
 import { decryptSecret } from '~/lib/feedflow/crypto-tokens';
 import type { UnifiedPost } from '~/lib/feedflow/feed-types';
@@ -66,7 +68,7 @@ export async function getOrRefreshFeedForAccount(
   const admin = createFeedflowAdminClient();
   const { data: account, error } = await admin
     .from('social_accounts')
-    .select('*')
+    .select('id, account_id, platform, provider, access_token')
     .eq('id', socialAccountId)
     .single();
   if (error || !account) {

@@ -1,4 +1,16 @@
+import 'server-only';
+
 import { getOptionalInstagram } from '~/lib/feedflow/env';
+import type { IgMediaItem } from '~/lib/feedflow/instagram-display';
+
+export type {
+  IgMediaChild,
+  IgMediaItem,
+} from '~/lib/feedflow/instagram-display';
+export {
+  displayMediaForPost,
+  flattenMediaChildren,
+} from '~/lib/feedflow/instagram-display';
 
 const IG_VERSION = 'v21.0';
 const IG_GRAPH = `https://graph.instagram.com/${IG_VERSION}`;
@@ -154,26 +166,6 @@ export async function fetchInstagramBusinessAccount(
   };
 }
 
-export type IgMediaChild = {
-  id: string;
-  media_type?: string;
-  media_url?: string;
-  thumbnail_url?: string;
-  permalink?: string;
-};
-
-export type IgMediaItem = {
-  id: string;
-  caption?: string;
-  media_type: string;
-  media_url?: string;
-  thumbnail_url?: string;
-  permalink?: string;
-  timestamp?: string;
-  username?: string;
-  children?: { data?: IgMediaChild[] };
-};
-
 export type InstagramRateLimit = {
   callCount: number | null;
   retryAfterSeconds: number | null;
@@ -249,45 +241,4 @@ export async function fetchInstagramMedia(
   }
 
   return { items: data.data ?? [], rateLimit };
-}
-
-export function flattenMediaChildren(item: IgMediaItem): IgMediaChild[] {
-  return item.children?.data ?? [];
-}
-
-export function displayMediaForPost(item: {
-  media_type: string;
-  media_url?: string | null;
-  thumbnail_url?: string | null;
-  children?: IgMediaChild[] | { data?: IgMediaChild[] } | null;
-}): { src: string; isVideo: boolean } {
-  const children = Array.isArray(item.children)
-    ? item.children
-    : (item.children?.data ?? []);
-
-  if (item.media_type === 'VIDEO') {
-    return {
-      src: item.thumbnail_url || item.media_url || '',
-      isVideo: true,
-    };
-  }
-
-  if (item.media_type === 'CAROUSEL_ALBUM') {
-    const first = children[0];
-    const src =
-      first?.media_url ||
-      first?.thumbnail_url ||
-      item.media_url ||
-      item.thumbnail_url ||
-      '';
-    return {
-      src,
-      isVideo: first?.media_type === 'VIDEO',
-    };
-  }
-
-  return {
-    src: item.media_url || item.thumbnail_url || '',
-    isVideo: false,
-  };
 }

@@ -3,12 +3,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createFeedflowAdminClient } from '~/lib/feedflow/admin';
+import { FEEDFLOW_EMBED_KEY_PATTERN } from '~/lib/feedflow/embed';
 import { getOrRefreshFeedForAccount } from '~/lib/feedflow/feed-cache';
 
 export const dynamic = 'force-dynamic';
 
 const querySchema = z.object({
-  widget: z.string().min(1),
+  widget: z.string().regex(FEEDFLOW_EMBED_KEY_PATTERN),
 });
 
 const corsHeaders = {
