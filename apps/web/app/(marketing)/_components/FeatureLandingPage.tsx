@@ -139,7 +139,7 @@ export function FeatureLandingPage({
                 ) : (
                   <Link
                     href={secondaryCta.href}
-                    data-test="feature-assistant-download"
+                    data-test="feature-assistant-download-page"
                   >
                     <Download className="mr-1.5 h-4 w-4" />
                     {secondaryCta.label}

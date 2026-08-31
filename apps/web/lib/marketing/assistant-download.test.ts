@@ -1,11 +1,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import {
-  isAssistantDownloadFilePath,
   OZER_ASSISTANT_DOWNLOAD,
+  isAssistantDownloadFilePath,
 } from './assistant-download';
 import { getFeaturePageConfig } from './feature-landing-pages';
 
@@ -34,14 +33,22 @@ describe('OZER_ASSISTANT_DOWNLOAD', () => {
     expect(isAssistantDownloadFilePath(OZER_ASSISTANT_DOWNLOAD.filePath)).toBe(
       true,
     );
+    expect(
+      isAssistantDownloadFilePath(OZER_ASSISTANT_DOWNLOAD.latestFilePath),
+    ).toBe(true);
     expect(isAssistantDownloadFilePath('/download')).toBe(false);
-    expect(isAssistantDownloadFilePath(OZER_ASSISTANT_DOWNLOAD.appcastPath)).toBe(
-      false,
-    );
+    expect(
+      isAssistantDownloadFilePath(OZER_ASSISTANT_DOWNLOAD.appcastPath),
+    ).toBe(false);
+    expect(isAssistantDownloadFilePath('/templates/example.zip')).toBe(false);
   });
 
   it('points Assistant feature pages at the download landing', () => {
-    for (const slug of ['desktop-assistant', 'activity', 'dictation'] as const) {
+    for (const slug of [
+      'desktop-assistant',
+      'activity',
+      'dictation',
+    ] as const) {
       expect(getFeaturePageConfig(slug).secondaryCta?.href).toBe(
         OZER_ASSISTANT_DOWNLOAD.pagePath,
       );

@@ -50,7 +50,7 @@ function AssistantDownloadRoutePage() {
             applicationCategory: 'ProductivityApplication',
             operatingSystem: `${download.minOs}, ${download.architecture}`,
             softwareVersion: download.versionLabel,
-            downloadUrl: absoluteUrl(download.filePath),
+            downloadUrl: absoluteUrl(download.latestFilePath),
             description: PAGE_DESCRIPTION,
             url: absoluteUrl(download.pagePath),
             isPartOf: {

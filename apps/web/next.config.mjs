@@ -505,7 +505,7 @@ async function getRedirects() {
     {
       source: '/assistant',
       destination: '/download',
-      permanent: false,
+      permanent: true,
     },
     {
       source: '/downloads/OzerAssistant-latest.zip',

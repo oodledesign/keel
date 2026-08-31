@@ -22,6 +22,7 @@
 export const OZER_ASSISTANT_DOWNLOAD = {
   productName: 'Ozer Assistant',
   version: '1.0',
+  /** CFBundleVersion — used in Sparkle `sparkle:version` when the appcast item is added. */
   build: 16,
   versionLabel: '1.0 (16)',
   fileName: 'OzerAssistant-1.0.zip',
@@ -39,5 +40,5 @@ export const OZER_ASSISTANT_DOWNLOAD = {
 } as const;
 
 export function isAssistantDownloadFilePath(href: string): boolean {
-  return href.endsWith('.zip');
+  return href.startsWith('/downloads/') && href.endsWith('.zip');
 }
