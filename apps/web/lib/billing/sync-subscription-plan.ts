@@ -16,7 +16,10 @@ import {
   clampBillableSeats as clampCommercialBillableSeats,
   maxMembersForBillableSeats as commercialMaxMembersForBillableSeats,
 } from './commercial-graduated-pricing';
-import { findPlanByStripePriceId } from './ozer-plan-catalog';
+import {
+  accountPlanLimitColumnsFromCatalog,
+  findPlanByStripePriceId,
+} from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';
 
@@ -115,7 +118,8 @@ export async function syncKeelPlanFromSubscription(
     );
 
     if (plan.workspaceProfiles?.length) {
-      const isGraduatedBusiness = plan.family === 'business';
+      const isGraduatedBusiness =
+        plan.family === 'business' || plan.family === 'business_starter';
       const isCommercial = plan.family === 'commercial_property';
       const billableQuantity =
         isGraduatedBusiness || isCommercial
@@ -131,7 +135,10 @@ export async function syncKeelPlanFromSubscription(
         maxMembers = commercialMaxMembersForBillableSeats(billableQuantity);
       } else if (billableQuantity != null && isGraduatedBusiness) {
         maxMembers = businessMaxMembersForBillableSeats(billableQuantity);
-        maxProjectGuests = maxProjectGuestsForBillableSeats(billableQuantity);
+        maxProjectGuests =
+          plan.family === 'business_starter'
+            ? billableQuantity // 1 guest per seat on Starter
+            : maxProjectGuestsForBillableSeats(billableQuantity);
       } else if (plan.family === 'business_lite') {
         maxProjectGuests = 1;
       }
@@ -142,23 +149,24 @@ export async function syncKeelPlanFromSubscription(
           plan_product_id: plan.productId,
           plan_id: plan.planId,
           plan_family: plan.family,
-          max_members: maxMembers,
-          max_properties: plan.limits.maxProperties,
-          max_videos: plan.limits.maxVideos,
-          max_project_guests: maxProjectGuests,
+          ...accountPlanLimitColumnsFromCatalog(plan.limits, {
+            maxMembers,
+            maxProjectGuests,
+          }),
           updated_at: new Date().toISOString(),
         } as never,
         { onConflict: 'account_id' },
       );
       workspacePlanSynced = true;
 
-      if (plan.family === 'business') {
+      if (plan.family === 'business' || plan.family === 'business_starter') {
         await markBusinessUpgradedFromLite(admin, accountId);
         await syncFullBusinessModules(admin, accountId);
       }
 
       if (
         plan.family === 'business' ||
+        plan.family === 'business_starter' ||
         plan.family === 'business_lite' ||
         plan.family === 'commercial_property'
       ) {
@@ -175,7 +183,7 @@ export async function syncKeelPlanFromSubscription(
           )?.credits_monthly_limit ?? null;
 
         // Business seat bumps: raise limit + grant delta (refillRemaining false).
-        // Lite / Commercial / first grant: refill the period pool.
+        // Lite / Starter / Commercial / first grant: refill the period pool.
         const refillRemaining =
           plan.family !== 'business' ||
           previousLimit == null ||
@@ -253,9 +261,7 @@ export async function syncKeelPlanFromSubscription(
           plan_product_id: firstWorkspacePlan.productId,
           plan_id: firstWorkspacePlan.planId,
           plan_family: firstWorkspacePlan.family,
-          max_members: firstWorkspacePlan.limits.maxMembers,
-          max_properties: firstWorkspacePlan.limits.maxProperties,
-          max_videos: firstWorkspacePlan.limits.maxVideos,
+          ...accountPlanLimitColumnsFromCatalog(firstWorkspacePlan.limits),
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'account_id' },

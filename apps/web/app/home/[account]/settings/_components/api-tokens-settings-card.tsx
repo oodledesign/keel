@@ -116,8 +116,8 @@ export function ApiTokensSettingsCard({
             Plan:{' '}
             <span className="font-medium text-[var(--workspace-shell-text)]">
               {usageSummary.tier === 'unlimited'
-                ? 'Unlimited (Business Solo+ / Community / Property)'
-                : 'Personal / Business Lite — 2 hours / month'}
+                ? 'Unlimited (Pro / Community / Property)'
+                : 'Personal / Free — 5 hours / month'}
             </span>
           </p>
           <p className="mt-1">
@@ -129,10 +129,10 @@ export function ApiTokensSettingsCard({
           </p>
           {usageSummary.tier === 'limited' ? (
             <p className="mt-2 text-xs">
-              Personal accounts and Business Lite include 2 hours of meeting
-              transcription / screen capture per person per month. Business
-              Solo, Team, Scale, Community, and Property unlock unlimited
-              recorder time for each member.
+              Personal accounts and Free include 5 hours of meeting
+              transcription / screen capture per person per month. Pro,
+              Community, and Property unlock unlimited recorder time for each
+              member.
             </p>
           ) : null}
         </div>

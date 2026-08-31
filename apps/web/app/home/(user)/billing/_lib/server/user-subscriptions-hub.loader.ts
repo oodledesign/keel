@@ -134,7 +134,7 @@ export const loadUserSubscriptionsHub = cache(
         planLabel =
           plan?.productId.replace('keel-', '').replace(/-/g, ' ') ?? null;
       } else if (accountEntitlements.includes('workspace_business_lite')) {
-        planLabel = 'Business Lite';
+        planLabel = 'Free';
       }
 
       const addons = accountEntitlements

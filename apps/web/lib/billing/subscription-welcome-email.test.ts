@@ -61,7 +61,7 @@ describe('subscription welcome email', () => {
     });
 
     expect(context).not.toBeNull();
-    expect(context?.productName).toBe('Business');
+    expect(context?.productName).toBe('Pro');
     expect(context?.isTrial).toBe(true);
     expect(context?.features.length).toBeGreaterThan(0);
     expect(context?.gettingStartedSteps.length).toBeGreaterThan(0);
@@ -107,7 +107,7 @@ describe('subscription welcome email', () => {
 
     expect(email.subject).toContain('Oodle Design');
     expect(email.subject).toContain('trial');
-    expect(email.html).toContain('Business');
+    expect(email.html).toContain('Pro');
     expect(email.html).toContain('Add your first client');
   });
 
@@ -129,7 +129,7 @@ describe('subscription welcome email', () => {
       welcome: welcome!,
     });
 
-    expect(email.subject).toContain('Welcome to Business');
+    expect(email.subject).toContain('Welcome to Pro');
     expect(email.html).toContain('Payment is confirmed');
   });
 });

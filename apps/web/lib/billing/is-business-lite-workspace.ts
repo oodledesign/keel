@@ -22,6 +22,10 @@ export async function isBusinessLiteWorkspace(
     return false;
   }
 
+  if (await hasEntitlement(client, accountId, 'workspace_business_starter')) {
+    return false;
+  }
+
   return hasBusinessLiteEntitlement(client, accountId);
 }
 

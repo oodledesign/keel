@@ -61,21 +61,21 @@ export default createBillingSchema({
     },
     {
       id: 'ozer-business-lite',
-      name: 'Business Lite',
+      name: 'Free',
       description:
-        'Free workspace with Meeting Assistant (2 hrs/mo) and apps — install Signatures, Site Studio, Media Generate, and more',
+        'Free workspace with Meeting Assistant (5 hrs/mo) and apps — install Signatures, Site Studio, Media Generate, and more',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       plans: [
         {
           id: 'business-lite-free',
-          name: 'Lite',
+          name: 'Free',
           paymentType: 'recurring',
           interval: 'month',
           lineItems: [
             {
               id: OZER_STRIPE_PRICES.business_lite_monthly,
-              name: 'Business Lite',
+              name: 'Free',
               cost: 0,
               type: 'flat',
             },
@@ -85,16 +85,56 @@ export default createBillingSchema({
       features: [
         'Apps marketplace access',
         'Team & brand settings',
-        'Up to 3 team members',
+        'Up to 2 team members',
         '200 AI credits / month',
         '1 project guest',
-        'Meeting Assistant — 2 hrs/mo',
+        'Meeting Assistant — 5 hrs/mo',
         'Pay only for the apps you use',
       ],
     },
     {
+      id: 'ozer-business-starter',
+      name: 'Starter',
+      description:
+        'Clients, projects, invoices, and AI for solo freelancers — £14 for the first seat, £9 for each additional seat',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
+      plans: [
+        {
+          id: 'business-starter-monthly',
+          name: 'Starter Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          trialDays: TRIAL_DAYS,
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.business_starter_monthly,
+              name: 'Billable seat',
+              cost: 14,
+              type: 'per_seat',
+              unit: 'seat',
+              description:
+                'Graduated: £14 for seat 1, £9 for every additional seat',
+              tiers: [
+                { upTo: 1, cost: 14 },
+                { upTo: 'unlimited', cost: 9 },
+              ],
+            },
+          ],
+        },
+      ],
+      features: [
+        '£14/mo for seat 1, then £9 per extra seat',
+        'Clients, projects, invoices & pipeline',
+        'Unlimited active clients, invoices & open tasks',
+        '10 GB client portal storage',
+        'Meeting Assistant — unlimited',
+        '1 project guest per billable seat',
+      ],
+    },
+    {
       id: 'ozer-business',
-      name: 'Business',
+      name: 'Pro',
       highlighted: true,
       badge: 'Popular',
       description:
@@ -104,7 +144,7 @@ export default createBillingSchema({
       plans: [
         {
           id: 'business-monthly',
-          name: 'Business Monthly',
+          name: 'Pro Monthly',
           paymentType: 'recurring',
           interval: 'month',
           trialDays: TRIAL_DAYS,
@@ -127,7 +167,7 @@ export default createBillingSchema({
         },
         {
           id: 'business-yearly',
-          name: 'Business Yearly',
+          name: 'Pro Yearly',
           paymentType: 'recurring',
           interval: 'year',
           trialDays: TRIAL_DAYS,
@@ -155,8 +195,10 @@ export default createBillingSchema({
         'Shared AI credits that scale with seats',
         '3 project guests per billable seat',
         'Unlimited client portal access',
+        '25 GB client portal storage',
         'Unlimited client & project sharing with other paid workspaces',
         'Meeting Assistant — unlimited',
+        'Meeting coaching & auto task extraction',
       ],
     },
     {

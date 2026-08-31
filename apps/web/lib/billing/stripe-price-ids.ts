@@ -20,14 +20,36 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_BUSINESS_LITE_MONTHLY',
     'price_ozer_business_lite_monthly',
   ),
+  /**
+   * Starter graduated per-seat Price (seat 1 £14, seats 2+ £9).
+   * Create in Stripe Dashboard (test mode) then set the env var.
+   */
+  business_starter_monthly: price(
+    'STRIPE_PRICE_BUSINESS_STARTER_MONTHLY',
+    'price_ozer_business_starter_monthly',
+  ),
   /** Graduated per-seat Price (seat 1 £29, 2–5 £22, 6+ £16). */
   business_monthly: price(
     'STRIPE_PRICE_BUSINESS_MONTHLY',
     'price_ozer_business_monthly',
   ),
+  /**
+   * Pro corrected Price (seat 1 £29, seats 2+ £22) — replace BUSINESS_MONTHLY
+   * only after confirming zero active/trialing Pro subscribers.
+   * Placeholder until Step 0 verification + dashboard creation.
+   */
+  business_monthly_v2: price(
+    'STRIPE_PRICE_BUSINESS_MONTHLY_V2',
+    'price_ozer_business_monthly_v2',
+  ),
   business_yearly: price(
     'STRIPE_PRICE_BUSINESS_YEARLY',
     'price_ozer_business_yearly',
+  ),
+  /** Yearly Pro corrected Price (10× monthly v2 bands) — same gate as monthly v2. */
+  business_yearly_v2: price(
+    'STRIPE_PRICE_BUSINESS_YEARLY_V2',
+    'price_ozer_business_yearly_v2',
   ),
   property_starter_monthly: price(
     'STRIPE_PRICE_PROPERTY_STARTER_MONTHLY',

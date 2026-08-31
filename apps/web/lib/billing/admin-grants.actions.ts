@@ -12,7 +12,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { logAdminAction } from '~/lib/admin/log-admin-action';
 
 import { applyAdminPlanUsageGrants } from './apply-admin-plan-usage-grants';
-import { findPlanByProductAndPlanId } from './ozer-plan-catalog';
+import {
+  accountPlanLimitColumnsFromCatalog,
+  findPlanByProductAndPlanId,
+} from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,
@@ -250,12 +253,15 @@ export const adminApplyPlanLimitsAction = enhanceAction(
     let maxMembers = plan.limits.maxMembers;
     let maxProjectGuests: number | null = null;
 
-    if (plan.family === 'business') {
+    if (plan.family === 'business' || plan.family === 'business_starter') {
       const { maxMembersForBillableSeats, maxProjectGuestsForBillableSeats } =
         await import('~/lib/billing/business-graduated-pricing');
       const seats = Math.max(1, input.billableSeats ?? 1);
       maxMembers = maxMembersForBillableSeats(seats);
-      maxProjectGuests = maxProjectGuestsForBillableSeats(seats);
+      maxProjectGuests =
+        plan.family === 'business_starter'
+          ? seats
+          : maxProjectGuestsForBillableSeats(seats);
     } else if (plan.family === 'business_lite') {
       maxProjectGuests = 1;
     } else if (plan.family === 'commercial_property') {
@@ -272,10 +278,10 @@ export const adminApplyPlanLimitsAction = enhanceAction(
         plan_product_id: plan.productId,
         plan_id: plan.planId,
         plan_family: plan.family,
-        max_members: maxMembers,
-        max_properties: plan.limits.maxProperties,
-        max_videos: plan.limits.maxVideos,
-        max_project_guests: maxProjectGuests,
+        ...accountPlanLimitColumnsFromCatalog(plan.limits, {
+          maxMembers,
+          maxProjectGuests,
+        }),
         updated_at: new Date().toISOString(),
       } as never,
       { onConflict: 'account_id' },
