@@ -4,6 +4,7 @@ import { ArrowRight, Download } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
+import { isAssistantDownloadFilePath } from '~/lib/marketing/assistant-download';
 import type { FeatureSlug } from '~/lib/marketing/feature-landing-pages';
 import {
   marketingBodyText,
@@ -126,10 +127,24 @@ export function FeatureLandingPage({
                 size="lg"
                 className={marketingBtnOutline}
               >
-                <Link href={secondaryCta.href}>
-                  <Download className="mr-1.5 h-4 w-4" />
-                  {secondaryCta.label}
-                </Link>
+                {isAssistantDownloadFilePath(secondaryCta.href) ? (
+                  <a
+                    href={secondaryCta.href}
+                    download
+                    data-test="feature-assistant-download"
+                  >
+                    <Download className="mr-1.5 h-4 w-4" />
+                    {secondaryCta.label}
+                  </a>
+                ) : (
+                  <Link
+                    href={secondaryCta.href}
+                    data-test="feature-assistant-download"
+                  >
+                    <Download className="mr-1.5 h-4 w-4" />
+                    {secondaryCta.label}
+                  </Link>
+                )}
               </Button>
             ) : null}
             <Button

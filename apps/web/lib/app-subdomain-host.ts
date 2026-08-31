@@ -47,7 +47,8 @@ export function isAppHostStaticPath(pathname: string): boolean {
     pathname.startsWith('/brand/') ||
     pathname.startsWith('/images/') ||
     pathname.startsWith('/assets/') ||
-    pathname.startsWith('/locales/')
+    pathname.startsWith('/locales/') ||
+    pathname.startsWith('/downloads/')
   );
 }
 
@@ -84,6 +85,8 @@ const MARKETING_ROUTE_PREFIXES = [
   '/features',
   '/pricing',
   '/early-access',
+  '/download',
+  '/assistant',
   '/faq',
   '/contact',
   '/blog',

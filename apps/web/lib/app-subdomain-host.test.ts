@@ -59,6 +59,54 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves Assistant zip downloads as static files on either host', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/downloads/OzerAssistant-1.0.zip'),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://www.ozer.so/downloads/OzerAssistant-latest.zip'),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://www.ozer.so/downloads/OzerAssistant-1.0.zip'),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://www.ozer.so/downloads/appcast.xml'),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/downloads/appcast.xml'),
+      ),
+    ).toBeNull();
+  });
+
+  it('sends the Assistant download page from the app host to www', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(new URL('https://app.ozer.so/download')),
+    ).toBe('https://www.ozer.so/download');
+
+    expect(
+      resolveAppSubdomainRedirect(new URL('https://app.ozer.so/assistant')),
+    ).toBe('https://www.ozer.so/assistant');
+  });
+
   it('serves OAuth discovery and consent paths on the app host', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
     vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
