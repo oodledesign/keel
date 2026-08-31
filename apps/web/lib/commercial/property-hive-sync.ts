@@ -347,7 +347,10 @@ export async function persistPropertyHivePublicationError(input: {
   listingId: string;
   lastError: string;
 }): Promise<void> {
-  const existing = await getExistingPublication(input.accountId, input.listingId);
+  const existing = await getExistingPublication(
+    input.accountId,
+    input.listingId,
+  );
   const now = new Date().toISOString();
   const payload = {
     account_id: input.accountId,

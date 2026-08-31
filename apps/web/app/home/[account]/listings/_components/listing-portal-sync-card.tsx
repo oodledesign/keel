@@ -13,10 +13,10 @@ import { toast } from '@kit/ui/sonner';
 
 import { isEachFeedIncluded } from '~/lib/commercial/each-feed-inclusion';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
+import { portalPublishFailureMessage } from '~/lib/commercial/portal-publish-result';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import { testPublishListingAction } from '../../commercial-publishing/_lib/server/server-actions';
-import { portalPublishFailureMessage } from '~/lib/commercial/portal-publish-result';
 import type {
   CommercialListing,
   CommercialListingMedia,
@@ -152,9 +152,7 @@ export function ListingPortalSyncCard({
           <PublicationRow
             pub={eachPublication}
             pending={pending && pendingPortal === 'each'}
-            onRepublish={
-              canEditDisposals ? () => republish('each') : undefined
-            }
+            onRepublish={canEditDisposals ? () => republish('each') : undefined}
           />
         ) : null}
 
@@ -173,7 +171,9 @@ export function ListingPortalSyncCard({
                   Property Hive
                 </p>
                 <p className="text-xs font-medium text-rose-500">error</p>
-                <p className="mt-1 text-xs text-rose-500">{propertyHiveError}</p>
+                <p className="mt-1 text-xs text-rose-500">
+                  {propertyHiveError}
+                </p>
                 {canEditDisposals ? (
                   <Button
                     type="button"
@@ -238,10 +238,7 @@ function PublicationRow({
             Last sync: {formatSyncAt(pub.lastSyncAt)}
           </p>
           {pub.lastError ? (
-            <p
-              role="alert"
-              className="mt-1 text-xs text-rose-500"
-            >
+            <p role="alert" className="mt-1 text-xs text-rose-500">
               {pub.lastError}
             </p>
           ) : null}

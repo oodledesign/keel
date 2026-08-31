@@ -345,175 +345,175 @@ export function ListingDetailShell({
             edit, publish, or change settings.
           </div>
         ) : null}
-      {isOverview ? (
-        <>
-          <div ref={heroSentinelRef} className="h-px w-full" aria-hidden />
-          <OverviewHeader
-            listing={listing}
-            address={address}
-            headerActions={headerActions}
-          />
-          <ListingPageSearch listingBasePath={base} className="max-w-lg" />
-        </>
-      ) : null}
-
-      <div
-        className={cn(
-          'sticky top-0 z-20 -mx-1 space-y-3 px-1',
-          showStickyTitle
-            ? 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3'
-            : 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3 lg:static lg:border-0 lg:bg-transparent lg:pb-0',
-        )}
-      >
-        {showStickyTitle ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-lg font-semibold text-[var(--workspace-shell-text)]">
-                  {listing.name}
-                </h2>
-                <ListingStatusBadge status={listing.status} />
-              </div>
-              {address ? (
-                <p className="mt-0.5 flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="line-clamp-1">{address}</span>
-                </p>
-              ) : null}
-            </div>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:max-w-md sm:items-end">
-              <ListingPageSearch
-                listingBasePath={base}
-                className="w-full sm:w-72"
-              />
-              {headerActions}
-            </div>
-          </div>
+        {isOverview ? (
+          <>
+            <div ref={heroSentinelRef} className="h-px w-full" aria-hidden />
+            <OverviewHeader
+              listing={listing}
+              address={address}
+              headerActions={headerActions}
+            />
+            <ListingPageSearch listingBasePath={base} className="max-w-lg" />
+          </>
         ) : null}
 
-        {/* Mobile / tablet primary + section nav */}
-        <div className="space-y-2 lg:hidden">
-          <nav className="flex gap-1 overflow-x-auto pb-0.5">
+        <div
+          className={cn(
+            'sticky top-0 z-20 -mx-1 space-y-3 px-1',
+            showStickyTitle
+              ? 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3'
+              : 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3 lg:static lg:border-0 lg:bg-transparent lg:pb-0',
+          )}
+        >
+          {showStickyTitle ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="truncate text-lg font-semibold text-[var(--workspace-shell-text)]">
+                    {listing.name}
+                  </h2>
+                  <ListingStatusBadge status={listing.status} />
+                </div>
+                {address ? (
+                  <p className="mt-0.5 flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
+                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span className="line-clamp-1">{address}</span>
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:max-w-md sm:items-end">
+                <ListingPageSearch
+                  listingBasePath={base}
+                  className="w-full sm:w-72"
+                />
+                {headerActions}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Mobile / tablet primary + section nav */}
+          <div className="space-y-2 lg:hidden">
+            <nav className="flex gap-1 overflow-x-auto pb-0.5">
+              {NAV.map((item) => {
+                const href = `${base}${item.href}`;
+                const active = item.key === activeNav.key;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.key}
+                    href={href}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                      active
+                        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                        : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+            {activeSections.length > 0 ? (
+              <nav className="flex gap-1 overflow-x-auto pb-0.5">
+                {activeSections.map((section) => (
+                  <a
+                    key={section.id}
+                    href={`#${section.id}`}
+                    className="inline-flex shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                  >
+                    {section.label}
+                  </a>
+                ))}
+              </nav>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <nav
+            className={cn(
+              'hidden shrink-0 lg:sticky lg:flex lg:w-52 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible',
+              STICKY_OFFSET_CLASS,
+              showStickyTitle ? 'lg:top-[4.75rem]' : 'lg:top-3',
+            )}
+          >
             {NAV.map((item) => {
               const href = `${base}${item.href}`;
               const active = item.key === activeNav.key;
               const Icon = item.icon;
               return (
-                <Link
-                  key={item.key}
-                  href={href}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                    active
-                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
-                      : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                </Link>
+                <div key={item.key} className="space-y-0.5">
+                  <Link
+                    href={href}
+                    className={cn(
+                      'inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      active
+                        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                        : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                  {active && item.sections?.length ? (
+                    <div className="ml-3 space-y-0.5 border-l border-[color:var(--workspace-shell-border)] pl-2">
+                      {item.sections.map((section) => (
+                        <a
+                          key={section.id}
+                          href={`#${section.id}`}
+                          className="block rounded-md px-2 py-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                        >
+                          {section.label}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </nav>
-          {activeSections.length > 0 ? (
-            <nav className="flex gap-1 overflow-x-auto pb-0.5">
-              {activeSections.map((section) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="inline-flex shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-                >
-                  {section.label}
-                </a>
-              ))}
-            </nav>
-          ) : null}
+
+          <div className="min-w-0 flex-1 space-y-4">{children}</div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <nav
-          className={cn(
-            'hidden shrink-0 lg:sticky lg:flex lg:w-52 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible',
-            STICKY_OFFSET_CLASS,
-            showStickyTitle ? 'lg:top-[4.75rem]' : 'lg:top-3',
-          )}
-        >
-          {NAV.map((item) => {
-            const href = `${base}${item.href}`;
-            const active = item.key === activeNav.key;
-            const Icon = item.icon;
-            return (
-              <div key={item.key} className="space-y-0.5">
-                <Link
-                  href={href}
-                  className={cn(
-                    'inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    active
-                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
-                      : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                </Link>
-                {active && item.sections?.length ? (
-                  <div className="ml-3 space-y-0.5 border-l border-[color:var(--workspace-shell-border)] pl-2">
-                    {item.sections.map((section) => (
-                      <a
-                        key={section.id}
-                        href={`#${section.id}`}
-                        className="block rounded-md px-2 py-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-                      >
-                        {section.label}
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </nav>
+        <ListingFormModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          accountId={accountId}
+          accountSlug={accountSlug}
+          listing={listing}
+          onSaved={(saved) => {
+            setListing(saved);
+            setEditOpen(false);
+            router.refresh();
+          }}
+        />
 
-        <div className="min-w-0 flex-1 space-y-4">{children}</div>
-      </div>
-
-      <ListingFormModal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        accountId={accountId}
-        accountSlug={accountSlug}
-        listing={listing}
-        onSaved={(saved) => {
-          setListing(saved);
-          setEditOpen(false);
-          router.refresh();
-        }}
-      />
-
-      <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
-        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Archive this disposal?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sets status to Withdrawn and takes it off market. You can change
-              the status again later from Edit.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={pending}
-              onClick={(event) => {
-                event.preventDefault();
-                onArchive();
-              }}
-            >
-              Archive
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+          <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Archive this disposal?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Sets status to Withdrawn and takes it off market. You can change
+                the status again later from Edit.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={pending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onArchive();
+                }}
+              >
+                Archive
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DisposalAccessProvider>
   );
