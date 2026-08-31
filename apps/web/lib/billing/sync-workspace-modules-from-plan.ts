@@ -74,7 +74,7 @@ export async function syncFullBusinessModules(
   await syncAddonModulesFromEntitlements(admin, accountId);
 }
 
-/** Restrict workspace to the free apps shell (Business Lite). */
+/** Restrict workspace to Business Free modules until Starter or Pro. */
 export async function syncBusinessLiteModules(
   admin: SupabaseClient,
   accountId: string,

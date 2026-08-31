@@ -49,8 +49,8 @@ export function BusinessLiteDashboard({
               Hi {greeting}
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              This workspace is set up for Ozer apps. Browse the marketplace to
-              explore all available add-ons.
+              Free includes capped clients, invoices, and tasks. Upgrade to
+              Starter or Pro to lift those caps — add-ons stay optional.
             </p>
           </div>
           <Button asChild variant="outline" className="shrink-0 rounded-xl">
@@ -64,7 +64,11 @@ export function BusinessLiteDashboard({
         {installedApps.length > 0 ? (
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {installedApps.map((app) => (
-              <Link key={app.path} href={app.path} className={installedAppCardClass}>
+              <Link
+                key={app.path}
+                href={app.path}
+                className={installedAppCardClass}
+              >
                 <div className="flex items-start gap-3">
                   <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--ozer-accent)]">
                     {app.Icon}

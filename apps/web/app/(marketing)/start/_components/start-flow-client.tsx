@@ -294,9 +294,9 @@ export function StartFlowClient() {
                 marketingBodyText,
               )}
             >
-              Your personal account is always free. Here for an app like
-              Signatures? Choose that path. Or add a full business workspace —
-              or start personal-only.
+              Your personal account is always free. Add a Business workspace
+              (Free, Starter, or Pro), a family or community space, or stay
+              personal-only.
             </p>
           </div>
 

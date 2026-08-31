@@ -36,14 +36,18 @@ const STACK_EXTRAS: Array<{
   href: string;
   icon: LucideIcon;
 }> = [
-  { label: 'Email Assistant', href: '/features/email-assistant', icon: Mail },
   {
-    label: 'Meeting Assistant',
+    label: 'Email Assistant (Pro)',
+    href: '/features/email-assistant',
+    icon: Mail,
+  },
+  {
+    label: 'Meeting recording',
     href: '/features/desktop-assistant',
     icon: Mic,
   },
   { label: 'Activity tracking', href: '/features/activity', icon: Activity },
-  { label: 'AI Planner', href: '/features/planner', icon: LayoutDashboard },
+  { label: 'Planner (Pro)', href: '/features/planner', icon: LayoutDashboard },
   { label: 'Tasks & pipeline', href: '/features/pipeline', icon: ListTodo },
 ];
 

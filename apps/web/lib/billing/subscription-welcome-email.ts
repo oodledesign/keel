@@ -11,18 +11,18 @@ import {
   renderOzerTransactionalEmail,
 } from '~/lib/email/ozer-transactional-shell';
 
-import type { BillingEmailKind } from './account-billing-types';
 import { loadAccountMeta } from './account-billing-lifecycle';
+import type { BillingEmailKind } from './account-billing-types';
 import { loadBillingCustomerEmail } from './billing-customer-email';
 import {
-  enqueueBillingEmail,
   type BillingEmailPayload,
+  enqueueBillingEmail,
 } from './billing-email-outbox';
 import { notificationAlreadySent } from './billing-lifecycle-emails';
 import {
-  findPlanByStripePriceId,
   type OzerPlanDefinition,
   type OzerPlanFamily,
+  findPlanByStripePriceId,
 } from './ozer-plan-catalog';
 
 type AnyClient = SupabaseClient<any>;
@@ -92,10 +92,11 @@ function gettingStartedSteps(
     case 'business_lite':
       return [
         { label: 'Open your workspace', href: paths.home },
-        { label: 'Browse apps in the marketplace', href: paths.home },
+        { label: 'Add your first client', href: paths.clients },
         { label: 'Invite teammates', href: paths.members },
         { label: 'Manage billing', href: paths.billing },
       ];
+    case 'business_starter':
     case 'business':
     default:
       return [
@@ -324,7 +325,9 @@ export async function enqueueSubscriptionWelcomeEmail(
     typeof input.subscription.trial_ends_at === 'string'
       ? input.subscription.trial_ends_at
       : input.subscription.trial_ends_at != null
-        ? new Date(Number(input.subscription.trial_ends_at) * 1000).toISOString()
+        ? new Date(
+            Number(input.subscription.trial_ends_at) * 1000,
+          ).toISOString()
         : null;
 
   const stripeEventId =

@@ -135,7 +135,7 @@ export function OzerWorkspaceCheckoutForm(params: {
       <CardHeader>
         <CardTitle>
           {params.upgradeFromLite ? (
-            'Upgrade to full business'
+            'Upgrade to Starter or Pro'
           ) : setupMode ? (
             'Choose your workspace plan'
           ) : (

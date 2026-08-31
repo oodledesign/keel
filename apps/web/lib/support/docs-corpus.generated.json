@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T22:29:10.796Z",
+  "generatedAt": "2026-08-31T22:50:31.392Z",
   "chunkCount": 134,
   "chunks": [
     {
@@ -645,28 +645,28 @@
       "text": "finances).\n2. Use it for higher-level money views / integrations (for example accounting connections when configured).\n\nWhat you’ll see\n\n- Invoice list with status filters\n- Editor for line items and client details\n- Related proposal/contract lists nearby in the same sidebar section\n\nTips\n\n- Invoice from the client or project context when available so links stay correct.\n- Keep currency and VAT approach consistent with your legal entity.\n- Recurring or retainer patterns: duplicate a prior invoice as a starting point when templates aren’t enough.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Can’t create invoices | Role needs invoice permission; check Business plan includes invoicing |\n| Send fails | Confirm client email; verify outbound email / provider settings |\n| Wrong branding on PDF | Update Settings → Brand |\n| Looking for Stripe subscription UI | That’s Settings → Billing — see Workspace subscription |"
     },
     {
-      "id": "86fdc08971c4",
+      "id": "340a0082663b",
       "path": "/work/invoicing-billing/workspace-subscription",
       "title": "Workspace subscription",
-      "text": "(where offered) are commonly 14 days on paid Business plans. Annual billing on Pro is 10× monthly (16.7% less than 12×). 1 / 4 / 10 seat figures on marketing pages are examples on Starter or Pro — not separate products.\n\nCommon add-ons (when sold separately): Email assistant, portal publishing, branded signatures, media units, and similar marketplace apps.\n\nSteps: start or change a plan\n\n1. Switch to the Business workspace you want billed.\n2. Open Settings → Billing → /app/[account]/settings/billing.\n3. Review current plan, seats, and renewal.\n4. Choose Free, Starter, or Pro as appropriate, then set billable seats.\n5. Complete Stripe Checkout; you’ll return via the billing return route (/app/[account]/billing/return).\n6. Confirm the new plan features unlock (sidebar modules, seat capacity).\n\nSteps: manage payment method and invoices from Ozer\n\n1. From Settings → Billing, open the Stripe customer portal when offered (update card, download Ozer receipts).\n2."
+      "text": "s and trial countdown when applicable\n- Add-on toggles or marketplace upsells for Email assistant, portals, etc.\n\nTips\n\n- Bill the correct workspace — each Business account has its own subscription.\n- Invite seats only after the plan supports them (Invite your team).\n- For marketing comparisons see Pricing.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Billing page missing | You need billing permission; ask an owner |\n| Checkout succeeded but features missing | Refresh; wait a moment for webhooks; sign out/in |\n| Seat invite blocked | Add seats on Starter or Pro, or remove inactive members |\n| Confused with client invoices | Use Commercial → Invoices for client billing |"
+    },
+    {
+      "id": "67db174c703c",
+      "path": "/work/invoicing-billing/workspace-subscription",
+      "title": "Workspace subscription",
+      "text": "ant billed.\n2. Open Settings → Billing → /app/[account]/settings/billing.\n3. Review current plan, seats, and renewal.\n4. Choose Free, Starter, or Pro as appropriate, then set billable seats.\n5. Complete Stripe Checkout; you’ll return via the billing return route (/app/[account]/billing/return).\n6. Confirm the new plan features unlock (sidebar modules, seat capacity).\n\nSteps: manage payment method and invoices from Ozer\n\n1. From Settings → Billing, open the Stripe customer portal when offered (update card, download Ozer receipts).\n2. Adjust seats on the same Starter or Pro product — extra seats stay cheaper than seat 1.\n3. Cancel or change renewal only from Billing / portal — cancelling does not delete workspace data immediately, but modules may lock when entitlement ends.\n\nWhat you’ll see\n\n- Plan cards and feature lists\n- Current subscription status and trial countdown when applicable\n- Add-on toggles or marketplace upsells for Email assistant, portals, etc.\n\nTips"
     },
     {
       "id": "8cc028364953",
       "path": "/work/invoicing-billing/workspace-subscription",
       "title": "Workspace subscription",
-      "text": "Workspace subscription\n\nGoal\n\nChoose and manage the Ozer Business plan (and add-ons) that funds this team workspace.\n\nPrerequisites\n\n- Business team account\n- Permission to view billing (Settings → Billing)\n- Payment method ready for checkout (Stripe)\n\nThis is not client invoicing. Client bills live under Client invoices.\n\nBusiness plans (summary)\n\nExact prices can change — confirm on ozer.so/pricing. Typical Business products:\n\n| Plan | Best for | Typical inclusions |\n| --- | --- | --- |\n| Free (Business Lite) | Apps-only / light use | Marketplace access; pay for apps you use |\n| Starter | Solo freelancers | Clients, jobs, invoices; £14 seat 1, then £9 each extra seat |\n| Pro | Studios | Everything in Starter, shared AI, 3 guests per seat; £29 seat 1, then £22 each extra seat |\n\nTrials (where offered) are commonly 14 days on paid Business plans. Annual billing on Pro is 10× monthly (16.7% less than 12×)."
+      "text": "Workspace subscription\n\nGoal\n\nChoose and manage the Ozer Business plan (and add-ons) that funds this team workspace.\n\nPrerequisites\n\n- Business team account\n- Permission to view billing (Settings → Billing)\n- Payment method ready for checkout (Stripe)\n\nThis is not client invoicing. Client bills live under Client invoices.\n\nBusiness plans (summary)\n\nExact prices can change — confirm on ozer.so/pricing. Typical Business products:\n\n| Plan | Best for | Typical inclusions |\n| --- | --- | --- |\n| Free (Business Lite) | Light use | 2 seats; 3 clients; 5 invoices/month; 20 open tasks; 5 bookings/month; 250 MB portal; meeting recording 5 hrs/mo. No planner, email assistant, or coaching. Add-ons not bundled. |\n| Starter | Solo freelancers | Unlimited clients, invoices, tasks, scheduling; 10 GB portal; recording unlimited. £14 seat 1, then £9 each extra. No planner, email assistant, or coaching. |"
     },
     {
-      "id": "99fc32e2af1a",
+      "id": "e02345aa2608",
       "path": "/work/invoicing-billing/workspace-subscription",
       "title": "Workspace subscription",
-      "text": "rmission; ask an owner |\n| Checkout succeeded but features missing | Refresh; wait a moment for webhooks; sign out/in |\n| Seat invite blocked | Add seats on Starter or Pro, or remove inactive members |\n| Confused with client invoices | Use Commercial → Invoices for client billing |"
-    },
-    {
-      "id": "b6fd0aa785e8",
-      "path": "/work/invoicing-billing/workspace-subscription",
-      "title": "Workspace subscription",
-      "text": "Ozer\n\n1. From Settings → Billing, open the Stripe customer portal when offered (update card, download Ozer receipts).\n2. Adjust seats on the same Starter or Pro product — extra seats stay cheaper than seat 1.\n3. Cancel or change renewal only from Billing / portal — cancelling does not delete workspace data immediately, but modules may lock when entitlement ends.\n\nWhat you’ll see\n\n- Plan cards and feature lists\n- Current subscription status and trial countdown when applicable\n- Add-on toggles or marketplace upsells for Email assistant, portals, etc.\n\nTips\n\n- Bill the correct workspace — each Business account has its own subscription.\n- Invite seats only after the plan supports them (Invite your team).\n- For marketing comparisons see Pricing.\n\nTroubleshooting\n\n| Problem | What to try |\n| --- | --- |\n| Billing page missing | You need billing permission; ask an owner |\n| Checkout succeeded but features missing | Refresh; wait a moment for webhooks; sign out/in |"
+      "text": "eduling; 10 GB portal; recording unlimited. £14 seat 1, then £9 each extra. No planner, email assistant, or coaching. |\n| Pro | Studios | Unlimited ops; 25 GB; recording unlimited; planner, email assistant, coaching, and auto tasks; second brain indexes transcripts. £29 seat 1, then £22 each extra. Shared AI pool scales with seats. |\n\nTrials (where offered) are commonly 14 days on paid Business plans. Annual billing on Pro is 10× monthly (16.7% less than 12×). 1 / 4 / 10 seat figures on marketing pages are examples on Starter or Pro — not separate products.\n\nCommon add-ons (when sold separately): branded signatures, media units, and similar marketplace apps. Email assistant is included on Pro and spends the workspace AI credit pool.\n\nSteps: start or change a plan\n\n1. Switch to the Business workspace you want billed.\n2. Open Settings → Billing → /app/[account]/settings/billing.\n3. Review current plan, seats, and renewal.\n4."
     },
     {
       "id": "12b16e400340",

@@ -21,8 +21,9 @@ type EntitlementRow = {
 
 const WORKSPACE_ENTITLEMENTS = [
   { key: 'workspace_community', label: 'Community workspace' },
-  { key: 'workspace_business_lite', label: 'Business Lite (apps shell)' },
-  { key: 'workspace_business', label: 'Business workspace' },
+  { key: 'workspace_business_lite', label: 'Business Free (capped)' },
+  { key: 'workspace_business_starter', label: 'Business Starter' },
+  { key: 'workspace_business', label: 'Business Pro' },
   { key: 'workspace_property', label: 'Property workspace' },
   {
     key: 'workspace_commercial_property',
@@ -239,13 +240,13 @@ export function AdminBillingGrantsPanel(props: {
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="text-muted-foreground text-sm">
-          Presets set <strong>Starter or Pro</strong> seat limits
-          and refill the matching AI credit pool (Scale = 12,000). Media
-          Generate Starter/Studio/Agency presets also grant monthly media units.
-          Add-on <strong>Grant</strong> only unlocks the app — use a quick
-          preset when you need usage tokens. Workspace type grants (Community /
-          Lite / Property / Commercial Property) are different products — do not
-          stack them to “upgrade” a Business plan.
+          Presets set <strong>Starter or Pro</strong> seat limits and refill the
+          matching AI credit pool (Scale = 12,000). Media Generate
+          Starter/Studio/Agency presets also grant monthly media units. Add-on{' '}
+          <strong>Grant</strong> only unlocks the app — use a quick preset when
+          you need usage tokens. Workspace type grants (Community / Lite /
+          Property / Commercial Property) are different products — do not stack
+          them to “upgrade” a Business plan.
         </p>
         <div>
           <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">

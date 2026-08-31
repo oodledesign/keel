@@ -298,7 +298,7 @@ function personalComparison(): SegmentPricingComparison {
         title: 'Assistants',
         rows: [
           {
-            feature: 'Meeting Assistant',
+            feature: 'Meeting recording & transcription',
             hint: 'Mac meeting recording & transcription. Personal: limited hours. Starter and Pro: unlimited. Coaching is Pro-only.',
             href: '/features/desktop-assistant',
             values: v('2 hrs/mo', true),

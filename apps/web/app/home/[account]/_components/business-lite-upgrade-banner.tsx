@@ -7,7 +7,6 @@ import Link from 'next/link';
 import {
   ArrowRight,
   BriefcaseBusiness,
-  FileText,
   FolderKanban,
   Kanban,
   PenLine,
@@ -25,12 +24,12 @@ type BusinessLiteUpgradeBannerProps = {
 };
 
 const FEATURES = [
-  { label: 'Clients', Icon: BriefcaseBusiness },
-  { label: 'Projects', Icon: FolderKanban },
-  { label: 'Pipeline', Icon: Kanban },
-  { label: 'Invoices', Icon: PenLine },
+  { label: 'Unlimited clients', Icon: BriefcaseBusiness },
+  { label: 'Unlimited invoices', Icon: PenLine },
+  { label: 'Unlimited tasks', Icon: FolderKanban },
+  { label: 'Planner (Pro)', Icon: Kanban },
+  { label: 'Email + coaching (Pro)', Icon: Sparkles },
   { label: 'Finances', Icon: Wallet },
-  { label: 'Docs', Icon: FileText },
 ] as const;
 
 export function BusinessLiteUpgradeBanner({
@@ -64,14 +63,15 @@ export function BusinessLiteUpgradeBanner({
         <div className="min-w-0 space-y-2">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--ozer-accent)]">
             <Sparkles className="h-3 w-3" aria-hidden />
-            Get all business features
+            Lift Free caps
           </div>
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
             <h2 className="text-sm font-semibold tracking-tight text-[var(--workspace-shell-text)] sm:text-base">
-              Upgrade to full business
+              Upgrade to Starter or Pro
             </h2>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              CRM, billing, and docs — add-ons stay on either plan.
+              Starter lifts caps and recording. Pro adds planner, email
+              assistant, and coaching.
             </p>
           </div>
           <ul className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
