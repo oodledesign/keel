@@ -154,8 +154,8 @@ export async function assertRecorderSyncAllowed(
     );
     throw new RecorderUsageLimitError(
       remainingMinutes > 0
-        ? `Desktop recorder limit: about ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'} left this month. Upgrade to Business Solo (or higher) for unlimited recording time.`
-        : 'Desktop recorder recording time limit reached for this month. Upgrade to Business Solo (or higher) for unlimited recording time.',
+        ? `Desktop recorder limit: about ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'} left this month. Upgrade to Starter or Pro for unlimited recording time.`
+        : 'Desktop recorder recording time limit reached for this month. Upgrade to Starter or Pro for unlimited recording time.',
       summary,
     );
   }

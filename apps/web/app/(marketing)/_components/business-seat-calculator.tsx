@@ -17,14 +17,21 @@ import {
   aiCreditsForBillableSeats,
   clampBillableSeats,
   estimateMonthlyBreakdownGbp,
-  illustrativeTierForSeats,
   maxProjectGuestsForBillableSeats,
 } from '~/lib/billing/business-graduated-pricing';
+import {
+  BUSINESS_STARTER_PLAN_ID,
+  BUSINESS_STARTER_PRODUCT_ID,
+  estimateStarterMonthlyBreakdownGbp,
+  maxProjectGuestsForStarterBillableSeats,
+} from '~/lib/billing/business-starter-pricing';
 import {
   buildPricingSignupUrl,
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
 import { marketingBtnGradient } from '~/lib/marketing/marketing-ui';
+
+type PaidPlan = 'starter' | 'pro';
 
 type BusinessSeatCalculatorProps = {
   className?: string;
@@ -37,15 +44,22 @@ export function BusinessSeatCalculator({
   variant = 'dark',
 }: BusinessSeatCalculatorProps) {
   const [seats, setSeats] = useState(4);
+  const [plan, setPlan] = useState<PaidPlan>('pro');
   const billable = clampBillableSeats(seats);
-  const { lines, totalGbp } = estimateMonthlyBreakdownGbp(billable);
-  const tier = illustrativeTierForSeats(billable);
-  const aiCredits = aiCreditsForBillableSeats(billable);
-  const projectGuests = maxProjectGuestsForBillableSeats(billable);
+  const isStarter = plan === 'starter';
+  const { lines, totalGbp } = isStarter
+    ? estimateStarterMonthlyBreakdownGbp(billable)
+    : estimateMonthlyBreakdownGbp(billable);
+  const projectGuests = isStarter
+    ? maxProjectGuestsForStarterBillableSeats(billable)
+    : maxProjectGuestsForBillableSeats(billable);
+  const aiCredits = isStarter ? null : aiCreditsForBillableSeats(billable);
   const signupUrl = buildPricingSignupUrl({
     profile: 'work_design',
-    productId: BUSINESS_GRADUATED_PRODUCT_ID,
-    planId: BUSINESS_GRADUATED_PLAN_ID,
+    productId: isStarter
+      ? BUSINESS_STARTER_PRODUCT_ID
+      : BUSINESS_GRADUATED_PRODUCT_ID,
+    planId: isStarter ? BUSINESS_STARTER_PLAN_ID : BUSINESS_GRADUATED_PLAN_ID,
     seats: billable,
   });
 
@@ -87,9 +101,44 @@ export function BusinessSeatCalculator({
                   : 'text-[var(--ozer-plum-600)]',
               )}
             >
-              Graduated per-seat pricing — seat 1 at £29, then cheaper add-on
-              seats. Shared AI and project guests scale with your team.
+              Compare Starter and Pro for the same seat count. Extra seats stay
+              cheaper than seat 1. No transaction fees on your subscription.
             </p>
+          </div>
+
+          <div
+            className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] p-1"
+            role="group"
+            aria-label="Paid plan"
+          >
+            <button
+              type="button"
+              onClick={() => setPlan('starter')}
+              className={cn(
+                'rounded-full px-3 py-1.5 text-sm font-medium transition',
+                isStarter
+                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                  : isDark
+                    ? 'text-[var(--ozer-text-on-dark-muted)]'
+                    : 'text-[var(--ozer-plum-600)]',
+              )}
+            >
+              Starter
+            </button>
+            <button
+              type="button"
+              onClick={() => setPlan('pro')}
+              className={cn(
+                'rounded-full px-3 py-1.5 text-sm font-medium transition',
+                !isStarter
+                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                  : isDark
+                    ? 'text-[var(--ozer-text-on-dark-muted)]'
+                    : 'text-[var(--ozer-plum-600)]',
+              )}
+            >
+              Pro
+            </button>
           </div>
 
           <div className="space-y-2">
@@ -109,7 +158,7 @@ export function BusinessSeatCalculator({
               min={1}
               max={30}
               value={billable}
-              aria-valuetext={`${billable} billable seat${billable === 1 ? '' : 's'} — ${tier.label}`}
+              aria-valuetext={`${billable} billable seat${billable === 1 ? '' : 's'} on ${isStarter ? 'Starter' : 'Pro'}`}
               autoComplete="off"
               className={cn(
                 'h-2 w-full cursor-pointer appearance-none rounded-full accent-[var(--ozer-coral-500)]',
@@ -151,7 +200,9 @@ export function BusinessSeatCalculator({
                   : 'text-[var(--ozer-plum-600)]',
               )}
             >
-              Maps to {tier.label}
+              {isStarter
+                ? '£14 first seat, £9 each extra'
+                : '£29 first seat, £22 each extra'}
             </p>
           </div>
         </div>
@@ -165,7 +216,7 @@ export function BusinessSeatCalculator({
           )}
         >
           <p className="text-sm font-bold tracking-[0.08em] text-[var(--ozer-plum-600)] uppercase">
-            Estimated monthly total
+            {isStarter ? 'Starter' : 'Pro'} estimated monthly total
           </p>
 
           <dl
@@ -203,13 +254,23 @@ export function BusinessSeatCalculator({
           </dl>
 
           <ul className="space-y-2 text-sm text-[var(--ozer-plum-700)]">
-            <li>{aiCredits.toLocaleString()} shared AI credits / month</li>
+            {aiCredits != null ? (
+              <li>{aiCredits.toLocaleString()} shared AI credits / month</li>
+            ) : (
+              <li>Clients, projects, invoices, and pipeline</li>
+            )}
             <li>
               {projectGuests} project guest
               {projectGuests === 1 ? '' : 's'} included
             </li>
-            <li>Unlimited client portal access</li>
-            <li>Unlimited sharing with other paid workspaces</li>
+            <li>
+              {isStarter
+                ? '10 GB client portal storage'
+                : '25 GB client portal storage'}
+            </li>
+            {!isStarter ? (
+              <li>Unlimited sharing with other paid workspaces</li>
+            ) : null}
           </ul>
           <Button
             asChild
@@ -217,7 +278,8 @@ export function BusinessSeatCalculator({
             className={cn(marketingBtnGradient, 'mt-auto w-full')}
           >
             <Link href={signupUrl}>
-              Start with {billable} seat{billable === 1 ? '' : 's'}
+              Start {isStarter ? 'Starter' : 'Pro'} with {billable} seat
+              {billable === 1 ? '' : 's'}
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>

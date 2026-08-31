@@ -172,7 +172,7 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
               )}
             >
               <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
-                Ozer (Business Team)
+                Ozer (4-seat Pro)
               </h3>
               <ul className={cn('mt-3 space-y-2 text-sm', marketingMutedText)}>
                 {config.pricingMaths.ozerLines.map((line) => (

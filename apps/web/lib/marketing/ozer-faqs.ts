@@ -18,7 +18,7 @@ export const OZER_FAQS: OzerFaqItem[] = [
   {
     question: 'Do I pay per seat?',
     answer:
-      'No. One workspace price covers the team. Invited members do not pay — billing stays with the workspace owner.',
+      'Yes on paid Business. Starter is £14 for seat 1 then £9 for each extra seat. Pro is £29 for seat 1 then £22 for each extra seat. Invited members do not pay separately — billing stays with the workspace owner.',
   },
   {
     question: 'Can I cancel anytime?',

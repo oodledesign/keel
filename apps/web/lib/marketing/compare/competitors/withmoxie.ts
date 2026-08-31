@@ -31,7 +31,7 @@ export const withmoxieComparison: ComparisonConfig = {
   },
   inBrief: [
     'Moxie (withmoxie.com) sells flat monthly plans for freelancers and small teams, with a published seat ceiling on its Teams tier.',
-    'Ozer is a Workspace OS with flat team pricing, EU data residency, and Mac meeting capture without permanent audio storage.',
+    'Ozer is a Workspace OS with graduated Starter and Pro seats, EU data residency, and Mac meeting capture without permanent audio storage.',
     'Choose Moxie if its flat tiers and feature set fit and you accept geographic limits on some features; choose Ozer if you need EU residency and a broader workspace model.',
   ],
   glanceRows: [
@@ -148,7 +148,7 @@ export const withmoxieComparison: ComparisonConfig = {
     ),
     ozerLines: [
       {
-        label: 'Business Team annual (up to 5 members)',
+        label: 'Pro annual for 4 billable seats',
         amountGbp: OZER_TEAM_OF_FOUR.teamOfFourAnnualGbp,
       },
       {
@@ -156,7 +156,7 @@ export const withmoxieComparison: ComparisonConfig = {
         amountGbp: c(1160, 'https://stripe.com/gb/pricing', '2026-07-04'),
       },
     ],
-    ozerTotalGbp: c(1950, 'https://ozer.so/pricing', '2026-07-04'),
+    ozerTotalGbp: c(2110, 'https://ozer.so/pricing', '2026-07-04'),
     footnotes: [
       {
         text: 'Public materials often list Moxie at about $12 / $25 / $40 monthly with a Teams seat ceiling around five users — verify live limits.',
@@ -178,7 +178,7 @@ export const withmoxieComparison: ComparisonConfig = {
     'You do not need EU data residency as a hard requirement.',
   ],
   chooseOzerIf: [
-    'You want flat team pricing with a clear Business Team band (up to five members) and a UK Trust Centre.',
+    'You want graduated GBP seats (Starter from £14, Pro from £29) and a UK Trust Centre.',
     'You need EU data residency for client commitments.',
     'You want Mac meeting transcription processed on-device without permanent audio files.',
     'You want personal and business workspaces connected in one Workspace OS.',
@@ -192,7 +192,7 @@ export const withmoxieComparison: ComparisonConfig = {
     {
       question: "What's the best Moxie alternative in the UK?",
       answer:
-        'Ozer is one option for UK studios that want EU residency, flat team pricing, and Mac meeting capture. Others may fit if you only need a lightweight freelance CRM.',
+        'Ozer is one option for UK studios that want EU residency, graduated Starter and Pro seats, and Mac meeting capture. Others may fit if you only need a lightweight freelance CRM.',
     },
     {
       question: 'How many seats does Moxie Teams include?',
@@ -211,7 +211,7 @@ export const withmoxieComparison: ComparisonConfig = {
     },
   ],
   migrationNote:
-    'Moving from Moxie means exporting clients and open work, recreating projects and invoices in Ozer, and inviting the team to Business Team. If you rely on Moxie phone features, plan a parallel channel before cutover.',
+    'Moving from Moxie means exporting clients and open work, recreating projects and invoices in Ozer, and inviting the team to a Starter or Pro workspace. If you rely on Moxie phone features, plan a parallel channel before cutover.',
   relatedFeatures: [
     { href: '/features/invoicing', label: 'Ozer invoicing' },
     { href: '/features/project-management', label: 'Ozer projects' },

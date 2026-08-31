@@ -28,7 +28,11 @@ export type SegmentPricingComparison = {
   groups: PricingComparisonGroup[];
 };
 
-const WORK_PLAN_IDS = ['ozer-business-lite', 'ozer-business'] as const;
+const WORK_PLAN_IDS = [
+  'ozer-business-lite',
+  'ozer-business-starter',
+  'ozer-business',
+] as const;
 
 const PERSONAL_COMPARISON_COLUMNS: PricingComparisonPlanColumn[] = [
   { id: 'ozer-personal', label: 'Personal & family' },
@@ -36,15 +40,24 @@ const PERSONAL_COMPARISON_COLUMNS: PricingComparisonPlanColumn[] = [
 ];
 
 function workComparison(): SegmentPricingComparison {
-  const cols = WORK_PLAN_IDS.map((id, index) => ({
+  const cols = WORK_PLAN_IDS.map((id) => ({
     id,
-    label: ['Lite', 'Business'][index]!,
+    label:
+      id === 'ozer-business-lite'
+        ? 'Free'
+        : id === 'ozer-business-starter'
+          ? 'Starter'
+          : 'Pro',
     highlighted: id === 'ozer-business',
   }));
 
-  const v = (lite: PricingFeatureCell, business: PricingFeatureCell) =>
+  const v = (
+    lite: PricingFeatureCell,
+    starter: PricingFeatureCell,
+    pro: PricingFeatureCell,
+  ) =>
     Object.fromEntries(
-      WORK_PLAN_IDS.map((id, i) => [id, [lite, business][i]!]),
+      WORK_PLAN_IDS.map((id, i) => [id, [lite, starter, pro][i]!]),
     );
 
   return {
@@ -55,47 +68,51 @@ function workComparison(): SegmentPricingComparison {
         rows: [
           {
             feature: 'Monthly price',
-            hint: 'Business uses graduated per-seat pricing from £29 for seat 1.',
-            values: v('Free', 'From £29 / seat'),
+            hint: 'Starter and Pro use graduated seats. Extra seats stay cheaper than seat 1.',
+            values: v('Free', 'From £14 / seat', 'From £29 / seat'),
           },
           {
             feature: 'Billable seats',
             hint: 'Owners, admins, staff, and contractors count as paid seats.',
-            values: v('Up to 3 members', 'Pay per seat (graduated)'),
+            values: v(
+              'Up to 2 members',
+              '£14 then £9 extra',
+              '£29 then £22 extra',
+            ),
           },
           {
             feature: 'Project guests',
             hint: 'External collaborators on a single project board — not paid seats.',
-            values: v('1', '3 per billable seat'),
+            values: v('1', '1 per billable seat', '3 per billable seat'),
           },
           {
             feature: 'Client portal contacts',
             hint: 'Clients viewing their portal — unlimited on every plan.',
-            values: v('Unlimited', 'Unlimited'),
+            values: v('Unlimited', 'Unlimited', 'Unlimited'),
           },
           {
             feature: 'Share clients & projects with other workspaces',
-            values: v(false, 'Unlimited (paid workspaces)'),
+            values: v(false, false, 'Unlimited (paid workspaces)'),
           },
           {
             feature: '14-day free trial',
             hint: 'On your first paid workspace — no card required.',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Apps marketplace',
             hint: 'Install Signatures, Site Studio, Media Generate, and future apps.',
             href: '/apps',
-            values: v(true, true),
+            values: v(true, true, true),
           },
           {
             feature: 'Team & brand settings',
-            values: v(true, true),
+            values: v(true, true, true),
           },
           {
             feature: 'Monthly AI credits',
-            hint: 'Shared workspace pool. Paid Business scales with seats (3k + 1.5k + 1k bands).',
-            values: v('200', 'From 3,000 (scales with seats)'),
+            hint: 'Shared workspace pool. Pro scales with seats (3,000 + 1,500 per extra seat).',
+            values: v('200', 'Workspace AI included', 'From 3,000 (scales)'),
           },
         ],
       },
@@ -105,69 +122,69 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Clients & pipeline',
             href: '/features/pipeline',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Jobs & projects',
             href: '/features/project-management',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Tasks & planner',
             href: '/features/planner',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Scheduling',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Invoices, proposals & contracts',
             href: '/features/invoicing',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Activity tracking',
             href: '/features/activity',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Client portal',
             href: '/features/client-portals',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Team & client messaging',
             href: '/features/messaging',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'SOPs & playbook checklists',
             href: '/features/sops',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Docs & notes',
             href: '/features/notes',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Finances',
             href: '/features/finances',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Support tickets',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Websites',
-            values: v(false, true),
+            values: v(false, true, true),
           },
           {
             feature: 'Second Brain',
             href: '/features/second-brain',
-            values: v(false, true),
+            values: v(false, true, true),
           },
         ],
       },
@@ -177,22 +194,26 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Meeting Assistant',
             href: '/features/desktop-assistant',
-            values: v('2 hrs/mo', true),
+            values: v('5 hrs/mo', true, true),
           },
           {
             feature: 'Dictation',
             href: '/features/dictation',
-            values: v(true, true),
+            values: v(true, true, true),
           },
           {
             feature: 'Email Assistant',
             href: '/features/email-assistant',
-            values: v('add-on', 'add-on'),
+            values: v('add-on', 'add-on', 'add-on'),
           },
           {
             feature: 'AI Planner',
             href: '/features/planner',
-            values: v(true, true),
+            values: v(true, true, true),
+          },
+          {
+            feature: 'Meeting coaching & auto task extraction',
+            values: v(false, false, true),
           },
         ],
       },
@@ -202,17 +223,17 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Signatures',
             href: '/apps/signatures',
-            values: v('add-on', 'add-on'),
+            values: v('add-on', 'add-on', 'add-on'),
           },
           {
             feature: 'Site Studio',
             href: '/apps',
-            values: v('add-on', 'add-on'),
+            values: v('add-on', 'add-on', 'add-on'),
           },
           {
             feature: 'Media Generate',
             href: '/apps',
-            values: v('add-on', 'add-on'),
+            values: v('add-on', 'add-on', 'add-on'),
           },
         ],
       },
@@ -221,11 +242,11 @@ function workComparison(): SegmentPricingComparison {
         rows: [
           {
             feature: 'Priority support',
-            values: v(false, true),
+            values: v(false, false, true),
           },
           {
             feature: 'Ozer subscription transaction fees',
-            values: v('None', 'None'),
+            values: v('None', 'None', 'None'),
           },
         ],
       },
@@ -271,7 +292,7 @@ function personalComparison(): SegmentPricingComparison {
         rows: [
           {
             feature: 'Meeting Assistant',
-            hint: 'Mac meetings → tasks. Personal/Lite: 2 hrs/mo. Solo+: unlimited.',
+            hint: 'Mac meetings → tasks. Personal/Free: limited hours. Paid Business: unlimited.',
             href: '/features/desktop-assistant',
             values: v('2 hrs/mo', true),
           },
@@ -290,7 +311,7 @@ function personalComparison(): SegmentPricingComparison {
           {
             feature: 'Monthly AI credits',
             hint: 'Allowance for AI features on your personal account.',
-            values: v('200', '2,000'),
+            values: v('200', 'From 3,000 on Pro'),
           },
         ],
       },
@@ -299,11 +320,11 @@ function personalComparison(): SegmentPricingComparison {
         rows: [
           {
             feature: 'Monthly price',
-            values: v('Free', 'From £29'),
+            values: v('Free', 'From £14 Starter / £29 Pro'),
           },
           {
-            feature: 'Per-seat billing',
-            values: v(false, false),
+            feature: 'Graduated seats',
+            values: v(false, true),
           },
         ],
       },

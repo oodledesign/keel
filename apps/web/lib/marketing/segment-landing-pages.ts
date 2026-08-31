@@ -19,12 +19,15 @@ import {
   BUSINESS_GRADUATED_PLAN_ID,
   BUSINESS_GRADUATED_PRODUCT_ID,
   BUSINESS_GRADUATED_TIERS,
-  BUSINESS_ILLUSTRATIVE_TIERS,
-  aiCreditsForBillableSeats,
-  estimateMonthlyBreakdownGbp as estimateBusinessMonthlyBreakdownGbp,
+  estimateMonthlyGbp as estimateBusinessMonthlyGbp,
   formatGraduatedWorkedExample as formatBusinessGraduatedWorkedExample,
-  maxProjectGuestsForBillableSeats,
 } from '~/lib/billing/business-graduated-pricing';
+import {
+  BUSINESS_STARTER_PLAN_ID,
+  BUSINESS_STARTER_PRODUCT_ID,
+  estimateStarterMonthlyGbp,
+  formatStarterWorkedExample,
+} from '~/lib/billing/business-starter-pricing';
 import {
   COMMERCIAL_GRADUATED_PLAN_ID,
   COMMERCIAL_GRADUATED_PRODUCT_ID,
@@ -196,66 +199,48 @@ function relatedExcept(current: SegmentSlug) {
 }
 
 function businessPricingCards(): SegmentPricingCard[] {
-  const unitGbpForSeats = (seats: number) =>
-    estimateBusinessMonthlyBreakdownGbp(seats).lines.at(-1)?.unitGbp ??
-    BUSINESS_GRADUATED_TIERS[0]!.unitGbp;
+  const starter = MARKETING_WORKSPACE_PLANS.find(
+    (plan) => plan.productId === BUSINESS_STARTER_PRODUCT_ID,
+  );
+  const pro = MARKETING_WORKSPACE_PLANS.find(
+    (plan) => plan.productId === BUSINESS_GRADUATED_PRODUCT_ID,
+  );
 
-  const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
-
-  const soloFeatures = [
-    'Clients, projects, invoices & pipeline',
-    `${aiCreditsForBillableSeats(1).toLocaleString()} shared AI credits / mo`,
-    `${maxProjectGuestsForBillableSeats(1)} project guests`,
-    'Unlimited client portal access',
-    'Meeting Assistant — unlimited',
-  ];
-
-  return BUSINESS_ILLUSTRATIVE_TIERS.map((tier) => {
-    const isSolo = tier.id === 'solo';
-    const unitGbp = unitGbpForSeats(tier.billableSeats);
-    const guests = maxProjectGuestsForBillableSeats(tier.billableSeats);
-    const credits = aiCreditsForBillableSeats(tier.billableSeats);
-
-    const features = isSolo
-      ? soloFeatures
-      : [
-          'Everything in Business Solo, plus…',
-          `${credits.toLocaleString()} shared AI credits / mo`,
-          `${guests} project guests`,
-          'Unlimited sharing with other paid workspaces',
-        ];
-
-    const thenLabel =
-      tier.id === 'team'
-        ? `for ${seats2to5!.bandLabel.toLowerCase()}`
-        : tier.id === 'scale'
-          ? `for ${seats6plus!.bandLabel.toLowerCase()}`
-          : '/mo';
-
-    return {
-      id: tier.id,
-      name: tier.label,
-      bandTitle: tier.bandTitle,
-      description: tier.description,
-      priceGbp: unitGbp,
-      priceUnit: isSolo ? 'month' : 'then_band',
-      priceUnitLabel: isSolo ? '/mo' : thenLabel,
-      priceLabel: isSolo
-        ? `${formatGbp(unitGbp)}/mo`
-        : `${formatGbp(unitGbp)} ${thenLabel}`,
-      priceCaption: isSolo ? seat1!.bandLabel : undefined,
-      priceExample: isSolo
-        ? undefined
-        : formatBusinessGraduatedWorkedExample(tier.billableSeats, formatGbp),
-      features,
-      highlighted: tier.highlighted,
-      badge: tier.highlighted ? 'Popular' : undefined,
-      signupProfile: 'work_design' as const,
+  return [
+    ...MARKETING_WORKSPACE_PLANS.filter(
+      (plan) => plan.productId === 'ozer-business-lite',
+    ).map((plan) => planToCard(plan)),
+    {
+      name: starter?.name ?? 'Starter',
+      description:
+        starter?.description ??
+        'Clients, projects, and invoices — £14 for seat 1, then £9 for every extra seat',
+      priceGbp: estimateStarterMonthlyGbp(1),
+      priceLabel: `${formatGbp(estimateStarterMonthlyGbp(1))}/mo`,
+      priceExample: formatStarterWorkedExample(4, formatGbp),
+      features: starter?.features ?? [],
+      signupProfile: 'work_design',
+      productId: BUSINESS_STARTER_PRODUCT_ID,
+      planId: starter?.monthlyPlanId ?? BUSINESS_STARTER_PLAN_ID,
+      seats: 1,
+    },
+    {
+      name: pro?.name ?? 'Pro',
+      description:
+        pro?.description ??
+        'Graduated seats for studios — £29 for seat 1, then £22 for every extra seat',
+      priceGbp: estimateBusinessMonthlyGbp(1),
+      priceLabel: `${formatGbp(estimateBusinessMonthlyGbp(1))}/mo`,
+      priceExample: formatBusinessGraduatedWorkedExample(4, formatGbp),
+      features: pro?.features ?? [],
+      highlighted: true,
+      badge: 'Popular',
+      signupProfile: 'work_design',
       productId: BUSINESS_GRADUATED_PRODUCT_ID,
-      planId: BUSINESS_GRADUATED_PLAN_ID,
-      seats: tier.billableSeats,
-    };
-  });
+      planId: pro?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
+      seats: 1,
+    },
+  ];
 }
 
 function commercialPricingCards(): SegmentPricingCard[] {
@@ -529,15 +514,10 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
             'Staff and contractors take paid seats; project guests and client portals are included.',
         },
       ],
-      pricingPlans: [
-        ...MARKETING_WORKSPACE_PLANS.filter(
-          (p) => p.productId === 'ozer-business-lite',
-        ).map((p) => planToCard(p)),
-        ...businessPricingCards(),
-      ],
+      pricingPlans: businessPricingCards(),
       pricingNote: (() => {
-        const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
-        return `One graduated Business price: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to5!.unitGbp)} for seats 2–5, then ${formatGbp(seats6plus!.unitGbp)} for seats 6+. Solo / Team / Scale describe those bands — not separate products. Project guests scale at 3 per seat; client portals are unlimited.`;
+        const [seat1, extraSeats] = BUSINESS_GRADUATED_TIERS;
+        return `Three public products: Free, Starter, and Pro. Starter is £14 for seat 1 then £9 for every extra seat. Pro is ${formatGbp(seat1!.unitGbp)} for seat 1 then ${formatGbp(extraSeats!.unitGbp)} for every extra seat. 1 / 4 / 10 seat figures are examples on those products — not separate SKUs.`;
       })(),
       faqs: [
         {
@@ -551,9 +531,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
             'Yes. Planner and Today pull from workspaces you enable. Client work and personal errands in one day — then push blocks to Google Calendar if you want.',
         },
         {
-          question: 'What is Business Lite vs paid Business?',
+          question: 'What is Free vs Starter vs Pro?',
           answer:
-            'Business Lite is free: apps marketplace, team settings, brand basics, 200 AI credits, and 1 project guest. Paid Business unlocks full CRM with graduated seats, shared AI that scales, more project guests, and unlimited sharing with other paid workspaces.',
+            'Free (Business Lite) is apps-only. Starter unlocks clients, projects, and invoices from £14, then £9 per extra seat. Pro adds shared AI that scales, 3 project guests per seat, and unlimited sharing with other paid workspaces.',
         },
         {
           question: 'Do clients pay for Ozer?',

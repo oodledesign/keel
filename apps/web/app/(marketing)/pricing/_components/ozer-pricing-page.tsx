@@ -64,8 +64,8 @@ export function OzerPricingPage() {
           )}
         >
           Start free with a personal account — your hub for every workspace. Add
-          Ozer Business when you need the studio stack. One price covers the
-          team, not a per-seat tax. One Workspace OS, not a pile of siloed
+          Free, Starter, or Pro when you need a studio workspace. Extra seats
+          stay cheaper than seat 1. One Workspace OS, not a pile of siloed
           tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -155,7 +155,7 @@ export function OzerPricingPage() {
           Ready to run the studio?
         </h2>
         <p className={cn('mx-auto mt-2 max-w-lg text-sm', marketingBodyText)}>
-          Start with a free personal account, then add Solo or Team for the
+          Start with a free personal account, then add Starter or Pro for the
           studio. Invited team members never pay — billing stays with the
           workspace owner.
         </p>
@@ -239,7 +239,7 @@ function FreePlanCard() {
           <Link href={buildPricingSignupUrl({})}>Start free</Link>
         </Button>
         <p className={cn('mt-2 text-center text-xs', marketingMutedText)}>
-          Free personal account · add business Solo or Team when ready
+          Free personal account · add Starter or Pro when ready
         </p>
       </div>
     </article>
@@ -251,14 +251,18 @@ function WorkspacePlanCard(props: {
   interval: BillingInterval;
 }) {
   const { plan, interval } = props;
+  const hasYearlyCheckout = Boolean(
+    plan.yearlyPlanId && plan.yearlyPlanId !== plan.monthlyPlanId,
+  );
+  const displayInterval = hasYearlyCheckout ? interval : 'month';
   const price =
-    interval === 'year' ? plan.yearlyPriceGbp : plan.monthlyPriceGbp;
-  const planId = planIdForInterval(plan, interval);
+    displayInterval === 'year' ? plan.yearlyPriceGbp : plan.monthlyPriceGbp;
+  const planId = planIdForInterval(plan, displayInterval);
   const signupUrl = buildPricingSignupUrl({
     profile: plan.profile,
     productId: plan.productId,
     planId,
-    interval,
+    interval: displayInterval,
   });
   const features =
     plan.productId === 'ozer-business-lite'
@@ -293,12 +297,17 @@ function WorkspacePlanCard(props: {
       <p className="mt-4 text-3xl font-bold tracking-tight">
         {formatGbp(price)}
         <span className={cn('text-base font-normal', marketingMutedText)}>
-          {interval === 'year' ? '/yr' : '/mo'}
+          {displayInterval === 'year' ? '/yr' : '/mo'}
         </span>
       </p>
-      {interval === 'year' ? (
+      {displayInterval === 'year' ? (
         <p className="mt-1 text-xs text-[var(--ozer-accent)]">
           {formatGbp(Math.round(plan.yearlyPriceGbp / 12))}/mo billed annually
+        </p>
+      ) : plan.productId === 'ozer-business-starter' && interval === 'year' ? (
+        <p className="mt-1 text-xs text-[var(--ozer-accent)]">
+          Annual is 10× monthly ({formatGbp(plan.monthlyPriceGbp * 10)}/yr)
+          when yearly billing is available
         </p>
       ) : null}
       <FeatureList features={features} />

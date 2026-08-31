@@ -15,8 +15,12 @@ import {
   BUSINESS_GRADUATED_PLAN_ID,
   BUSINESS_GRADUATED_PRODUCT_ID,
   estimateMonthlyGbp,
-  illustrativeTierForSeats,
 } from '~/lib/billing/business-graduated-pricing';
+import {
+  BUSINESS_STARTER_PLAN_ID,
+  BUSINESS_STARTER_PRODUCT_ID,
+  estimateStarterMonthlyGbp,
+} from '~/lib/billing/business-starter-pricing';
 import { catalogPlansForAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import {
   MARKETING_WORKSPACE_PLANS,
@@ -448,15 +452,18 @@ function buildRecommendation(
 ): Recommendation | null {
   const signatureTier = getSignatureTier(answers.mailboxes, signatureTiers);
   const signaturesOnly = answers.intent === 'signatures';
+  const paidProduct = recommendPaidProduct(answers);
   const businessPlan = signaturesOnly
     ? getBusinessPlan('lite', businessPlans)
-    : getBusinessPlan(answers.people, businessPlans);
+    : getBusinessPlan(paidProduct, businessPlans);
   const billableSeats = seatsForPeopleAnswer(answers.people);
   const businessMonthly = signaturesOnly
     ? 0
-    : estimateMonthlyGbp(billableSeats);
+    : paidProduct === 'starter'
+      ? estimateStarterMonthlyGbp(billableSeats)
+      : estimateMonthlyGbp(billableSeats);
   const businessYearly = signaturesOnly ? 0 : businessMonthly * 10;
-  const bandLabel = illustrativeTierForSeats(billableSeats).label;
+  const bandLabel = paidProduct === 'starter' ? 'Starter' : 'Pro';
 
   if (!businessPlan && !signaturesOnly) return null;
 
@@ -476,7 +483,7 @@ function buildRecommendation(
       yearlyPriceGbp: signaturesOnly ? 0 : businessYearly,
       why: signaturesOnly
         ? 'Business Lite keeps the workspace free forever while we set a custom flat Signatures tier for your mailbox count.'
-        : `${bandLabel} on graduated Business covers your team workspace, and we will sort a custom flat Signatures tier for your mailbox count.`,
+        : `${bandLabel} on graduated seats covers your team workspace, and we will sort a custom flat Signatures tier for your mailbox count.`,
       note: 'For teams past 150 mailboxes, book a setup call and we will sort seats and pricing.',
       ctaLabel: 'Book a setup call',
       ctaHref: SETUP_CALL_HREF,
@@ -504,7 +511,7 @@ function buildRecommendation(
     why: buildWhy(answers, billableSeats, signatureTier, signaturesOnly),
     note:
       answers.people === 'larger'
-        ? "For larger desks, start on graduated Business and we'll confirm seat count on a call if you need help."
+        ? "For larger desks, start on Pro and we'll confirm seat count on a call if you need help."
         : signaturesOnly
           ? 'The Business Lite workspace itself is free forever.'
           : undefined,
@@ -518,8 +525,15 @@ function buildRecommendation(
           }
         : {
             profile: 'work_design',
-            productId: BUSINESS_GRADUATED_PRODUCT_ID,
-            planId: businessPlan?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
+            productId:
+              paidProduct === 'starter'
+                ? BUSINESS_STARTER_PRODUCT_ID
+                : BUSINESS_GRADUATED_PRODUCT_ID,
+            planId:
+              businessPlan?.monthlyPlanId ??
+              (paidProduct === 'starter'
+                ? BUSINESS_STARTER_PLAN_ID
+                : BUSINESS_GRADUATED_PLAN_ID),
             interval: 'month',
             seats: billableSeats,
           },
@@ -537,12 +551,16 @@ function buildWhy(
     return `${signatureTier.name} covers ${mailboxBandText(signatureTier)} with centrally managed signatures — flat, never per person.`;
   }
 
-  const band = illustrativeTierForSeats(billableSeats);
-  const total = formatGbp(estimateMonthlyGbp(billableSeats));
+  const paidProduct = recommendPaidProduct(answers);
+  const total = formatGbp(
+    paidProduct === 'starter'
+      ? estimateStarterMonthlyGbp(billableSeats)
+      : estimateMonthlyGbp(billableSeats),
+  );
   const businessWhy =
-    band.id === 'solo'
-      ? `Business from ${total}/mo for one billable seat — clients, projects, and invoices on graduated pricing.`
-      : `${band.label} is an illustrative band on the same Business plan — about ${total}/mo for ${billableSeats} billable seats with shared clients and projects.`;
+    paidProduct === 'starter'
+      ? `Starter is about ${total}/mo for ${billableSeats} billable seat${billableSeats === 1 ? '' : 's'} — clients, projects, and invoices from £14, then £9 per extra seat.`
+      : `Pro is about ${total}/mo for ${billableSeats} billable seats — £29 for seat 1, then £22 for every extra seat, with shared AI and more project guests.`;
 
   if (answers.signatures === 'yes' && signatureTier) {
     return `${businessWhy} Signatures ${signatureTier.name} adds ${mailboxBandText(signatureTier)}.`;
@@ -593,15 +611,25 @@ function getSignatureTier(
   return tiers.find((tier) => tier.key === answer);
 }
 
+function recommendPaidProduct(answers: Answers): 'starter' | 'pro' {
+  if (answers.intent === 'freelance' || answers.people === 'solo') {
+    return 'starter';
+  }
+  return 'pro';
+}
+
 function getBusinessPlan(
-  answer: PeopleAnswer | 'lite' | undefined,
+  answer: PeopleAnswer | 'lite' | 'starter' | 'pro' | undefined,
   plans: typeof MARKETING_WORKSPACE_PLANS,
 ) {
   if (answer === 'lite') {
     return plans.find((plan) => plan.productId === 'ozer-business-lite');
   }
+  if (answer === 'starter' || answer === 'solo') {
+    return plans.find((plan) => plan.productId === BUSINESS_STARTER_PRODUCT_ID);
+  }
   if (
-    answer === 'solo' ||
+    answer === 'pro' ||
     answer === 'team' ||
     answer === 'scale' ||
     answer === 'larger'

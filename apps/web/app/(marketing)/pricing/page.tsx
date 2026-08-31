@@ -58,7 +58,7 @@ function stackSavingPercent(
 export const metadata = buildMarketingMetadata({
   title: 'Pricing — graduated Business seats — Ozer',
   description:
-    'Ozer pricing: personal and family free; Business Lite £0; paid Business from £29 for seat 1 with cheaper add-on seats. No subscription transaction fees.',
+    'Ozer pricing: personal and family free; Free (Business Lite) £0; Starter from £14; Pro from £29 with cheaper extra seats. No subscription transaction fees.',
   path: '/pricing',
   ogType: 'pricing',
   keywords: [
@@ -90,7 +90,7 @@ async function PricingPage() {
     softwareApplicationJsonLd({
       name: 'Ozer',
       description:
-        'Workspace OS pricing in GBP — graduated Business seats from £29 for seat 1.',
+        'Workspace OS pricing in GBP — Free, Starter from £14, and Pro from £29 with cheaper extra seats.',
       url: absoluteUrl('/pricing'),
       offers,
     }),

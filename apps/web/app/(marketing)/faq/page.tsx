@@ -18,7 +18,7 @@ export const generateMetadata = async () => {
   return buildMarketingMetadata({
     title: 'FAQ on pricing and seats — Ozer',
     description:
-      'Answers on free plans, flat team pricing, trials, £ billing, EU data, and Mac meeting audio in the Ozer Workspace OS.',
+      'Answers on free plans, graduated Starter and Pro seats, trials, £ billing, EU data, and Mac meeting audio in the Ozer Workspace OS.',
     path: '/faq',
     ogType: 'default',
   });

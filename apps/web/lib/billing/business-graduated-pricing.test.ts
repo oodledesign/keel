@@ -11,18 +11,18 @@ import {
   maxProjectGuestsForBillableSeats,
 } from './business-graduated-pricing';
 
-describe('business graduated pricing', () => {
-  it('estimates Solo / Team / Scale worked examples', () => {
+describe('business graduated pricing (two-band Pro)', () => {
+  it('estimates 1 / 4 / 10 seat worked examples', () => {
     expect(estimateMonthlyGbp(1)).toBe(29);
     // 29 + 22×3 = 95
     expect(estimateMonthlyGbp(4)).toBe(95);
-    // 29 + 22×4 + 16×5 = 29 + 88 + 80 = 197
-    expect(estimateMonthlyGbp(10)).toBe(197);
-    // 29 + 22×4 + 16×10 = 29 + 88 + 160 = 277
-    expect(estimateMonthlyGbp(15)).toBe(277);
+    // 29 + 22×9 = 227
+    expect(estimateMonthlyGbp(10)).toBe(227);
+    // 29 + 22×14 = 337
+    expect(estimateMonthlyGbp(15)).toBe(337);
   });
 
-  it('itemises graduated bands for the calculator', () => {
+  it('itemises two graduated bands for the calculator', () => {
     expect(estimateMonthlyBreakdownGbp(4)).toEqual({
       totalGbp: 95,
       lines: [
@@ -33,7 +33,7 @@ describe('business graduated pricing', () => {
           subtotalGbp: 29,
         },
         {
-          bandLabel: 'Seats 2–5',
+          bandLabel: 'Seats 2+',
           seatsInBand: 3,
           unitGbp: 22,
           subtotalGbp: 66,
@@ -49,16 +49,10 @@ describe('business graduated pricing', () => {
         subtotalGbp: 29,
       },
       {
-        bandLabel: 'Seats 2–5',
-        seatsInBand: 4,
+        bandLabel: 'Seats 2+',
+        seatsInBand: 9,
         unitGbp: 22,
-        subtotalGbp: 88,
-      },
-      {
-        bandLabel: 'Seats 6+',
-        seatsInBand: 5,
-        unitGbp: 16,
-        subtotalGbp: 80,
+        subtotalGbp: 198,
       },
     ]);
   });
@@ -69,22 +63,22 @@ describe('business graduated pricing', () => {
       'e.g. 4 seats = £29 + 3 × £22 = £95/mo',
     );
     expect(formatGraduatedWorkedExample(10, formatMoney)).toBe(
-      'e.g. 10 seats = £29 + 4 × £22 + 5 × £16 = £197/mo',
+      'e.g. 10 seats = £29 + 9 × £22 = £227/mo',
     );
   });
 
-  it('holds band boundaries at 5 and 6 seats', () => {
+  it('keeps the additional-seat rate at £22 after five seats', () => {
     expect(estimateMonthlyBreakdownGbp(5).totalGbp).toBe(29 + 4 * 22);
-    expect(estimateMonthlyBreakdownGbp(6).lines).toHaveLength(3);
-    expect(estimateMonthlyBreakdownGbp(6).totalGbp).toBe(29 + 4 * 22 + 16);
+    expect(estimateMonthlyBreakdownGbp(6).lines).toHaveLength(2);
+    expect(estimateMonthlyBreakdownGbp(6).totalGbp).toBe(29 + 5 * 22);
   });
 
-  it('scales shared AI credits sub-linearly', () => {
+  it('scales shared AI credits in two bands', () => {
     expect(aiCreditsForBillableSeats(1)).toBe(3000);
     // 3k + 4×1.5k = 9k
     expect(aiCreditsForBillableSeats(5)).toBe(9000);
-    // 9k + 10×1k = 19k
-    expect(aiCreditsForBillableSeats(15)).toBe(19000);
+    // 3k + 14×1.5k = 24k
+    expect(aiCreditsForBillableSeats(15)).toBe(24000);
   });
 
   it('scales project guests at 3 per seat', () => {

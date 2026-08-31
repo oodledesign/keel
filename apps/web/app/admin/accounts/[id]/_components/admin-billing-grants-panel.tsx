@@ -42,19 +42,19 @@ const ADDON_ENTITLEMENTS = [
 
 const QUICK_PLANS = [
   {
-    label: 'Business Solo (1 seat)',
+    label: 'Pro (1 seat)',
     productId: 'ozer-business',
     planId: 'business-monthly',
     billableSeats: 1,
   },
   {
-    label: 'Business Team (4 seats)',
+    label: 'Pro (4 seats)',
     productId: 'ozer-business',
     planId: 'business-monthly',
     billableSeats: 4,
   },
   {
-    label: 'Business Scale (10 seats)',
+    label: 'Pro (10 seats)',
     productId: 'ozer-business',
     planId: 'business-monthly',
     billableSeats: 10,
@@ -63,6 +63,12 @@ const QUICK_PLANS = [
     label: 'Business Lite',
     productId: 'ozer-business-lite',
     planId: 'business-lite-free',
+  },
+  {
+    label: 'Starter (1 seat)',
+    productId: 'ozer-business-starter',
+    planId: 'business-starter-monthly',
+    billableSeats: 1,
   },
   {
     label: 'Property Starter',
@@ -233,7 +239,7 @@ export function AdminBillingGrantsPanel(props: {
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="text-muted-foreground text-sm">
-          Presets set <strong>Business Solo / Team / Scale</strong> seat limits
+          Presets set <strong>Starter or Pro</strong> seat limits
           and refill the matching AI credit pool (Scale = 12,000). Media
           Generate Starter/Studio/Agency presets also grant monthly media units.
           Add-on <strong>Grant</strong> only unlocks the app — use a quick

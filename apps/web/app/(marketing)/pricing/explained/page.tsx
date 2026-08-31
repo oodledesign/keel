@@ -37,17 +37,18 @@ import {
 
 const FAQS = () => {
   const lite = getBillingProductPrice('ozer-business-lite');
-  const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
+  const starter = getBillingProductPrice('ozer-business-starter');
+  const [seat1, extraSeats] = BUSINESS_GRADUATED_TIERS;
 
   return [
     {
       question: 'How much does Ozer cost per month?',
-      answer: `Personal and family are free. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Paid Business is graduated: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to5!.unitGbp)} for seats 2–5, then ${formatGbp(seats6plus!.unitGbp)} for seats 6+. Personal and family workspaces are free forever.`,
+      answer: `Personal and family are free. Free (Business Lite) is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Starter is ${formatGbp(starter?.monthlyPriceGbp ?? 14)} for seat 1, then £9 for every extra seat. Pro is ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(extraSeats!.unitGbp)} for every extra seat. Personal and family workspaces are free forever.`,
     },
     {
       question: 'Does Ozer charge per user?',
       answer:
-        'Yes — billable seats use graduated bands on one Business product. Seat 1 is £29; extra seats get cheaper unit rates. You stay on the same plan as you grow.',
+        'Yes — billable seats use graduated bands. Starter is £14 then £9; Pro is £29 then £22. Extra seats stay cheaper than seat 1. You stay on the same product as you grow.',
     },
     {
       question: 'Does Ozer take a cut of my invoices?',
@@ -69,7 +70,7 @@ const FAQS = () => {
 export const metadata = buildMarketingMetadata({
   title: 'How much does Ozer cost? — Ozer',
   description:
-    'Exact Ozer prices in £: personal free; Business Lite £0; paid Business from £29 for seat 1, then cheaper add-on seats. Graduated pricing — not separate Solo/Team/Scale products.',
+    'Exact Ozer prices in £: personal free; Free £0; Starter from £14; Pro from £29 with cheaper extra seats. Graduated pricing — Solo/Team/Scale are seat examples, not separate products.',
   path: '/pricing/explained',
   ogType: 'pricing',
   keywords: [
@@ -86,9 +87,10 @@ function PricingExplainedPage() {
   const ten = annualCostForTeamSize(10);
   const business = listBusinessWorkspacePrices();
   const faqs = FAQS();
-  const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
+  const [seat1, extraSeats] = BUSINESS_GRADUATED_TIERS;
+  const starter = business.find((p) => p.productId === 'ozer-business-starter');
 
-  const answerFirst = `Ozer costs ${formatGbp(0)} per month for personal and family workspaces. Business Lite is ${formatGbp(business.find((p) => p.productId === 'ozer-business-lite')?.monthlyPriceGbp ?? 0)} per month. Paid Business is one graduated product: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to5!.unitGbp)} for seats 2–5, then ${formatGbp(seats6plus!.unitGbp)} for seats 6+. Examples: one seat ${formatGbp(solo.monthlyGbp)}/mo; four seats ${formatGbp(four.monthlyGbp)}/mo; ten seats ${formatGbp(ten.monthlyGbp)}/mo. No Ozer cut on invoices.`;
+  const answerFirst = `Ozer costs ${formatGbp(0)} per month for personal and family workspaces. Free (Business Lite) is ${formatGbp(business.find((p) => p.productId === 'ozer-business-lite')?.monthlyPriceGbp ?? 0)} per month. Starter is ${formatGbp(starter?.monthlyPriceGbp ?? 14)} for seat 1, then £9 for every extra seat. Pro is ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(extraSeats!.unitGbp)} for every extra seat. Pro examples: one seat ${formatGbp(solo.monthlyGbp)}/mo; four seats ${formatGbp(four.monthlyGbp)}/mo; ten seats ${formatGbp(ten.monthlyGbp)}/mo. No Ozer cut on invoices.`;
 
   return (
     <main className={cn('relative overflow-hidden', marketingShellClass)}>
@@ -174,8 +176,11 @@ function PricingExplainedPage() {
               <li key={plan.productId}>
                 {plan.productId === 'ozer-business'
                   ? `${plan.productName}: from ${formatGbp(estimateMonthlyGbp(1))} per month (graduated seats)`
-                  : `${plan.productName}: ${formatGbp(plan.monthlyPriceGbp)} per month`}
+                  : plan.productId === 'ozer-business-starter'
+                    ? `${plan.productName}: from ${formatGbp(plan.monthlyPriceGbp)} per month (£14 seat 1, then £9)`
+                    : `${plan.productName}: ${formatGbp(plan.monthlyPriceGbp)} per month`}
                 {plan.productId !== 'ozer-business' &&
+                plan.productId !== 'ozer-business-starter' &&
                 plan.yearlyPriceGbp != null
                   ? ` (or ${formatGbp(plan.yearlyPriceGbp)} per year)`
                   : null}

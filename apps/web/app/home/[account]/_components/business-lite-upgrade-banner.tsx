@@ -94,12 +94,12 @@ export function BusinessLiteUpgradeBanner({
             className="ozer-gradient-btn h-9 rounded-lg px-4"
           >
             <Link href={`${billingPath}?upgrade=1`}>
-              Upgrade from £29/mo
+              Upgrade from £14/mo
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" aria-hidden />
             </Link>
           </Button>
           <p className="text-[11px] text-[var(--workspace-shell-text-muted)] sm:text-right">
-            14-day trial on Business Solo
+            14-day trial on Starter or Pro
           </p>
         </div>
       </div>

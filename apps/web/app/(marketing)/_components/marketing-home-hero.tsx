@@ -77,7 +77,7 @@ export function MarketingHomeHero({ viewer }: MarketingHomeHeroProps) {
           >
             {isAuthenticated
               ? 'Your clients, projects, invoices, and plan for the day are ready in your personal hub — one login, every workspace.'
-              : 'Clients, projects, invoices, pipeline, activity tracking, and your plan for the day — one place, one login. From £29/month flat, with no per-seat maths and no transaction fees.'}
+              : 'Clients, projects, invoices, pipeline, activity tracking, and your plan for the day — one place, one login. Graduated from £14 on Starter or £29 on Pro, with cheaper extra seats and no transaction fees.'}
           </motion.p>
         </div>
 

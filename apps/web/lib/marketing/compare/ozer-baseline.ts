@@ -23,7 +23,7 @@ const fourSeatYearly = fourSeatMonthly * 10;
 /** Business (4-seat example) figures from graduated pricing. */
 export const OZER_TEAM_OF_FOUR = {
   pricingModel: ozerSourced(
-    'Graduated per-seat pricing on one Business product; seat 1 at £29, then cheaper add-on seats',
+    'Graduated seats: Starter from £14 then £9; Pro from £29 then £22. Extra seats stay cheaper than seat 1.',
   ),
   teamOfFourGbpYear: ozerSourced(
     `${formatGbp(fourSeatYearly)}/year for 4 billable seats on annual billing (${formatGbp(fourSeatMonthly)}/month)`,

@@ -216,7 +216,7 @@ export function FeatureLandingPage({
               href="/pricing"
               className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
             >
-              Ozer pricing — flat price for the whole team
+              Ozer pricing — graduated seats from £14
             </Link>
             <Link
               href={relatedBlog.href}

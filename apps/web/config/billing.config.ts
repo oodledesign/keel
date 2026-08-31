@@ -156,11 +156,10 @@ export default createBillingSchema({
               type: 'per_seat',
               unit: 'seat',
               description:
-                'Graduated: £29 for seat 1, £22 for seats 2–5, £16 for seats 6+',
+                'Graduated: £29 for seat 1, £22 for every additional seat',
               tiers: [
                 { upTo: 1, cost: 29 },
-                { upTo: 5, cost: 22 },
-                { upTo: 'unlimited', cost: 16 },
+                { upTo: 'unlimited', cost: 22 },
               ],
             },
           ],
@@ -179,11 +178,10 @@ export default createBillingSchema({
               type: 'per_seat',
               unit: 'seat',
               description:
-                'Graduated yearly (10× monthly): £290 for seat 1, £220 for seats 2–5, £160 for seats 6+',
+                'Graduated yearly (10× monthly): £290 for seat 1, £220 for every additional seat',
               tiers: [
                 { upTo: 1, cost: 290 },
-                { upTo: 5, cost: 220 },
-                { upTo: 'unlimited', cost: 160 },
+                { upTo: 'unlimited', cost: 220 },
               ],
             },
           ],

@@ -25,7 +25,7 @@ import {
 export const metadata = buildMarketingMetadata({
   title: 'Stack cost calculator UK — Ozer',
   description:
-    'How much does business software cost for a small agency in the UK? Add your tools, seats, and card fees. Compare the annual total in £ to Ozer’s flat team price.',
+    'How much does business software cost for a small agency in the UK? Add your tools, seats, and card fees. Compare the annual total in £ to Ozer Starter or Pro.',
   path: '/tools/stack-cost-calculator',
   ogType: 'default',
   keywords: [
@@ -44,7 +44,7 @@ function StackCostCalculatorPage() {
             headline:
               'How much does business software cost for a small agency in the UK?',
             description:
-              'Methodology for estimating annual SaaS spend for a small UK studio, compared with Ozer Business Team.',
+              'Methodology for estimating annual SaaS spend for a small UK studio, compared with Ozer Starter or Pro.',
             path: '/tools/stack-cost-calculator',
             authorName: 'Dan Potter',
             dateModified: '2026-07-04',
@@ -86,9 +86,9 @@ function StackCostCalculatorPage() {
               use 2.9% of annual card revenue plus £0.20 per transaction.
             </li>
             <li>
-              Ozer’s comparison figure is Business Team from billing config: a
-              flat workspace price for up to five members, with no subscription
-              transaction fee.
+              Ozer’s comparison figure uses real graduated helpers. Pick seats
+              and Starter or Pro — 4-seat Pro is still £95/mo, with no
+              subscription transaction fee.
             </li>
           </ol>
         </aside>

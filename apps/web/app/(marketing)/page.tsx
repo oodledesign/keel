@@ -51,7 +51,7 @@ import { OzerVsOthersSection } from './_components/ozer-vs-others-section';
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS for studios — Ozer',
   description:
-    'Ozer is the Workspace OS for freelancers and small studios. Clients, projects, invoices, pipeline, activity tracking, and your plan for the day in one place from £29 per month.',
+    'Ozer is the Workspace OS for freelancers and small studios. Clients, projects, invoices, pipeline, activity tracking, and your plan for the day in one place — from £14 on Starter or £29 on Pro.',
   path: '/',
   ogType: 'default',
   keywords: [
@@ -233,13 +233,13 @@ async function Home() {
             id="home-pricing-heading"
             className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]"
           >
-            Graduated pricing from {formatGbp(estimateMonthlyGbp(1))}
+            Graduated from £14 Starter / £29 Pro
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]">
-            Seat 1 is {formatGbp(estimateMonthlyGbp(1))}/month. A 4-seat studio
-            is about {formatGbp(estimateMonthlyGbp(4))}/month on the same
-            Business plan — cheaper add-on seats, shared AI, no transaction fees
-            on your subscription.
+            Starter is £14 for seat 1, then £9 each extra. Pro is{' '}
+            {formatGbp(estimateMonthlyGbp(1))} for seat 1, then £22 each extra —
+            a 4-seat studio is {formatGbp(estimateMonthlyGbp(4))}/month. No
+            transaction fees on your subscription.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button asChild className={marketingBtnGradient}>

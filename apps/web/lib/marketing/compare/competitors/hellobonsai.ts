@@ -35,8 +35,8 @@ export const hellobonsaiComparison: ComparisonConfig = {
   },
   inBrief: [
     'Hello Bonsai is a freelance operations suite with proposals, contracts, and invoicing, sold primarily on per-user plans.',
-    'Ozer is a Workspace OS with flat team pricing, EU data residency, and Mac meeting capture that does not keep permanent audio.',
-    'Choose Bonsai if you want a US-centric freelance stack and accept per-seat cost; choose Ozer if a 4-person UK studio wants one flat workspace price and EU-hosted data.',
+    'Ozer is a Workspace OS with graduated Starter and Pro seats, EU data residency, and Mac meeting capture that does not keep permanent audio.',
+    'Choose Bonsai if you want a US-centric freelance stack and accept per-user cost; choose Ozer if a 4-person UK studio wants cheaper extra seats and EU-hosted data.',
   ],
   glanceRows: [
     {
@@ -153,7 +153,7 @@ export const hellobonsaiComparison: ComparisonConfig = {
     ),
     ozerLines: [
       {
-        label: 'Business Team annual (up to 5 members)',
+        label: 'Pro annual for 4 billable seats',
         amountGbp: OZER_TEAM_OF_FOUR.teamOfFourAnnualGbp,
       },
       {
@@ -162,7 +162,7 @@ export const hellobonsaiComparison: ComparisonConfig = {
         note: 'Stripe UK card pricing; not an Ozer platform fee',
       },
     ],
-    ozerTotalGbp: c(1950, 'https://ozer.so/pricing', '2026-07-04'),
+    ozerTotalGbp: c(2110, 'https://ozer.so/pricing', '2026-07-04'),
     footnotes: [
       {
         text: 'Bonsai public tiers are often described in the $9–$49 per user per month range on annual billing; confirm live tiers before citing.',
@@ -190,7 +190,7 @@ export const hellobonsaiComparison: ComparisonConfig = {
     'You do not need EU data residency or on-device Mac meeting capture as hard requirements.',
   ],
   chooseOzerIf: [
-    'You want a flat price for the whole team (Business Team covers up to five members) rather than multiplying seats.',
+    'You want graduated GBP seats (Starter from £14, Pro from £29) rather than a US per-user multiplier.',
     'You need EU data residency and a UK-built product with a published Trust Centre.',
     'You want Mac meeting transcription processed on-device without keeping permanent audio files.',
     'You want personal, family, and business workspaces in one Workspace OS — not only a freelance CRM silo.',
@@ -204,13 +204,13 @@ export const hellobonsaiComparison: ComparisonConfig = {
     {
       question: "What's the best Hello Bonsai alternative in the UK?",
       answer:
-        'There is no single best alternative. Ozer is built for UK/EU studios that want flat team pricing, EU residency, and Mac meeting capture. Other tools may fit if you prioritise different modules or US-centric ecosystems.',
+        'There is no single best alternative. Ozer is built for UK/EU studios that want graduated Starter and Pro seats, EU residency, and Mac meeting capture. Other tools may fit if you prioritise different modules or US-centric ecosystems.',
     },
     {
       question:
         'How does Hello Bonsai pricing compare to Ozer for four people?',
       answer:
-        'Bonsai charges per user; Ozer Business Team is a flat workspace price for up to five members (£790/year on annual billing). Run the pricing maths section with verified Bonsai tiers and FX before deciding.',
+        'Bonsai charges per user; Ozer Pro for four seats is £95/mo or £950/year on annual billing. Run the pricing maths section with verified Bonsai tiers and FX before deciding.',
     },
     {
       question: 'Does Ozer replace Hello Bonsai proposals and contracts?',
@@ -224,7 +224,7 @@ export const hellobonsaiComparison: ComparisonConfig = {
     },
   ],
   migrationNote:
-    'Moving from Hello Bonsai typically means exporting clients and open invoices, recreating active projects in Ozer, reconnecting Gmail if you use email assist, and inviting the team to one Business Team workspace. Plan a quiet week for template rebuilds (proposals/contracts) rather than a big-bang cutover.',
+    'Moving from Hello Bonsai typically means exporting clients and open invoices, recreating active projects in Ozer, reconnecting Gmail if you use email assist, and inviting the team to one Starter or Pro workspace. Plan a quiet week for template rebuilds (proposals/contracts) rather than a big-bang cutover.',
   relatedFeatures: [
     { href: '/features/invoicing', label: 'Ozer invoicing' },
     { href: '/features/contracts', label: 'Ozer contracts' },

@@ -23,10 +23,13 @@ import { cn } from '@kit/ui/utils';
 import {
   BUSINESS_GRADUATED_PLAN_ID,
   BUSINESS_GRADUATED_PRODUCT_ID,
-  BUSINESS_ILLUSTRATIVE_TIERS,
   estimateMonthlyGbp,
-  formatGraduatedWorkedExample,
 } from '~/lib/billing/business-graduated-pricing';
+import {
+  BUSINESS_STARTER_PLAN_ID,
+  BUSINESS_STARTER_PRODUCT_ID,
+  estimateStarterMonthlyGbp,
+} from '~/lib/billing/business-starter-pricing';
 import {
   MARKETING_FREE_TIER,
   MARKETING_WORKSPACE_PLANS,
@@ -52,7 +55,7 @@ type WorkspaceChoice =
   | 'family'
   | 'community';
 
-type BusinessTier = 'lite' | 'solo' | 'team' | 'scale';
+type BusinessTier = 'lite' | 'starter' | 'pro';
 
 function planByProductId(productId: string) {
   return MARKETING_WORKSPACE_PLANS.find((plan) => plan.productId === productId);
@@ -94,7 +97,7 @@ const workspaceOptions: Array<{
     value: 'business',
     title: 'Add a business workspace',
     description:
-      'Clients, projects, and invoices — graduated Business from £29 for seat 1.',
+      'Clients, projects, and invoices — Starter from £14, Pro from £29.',
     icon: Briefcase,
     priceProductId: BUSINESS_GRADUATED_PRODUCT_ID,
   },
@@ -118,9 +121,12 @@ export function StartFlowClient() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('personal');
   const [workspace, setWorkspace] = useState<WorkspaceChoice | null>(null);
-  const [businessTier, setBusinessTier] = useState<BusinessTier | null>('solo');
+  const [businessTier, setBusinessTier] = useState<BusinessTier | null>(
+    'starter',
+  );
 
   const business = planByProductId(BUSINESS_GRADUATED_PRODUCT_ID);
+  const starter = planByProductId(BUSINESS_STARTER_PRODUCT_ID);
   const lite = planByProductId('ozer-business-lite');
 
   const signupHref = useMemo(() => {
@@ -141,19 +147,29 @@ export function StartFlowClient() {
       return buildPricingSignupUrl({ profile: 'community' });
     }
 
-    const illustrative = BUSINESS_ILLUSTRATIVE_TIERS.find(
-      (tier) => tier.id === businessTier,
-    );
-    const seats = illustrative?.billableSeats ?? 1;
+    if (businessTier === 'starter') {
+      return buildPricingSignupUrl({
+        profile: 'work_design',
+        productId: BUSINESS_STARTER_PRODUCT_ID,
+        planId: starter?.monthlyPlanId ?? BUSINESS_STARTER_PLAN_ID,
+        interval: 'month',
+        seats: 1,
+      });
+    }
 
     return buildPricingSignupUrl({
       profile: 'work_design',
       productId: BUSINESS_GRADUATED_PRODUCT_ID,
       planId: business?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
       interval: 'month',
-      seats,
+      seats: 1,
     });
-  }, [workspace, businessTier, business?.monthlyPlanId]);
+  }, [
+    workspace,
+    businessTier,
+    business?.monthlyPlanId,
+    starter?.monthlyPlanId,
+  ]);
 
   const stepIndex = step === 'personal' ? 0 : step === 'workspace' ? 1 : 2;
   const totalSteps = workspace === 'business' || step === 'business' ? 3 : 2;
@@ -414,25 +430,27 @@ export function StartFlowClient() {
           <ul className="grid gap-3">
             {(
               [
-                ...BUSINESS_ILLUSTRATIVE_TIERS.map((tier) => {
-                  const total = estimateMonthlyGbp(tier.billableSeats);
-                  const isSolo = tier.id === 'solo';
-                  return {
-                    value: tier.id,
-                    title: tier.label,
-                    priceLabel: isSolo
-                      ? `From ${formatGbp(total)}`
-                      : formatGbp(total),
-                    description: isSolo
-                      ? `${tier.description} — 14-day trial.`
-                      : `${tier.description}. ${formatGraduatedWorkedExample(tier.billableSeats, formatGbp)} — 14-day trial.`,
-                    recommended: tier.highlighted,
-                    variant: 'plan' as const,
-                  };
-                }),
+                {
+                  value: 'starter' as const,
+                  title: starter?.name ?? 'Starter',
+                  priceLabel: `From ${formatGbp(estimateStarterMonthlyGbp(1))}`,
+                  description:
+                    'Clients, projects, and invoices — £14 for seat 1, then £9 for every extra seat. 14-day trial.',
+                  recommended: false,
+                  variant: 'plan' as const,
+                },
+                {
+                  value: 'pro' as const,
+                  title: business?.name ?? 'Pro',
+                  priceLabel: `From ${formatGbp(estimateMonthlyGbp(1))}`,
+                  description:
+                    'Shared AI, more guests, and sharing — £29 for seat 1, then £22 for every extra seat. 14-day trial.',
+                  recommended: true,
+                  variant: 'plan' as const,
+                },
                 {
                   value: 'lite' as const,
-                  title: lite?.name ?? 'Business Lite',
+                  title: lite?.name ?? 'Free',
                   priceLabel: 'Free',
                   description:
                     'Apps only — Signatures and marketplace add-ons. No clients, jobs, or invoices.',
