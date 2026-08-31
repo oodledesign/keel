@@ -158,7 +158,7 @@ export function SopTrackerWidget({
     if (stepNeedsListing(step) && !listingId) {
       toast.message('Create the disposal first', {
         description:
-          'Open “Start the disposal record”, save the new disposal, then continue.',
+          'Open “Start the disposal record”, add a disposal (it starts as a draft), then continue.',
       });
       const first = steps.find((s) => !stepNeedsListing(s)) ?? steps[0];
       if (first && first.id !== step.id) {

@@ -20,6 +20,7 @@ import { loadClientsPageData } from './_lib/server/clients-page.loader';
 
 interface ClientsPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ list?: string }>;
 }
 
 export async function generateMetadata({ params }: ClientsPageProps) {
@@ -37,8 +38,9 @@ export async function generateMetadata({ params }: ClientsPageProps) {
   return { title };
 }
 
-async function ClientsPage({ params }: ClientsPageProps) {
+async function ClientsPage({ params, searchParams }: ClientsPageProps) {
   const accountSlug = (await params).account;
+  const listParam = (await searchParams).list;
   const workspace = await loadTeamWorkspace(accountSlug);
   const spaceType = getSpaceTypeFromAccount(
     workspace.account as { space_type?: string | null },
@@ -71,7 +73,10 @@ async function ClientsPage({ params }: ClientsPageProps) {
     isContractorView,
     initialOverview,
     initialTotal,
-  } = await loadClientsPageData(accountSlug, { variant });
+  } = await loadClientsPageData(accountSlug, {
+    variant,
+    audience: listParam === 'mailing' ? 'mailing_list' : 'all',
+  });
 
   const pageTitle = isProperty
     ? 'Tenants'
@@ -103,6 +108,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
           }
           showCommercialRole={isCommercial}
           showLinkedInImport={!isCommercial}
+          initialAudience={listParam === 'mailing' ? 'mailing_list' : 'all'}
         />
       </PageBody>
     </>

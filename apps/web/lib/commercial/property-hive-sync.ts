@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { isBlockedLogoHostname } from '~/lib/clients/client-logo-icons';
@@ -93,6 +94,10 @@ type PublicationStatus = 'draft' | 'published' | 'unpublished' | 'error';
 /** Untyped until `pnpm supabase:web:typegen` includes commercial_* tables. */
 function db(): SupabaseClient {
   return getSupabaseServerClient() as unknown as SupabaseClient;
+}
+
+function adminDb(): SupabaseClient {
+  return getSupabaseServerAdminClient() as unknown as SupabaseClient;
 }
 
 function normalizeSiteUrl(siteUrl: string): string {
@@ -283,7 +288,7 @@ async function loadListing(
 async function getExistingPublication(accountId: string, listingId: string) {
   const { data } = await db()
     .from('commercial_portal_publications')
-    .select('id, external_id, status')
+    .select('id, external_id, external_url, status')
     .eq('account_id', accountId)
     .eq('listing_id', listingId)
     .eq('portal', 'property_hive')
@@ -292,6 +297,7 @@ async function getExistingPublication(accountId: string, listingId: string) {
   return data as {
     id: string;
     external_id: string | null;
+    external_url: string | null;
     status: string;
   } | null;
 }
@@ -325,6 +331,50 @@ async function upsertPublication(input: {
     );
 
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Persist a Property Hive failure so the Management portal card can show it.
+ * Callers must already have authorised the listing write. Admin is used only
+ * here so a session RLS miss cannot wipe external_id or hide the error.
+ */
+export async function persistPropertyHivePublicationError(input: {
+  accountId: string;
+  listingId: string;
+  lastError: string;
+}): Promise<void> {
+  const writer = adminDb();
+  const { data: existing } = await writer
+    .from('commercial_portal_publications')
+    .select('external_id, external_url')
+    .eq('account_id', input.accountId)
+    .eq('listing_id', input.listingId)
+    .eq('portal', 'property_hive')
+    .maybeSingle();
+
+  const now = new Date().toISOString();
+  const { error } = await writer.from('commercial_portal_publications').upsert(
+    {
+      account_id: input.accountId,
+      listing_id: input.listingId,
+      portal: 'property_hive',
+      external_id:
+        (existing as { external_id?: string | null } | null)?.external_id ??
+        null,
+      external_url:
+        (existing as { external_url?: string | null } | null)?.external_url ??
+        null,
+      status: 'error' as const,
+      last_sync_at: now,
+      last_error: input.lastError,
+      updated_at: now,
+    },
+    { onConflict: 'listing_id,portal' },
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 function basicAuthHeader(username: string, applicationPassword: string) {

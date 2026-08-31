@@ -45,6 +45,7 @@ import { ClientOverviewCard } from './client-overview-card';
 
 type ViewMode = 'cards' | 'list';
 type SortKey = 'name-asc' | 'name-desc' | 'recent' | 'projects' | 'disposals';
+type ContactAudience = 'all' | 'mailing_list';
 
 const panelToolbarClass =
   'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -151,6 +152,7 @@ export function ClientsPageContent({
   addClientLabel = 'Add client',
   showCommercialRole = false,
   showLinkedInImport = true,
+  initialAudience = 'all',
 }: {
   accountSlug: string;
   accountId: string;
@@ -165,6 +167,7 @@ export function ClientsPageContent({
   addClientLabel?: string;
   showCommercialRole?: boolean;
   showLinkedInImport?: boolean;
+  initialAudience?: ContactAudience;
 }) {
   const isCommercial = variant === 'commercial';
   const pathname = usePathname();
@@ -184,6 +187,7 @@ export function ClientsPageContent({
   const [sort, setSort] = useState<SortKey>('name-asc');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [showArchived, setShowArchived] = useState(false);
+  const [audience, setAudience] = useState<ContactAudience>(initialAudience);
   const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
   const [members, setMembers] = useState<
     Array<{ user_id: string; name: string | null; picture_url?: string | null }>
@@ -217,10 +221,22 @@ export function ClientsPageContent({
       return;
     }
 
+    if (audience !== initialAudience) {
+      return;
+    }
+
     setPageClients(initialOverview);
     setCachedClients(initialOverview);
     setTotal(Number(initialTotal) || 0);
-  }, [initialOverview, initialTotal, page, search, searchDebounced]);
+  }, [
+    audience,
+    initialAudience,
+    initialOverview,
+    initialTotal,
+    page,
+    search,
+    searchDebounced,
+  ]);
 
   useEffect(() => {
     listAccountMembers({ accountSlug })
@@ -248,6 +264,7 @@ export function ClientsPageContent({
           pageSize,
           members,
           variant,
+          audience,
         });
         const list = Array.isArray((result as { data?: unknown })?.data)
           ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -265,7 +282,7 @@ export function ClientsPageContent({
         setLoadingPage(false);
       }
     },
-    [accountId, pageSize, members, variant],
+    [accountId, pageSize, members, variant, audience],
   );
 
   const refreshClients = useCallback(async () => {
@@ -280,12 +297,24 @@ export function ClientsPageContent({
 
     const isDefaultFirstPage = page === 1;
 
-    if (isDefaultFirstPage && initialOverview.length > 0) {
+    if (
+      isDefaultFirstPage &&
+      initialOverview.length > 0 &&
+      audience === initialAudience
+    ) {
       return;
     }
 
     void fetchClientsPage(page);
-  }, [page, search, searchDebounced, fetchClientsPage, initialOverview.length]);
+  }, [
+    page,
+    search,
+    searchDebounced,
+    fetchClientsPage,
+    initialOverview.length,
+    audience,
+    initialAudience,
+  ]);
 
   useEffect(() => {
     const query = searchDebounced.trim().toLowerCase();
@@ -310,6 +339,7 @@ export function ClientsPageContent({
             pageSize,
             members,
             variant,
+            audience,
           });
           const list = Array.isArray((result as { data?: unknown })?.data)
             ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -347,7 +377,7 @@ export function ClientsPageContent({
     return () => {
       cancelled = true;
     };
-  }, [accountId, searchDebounced, pageSize, members, variant]);
+  }, [accountId, searchDebounced, pageSize, members, variant, audience]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -423,6 +453,24 @@ export function ClientsPageContent({
   const setView = (mode: ViewMode) => {
     setViewMode(mode);
     window.localStorage.setItem(viewStorageKey(accountId), mode);
+  };
+
+  const setContactAudience = (next: ContactAudience) => {
+    if (next === audience) return;
+    setAudience(next);
+    setPageClients([]);
+    setCachedClients([]);
+    setPage(1);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (next === 'mailing_list') {
+      nextParams.set('list', 'mailing');
+    } else {
+      nextParams.delete('list');
+    }
+    const nextPath = nextParams.toString()
+      ? `${pathname}?${nextParams.toString()}`
+      : pathname;
+    router.replace(nextPath, { scroll: false });
   };
 
   if (!canViewClients) {
@@ -503,6 +551,41 @@ export function ClientsPageContent({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
+        <div
+          className={cn('inline-flex rounded-lg p-1', panelToolbarClass)}
+          role="tablist"
+          aria-label={isCommercial ? 'Contact list' : 'Client list'}
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={audience === 'all'}
+            onClick={() => setContactAudience('all')}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-sm font-medium transition',
+              audience === 'all'
+                ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+            )}
+          >
+            {isCommercial ? 'All contacts' : 'All clients'}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={audience === 'mailing_list'}
+            onClick={() => setContactAudience('mailing_list')}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-sm font-medium transition',
+              audience === 'mailing_list'
+                ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+            )}
+          >
+            Mailing list
+          </button>
+        </div>
+
         <div className="relative min-w-[220px] flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
@@ -618,9 +701,11 @@ export function ClientsPageContent({
               ? isCommercial
                 ? 'No contacts match your search.'
                 : 'No clients match your search.'
-              : isCommercial
-                ? 'No contacts yet. Add your first contact to get started.'
-                : 'No clients yet. Add your first client to get started.'}
+              : audience === 'mailing_list'
+                ? 'No mailing-list subscribers yet. People who join from a mailing-list form appear here and stay on All contacts.'
+                : isCommercial
+                  ? 'No contacts yet. Add your first contact to get started.'
+                  : 'No clients yet. Add your first client to get started.'}
           </div>
         ) : viewMode === 'cards' ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

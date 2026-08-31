@@ -13,6 +13,7 @@ import { toast } from '@kit/ui/sonner';
 
 import { isEachFeedIncluded } from '~/lib/commercial/each-feed-inclusion';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
+import { portalPublishFailureMessage } from '~/lib/commercial/portal-publish-result';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import { testPublishListingAction } from '../../commercial-publishing/_lib/server/server-actions';
@@ -62,9 +63,29 @@ export function ListingPortalSyncCard({
   const router = useRouter();
   const [pendingPortal, setPendingPortal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [portalErrors, setPortalErrors] = useState<Record<string, string>>({});
 
-  const otherPublications = publications.filter((pub) => pub.portal !== 'each');
-  const eachPublication = publications.find((pub) => pub.portal === 'each');
+  const visiblePublications = publications.map((pub) =>
+    portalErrors[pub.portal]
+      ? {
+          ...pub,
+          status: 'error' as const,
+          lastError: portalErrors[pub.portal] ?? pub.lastError,
+        }
+      : pub,
+  );
+
+  const otherPublications = visiblePublications.filter(
+    (pub) => pub.portal !== 'each',
+  );
+  const eachPublication = visiblePublications.find(
+    (pub) => pub.portal === 'each',
+  );
+  const propertyHiveError =
+    portalErrors.property_hive &&
+    !visiblePublications.some((pub) => pub.portal === 'property_hive')
+      ? portalErrors.property_hive
+      : null;
 
   const republish = (portal: 'property_hive' | 'rightmove' | 'each') => {
     if (!canEditDisposals) return;
@@ -79,25 +100,24 @@ export function ListingPortalSyncCard({
           listingId: listing.id,
           portal,
         });
-        if (
-          result &&
-          typeof result === 'object' &&
-          'ok' in result &&
-          result.ok === false
-        ) {
-          toast.error(
-            'error' in result && typeof result.error === 'string'
-              ? result.error
-              : 'Publish failed',
-          );
+        const failure = portalPublishFailureMessage(result);
+        if (failure) {
+          setPortalErrors((current) => ({ ...current, [portal]: failure }));
+          toast.error(failure);
         } else {
+          setPortalErrors((current) => {
+            const next = { ...current };
+            delete next[portal];
+            return next;
+          });
           toast.success(`Republished to ${portal.replace(/_/g, ' ')}`);
         }
         router.refresh();
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Could not republish',
-        );
+        const message =
+          error instanceof Error ? error.message : 'Could not republish';
+        setPortalErrors((current) => ({ ...current, [portal]: message }));
+        toast.error(message);
       } finally {
         setPendingPortal(null);
       }
@@ -132,19 +152,45 @@ export function ListingPortalSyncCard({
           <PublicationRow
             pub={eachPublication}
             pending={pending && pendingPortal === 'each'}
-            onRepublish={
-              canEditDisposals ? () => republish('each') : undefined
-            }
+            onRepublish={canEditDisposals ? () => republish('each') : undefined}
           />
         ) : null}
 
-        {otherPublications.length === 0 && !eachPublication ? (
+        {otherPublications.length === 0 &&
+        !eachPublication &&
+        !propertyHiveError ? (
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
             Rightmove and Property Hive status will appear here after you
             publish or sync from Commercial publishing.
           </p>
         ) : (
           <ul className="space-y-3">
+            {propertyHiveError ? (
+              <li className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Property Hive
+                </p>
+                <p className="text-xs font-medium text-rose-500">error</p>
+                <p className="mt-1 text-xs text-rose-500">
+                  {propertyHiveError}
+                </p>
+                {canEditDisposals ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    className="mt-2 border-[color:var(--workspace-shell-border)]"
+                    onClick={() => republish('property_hive')}
+                  >
+                    <RefreshCw
+                      className={`mr-1 h-3.5 w-3.5 ${pending && pendingPortal === 'property_hive' ? 'animate-spin' : ''}`}
+                    />
+                    Retry
+                  </Button>
+                ) : null}
+              </li>
+            ) : null}
             {otherPublications.map((pub) => (
               <PublicationRow
                 key={pub.id}
@@ -192,7 +238,7 @@ function PublicationRow({
             Last sync: {formatSyncAt(pub.lastSyncAt)}
           </p>
           {pub.lastError ? (
-            <p className="mt-1 line-clamp-2 text-[11px] text-rose-500">
+            <p role="alert" className="mt-1 text-xs text-rose-500">
               {pub.lastError}
             </p>
           ) : null}

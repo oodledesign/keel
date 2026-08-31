@@ -228,10 +228,76 @@ class ClientsService {
     return this.listClientsWithDb(readDb, params);
   }
 
+  /**
+   * Clients subscribed via the public mailing-list form.
+   * Primary source is workspace_mailing_preferences (all workspaces).
+   * Commercial signup also writes commercial_marketing_preferences.
+   */
+  private async listMailingListClientIds(
+    readDb: any,
+    accountId: string,
+  ): Promise<string[]> {
+    const ids = new Set<string>();
+
+    const mailing = await readDb
+      .from('workspace_mailing_preferences')
+      .select('client_id')
+      .eq('account_id', accountId)
+      .eq('purpose', 'workspace_mailing_list')
+      .eq('marketing_status', 'subscribed')
+      .not('client_id', 'is', null)
+      .limit(200);
+
+    if (mailing.error) {
+      if (isMissingRelationError(mailing.error)) {
+        return [];
+      }
+      throw mailing.error;
+    }
+
+    for (const row of mailing.data ?? []) {
+      const clientId = (row as { client_id?: string | null }).client_id;
+      if (clientId) ids.add(clientId);
+    }
+
+    const commercial = await readDb
+      .from('commercial_marketing_preferences')
+      .select('client_id')
+      .eq('account_id', accountId)
+      .eq('purpose', 'matching_disposals')
+      .eq('marketing_status', 'subscribed')
+      .not('client_id', 'is', null)
+      .limit(200);
+
+    if (commercial.error) {
+      if (!isMissingRelationError(commercial.error)) {
+        throw commercial.error;
+      }
+    } else {
+      for (const row of commercial.data ?? []) {
+        const clientId = (row as { client_id?: string | null }).client_id;
+        if (clientId) ids.add(clientId);
+      }
+    }
+
+    return [...ids].slice(0, 200);
+  }
+
   private async listClientsWithDb(readDb: any, params: ListClientsInput) {
     const { page = 1, pageSize = 20, search } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
+
+    let mailingClientIds: string[] | null = null;
+    if (params.audience === 'mailing_list') {
+      mailingClientIds = await this.listMailingListClientIds(
+        readDb,
+        params.accountId,
+      );
+      if (mailingClientIds.length === 0) {
+        return { data: [], total: 0 };
+      }
+    }
 
     let query = readDb
       .from('clients')
@@ -247,6 +313,10 @@ class ClientsService {
       query = query.not('archived_at', 'is', null);
     } else {
       query = query.is('archived_at', null);
+    }
+
+    if (mailingClientIds) {
+      query = query.in('id', mailingClientIds);
     }
 
     if (search?.trim()) {
@@ -272,6 +342,10 @@ class ClientsService {
           .eq('account_id', params.accountId)
           .order('created_at', { ascending: false })
           .range(from, to);
+
+        if (mailingClientIds) {
+          legacyQuery = legacyQuery.in('id', mailingClientIds);
+        }
 
         if (search?.trim()) {
           const term = `%${search.trim()}%`;

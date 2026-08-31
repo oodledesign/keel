@@ -18,6 +18,7 @@ import {
 } from '~/lib/commercial/property-hive-feed';
 import {
   getPropertyHiveCredentials,
+  persistPropertyHivePublicationError,
   pushListingToPropertyHive,
   savePropertyHiveCredentials,
 } from '~/lib/commercial/property-hive-sync';
@@ -175,10 +176,23 @@ export const testPublishListingAction = enhanceAction(
         }
 
         if (!restConfigured) {
+          const message =
+            'Property Hive XML feed is not enabled yet. Click “Enable feed” above, or save WordPress REST credentials for live push.';
+          if (input.listingId) {
+            try {
+              await persistPropertyHivePublicationError({
+                accountId: input.accountId,
+                listingId: input.listingId,
+                lastError: message,
+              });
+            } catch {
+              /* card still shows the returned error */
+            }
+          }
           return {
             ok: false as const,
-            message:
-              'Property Hive XML feed is not enabled yet. Click “Enable feed” above, or save WordPress REST credentials for live push.',
+            error: message,
+            message,
           };
         }
 
@@ -189,15 +203,34 @@ export const testPublishListingAction = enhanceAction(
           };
         }
 
-        const result = await pushListingToPropertyHive(
-          input.accountId,
-          input.listingId,
-        );
-        return {
-          ok: true as const,
-          message: `Pushed to Property Hive (id ${result.externalId})`,
-          externalUrl: result.externalUrl,
-        };
+        try {
+          const result = await pushListingToPropertyHive(
+            input.accountId,
+            input.listingId,
+          );
+          return {
+            ok: true as const,
+            message: `Pushed to Property Hive (id ${result.externalId})`,
+            externalUrl: result.externalUrl,
+          };
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : 'Property Hive push failed';
+          try {
+            await persistPropertyHivePublicationError({
+              accountId: input.accountId,
+              listingId: input.listingId,
+              lastError: message,
+            });
+          } catch {
+            /* card still shows the returned error */
+          }
+          return {
+            ok: false as const,
+            error: message,
+            message,
+          };
+        }
       }
 
       if (input.portal === 'rightmove') {

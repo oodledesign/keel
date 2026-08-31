@@ -22,7 +22,10 @@ export const loadClientsPageData = cache(loadClientsPageDataImpl);
 
 async function loadClientsPageDataImpl(
   accountSlug: string,
-  options?: { variant?: 'work' | 'commercial' },
+  options?: {
+    variant?: 'work' | 'commercial';
+    audience?: 'all' | 'mailing_list';
+  },
 ) {
   const workspace = await loadTeamWorkspace(accountSlug);
 
@@ -59,6 +62,7 @@ async function loadClientsPageDataImpl(
         page: 1,
         pageSize: 20,
         variant,
+        audience: options?.audience ?? 'all',
       });
       initialOverview = result.data;
       initialTotal = result.total ?? 0;
