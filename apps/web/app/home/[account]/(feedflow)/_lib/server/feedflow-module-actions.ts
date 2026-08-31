@@ -77,7 +77,29 @@ export const deleteFeedflowSocialAccount = enhanceAction(
       user.id,
     );
 
-    const { error } = await supabaseCustomSchema(client, 'feedflow')
+    const feed = supabaseCustomSchema(client, 'feedflow');
+
+    const { error: postsError } = await feed
+      .from('posts')
+      .delete()
+      .eq('social_account_id', input.socialAccountId)
+      .eq('account_id', input.accountId);
+
+    if (postsError) {
+      throw new Error(postsError.message);
+    }
+
+    const { error: cacheError } = await feed
+      .from('feed_cache')
+      .delete()
+      .eq('social_account_id', input.socialAccountId)
+      .eq('account_id', input.accountId);
+
+    if (cacheError) {
+      throw new Error(cacheError.message);
+    }
+
+    const { error } = await feed
       .from('social_accounts')
       .delete()
       .eq('id', input.socialAccountId)

@@ -13,6 +13,9 @@ const serverSchema = z.object({
     .string()
     .min(32, 'TOKEN_ENCRYPTION_KEY must be at least 32 bytes (base64 or hex)'),
   OAUTH_STATE_SECRET: z.string().min(16).optional(),
+  FEEDFLOW_INSTAGRAM_APP_ID: z.string().optional(),
+  FEEDFLOW_INSTAGRAM_APP_SECRET: z.string().optional(),
+  FEEDFLOW_INSTAGRAM_REDIRECT_URI: z.string().url().optional(),
   INSTAGRAM_APP_ID: z.string().optional(),
   INSTAGRAM_APP_SECRET: z.string().optional(),
   INSTAGRAM_REDIRECT_URI: z.string().url().optional(),
@@ -45,22 +48,51 @@ export function getFeedflowServerEnv(): FeedflowServerEnv {
   return parsed.data;
 }
 
+export const FEEDFLOW_INSTAGRAM_CALLBACK_PATH =
+  '/api/feedflow/auth/instagram/callback';
+
+function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return undefined;
+}
+
+function defaultFeedflowInstagramRedirectUri(): string | undefined {
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
+  if (!site) return undefined;
+  return `${site}${FEEDFLOW_INSTAGRAM_CALLBACK_PATH}`;
+}
+
 /**
- * Provider-specific env only (no full Feedflow schema).
- * Used by UI and OAuth start routes so pages never throw when base env
- * (e.g. TOKEN_ENCRYPTION_KEY) is not configured yet — callbacks still use
- * {@link getFeedflowServerEnv} and will fail fast if secrets are missing.
+ * Instagram Login credentials for Feedflow only.
+ *
+ * Prefer FEEDFLOW_INSTAGRAM_*. Fall back to legacy INSTAGRAM_* when the new
+ * names are absent. Never read Auto-Reply's META_INSTAGRAM_* / META_REDIRECT_URI.
  */
 export function getOptionalInstagram() {
-  const appId = process.env.INSTAGRAM_APP_ID;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET;
-  const redirectUri = process.env.INSTAGRAM_REDIRECT_URI;
+  const appId = firstNonEmpty(
+    process.env.FEEDFLOW_INSTAGRAM_APP_ID,
+    process.env.INSTAGRAM_APP_ID,
+  );
+  const appSecret = firstNonEmpty(
+    process.env.FEEDFLOW_INSTAGRAM_APP_SECRET,
+    process.env.INSTAGRAM_APP_SECRET,
+  );
+  const redirectUri = firstNonEmpty(
+    process.env.FEEDFLOW_INSTAGRAM_REDIRECT_URI,
+    process.env.INSTAGRAM_REDIRECT_URI,
+    defaultFeedflowInstagramRedirectUri(),
+  );
+
   if (!appId || !appSecret || !redirectUri) {
     return null;
   }
   if (!z.string().url().safeParse(redirectUri).success) {
     return null;
   }
+
   return {
     appId,
     appSecret,
