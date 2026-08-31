@@ -40,11 +40,7 @@ export function feedflowSocialAccountsPath(slug: string): string {
 
 function isFeedflowSurface(path: string): boolean {
   const pathname = pathnameOnly(path);
-  return (
-    pathname.includes('/social/') ||
-    pathname.includes('/reviews') ||
-    pathname.includes('/widgets')
-  );
+  return /\/(social|reviews|widgets)(\/|$)/.test(pathname);
 }
 
 export function sameOriginRefererPath(
