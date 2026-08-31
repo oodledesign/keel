@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd ../.. && pnpm run build --filter=web",
   "installCommand": "cd ../.. && pnpm install",
+  "ignoreCommand": "bash ../../scripts/vercel-ignore.sh web",
   "build": {
     "env": {
       "NODE_OPTIONS": "--max-old-space-size=5120",
