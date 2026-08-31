@@ -13,6 +13,7 @@ export type FeedflowSocialAccountRow = {
   platform: string | null;
   provider: string;
   external_account_id: string;
+  username: string | null;
   client_id: string | null;
   created_at: string;
   last_refreshed_at: string | null;
@@ -43,7 +44,7 @@ export const loadFeedflowSocialAccountsForTeam = cache(
     const { data, error } = await supabaseCustomSchema(client, 'feedflow')
       .from('social_accounts')
       .select(
-        'id, platform, provider, external_account_id, client_id, created_at, last_refreshed_at, token_status',
+        'id, platform, provider, external_account_id, username, client_id, created_at, last_refreshed_at, token_status',
       )
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
@@ -99,7 +100,7 @@ export const loadFeedflowSocialAccountsForClient = cache(
     const { data, error } = await supabaseCustomSchema(client, 'feedflow')
       .from('social_accounts')
       .select(
-        'id, platform, provider, external_account_id, created_at, last_refreshed_at, token_status',
+        'id, platform, provider, external_account_id, username, created_at, last_refreshed_at, token_status',
       )
       .eq('account_id', accountId)
       .eq('client_id', clientId)

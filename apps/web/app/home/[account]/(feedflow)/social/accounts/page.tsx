@@ -59,7 +59,7 @@ export default async function FeedflowSocialAccountsPage({
       <TeamAccountLayoutPageHeader
         account={account}
         title="Social accounts"
-        description="Connect Instagram or TikTok for feed widgets. Callback URLs live under /api/feedflow/auth/*/callback."
+        description="Connect Instagram (Instagram Login, no Facebook Page) or TikTok for feed widgets. Callback URLs live under /api/feedflow/auth/*/callback."
       />
       <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <FeedflowOauthBanner

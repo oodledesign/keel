@@ -79,12 +79,13 @@ export function FeedflowSocialPanel(props: {
           </Button>
         ) : (
           <p className="text-muted-foreground text-sm">
-            Instagram: set INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET,
-            INSTAGRAM_REDIRECT_URI (callback must be{' '}
+            Instagram: set FEEDFLOW_INSTAGRAM_APP_ID,
+            FEEDFLOW_INSTAGRAM_APP_SECRET, FEEDFLOW_INSTAGRAM_REDIRECT_URI
+            (callback must be{' '}
             <code className="text-xs">
               …/api/feedflow/auth/instagram/callback
             </code>
-            ).
+            ). Do not use Auto-Reply META_INSTAGRAM_* keys.
           </p>
         )}
         {props.tiktokEnabled ? (
@@ -119,7 +120,7 @@ export function FeedflowSocialPanel(props: {
               <tr>
                 <th className="px-4 py-3">Platform</th>
                 <th className="px-4 py-3">Provider</th>
-                <th className="px-4 py-3">External id</th>
+                <th className="px-4 py-3">Account</th>
                 <th className="px-4 py-3">Last refresh</th>
                 <th className="px-4 py-3 text-right"> </th>
               </tr>
@@ -133,7 +134,9 @@ export function FeedflowSocialPanel(props: {
                   <td className="px-4 py-3">{row.platform ?? '—'}</td>
                   <td className="px-4 py-3">{row.provider}</td>
                   <td className="px-4 py-3 font-mono text-xs">
-                    {row.external_account_id}
+                    {row.username
+                      ? `@${row.username}`
+                      : row.external_account_id}
                   </td>
                   <td className="text-muted-foreground px-4 py-3">
                     {row.last_refreshed_at

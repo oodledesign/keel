@@ -77,7 +77,7 @@ export default async function FeedflowReviewsPage({
                 <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
                   <tr>
                     <th className="px-4 py-3">Platform</th>
-                    <th className="px-4 py-3">External id</th>
+                    <th className="px-4 py-3">Account</th>
                     <th className="px-4 py-3">Client</th>
                     <th className="px-4 py-3">Status</th>
                   </tr>
@@ -92,7 +92,9 @@ export default async function FeedflowReviewsPage({
                         {row.platform ?? row.provider}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {row.external_account_id}
+                        {row.username
+                          ? `@${row.username}`
+                          : row.external_account_id}
                       </td>
                       <td className="px-4 py-3">
                         {row.client_id ? (
@@ -119,7 +121,7 @@ export default async function FeedflowReviewsPage({
 
         <ModuleDataSection
           title="Widgets"
-          description="Public JSON for each widget is served from the feed API using the embed key."
+          description="Each widget has a public embed snippet and a JSON feed."
         >
           {widgets.length === 0 ? (
             <ModuleEmptyState message="No widgets yet. Create one under Feedflow Widgets." />
@@ -131,7 +133,7 @@ export default async function FeedflowReviewsPage({
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Layout</th>
                     <th className="px-4 py-3">Embed key</th>
-                    <th className="px-4 py-3">Feed</th>
+                    <th className="px-4 py-3">Embed</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,12 +151,21 @@ export default async function FeedflowReviewsPage({
                       </td>
                       <td className="px-4 py-3">
                         <a
+                          href={`/api/feedflow/embed?widget=${encodeURIComponent(w.embed_key)}`}
+                          className="text-primary underline-offset-4 hover:underline"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Preview
+                        </a>
+                        <span className="text-muted-foreground px-2">·</span>
+                        <a
                           href={`/api/feedflow/feed?widget=${encodeURIComponent(w.embed_key)}`}
                           className="text-primary underline-offset-4 hover:underline"
                           target="_blank"
                           rel="noreferrer"
                         >
-                          Open JSON
+                          JSON
                         </a>
                       </td>
                     </tr>

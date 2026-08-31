@@ -1,48 +1,85 @@
-import { getOptionalInstagram } from '~/lib/feedflow/env';
+import 'server-only';
 
-const FB_VERSION = 'v21.0';
+import { getOptionalInstagram } from '~/lib/feedflow/env';
+import type { IgMediaItem } from '~/lib/feedflow/instagram-display';
+
+export type {
+  IgMediaChild,
+  IgMediaItem,
+} from '~/lib/feedflow/instagram-display';
+export {
+  displayMediaForPost,
+  flattenMediaChildren,
+} from '~/lib/feedflow/instagram-display';
+
+const IG_VERSION = 'v21.0';
+const IG_GRAPH = `https://graph.instagram.com/${IG_VERSION}`;
+const IG_SCOPE = 'instagram_business_basic';
+
+export const INSTAGRAM_FEEDFLOW_SCOPE = IG_SCOPE;
+
+type GraphErrorBody = {
+  access_token?: string;
+  user_id?: string | number;
+  expires_in?: number;
+  error_type?: string;
+  error_message?: string;
+  error?: { message?: string; type?: string; code?: number };
+};
+
+function graphErrorMessage(data: GraphErrorBody, fallback: string): string {
+  return data.error?.message ?? data.error_message ?? fallback;
+}
 
 export function buildInstagramAuthUrl(state: string): string {
   const cfg = getOptionalInstagram();
   if (!cfg) throw new Error('Instagram is not configured');
-  const scope = [
-    'instagram_basic',
-    'pages_show_list',
-    'business_management',
-  ].join(',');
+
   const params = new URLSearchParams({
     client_id: cfg.appId,
     redirect_uri: cfg.redirectUri,
-    scope,
+    scope: IG_SCOPE,
     state,
     response_type: 'code',
+    force_reauth: 'true',
   });
-  return `https://www.facebook.com/${FB_VERSION}/dialog/oauth?${params}`;
+
+  return `https://www.instagram.com/oauth/authorize?${params.toString()}`;
 }
 
 export async function exchangeInstagramCode(code: string): Promise<{
   accessToken: string;
+  userId: string | null;
   expiresIn: number;
 }> {
   const cfg = getOptionalInstagram();
   if (!cfg) throw new Error('Instagram is not configured');
-  const url = new URL(
-    `https://graph.facebook.com/${FB_VERSION}/oauth/access_token`,
-  );
-  url.searchParams.set('client_id', cfg.appId);
-  url.searchParams.set('client_secret', cfg.appSecret);
-  url.searchParams.set('redirect_uri', cfg.redirectUri);
-  url.searchParams.set('code', code);
-  const res = await fetch(url.toString());
-  const data = (await res.json()) as {
-    access_token?: string;
-    expires_in?: number;
-    error?: { message: string };
-  };
+
+  const body = new URLSearchParams({
+    client_id: cfg.appId,
+    client_secret: cfg.appSecret,
+    grant_type: 'authorization_code',
+    redirect_uri: cfg.redirectUri,
+    code,
+  });
+
+  const res = await fetch('https://api.instagram.com/oauth/access_token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  const data = (await res.json()) as GraphErrorBody;
+
   if (!res.ok || !data.access_token) {
-    throw new Error(data.error?.message ?? 'Instagram token exchange failed');
+    throw new Error(graphErrorMessage(data, 'Instagram token exchange failed'));
   }
-  return { accessToken: data.access_token, expiresIn: data.expires_in ?? 3600 };
+
+  return {
+    accessToken: data.access_token,
+    userId: data.user_id != null ? String(data.user_id) : null,
+    expiresIn: data.expires_in ?? 3600,
+  };
 }
 
 export async function exchangeLongLivedInstagram(shortLived: string): Promise<{
@@ -51,75 +88,24 @@ export async function exchangeLongLivedInstagram(shortLived: string): Promise<{
 }> {
   const cfg = getOptionalInstagram();
   if (!cfg) throw new Error('Instagram is not configured');
-  const url = new URL(
-    `https://graph.facebook.com/${FB_VERSION}/oauth/access_token`,
-  );
-  url.searchParams.set('grant_type', 'fb_exchange_token');
-  url.searchParams.set('client_id', cfg.appId);
+
+  const url = new URL('https://graph.instagram.com/access_token');
+  url.searchParams.set('grant_type', 'ig_exchange_token');
   url.searchParams.set('client_secret', cfg.appSecret);
-  url.searchParams.set('fb_exchange_token', shortLived);
+  url.searchParams.set('access_token', shortLived);
+
   const res = await fetch(url.toString());
-  const data = (await res.json()) as {
-    access_token?: string;
-    expires_in?: number;
-    error?: { message: string };
-  };
+  const data = (await res.json()) as GraphErrorBody;
+
   if (!res.ok || !data.access_token) {
     throw new Error(
-      data.error?.message ?? 'Instagram long-lived exchange failed',
+      graphErrorMessage(data, 'Instagram long-lived exchange failed'),
     );
   }
+
   return {
     accessToken: data.access_token,
     expiresIn: data.expires_in ?? 60 * 24 * 3600,
-  };
-}
-
-type IgPage = {
-  id: string;
-  access_token: string;
-  instagram_business_account?: { id: string; username?: string };
-};
-
-export async function fetchInstagramBusinessAccount(
-  userAccessToken: string,
-): Promise<{
-  igUserId: string;
-  username: string | null;
-  pageAccessToken: string;
-}> {
-  const url = new URL(`https://graph.facebook.com/${FB_VERSION}/me/accounts`);
-  url.searchParams.set(
-    'fields',
-    'instagram_business_account{id,username},access_token',
-  );
-  url.searchParams.set('access_token', userAccessToken);
-  const res = await fetch(url.toString());
-  const data = (await res.json()) as {
-    data?: IgPage[];
-    error?: { message: string };
-  };
-  if (!res.ok || !data.data?.length) {
-    throw new Error(
-      data.error?.message ??
-        'No Facebook pages / Instagram business account found',
-    );
-  }
-  const page =
-    data.data.find((p) => p.instagram_business_account?.id) ?? data.data[0];
-  if (!page) {
-    throw new Error('No Facebook page data returned');
-  }
-  const ig = page.instagram_business_account;
-  if (!ig?.id) {
-    throw new Error(
-      'Connect an Instagram Business or Creator account to a Facebook Page.',
-    );
-  }
-  return {
-    igUserId: ig.id,
-    username: ig.username ?? null,
-    pageAccessToken: page.access_token,
   };
 }
 
@@ -127,54 +113,132 @@ export async function refreshInstagramLongLived(accessToken: string): Promise<{
   accessToken: string;
   expiresIn: number;
 }> {
-  const url = new URL(`https://graph.instagram.com/refresh_access_token`);
+  const url = new URL('https://graph.instagram.com/refresh_access_token');
   url.searchParams.set('grant_type', 'ig_refresh_token');
   url.searchParams.set('access_token', accessToken);
+
   const res = await fetch(url.toString());
-  const data = (await res.json()) as {
-    access_token?: string;
-    expires_in?: number;
-    error?: { message: string };
-  };
+  const data = (await res.json()) as GraphErrorBody;
+
   if (!res.ok || !data.access_token) {
-    throw new Error(data.error?.message ?? 'Instagram token refresh failed');
+    throw new Error(graphErrorMessage(data, 'Instagram token refresh failed'));
   }
+
   return {
     accessToken: data.access_token,
     expiresIn: data.expires_in ?? 60 * 24 * 3600,
   };
 }
 
-export type IgMediaItem = {
-  id: string;
-  caption?: string;
-  media_type: string;
-  media_url?: string;
-  thumbnail_url?: string;
-  permalink?: string;
-  timestamp?: string;
+export async function fetchInstagramBusinessAccount(
+  userAccessToken: string,
+  fallbackUserId?: string | null,
+): Promise<{
+  igUserId: string;
+  username: string | null;
+}> {
+  const url = new URL(`${IG_GRAPH}/me`);
+  url.searchParams.set('fields', 'user_id,username,account_type,name');
+  url.searchParams.set('access_token', userAccessToken);
+
+  const res = await fetch(url.toString());
+  const data = (await res.json()) as {
+    id?: string;
+    user_id?: string;
+    username?: string;
+    error?: { message?: string };
+  };
+
+  if (!res.ok) {
+    throw new Error(
+      data.error?.message ?? 'Failed to load Instagram professional account',
+    );
+  }
+
+  const igUserId = data.user_id ?? data.id ?? fallbackUserId;
+  if (!igUserId) {
+    throw new Error('Instagram account ID missing from token exchange');
+  }
+
+  return {
+    igUserId: String(igUserId),
+    username: data.username ?? null,
+  };
+}
+
+export type InstagramRateLimit = {
+  callCount: number | null;
+  retryAfterSeconds: number | null;
+  shouldPause: boolean;
 };
+
+const RATE_LIMIT_PAUSE_THRESHOLD = 80;
+
+export function parseInstagramRateLimit(headers: Headers): InstagramRateLimit {
+  const retryAfterRaw = headers.get('retry-after');
+  const retryAfterSeconds = retryAfterRaw ? Number(retryAfterRaw) : null;
+  let callCount: number | null = null;
+
+  const usage = headers.get('x-app-usage');
+  if (usage) {
+    try {
+      const parsed = JSON.parse(usage) as { call_count?: number };
+      if (typeof parsed.call_count === 'number') {
+        callCount = parsed.call_count;
+      }
+    } catch {
+      /* ignore malformed usage header */
+    }
+  }
+
+  const shouldPause =
+    (retryAfterSeconds != null &&
+      Number.isFinite(retryAfterSeconds) &&
+      retryAfterSeconds > 0) ||
+    (callCount != null && callCount >= RATE_LIMIT_PAUSE_THRESHOLD);
+
+  return { callCount, retryAfterSeconds, shouldPause };
+}
+
+export class InstagramRateLimitedError extends Error {
+  readonly rateLimit: InstagramRateLimit;
+
+  constructor(
+    rateLimit: InstagramRateLimit,
+    message = 'Instagram rate limited',
+  ) {
+    super(message);
+    this.name = 'InstagramRateLimitedError';
+    this.rateLimit = rateLimit;
+  }
+}
+
+const MEDIA_FIELDS =
+  'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username,children{id,media_type,media_url,thumbnail_url,permalink}';
 
 export async function fetchInstagramMedia(
   igUserId: string,
   accessToken: string,
   limit = 25,
-): Promise<IgMediaItem[]> {
-  const fields =
-    'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp';
-  const url = new URL(
-    `https://graph.facebook.com/${FB_VERSION}/${igUserId}/media`,
-  );
-  url.searchParams.set('fields', fields);
-  url.searchParams.set('limit', String(limit));
+): Promise<{ items: IgMediaItem[]; rateLimit: InstagramRateLimit }> {
+  const url = new URL(`${IG_GRAPH}/${encodeURIComponent(igUserId)}/media`);
+  url.searchParams.set('fields', MEDIA_FIELDS);
+  url.searchParams.set('limit', String(Math.min(30, Math.max(1, limit))));
   url.searchParams.set('access_token', accessToken);
+
   const res = await fetch(url.toString());
+  const rateLimit = parseInstagramRateLimit(res.headers);
   const data = (await res.json()) as {
     data?: IgMediaItem[];
-    error?: { message: string };
+    error?: { message?: string };
   };
+
   if (!res.ok) {
+    if (res.status === 429 || rateLimit.shouldPause) {
+      throw new InstagramRateLimitedError(rateLimit);
+    }
     throw new Error(data.error?.message ?? 'Instagram media fetch failed');
   }
-  return data.data ?? [];
+
+  return { items: data.data ?? [], rateLimit };
 }
