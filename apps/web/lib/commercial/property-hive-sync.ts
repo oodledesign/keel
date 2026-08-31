@@ -312,70 +312,68 @@ async function upsertPublication(input: {
   metadata?: Record<string, unknown>;
 }) {
   const now = new Date().toISOString();
-  const payload = {
-    account_id: input.accountId,
-    listing_id: input.listingId,
-    portal: 'property_hive',
-    external_id: input.externalId ?? null,
-    external_url: input.externalUrl ?? null,
-    status: input.status,
-    last_sync_at: now,
-    last_error: input.lastError ?? null,
-    metadata: input.metadata ?? {},
-    updated_at: now,
-  };
-
   const { error } = await db()
     .from('commercial_portal_publications')
-    .upsert(payload, { onConflict: 'listing_id,portal' });
+    .upsert(
+      {
+        account_id: input.accountId,
+        listing_id: input.listingId,
+        portal: 'property_hive',
+        external_id: input.externalId ?? null,
+        external_url: input.externalUrl ?? null,
+        status: input.status,
+        last_sync_at: now,
+        last_error: input.lastError ?? null,
+        metadata: input.metadata ?? {},
+        updated_at: now,
+      },
+      { onConflict: 'listing_id,portal' },
+    );
 
-  if (!error) return;
-
-  const adminWrite = await adminDb()
-    .from('commercial_portal_publications')
-    .upsert(payload, { onConflict: 'listing_id,portal' });
-
-  if (adminWrite.error) throw new Error(adminWrite.error.message);
+  if (error) throw new Error(error.message);
 }
 
 /**
- * Persist a Property Hive failure on the Management portal card even when the
- * live push already threw (or RLS blocked the session upsert).
+ * Persist a Property Hive failure so the Management portal card can show it.
+ * Callers must already have authorised the listing write. Admin is used only
+ * here so a session RLS miss cannot wipe external_id or hide the error.
  */
 export async function persistPropertyHivePublicationError(input: {
   accountId: string;
   listingId: string;
   lastError: string;
 }): Promise<void> {
-  const existing = await getExistingPublication(
-    input.accountId,
-    input.listingId,
-  );
+  const writer = adminDb();
+  const { data: existing } = await writer
+    .from('commercial_portal_publications')
+    .select('external_id, external_url')
+    .eq('account_id', input.accountId)
+    .eq('listing_id', input.listingId)
+    .eq('portal', 'property_hive')
+    .maybeSingle();
+
   const now = new Date().toISOString();
-  const payload = {
-    account_id: input.accountId,
-    listing_id: input.listingId,
-    portal: 'property_hive',
-    external_id: existing?.external_id ?? null,
-    external_url: existing?.external_url ?? null,
-    status: 'error' as const,
-    last_sync_at: now,
-    last_error: input.lastError,
-    updated_at: now,
-  };
+  const { error } = await writer.from('commercial_portal_publications').upsert(
+    {
+      account_id: input.accountId,
+      listing_id: input.listingId,
+      portal: 'property_hive',
+      external_id:
+        (existing as { external_id?: string | null } | null)?.external_id ??
+        null,
+      external_url:
+        (existing as { external_url?: string | null } | null)?.external_url ??
+        null,
+      status: 'error' as const,
+      last_sync_at: now,
+      last_error: input.lastError,
+      updated_at: now,
+    },
+    { onConflict: 'listing_id,portal' },
+  );
 
-  const sessionWrite = await db()
-    .from('commercial_portal_publications')
-    .upsert(payload, { onConflict: 'listing_id,portal' });
-
-  if (!sessionWrite.error) return;
-
-  const adminWrite = await adminDb()
-    .from('commercial_portal_publications')
-    .upsert(payload, { onConflict: 'listing_id,portal' });
-
-  if (adminWrite.error) {
-    throw new Error(adminWrite.error.message);
+  if (error) {
+    throw new Error(error.message);
   }
 }
 

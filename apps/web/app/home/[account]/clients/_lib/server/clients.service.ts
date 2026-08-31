@@ -245,7 +245,8 @@ class ClientsService {
       .eq('account_id', accountId)
       .eq('purpose', 'workspace_mailing_list')
       .eq('marketing_status', 'subscribed')
-      .not('client_id', 'is', null);
+      .not('client_id', 'is', null)
+      .limit(200);
 
     if (mailing.error) {
       if (isMissingRelationError(mailing.error)) {
@@ -265,16 +266,21 @@ class ClientsService {
       .eq('account_id', accountId)
       .eq('purpose', 'matching_disposals')
       .eq('marketing_status', 'subscribed')
-      .not('client_id', 'is', null);
+      .not('client_id', 'is', null)
+      .limit(200);
 
-    if (!commercial.error) {
+    if (commercial.error) {
+      if (!isMissingRelationError(commercial.error)) {
+        throw commercial.error;
+      }
+    } else {
       for (const row of commercial.data ?? []) {
         const clientId = (row as { client_id?: string | null }).client_id;
         if (clientId) ids.add(clientId);
       }
     }
 
-    return [...ids];
+    return [...ids].slice(0, 200);
   }
 
   private async listClientsWithDb(readDb: any, params: ListClientsInput) {
