@@ -18,7 +18,10 @@ export function isInstagramTokenDueForRefresh(
     row.last_refreshed_at ?? row.connected_at ?? row.created_at,
   );
 
-  if (lastRefreshed != null && now - lastRefreshed < INSTAGRAM_TOKEN_MIN_AGE_MS) {
+  if (
+    lastRefreshed != null &&
+    now - lastRefreshed < INSTAGRAM_TOKEN_MIN_AGE_MS
+  ) {
     return false;
   }
 
@@ -31,7 +34,10 @@ export function isInstagramTokenDueForRefresh(
   }
 
   const expiresAt = parseTime(row.token_expires_at);
-  if (expiresAt != null && expiresAt - now <= INSTAGRAM_TOKEN_EXPIRY_WINDOW_MS) {
+  if (
+    expiresAt != null &&
+    expiresAt - now <= INSTAGRAM_TOKEN_EXPIRY_WINDOW_MS
+  ) {
     return true;
   }
 

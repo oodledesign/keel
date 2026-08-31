@@ -16,10 +16,7 @@ describe('getOptionalInstagram', () => {
     );
     vi.stubEnv('INSTAGRAM_APP_ID', 'legacy-app');
     vi.stubEnv('INSTAGRAM_APP_SECRET', 'legacy-secret');
-    vi.stubEnv(
-      'INSTAGRAM_REDIRECT_URI',
-      'https://example.com/legacy/callback',
-    );
+    vi.stubEnv('INSTAGRAM_REDIRECT_URI', 'https://example.com/legacy/callback');
 
     expect(getOptionalInstagram()).toEqual({
       appId: 'ff-app',

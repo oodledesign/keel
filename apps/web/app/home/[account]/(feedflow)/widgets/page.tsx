@@ -67,7 +67,9 @@ export default async function FeedflowWidgetsPage({
         <ModuleDataSection title="Widgets">
           <FeedflowWidgetsManager
             accountId={accountId}
-            siteOrigin={process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? ''}
+            siteOrigin={
+              process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? ''
+            }
             socialAccounts={social}
             widgets={widgets}
           />

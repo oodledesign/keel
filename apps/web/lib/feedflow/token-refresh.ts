@@ -95,7 +95,9 @@ export async function refreshDueInstagramTokens(): Promise<{
       refreshed += 1;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Instagram token refresh failed';
+        error instanceof Error
+          ? error.message
+          : 'Instagram token refresh failed';
       const status = isPermanentTokenFailure(message)
         ? 'needs_reauth'
         : 'error';

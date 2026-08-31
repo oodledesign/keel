@@ -211,7 +211,10 @@ export function parseInstagramRateLimit(headers: Headers): InstagramRateLimit {
 export class InstagramRateLimitedError extends Error {
   readonly rateLimit: InstagramRateLimit;
 
-  constructor(rateLimit: InstagramRateLimit, message = 'Instagram rate limited') {
+  constructor(
+    rateLimit: InstagramRateLimit,
+    message = 'Instagram rate limited',
+  ) {
     super(message);
     this.name = 'InstagramRateLimitedError';
     this.rateLimit = rateLimit;

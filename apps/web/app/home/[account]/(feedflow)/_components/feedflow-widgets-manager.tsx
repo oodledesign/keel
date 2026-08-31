@@ -141,11 +141,7 @@ export function FeedflowWidgetsManager(props: {
       {props.widgets.length > 0 ? (
         <div className="space-y-6">
           {props.widgets.map((widget) => (
-            <WidgetEmbedCard
-              key={widget.id}
-              widget={widget}
-              origin={origin}
-            />
+            <WidgetEmbedCard key={widget.id} widget={widget} origin={origin} />
           ))}
         </div>
       ) : null}
@@ -153,10 +149,7 @@ export function FeedflowWidgetsManager(props: {
   );
 }
 
-function WidgetEmbedCard(props: {
-  widget: FeedflowWidgetRow;
-  origin: string;
-}) {
+function WidgetEmbedCard(props: { widget: FeedflowWidgetRow; origin: string }) {
   const snippets = useMemo(
     () => ({
       iframe: buildIframeEmbedSnippet(props.origin, props.widget.embed_key),
@@ -205,7 +198,12 @@ function WidgetEmbedCard(props: {
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <Label>iframe snippet</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => copy('iframe')}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => copy('iframe')}
+            >
               {copied === 'iframe' ? 'Copied' : 'Copy iframe'}
             </Button>
           </div>
@@ -218,7 +216,12 @@ function WidgetEmbedCard(props: {
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <Label>script snippet</Label>
-            <Button type="button" size="sm" variant="outline" onClick={() => copy('script')}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => copy('script')}
+            >
               {copied === 'script' ? 'Copied' : 'Copy script'}
             </Button>
           </div>

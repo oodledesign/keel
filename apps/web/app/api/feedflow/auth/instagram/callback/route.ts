@@ -69,7 +69,10 @@ export async function GET(request: NextRequest) {
   try {
     const short = await exchangeInstagramCode(code);
     const long = await exchangeLongLivedInstagram(short.accessToken);
-    const ig = await fetchInstagramBusinessAccount(long.accessToken, short.userId);
+    const ig = await fetchInstagramBusinessAccount(
+      long.accessToken,
+      short.userId,
+    );
     const enc = encryptSecret(long.accessToken);
     const now = new Date();
     const expiresAt = new Date(
@@ -92,7 +95,10 @@ export async function GET(request: NextRequest) {
       connected_at: now.toISOString(),
     };
 
-    const { data: saved, error } = await supabaseCustomSchema(client, 'feedflow')
+    const { data: saved, error } = await supabaseCustomSchema(
+      client,
+      'feedflow',
+    )
       .from('social_accounts')
       .upsert(row, {
         onConflict: 'account_id,provider,external_account_id',

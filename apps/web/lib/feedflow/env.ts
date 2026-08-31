@@ -51,7 +51,9 @@ export function getFeedflowServerEnv(): FeedflowServerEnv {
 export const FEEDFLOW_INSTAGRAM_CALLBACK_PATH =
   '/api/feedflow/auth/instagram/callback';
 
-function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
+function firstNonEmpty(
+  ...values: Array<string | undefined>
+): string | undefined {
   for (const value of values) {
     const trimmed = value?.trim();
     if (trimmed) return trimmed;

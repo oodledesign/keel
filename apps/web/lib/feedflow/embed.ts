@@ -26,7 +26,10 @@ export function feedflowEmbedUrl(origin: string, embedKey: string): string {
   return `${base}/api/feedflow/embed?widget=${encodeURIComponent(embedKey)}`;
 }
 
-export function feedflowEmbedScriptUrl(origin: string, embedKey: string): string {
+export function feedflowEmbedScriptUrl(
+  origin: string,
+  embedKey: string,
+): string {
   const base = origin.replace(/\/$/, '');
   return `${base}/api/feedflow/embed/script?widget=${encodeURIComponent(embedKey)}`;
 }
@@ -36,17 +39,26 @@ export function feedflowFeedJsonUrl(origin: string, embedKey: string): string {
   return `${base}/api/feedflow/feed?widget=${encodeURIComponent(embedKey)}`;
 }
 
-export function buildIframeEmbedSnippet(origin: string, embedKey: string): string {
+export function buildIframeEmbedSnippet(
+  origin: string,
+  embedKey: string,
+): string {
   const src = feedflowEmbedUrl(origin, embedKey);
   return `<iframe src="${src}" title="Instagram feed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="border:0;width:100%;min-height:480px;"></iframe>`;
 }
 
-export function buildScriptEmbedSnippet(origin: string, embedKey: string): string {
+export function buildScriptEmbedSnippet(
+  origin: string,
+  embedKey: string,
+): string {
   const src = feedflowEmbedScriptUrl(origin, embedKey);
   return `<div data-feedflow-widget="${embedKey}"></div>\n<script async src="${src}"></script>`;
 }
 
-export function buildEmbedLoaderScript(origin: string, embedKey: string): string {
+export function buildEmbedLoaderScript(
+  origin: string,
+  embedKey: string,
+): string {
   const src = feedflowEmbedUrl(origin, embedKey);
   const safeKey = JSON.stringify(embedKey);
   const safeSrc = JSON.stringify(src);
@@ -123,9 +135,7 @@ export function renderFeedflowEmbedHtml(input: {
           ? '<span class="ff-play" aria-hidden="true"></span>'
           : '';
       const captionHtml =
-        showCaptions && caption
-          ? `<p class="ff-caption">${caption}</p>`
-          : '';
+        showCaptions && caption ? `<p class="ff-caption">${caption}</p>` : '';
 
       return `<a class="ff-card" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
   <span class="ff-media">${src ? `<img src="${src}" alt="" loading="lazy" />` : '<span class="ff-empty">Post</span>'}${play}</span>

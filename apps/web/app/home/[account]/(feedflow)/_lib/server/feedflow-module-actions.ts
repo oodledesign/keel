@@ -5,7 +5,6 @@ import { revalidatePath } from 'next/cache';
 import { nanoid } from 'nanoid';
 
 import { enhanceAction } from '@kit/next/actions';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { assertFeedflowWriteAccess } from '~/lib/feedflow/assert-feedflow-write';
