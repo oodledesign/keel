@@ -95,3 +95,16 @@ export function rewriteHrefToWorkspaceSlug(
 
   return `/app/${slug}${remainder}${suffix}`;
 }
+
+/** Copy query keys onto a redirect target without overwriting existing ones. */
+export function appendMissingSearchParams(
+  target: URL,
+  searchParams: Pick<URLSearchParams, 'forEach'>,
+): URL {
+  searchParams.forEach((value, key) => {
+    if (!target.searchParams.has(key)) {
+      target.searchParams.set(key, value);
+    }
+  });
+  return target;
+}

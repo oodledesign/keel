@@ -8,6 +8,7 @@ import { getOptionalTikTok } from '~/lib/feedflow/env';
 import {
   feedflowAppUrl,
   feedflowErrorRedirect,
+  resolveFeedflowErrorPath,
   safeFeedflowReturnPath,
 } from '~/lib/feedflow/oauth-redirect';
 import { signFeedflowOAuthState } from '~/lib/feedflow/oauth-state';
@@ -20,13 +21,17 @@ export async function GET(request: NextRequest) {
   const accountId = request.nextUrl.searchParams.get('account_id');
   const returnParam = request.nextUrl.searchParams.get('return');
   const clientIdParam = request.nextUrl.searchParams.get('client_id');
-  const earlyReturn =
-    safeFeedflowReturnPath(returnParam) ?? pathsConfig.app.home;
+  const earlyReturn = resolveFeedflowErrorPath({
+    origin: request.nextUrl.origin,
+    returnParam,
+    referer: request.headers.get('referer'),
+  });
 
   if (!accountId?.match(/^[0-9a-f-]{36}$/i)) {
-    return NextResponse.json(
-      { error: 'account_id (uuid) is required' },
-      { status: 400 },
+    return feedflowErrorRedirect(
+      request,
+      earlyReturn,
+      'Missing workspace. Open Social accounts and click Connect TikTok again.',
     );
   }
 
@@ -58,6 +63,7 @@ export async function GET(request: NextRequest) {
       request,
       earlyReturn,
       'Feedflow add-on required',
+      slug,
     );
   }
 
@@ -66,6 +72,7 @@ export async function GET(request: NextRequest) {
       request,
       earlyReturn,
       'TikTok is not configured',
+      slug,
     );
   }
 
@@ -94,6 +101,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'OAuth start failed';
-    return feedflowErrorRedirect(request, returnPath, msg);
+    return feedflowErrorRedirect(request, returnPath, msg, slug);
   }
 }

@@ -12,7 +12,7 @@ import {
 import {
   feedflowAppUrl,
   feedflowErrorRedirect,
-  safeFeedflowReturnPath,
+  resolveFeedflowErrorPath,
 } from '~/lib/feedflow/oauth-redirect';
 import { verifyFeedflowOAuthState } from '~/lib/feedflow/oauth-state';
 import { ingestInstagramAccount } from '~/lib/feedflow/posts';
@@ -43,11 +43,22 @@ export async function GET(request: NextRequest) {
     payload = stateToken ? verifyFeedflowOAuthState(stateToken) : null;
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Invalid OAuth state';
-    return feedflowErrorRedirect(request, pathsConfig.app.home, msg);
+    return feedflowErrorRedirect(
+      request,
+      resolveFeedflowErrorPath({
+        origin: request.nextUrl.origin,
+        referer: request.headers.get('referer'),
+      }),
+      msg,
+    );
   }
 
-  const returnPath =
-    safeFeedflowReturnPath(payload?.returnPath) ?? pathsConfig.app.home;
+  const returnPath = resolveFeedflowErrorPath({
+    origin: request.nextUrl.origin,
+    returnParam: payload?.returnPath,
+    referer: request.headers.get('referer'),
+    slug: null,
+  });
 
   if (
     !payload ||
