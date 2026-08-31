@@ -44,6 +44,7 @@ export async function buildLlmsTxt(): Promise<string> {
     '## Primary pages',
     `- [Home](${url(base, '/')}): Main marketing homepage`,
     `- [Pricing](${url(base, '/pricing')}): Plans and add-ons`,
+    `- [Download Assistant](${url(base, '/download')}): Direct Mac download for Ozer Assistant (Apple Silicon, macOS 15+)`,
     `- [Apps](${url(base, '/apps')}): Ozer app modules overview`,
     `- [Documentation](${docsUrl()}): Product documentation`,
     `- [Blog](${url(base, '/blog')}): Articles and updates`,

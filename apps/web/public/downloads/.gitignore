@@ -1,0 +1,6 @@
+# Sparkle private keys — never commit
+*priv*
+*private*
+ed25519*
+dsa_priv*
+sparkle*.pem

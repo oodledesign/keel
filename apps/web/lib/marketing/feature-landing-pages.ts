@@ -5,6 +5,7 @@ import type {
   FAQItem,
   FeatureHighlight,
 } from '~/(marketing)/_components/FeatureLandingPage';
+import { OZER_ASSISTANT_DOWNLOAD } from '~/lib/marketing/assistant-download';
 import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 
 export type FeatureSlug =
@@ -331,7 +332,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     heroBadge: 'Native macOS app · Download for Mac',
     secondaryCta: {
       label: 'Download for Mac',
-      href: '#early-access',
+      href: OZER_ASSISTANT_DOWNLOAD.pagePath,
     },
     metadata: {
       title: 'Mac meeting notes to tasks — Ozer',
@@ -405,7 +406,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           question: 'How do I download Ozer Assistant for Mac?',
           answer:
-            'Join early access to get the macOS download link. After installing, sign in with your Ozer account from the app to sync meetings and tasks to your workspaces.',
+            'Download the notarized Mac app from ozer.so/download. Unzip it, drag Ozer Assistant to Applications, then sign in with your Ozer account to sync meetings and tasks. Requires macOS 15+ and Apple Silicon.',
         },
         {
           question: 'Does it work with any call tool?',
@@ -445,7 +446,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     heroBadge: 'Included in Ozer Assistant for Mac',
     secondaryCta: {
       label: 'Download for Mac',
-      href: '#early-access',
+      href: OZER_ASSISTANT_DOWNLOAD.pagePath,
     },
     metadata: {
       title: 'Mac dictation with punctuation — Ozer',
@@ -517,7 +518,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           question: 'Is dictation a separate download?',
           answer:
-            'No. Dictation is built into Ozer Assistant for Mac — the same native desktop app you use for meeting notes and transcription.',
+            'No. Dictation is built into Ozer Assistant for Mac — download it from ozer.so/download. Same native desktop app you use for meeting notes and transcription.',
         },
         {
           question: 'Does it work outside Ozer?',
@@ -548,7 +549,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     heroBadge: 'Included in Ozer Assistant for Mac',
     secondaryCta: {
       label: 'Download for Mac',
-      href: '#early-access',
+      href: OZER_ASSISTANT_DOWNLOAD.pagePath,
     },
     metadata: {
       title: 'Desktop activity assigned to projects — Ozer',
@@ -619,7 +620,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           question: 'Do I need Ozer Assistant installed?',
           answer:
-            'Yes. Activity is captured by Ozer Assistant for Mac and synced to your workspace. Install the desktop app, enable tracking in workspace settings, and upload from the menu bar.',
+            'Yes. Activity is captured by Ozer Assistant for Mac and synced to your workspace. Download the app from ozer.so/download, enable tracking in workspace settings, and upload from the menu bar.',
         },
         {
           question: 'Is everything on my Mac recorded?',

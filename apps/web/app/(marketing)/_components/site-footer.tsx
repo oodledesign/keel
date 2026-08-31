@@ -7,6 +7,7 @@ import { Trans } from '@kit/ui/trans';
 import { AppLogo } from '~/components/app-logo';
 import appConfig from '~/config/app.config';
 import { docsUrl } from '~/lib/docs-url';
+import { OZER_ASSISTANT_DOWNLOAD } from '~/lib/marketing/assistant-download';
 
 import { MarketingFooterNewsletter } from './marketing-footer-newsletter';
 
@@ -83,6 +84,10 @@ export function SiteFooter() {
             { href: '/features', label: 'Features' },
             { href: '/features/activity', label: 'Activity tracking' },
             { href: '/features/desktop-assistant', label: 'Assistant for Mac' },
+            {
+              href: OZER_ASSISTANT_DOWNLOAD.pagePath,
+              label: 'Download Assistant',
+            },
             { href: '/apps', label: 'Apps' },
             { href: '/pricing', label: <Trans i18nKey="marketing:pricing" /> },
             {

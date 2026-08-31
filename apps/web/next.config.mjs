@@ -89,6 +89,32 @@ const config = {
         },
       ],
     },
+    {
+      source: '/downloads/appcast.xml',
+      headers: [
+        {
+          key: 'Content-Type',
+          value: 'application/xml; charset=utf-8',
+        },
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=300',
+        },
+      ],
+    },
+    {
+      source: '/downloads/:file.zip',
+      headers: [
+        {
+          key: 'Content-Disposition',
+          value: 'attachment',
+        },
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=3600',
+        },
+      ],
+    },
   ],
   turbopack: {
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx'],
@@ -475,6 +501,19 @@ async function getRedirects() {
     permanent: false,
   }));
 
+  const assistantDownloadRedirects = [
+    {
+      source: '/assistant',
+      destination: '/download',
+      permanent: true,
+    },
+    {
+      source: '/downloads/OzerAssistant-latest.zip',
+      destination: '/downloads/OzerAssistant-1.0.zip',
+      permanent: false,
+    },
+  ];
+
   return [
     ...legacyHomeRedirects,
     {
@@ -565,6 +604,7 @@ async function getRedirects() {
     ...comingSoonRedirects,
     ...docsRedirects,
     ...marketingRedirects,
+    ...assistantDownloadRedirects,
   ];
 }
 

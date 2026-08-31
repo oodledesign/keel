@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Ozer Assistant</title>
+    <link>https://www.ozer.so/downloads/appcast.xml</link>
+    <description>Updates for Ozer Assistant</description>
+    <language>en</language>
+    <!--
+      Placeholder channel until the next notarized build.
+
+      Add an <item> with enclosure url, length, sparkle:version,
+      sparkle:shortVersionString, sparkle:minimumSystemVersion (15.0),
+      and sparkle:edSignature. Do not commit the Sparkle private key.
+
+      Enclosure URL: https://www.ozer.so/downloads/OzerAssistant-1.0.zip
+      Stable latest: https://www.ozer.so/downloads/OzerAssistant-latest.zip
+    -->
+  </channel>
+</rss>

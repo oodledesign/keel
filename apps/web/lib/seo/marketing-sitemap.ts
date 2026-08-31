@@ -31,6 +31,7 @@ const STATIC_MARKETING_PATHS: Array<{
     priority: 0.8,
     changeFrequency: 'monthly',
   },
+  { path: '/download', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/faq', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/contact', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/blog', priority: 0.8, changeFrequency: 'weekly' },
