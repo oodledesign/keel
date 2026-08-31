@@ -175,7 +175,7 @@ export const honeybookComparison: ComparisonConfig = {
   },
   chooseCompetitorIf: [
     'Your clients and collaborators already live in HoneyBook’s US creative ecosystem.',
-    'You prioritise HoneyBook’s specific client-flow templates over EU residency or flat UK team pricing.',
+    'You prioritise HoneyBook’s specific client-flow templates over EU residency or graduated UK seat pricing.',
     'You are comfortable with tier jumps and card fees as part of the total cost of ownership.',
   ],
   chooseOzerIf: [
@@ -198,7 +198,7 @@ export const honeybookComparison: ComparisonConfig = {
     {
       question: 'How do HoneyBook fees compare to Ozer?',
       answer:
-        'HoneyBook charges a subscription tier plus card processing on payments. Ozer charges a flat workspace subscription; client card fees go to Stripe, not an Ozer platform cut on the subscription.',
+        'HoneyBook charges a subscription tier plus card processing on payments. Ozer charges a graduated Starter or Pro subscription; client card fees go to Stripe, not an Ozer platform cut on the subscription.',
     },
     {
       question: 'Is HoneyBook suitable for UK agencies?',

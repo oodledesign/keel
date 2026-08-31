@@ -88,7 +88,7 @@ const workspaceOptions: Array<{
     value: 'apps',
     title: 'I mainly want an app (e.g. Signatures)',
     description:
-      'Free Business Lite — install Signatures and other apps. No CRM or clients.',
+      'Free workspace — 2 seats, capped clients and invoices. Add Signatures if you need it.',
     icon: PenLine,
     priceProductId: null,
     emphasized: true,
@@ -422,8 +422,8 @@ export function StartFlowClient() {
               )}
             >
               Personal stays free. Paid plans include a 14-day trial with no
-              card required. Lite is free forever if you only need apps like
-              Signatures.
+              card required. Free is £0 forever with capped clients and
+              invoices.
             </p>
           </div>
 
@@ -435,7 +435,7 @@ export function StartFlowClient() {
                   title: starter?.name ?? 'Starter',
                   priceLabel: `From ${formatGbp(estimateStarterMonthlyGbp(1))}`,
                   description:
-                    'Clients, projects, and invoices — £14 for seat 1, then £9 for every extra seat. 14-day trial.',
+                    'Unlimited clients, invoices, and tasks — £14 for seat 1, then £9 extra. Recording unlimited. No planner or coaching. 14-day trial.',
                   recommended: false,
                   variant: 'plan' as const,
                 },
@@ -444,7 +444,7 @@ export function StartFlowClient() {
                   title: business?.name ?? 'Pro',
                   priceLabel: `From ${formatGbp(estimateMonthlyGbp(1))}`,
                   description:
-                    'Shared AI, more guests, and sharing — £29 for seat 1, then £22 for every extra seat. 14-day trial.',
+                    'Planner, email assistant, and coaching — £29 for seat 1, then £22 extra. Shared AI pool. 14-day trial.',
                   recommended: true,
                   variant: 'plan' as const,
                 },
@@ -453,7 +453,7 @@ export function StartFlowClient() {
                   title: lite?.name ?? 'Free',
                   priceLabel: 'Free',
                   description:
-                    'Apps only — Signatures and marketplace add-ons. No clients, jobs, or invoices.',
+                    '£0 forever — 2 seats, 3 clients, 5 invoices/month, meeting recording 5 hrs/mo. No planner or coaching.',
                   recommended: false,
                   variant: 'apps' as const,
                 },

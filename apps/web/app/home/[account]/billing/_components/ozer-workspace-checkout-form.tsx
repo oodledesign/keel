@@ -145,7 +145,7 @@ export function OzerWorkspaceCheckoutForm(params: {
 
         <CardDescription>
           {params.upgradeFromLite ? (
-            'Paid Business includes clients, projects, invoicing, and finances with graduated seats. Your installed apps stay on this workspace.'
+            'Starter or Pro lifts Free caps and uses graduated seats. Starter is recording-only; Pro adds planner, email assistant, and coaching. Your installed apps stay on this workspace.'
           ) : setupMode ? (
             isCommercial ? (
               'Graduated per-seat pricing in GBP. Seat 1 is £89, seats 2–7 are £55, seats 8+ are £39.'

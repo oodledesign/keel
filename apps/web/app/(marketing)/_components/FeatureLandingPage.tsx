@@ -256,8 +256,8 @@ export function FeatureLandingPage({
           <p
             className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed md:text-base ${marketingBodyText}`}
           >
-            Start free. Personal and family stay free. Pay when you add a paid
-            workspace — one price covers the team.
+            Start free. Personal and family stay free. Business is Free, Starter
+            from £14, or Pro from £29 — extra seats stay cheaper.
           </p>
           <Button asChild size="lg" className={`mt-6 ${marketingBtnGradient}`}>
             <Link href={ctaHref}>

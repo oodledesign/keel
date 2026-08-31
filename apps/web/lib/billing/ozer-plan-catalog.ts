@@ -37,9 +37,9 @@ export type OzerPlanLimits = {
   maxBookingsPerMonth?: number | null;
   maxPortalStorageBytes?: number | null;
   /**
-   * Monthly client-request credit allotment.
-   * NULL means zero / feature not available — NOT unlimited.
-   * Do not pass this through helpers that treat NULL as unlimited.
+   * Unused for platform pricing. Businesses manage their own client-request
+   * library — this is not an Ozer-billed monthly pile.
+   * NULL means unset / not sold. Do not invent marketing numbers.
    */
   clientRequestCreditAllowance?: number | null;
   meetingCoachingEnabled?: boolean;

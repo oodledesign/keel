@@ -110,9 +110,13 @@ function workComparison(): SegmentPricingComparison {
             values: v(true, true, true),
           },
           {
+            feature: 'Portal storage',
+            values: v('250 MB', '10 GB', '25 GB'),
+          },
+          {
             feature: 'Monthly AI credits',
-            hint: 'Shared workspace pool. Pro scales with seats (3,000 + 1,500 per extra seat).',
-            values: v('200', 'Workspace AI included', 'From 3,000 (scales)'),
+            hint: 'One shared workspace pool for email drafts, summaries, coaching, and other model use. Pro scales with seats (3,000 + 1,500 per extra seat). Starter uses the same pool — we do not publish a separate credit pile.',
+            values: v('200', 'Same workspace pool', 'From 3,000 (scales)'),
           },
         ],
       },
@@ -122,26 +126,30 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Clients & pipeline',
             href: '/features/pipeline',
-            values: v(false, true, true),
+            values: v('3 active clients', 'Unlimited', 'Unlimited'),
           },
           {
             feature: 'Jobs & projects',
             href: '/features/project-management',
-            values: v(false, true, true),
+            values: v(true, true, true),
           },
           {
-            feature: 'Tasks & planner',
+            feature: 'Open tasks',
+            values: v('20', 'Unlimited', 'Unlimited'),
+          },
+          {
+            feature: 'Planner',
             href: '/features/planner',
-            values: v(false, true, true),
+            values: v(false, false, true),
           },
           {
-            feature: 'Scheduling',
-            values: v(false, true, true),
+            feature: 'Scheduling / bookings',
+            values: v('5 / month', 'Unlimited', 'Unlimited'),
           },
           {
             feature: 'Invoices, proposals & contracts',
             href: '/features/invoicing',
-            values: v(false, true, true),
+            values: v('5 invoices / month', 'Unlimited', 'Unlimited'),
           },
           {
             feature: 'Activity tracking',
@@ -156,7 +164,7 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Team & client messaging',
             href: '/features/messaging',
-            values: v(false, true, true),
+            values: v('Unlimited', 'Unlimited', 'Unlimited'),
           },
           {
             feature: 'SOPs & playbook checklists',
@@ -184,7 +192,8 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Second Brain',
             href: '/features/second-brain',
-            values: v(false, true, true),
+            hint: 'Free stays within the client cap. Pro also indexes meeting transcripts.',
+            values: v('Within client cap', true, 'Indexes transcripts'),
           },
         ],
       },
@@ -192,9 +201,10 @@ function workComparison(): SegmentPricingComparison {
         title: 'Assistants',
         rows: [
           {
-            feature: 'Meeting Assistant',
+            feature: 'Meeting recording & transcription',
+            hint: 'Local WhisperKit on Mac. Coaching and auto tasks are a separate Pro AI layer.',
             href: '/features/desktop-assistant',
-            values: v('5 hrs/mo', true, true),
+            values: v('5 hrs/mo', 'Unlimited', 'Unlimited'),
           },
           {
             feature: 'Dictation',
@@ -203,16 +213,13 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Email Assistant',
+            hint: 'Included on Pro. Drafts spend the workspace AI credit pool — not a second currency.',
             href: '/features/email-assistant',
-            values: v('add-on', 'add-on', 'add-on'),
-          },
-          {
-            feature: 'AI Planner',
-            href: '/features/planner',
-            values: v(true, true, true),
+            values: v(false, false, true),
           },
           {
             feature: 'Meeting coaching & auto task extraction',
+            hint: 'Pro-only AI layer. Uses the same workspace AI credit pool as drafts and summaries.',
             values: v(false, false, true),
           },
         ],
@@ -292,7 +299,7 @@ function personalComparison(): SegmentPricingComparison {
         rows: [
           {
             feature: 'Meeting Assistant',
-            hint: 'Mac meetings → tasks. Personal/Free: limited hours. Paid Business: unlimited.',
+            hint: 'Mac meeting recording & transcription. Personal: limited hours. Starter and Pro: unlimited. Coaching is Pro-only.',
             href: '/features/desktop-assistant',
             values: v('2 hrs/mo', true),
           },

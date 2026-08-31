@@ -235,8 +235,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             Run the studio from one home
           </h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            Ozer is the Workspace OS for freelancers and small agencies — flat
-            price for the whole team.
+            Ozer is the Workspace OS for freelancers and small agencies —
+            graduated seats from £14 on Starter or £29 on Pro.
           </p>
           <Button asChild className="mt-4">
             <Link href="/auth/sign-up">Start free</Link>

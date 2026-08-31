@@ -248,7 +248,7 @@ export const COMPETITOR_MATRIX_ROWS: CompetitorMatrixRow[] = [
     },
   },
   {
-    id: 'flat-pricing',
+    id: 'graduated-seats',
     feature: 'Graduated seats (Starter + Pro)',
     values: {
       ozer: true,

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-31T22:20:00.894Z",
-  "chunkCount": 133,
+  "generatedAt": "2026-08-31T22:29:10.796Z",
+  "chunkCount": 134,
   "chunks": [
     {
       "id": "42c411100896",
@@ -459,16 +459,22 @@
       "text": "Tasks\n\nTasks (/app/tasks) is the Personal list for to-dos across life and, optionally, every workspace you belong to.\n\nOpen Tasks\n\n1. Select Tasks in the Personal sidebar, or go to /app/tasks.\n2. Choose a workspace filter: Personal only, a specific workspace, or All when cross-workspace inclusion is on.\n3. Scan due dates and priorities, then open a task to edit details or mark it complete.\n\nCreate a task\n\n1. From Tasks, use the create control (or the workspace “new” menu on mobile).\n2. Give the task a clear title — one outcome per task.\n3. Set due date and optional link to a Personal project if it belongs to a larger plan.\n4. Save, then optionally drop it into Planner (/app/planner/plan) for today’s schedule.\n\nWork across workspaces\n\n1. In Personal preferences, enable including workspace tasks when you want a single inbox of open work.\n2. Filter /app/tasks by workspace when you need to focus (for example Business delivery only).\n3."
     },
     {
+      "id": "1abbf177cd35",
+      "path": "/work",
+      "title": "Ozer Business",
+      "text": "deal board\n4. Projects & tasks — delivery, tasks, planner\n5. Invoicing & billing — client invoices and your Ozer plan\n6. Activity & meetings — desktop tracking and transcripts\n7. Email assistant — Gmail triage and drafts\n8. Portals & websites — client portals and site publishing\n9. Security & trust — access model and policy links\n\nWhat you’ll see in the app sidebar\n\nIn a Business workspace the left sidebar is grouped roughly as:\n\n- Work — Dashboard, Projects, Tasks, Planner, Schedule, Scheduling\n- Clients — Pipeline, Clients, Meetings, Activity, Websites, Support (Emails appears here when the email add-on is available)\n- Commercial — Invoices, Proposals, Contracts, Finances\n- Team & tools — Team, Notes and files, Second brain, SOPs, Messages\n- Apps — optional marketplace apps (Rankly, Signatures, and so on)\n\nExact labels depend on modules enabled under Settings. Paths in these guides use /app/[account]/… where [account] is your workspace slug."
+    },
+    {
       "id": "404072ef2223",
       "path": "/work",
       "title": "Ozer Business",
-      "text": "Ozer Business\n\nOzer Business is the team workspace for freelancers and small studios. Clients, pipeline, projects, invoices, activity, email, and client portals live under one account slug at /app/[account]/….\n\nThis documentation walks through the Business product — not Personal life tools or Commercial property agency workflows. Use the Workspace switcher at the top of the sidebar to move between documentation areas.\n\nWho it’s for\n\n- Solo freelancers billing clients and tracking deals\n- Small agencies and studios sharing one CRM and delivery board\n- Teams that want flat pricing, EU-hosted data, and client-facing portals\n\nMap of these docs\n\n1. Getting started — signup, first Business workspace, invites\n2. Workspace — accounts, sidebar sections, switching spaces\n3. Clients & pipeline — CRM records and deal board\n4. Projects & tasks — delivery, tasks, planner\n5. Invoicing & billing — client invoices and your Ozer plan\n6. Activity & meetings — desktop tracking and transcripts\n7."
+      "text": "Ozer Business\n\nOzer Business is the team workspace for freelancers and small studios. Clients, pipeline, projects, invoices, activity, email, and client portals live under one account slug at /app/[account]/….\n\nThis documentation walks through the Business product — not Personal life tools or Commercial property agency workflows. Use the Workspace switcher at the top of the sidebar to move between documentation areas.\n\nWho it’s for\n\n- Solo freelancers billing clients and tracking deals\n- Small agencies and studios sharing one CRM and delivery board\n- Teams that want graduated Starter and Pro seats, EU-hosted data, and client-facing portals\n\nMap of these docs\n\n1. Getting started — signup, first Business workspace, invites\n2. Workspace — accounts, sidebar sections, switching spaces\n3. Clients & pipeline — CRM records and deal board\n4. Projects & tasks — delivery, tasks, planner\n5. Invoicing & billing — client invoices and your Ozer plan\n6."
     },
     {
-      "id": "d7f118165320",
+      "id": "511a67170f63",
       "path": "/work",
       "title": "Ozer Business",
-      "text": "5. Invoicing & billing — client invoices and your Ozer plan\n6. Activity & meetings — desktop tracking and transcripts\n7. Email assistant — Gmail triage and drafts\n8. Portals & websites — client portals and site publishing\n9. Security & trust — access model and policy links\n\nWhat you’ll see in the app sidebar\n\nIn a Business workspace the left sidebar is grouped roughly as:\n\n- Work — Dashboard, Projects, Tasks, Planner, Schedule, Scheduling\n- Clients — Pipeline, Clients, Meetings, Activity, Websites, Support (Emails appears here when the email add-on is available)\n- Commercial — Invoices, Proposals, Contracts, Finances\n- Team & tools — Team, Notes and files, Second brain, SOPs, Messages\n- Apps — optional marketplace apps (Rankly, Signatures, and so on)\n\nExact labels depend on modules enabled under Settings. Paths in these guides use /app/[account]/… where [account] is your workspace slug.\n\nProduct overview: ozer.so · Pricing: ozer.so/pricing"
+      "text": "on modules enabled under Settings. Paths in these guides use /app/[account]/… where [account] is your workspace slug.\n\nProduct overview: ozer.so · Pricing: ozer.so/pricing"
     },
     {
       "id": "72b9a86a53e5",

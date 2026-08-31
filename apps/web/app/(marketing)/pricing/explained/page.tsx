@@ -62,7 +62,7 @@ const FAQS = () => {
     {
       question: 'How does Ozer pricing compare to Bonsai and HoneyBook?',
       answer:
-        'Bonsai and HoneyBook often use per-user or tiered US pricing, sometimes with card fees. Ozer uses graduated GBP seat pricing on one Business product. See the comparison pages for worked examples.',
+        'Bonsai and HoneyBook often use per-user or tiered US pricing, sometimes with card fees. Ozer uses graduated GBP seats on Free, Starter, and Pro. See the comparison pages for worked examples.',
     },
   ];
 };

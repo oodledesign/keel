@@ -389,7 +389,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
       ],
       pricingPlans: [freePersonalCard()],
       pricingNote:
-        'Personal and family stay free. You pay only when you add community, business, or property — and one workspace price covers the team, not a per-seat tax.',
+        'Personal and family stay free. You pay only when you add community, business, or property. Business uses graduated seats (Starter from £14, Pro from £29) — extra seats are cheaper than seat 1.',
       faqs: [
         {
           question: 'Is Ozer really free for personal use?',
@@ -414,7 +414,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           question: 'Can I freelance on the free plan?',
           answer:
-            'Personal is for life organisation. For clients, invoices, and jobs, add a business workspace — free Business Lite or a 14-day Solo trial.',
+            'Personal is for life organisation. For clients, invoices, and jobs, add a business workspace — free Business Lite, or a 14-day trial on Starter or Pro.',
         },
       ],
       relatedSegments: relatedExcept('personal'),
@@ -426,7 +426,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
       seo: {
         title: 'Business CRM in Workspace OS — Ozer',
         description:
-          'Clients, jobs, invoices, activity tracking, and pipeline in a business workspace linked to free personal home. Flat price for the whole team from £0–£29 per month.',
+          'Clients, jobs, invoices, activity tracking, and pipeline in a business workspace linked to free personal home. Free, Starter from £14, or Pro from £29 — extra seats stay cheaper.',
         keywords: [
           'workspace OS for business',
           'small business CRM UK',
@@ -440,12 +440,12 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         title: 'Run the studio without',
         titleAccent: 'seven tools and Zapier',
         subtitle:
-          'Ozer’s business workspace answers “where do clients, jobs, and invoices live?” Pipeline, delivery, billing, activity tracking, and portals in one workspace — while personal home still sees today’s tasks. One account. One price for the team.',
+          'Ozer’s business workspace answers “where do clients, jobs, and invoices live?” Pipeline, delivery, billing, activity tracking, and portals in one workspace — while personal home still sees today’s tasks. One account. Graduated seats from £14 on Starter or £29 on Pro.',
       },
       stats: [
-        { value: '£0', label: 'Business Lite — apps and team' },
+        { value: '£0', label: 'Free — 2 seats, capped clients' },
         { value: '1 login', label: 'Personal and business together' },
-        { value: 'Team price', label: 'Not a per-seat tax' },
+        { value: '£14 / £29', label: 'Starter or Pro, extra seats cheaper' },
       ],
       features: [
         {
@@ -501,7 +501,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           title: 'Start free or trial',
           description:
-            'Business Lite at £0 for apps and team settings, or a 14-day trial on graduated Business seats.',
+            'Start on Free at £0 with 2 seats and capped clients, or take a 14-day trial on Starter or Pro.',
         },
         {
           title: 'Add clients and jobs',
@@ -533,7 +533,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           question: 'What is Free vs Starter vs Pro?',
           answer:
-            'Free (Business Lite) is apps-only. Starter unlocks clients, projects, and invoices from £14, then £9 per extra seat. Pro adds shared AI that scales, 3 project guests per seat, and unlimited sharing with other paid workspaces.',
+            'Free is £0 with 2 seats and capped clients, invoices, and tasks. Starter is unlimited ops from £14, then £9 per extra seat — recording unlimited, no planner or coaching. Pro adds planner, email assistant, meeting coaching, and a shared AI pool that scales, from £29 then £22.',
         },
         {
           question: 'Do clients pay for Ozer?',

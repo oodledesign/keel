@@ -264,14 +264,7 @@ function WorkspacePlanCard(props: {
     planId,
     interval: displayInterval,
   });
-  const features =
-    plan.productId === 'ozer-business-lite'
-      ? plan.features.map((feature) =>
-          feature === 'Apps marketplace access'
-            ? 'Apps marketplace — install Signatures and future add-ons'
-            : feature,
-        )
-      : plan.features;
+  const features = plan.features;
 
   return (
     <article
@@ -306,8 +299,8 @@ function WorkspacePlanCard(props: {
         </p>
       ) : plan.productId === 'ozer-business-starter' && interval === 'year' ? (
         <p className="mt-1 text-xs text-[var(--ozer-accent)]">
-          Annual is 10× monthly ({formatGbp(plan.monthlyPriceGbp * 10)}/yr)
-          when yearly billing is available
+          Annual is 10× monthly (16.7% less than 12×) when yearly checkout is
+          available
         </p>
       ) : null}
       <FeatureList features={features} />

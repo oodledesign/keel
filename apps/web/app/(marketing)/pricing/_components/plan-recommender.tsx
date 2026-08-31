@@ -559,8 +559,8 @@ function buildWhy(
   );
   const businessWhy =
     paidProduct === 'starter'
-      ? `Starter is about ${total}/mo for ${billableSeats} billable seat${billableSeats === 1 ? '' : 's'} — clients, projects, and invoices from £14, then £9 per extra seat.`
-      : `Pro is about ${total}/mo for ${billableSeats} billable seats — £29 for seat 1, then £22 for every extra seat, with shared AI and more project guests.`;
+      ? `Starter is about ${total}/mo for ${billableSeats} billable seat${billableSeats === 1 ? '' : 's'} — unlimited clients and invoices from £14, then £9 per extra seat. Recording is unlimited; planner and coaching stay on Pro.`
+      : `Pro is about ${total}/mo for ${billableSeats} billable seats — £29 for seat 1, then £22 for every extra seat, with planner, email assistant, coaching, and a shared AI pool.`;
 
   if (answers.signatures === 'yes' && signatureTier) {
     return `${businessWhy} Signatures ${signatureTier.name} adds ${mailboxBandText(signatureTier)}.`;
