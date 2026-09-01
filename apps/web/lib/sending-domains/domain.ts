@@ -38,7 +38,7 @@ export function normalizeSendingDomain(input: string): string {
 
   if (!value) {
     throw new SendingDomainError(
-      'Enter a domain such as bracketts.co.uk — not a full email address.',
+      'Enter a domain such as your-domain.co.uk — not a full email address.',
     );
   }
 
@@ -59,7 +59,7 @@ export function normalizeSendingDomain(input: string): string {
 
   if (!DOMAIN_RE.test(value)) {
     throw new SendingDomainError(
-      'That does not look like a valid domain. Try something like bracketts.co.uk.',
+      'That does not look like a valid domain. Try something like your-domain.co.uk.',
     );
   }
 

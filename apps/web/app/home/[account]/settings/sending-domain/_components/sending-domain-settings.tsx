@@ -163,13 +163,13 @@ export function SendingDomainSettings({
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-2">
-        <h1 className="font-heading text-2xl text-[var(--workspace-shell-text)]">
+        <h1 className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]">
           Sending domain
         </h1>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Send circulation and campaign email from your own domain, for example{' '}
           <span className="font-medium text-[var(--workspace-shell-text)]">
-            mail@mail.bracketts.co.uk
+            mail@mail.your-domain.co.uk
           </span>
           . Invites and sign-in emails still come from Ozer.
         </p>
@@ -195,7 +195,7 @@ export function SendingDomainSettings({
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setDomainInput(event.target.value)
               }
-              placeholder="bracketts.co.uk"
+              placeholder="your-domain.co.uk"
               disabled={!canEdit || pending}
               spellCheck={false}
               autoCapitalize="none"
