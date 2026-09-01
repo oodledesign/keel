@@ -110,9 +110,9 @@ extension NativeWorkspace {
     var showsClients: Bool {
         switch profile {
         case "work_design", "commercial_property", "building_surveyor":
-            true
+            return true
         default:
-            false
+            return false
         }
     }
 
@@ -121,9 +121,9 @@ extension NativeWorkspace {
         if isPersonalAccount { return false }
         switch profile {
         case "work_design", "work_property", "commercial_property", "building_surveyor":
-            true
+            return true
         default:
-            false
+            return false
         }
     }
 
