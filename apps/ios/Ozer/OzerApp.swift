@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct OzerApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var session = AppSession()
     @Environment(\.scenePhase) private var scenePhase
 

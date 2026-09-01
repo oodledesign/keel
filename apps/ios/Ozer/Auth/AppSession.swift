@@ -19,6 +19,8 @@ final class AppSession {
     private(set) var workspacesLoaded = false
     private(set) var isRefreshingWorkspaces = false
     private(set) var selectedWorkspace: NativeWorkspace?
+    private(set) var pendingScreen: AppScreen?
+    private(set) var pendingInvoiceId: String?
 
     var lastError: String?
 
@@ -56,7 +58,10 @@ final class AppSession {
             if let data = try KeychainStore.data(account: Self.keychainAccount) {
                 session = try JSONDecoder().decode(AuthSession.self, from: data)
                 phase = .signedIn
-                Task { await refreshWorkspaces() }
+                Task {
+                    await refreshWorkspaces()
+                    await PushRegistration.registerIfNeeded(session: self)
+                }
             } else {
                 session = nil
                 phase = .signedOut
@@ -122,6 +127,10 @@ final class AppSession {
 
     func handleOpenURL(_ url: URL) async {
         guard url.scheme == AppConfiguration.authCallbackScheme else { return }
+        if let invoiceId = Self.invoiceId(from: url) {
+            openInvoice(id: invoiceId)
+            return
+        }
         lastError = nil
         do {
             let next = try await auth.handleRedirect(url)
@@ -129,6 +138,33 @@ final class AppSession {
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    func openInvoice(id: String) {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        pendingInvoiceId = trimmed
+        pendingScreen = .invoices
+    }
+
+    func clearPendingInvoice() {
+        pendingInvoiceId = nil
+    }
+
+    func clearPendingScreen() {
+        pendingScreen = nil
+    }
+
+    static func invoiceId(from url: URL) -> String? {
+        let host = url.host?.lowercased() ?? ""
+        let parts = url.pathComponents.filter { $0 != "/" }
+        if host == "invoice" || host == "invoices" {
+            return parts.first
+        }
+        if parts.first == "invoice" || parts.first == "invoices" {
+            return parts.dropFirst().first
+        }
+        return nil
     }
 
     func validAccessToken() async throws -> String {
@@ -200,7 +236,10 @@ final class AppSession {
         workspaces = WorkspaceSelection.sorted(incoming)
         workspacesLoaded = true
         reconcileSelection()
-        Task { await flushOfflineWork() }
+        Task {
+            await flushOfflineWork()
+            await PushRegistration.registerIfNeeded(session: self)
+        }
     }
 
     private func reconcileSelection() {
@@ -221,7 +260,10 @@ final class AppSession {
         session = next
         phase = .signedIn
         if shouldLoadWorkspaces {
-            Task { await refreshWorkspaces() }
+            Task {
+                await refreshWorkspaces()
+                await PushRegistration.registerIfNeeded(session: self)
+            }
         }
     }
 

@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server';
 
 import { authenticateNativeRequest } from '~/lib/native/auth';
 import { handleNativeError } from '~/lib/native/http';
-import { loadNativeToday } from '~/lib/native/today';
+import { getNativeFinances } from '~/lib/native/invoices';
 import { requireNativeWorkspace } from '~/lib/native/workspace';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 20;
 
 export async function GET(request: Request) {
   const auth = await authenticateNativeRequest(request);
@@ -16,19 +15,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const workspaceRef = new URL(request.url).searchParams.get('workspace');
     const workspace = await requireNativeWorkspace(
       auth.context.supabase,
       auth.context.userId,
-      workspaceRef,
+      new URL(request.url).searchParams.get('workspace'),
     );
-    const payload = await loadNativeToday(
-      auth.context.supabase,
-      auth.context.userId,
-      workspace,
-    );
-    return NextResponse.json(payload);
+    const finances = await getNativeFinances(auth.context.supabase, workspace);
+    return NextResponse.json(finances);
   } catch (error) {
-    return handleNativeError(error, 'today');
+    return handleNativeError(error, 'finances');
   }
 }

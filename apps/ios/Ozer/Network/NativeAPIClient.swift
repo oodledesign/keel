@@ -275,6 +275,86 @@ actor NativeAPIClient {
         }
     }
 
+    func invoices(
+        workspace: String,
+        status: String? = nil,
+        accessToken: String
+    ) async throws -> InvoicesPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let status, !status.isEmpty, status != "open" {
+            query.append(URLQueryItem(name: "status", value: status))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/invoices",
+            queryItems: query,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return InvoicesPayload.empty
+        }
+        do {
+            return try JSONDecoder().decode(InvoicesPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func invoice(id: String, workspace: String, accessToken: String) async throws -> InvoiceItem {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/invoices/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(InvoiceItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func finances(workspace: String, accessToken: String) async throws -> FinancesPayload {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/finances",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return FinancesPayload.empty
+        }
+        do {
+            return try JSONDecoder().decode(FinancesPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func registerDevice(
+        token: String,
+        workspace: String?,
+        accessToken: String
+    ) async throws {
+        var body: [String: Any] = [
+            "token": token,
+            "platform": "ios",
+        ]
+        if let workspace, !workspace.isEmpty {
+            body["workspace"] = workspace
+        }
+        _ = try await send(
+            method: "POST",
+            path: "api/native/v1/devices",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+    }
+
     func people(workspace: String, accessToken: String) async throws -> PeoplePayload {
         let data = try await send(
             method: "GET",
@@ -406,22 +486,65 @@ struct TodayPayload: Decodable, Equatable {
     var greeting: String?
     var message: String?
     var summary: String?
+    var date: String?
+    var dateLabel: String?
     var items: [TodayItem]
+    var tasksDueToday: [TaskItem]
+    var overdueTasks: [TaskItem]
+    var recentNotes: [NoteItem]
+    var meetingsToday: [MeetingTodayItem]
+    var finances: FinancesPayload?
 
-    static let empty = TodayPayload(title: nil, greeting: nil, message: nil, summary: nil, items: [])
+    static let empty = TodayPayload(
+        title: nil,
+        greeting: nil,
+        message: nil,
+        summary: nil,
+        date: nil,
+        dateLabel: nil,
+        items: [],
+        tasksDueToday: [],
+        overdueTasks: [],
+        recentNotes: [],
+        meetingsToday: [],
+        finances: nil
+    )
 
     enum CodingKeys: String, CodingKey {
-        case title, greeting, message, summary, items, tasks, cards
+        case title, greeting, message, summary, items, tasks, cards, date, finances
+        case dateLabel = "date_label"
         case tasksDueToday = "tasks_due_today"
         case overdueTasks = "overdue_tasks"
+        case recentNotes = "recent_notes"
+        case meetingsToday = "meetings_today"
     }
 
-    init(title: String?, greeting: String?, message: String?, summary: String?, items: [TodayItem]) {
+    init(
+        title: String?,
+        greeting: String?,
+        message: String?,
+        summary: String?,
+        date: String? = nil,
+        dateLabel: String? = nil,
+        items: [TodayItem],
+        tasksDueToday: [TaskItem] = [],
+        overdueTasks: [TaskItem] = [],
+        recentNotes: [NoteItem] = [],
+        meetingsToday: [MeetingTodayItem] = [],
+        finances: FinancesPayload? = nil
+    ) {
         self.title = title
         self.greeting = greeting
         self.message = message
         self.summary = summary
+        self.date = date
+        self.dateLabel = dateLabel
         self.items = items
+        self.tasksDueToday = tasksDueToday
+        self.overdueTasks = overdueTasks
+        self.recentNotes = recentNotes
+        self.meetingsToday = meetingsToday
+        self.finances = finances
     }
 
     init(from decoder: Decoder) throws {
@@ -430,15 +553,20 @@ struct TodayPayload: Decodable, Equatable {
         greeting = try container.decodeIfPresent(String.self, forKey: .greeting)
         message = try container.decodeIfPresent(String.self, forKey: .message)
         summary = try container.decodeIfPresent(String.self, forKey: .summary)
+        date = try container.decodeIfPresent(String.self, forKey: .date)
+        dateLabel = try container.decodeIfPresent(String.self, forKey: .dateLabel)
+        tasksDueToday = try container.decodeIfPresent([TaskItem].self, forKey: .tasksDueToday) ?? []
+        overdueTasks = try container.decodeIfPresent([TaskItem].self, forKey: .overdueTasks) ?? []
+        recentNotes = try container.decodeIfPresent([NoteItem].self, forKey: .recentNotes) ?? []
+        meetingsToday = try container.decodeIfPresent([MeetingTodayItem].self, forKey: .meetingsToday) ?? []
+        finances = try container.decodeIfPresent(FinancesPayload.self, forKey: .finances)
 
-        let dueToday = try container.decodeIfPresent([TodayItem].self, forKey: .tasksDueToday)
-        let overdue = try container.decodeIfPresent([TodayItem].self, forKey: .overdueTasks)
-        if dueToday != nil || overdue != nil {
-            items = Self.mergeHomeItems(dueToday: dueToday ?? [], overdue: overdue ?? [])
-            return
-        }
-
-        if let items = try container.decodeIfPresent([TodayItem].self, forKey: .items) {
+        if !tasksDueToday.isEmpty || !overdueTasks.isEmpty {
+            items = Self.mergeHomeItems(
+                dueToday: tasksDueToday.map(\.asTodayItem),
+                overdue: overdueTasks.map(\.asTodayItem)
+            )
+        } else if let items = try container.decodeIfPresent([TodayItem].self, forKey: .items) {
             self.items = items
         } else if let tasks = try container.decodeIfPresent([TodayItem].self, forKey: .tasks) {
             self.items = tasks
@@ -554,6 +682,17 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
         default:
             false
         }
+    }
+
+    var asTodayItem: TodayItem {
+        TodayItem(id: id, title: title, subtitle: displaySubtitle)
+    }
+
+    var isOverdue: Bool {
+        guard let dueDate = Self.dueDate(from: due) else { return false }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar.startOfDay(for: dueDate) < calendar.startOfDay(for: Date())
     }
 
     /// Due date plus client name when present.
