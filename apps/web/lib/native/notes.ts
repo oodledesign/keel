@@ -47,7 +47,7 @@ export async function createNativeNote(input: {
   category?: string | null;
   tags?: string[] | null;
   clientId?: string | null;
-  client?: SupabaseClient;
+  client: SupabaseClient;
 }) {
   const body = input.body.trim();
   if (!body) {
@@ -55,7 +55,7 @@ export async function createNativeNote(input: {
   }
 
   const clientId = parseOptionalClientId(input.clientId ?? undefined) ?? null;
-  if (clientId && input.client) {
+  if (clientId) {
     const { data, error } = await input.client
       .from('clients')
       .select('id')

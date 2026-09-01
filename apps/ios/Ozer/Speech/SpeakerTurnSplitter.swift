@@ -33,6 +33,7 @@ struct TimedCaption: Equatable {
 struct SpeakerTurnSplitter {
     static let paragraphThreshold: TimeInterval = 2
     static let pauseThreshold: TimeInterval = paragraphThreshold
+    static let liveTurnID = "__live__"
 
     private(set) var turns: [SpeakerTurn] = []
     private(set) var captions: [TimedCaption] = []
@@ -63,6 +64,7 @@ struct SpeakerTurnSplitter {
         if !live.isEmpty {
             result.append(
                 SpeakerTurn(
+                    id: Self.liveTurnID,
                     speaker: liveSpeaker,
                     text: live,
                     start: openStart ?? lastSpeechAt ?? 0,
