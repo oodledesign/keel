@@ -177,7 +177,7 @@ export const testPublishListingAction = enhanceAction(
 
         if (!restConfigured) {
           const message =
-            'Property Hive XML feed is not enabled yet. Click “Enable feed” above, or save WordPress REST credentials for live push.';
+            'Property Hive XML feed is not enabled yet. Click “Enable XML feed” above.';
           if (input.listingId) {
             try {
               await persistPropertyHivePublicationError({
@@ -198,8 +198,9 @@ export const testPublishListingAction = enhanceAction(
 
         if (!input.listingId) {
           return {
-            ok: true as const,
-            message: 'Property Hive WordPress credentials are configured',
+            ok: false as const,
+            message:
+              'Property Hive XML feed is not enabled yet. Click “Enable XML feed” above.',
           };
         }
 

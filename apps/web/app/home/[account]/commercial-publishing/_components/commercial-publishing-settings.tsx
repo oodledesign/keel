@@ -31,7 +31,6 @@ import {
   ensurePropertyHiveFeedAction,
   rotateEachFeedAction,
   rotatePropertyHiveFeedAction,
-  savePropertyHiveCredentialsAction,
   saveRightmoveWorkspaceBranchesAction,
   testPublishListingAction,
 } from '../_lib/server/server-actions';
@@ -44,22 +43,12 @@ interface CommercialPublishingSettingsProps {
   portalPublishingUnlocked?: boolean;
 }
 
-function ConfiguredBadge({
-  configured,
-  feedEnabled,
-}: {
-  configured: boolean;
-  feedEnabled?: boolean;
-}) {
-  if (configured || feedEnabled) {
+function ConfiguredBadge({ configured }: { configured: boolean }) {
+  if (configured) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
         <CheckCircle2 className="h-3 w-3" />
-        {configured && feedEnabled
-          ? 'REST + feed'
-          : feedEnabled
-            ? 'XML feed on'
-            : 'Configured'}
+        Configured
       </span>
     );
   }
@@ -78,7 +67,6 @@ export function CommercialPublishingSettings({
   portalPublishingUnlocked = true,
 }: CommercialPublishingSettingsProps) {
   const [settings, setSettings] = useState(initialSettings);
-  const [phPending, startPhTransition] = useTransition();
   const [rmPending, startRmTransition] = useTransition();
   const [testPending, startTestTransition] = useTransition();
   const [feedPending, startFeedTransition] = useTransition();
@@ -89,13 +77,6 @@ export function CommercialPublishingSettings({
   const [eachFeedUrl, setEachFeedUrl] = useState(
     initialSettings.each.feedUrl ?? '',
   );
-
-  const [phForm, setPhForm] = useState({
-    siteUrl: initialSettings.propertyHive.siteUrl,
-    username: initialSettings.propertyHive.username,
-    applicationPassword: '',
-    officeId: initialSettings.propertyHive.officeId ?? '',
-  });
 
   const [rmBranchIds, setRmBranchIds] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -111,25 +92,6 @@ export function CommercialPublishingSettings({
   const [testPortal, setTestPortal] = useState<
     'property_hive' | 'rightmove' | 'each'
   >('property_hive');
-
-  const savePropertyHive = () => {
-    startPhTransition(async () => {
-      try {
-        const updated = await savePropertyHiveCredentialsAction({
-          accountId,
-          siteUrl: phForm.siteUrl,
-          username: phForm.username,
-          applicationPassword: phForm.applicationPassword || undefined,
-          officeId: phForm.officeId || null,
-        });
-        setSettings(updated);
-        setPhForm((prev) => ({ ...prev, applicationPassword: '' }));
-        toast.success('Property Hive credentials saved');
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Save failed');
-      }
-    });
-  };
 
   const saveRightmoveBranches = () => {
     startRmTransition(async () => {
@@ -325,88 +287,6 @@ export function CommercialPublishingSettings({
       <Card className={workspacePanelCard}>
         <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-            Property Hive
-          </CardTitle>
-          <ConfiguredBadge
-            configured={settings.propertyHive.configured}
-            feedEnabled={settings.propertyHive.feedEnabled}
-          />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Prefer the XML feed below for Property Hive imports. WordPress REST
-            credentials are optional for a live API push.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="ph-site-url">Site URL</Label>
-              <Input
-                id="ph-site-url"
-                placeholder="https://yoursite.co.uk"
-                value={phForm.siteUrl}
-                onChange={(e) =>
-                  setPhForm((prev) => ({ ...prev, siteUrl: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ph-username">Username</Label>
-              <Input
-                id="ph-username"
-                autoComplete="off"
-                value={phForm.username}
-                onChange={(e) =>
-                  setPhForm((prev) => ({ ...prev, username: e.target.value }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ph-password">Application password</Label>
-              <Input
-                id="ph-password"
-                type="password"
-                autoComplete="new-password"
-                placeholder={
-                  settings.propertyHive.configured
-                    ? 'Leave blank to keep existing'
-                    : 'Required'
-                }
-                value={phForm.applicationPassword}
-                onChange={(e) =>
-                  setPhForm((prev) => ({
-                    ...prev,
-                    applicationPassword: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ph-office-id">Office ID</Label>
-              <Input
-                id="ph-office-id"
-                placeholder="Optional"
-                value={phForm.officeId}
-                onChange={(e) =>
-                  setPhForm((prev) => ({ ...prev, officeId: e.target.value }))
-                }
-              />
-            </div>
-          </div>
-          <Button
-            type="button"
-            disabled={phPending}
-            onClick={savePropertyHive}
-            className={workspaceBtnPrimaryMd}
-          >
-            {phPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Save Property Hive credentials
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className={workspacePanelCard}>
-        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
             Property Hive XML feed
           </CardTitle>
           <ConfiguredBadge configured={settings.propertyHive.feedEnabled} />
@@ -490,8 +370,8 @@ export function CommercialPublishingSettings({
             Rightmove Commercial Listings uses platform OAuth (env). Rightmove
             Branch IDs live on each workspace office under Brand settings →
             Branches, and disposals pick an office on Management. EACH and
-            Property Hive WordPress use XML feed URLs (EACH has its own token so
-            stock can diverge later).
+            Property Hive use XML feed URLs (EACH has its own token so stock can
+            diverge later).
           </p>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
@@ -651,8 +531,7 @@ export function CommercialPublishingSettings({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            For Property Hive and EACH, this checks each portal’s XML feed (or
-            live REST push for PH if WordPress credentials are saved). For
+            For Property Hive and EACH, this checks each portal’s XML feed. For
             Rightmove, leave Listing empty to verify OAuth (optionally pick an
             office to probe its Branch ID); pick a listing to PUT — that listing
             must have an Office / branch assigned on Management.
