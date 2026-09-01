@@ -143,6 +143,8 @@ struct DictationSheet: View {
         permissionError = nil
         do {
             try await speech.start()
+        } catch is CancellationError {
+            return
         } catch {
             permissionError = error.localizedDescription
         }

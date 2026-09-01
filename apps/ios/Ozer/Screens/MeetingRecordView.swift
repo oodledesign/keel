@@ -79,6 +79,8 @@ struct MeetingRecordView: View {
     private func start() async {
         do {
             try await capture.start()
+        } catch is CancellationError {
+            return
         } catch {
             startError = error.localizedDescription
         }
