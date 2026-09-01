@@ -67,20 +67,30 @@ struct SpeakerTurnSplitter {
         let trimmed = sessionText.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return }
 
+        // On-device Speech rewrites the hypothesis and often drops the start ~1 min in.
+        // Never shrink committed paragraphs; freeze the peak and treat the short rewrite as new.
+        if !currentSessionText.isEmpty, trimmed.count < currentSessionText.count,
+           !currentSessionText.hasPrefix(trimmed) {
+            commitOpen()
+            committedSessionText = ""
+            carriedText = ""
+            currentSessionText = trimmed
+            openStart = time
+        } else if trimmed.count >= currentSessionText.count {
+            currentSessionText = trimmed
+        }
+
         if let last = lastSpeechAt, time - last >= Self.paragraphThreshold {
             commitOpen()
         }
 
-        currentSessionText = trimmed
+        let stable = currentSessionText
         let delta: String
-        if !committedSessionText.isEmpty, trimmed.hasPrefix(committedSessionText) {
-            delta = String(trimmed.dropFirst(committedSessionText.count))
+        if !committedSessionText.isEmpty, stable.hasPrefix(committedSessionText) {
+            delta = String(stable.dropFirst(committedSessionText.count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-        } else if !committedSessionText.isEmpty {
-            committedSessionText = ""
-            delta = trimmed
         } else {
-            delta = trimmed
+            delta = stable
         }
 
         openText = [carriedText, delta]
@@ -121,8 +131,8 @@ struct SpeakerTurnSplitter {
         return Self.format(turns: turns, liveText: "", liveSpeaker: liveSpeaker)
     }
 
-    /// Relabel committed paragraphs. Never rebuild the transcript from Speech word
-    /// fragments — those segments are incomplete and were wiping 2 minutes down to a few lines.
+    /// Relabel committed paragraphs. Split a long paragraph across diarization
+    /// spans so a speaker change near the end is not swallowed by one Me block.
     mutating func applyDiarization(_ spans: [DiarizedSpan]) {
         commitOpen()
         guard !turns.isEmpty else { return }
@@ -130,20 +140,57 @@ struct SpeakerTurnSplitter {
 
         var labelled: [SpeakerTurn] = []
         for turn in turns {
-            let caption = TimedCaption(start: turn.start, end: turn.end, text: turn.text)
-            let speaker = Self.speakerName(for: Self.speakerIndex(for: caption, in: spans))
-            if let last = labelled.last, last.speaker == speaker {
-                labelled[labelled.count - 1].text = [last.text, turn.text]
-                    .filter { !$0.isEmpty }
-                    .joined(separator: "\n\n")
-                labelled[labelled.count - 1].end = max(last.end, turn.end)
-            } else {
-                labelled.append(
-                    SpeakerTurn(speaker: speaker, text: turn.text, start: turn.start, end: turn.end)
-                )
+            for piece in Self.splitTurn(turn, spans: spans) {
+                if let last = labelled.last, last.speaker == piece.speaker {
+                    labelled[labelled.count - 1].text = [last.text, piece.text]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: "\n\n")
+                    labelled[labelled.count - 1].end = max(last.end, piece.end)
+                } else {
+                    labelled.append(piece)
+                }
             }
         }
         turns = labelled
+    }
+
+    static func splitTurn(_ turn: SpeakerTurn, spans: [DiarizedSpan]) -> [SpeakerTurn] {
+        let clipped = spans.compactMap { span -> DiarizedSpan? in
+            let start = max(turn.start, span.start)
+            let end = min(turn.end, span.end)
+            guard end - start > 0.08 else { return nil }
+            return DiarizedSpan(speakerIndex: span.speakerIndex, start: start, end: end)
+        }
+        .sorted { $0.start < $1.start }
+
+        if clipped.count <= 1 {
+            var copy = turn
+            if let span = clipped.first {
+                copy.speaker = speakerName(for: span.speakerIndex)
+            } else {
+                let caption = TimedCaption(start: turn.start, end: turn.end, text: turn.text)
+                copy.speaker = speakerName(for: speakerIndex(for: caption, in: spans))
+            }
+            return [copy]
+        }
+
+        let duration = max(0.001, turn.end - turn.start)
+        let chars = Array(turn.text)
+        guard !chars.isEmpty else { return [turn] }
+
+        var pieces: [SpeakerTurn] = []
+        for span in clipped {
+            let i0 = Int(((span.start - turn.start) / duration * Double(chars.count)).rounded(.down))
+            let i1 = Int(((span.end - turn.start) / duration * Double(chars.count)).rounded(.up))
+            let lo = min(max(0, i0), chars.count)
+            let hi = min(max(lo, i1), chars.count)
+            let text = String(chars[lo..<hi]).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            pieces.append(
+                SpeakerTurn(speaker: speakerName(for: span.speakerIndex), text: text, start: span.start, end: span.end)
+            )
+        }
+        return pieces.isEmpty ? [turn] : pieces
     }
 
     static func speakerName(for index: Int) -> String {

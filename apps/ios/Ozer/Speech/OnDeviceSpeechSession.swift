@@ -88,8 +88,20 @@ final class OnDeviceSpeechSession {
                 if let result {
                     self.lastError = nil
                     let next = result.bestTranscription.formattedString
-                    self.sessionText = next
-                    let pieces = [self.committedText, next]
+                    if !self.sessionText.isEmpty, next.count < self.sessionText.count {
+                        let peak = self.sessionText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !peak.isEmpty {
+                            self.committedText = [self.committedText, peak]
+                                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                                .filter { !$0.isEmpty }
+                                .joined(separator: " ")
+                        }
+                    }
+                    if next.count >= self.sessionText.count || self.sessionText.isEmpty
+                        || next.count < self.sessionText.count {
+                        self.sessionText = next
+                    }
+                    let pieces = [self.committedText, self.sessionText]
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                         .filter { !$0.isEmpty }
                     self.partialText = pieces.joined(separator: " ")

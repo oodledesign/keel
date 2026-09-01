@@ -41,7 +41,7 @@ actor LocalDiarizer {
         guard !samples.isEmpty else { return [] }
         let models = try DiarizationModels.load()
         var observations: [Observation] = []
-        let step = Self.windowSamples
+        let step = Self.windowSamples / 2
         let total = max(1, samples.count)
         var offset = 0
 
