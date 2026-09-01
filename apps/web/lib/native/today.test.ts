@@ -9,6 +9,7 @@ const studio: NativeWorkspace = {
   name: 'Studio',
   profile: 'work_design',
   isPersonal: false,
+  image: null,
 };
 
 const personal: NativeWorkspace = {
@@ -17,6 +18,7 @@ const personal: NativeWorkspace = {
   name: 'Dan',
   profile: 'personal',
   isPersonal: true,
+  image: null,
 };
 
 function task(overrides: {

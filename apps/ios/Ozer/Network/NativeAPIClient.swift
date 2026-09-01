@@ -177,21 +177,31 @@ struct NativeWorkspace: Decodable, Equatable, Identifiable {
     var name: String
     var profile: String
     var isPersonal: Bool
+    /// Public HTTPS logo or photo. Missing or non-https values stay nil.
+    var image: String?
 
     var queryValue: String {
         slug.isEmpty ? id : slug
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, slug, name, profile, isPersonal
+        case id, slug, name, profile, isPersonal, image
     }
 
-    init(id: String, slug: String, name: String, profile: String, isPersonal: Bool) {
+    init(
+        id: String,
+        slug: String,
+        name: String,
+        profile: String,
+        isPersonal: Bool,
+        image: String? = nil
+    ) {
         self.id = id
         self.slug = slug
         self.name = name
         self.profile = profile
         self.isPersonal = isPersonal
+        self.image = image
     }
 
     init(from decoder: Decoder) throws {
@@ -202,6 +212,7 @@ struct NativeWorkspace: Decodable, Equatable, Identifiable {
         profile = try container.decodeIfPresent(String.self, forKey: .profile) ?? ""
         isPersonal = try container.decodeIfPresent(Bool.self, forKey: .isPersonal)
             ?? (profile == "personal")
+        image = try container.decodeIfPresent(String.self, forKey: .image)
     }
 }
 

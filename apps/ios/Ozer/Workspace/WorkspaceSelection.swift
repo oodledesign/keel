@@ -75,6 +75,31 @@ extension NativeWorkspace {
         return "Workspace"
     }
 
+    /// HTTPS logo URL only. Relative, http, and junk values are ignored.
+    var httpsImageURL: URL? {
+        guard let image,
+              let url = URL(string: image.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.scheme?.lowercased() == "https"
+        else {
+            return nil
+        }
+        return url
+    }
+
+    /// One or two letters from the account name (Oodle → O, The House → TH).
+    var logoInitials: String {
+        let words = displayName.split { $0.isWhitespace || $0 == "-" }.filter { !$0.isEmpty }
+        let letters = words.compactMap { word in word.first(where: \.isLetter) }
+        switch letters.count {
+        case 0:
+            return ""
+        case 1:
+            return String(letters[0]).uppercased()
+        default:
+            return String([letters[0], letters[1]]).uppercased()
+        }
+    }
+
     /// Secondary type label only. Hidden when it repeats the name.
     var profileSubtitle: String? {
         let label: String

@@ -81,6 +81,7 @@ struct WorkspaceMembershipRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
+            WorkspaceLogoView(workspace: workspace, size: 30)
             VStack(alignment: .leading, spacing: 2) {
                 Text(workspace.displayName)
                     .font(emphasizeTitle ? .body.weight(.semibold) : .body)
