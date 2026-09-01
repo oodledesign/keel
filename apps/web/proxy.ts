@@ -261,6 +261,7 @@ async function adminMiddleware(request: NextRequest, response: NextResponse) {
 function isAuthCompletionPath(pathname: string) {
   return (
     pathname === pathsConfig.auth.callback ||
+    pathname === pathsConfig.auth.native ||
     pathname === '/auth/confirm' ||
     pathname.startsWith('/auth/callback/')
   );

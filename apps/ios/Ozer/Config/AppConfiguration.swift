@@ -19,12 +19,18 @@ enum AppConfiguration {
         !supabaseAnonKey.isEmpty
     }
 
+    /// Custom scheme the HTTPS bounce page hops to, and Google OAuth returns to.
     static var authCallbackURL: URL {
         URL(string: "so.ozer.app://auth-callback")!
     }
 
     static var authCallbackScheme: String {
         "so.ozer.app"
+    }
+
+    /// HTTPS bounce so Mail/Gmail open a real URL. Must be on the Supabase allow-list.
+    static var nativeAuthRedirectURL: URL {
+        apiBaseURL.appending(path: "auth/native")
     }
 
     private static func string(for key: String) -> String {

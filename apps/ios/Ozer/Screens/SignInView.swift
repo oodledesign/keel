@@ -4,6 +4,8 @@ import SwiftUI
 struct SignInView: View {
     @Environment(AppSession.self) private var session
     @State private var email = ""
+    @State private var otpCode = ""
+    @State private var magicLinkSent = false
     @State private var magicLinkMessage: String?
     @State private var isWorking = false
     @State private var appleNonce = ""
@@ -21,11 +23,6 @@ struct SignInView: View {
                     Text(error)
                         .font(.footnote)
                         .foregroundStyle(OzerPalette.coral)
-                }
-                if let magicLinkMessage {
-                    Text(magicLinkMessage)
-                        .font(.footnote)
-                        .foregroundStyle(OzerPalette.plumMuted)
                 }
             }
             .padding(28)
@@ -115,7 +112,11 @@ struct SignInView: View {
             Button {
                 Task {
                     await run {
-                        magicLinkMessage = await session.sendMagicLink(email: email.trimmingCharacters(in: .whitespaces))
+                        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+                        magicLinkMessage = await session.sendMagicLink(email: trimmed)
+                        if magicLinkMessage != nil {
+                            magicLinkSent = true
+                        }
                     }
                 }
             } label: {
@@ -125,8 +126,67 @@ struct SignInView: View {
                     .frame(height: 52)
             }
             .buttonStyle(OzerPrimaryButtonStyle())
-            .disabled(email.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(trimmedEmail.isEmpty)
+
+            if magicLinkSent {
+                if let magicLinkMessage {
+                    Text(magicLinkMessage)
+                        .font(.footnote)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                otpFields
+            }
         }
+    }
+
+    private var trimmedEmail: String {
+        email.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var sanitizedOTP: String {
+        String(otpCode.filter(\.isNumber).prefix(6))
+    }
+
+    private var otpFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("6-digit code", text: otpCodeBinding)
+                .textContentType(.oneTimeCode)
+                .keyboardType(.numberPad)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding(.horizontal, 14)
+                .frame(height: 52)
+                .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous)
+                        .stroke(OzerPalette.border, lineWidth: 1)
+                }
+                .accessibilityLabel("6-digit code")
+
+            Button {
+                Task {
+                    await run {
+                        await session.verifyEmailOTP(email: trimmedEmail, token: sanitizedOTP)
+                    }
+                }
+            } label: {
+                Text("Verify code")
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+            }
+            .buttonStyle(OzerPrimaryButtonStyle())
+            .disabled(sanitizedOTP.count != 6 || trimmedEmail.isEmpty)
+            .accessibilityLabel("Verify code")
+        }
+    }
+
+    private var otpCodeBinding: Binding<String> {
+        Binding(
+            get: { otpCode },
+            set: { otpCode = String($0.filter(\.isNumber).prefix(6)) }
+        )
     }
 
     private func labelRow(title: String, systemImage: String) -> some View {
