@@ -12,6 +12,10 @@ import {
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 import { filterOnMarketListingsForPortalFeed } from '~/lib/commercial/each-feed-inclusion';
+import {
+  buildCommercialListingMediaPublicUrl,
+  resolveSiteUrlForPublicMedia,
+} from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import { renderPropertyHiveOzerListingFields } from '~/lib/commercial/property-hive-custom-fields';
 
@@ -269,7 +273,18 @@ async function createSignedUrlMap(
 function resolveMediaUrlFromMaps(
   media: MediaRow,
   signedByPath: Map<string, string>,
+  siteUrl: string | null,
 ): string | null {
+  if (siteUrl) {
+    return buildCommercialListingMediaPublicUrl({
+      siteUrl,
+      mediaId: media.id,
+      mediaType: media.media_type,
+      fileName: media.file_name,
+      mimeType: media.mime_type,
+    });
+  }
+
   const storagePath = media.storage_path?.trim() || null;
   return resolveCommercialMediaPublicUrl({
     storageSignedUrl: storagePath
@@ -338,6 +353,7 @@ function renderPropertyXml(
   media: MediaRow[],
   coAgents: CoAgentFeedRow[] = [],
   signedByPath: Map<string, string> = new Map(),
+  siteUrl: string | null = null,
 ): string {
   const disposalType = (listing.disposal_type as DisposalType) ?? 'to_let';
   const includesToLet = disposalIncludesToLet(disposalType);
@@ -357,7 +373,7 @@ function renderPropertyXml(
   for (const item of media
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)) {
-    const url = resolveMediaUrlFromMaps(item, signedByPath);
+    const url = resolveMediaUrlFromMaps(item, signedByPath, siteUrl);
     if (!url) continue;
     const name = item.file_name || `${item.media_type}-${item.id}`;
     const isImage =
@@ -804,6 +820,16 @@ export async function buildCommercialFeedXml(
     ON_MARKET_STATUSES.has(row.status),
   );
 
+  // Property Hive / EACH match on Kato <id>/<object_id>. Listings without an
+  // external_id would export as an Ozer UUID and create duplicate WP posts.
+  const beforeExternalFilter = listingRows.length;
+  listingRows = listingRows.filter((row) => Boolean(row.external_id?.trim()));
+  if (listingRows.length < beforeExternalFilter) {
+    console.warn(
+      `[${portal}-feed] skipped ${beforeExternalFilter - listingRows.length} on-market listing(s) without external_id (avoids duplicate Property Hive posts)`,
+    );
+  }
+
   if (portal === 'each' && listingRows.length > 0) {
     const candidateIds = listingRows.map((l) => l.id);
     const { data: optedOut, error: pubError } = await client
@@ -881,12 +907,21 @@ export async function buildCommercialFeedXml(
   }
 
   const allMedia = (media ?? []) as MediaRow[];
-  const signedByPath = await createSignedUrlMap(
-    client,
-    allMedia
-      .map((item) => item.storage_path)
-      .filter((path): path is string => Boolean(path?.trim())),
-  );
+  const siteUrl = resolveSiteUrlForPublicMedia();
+  const signedByPath = siteUrl
+    ? new Map<string, string>()
+    : await createSignedUrlMap(
+        client,
+        allMedia
+          .map((item) => item.storage_path)
+          .filter((path): path is string => Boolean(path?.trim())),
+      );
+
+  if (!siteUrl && allMedia.length > 0) {
+    console.warn(
+      '[property-hive-feed] NEXT_PUBLIC_APP_SITE_URL not set; falling back to signed storage URLs (may fail Property Hive import)',
+    );
+  }
 
   const propertiesXml = listingRows.map((listing) =>
     renderPropertyXml(
@@ -895,6 +930,7 @@ export async function buildCommercialFeedXml(
       mediaByListing.get(listing.id) ?? [],
       coAgentsByListing.get(listing.id) ?? [],
       signedByPath,
+      siteUrl,
     ),
   );
 
