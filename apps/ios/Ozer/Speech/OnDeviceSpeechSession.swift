@@ -14,13 +14,15 @@ final class OnDeviceSpeechSession {
     private var recognizer: SFSpeechRecognizer?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    private var sessionEndTask: Task<Void, Never>?
     private var restartTask: Task<Void, Never>?
     private var speechEpoch = 0
-    private var consecutiveSpeechFailures = 0
+    private var isRestartingSpeech = false
     /// Restart before Apple’s ~1 minute recognition window ends.
     private static let restartAfter: TimeInterval = 50
+    private static let restartHandshake: TimeInterval = 0.35
+    private static let restartFallback: TimeInterval = 2.5
     private static let restartBackoff: TimeInterval = 1.5
-    private static let maxSpeechFailures = 3
 
     var displayText: String {
         partialText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -31,7 +33,7 @@ final class OnDeviceSpeechSession {
         lastError = nil
         partialText = ""
         speechEpoch = 0
-        consecutiveSpeechFailures = 0
+        isRestartingSpeech = false
 
         guard SpeechPermissions.liveOnDeviceSpeechSupported else {
             throw SpeechPermissionError.simulatorUnsupported
@@ -54,7 +56,7 @@ final class OnDeviceSpeechSession {
 
         do {
             try startSpeech(recognizer: recognizer)
-            scheduleRestart()
+            scheduleSessionEnd()
         } catch {
             isListening = false
             stopEngine()
@@ -63,8 +65,6 @@ final class OnDeviceSpeechSession {
     }
 
     func stop() -> String {
-        restartTask?.cancel()
-        restartTask = nil
         let text = displayText
         stopEngine()
         isListening = false
@@ -82,7 +82,7 @@ final class OnDeviceSpeechSession {
             Task { @MainActor in
                 guard let self, self.isListening, self.speechEpoch == epoch else { return }
                 if let result {
-                    self.consecutiveSpeechFailures = 0
+                    self.lastError = nil
                     let next = result.bestTranscription.formattedString
                     if self.partialText.isEmpty || next.count >= self.partialText.count {
                         self.partialText = next
@@ -90,57 +90,76 @@ final class OnDeviceSpeechSession {
                         self.partialText = "\(self.partialText) \(next)"
                     }
                     if result.isFinal {
-                        self.restartRecognitionIfNeeded()
+                        self.queueSpeechRestart()
                     }
                     return
                 }
-                if error != nil {
-                    self.handleSpeechFailure()
+                if let error {
+                    if !SpeechPermissions.isCancellation(error) {
+                        self.lastError = error.localizedDescription
+                    }
+                    self.queueSpeechRestart()
                 }
             }
         }
     }
 
-    private func scheduleRestart() {
-        restartTask?.cancel()
-        restartTask = Task { [weak self] in
+    private func scheduleSessionEnd() {
+        sessionEndTask?.cancel()
+        sessionEndTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.restartAfter))
             guard let self, !Task.isCancelled, self.isListening else { return }
-            self.restartRecognitionIfNeeded()
+            self.request?.endAudio()
+            try? await Task.sleep(for: .seconds(Self.restartFallback))
+            guard let self, !Task.isCancelled, self.isListening, !self.isRestartingSpeech else { return }
+            self.queueSpeechRestart()
         }
     }
 
-    private func handleSpeechFailure() {
-        consecutiveSpeechFailures += 1
-        if consecutiveSpeechFailures >= Self.maxSpeechFailures {
-            lastError = SpeechPermissionError.onDeviceUnavailable.errorDescription
-            isListening = false
-            stopEngine()
-            return
-        }
+    private func queueSpeechRestart() {
+        guard isListening, recognizer != nil else { return }
+        guard !isRestartingSpeech else { return }
+        isRestartingSpeech = true
+        audio.attach(nil)
+        request?.endAudio()
+        request = nil
+
         restartTask?.cancel()
         restartTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Self.restartBackoff))
-            guard let self, !Task.isCancelled, self.isListening else { return }
-            self.restartRecognitionIfNeeded()
+            try? await Task.sleep(for: .seconds(Self.restartHandshake))
+            guard let self, !Task.isCancelled, self.isListening else {
+                self?.isRestartingSpeech = false
+                return
+            }
+            self.completeSpeechRestart()
         }
     }
 
-    private func restartRecognitionIfNeeded() {
-        guard isListening, let recognizer else { return }
-        invalidateSpeech()
+    private func completeSpeechRestart() {
+        guard isListening, let recognizer else {
+            isRestartingSpeech = false
+            return
+        }
+        task = nil
         do {
             try startSpeech(recognizer: recognizer)
-            scheduleRestart()
+            scheduleSessionEnd()
+            isRestartingSpeech = false
         } catch {
+            isRestartingSpeech = false
             lastError = error.localizedDescription
-            isListening = false
-            stopEngine()
+            restartTask?.cancel()
+            restartTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(Self.restartBackoff))
+                guard let self, !Task.isCancelled, self.isListening else { return }
+                self.queueSpeechRestart()
+            }
         }
     }
 
     private func invalidateSpeech() {
         speechEpoch += 1
+        isRestartingSpeech = false
         audio.attach(nil)
         request?.endAudio()
         task?.cancel()
@@ -149,7 +168,9 @@ final class OnDeviceSpeechSession {
     }
 
     private func stopEngine() {
+        sessionEndTask?.cancel()
         restartTask?.cancel()
+        sessionEndTask = nil
         restartTask = nil
         invalidateSpeech()
         audio.stop()

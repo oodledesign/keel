@@ -4,45 +4,70 @@ struct SpeakerTurn: Codable, Equatable, Hashable, Identifiable {
     var id: String
     var speaker: String
     var text: String
+    var start: TimeInterval
+    var end: TimeInterval
 
-    init(id: String = UUID().uuidString, speaker: String, text: String) {
+    init(
+        id: String = UUID().uuidString,
+        speaker: String,
+        text: String,
+        start: TimeInterval = 0,
+        end: TimeInterval = 0
+    ) {
         self.id = id
         self.speaker = speaker
         self.text = text
+        self.start = start
+        self.end = end
     }
 }
 
-/// Pause-based labels: first voice is Me, later turns are Speaker 1, Speaker 2…
-/// Apple Speech does not give speaker IDs — a ~1.2s gap starts the next label.
-/// Later turns never go back to Me.
+struct TimedCaption: Equatable {
+    var start: TimeInterval
+    var end: TimeInterval
+    var text: String
+}
+
+/// Live captions stay on Me. Short pauses become paragraphs.
+/// Speaker labels come from embeddings after the meeting, not from silence.
 struct SpeakerTurnSplitter {
-    static let pauseThreshold: TimeInterval = 1.2
+    static let paragraphThreshold: TimeInterval = 2
+    static let pauseThreshold: TimeInterval = paragraphThreshold
 
     private(set) var turns: [SpeakerTurn] = []
+    private(set) var captions: [TimedCaption] = []
     private var openText = ""
+    private var openStart: TimeInterval?
     private var lastSpeechAt: TimeInterval?
-    private var nextIndex = 0
     private var committedSessionText = ""
     private var currentSessionText = ""
     private var carriedText = ""
+    private var sessionOrigin: TimeInterval = 0
 
     var liveText: String {
         openText
     }
 
     var liveSpeaker: String {
-        Self.speakerName(for: nextIndex)
+        Self.speakerName(for: 0)
     }
 
     var formattedBody: String {
         Self.format(turns: turns, liveText: openText, liveSpeaker: liveSpeaker)
     }
 
+    mutating func beginSession(at origin: TimeInterval) {
+        sessionOrigin = origin
+        committedSessionText = ""
+        currentSessionText = ""
+        captions.removeAll { $0.start >= origin - 0.05 }
+    }
+
     mutating func ingest(sessionText: String, at time: TimeInterval) {
         let trimmed = sessionText.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return }
 
-        if let last = lastSpeechAt, time - last >= Self.pauseThreshold, !openText.isEmpty {
+        if let last = lastSpeechAt, time - last >= Self.paragraphThreshold {
             commitOpen()
         }
 
@@ -61,10 +86,18 @@ struct SpeakerTurnSplitter {
         openText = [carriedText, delta]
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+        if openStart == nil {
+            openStart = time
+        }
         lastSpeechAt = time
     }
 
-    /// Recognition restart: keep the current turn, new formatted strings start empty.
+    mutating func ingestCaptions(_ next: [TimedCaption]) {
+        captions.removeAll { $0.start >= sessionOrigin - 0.05 }
+        captions.append(contentsOf: next.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+        captions.sort { $0.start < $1.start }
+    }
+
     mutating func rollSession() {
         carriedText = openText
         committedSessionText = ""
@@ -73,11 +106,13 @@ struct SpeakerTurnSplitter {
 
     mutating func commitOpen() {
         let trimmed = openText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let start = openStart ?? lastSpeechAt ?? 0
+        let end = lastSpeechAt ?? start
         openText = ""
         carriedText = ""
+        openStart = nil
         guard !trimmed.isEmpty else { return }
-        turns.append(SpeakerTurn(speaker: Self.speakerName(for: nextIndex), text: trimmed))
-        nextIndex += 1
+        turns.append(SpeakerTurn(speaker: Self.speakerName(for: 0), text: trimmed, start: start, end: end))
         committedSessionText = currentSessionText
     }
 
@@ -86,21 +121,102 @@ struct SpeakerTurnSplitter {
         return Self.format(turns: turns, liveText: "", liveSpeaker: liveSpeaker)
     }
 
+    /// Apply embedding clusters. First voice is Me; the same embedding can return as Me.
+    mutating func applyDiarization(_ spans: [DiarizedSpan]) {
+        commitOpen()
+        let source = captions.isEmpty ? turns.map { TimedCaption(start: $0.start, end: $0.end, text: $0.text) } : captions
+        guard !source.isEmpty else { return }
+
+        if spans.isEmpty {
+            turns = source.map { caption in
+                SpeakerTurn(speaker: Self.speakerName(for: 0), text: caption.text, start: caption.start, end: caption.end)
+            }
+            return
+        }
+
+        var labelled: [SpeakerTurn] = []
+        for caption in source {
+            let speaker = Self.speakerName(for: Self.speakerIndex(for: caption, in: spans))
+            if let last = labelled.last, last.speaker == speaker {
+                labelled[labelled.count - 1].text = [last.text, caption.text]
+                    .filter { !$0.isEmpty }
+                    .joined(separator: " ")
+                labelled[labelled.count - 1].end = max(last.end, caption.end)
+            } else {
+                labelled.append(
+                    SpeakerTurn(speaker: speaker, text: caption.text, start: caption.start, end: caption.end)
+                )
+            }
+        }
+        turns = labelled
+    }
+
     static func speakerName(for index: Int) -> String {
         if index <= 0 { return "Me" }
         return "Speaker \(index)"
     }
 
-    static func format(turns: [SpeakerTurn], liveText: String, liveSpeaker: String) -> String {
-        var blocks: [String] = turns.compactMap { turn in
-            let text = turn.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { return nil }
-            return "\(turn.speaker)\n\n\(text)"
+    static func speakerIndex(for caption: TimedCaption, in spans: [DiarizedSpan]) -> Int {
+        var bestIndex = 0
+        var bestOverlap: TimeInterval = -1
+        for span in spans {
+            let start = max(caption.start, span.start)
+            let end = min(caption.end, span.end)
+            let overlap = end - start
+            if overlap > bestOverlap {
+                bestOverlap = overlap
+                bestIndex = span.speakerIndex
+            }
         }
+        if bestOverlap > 0 {
+            return bestIndex
+        }
+        guard let nearest = spans.min(by: {
+            abs(($0.start + $0.end) / 2 - (caption.start + caption.end) / 2)
+                < abs(($1.start + $1.end) / 2 - (caption.start + caption.end) / 2)
+        }) else {
+            return 0
+        }
+        return nearest.speakerIndex
+    }
+
+    static func format(turns: [SpeakerTurn], liveText: String, liveSpeaker: String) -> String {
+        var blocks: [String] = []
+        var currentSpeaker: String?
+        var paragraphs: [String] = []
+
+        func flush() {
+            guard let speaker = currentSpeaker else { return }
+            let body = paragraphs.joined(separator: "\n\n")
+            if !body.isEmpty {
+                blocks.append("\(speaker)\n\n\(body)")
+            }
+            paragraphs = []
+        }
+
+        for turn in turns {
+            let text = turn.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            if turn.speaker != currentSpeaker {
+                flush()
+                currentSpeaker = turn.speaker
+            }
+            paragraphs.append(text)
+        }
+
         let live = liveText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !live.isEmpty {
-            blocks.append("\(liveSpeaker)\n\n\(live)")
+            if liveSpeaker != currentSpeaker {
+                flush()
+                blocks.append("\(liveSpeaker)\n\n\(live)")
+            } else {
+                paragraphs.append(live)
+                flush()
+            }
+        } else {
+            flush()
         }
+
         return blocks.joined(separator: "\n\n")
     }
 

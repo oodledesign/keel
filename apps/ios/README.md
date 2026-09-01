@@ -27,7 +27,9 @@ cp apps/ios/Config/Local.xcconfig.example apps/ios/Config/Local.xcconfig
 
 `Ozer/Info.plist` asks for the microphone and on-device speech recognition (Ozer-specific strings, not generic). `UIBackgroundModes` includes `audio` so a meeting can keep recording when the screen locks. No iCloud. Speech uses Apple’s Speech framework with `requiresOnDeviceRecognition` and locale `en-GB`.
 
-The iOS Simulator must not run live on-device Speech or a mic tap that hops to the main actor — that pins the host CPU. Meetings on Simulator start a timer-only placeholder and show that live captions need a real iPhone. Dictation fails fast with the same message. Permission prompts time out instead of hanging after Allow.
+The iOS Simulator must not run live on-device Speech, a mic tap that hops to the main actor, or the pyannote/WeSpeaker models — that pins the host CPU. Meetings on Simulator start a timer-only placeholder and show that live captions need a real iPhone. Dictation fails fast with the same message. Permission prompts time out instead of hanging after Allow.
+
+Speaker models come from FluidInference’s CoreML conversion of pyannote (CC-BY-4.0) and WeSpeaker (Apache-2.0). Ozer downloads them at first meeting on a real iPhone.
 
 ## Config keys
 
@@ -47,7 +49,7 @@ Sign in with **Apple**, **Google**, or a **magic-link email**. Access and refres
 
 - Apple: `AuthenticationServices` → GoTrue `grant_type=id_token`
 - Google: ephemeral `ASWebAuthenticationSession` + PKCE (no cookies)
-- Magic link (app): `POST /auth/v1/otp?redirect_to=https://app.ozer.so/auth/native`. Mail opens that HTTPS page, which hops to `so.ozer.app://auth-callback`. After “Email me a link”, the sign-in screen also accepts the 8-digit email code via `POST /auth/v1/verify`.
+- Magic link (app): `POST /auth/v1/otp?redirect_to=https://app.ozer.so/auth/native`. The email button uses `/auth/confirm?token_hash=…&callback=…`. For a native callback, confirm does **not** verify in the browser (that burned the token and opened the app empty). It hops to `/auth/native?token_hash=…`, then `so.ozer.app://auth-callback`, and the app POSTs `/auth/v1/verify`. After “Email me a link”, the sign-in screen still accepts the 8-digit email code.
 - Magic link (website): unchanged — Makerkit still uses `/auth/callback`. Do not point web `emailRedirectTo` at `/auth/native`.
 
 Add these redirect URLs in **Supabase → Authentication → URL Configuration → Redirect URLs**:
@@ -141,7 +143,8 @@ Surveyor, studio (`work_design` / `work_property`), and commercial property work
 - Start / stop, elapsed time, live captions, screen stays awake
 - Background audio mode so a lock-screen meeting is not killed
 - Audio stays on the phone as m4a (excluded from iCloud backup) until the user deletes the meeting
-- After stop, the transcript is labelled **Me** for the first voice, then **Speaker 1 / Speaker 2** on pauses of ~1.2s. Apple Speech does not give speaker IDs. Later turns never go back to Me. Mic only — no computer-audio “Them”
+- Live captions stay on **Me**. After stop, on-device diarization (pyannote segmentation-3.0 + WeSpeaker ResNet34-LM, ~32 MB downloaded once into Application Support, excluded from iCloud) labels **Me** then **Speaker 1 / Speaker 2**. The same voice can return as Me. Not NVIDIA Sortformer. If models fail, the meeting stays Me-only — it does not invent speakers from short pauses. Mic only — no computer-audio “Them”
+- On-device Speech sessions are ended and restarted around 50s so live captions continue; the m4a/caf recording is not restarted. If a restart fails, the meeting screen shows an error and keeps retrying — the timer is not a silent freeze.
 - The transcript is saved as a note (`category: meeting_transcript`) when sync is possible; otherwise it stays local and syncs later
 - The list shows local meetings plus synced meeting notes
 

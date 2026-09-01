@@ -77,6 +77,25 @@ actor SupabaseAuthClient {
         _ = try await send(request, expecting: [200, 201, 204])
     }
 
+    func verifyTokenHash(_ tokenHash: String, type: String?) async throws -> AuthSession {
+        try requireAnonKey()
+        let resolvedType = type?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        var body: [String: String] = [
+            "type": resolvedType.isEmpty ? "magiclink" : resolvedType,
+            "token_hash": tokenHash,
+        ]
+        if let verifier = consumePendingPKCE()?.verifier {
+            body["code_verifier"] = verifier
+        } else {
+            clearPendingPKCE()
+        }
+        var request = try authRequest(path: "auth/v1/verify")
+        request.httpMethod = "POST"
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let data = try await send(request, expecting: [200])
+        return try decodeSession(data)
+    }
+
     func verifyEmailOTP(email: String, token: String) async throws -> AuthSession {
         try requireAnonKey()
         clearPendingPKCE()
@@ -107,6 +126,11 @@ actor SupabaseAuthClient {
                 userId: items["user_id"] ?? "",
                 email: items["email"]
             )
+        }
+
+        if let tokenHash = items["token_hash"], !tokenHash.isEmpty {
+            let type = items["type"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return try await verifyTokenHash(tokenHash, type: type)
         }
 
         guard let code = items["code"] else {

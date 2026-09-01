@@ -31,6 +31,18 @@ struct MeetingRecordView: View {
                         .stroke(OzerPalette.border, lineWidth: 1)
                 }
 
+                if let status = capture.statusMessage {
+                    Text(status)
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .multilineTextAlignment(.center)
+                }
+
+                if let progress = capture.modelProgress {
+                    ProgressView(value: progress)
+                        .tint(OzerPalette.coral)
+                }
+
                 if let banner = startError ?? capture.lastError {
                     Text(banner)
                         .font(.subheadline)

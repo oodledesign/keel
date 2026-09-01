@@ -24,15 +24,15 @@ enum AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAnonKey:
-            "Add OZER_SUPABASE_ANON_KEY in Config/Local.xcconfig, then rebuild."
+            return "Add OZER_SUPABASE_ANON_KEY in Config/Local.xcconfig, then rebuild."
         case .cancelled:
-            "Sign-in was cancelled."
+            return "Sign-in was cancelled."
         case .missingIdentityToken:
-            "Apple did not return an identity token."
+            return "Apple did not return an identity token."
         case .missingAuthorizationCode:
-            "The sign-in redirect did not include an auth code."
+            return "The sign-in redirect did not include an auth code. Type the 8-digit email code in Ozer instead."
         case .server(let message), .transport(let message):
-            message
+            return message
         }
     }
 }

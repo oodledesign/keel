@@ -10,6 +10,7 @@ enum SpeechPermissionError: LocalizedError {
     case simulatorUnsupported
     case timedOut
     case audioEngineUnavailable
+    case diarizationUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -27,6 +28,8 @@ enum SpeechPermissionError: LocalizedError {
             return "Microphone or speech permission didn’t finish. Try again, or use a real iPhone."
         case .audioEngineUnavailable:
             return "Ozer couldn’t start the microphone. Try again on this iPhone."
+        case .diarizationUnavailable:
+            return "Speaker models couldn’t be downloaded. This meeting is saved as Me only."
         }
     }
 }
@@ -101,6 +104,25 @@ enum SpeechPermissions {
 
     nonisolated static func deactivateAudioSession() {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    /// Cancellation from our own `endAudio` / task teardown is not a hard speech failure.
+    nonisolated static func isCancellation(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain, nsError.code == NSURLErrorCancelled {
+            return true
+        }
+        let domain = nsError.domain
+        if domain == "kLSRErrorDomain" || domain == "kAFAssistantErrorDomain" {
+            switch nsError.code {
+            case 1, 203, 209, 216, 301:
+                return true
+            default:
+                break
+            }
+        }
+        let description = error.localizedDescription.lowercased()
+        return description.contains("cancel")
     }
 
     private static func requestMicrophone() async throws {

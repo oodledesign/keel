@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isSafeRedirectPath } from '@kit/shared/utils';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  isNativeAuthCallback,
+  nativeAuthBouncePath,
+} from '~/lib/native/app-callback-url';
 
 /**
  * Email confirmation / recovery links land here
@@ -14,8 +18,10 @@ import pathsConfig from '~/config/paths.config';
  *
  * Flow:
  * - HEAD → empty 200 (never verify)
- * - GET → interstitial page; OTP is only verified after an explicit button click
+ * - GET → interstitial page; web OTP is only verified after an explicit button click
  *   (POST /api/auth/verify-otp), which scanners do not perform.
+ * - Native magic links (`callback` → `/auth/native` or `so.ozer.app://…`) skip
+ *   browser verify so the token is not burned before the iPhone app sees it.
  */
 
 export async function HEAD() {
@@ -80,7 +86,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(pathsConfig.auth.signIn, request.url));
   }
 
-  const nextPath = resolveNextPath(type, callback);
+  const nextPath = isNativeAuthCallback(callback)
+    ? nativeAuthBouncePath(tokenHash, type)
+    : resolveNextPath(type, callback);
+  const verifyInBrowser = !isNativeAuthCallback(callback);
   const label = ctaLabel(type);
 
   const html = `<!DOCTYPE html>
@@ -125,11 +134,16 @@ export async function GET(request: NextRequest) {
       var tokenHash = ${JSON.stringify(tokenHash)};
       var type = ${JSON.stringify(type)};
       var nextPath = ${JSON.stringify(nextPath)};
+      var verifyInBrowser = ${JSON.stringify(verifyInBrowser)};
       var btn = document.getElementById('continue');
       var err = document.getElementById('err');
       btn.addEventListener('click', function () {
         btn.disabled = true;
         err.style.display = 'none';
+        if (!verifyInBrowser) {
+          window.location.replace(nextPath);
+          return;
+        }
         fetch('/api/auth/verify-otp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
