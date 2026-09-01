@@ -78,10 +78,17 @@ describe('endOfZonedDay (Europe/London)', () => {
     expect(isDue('2026-09-01T11:00:00.000Z', now)).toBe(true);
   });
 
-  it('treats a late wall-clock time on the 1st as due before the cron', () => {
+  it('treats a late-afternoon next_issue_at as due even after the 08:15 cron', () => {
     const now = new Date('2026-09-01T08:15:00.000Z');
     // 18:00 London BST = 17:00 UTC — after the cron, same London date
     expect(isDue('2026-09-01T17:00:00.000Z', now)).toBe(true);
+  });
+
+  it('ends BST 30 Sep at 22:59:59.999 UTC (month rollover)', () => {
+    const now = new Date('2026-09-30T08:15:00.000Z');
+    expect(endOfZonedDay(now, LONDON).toISOString()).toBe(
+      '2026-09-30T22:59:59.999Z',
+    );
   });
 
   it('treats noon-UK as due before the cron on a GMT 1st', () => {
