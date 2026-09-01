@@ -82,7 +82,7 @@ export async function circulateContactDigests(
   const fromEmail = identity.fromEmail;
   if (!fromEmail) {
     throw new Error(
-      'Set a contact email in workspace Brand settings. The address must be on a verified SES domain.',
+      'Add a verified sending domain in workspace settings, or set a contact email that can send from Ozer.',
     );
   }
 
@@ -168,6 +168,8 @@ export async function circulateContactDigests(
       emailBrand,
       dryRun: Boolean(input.dryRun),
       triggerListingId: input.triggerListingId ?? null,
+      sesTenant: identity.sesTenantName,
+      sesConfigurationSet: identity.sesConfigurationSet,
     });
     mailed += result.mailed;
     skipped += result.skipped;
@@ -207,6 +209,8 @@ async function sendOneDigest(input: {
   emailBrand: CirculationEmailBrand;
   dryRun: boolean;
   triggerListingId: string | null;
+  sesTenant: string | null;
+  sesConfigurationSet: string | null;
 }): Promise<{
   mailed: number;
   skipped: number;
@@ -291,6 +295,8 @@ async function sendOneDigest(input: {
       html,
       listUnsubscribeUrl: unsubscribeUrl,
       accountId,
+      sesTenant: input.sesTenant ?? undefined,
+      sesConfigurationSet: input.sesConfigurationSet ?? undefined,
       metadata: {
         send_id: sendId,
         send_kind: 'digest',

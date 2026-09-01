@@ -10,14 +10,18 @@
   },
   "prettier": "@kit/prettier-config",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./raw-email": "./src/raw-email.ts",
+    "./identity": "./src/identity.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-ses": "^3.1064.0"
+    "@aws-sdk/client-ses": "^3.1064.0",
+    "@aws-sdk/client-sesv2": "^3.1064.0",
+    "@aws-sdk/client-sts": "^3.1064.0",
+    "@kit/mailers-shared": "workspace:*"
   },
   "devDependencies": {
     "@kit/eslint-config": "workspace:*",
-    "@kit/mailers-shared": "workspace:*",
     "@kit/prettier-config": "workspace:*",
     "@kit/tsconfig": "workspace:*",
     "@types/node": "catalog:",

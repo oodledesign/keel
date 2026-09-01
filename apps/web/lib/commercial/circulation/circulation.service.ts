@@ -561,6 +561,8 @@ export async function sendCirculationEmailViaSes(input: {
   html: string;
   listUnsubscribeUrl: string;
   accountId?: string | null;
+  sesTenant?: string;
+  sesConfigurationSet?: string;
   metadata?: Record<string, unknown>;
 }): Promise<{ messageId: string | null }> {
   const { insertPlatformEmailLog } =
@@ -579,6 +581,8 @@ export async function sendCirculationEmailViaSes(input: {
       html: input.html,
       replyTo: input.replyTo,
       listUnsubscribeUrl: input.listUnsubscribeUrl,
+      sesTenant: input.sesTenant,
+      sesConfigurationSet: input.sesConfigurationSet,
     });
     messageId =
       result &&

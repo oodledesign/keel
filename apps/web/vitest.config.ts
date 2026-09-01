@@ -12,6 +12,14 @@ export default defineConfig({
       '~/lib': path.resolve(__dirname, 'lib'),
       '~/config': path.resolve(__dirname, 'config'),
       '~/components': path.resolve(__dirname, 'components'),
+      '@kit/ses/raw-email': path.resolve(
+        __dirname,
+        '../../packages/mailers/ses/src/raw-email.ts',
+      ),
+      '@kit/ses/identity': path.resolve(
+        __dirname,
+        '../../packages/mailers/ses/src/identity.ts',
+      ),
       'server-only': path.resolve(__dirname, 'vitest.server-only.stub.ts'),
     },
   },

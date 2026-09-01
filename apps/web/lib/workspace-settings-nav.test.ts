@@ -22,6 +22,7 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).toContain('payments');
     expect(ids).toContain('services');
     expect(ids).toContain('brand');
+    expect(ids).toContain('sending-domain');
     expect(ids).toContain('templates');
     expect(ids).toContain('knowledge');
     expect(ids).toContain('task-automation');
@@ -42,6 +43,7 @@ describe('buildWorkspaceSettingsNav', () => {
       'focus',
       'activity',
       'brand',
+      'sending-domain',
       'brand-voice',
     ]);
     expect(ids).not.toContain('payments');
@@ -49,6 +51,17 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).not.toContain('templates');
     expect(ids).not.toContain('knowledge');
     expect(ids).not.toContain('finances');
+  });
+
+  it('omits sending domain for family workspaces', () => {
+    const items = buildWorkspaceSettingsNav({
+      accountSlug: 'family',
+      workspaceProfile: 'family',
+      moduleSettings: {},
+      access: ownerAccess,
+    });
+
+    expect(items.map((item) => item.id)).not.toContain('sending-domain');
   });
 
   it('excludes invoice and brain settings for landlord property workspaces', () => {

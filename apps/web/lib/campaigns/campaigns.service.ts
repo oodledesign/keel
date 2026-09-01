@@ -19,6 +19,11 @@ import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
+  getPlatformSesFrom,
+  loadAccountSendingDomain,
+  resolveWorkspaceMailFrom,
+} from '~/lib/sending-domains';
+import {
   buildWorkspaceMailingListUnsubscribeUrl,
   listWorkspaceMailingListSubscribers,
 } from '~/lib/workspace-forms/workspace-mailing-list';
@@ -443,14 +448,37 @@ class CampaignsService {
     }
 
     const brand = await loadAccountBrandResolved(input.accountId);
-    const fromEmail = campaign.fromEmail || brand.contact_email?.trim();
+    const { data: accountRow } = await this.client
+      .from('accounts')
+      .select('name')
+      .eq('id', input.accountId)
+      .maybeSingle();
+    const sendingDomain = await loadAccountSendingDomain(
+      this.client,
+      input.accountId,
+    );
+    const resolved = resolveWorkspaceMailFrom({
+      accountName:
+        (accountRow as { name?: string | null } | null)?.name?.trim() ||
+        campaign.fromName?.trim() ||
+        'Agency',
+      brandContactEmail: brand.contact_email,
+      proposedFromEmail: campaign.fromEmail,
+      proposedFromName: campaign.fromName,
+      sendingDomain,
+      platformFrom: getPlatformSesFrom(),
+    });
+    const fromEmail = resolved.fromEmail;
     if (!fromEmail) {
-      throw new Error('Campaign is missing a from address');
+      throw new Error(
+        'Add a verified sending domain in workspace settings, or set a contact email that can send from Ozer.',
+      );
     }
 
-    const fromName = campaign.fromName?.trim() || fromEmail;
-    const fromHeader = `${fromName} <${fromEmail}>`;
-    const replyTo = campaign.replyTo?.trim() || fromEmail;
+    const fromName = resolved.fromName;
+    const fromHeader = resolved.fromHeader ?? `${fromName} <${fromEmail}>`;
+    const replyTo =
+      campaign.replyTo?.trim() || resolved.replyTo || fromEmail;
     const limit = Math.max(1, Math.min(input.batchSize ?? 40, 100));
 
     const { data, error } = await fromTable(
@@ -562,6 +590,8 @@ class CampaignsService {
           html,
           listUnsubscribeUrl: buildWorkspaceMailingListUnsubscribeUrl(token),
           accountId: input.accountId,
+          sesTenant: resolved.sesTenantName ?? undefined,
+          sesConfigurationSet: resolved.sesConfigurationSet ?? undefined,
           metadata: {
             campaign_id: campaign.id,
             recipient_id: recipient.id,

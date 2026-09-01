@@ -11,6 +11,8 @@ export async function sendCampaignEmailViaSes(input: {
   html: string;
   listUnsubscribeUrl: string;
   accountId?: string | null;
+  sesTenant?: string;
+  sesConfigurationSet?: string;
   metadata?: Record<string, unknown>;
 }): Promise<{ messageId: string | null }> {
   let status: 'sent' | 'failed' = 'sent';
@@ -26,6 +28,8 @@ export async function sendCampaignEmailViaSes(input: {
       html: input.html,
       replyTo: input.replyTo,
       listUnsubscribeUrl: input.listUnsubscribeUrl,
+      sesTenant: input.sesTenant,
+      sesConfigurationSet: input.sesConfigurationSet,
     });
     messageId =
       result &&

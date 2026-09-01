@@ -10,6 +10,10 @@ export const MailerSchema = z
     replyTo: z.string().email().optional(),
     /** Absolute unsubscribe URL for List-Unsubscribe header (marketing/circulation). */
     listUnsubscribeUrl: z.string().url().optional(),
+    /** SES tenant name (SendRawEmail / SMTP: X-SES-TENANT). */
+    sesTenant: z.string().min(1).optional(),
+    /** SES configuration set (SendRawEmail param + X-SES-CONFIGURATION-SET). */
+    sesConfigurationSet: z.string().min(1).optional(),
   })
   .and(
     z.union([

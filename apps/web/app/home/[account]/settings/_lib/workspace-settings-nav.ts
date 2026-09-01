@@ -51,6 +51,14 @@ function appendBrandNavItems(
       href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
     },
     {
+      id: 'sending-domain',
+      label: 'Sending domain',
+      href: settingsPath(
+        pathsConfig.app.accountSendingDomainSettings,
+        accountSlug,
+      ),
+    },
+    {
       id: 'brand-voice',
       label: 'Brand voice',
       href: settingsPath(
@@ -179,6 +187,19 @@ export function buildWorkspaceSettingsNav(input: {
       href: settingsPath(pathsConfig.app.accountBrainKnowledge, accountSlug),
     });
 
+    appendBillingNavItem(items, accountSlug, access);
+    return items;
+  }
+
+  if (workspaceProfile === 'building_surveyor') {
+    items.push({
+      id: 'sending-domain',
+      label: 'Sending domain',
+      href: settingsPath(
+        pathsConfig.app.accountSendingDomainSettings,
+        accountSlug,
+      ),
+    });
     appendBillingNavItem(items, accountSlug, access);
     return items;
   }

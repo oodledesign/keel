@@ -26,6 +26,11 @@ import {
   type MatchRequirementSnapshot,
   scoreListingRequirementMatch,
 } from '~/lib/commercial/match-scoring';
+import {
+  getPlatformSesFrom,
+  loadAccountSendingDomain,
+  resolveWorkspaceMailFrom,
+} from '~/lib/sending-domains';
 
 export type CirculationCandidate = {
   requirementId: string;
@@ -45,6 +50,8 @@ export type CirculationIdentity = {
   fromEmail: string | null;
   replyTo: string | null;
   brand: AccountBrandResolved;
+  sesTenantName: string | null;
+  sesConfigurationSet: string | null;
 };
 
 export type CirculationSendTrigger = 'manual' | 'auto' | 'dry_run';
@@ -205,15 +212,25 @@ export async function resolveCirculationIdentity(
 
   const agencyName =
     (account as { name?: string | null } | null)?.name?.trim() || 'Agency';
-  const brand = await loadAccountBrandResolved(accountId);
-  const fromEmail = brand.contact_email?.trim() || null;
+  const [brand, sendingDomain] = await Promise.all([
+    loadAccountBrandResolved(accountId),
+    loadAccountSendingDomain(client, accountId),
+  ]);
+  const resolved = resolveWorkspaceMailFrom({
+    accountName: agencyName,
+    brandContactEmail: brand.contact_email,
+    sendingDomain,
+    platformFrom: getPlatformSesFrom(),
+  });
 
   return {
     agencyName,
-    fromName: agencyName,
-    fromEmail,
-    replyTo: fromEmail,
+    fromName: resolved.fromName,
+    fromEmail: resolved.fromEmail,
+    replyTo: resolved.replyTo,
     brand,
+    sesTenantName: resolved.sesTenantName,
+    sesConfigurationSet: resolved.sesConfigurationSet,
   };
 }
 
@@ -448,14 +465,27 @@ export async function circulateListing(
   }
 
   const identity = await resolveCirculationIdentity(client, input.accountId);
-  const fromEmail = input.fromEmail?.trim() || identity.fromEmail;
+  const sendingDomain = await loadAccountSendingDomain(client, input.accountId);
+  const resolved = resolveWorkspaceMailFrom({
+    accountName: identity.agencyName,
+    brandContactEmail: identity.brand.contact_email,
+    proposedFromEmail: input.fromEmail,
+    proposedFromName: input.fromName,
+    sendingDomain,
+    platformFrom: getPlatformSesFrom(),
+  });
+  const fromEmail = resolved.fromEmail;
   if (!fromEmail) {
     throw new Error(
-      'Set a From email on workspace brand settings (contact email) or in the Circulate dialog. The address must be on a verified SES domain.',
+      'Add a verified sending domain in workspace settings, or set a contact email that can send from Ozer.',
     );
   }
-  const fromName = input.fromName?.trim() || identity.fromName;
-  const replyTo = input.replyTo?.trim() || identity.replyTo || fromEmail;
+  const fromName = resolved.fromName;
+  const replyTo =
+    input.replyTo?.trim() ||
+    resolved.replyTo ||
+    identity.brand.contact_email?.trim() ||
+    fromEmail;
   const sendTrigger: CirculationSendTrigger = input.dryRun
     ? 'dry_run'
     : (input.sendTrigger ?? 'manual');
@@ -647,6 +677,8 @@ export async function circulateListing(
         html,
         listUnsubscribeUrl: unsubscribeUrl,
         accountId: input.accountId,
+        sesTenant: resolved.sesTenantName ?? undefined,
+        sesConfigurationSet: resolved.sesConfigurationSet ?? undefined,
         metadata: {
           listing_id: (listing as { id: string }).id,
           requirement_id: requirementId,
