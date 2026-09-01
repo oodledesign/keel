@@ -216,7 +216,7 @@ struct TaskClientFilterSheet: View {
     @State private var isLoading: Bool
     @State private var loadError: NativeAPIError?
     @State private var searchText = ""
-    private let api = NativeAPIClient()
+    @State private var api = NativeAPIClient()
 
     init(
         initialClients: [ClientItem] = [],

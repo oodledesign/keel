@@ -136,7 +136,7 @@ struct TasksListView: View {
                 .presentationDetents([.medium, .large])
             }
             .onChange(of: showClientFilter) { _, presented in
-                if presented, clients.isEmpty {
+                if presented, clients.isEmpty, !isLoadingClients {
                     Task { await loadClients() }
                 }
             }
