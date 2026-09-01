@@ -121,30 +121,25 @@ struct SpeakerTurnSplitter {
         return Self.format(turns: turns, liveText: "", liveSpeaker: liveSpeaker)
     }
 
-    /// Apply embedding clusters. First voice is Me; the same embedding can return as Me.
+    /// Relabel committed paragraphs. Never rebuild the transcript from Speech word
+    /// fragments — those segments are incomplete and were wiping 2 minutes down to a few lines.
     mutating func applyDiarization(_ spans: [DiarizedSpan]) {
         commitOpen()
-        let source = captions.isEmpty ? turns.map { TimedCaption(start: $0.start, end: $0.end, text: $0.text) } : captions
-        guard !source.isEmpty else { return }
-
-        if spans.isEmpty {
-            turns = source.map { caption in
-                SpeakerTurn(speaker: Self.speakerName(for: 0), text: caption.text, start: caption.start, end: caption.end)
-            }
-            return
-        }
+        guard !turns.isEmpty else { return }
+        guard !spans.isEmpty else { return }
 
         var labelled: [SpeakerTurn] = []
-        for caption in source {
+        for turn in turns {
+            let caption = TimedCaption(start: turn.start, end: turn.end, text: turn.text)
             let speaker = Self.speakerName(for: Self.speakerIndex(for: caption, in: spans))
             if let last = labelled.last, last.speaker == speaker {
-                labelled[labelled.count - 1].text = [last.text, caption.text]
+                labelled[labelled.count - 1].text = [last.text, turn.text]
                     .filter { !$0.isEmpty }
-                    .joined(separator: " ")
-                labelled[labelled.count - 1].end = max(last.end, caption.end)
+                    .joined(separator: "\n\n")
+                labelled[labelled.count - 1].end = max(last.end, turn.end)
             } else {
                 labelled.append(
-                    SpeakerTurn(speaker: speaker, text: caption.text, start: caption.start, end: caption.end)
+                    SpeakerTurn(speaker: speaker, text: turn.text, start: turn.start, end: turn.end)
                 )
             }
         }

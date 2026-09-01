@@ -18,6 +18,8 @@ final class OnDeviceSpeechSession {
     private var restartTask: Task<Void, Never>?
     private var speechEpoch = 0
     private var isRestartingSpeech = false
+    private var committedText = ""
+    private var sessionText = ""
     /// Restart before Apple’s ~1 minute recognition window ends.
     private static let restartAfter: TimeInterval = 50
     private static let restartHandshake: TimeInterval = 0.35
@@ -34,6 +36,8 @@ final class OnDeviceSpeechSession {
         partialText = ""
         speechEpoch = 0
         isRestartingSpeech = false
+        committedText = ""
+        sessionText = ""
 
         guard SpeechPermissions.liveOnDeviceSpeechSupported else {
             throw SpeechPermissionError.simulatorUnsupported
@@ -84,11 +88,11 @@ final class OnDeviceSpeechSession {
                 if let result {
                     self.lastError = nil
                     let next = result.bestTranscription.formattedString
-                    if self.partialText.isEmpty || next.count >= self.partialText.count {
-                        self.partialText = next
-                    } else if !next.isEmpty {
-                        self.partialText = "\(self.partialText) \(next)"
-                    }
+                    self.sessionText = next
+                    let pieces = [self.committedText, next]
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                    self.partialText = pieces.joined(separator: " ")
                     if result.isFinal {
                         self.queueSpeechRestart()
                     }
@@ -120,6 +124,14 @@ final class OnDeviceSpeechSession {
         guard isListening, recognizer != nil else { return }
         guard !isRestartingSpeech else { return }
         isRestartingSpeech = true
+        let session = sessionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !session.isEmpty {
+            committedText = [committedText, session]
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+        }
+        sessionText = ""
         audio.attach(nil)
         request?.endAudio()
         request = nil

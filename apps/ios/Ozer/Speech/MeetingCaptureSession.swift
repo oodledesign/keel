@@ -294,6 +294,7 @@ final class MeetingCaptureSession {
         guard isRecording, recognizer != nil else { return }
         guard !isRestartingSpeech else { return }
         isRestartingSpeech = true
+        splitter.commitOpen()
         splitter.rollSession()
         liveTranscript = splitter.formattedBody
         audio.attach(nil)
