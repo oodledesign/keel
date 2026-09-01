@@ -3,7 +3,6 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
-
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 import { NativeHttpError } from './http';
@@ -51,7 +50,11 @@ export async function loadPersonalNativeWorkspace(
     name: data.name?.trim() || slug,
     profile: 'personal',
     isPersonal: true,
-    image: await resolvePersonalWorkspaceImage(client, data.id, data.picture_url),
+    image: await resolvePersonalWorkspaceImage(
+      client,
+      data.id,
+      data.picture_url,
+    ),
   };
 }
 

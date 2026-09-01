@@ -52,7 +52,6 @@ struct WorkspaceLogoView: View {
             guard let url = workspace.httpsImageURL else { return }
             var request = URLRequest(url: url)
             request.httpShouldHandleCookies = false
-            request.cachePolicy = .reloadIgnoringLocalCacheData
             do {
                 let (data, response) = try await WorkspaceImageSession.shared.data(for: request)
                 guard let http = response as? HTTPURLResponse, http.statusCode == 200,
@@ -82,6 +81,10 @@ struct WorkspaceLogoView: View {
                     .foregroundStyle(OzerPalette.cream)
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
+            } else {
+                Image(systemName: "building.2.fill")
+                    .font(.system(size: size * 0.38, weight: .medium))
+                    .foregroundStyle(OzerPalette.cream)
             }
         }
     }

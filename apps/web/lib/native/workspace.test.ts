@@ -99,8 +99,12 @@ describe('native workspaces', () => {
     expect(publicHttpsImageUrl('https://cdn.example.com/oodle.png')).toBe(
       'https://cdn.example.com/oodle.png',
     );
-    expect(publicHttpsImageUrl(' http://cdn.example.com/oodle.png ')).toBeNull();
-    expect(publicHttpsImageUrl('/storage/v1/object/public/logos/o.png')).toBeNull();
+    expect(
+      publicHttpsImageUrl(' http://cdn.example.com/oodle.png '),
+    ).toBeNull();
+    expect(
+      publicHttpsImageUrl('/storage/v1/object/public/logos/o.png'),
+    ).toBeNull();
     expect(publicHttpsImageUrl('')).toBeNull();
     expect(publicHttpsImageUrl(null)).toBeNull();
   });
@@ -114,7 +118,9 @@ describe('native workspaces', () => {
       isPersonal: false,
       image: 'https://cdn.example.com/oodle.png',
     });
-    expect(publicNativeWorkspace({ ...studio, image: 'http://insecure' }).image).toBeNull();
+    expect(
+      publicNativeWorkspace({ ...studio, image: 'http://insecure' }).image,
+    ).toBeNull();
     expect(publicNativeWorkspace(family).image).toBeNull();
   });
 });
