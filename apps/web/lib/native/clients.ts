@@ -94,6 +94,7 @@ async function loadNativeClientRows(
   const { data, error } = await query;
 
   if (error) {
+    // Temporary shim: environments that have not applied archived_at retry without it.
     if (/archived_at/i.test(error.message ?? '')) {
       const legacy = await client
         .from('clients')
@@ -131,6 +132,7 @@ async function loadNativeClientRow(
   const { data, error } = await query.maybeSingle();
 
   if (error) {
+    // Temporary shim: environments that have not applied archived_at retry without it.
     if (/archived_at/i.test(error.message ?? '')) {
       const legacy = await client
         .from('clients')
@@ -203,6 +205,7 @@ async function loadNativeClientContacts(
 
   for (const row of rows) {
     const contact = row.contacts;
+    // Null account_id is unscoped (legacy rows); only drop a different workspace.
     if (contact?.account_id && contact.account_id !== accountId) {
       continue;
     }
