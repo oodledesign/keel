@@ -48,6 +48,9 @@ struct DictationSheet: View {
         if let permissionError {
             return permissionError
         }
+        if let lastError = speech.lastError {
+            return lastError
+        }
         if speech.isListening {
             return tapLocked ? "Listening. Tap the mic to save." : "Release to save, or keep holding."
         }

@@ -27,6 +27,8 @@ cp apps/ios/Config/Local.xcconfig.example apps/ios/Config/Local.xcconfig
 
 `Ozer/Info.plist` asks for the microphone and on-device speech recognition (Ozer-specific strings, not generic). `UIBackgroundModes` includes `audio` so a meeting can keep recording when the screen locks. No iCloud. Speech uses Apple’s Speech framework with `requiresOnDeviceRecognition` and locale `en-GB`.
 
+The iOS Simulator must not run live on-device Speech or a mic tap that hops to the main actor — that pins the host CPU. Meetings on Simulator start a timer-only placeholder and show that live captions need a real iPhone. Dictation fails fast with the same message. Permission prompts time out instead of hanging after Allow.
+
 ## Config keys
 
 Set in `Config/Shared.xcconfig` (defaults) and optional `Config/Local.xcconfig` (overrides). Values are copied into `Info.plist` at build time.

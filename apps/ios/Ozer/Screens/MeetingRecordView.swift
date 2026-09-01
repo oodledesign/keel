@@ -31,8 +31,8 @@ struct MeetingRecordView: View {
                         .stroke(OzerPalette.border, lineWidth: 1)
                 }
 
-                if let startError {
-                    Text(startError)
+                if let banner = startError ?? capture.lastError {
+                    Text(banner)
                         .font(.subheadline)
                         .foregroundStyle(OzerPalette.plumMuted)
                         .multilineTextAlignment(.center)

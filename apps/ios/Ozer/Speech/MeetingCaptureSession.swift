@@ -20,11 +20,10 @@ final class MeetingCaptureSession {
     private(set) var liveTranscript = ""
     private(set) var lastError: String?
 
-    private let engine = AVAudioEngine()
+    private let audio = SpeechAudioEngine()
     private var recognizer: SFSpeechRecognizer?
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
-    private var audioFile: AVAudioFile?
     private var cafURL: URL?
     private var splitter = SpeakerTurnSplitter()
     private var startedAt = Date()
@@ -32,15 +31,18 @@ final class MeetingCaptureSession {
     private var restartTask: Task<Void, Never>?
     private var pauseTask: Task<Void, Never>?
     private var recordingID = UUID()
+    private var speechEpoch = 0
+    private var consecutiveSpeechFailures = 0
 
     private static let restartAfter: TimeInterval = 50
+    private static let restartBackoff: TimeInterval = 1.5
+    private static let maxSpeechFailures = 3
 
     var elapsedLabel: String {
         Self.formatElapsed(elapsed)
     }
 
     func start() async throws {
-        try await SpeechPermissions.request()
         teardown(deactivateAudio: true)
         lastError = nil
         splitter = SpeakerTurnSplitter()
@@ -48,27 +50,41 @@ final class MeetingCaptureSession {
         elapsed = 0
         startedAt = Date()
         recordingID = UUID()
+        speechEpoch = 0
+        consecutiveSpeechFailures = 0
 
-        let recognizer = try SpeechPermissions.makeRecognizer()
-        guard recognizer.isAvailable else {
-            throw SpeechPermissionError.onDeviceUnavailable
+        guard SpeechPermissions.liveOnDeviceSpeechSupported else {
+            beginSimulatorPlaceholder()
+            return
         }
-        if !recognizer.supportsOnDeviceRecognition {
-            throw SpeechPermissionError.onDeviceUnavailable
-        }
+
+        try await SpeechPermissions.request()
+
+        let recognizer = try SpeechPermissions.requireOnDeviceRecognizer()
         self.recognizer = recognizer
 
-        try OnDeviceSpeechSession.activateAudioSession(playAndRecord: true)
-        UIApplication.shared.isIdleTimerDisabled = true
+        do {
+            try SpeechPermissions.activateAudioSession(playAndRecord: true)
+            UIApplication.shared.isIdleTimerDisabled = true
 
-        let cafURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ozer-meeting-\(recordingID.uuidString).caf")
-        self.cafURL = cafURL
-        try startEngine(cafURL: cafURL)
-        try startSpeech(recognizer: recognizer)
-        isRecording = true
-        startElapsedTimer()
-        scheduleRestart()
+            let cafURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("ozer-meeting-\(recordingID.uuidString).caf")
+            self.cafURL = cafURL
+            try audio.start(writingTo: cafURL)
+            isRecording = true
+            startElapsedTimer()
+        } catch {
+            teardown(deactivateAudio: true)
+            UIApplication.shared.isIdleTimerDisabled = false
+            throw error
+        }
+
+        do {
+            try startSpeech(recognizer: recognizer)
+            scheduleRestart()
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     func stop() async throws -> MeetingCaptureResult {
@@ -78,13 +94,8 @@ final class MeetingCaptureSession {
         restartTask = nil
         elapsedTimer?.invalidate()
         elapsedTimer = nil
-        request?.endAudio()
-        task?.cancel()
-        if engine.isRunning {
-            engine.stop()
-        }
-        engine.inputNode.removeTap(onBus: 0)
-        audioFile = nil
+        invalidateSpeech()
+        audio.stop()
 
         let duration = Date().timeIntervalSince(startedAt)
         elapsed = duration
@@ -94,7 +105,7 @@ final class MeetingCaptureSession {
         UIApplication.shared.isIdleTimerDisabled = false
 
         let audioURL = try await Self.persistM4A(from: cafURL, id: recordingID)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        SpeechPermissions.deactivateAudioSession()
 
         return MeetingCaptureResult(
             transcript: transcript,
@@ -112,34 +123,34 @@ final class MeetingCaptureSession {
         isRecording = false
     }
 
-    private func startEngine(cafURL: URL) throws {
-        let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        input.removeTap(onBus: 0)
-        audioFile = try AVAudioFile(forWriting: cafURL, settings: format.settings)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.request?.append(buffer)
-            try? self?.audioFile?.write(from: buffer)
-        }
-        engine.prepare()
-        try engine.start()
+    private func beginSimulatorPlaceholder() {
+        lastError = SpeechPermissionError.simulatorUnsupported.errorDescription
+        liveTranscript = SpeechPermissionError.simulatorUnsupported.errorDescription ?? ""
+        isRecording = true
+        UIApplication.shared.isIdleTimerDisabled = true
+        startElapsedTimer()
     }
 
     private func startSpeech(recognizer: SFSpeechRecognizer) throws {
+        speechEpoch += 1
+        let epoch = speechEpoch
         let request = SFSpeechAudioBufferRecognitionRequest()
         SpeechPermissions.configureOnDevice(request)
         self.request = request
+        audio.attach(request)
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor in
-                guard let self, self.isRecording else { return }
+                guard let self, self.isRecording, self.speechEpoch == epoch else { return }
                 if let result {
+                    self.consecutiveSpeechFailures = 0
                     self.applyRecognition(result.bestTranscription.formattedString)
                     if result.isFinal {
                         self.restartRecognition()
                     }
+                    return
                 }
                 if error != nil {
-                    self.restartRecognition()
+                    self.handleSpeechFailure()
                 }
             }
         }
@@ -171,20 +182,43 @@ final class MeetingCaptureSession {
         }
     }
 
+    private func handleSpeechFailure() {
+        consecutiveSpeechFailures += 1
+        if consecutiveSpeechFailures >= Self.maxSpeechFailures {
+            lastError = SpeechPermissionError.onDeviceUnavailable.errorDescription
+            invalidateSpeech()
+            restartTask?.cancel()
+            restartTask = nil
+            return
+        }
+        restartTask?.cancel()
+        restartTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.restartBackoff))
+            guard let self, !Task.isCancelled, self.isRecording else { return }
+            self.restartRecognition()
+        }
+    }
+
     private func restartRecognition() {
         guard isRecording, let recognizer else { return }
         splitter.rollSession()
         liveTranscript = splitter.formattedBody
-        request?.endAudio()
-        task?.cancel()
-        task = nil
-        request = nil
+        invalidateSpeech()
         do {
             try startSpeech(recognizer: recognizer)
             scheduleRestart()
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    private func invalidateSpeech() {
+        speechEpoch += 1
+        audio.attach(nil)
+        request?.endAudio()
+        task?.cancel()
+        task = nil
+        request = nil
     }
 
     private func startElapsedTimer() {
@@ -200,17 +234,10 @@ final class MeetingCaptureSession {
     private func teardown(deactivateAudio: Bool) {
         elapsedTimer?.invalidate()
         elapsedTimer = nil
-        request?.endAudio()
-        task?.cancel()
-        task = nil
-        request = nil
-        if engine.isRunning {
-            engine.stop()
-        }
-        engine.inputNode.removeTap(onBus: 0)
-        audioFile = nil
+        invalidateSpeech()
+        audio.stop()
         if deactivateAudio {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            SpeechPermissions.deactivateAudioSession()
         }
     }
 
@@ -225,7 +252,7 @@ final class MeetingCaptureSession {
         return String(format: "%d:%02d", minutes, secs)
     }
 
-    private static func persistM4A(from cafURL: URL?, id: UUID) async throws -> URL? {
+    nonisolated private static func persistM4A(from cafURL: URL?, id: UUID) async throws -> URL? {
         guard let cafURL, FileManager.default.fileExists(atPath: cafURL.path) else {
             return nil
         }
