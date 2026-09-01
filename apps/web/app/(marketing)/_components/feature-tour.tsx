@@ -215,7 +215,7 @@ function FeatureTourSlidePanel({
   }
 
   return (
-    <div className="relative h-[calc(100dvh-10.5rem)] lg:h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-7rem)] lg:max-h-[calc(100vh-7rem)]">
+    <div className="relative h-[calc(100dvh-10.5rem)] lg:h-[calc(100vh-7rem)] lg:max-h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-7rem)]">
       <AnimatePresence initial={false} mode="sync">
         <motion.article
           key={activeBlock.id}
