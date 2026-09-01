@@ -217,6 +217,7 @@ function FeatureTourSlidePanel({
 
   return (
     <div className="relative h-[calc(100dvh-10.5rem)] lg:h-[calc(100vh-7rem)] lg:max-h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-7rem)]">
+      {/* 10.5rem = sticky header (top-20) + Features pills + mb-4 */}
       <AnimatePresence initial={false} mode="sync">
         <motion.article
           key={activeBlock.id}
@@ -320,6 +321,7 @@ function FeatureTourNav({
                   }
                 }}
                 href={`#${block.id}`}
+                aria-current={isActive ? 'true' : undefined}
                 onClick={(event) => {
                   event.preventDefault();
                   onNavigate(block.id, index);
