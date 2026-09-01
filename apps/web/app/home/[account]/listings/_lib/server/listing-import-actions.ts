@@ -289,6 +289,7 @@ export const commitListingImportAction = enhanceAction(
             match.existing.id,
             input.accountId,
             payload,
+            { actorUserId: user?.id ?? null },
           );
           updated += 1;
           continue;

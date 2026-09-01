@@ -227,6 +227,7 @@ export function createViewingsService(client: SupabaseClient) {
       viewingId: string,
       accountId: string,
       input: Omit<UpdateViewingInput, 'viewingId' | 'accountId'>,
+      options?: { actorUserId?: string | null },
     ): Promise<CommercialViewing> {
       const selectWithLinks =
         '*, commercial_listings(name), clients(display_name, company_name), contacts(full_name, first_name, last_name)';
@@ -293,6 +294,7 @@ export function createViewingsService(client: SupabaseClient) {
         await recordListingEvent(client, {
           accountId,
           listingId: viewing.listingId,
+          actorUserId: options?.actorUserId ?? null,
           eventType: 'viewing_updated',
           summary:
             prevStatus && prevStatus !== viewing.status

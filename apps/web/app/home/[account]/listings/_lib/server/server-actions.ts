@@ -146,7 +146,7 @@ export const createListing = enhanceAction(
 );
 
 export const updateListing = enhanceAction(
-  async (input) => {
+  async (input, user) => {
     const { requireCommercialBillableActor } =
       await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
@@ -158,6 +158,7 @@ export const updateListing = enhanceAction(
       listingId,
       accountId,
       rest,
+      { actorUserId: user.id },
     );
     await invalidateDisposalsData({ accountId, listingId });
     return listing;

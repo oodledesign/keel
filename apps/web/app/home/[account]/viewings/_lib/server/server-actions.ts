@@ -57,9 +57,11 @@ export const createViewing = enhanceAction(
 );
 
 export const updateViewing = enhanceAction(
-  async (input) => {
+  async (input, user) => {
     const { viewingId, accountId, ...rest } = input;
-    return getService().updateViewing(viewingId, accountId, rest);
+    return getService().updateViewing(viewingId, accountId, rest, {
+      actorUserId: user.id,
+    });
   },
   { schema: UpdateViewingSchema },
 );
