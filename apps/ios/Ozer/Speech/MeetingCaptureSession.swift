@@ -214,7 +214,7 @@ final class MeetingCaptureSession {
         }
     }
 
-    static func formatElapsed(_ seconds: TimeInterval) -> String {
+    nonisolated static func formatElapsed(_ seconds: TimeInterval) -> String {
         let total = max(0, Int(seconds))
         let hours = total / 3600
         let minutes = (total % 3600) / 60

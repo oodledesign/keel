@@ -31,7 +31,7 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
 final class MeetingStore {
     static let shared = MeetingStore()
 
-    private static let fileName = "meetings.json"
+    nonisolated private static let fileName = "meetings.json"
 
     private(set) var meetings: [LocalMeeting] = []
 
@@ -94,11 +94,11 @@ final class MeetingStore {
         persist()
     }
 
-    static func audioURL(for id: UUID) -> URL {
+    nonisolated static func audioURL(for id: UUID) -> URL {
         Self.directory.appendingPathComponent("\(id.uuidString).m4a")
     }
 
-    static var directory: URL {
+    nonisolated static var directory: URL {
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("OzerMeetings", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -113,13 +113,13 @@ final class MeetingStore {
         Self.write(meetings)
     }
 
-    private static func load() -> [LocalMeeting] {
+    nonisolated private static func load() -> [LocalMeeting] {
         let url = Self.directory.appendingPathComponent(Self.fileName)
         guard let data = try? Data(contentsOf: url) else { return [] }
         return (try? JSONDecoder().decode([LocalMeeting].self, from: data)) ?? []
     }
 
-    private static func write(_ meetings: [LocalMeeting]) {
+    nonisolated private static func write(_ meetings: [LocalMeeting]) {
         let url = Self.directory.appendingPathComponent(Self.fileName)
         guard let data = try? JSONEncoder().encode(meetings) else { return }
         try? data.write(to: url, options: .atomic)

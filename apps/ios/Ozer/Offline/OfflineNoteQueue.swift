@@ -112,11 +112,11 @@ final class OfflineNoteQueue {
         Self.write(pending, to: fileURL)
     }
 
-    static func isoString(from date: Date) -> String {
+    nonisolated static func isoString(from date: Date) -> String {
         Self.isoFractional.string(from: date)
     }
 
-    private static var storageDirectory: URL {
+    nonisolated private static var storageDirectory: URL {
         let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("OzerOffline", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -127,17 +127,17 @@ final class OfflineNoteQueue {
         return folder
     }
 
-    private static func load(from url: URL) -> [PendingNote] {
+    nonisolated private static func load(from url: URL) -> [PendingNote] {
         guard let data = try? Data(contentsOf: url) else { return [] }
         return (try? JSONDecoder().decode([PendingNote].self, from: data)) ?? []
     }
 
-    private static func write(_ notes: [PendingNote], to url: URL) {
+    nonisolated private static func write(_ notes: [PendingNote], to url: URL) {
         guard let data = try? JSONEncoder().encode(notes) else { return }
         try? data.write(to: url, options: .atomic)
     }
 
-    private static let isoFractional: ISO8601DateFormatter = {
+    nonisolated private static let isoFractional: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
