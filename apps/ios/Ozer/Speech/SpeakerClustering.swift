@@ -12,6 +12,8 @@ enum SpeakerClustering {
     static let maxSpeakers = 6
     static let clusterThreshold: Float = 0.55
     static let mergeThreshold: Float = 0.72
+    /// Nearby windows only for the pairwise pass; later centroid merge joins the same voice across the meeting.
+    static let pairWindow: TimeInterval = 20
 
     struct Observation: Equatable, Sendable {
         var embedding: [Float]
@@ -50,6 +52,7 @@ enum SpeakerClustering {
 
         for i in items.indices {
             for j in (i + 1) ..< items.count {
+                if items[j].start > items[i].end + pairWindow { break }
                 if cosineDistance(items[i].embedding, items[j].embedding) <= clusterThreshold {
                     union(i, j)
                 }
@@ -110,13 +113,17 @@ enum SpeakerClustering {
             union(pair.0, pair.1)
         }
 
+        // Items are time-sorted and union keeps the lower index, so the earliest
+        // observation's cluster is always root 0 and remaps to Me.
         var firstSeen: [Int: Int] = [:]
+        var nextLabel = 0
         var remapped: [Int] = []
         remapped.reserveCapacity(items.count)
         for index in items.indices {
             let id = root(index)
             if firstSeen[id] == nil {
-                firstSeen[id] = firstSeen.count
+                firstSeen[id] = nextLabel
+                nextLabel += 1
             }
             remapped.append(firstSeen[id] ?? 0)
         }

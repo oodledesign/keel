@@ -29,6 +29,13 @@ struct SpeakerTranscriptTests {
             )
         }
 
+        check("isRedundant is false for a continuation after a shared tail") {
+            !SpeakerTurnSplitter.isRedundant(
+                "and I will go to the store after lunch",
+                after: "I think we should wrap this up and I will go"
+            )
+        }
+
         check("growing hypothesis updates live turn in place") {
             var splitter = SpeakerTurnSplitter()
             splitter.ingest(sessionText: "It's very much like the school", at: 1)
@@ -182,7 +189,7 @@ struct SpeakerTranscriptTests {
             let first = spans.min(by: { $0.start < $1.start })
             labels.count == 2
                 && labels.count <= SpeakerClustering.maxSpeakers
-                && !labels.contains(where: { $0 > 6 })
+                && !labels.contains(where: { $0 >= SpeakerClustering.maxSpeakers })
                 && first?.speakerIndex == 0
         }
 

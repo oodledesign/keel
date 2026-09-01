@@ -103,6 +103,7 @@ struct SpeakerTurnSplitter {
                 lastSpeechAt = time
                 return
             }
+            committedSessionText = ""
             applySessionText(trimmed, at: time)
             return
         }
@@ -215,7 +216,9 @@ struct SpeakerTurnSplitter {
             let start = turn.start + startFraction * duration
             let end = turn.start + endFraction * duration
             let mid = (start + end) / 2
-            let speaker = regions.first { $0.start <= mid && mid <= $0.end }?.speakerIndex ?? majority
+            let speaker = regions.first { $0.start <= mid && mid < $0.end }?.speakerIndex
+                ?? regions.last?.speakerIndex
+                ?? majority
             pieces.append(
                 SpeakerTurn(
                     id: index == 0 ? turn.id : UUID().uuidString,
@@ -284,7 +287,7 @@ struct SpeakerTurnSplitter {
         }
 
         let overlap = wordOverlapCount(prev, next)
-        if overlap >= 4 { return true }
+        // Incoming is entirely a tail of the last paragraph — a repeat, not new speech.
         if overlap >= 2, overlap == nextWords.count { return true }
         if prevWords.count >= 4, nextWords.count >= 4, jaccard(prevWords, nextWords) >= 0.62 {
             return true
