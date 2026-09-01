@@ -59,6 +59,7 @@ final class MeetingCaptureSession {
         }
 
         try await SpeechPermissions.request()
+        try Task.checkCancellation()
 
         let recognizer = try SpeechPermissions.requireOnDeviceRecognizer()
         self.recognizer = recognizer
@@ -88,6 +89,9 @@ final class MeetingCaptureSession {
     }
 
     func stop() async throws -> MeetingCaptureResult {
+        guard isRecording else {
+            return MeetingCaptureResult(transcript: "", turns: [], duration: 0, audioURL: nil)
+        }
         pauseTask?.cancel()
         restartTask?.cancel()
         pauseTask = nil
@@ -119,6 +123,10 @@ final class MeetingCaptureSession {
         pauseTask?.cancel()
         restartTask?.cancel()
         teardown(deactivateAudio: true)
+        if let url = cafURL {
+            try? FileManager.default.removeItem(at: url)
+            cafURL = nil
+        }
         UIApplication.shared.isIdleTimerDisabled = false
         isRecording = false
     }

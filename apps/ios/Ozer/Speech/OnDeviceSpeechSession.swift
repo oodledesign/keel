@@ -38,6 +38,7 @@ final class OnDeviceSpeechSession {
         }
 
         try await SpeechPermissions.request()
+        try Task.checkCancellation()
 
         let recognizer = try SpeechPermissions.requireOnDeviceRecognizer()
         self.recognizer = recognizer

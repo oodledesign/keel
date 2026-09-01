@@ -8,6 +8,7 @@ struct DictationSheet: View {
     @State private var pressStartedAt: Date?
     @State private var tapLocked = false
     @State private var isSaving = false
+    @State private var isStarting = false
     @State private var permissionError: String?
 
     var body: some View {
@@ -136,8 +137,10 @@ struct DictationSheet: View {
     }
 
     private func startListening() async {
+        guard !speech.isListening, !isStarting else { return }
+        isStarting = true
+        defer { isStarting = false }
         permissionError = nil
-        guard !speech.isListening else { return }
         do {
             try await speech.start()
         } catch {

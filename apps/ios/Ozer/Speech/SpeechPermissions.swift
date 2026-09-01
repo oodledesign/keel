@@ -145,7 +145,7 @@ enum SpeechPermissions {
     }
 
     private static func requestSpeechAuthorization() async throws -> SFSpeechRecognizerAuthorizationStatus {
-        try await withThrowingCheckedContinuation { continuation in
+        try await withCheckedThrowingContinuation { continuation in
             let box = ResumeOnce(continuation)
             SFSpeechRecognizer.requestAuthorization { status in
                 box.resume(returning: status)
