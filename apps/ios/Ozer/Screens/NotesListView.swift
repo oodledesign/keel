@@ -1,0 +1,235 @@
+import SwiftUI
+
+struct NotesListView: View {
+    @Environment(AppSession.self) private var session
+    @State private var payload: NotesPayload?
+    @State private var loadError: NativeAPIError?
+    @State private var isLoading = false
+
+    private let client = NativeAPIClient()
+
+    /// Selected account id, or a pending/empty token until `/workspaces` lands.
+    private var reloadKey: String {
+        session.workspaceContentKey
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isLoading && payload == nil && loadError == nil {
+                    ProgressView()
+                        .tint(OzerPalette.coral)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let loadError {
+                    statusCard(error: loadError)
+                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                    membershipsEmptyCard
+                } else if let payload, !payload.items.isEmpty {
+                    content(payload)
+                } else {
+                    emptyCard()
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 88)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(OzerPalette.cream.ignoresSafeArea())
+            .navigationTitle("Notes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    WorkspaceChip()
+                }
+            }
+            .task(id: reloadKey) {
+                await load()
+            }
+            .refreshable {
+                await session.refreshWorkspaces()
+                await load()
+            }
+        }
+    }
+
+    private func content(_ payload: NotesPayload) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(payload.items) { item in
+                    NavigationLink {
+                        NoteDetailView(note: item)
+                    } label: {
+                        noteRow(item)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private func noteRow(_ item: NoteItem) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(item.displayTitle)
+                .font(.body.weight(.medium))
+                .foregroundStyle(OzerPalette.plum)
+            if let subtitle = item.displaySubtitle {
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(OzerPalette.plumMuted)
+                    .lineLimit(2)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+    }
+
+    private var membershipsEmptyCard: some View {
+        VStack(spacing: 12) {
+            Text("No workspaces yet")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+            Text("When your memberships load, notes will land here.")
+                .font(.body)
+                .foregroundStyle(OzerPalette.plumMuted)
+                .multilineTextAlignment(.center)
+            Button("Try again") {
+                Task {
+                    await session.refreshWorkspaces()
+                    await load()
+                }
+            }
+            .buttonStyle(OzerPrimaryButtonStyle())
+            .frame(width: 140)
+            .disabled(session.isRefreshingWorkspaces)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+    }
+
+    private func emptyCard() -> some View {
+        VStack(spacing: 10) {
+            Text("Nothing on this list")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+            Text("When there are notes in this workspace, they will land here.")
+                .font(.body)
+                .foregroundStyle(OzerPalette.plumMuted)
+                .multilineTextAlignment(.center)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+    }
+
+    private func statusCard(error: NativeAPIError) -> some View {
+        VStack(spacing: 12) {
+            Text(error == .notFound ? "Notes aren’t available yet" : "Couldn’t load notes")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+            Text(error.localizedDescription)
+                .font(.body)
+                .foregroundStyle(OzerPalette.plumMuted)
+                .multilineTextAlignment(.center)
+            if error != .unauthorized && error != .notFound {
+                Button("Try again") {
+                    Task { await load() }
+                }
+                .buttonStyle(OzerPrimaryButtonStyle())
+                .frame(width: 140)
+            }
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+    }
+
+    private func load() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let token = try await session.validAccessToken()
+            if !session.workspacesLoaded {
+                await session.refreshWorkspaces()
+            }
+            try Task.checkCancellation()
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else {
+                payload = nil
+                loadError = nil
+                return
+            }
+            payload = try await client.notes(
+                workspace: workspace,
+                accessToken: token
+            )
+            loadError = nil
+        } catch is CancellationError {
+            return
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            payload = nil
+            loadError = error
+        } catch {
+            if error.isTaskCancellation { return }
+            payload = nil
+            loadError = .transport(error.localizedDescription)
+        }
+    }
+}
+
+struct NoteDetailView: View {
+    let note: NoteItem
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(note.displayTitle)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plum)
+                if note.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("This note has no body yet.")
+                        .font(.body)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                } else {
+                    Text(note.body)
+                        .font(.body)
+                        .foregroundStyle(OzerPalette.plum)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                    .stroke(OzerPalette.border, lineWidth: 1)
+            }
+            .padding(.top, 8)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 88)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(OzerPalette.cream.ignoresSafeArea())
+        .navigationTitle("Note")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}

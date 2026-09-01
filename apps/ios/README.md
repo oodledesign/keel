@@ -91,9 +91,31 @@ Accept: application/json
 
 The list is `{ "items": [{ "id", "title", "due", "subtitle" }] }`. Title plus due/subtitle. Empty only when `items` is empty. A 403 is an error, not an empty list. Reloads when the selected workspace **id** changes, and when `/workspaces` first arrives.
 
+## Notes API
+
+Same workspace query and error mapping as Tasks (401 / 403 / 404):
+
+```
+GET {OZER_API_BASE}/api/native/v1/notes?workspace=<slug-or-uuid>
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+The list is `{ "items": [{ "id", "title", "body", "workspace", "created_at", "updated_at" }] }`. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens a read-only title + body screen. No create or edit on the phone yet.
+
+## People API
+
+```
+GET {OZER_API_BASE}/api/native/v1/people?workspace=<slug-or-uuid>
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+The list is `{ "items": [{ "id", "full_name", "nickname", "relationship_label", "email", "phone", "avatar_url", … }] }`. The server filters `person.account_id === workspace.id`, so Personal usually has people and team workspaces may be empty. Row title is `full_name` (or nickname). Subtitle is relationship or email. A small `https` avatar is optional; initials show otherwise. Tap opens a read-only card from those list fields only (no extra GET).
+
 ## Tab bar
 
-Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, People. Shopping is in the Menu. Notes, People, and Shopping are still navigation stubs.
+Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, People. Shopping is in the Menu and is still a navigation stub.
 
 Out of scope: PowerSync, camera, Whisper, invoices, secrets, App Store submit, `WKWebView` of the web app.
 
