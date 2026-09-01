@@ -7,7 +7,7 @@ import { createInAppNotification } from '~/lib/notifications/create-in-app-notif
 
 async function notifyInvoiceApns(input: {
   accountId: string;
-  kind: 'paid' | 'overdue' | 'viewed';
+  kind: 'paid' | 'overdue';
   invoiceId: string;
   invoiceNumber: string;
   body: string;
@@ -82,14 +82,6 @@ export async function notifyInvoiceViewedInApp(params: {
     accountId: params.accountId,
     body,
     link: invoiceEditLink(params.accountSlug, params.invoiceId),
-  });
-
-  await notifyInvoiceApns({
-    accountId: params.accountId,
-    kind: 'viewed',
-    invoiceId: params.invoiceId,
-    invoiceNumber: params.invoiceNumber,
-    body,
   });
 }
 

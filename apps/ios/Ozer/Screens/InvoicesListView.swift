@@ -413,7 +413,7 @@ struct InvoiceDetailView: View {
         .background(OzerPalette.cream.ignoresSafeArea())
         .navigationTitle("Invoice")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: session.workspaceContentKey) {
+        .task(id: invoice.id) {
             await loadDetail()
         }
     }

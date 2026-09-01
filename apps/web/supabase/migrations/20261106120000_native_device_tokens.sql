@@ -38,13 +38,25 @@ CREATE POLICY native_device_tokens_select ON public.native_device_tokens
 
 DROP POLICY IF EXISTS native_device_tokens_insert ON public.native_device_tokens;
 CREATE POLICY native_device_tokens_insert ON public.native_device_tokens
-  FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()));
+  FOR INSERT TO authenticated WITH CHECK (
+    user_id = (SELECT auth.uid())
+    AND (
+      account_id IS NULL
+      OR public.has_role_on_account(account_id)
+    )
+  );
 
 DROP POLICY IF EXISTS native_device_tokens_update ON public.native_device_tokens;
 CREATE POLICY native_device_tokens_update ON public.native_device_tokens
   FOR UPDATE TO authenticated
   USING (user_id = (SELECT auth.uid()))
-  WITH CHECK (user_id = (SELECT auth.uid()));
+  WITH CHECK (
+    user_id = (SELECT auth.uid())
+    AND (
+      account_id IS NULL
+      OR public.has_role_on_account(account_id)
+    )
+  );
 
 DROP POLICY IF EXISTS native_device_tokens_delete ON public.native_device_tokens;
 CREATE POLICY native_device_tokens_delete ON public.native_device_tokens

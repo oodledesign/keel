@@ -39,13 +39,39 @@ async function loadApnsKey(
   return importPKCS8(decodePem(pem), 'ES256');
 }
 
+type CachedApnsJwt = {
+  key: string;
+  token: string;
+  expiresAt: number;
+};
+
+let cachedApnsJwt: CachedApnsJwt | null = null;
+
 async function apnsJwt(config: NonNullable<ReturnType<typeof readApnsConfig>>) {
+  const cacheKey = `${config.keyId}:${config.teamId}`;
+  const now = Date.now();
+  if (
+    cachedApnsJwt &&
+    cachedApnsJwt.key === cacheKey &&
+    cachedApnsJwt.expiresAt > now
+  ) {
+    return cachedApnsJwt.token;
+  }
+
   const key = await loadApnsKey(config);
-  return new SignJWT({})
+  const token = await new SignJWT({})
     .setProtectedHeader({ alg: 'ES256', kid: config.keyId })
     .setIssuer(config.teamId)
     .setIssuedAt()
     .sign(key);
+
+  cachedApnsJwt = {
+    key: cacheKey,
+    token,
+    expiresAt: now + 55 * 60 * 1000,
+  };
+
+  return token;
 }
 
 async function postApnsNotification(input: {
