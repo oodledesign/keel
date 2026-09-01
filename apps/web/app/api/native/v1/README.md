@@ -38,7 +38,7 @@ curl -sS "$ORIGIN/api/native/v1/notes?workspace=YOUR_SLUG" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-`workspace` accepts an account slug or UUID. Personal is always included in `/workspaces`.
+`workspace` accepts an account slug, UUID, or the chip aliases `personal`, `family`, and `business` (`business` maps to the first `work_design` workspace). Exact slug or UUID wins when they collide with an alias. Personal is always included in `/workspaces`.
 
 ## Apple Sign In (optional)
 

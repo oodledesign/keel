@@ -26,6 +26,26 @@ enum WorkspaceKind: String, CaseIterable, Identifiable, Codable {
 
     var queryValue: String { rawValue }
 
+    /// Map the Personal / Family / Business chip to a real `/workspaces` row.
+    /// Falls back to the chip alias so a naive query still hits the API resolver.
+    func resolvedQueryValue(in workspaces: [NativeWorkspace]) -> String {
+        matchingWorkspace(in: workspaces)?.queryValue ?? queryValue
+    }
+
+    func matchingWorkspace(in workspaces: [NativeWorkspace]) -> NativeWorkspace? {
+        switch self {
+        case .personal:
+            return workspaces.first(where: { $0.isPersonal || $0.profile == "personal" })
+        case .family:
+            return workspaces.first(where: { $0.profile == "family" })
+        case .business:
+            return workspaces.first(where: { $0.profile == "work_design" })
+                ?? workspaces.first(where: {
+                    !$0.isPersonal && $0.profile != "personal" && $0.profile != "family"
+                })
+        }
+    }
+
     private static let storageKey = "so.ozer.app.workspace"
 
     static var stored: WorkspaceKind {

@@ -133,7 +133,13 @@ struct HomeTodayView: View {
         defer { isLoading = false }
         do {
             let token = try await session.validAccessToken()
-            payload = try await client.today(workspace: session.workspace, accessToken: token)
+            if session.workspaces.isEmpty {
+                await session.refreshWorkspaces()
+            }
+            payload = try await client.today(
+                workspace: session.workspaceQueryValue,
+                accessToken: token
+            )
             loadError = nil
         } catch let error as NativeAPIError {
             if error == .unauthorized {

@@ -53,13 +53,17 @@ Enable Apple and Google providers there as well. A 401 from the native API signs
 
 ## Today API
 
+After sign-in the shell loads `{OZER_API_BASE}/api/native/v1/workspaces` and maps the Personal / Family / Business chips to a real account (`isPersonal` or `profile=personal`, `family`, `work_design`). Today then sends that slug or UUID:
+
 ```
-GET {OZER_API_BASE}/api/native/v1/today?workspace=personal|family|business
+GET {OZER_API_BASE}/api/native/v1/today?workspace=<slug-or-uuid>
 Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-No cookies. A 404 is shown as a calm empty state so this shell can ship before the API PR.
+The server also accepts the chip aliases `personal`, `family`, and `business` if the list has not loaded yet. Home decodes `tasks_due_today` then `overdue_tasks` (title + subtitle). A 403 is shown as an error, not an empty day.
+
+No cookies. A 404 is shown as a calm empty state.
 
 Workspace switcher is **Personal / Family / Business** only.
 

@@ -42,6 +42,31 @@ export function toNativeWorkspaceProfile(
   return 'work_design';
 }
 
+function findWorkspaceByAlias(
+  workspaces: NativeWorkspace[],
+  alias: string,
+): NativeWorkspace | null {
+  switch (alias) {
+    case 'personal':
+      return (
+        workspaces.find((workspace) => workspace.isPersonal) ??
+        workspaces.find((workspace) => workspace.profile === 'personal') ??
+        null
+      );
+    case 'family':
+      return (
+        workspaces.find((workspace) => workspace.profile === 'family') ?? null
+      );
+    case 'business':
+      return (
+        workspaces.find((workspace) => workspace.profile === 'work_design') ??
+        null
+      );
+    default:
+      return null;
+  }
+}
+
 export function findNativeWorkspace(
   workspaces: NativeWorkspace[],
   workspaceRef: string,
@@ -49,12 +74,17 @@ export function findNativeWorkspace(
   const ref = workspaceRef.trim();
   if (!ref) return null;
 
-  return (
+  const exact =
     workspaces.find((workspace) => workspace.slug === ref) ??
     (isUuid(ref)
       ? (workspaces.find((workspace) => workspace.id === ref) ?? null)
-      : null)
-  );
+      : null);
+
+  if (exact) {
+    return exact;
+  }
+
+  return findWorkspaceByAlias(workspaces, ref.toLowerCase());
 }
 
 export function publicNativeWorkspace(workspace: NativeWorkspace) {
@@ -63,5 +93,6 @@ export function publicNativeWorkspace(workspace: NativeWorkspace) {
     slug: workspace.slug,
     name: workspace.name,
     profile: workspace.profile,
+    isPersonal: workspace.isPersonal,
   };
 }

@@ -15,6 +15,7 @@ final class AppSession {
 
     private(set) var phase: Phase = .loading
     private(set) var session: AuthSession?
+    private(set) var workspaces: [NativeWorkspace] = []
     var workspace: WorkspaceKind = .stored {
         didSet { workspace.persist() }
     }
@@ -22,6 +23,12 @@ final class AppSession {
     var lastError: String?
 
     private let auth = SupabaseAuthClient()
+    private let api = NativeAPIClient()
+
+    /// Slug or UUID for native `?workspace=`. Chip alias if the list has no match yet.
+    var workspaceQueryValue: String {
+        workspace.resolvedQueryValue(in: workspaces)
+    }
 
     var userEmail: String? { session?.email }
 
@@ -30,6 +37,7 @@ final class AppSession {
             if let data = try KeychainStore.data(account: Self.keychainAccount) {
                 session = try JSONDecoder().decode(AuthSession.self, from: data)
                 phase = .signedIn
+                Task { await refreshWorkspaces() }
             } else {
                 session = nil
                 phase = .signedOut
@@ -117,6 +125,7 @@ final class AppSession {
     func signOut() async {
         let token = session?.accessToken
         session = nil
+        workspaces = []
         phase = .signedOut
         try? KeychainStore.deleteAll()
         if let token {
@@ -124,10 +133,28 @@ final class AppSession {
         }
     }
 
+    func refreshWorkspaces() async {
+        guard phase == .signedIn else { return }
+        do {
+            let token = try await validAccessToken()
+            workspaces = try await api.workspaces(accessToken: token)
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await handleUnauthorized()
+            }
+        } catch {
+            // Keep the last list (or empty). Today still tries the chip alias.
+        }
+    }
+
     private func persist(_ next: AuthSession) throws {
+        let shouldLoadWorkspaces = phase != .signedIn
         let data = try JSONEncoder().encode(next)
         try KeychainStore.set(data, account: Self.keychainAccount)
         session = next
         phase = .signedIn
+        if shouldLoadWorkspaces {
+            Task { await refreshWorkspaces() }
+        }
     }
 }

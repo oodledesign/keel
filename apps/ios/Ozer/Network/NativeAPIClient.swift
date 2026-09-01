@@ -35,16 +35,52 @@ actor NativeAPIClient {
         session = URLSession(configuration: configuration)
     }
 
-    func today(workspace: WorkspaceKind, accessToken: String) async throws -> TodayPayload {
+    func workspaces(accessToken: String) async throws -> [NativeWorkspace] {
+        let data = try await get(
+            path: "api/native/v1/workspaces",
+            queryItems: [],
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return []
+        }
+        do {
+            return try JSONDecoder().decode([NativeWorkspace].self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func today(workspace: String, accessToken: String) async throws -> TodayPayload {
+        let data = try await get(
+            path: "api/native/v1/today",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return TodayPayload.empty
+        }
+        do {
+            return try JSONDecoder().decode(TodayPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    private func get(
+        path: String,
+        queryItems: [URLQueryItem],
+        accessToken: String
+    ) async throws -> Data {
         var components = URLComponents(
-            url: AppConfiguration.apiBaseURL.appending(path: "api/native/v1/today"),
+            url: AppConfiguration.apiBaseURL.appending(path: path),
             resolvingAgainstBaseURL: false
         )
-        components?.queryItems = [
-            URLQueryItem(name: "workspace", value: workspace.queryValue),
-        ]
+        if !queryItems.isEmpty {
+            components?.queryItems = queryItems
+        }
         guard let url = components?.url else {
-            throw NativeAPIError.transport("Could not build the Today URL.")
+            throw NativeAPIError.transport("Could not build the request URL.")
         }
 
         var request = URLRequest(url: url)
@@ -70,14 +106,7 @@ actor NativeAPIClient {
 
         switch http.statusCode {
         case 200:
-            if data.isEmpty {
-                return TodayPayload.empty
-            }
-            do {
-                return try JSONDecoder().decode(TodayPayload.self, from: data)
-            } catch {
-                throw NativeAPIError.decoding
-            }
+            return data
         case 401:
             throw NativeAPIError.unauthorized
         case 404:
@@ -85,6 +114,40 @@ actor NativeAPIClient {
         default:
             throw NativeAPIError.http(http.statusCode)
         }
+    }
+}
+
+struct NativeWorkspace: Decodable, Equatable, Identifiable {
+    var id: String
+    var slug: String
+    var name: String
+    var profile: String
+    var isPersonal: Bool
+
+    var queryValue: String {
+        slug.isEmpty ? id : slug
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, slug, name, profile, isPersonal
+    }
+
+    init(id: String, slug: String, name: String, profile: String, isPersonal: Bool) {
+        self.id = id
+        self.slug = slug
+        self.name = name
+        self.profile = profile
+        self.isPersonal = isPersonal
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        slug = try container.decodeIfPresent(String.self, forKey: .slug) ?? ""
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? slug
+        profile = try container.decodeIfPresent(String.self, forKey: .profile) ?? ""
+        isPersonal = try container.decodeIfPresent(Bool.self, forKey: .isPersonal)
+            ?? (profile == "personal")
     }
 }
 
@@ -99,6 +162,8 @@ struct TodayPayload: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case title, greeting, message, summary, items, tasks, cards
+        case tasksDueToday = "tasks_due_today"
+        case overdueTasks = "overdue_tasks"
     }
 
     init(title: String?, greeting: String?, message: String?, summary: String?, items: [TodayItem]) {
@@ -115,6 +180,14 @@ struct TodayPayload: Decodable, Equatable {
         greeting = try container.decodeIfPresent(String.self, forKey: .greeting)
         message = try container.decodeIfPresent(String.self, forKey: .message)
         summary = try container.decodeIfPresent(String.self, forKey: .summary)
+
+        let dueToday = try container.decodeIfPresent([TodayItem].self, forKey: .tasksDueToday)
+        let overdue = try container.decodeIfPresent([TodayItem].self, forKey: .overdueTasks)
+        if dueToday != nil || overdue != nil {
+            items = Self.mergeHomeItems(dueToday: dueToday ?? [], overdue: overdue ?? [])
+            return
+        }
+
         if let items = try container.decodeIfPresent([TodayItem].self, forKey: .items) {
             self.items = items
         } else if let tasks = try container.decodeIfPresent([TodayItem].self, forKey: .tasks) {
@@ -124,6 +197,18 @@ struct TodayPayload: Decodable, Equatable {
         } else {
             items = []
         }
+    }
+
+    /// Due today first, then overdue. Same id keeps the due-today row.
+    static func mergeHomeItems(dueToday: [TodayItem], overdue: [TodayItem]) -> [TodayItem] {
+        var seen = Set<String>()
+        var merged: [TodayItem] = []
+        for item in dueToday + overdue {
+            if seen.insert(item.id).inserted {
+                merged.append(item)
+            }
+        }
+        return merged
     }
 
     var headline: String {
@@ -142,6 +227,12 @@ struct TodayItem: Decodable, Identifiable, Equatable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, title, subtitle, name, description, body
+    }
+
+    init(id: String, title: String, subtitle: String?) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
     }
 
     init(from decoder: Decoder) throws {
