@@ -53,6 +53,7 @@ function FeatureTourCard({
         'relative flex h-full flex-col overflow-x-hidden overflow-y-auto rounded-[1.25rem] lg:max-h-[calc(100vh-5.5rem)] lg:overflow-hidden',
         block.soon && 'opacity-95',
       )}
+      data-test="feature-tour-card"
     >
       {scrollYProgress != null && activeIndex != null ? (
         <FeatureStepProgress
@@ -127,7 +128,7 @@ function FeatureTourCard({
         <FeatureTourMock
           type={block.mock}
           accent={block.accent}
-          className="h-36 w-full shrink-0 sm:h-44 md:h-52 lg:h-full lg:min-h-0 lg:shrink"
+          className="h-36 max-h-36 w-full shrink-0 sm:h-44 sm:max-h-44 md:h-52 md:max-h-52 lg:h-full lg:max-h-none lg:min-h-0 lg:shrink"
         />
       </div>
     </div>
@@ -302,6 +303,7 @@ function FeatureTourNav({
       </p>
       <ul
         ref={scrollerRef}
+        data-test="feature-tour-pills"
         className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden"
       >
         {FEATURE_TOUR_BLOCKS.map((block, index) => {

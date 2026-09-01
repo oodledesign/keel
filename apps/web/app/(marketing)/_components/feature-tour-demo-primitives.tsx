@@ -11,8 +11,7 @@ import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
 export const FEATURE_DEMO_FRAME_CLASS =
   'relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_40px_var(--ozer-plum-alpha-08)]';
 
-export const FEATURE_DEMO_SHELL_CLASS =
-  'flex h-full min-h-0 w-full overflow-hidden';
+export const FEATURE_DEMO_SHELL_CLASS = 'flex min-h-0 w-full overflow-hidden';
 
 const LOOP_EASE = marketingHeroEase;
 

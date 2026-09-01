@@ -609,7 +609,10 @@ export function FeatureTourMock({
   })();
 
   return (
-    <div className={cn(FEATURE_DEMO_SHELL_CLASS, 'min-h-0', className)}>
+    <div
+      data-test="feature-tour-mock"
+      className={cn(FEATURE_DEMO_SHELL_CLASS, className)}
+    >
       {content}
     </div>
   );
