@@ -9,14 +9,17 @@ import {
   DEFAULT_BRAND_SECONDARY,
   loadAccountBrandResolved,
 } from '~/lib/brand/account-brand';
+import { fetchNearbyBrochureAmenities } from '~/lib/commercial/brochure-pdf/nearby-amenities';
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import type {
   BrochureAgent,
+  BrochureBranch,
   BrochureListing,
   BrochureMediaItem,
   PublicBrochureData,
 } from '~/lib/commercial/public-brochure.shared';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 function mapKeyPoints(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -102,6 +105,13 @@ function mapListingRow(listingRow: Record<string, unknown>): BrochureListing {
   };
 }
 
+function pickStaffPhone(row: {
+  phone_direct?: string | null;
+  phone_mobile?: string | null;
+}): string | null {
+  return row.phone_direct?.trim() || row.phone_mobile?.trim() || null;
+}
+
 const LISTING_SELECT = [
   'id',
   'account_id',
@@ -134,6 +144,7 @@ const LISTING_SELECT = [
   'description',
   'location_copy',
   'key_points',
+  'account_branch_id',
 ].join(', ');
 
 /**
@@ -161,32 +172,54 @@ export async function loadListingBrochureData(
   if (!row) return null;
 
   const listing = mapListingRow(row as unknown as Record<string, unknown>);
+  const listingBranchId =
+    ((row as unknown as Record<string, unknown>).account_branch_id as
+      | string
+      | null
+      | undefined) ?? null;
 
-  const [{ data: accountRow }, { data: agentRows }, { data: mediaRows }] =
-    await Promise.all([
-      client
-        .from('accounts')
-        .select('name')
-        .eq('id', listing.accountId)
-        .maybeSingle(),
-      client
-        .from('commercial_listing_agents')
-        .select('user_id, sort_order')
-        .eq('listing_id', listing.id)
-        .eq('account_id', listing.accountId)
-        .order('sort_order', { ascending: true }),
-      client
-        .from('commercial_listing_media')
-        .select(
-          'id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private',
-        )
-        .eq('listing_id', listing.id)
-        .eq('is_private', false)
-        .in('media_type', ['image', 'floorplan'])
-        .order('is_cover', { ascending: false })
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true }),
-    ]);
+  const [
+    { data: accountRow },
+    { data: agentRows },
+    { data: mediaRows },
+    { data: branchRows },
+    nearbyAmenities,
+  ] = await Promise.all([
+    client
+      .from('accounts')
+      .select('name')
+      .eq('id', listing.accountId)
+      .maybeSingle(),
+    client
+      .from('commercial_listing_agents')
+      .select('user_id, sort_order')
+      .eq('listing_id', listing.id)
+      .eq('account_id', listing.accountId)
+      .order('sort_order', { ascending: true }),
+    client
+      .from('commercial_listing_media')
+      .select(
+        'id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private',
+      )
+      .eq('listing_id', listing.id)
+      .eq('is_private', false)
+      .in('media_type', ['image', 'floorplan'])
+      .order('is_cover', { ascending: false })
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true }),
+    client
+      .from('account_branches')
+      .select('id, name, address, phone, email, is_default, sort_order')
+      .eq('account_id', listing.accountId)
+      .order('sort_order', { ascending: true }),
+    listing.latitude != null && listing.longitude != null
+      ? fetchNearbyBrochureAmenities({
+          latitude: listing.latitude,
+          longitude: listing.longitude,
+          town: listing.town,
+        })
+      : Promise.resolve([]),
+  ]);
 
   const userIds = (
     (agentRows ?? []) as Array<{ user_id: string; sort_order: number }>
@@ -229,6 +262,47 @@ export async function loadListingBrochureData(
       pictureUrl: member?.pictureUrl?.trim() || null,
     };
   });
+
+  const agentEmails = agents
+    .map((agent) => agent.email?.toLowerCase())
+    .filter((email): email is string => Boolean(email));
+
+  if (agentEmails.length > 0) {
+    try {
+      const signatures = supabaseCustomSchema(admin, 'signatures');
+      const { data: staffRows } = await signatures
+        .from('staff')
+        .select('email, signature_email, phone_direct, phone_mobile')
+        .eq('account_id', listing.accountId);
+
+      const phoneByEmail = new Map<string, string>();
+      for (const staff of (staffRows ?? []) as Array<{
+        email?: string | null;
+        signature_email?: string | null;
+        phone_direct?: string | null;
+        phone_mobile?: string | null;
+      }>) {
+        const phone = pickStaffPhone(staff);
+        if (!phone) continue;
+        for (const key of [staff.email, staff.signature_email]) {
+          const normalized = key?.trim().toLowerCase();
+          if (normalized) phoneByEmail.set(normalized, phone);
+        }
+      }
+
+      for (const agent of agents) {
+        const email = agent.email?.toLowerCase();
+        if (email && phoneByEmail.has(email)) {
+          agent.phone = phoneByEmail.get(email) ?? null;
+        }
+      }
+    } catch (err) {
+      console.error(
+        '[brochure-pdf] staff phone load error:',
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
 
   const signedMedia = await Promise.all(
     (
@@ -277,6 +351,11 @@ export async function loadListingBrochureData(
     secondaryColor: DEFAULT_BRAND_SECONDARY,
     accentColor: DEFAULT_BRAND_ACCENT,
   };
+  let brandContact: Pick<BrochureBranch, 'address' | 'phone' | 'email'> = {
+    address: null,
+    phone: null,
+    email: null,
+  };
 
   try {
     const resolved = await loadAccountBrandResolved(listing.accountId);
@@ -286,6 +365,11 @@ export async function loadListingBrochureData(
       secondaryColor: resolved.secondary_color,
       accentColor: resolved.accent_color,
     };
+    brandContact = {
+      address: resolved.address,
+      phone: resolved.phone,
+      email: resolved.contact_email,
+    };
   } catch (err) {
     console.error(
       '[brochure-pdf] brand load error:',
@@ -293,14 +377,39 @@ export async function loadListingBrochureData(
     );
   }
 
+  const branches = (branchRows ?? []) as Array<{
+    id: string;
+    name: string | null;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    is_default: boolean | null;
+  }>;
+  const listingBranch = listingBranchId
+    ? branches.find((item) => item.id === listingBranchId)
+    : null;
+  const defaultBranch =
+    branches.find((item) => item.is_default) ?? branches[0] ?? null;
+  const pickedBranch = listingBranch ?? defaultBranch;
+  const accountName =
+    (accountRow?.name as string | null | undefined)?.trim() || null;
+
+  const branch: BrochureBranch = {
+    name: pickedBranch?.name?.trim() || accountName,
+    address: pickedBranch?.address?.trim() || brandContact.address,
+    phone: pickedBranch?.phone?.trim() || brandContact.phone,
+    email: pickedBranch?.email?.trim() || brandContact.email,
+  };
+
   return {
     token: '',
     listing,
-    accountName:
-      (accountRow?.name as string | null | undefined)?.trim() || null,
+    accountName,
     brand,
     agents,
     images: media.filter((m) => m.mediaType === 'image'),
     floorplans: media.filter((m) => m.mediaType === 'floorplan'),
+    branch,
+    nearbyAmenities,
   };
 }

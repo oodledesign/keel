@@ -25,7 +25,16 @@ import type {
   BrochureSlotValue,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import {
+  brochureSashHex,
+  parseCoverPriceLines,
+} from '~/lib/commercial/brochure-pdf/cover-prices';
 import { fetchBrochureMapImageBytes } from '~/lib/commercial/brochure-pdf/mapbox-static';
+import {
+  buildFallbackNearbyAmenities,
+  isDummyLocalAreaAmenity,
+  sanitizeBrochureAmenities,
+} from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 
@@ -94,14 +103,17 @@ function drawWrapped(
     maxWidth: number;
     lineHeight?: number;
     maxLines?: number;
+    ellipsis?: boolean;
   },
 ): number {
   const lineHeight = opts.lineHeight ?? opts.size * 1.35;
   let lines = wrapText(text, opts.font, opts.size, opts.maxWidth);
   if (opts.maxLines != null && lines.length > opts.maxLines) {
     lines = lines.slice(0, opts.maxLines);
-    const last = lines[lines.length - 1] ?? '';
-    lines[lines.length - 1] = `${last.replace(/\s+\S*$/, '')}...`;
+    if (opts.ellipsis !== false) {
+      const last = lines[lines.length - 1] ?? '';
+      lines[lines.length - 1] = `${last.replace(/\s+\S*$/, '')}...`;
+    }
   }
 
   let y = opts.y;
@@ -298,9 +310,58 @@ function templateMargins(templateId: BrochureTemplateId) {
 }
 
 function coverBandRatio(templateId: BrochureTemplateId) {
-  if (templateId === 'editorial') return 0.26;
-  if (templateId === 'compact') return 0.38;
-  return 0.32;
+  if (templateId === 'editorial') return 0.28;
+  if (templateId === 'compact') return 0.4;
+  return 0.34;
+}
+
+function resolveCoverPriceLines(
+  slots: Record<string, BrochureSlotValue>,
+): string[] {
+  const dedicated = ['size', 'rent', 'price']
+    .map((key) => slotText(slots, key).trim())
+    .filter(Boolean);
+  if (dedicated.length > 0) return dedicated;
+  return parseCoverPriceLines(slotText(slots, 'headline'));
+}
+
+function drawReducedBadge(
+  page: PDFPage,
+  box: { x: number; y: number; width: number; height: number },
+  ctx: RenderCtx,
+  label: string,
+) {
+  const text = sanitizePdfText(label.trim().toUpperCase());
+  if (!text || box.width < 40 || box.height < 24) return;
+
+  const sash = hexToRgb(
+    brochureSashHex(ctx.data.brand.accentColor),
+    rgb(0.78, 0.06, 0.18),
+  );
+  const size = 8;
+  const padX = 8;
+  const width = Math.min(
+    box.width - 16,
+    ctx.fontBold.widthOfTextAtSize(text, size) + padX * 2,
+  );
+  const height = 18;
+  const x = box.x + 12;
+  const y = box.y + box.height - height - 12;
+
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: sash,
+  });
+  page.drawText(text, {
+    x: x + padX,
+    y: y + 5,
+    size,
+    font: ctx.fontBold,
+    color: ctx.colors.paper,
+  });
 }
 
 type RenderCtx = {
@@ -401,8 +462,11 @@ async function renderCover(
   const title = slotText(brochurePage.slots, 'title');
   const address = slotText(brochurePage.slots, 'address');
   const disposal = slotText(brochurePage.slots, 'disposal');
-  const headline = slotText(brochurePage.slots, 'headline');
   const brandName = slotText(brochurePage.slots, 'brandName');
+  const priceLines = resolveCoverPriceLines(brochurePage.slots);
+  const reducedLabel =
+    slotText(brochurePage.slots, 'reducedBadge').trim() ||
+    (ctx.data.showReducedPrice ? 'REDUCED PRICE' : '');
   const bandRatio = coverBandRatio(ctx.templateId);
   const titleSize =
     ctx.templateId === 'editorial'
@@ -410,17 +474,19 @@ async function renderCover(
       : ctx.templateId === 'compact'
         ? 18
         : 22;
+  const priceSize =
+    ctx.templateId === 'editorial'
+      ? 18
+      : ctx.templateId === 'compact'
+        ? 14
+        : 16;
 
   if (landscape) {
     const bandW = Math.round(width * bandRatio);
     const heroW = width - bandW;
-    drawImageInBox(
-      page,
-      heroImg,
-      { x: 0, y: 0, width: heroW, height },
-      ctx.colors.soft,
-      'smart',
-    );
+    const heroBox = { x: 0, y: 0, width: heroW, height };
+    drawImageInBox(page, heroImg, heroBox, ctx.colors.soft, 'smart');
+    if (reducedLabel) drawReducedBadge(page, heroBox, ctx, reducedLabel);
     page.drawRectangle({
       x: heroW,
       y: 0,
@@ -481,7 +547,7 @@ async function renderCover(
       maxWidth: bandW - 56,
       maxLines: 4,
     });
-    y -= 12;
+    y -= 10;
     y = drawWrapped(page, address, {
       x: heroW + 28,
       y,
@@ -489,35 +555,34 @@ async function renderCover(
       size: 10,
       color: ctx.colors.paperMuted,
       maxWidth: bandW - 56,
-      maxLines: 4,
+      maxLines: 6,
+      ellipsis: false,
     });
-    y -= 16;
-    if (headline) {
-      drawWrapped(page, headline, {
+    y -= 18;
+    for (const line of priceLines) {
+      y = drawWrapped(page, line, {
         x: heroW + 28,
         y,
         font: ctx.fontBold,
-        size: 11,
+        size: priceSize,
         color: ctx.colors.paper,
         maxWidth: bandW - 56,
-        maxLines: 3,
+        maxLines: 2,
+        lineHeight: priceSize * 1.2,
       });
+      y -= 6;
     }
   } else {
     const bandH =
       ctx.templateId === 'editorial'
-        ? 170
+        ? 220
         : ctx.templateId === 'compact'
-          ? 130
-          : 150;
+          ? 180
+          : 210;
     const heroH = height - bandH;
-    drawImageInBox(
-      page,
-      heroImg,
-      { x: 0, y: bandH, width, height: heroH },
-      ctx.colors.soft,
-      'smart',
-    );
+    const heroBox = { x: 0, y: bandH, width, height: heroH };
+    drawImageInBox(page, heroImg, heroBox, ctx.colors.soft, 'smart');
+    if (reducedLabel) drawReducedBadge(page, heroBox, ctx, reducedLabel);
     page.drawRectangle({
       x: 0,
       y: 0,
@@ -539,14 +604,14 @@ async function renderCover(
       x: 36,
       y: bandH - 16,
       maxWidth: 140,
-      maxHeight: 32,
+      maxHeight: 28,
     });
     if (logoH <= 0) {
       page.drawText(
         sanitizePdfText(brandName || ctx.data.accountName || 'Agency'),
         {
           x: 36,
-          y: bandH - 28,
+          y: bandH - 24,
           size: 10,
           font: ctx.fontBold,
           color: ctx.colors.paper,
@@ -554,7 +619,7 @@ async function renderCover(
       );
     }
 
-    let y = Math.min(110, bandH - 48);
+    let y = bandH - (logoH > 0 ? logoH + 28 : 40);
     if (disposal) {
       page.drawText(sanitizePdfText(disposal.toUpperCase()), {
         x: 36,
@@ -563,7 +628,7 @@ async function renderCover(
         font: ctx.fontBold,
         color: ctx.colors.accent,
       });
-      y -= 18;
+      y -= 16;
     }
     y = drawWrapped(page, title, {
       x: 36,
@@ -575,15 +640,30 @@ async function renderCover(
       maxLines: 2,
     });
     y -= 6;
-    drawWrapped(page, headline || address, {
+    y = drawWrapped(page, address, {
       x: 36,
       y,
       font: ctx.font,
-      size: 10,
+      size: 9,
       color: ctx.colors.paperMuted,
       maxWidth: width - 72,
-      maxLines: 2,
+      maxLines: 4,
+      ellipsis: false,
     });
+    y -= 10;
+    for (const line of priceLines) {
+      y = drawWrapped(page, line, {
+        x: 36,
+        y,
+        font: ctx.fontBold,
+        size: priceSize - 2,
+        color: ctx.colors.paper,
+        maxWidth: width - 72,
+        maxLines: 1,
+        lineHeight: (priceSize - 2) * 1.2,
+      });
+      y -= 4;
+    }
   }
 }
 
@@ -675,6 +755,42 @@ async function renderFacts(
     y -= rowH;
   }
 
+  const body = slotText(brochurePage.slots, 'body').trim();
+  const highlightLines = slotText(brochurePage.slots, 'highlights')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  if (body || highlightLines.length > 0) {
+    y -= 12;
+    const copyW = landscape ? tableW : width - margin * 2;
+    if (body) {
+      y = drawWrapped(page, body, {
+        x: tableX,
+        y,
+        font: ctx.font,
+        size: 9,
+        color: ctx.colors.ink,
+        maxWidth: copyW,
+        maxLines: landscape ? 10 : 12,
+      });
+      y -= 10;
+    }
+    for (const line of highlightLines) {
+      y = drawWrapped(page, line, {
+        x: tableX,
+        y,
+        font: ctx.font,
+        size: 9,
+        color: ctx.colors.ink,
+        maxWidth: copyW,
+        maxLines: 2,
+      });
+      y -= 4;
+    }
+  }
+
   if (landscape && ctx.data.images[0]) {
     const img = await resolveImage(ctx, ctx.data.images[0].url);
     const box = {
@@ -712,42 +828,58 @@ async function renderDescription(
     .slice(0, 10);
   const hasHighlights = highlightLines.length > 0;
 
+  const fullW = width - margin * 2;
+  const colW = landscape && hasHighlights ? (width - margin * 3) / 2 : fullW;
+  const estimatedLines =
+    Math.ceil(body.length / 72) +
+    (hasHighlights ? highlightLines.length * 2 + 3 : 0);
+  const panelH = Math.min(height - 72, Math.max(120, 36 + estimatedLines * 15));
+  if (ctx.templateId !== 'editorial') {
+    page.drawRectangle({
+      x: margin,
+      y: height - 52 - panelH,
+      width: fullW,
+      height: panelH,
+      color: ctx.colors.soft,
+    });
+  }
+
   page.drawText(sanitizePdfText(title), {
-    x: margin,
-    y: height - 48,
-    size: ctx.templateId === 'editorial' ? 22 : 18,
+    x: margin + (ctx.templateId === 'editorial' ? 0 : 14),
+    y: height - 40,
+    size: ctx.templateId === 'editorial' ? 22 : 16,
     font: ctx.fontBold,
     color: ctx.colors.ink,
   });
 
-  const fullW = width - margin * 2;
-  const colW = landscape && hasHighlights ? (width - margin * 3) / 2 : fullW;
-  let y = height - 80;
+  let y = height - 64;
+  const textX = margin + (ctx.templateId === 'editorial' ? 0 : 14);
+  const textW = colW - (ctx.templateId === 'editorial' ? 0 : 28);
 
   if (body) {
     y = drawWrapped(page, body, {
-      x: margin,
+      x: textX,
       y,
       font: ctx.font,
       size: ctx.templateId === 'compact' ? 9 : 10,
       color: ctx.colors.ink,
-      maxWidth: colW,
-      maxLines: landscape ? 22 : 28,
+      maxWidth: textW,
+      maxLines: landscape ? 18 : 22,
     });
   }
 
   if (!hasHighlights) return;
 
-  const hx = landscape ? margin * 2 + colW : margin;
-  let hy = landscape ? height - 80 : y - 24;
+  const hx = landscape ? margin * 2 + colW : textX;
+  let hy = landscape ? height - 64 : y - 16;
   page.drawText('Key points', {
     x: hx,
     y: hy,
-    size: 12,
+    size: 11,
     font: ctx.fontBold,
     color: ctx.colors.primary,
   });
-  hy -= 20;
+  hy -= 16;
   for (const line of highlightLines) {
     hy = drawWrapped(page, line, {
       x: hx,
@@ -755,10 +887,10 @@ async function renderDescription(
       font: ctx.font,
       size: 10,
       color: ctx.colors.ink,
-      maxWidth: landscape && hasHighlights ? colW : fullW,
+      maxWidth: landscape && hasHighlights ? colW : fullW - 28,
       maxLines: 2,
     });
-    hy -= 6;
+    hy -= 4;
   }
 }
 
@@ -978,10 +1110,20 @@ async function renderMap(
   const title = slotText(brochurePage.slots, 'title') || 'Location';
   const body = slotText(brochurePage.slots, 'body');
   const mapSlot = brochurePage.slots.map;
-  const amenities =
+  const rawAmenities =
     mapSlot?.type === 'map'
       ? mapSlot.amenities
       : ([] as Array<{ label: string; index: number }>);
+  const slotHasReal = rawAmenities.some(
+    (item) => item.label.trim() && !isDummyLocalAreaAmenity(item.label),
+  );
+  const amenities = sanitizeBrochureAmenities(
+    slotHasReal
+      ? rawAmenities
+      : (ctx.data.nearbyAmenities ??
+          buildFallbackNearbyAmenities(ctx.data.listing.town)),
+    ctx.data.listing.town,
+  );
   const lat =
     (mapSlot?.type === 'map' ? mapSlot.latitude : null) ??
     ctx.data.listing.latitude;
@@ -1065,6 +1207,7 @@ async function renderMap(
       width: Math.round(mapW * 2),
       height: Math.round(box.height * 2),
       zoom: 14,
+      pinColor: ctx.data.brand.accentColor,
     });
     const mapImg = await embedImage(ctx.pdf, bytes);
     if (mapImg) {
@@ -1129,12 +1272,105 @@ async function renderContact(
     );
   }
 
+  const branchName =
+    slotText(brochurePage.slots, 'branchName').trim() ||
+    ctx.data.branch?.name?.trim() ||
+    ctx.data.accountName?.trim() ||
+    '';
+  const branchAddress =
+    slotText(brochurePage.slots, 'branchAddress').trim() ||
+    ctx.data.branch?.address?.trim() ||
+    '';
+  const branchPhone =
+    slotText(brochurePage.slots, 'branchPhone').trim() ||
+    ctx.data.branch?.phone?.trim() ||
+    '';
+  const branchEmail =
+    slotText(brochurePage.slots, 'branchEmail').trim() ||
+    ctx.data.branch?.email?.trim() ||
+    '';
+
+  const branchCardW = landscape
+    ? Math.min(320, width * 0.42)
+    : width - margin * 2;
+  const addressLines = branchAddress
+    ? wrapText(branchAddress, ctx.font, 10, branchCardW - 28)
+    : [];
+  const branchLineCount =
+    (branchName ? 1 : 0) +
+    addressLines.length +
+    (branchPhone ? 1 : 0) +
+    (branchEmail ? 1 : 0);
+  const branchCardH = Math.max(72, 28 + branchLineCount * 14);
+
+  page.drawRectangle({
+    x: margin,
+    y: height - 100 - branchCardH,
+    width: branchCardW,
+    height: branchCardH,
+    color: ctx.colors.soft,
+  });
+
+  let by = height - 118;
+  if (branchName) {
+    page.drawText(sanitizePdfText(branchName), {
+      x: margin + 14,
+      y: by,
+      size: 12,
+      font: ctx.fontBold,
+      color: ctx.colors.ink,
+    });
+    by -= 16;
+  }
+  if (addressLines.length > 0) {
+    by = drawWrapped(page, branchAddress, {
+      x: margin + 14,
+      y: by,
+      font: ctx.font,
+      size: 10,
+      color: ctx.colors.ink,
+      maxWidth: branchCardW - 28,
+      maxLines: 5,
+      ellipsis: false,
+    });
+    by -= 6;
+  }
+  if (branchPhone) {
+    page.drawText(sanitizePdfText(branchPhone), {
+      x: margin + 14,
+      y: by,
+      size: 9,
+      font: ctx.font,
+      color: ctx.colors.muted,
+    });
+    by -= 13;
+  }
+  if (branchEmail) {
+    page.drawText(sanitizePdfText(branchEmail), {
+      x: margin + 14,
+      y: by,
+      size: 9,
+      font: ctx.font,
+      color: ctx.colors.muted,
+    });
+  }
+
   const agents = ctx.data.agents.slice(0, 4);
-  let x = margin;
-  let y = height - 120;
+  let x = landscape ? margin + branchCardW + 24 : margin;
+  let y = landscape ? height - 118 : height - 120 - branchCardH - 28;
   const cardW = landscape
-    ? (width - margin * 2) / 4 - 8
+    ? (width - margin - x) / Math.max(1, Math.min(agents.length, 3)) - 8
     : (width - margin * 2) / 2 - 8;
+
+  if (agents.length > 0) {
+    page.drawText('Agents', {
+      x,
+      y: y + 18,
+      size: 10,
+      font: ctx.fontBold,
+      color: ctx.colors.primary,
+    });
+  }
 
   for (const agent of agents) {
     page.drawText(sanitizePdfText(agent.name), {

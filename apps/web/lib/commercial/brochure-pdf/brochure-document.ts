@@ -12,6 +12,7 @@ export type BrochureDisplayOptions = {
   showRates: boolean;
   showServiceCharge: boolean;
   showEstateCharge: boolean;
+  showReducedPrice: boolean;
 };
 
 export const DEFAULT_BROCHURE_DISPLAY_OPTIONS: BrochureDisplayOptions = {
@@ -21,6 +22,7 @@ export const DEFAULT_BROCHURE_DISPLAY_OPTIONS: BrochureDisplayOptions = {
   showRates: true,
   showServiceCharge: true,
   showEstateCharge: false,
+  showReducedPrice: false,
 };
 
 export type BrochureSlotType = 'image' | 'text' | 'map' | 'agents' | 'facts';

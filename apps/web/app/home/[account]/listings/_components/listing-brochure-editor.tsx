@@ -121,6 +121,14 @@ function PreviewPage({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={hero} alt="" className="h-full w-full object-cover" />
               ) : null}
+              {slotText(page, 'reducedBadge') ? (
+                <span
+                  className="absolute top-2 left-2 px-1.5 py-0.5 text-[8px] font-semibold tracking-wide text-white uppercase"
+                  style={{ backgroundColor: accent }}
+                >
+                  {slotText(page, 'reducedBadge')}
+                </span>
+              ) : null}
             </div>
             <div
               className="flex h-full flex-col gap-1.5 p-3"
@@ -157,6 +165,19 @@ function PreviewPage({
               <p className="line-clamp-4 text-sm leading-snug font-semibold">
                 {title}
               </p>
+              {slotText(page, 'address') ? (
+                <p className="text-[8px] leading-snug opacity-80">
+                  {slotText(page, 'address')}
+                </p>
+              ) : null}
+              {['size', 'rent', 'price']
+                .map((key) => slotText(page, key))
+                .filter(Boolean)
+                .map((line) => (
+                  <p key={line} className="text-[10px] font-semibold">
+                    {line}
+                  </p>
+                ))}
               <p className="mt-auto text-[9px] opacity-50">Cover</p>
             </div>
           </div>
@@ -171,6 +192,14 @@ function PreviewPage({
             {hero ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={hero} alt="" className="h-full w-full object-cover" />
+            ) : null}
+            {slotText(page, 'reducedBadge') ? (
+              <span
+                className="absolute top-2 left-2 px-1.5 py-0.5 text-[8px] font-semibold tracking-wide text-white uppercase"
+                style={{ backgroundColor: accent }}
+              >
+                {slotText(page, 'reducedBadge')}
+              </span>
             ) : null}
           </div>
           <div
@@ -188,6 +217,19 @@ function PreviewPage({
               <p className="text-[9px] uppercase opacity-70">{brandName}</p>
             )}
             <p className="line-clamp-2 text-sm font-semibold">{title}</p>
+            {slotText(page, 'address') ? (
+              <p className="text-[8px] leading-snug opacity-80">
+                {slotText(page, 'address')}
+              </p>
+            ) : null}
+            {['size', 'rent', 'price']
+              .map((key) => slotText(page, key))
+              .filter(Boolean)
+              .map((line) => (
+                <p key={line} className="text-[10px] font-semibold">
+                  {line}
+                </p>
+              ))}
           </div>
         </div>
       </div>
