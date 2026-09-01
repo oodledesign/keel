@@ -6,10 +6,10 @@ import { createRecorderTask } from '~/lib/recorder/create-task';
 
 import { NativeHttpError } from './http';
 import {
+  DONE_NATIVE_TASK_DB_STATUSES,
   type NativeTask,
   type NativeTaskClientRow,
   type NativeTaskRow,
-  DONE_NATIVE_TASK_DB_STATUSES,
   OPEN_NATIVE_TASK_DB_STATUSES,
   canSeeNativeTask,
   isPersonalNativeWorkspace,

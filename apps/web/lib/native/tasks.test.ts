@@ -13,8 +13,8 @@ import {
   parseOptionalClientId,
   toNativeTask,
 } from './task-map';
-import { listNativeTasks } from './tasks';
 import { uiStatusToDb } from './task-status';
+import { listNativeTasks } from './tasks';
 import type { NativeWorkspace } from './workspace-shared';
 
 const personal: NativeWorkspace = {
@@ -223,7 +223,9 @@ describe('parseNativeTaskSearch', () => {
   });
 
   it('rejects an oversized q', () => {
-    expect(() => parseNativeTaskSearch('x'.repeat(201))).toThrow(NativeHttpError);
+    expect(() => parseNativeTaskSearch('x'.repeat(201))).toThrow(
+      NativeHttpError,
+    );
   });
 });
 

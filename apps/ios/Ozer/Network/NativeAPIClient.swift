@@ -94,6 +94,7 @@ actor NativeAPIClient {
         if let clientId, !clientId.isEmpty {
             query.append(URLQueryItem(name: "client", value: clientId))
         }
+        // Server defaults to open, so the phone omits that value.
         if let status, !status.isEmpty, status != "open" {
             query.append(URLQueryItem(name: "status", value: status))
         }
