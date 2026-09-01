@@ -11,7 +11,7 @@ struct MainTabView: View {
                 case .home:
                     HomeTodayView()
                 case .tasks:
-                    StubFeatureView(feature: .tasks)
+                    TasksListView()
                 case .notes:
                     StubFeatureView(feature: .notes)
                 case .people:

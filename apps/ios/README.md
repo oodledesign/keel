@@ -77,9 +77,21 @@ No cookies. A 404 is shown as a calm empty state.
 
 Workspace switcher is **Personal / Family / Business** only.
 
+## Tasks API
+
+The Tasks tab uses the same workspace slug or UUID as Today:
+
+```
+GET {OZER_API_BASE}/api/native/v1/tasks?workspace=<slug-or-uuid>
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+The list is `{ "items": [{ "id", "title", "status", "due", "workspace" }] }`. Title plus due/subtitle. Empty only when `items` is empty. A 403 is an error, not an empty list. Reloads when the workspace chip changes or `/workspaces` finishes resolving the slug.
+
 ## Tab bar
 
-Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, People. Shopping is in the Menu. Those screens are navigation stubs.
+Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, People. Shopping is in the Menu. Notes, People, and Shopping are still navigation stubs.
 
 Out of scope: PowerSync, camera, Whisper, invoices, secrets, App Store submit, `WKWebView` of the web app.
 
