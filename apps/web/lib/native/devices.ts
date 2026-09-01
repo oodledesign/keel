@@ -31,7 +31,7 @@ export async function upsertNativeDevice(input: {
   const token = parseNativeDeviceToken(input.token);
   const platform = parseNativeDevicePlatform(input.platform);
 
-  const { error } = await input.client
+  const { error, count } = await input.client
     .from('native_device_tokens' as never)
     .upsert(
       {
@@ -41,11 +41,17 @@ export async function upsertNativeDevice(input: {
         account_id: input.workspace?.id ?? null,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'token' },
+      { onConflict: 'token', count: 'exact' },
     );
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if ((count ?? 0) === 0) {
+    console.warn('[native/devices] token upsert matched no rows', {
+      userId: input.userId,
+    });
   }
 
   return {

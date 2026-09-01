@@ -1,4 +1,4 @@
-export type NativeInvoicePushKind = 'paid' | 'overdue' | 'viewed';
+export type NativeInvoicePushKind = 'paid' | 'overdue';
 
 export type NativeInvoicePushPayload = {
   title: string;
@@ -17,12 +17,7 @@ export function buildNativeInvoicePushPayload(input: {
   invoiceNumber: string;
   body: string;
 }): NativeInvoicePushPayload {
-  const title =
-    input.kind === 'paid'
-      ? 'Invoice paid'
-      : input.kind === 'overdue'
-        ? 'Invoice overdue'
-        : 'Invoice viewed';
+  const title = input.kind === 'paid' ? 'Invoice paid' : 'Invoice overdue';
 
   return {
     title,

@@ -85,7 +85,12 @@ async function postApnsNotification(input: {
 
   await new Promise<void>((resolve, reject) => {
     const client = connect(`https://${input.host}`);
-    client.on('error', reject);
+    const fail = (error: Error) => {
+      client.destroy();
+      reject(error);
+    };
+
+    client.on('error', fail);
 
     const request = client.request({
       ':method': 'POST',
@@ -115,7 +120,7 @@ async function postApnsNotification(input: {
       }
       reject(new Error(`APNs ${status || 'error'}: ${body || 'no body'}`));
     });
-    request.on('error', reject);
+    request.on('error', fail);
     request.end(
       JSON.stringify({
         aps: {

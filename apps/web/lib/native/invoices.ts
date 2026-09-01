@@ -116,7 +116,9 @@ export async function getNativeFinances(
     return emptyFinances();
   }
 
-  const rows = await loadNativeInvoiceRows(client, workspace.id, 'all');
+  const rows = await loadNativeInvoiceRows(client, workspace.id, 'all', {
+    limit: null,
+  });
   return summariseNativeFinances(rows);
 }
 
@@ -124,14 +126,20 @@ async function loadNativeInvoiceRows(
   client: SupabaseClient,
   accountId: string,
   status: NativeInvoiceListStatus,
+  options?: { limit?: number | null },
 ): Promise<NativeInvoiceRow[]> {
   let query = client
     .from('invoices')
     .select(INVOICE_SELECT)
     .eq('account_id', accountId)
     .is('archived_at', null)
-    .order('created_at', { ascending: false })
-    .limit(INVOICE_LIST_LIMIT);
+    .order('created_at', { ascending: false });
+
+  const limit =
+    options?.limit === undefined ? INVOICE_LIST_LIMIT : options.limit;
+  if (limit != null) {
+    query = query.limit(limit);
+  }
 
   if (status === 'open') {
     query = query.in('status', [...OPEN_NATIVE_INVOICE_DB_STATUSES]);
