@@ -559,7 +559,10 @@ function HeaderLayoutShell({
         )}
         oooDefaultAccountId={accountId}
       >
-        <Page style={'header'}>
+        <Page
+          style={'header'}
+          className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col"
+        >
           <PageNavigation>
             <TeamAccountNavigationMenu
               workspace={data}

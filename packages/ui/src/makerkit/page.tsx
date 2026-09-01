@@ -47,7 +47,7 @@ function PageWithSidebar(props: PageProps) {
         data-team-workspace-viewport
         className={cn(
           props.contentContainerClassName ??
-            'mx-auto flex h-dvh max-h-dvh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-inherit',
+            'mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-inherit',
         )}
       >
         {MobileNavigation}
@@ -90,12 +90,7 @@ function PageWithHeader(props: PageProps) {
   const { Navigation, Children, MobileNavigation } = getSlotsFromPage(props);
 
   return (
-    <div
-      className={cn(
-        'flex h-dvh max-h-dvh min-h-0 flex-1 flex-col',
-        props.className,
-      )}
-    >
+    <div className={cn('flex h-screen flex-1 flex-col', props.className)}>
       <div
         className={
           props.contentContainerClassName ?? 'flex flex-1 flex-col space-y-4'
