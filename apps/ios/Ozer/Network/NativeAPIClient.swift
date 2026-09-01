@@ -772,6 +772,19 @@ struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
         return trimmed.isEmpty ? "Untitled" : trimmed
     }
 
+    func matchesSearch(_ query: String) -> Bool {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if needle.isEmpty { return true }
+        if displayName.localizedCaseInsensitiveContains(needle) { return true }
+        if let companyName, companyName.localizedCaseInsensitiveContains(needle) {
+            return true
+        }
+        if let email, email.localizedCaseInsensitiveContains(needle) {
+            return true
+        }
+        return false
+    }
+
     var displaySubtitle: String? {
         let mail = email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return mail.isEmpty ? nil : mail

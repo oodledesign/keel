@@ -13,6 +13,8 @@ struct TasksListView: View {
     @State private var statusFilter: TaskStatusFilter = .open
     @State private var clientFilter: TaskClientFilter = .all
     @State private var clients: [ClientItem] = []
+    @State private var isLoadingClients = false
+    @State private var clientsLoadError: NativeAPIError?
     @State private var showClientFilter = false
 
     private let client = NativeAPIClient()
@@ -103,6 +105,8 @@ struct TasksListView: View {
             }
             .task(id: fetchKey) {
                 await load()
+            }
+            .task(id: reloadKey) {
                 await loadClients()
             }
             .refreshable {
@@ -124,11 +128,17 @@ struct TasksListView: View {
             }
             .sheet(isPresented: $showClientFilter) {
                 TaskClientFilterSheet(
-                    clients: clients,
+                    initialClients: clients,
+                    initialError: clientsLoadError,
                     selection: clientFilter,
                     onSelect: { clientFilter = $0 }
                 )
                 .presentationDetents([.medium, .large])
+            }
+            .onChange(of: showClientFilter) { _, presented in
+                if presented, clients.isEmpty {
+                    Task { await loadClients() }
+                }
             }
         }
     }
@@ -234,11 +244,10 @@ struct TasksListView: View {
                     .font(.body.weight(.medium))
                     .foregroundStyle(OzerPalette.plum)
                     .strikethrough(item.isCompleted || completingIds.contains(item.id))
-                if let subtitle = item.displaySubtitle {
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(OzerPalette.plumMuted)
-                }
+                TaskDueClientSubtitle(
+                    item: item,
+                    treatAsCompleted: completingIds.contains(item.id)
+                )
             }
             Spacer(minLength: 0)
         }
@@ -355,6 +364,8 @@ struct TasksListView: View {
         clientFilter = .all
         if clearClients {
             clients = []
+            clientsLoadError = nil
+            isLoadingClients = false
         }
     }
 
@@ -384,21 +395,41 @@ struct TasksListView: View {
     private func loadClients() async {
         guard showsClientFilter else {
             clients = []
+            clientsLoadError = nil
+            isLoadingClients = false
             return
         }
+        isLoadingClients = true
+        defer { isLoadingClients = false }
         do {
             let token = try await session.validAccessToken()
+            if !session.workspacesLoaded {
+                await session.refreshWorkspaces()
+            }
+            try Task.checkCancellation()
             let workspace = session.workspaceQueryValue
             guard !workspace.isEmpty else {
                 clients = []
+                clientsLoadError = nil
                 return
             }
             let payload = try await client.clients(workspace: workspace, accessToken: token)
             clients = payload.items
-        } catch let error as NativeAPIError where error == .unauthorized {
-            await session.handleUnauthorized()
+            clientsLoadError = nil
+        } catch is CancellationError {
+            return
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            if clients.isEmpty {
+                clientsLoadError = error
+            }
         } catch {
             if error.isTaskCancellation { return }
+            if clients.isEmpty {
+                clientsLoadError = .transport(error.localizedDescription)
+            }
         }
     }
 

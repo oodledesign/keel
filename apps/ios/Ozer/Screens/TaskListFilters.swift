@@ -108,6 +108,11 @@ extension TaskItem {
         }
     }
 
+    /// Open tasks whose due calendar day is before today. Completed tasks stay muted.
+    var showsOverdueDueDate: Bool {
+        !isCompleted && matchesDue(.overdue)
+    }
+
     private static func matchesDatedDue(
         _ filter: TaskDueFilter,
         due: String?,
@@ -156,12 +161,87 @@ struct TaskFilterChip: View {
     }
 }
 
+/// Due date (coral when overdue) plus client name. Used on the Tasks list row.
+struct TaskDueClientSubtitle: View {
+    var item: TaskItem
+    var treatAsCompleted: Bool = false
+
+    private var dueText: String? {
+        TaskItem.dueLabel(item.due)
+    }
+
+    private var clientText: String? {
+        let client = item.clientName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return client.isEmpty ? nil : client
+    }
+
+    private var isOverdue: Bool {
+        !treatAsCompleted && item.showsOverdueDueDate
+    }
+
+    var body: some View {
+        if dueText != nil || clientText != nil {
+            HStack(spacing: 0) {
+                if let dueText {
+                    Text(dueText)
+                        .foregroundStyle(isOverdue ? OzerPalette.coral : OzerPalette.plumMuted)
+                        .accessibilityLabel(isOverdue ? "Overdue, \(dueText)" : dueText)
+                }
+                if dueText != nil, clientText != nil {
+                    Text(" · ")
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+                if let clientText {
+                    Text(clientText)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+            }
+            .font(.subheadline)
+        } else if let subtitle = item.subtitle, !subtitle.isEmpty {
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(OzerPalette.plumMuted)
+        }
+    }
+}
+
 struct TaskClientFilterSheet: View {
+    @Environment(AppSession.self) private var session
     @Environment(\.dismiss) private var dismiss
 
-    var clients: [ClientItem]
     var selection: TaskClientFilter
     var onSelect: (TaskClientFilter) -> Void
+
+    @State private var clients: [ClientItem]
+    @State private var isLoading: Bool
+    @State private var loadError: NativeAPIError?
+    @State private var searchText = ""
+    private let api = NativeAPIClient()
+
+    init(
+        initialClients: [ClientItem] = [],
+        initialError: NativeAPIError? = nil,
+        selection: TaskClientFilter,
+        onSelect: @escaping (TaskClientFilter) -> Void
+    ) {
+        self.selection = selection
+        self.onSelect = onSelect
+        _clients = State(initialValue: initialClients)
+        _loadError = State(initialValue: initialClients.isEmpty ? initialError : nil)
+        _isLoading = State(initialValue: initialClients.isEmpty && initialError == nil)
+    }
+
+    private var query: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var visibleClients: [ClientItem] {
+        let sorted = clients.sorted {
+            $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending
+        }
+        guard !query.isEmpty else { return sorted }
+        return sorted.filter { $0.matchesSearch(query) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -174,22 +254,61 @@ struct TaskClientFilterSheet: View {
                     onSelect(.none)
                     dismiss()
                 }
-                ForEach(clients) { client in
-                    row(client.displayName, selected: selection.id == client.id) {
-                        onSelect(.client(id: client.id, name: client.displayName))
-                        dismiss()
-                    }
-                }
+                clientRows
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(OzerPalette.cream)
             .navigationTitle("Client")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search clients")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                         .foregroundStyle(OzerPalette.plumMuted)
+                }
+            }
+            .task(id: session.workspaceContentKey) {
+                await load()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var clientRows: some View {
+        if isLoading && clients.isEmpty && loadError == nil {
+            HStack {
+                Spacer()
+                ProgressView()
+                    .tint(OzerPalette.coral)
+                Spacer()
+            }
+            .listRowBackground(OzerPalette.panel)
+            .accessibilityLabel("Loading clients")
+        } else if let loadError, clients.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(loadError == .notFound ? "Clients aren’t available yet" : "Couldn’t load clients")
+                    .foregroundStyle(OzerPalette.plum)
+                Text(loadError.localizedDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(OzerPalette.plumMuted)
+                if loadError != .unauthorized && loadError != .notFound {
+                    Button("Try again") {
+                        Task { await load() }
+                    }
+                    .foregroundStyle(OzerPalette.coral)
+                }
+            }
+            .listRowBackground(OzerPalette.panel)
+        } else if visibleClients.isEmpty {
+            Text(query.isEmpty ? "No clients" : "No matches")
+                .foregroundStyle(OzerPalette.plumMuted)
+                .listRowBackground(OzerPalette.panel)
+        } else {
+            ForEach(visibleClients) { client in
+                row(client.displayName, selected: selection.id == client.id) {
+                    onSelect(.client(id: client.id, name: client.displayName))
+                    dismiss()
                 }
             }
         }
@@ -210,5 +329,44 @@ struct TaskClientFilterSheet: View {
         }
         .listRowBackground(OzerPalette.panel)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// Same clients request as the Clients tab (`GET /api/native/v1/clients`).
+    private func load() async {
+        if clients.isEmpty {
+            isLoading = true
+            loadError = nil
+        }
+        defer { isLoading = false }
+        do {
+            let token = try await session.validAccessToken()
+            if !session.workspacesLoaded {
+                await session.refreshWorkspaces()
+            }
+            try Task.checkCancellation()
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else {
+                clients = []
+                loadError = nil
+                return
+            }
+            let payload = try await api.clients(workspace: workspace, accessToken: token)
+            clients = payload.items
+            loadError = nil
+        } catch is CancellationError {
+            return
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            if clients.isEmpty {
+                loadError = error
+            }
+        } catch {
+            if error.isTaskCancellation { return }
+            if clients.isEmpty {
+                loadError = .transport(error.localizedDescription)
+            }
+        }
     }
 }
