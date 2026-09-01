@@ -1,0 +1,9 @@
+// Copy to Local.xcconfig (gitignored) and fill in locally.
+// Never commit a real Supabase anon key.
+
+OZER_SUPABASE_ANON_KEY =
+
+// Optional overrides:
+// OZER_API_BASE = https:/$()/app.ozer.so
+// OZER_SUPABASE_URL = https:/$()/igewpbdkvvhclfprteca.supabase.co
+// DEVELOPMENT_TEAM = 463T9J3286

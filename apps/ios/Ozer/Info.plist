@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>OZER_API_BASE</key>
+	<string>$(OZER_API_BASE)</string>
+	<key>OZER_SUPABASE_URL</key>
+	<string>$(OZER_SUPABASE_URL)</string>
+	<key>OZER_SUPABASE_ANON_KEY</key>
+	<string>$(OZER_SUPABASE_ANON_KEY)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>so.ozer.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>so.ozer.app</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

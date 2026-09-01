@@ -77,3 +77,9 @@ node-compile-cache/
 **/supabase/.temp/
 # Nextra / Pagefind search index (generated on docs postbuild)
 **/_pagefind/
+
+# Xcode — iOS app (apps/ios is not a pnpm/turbo package)
+**/xcuserdata/
+**/DerivedData/
+*.xcuserstate
+apps/ios/Config/Local.xcconfig
