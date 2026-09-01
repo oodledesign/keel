@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import {
   AnimatePresence,
@@ -50,7 +50,7 @@ function FeatureTourCard({
     <div
       className={cn(
         marketingCard,
-        'relative flex h-full max-h-[calc(100vh-5.5rem)] flex-col overflow-hidden rounded-[1.25rem]',
+        'relative flex h-full flex-col overflow-x-hidden overflow-y-auto rounded-[1.25rem] lg:max-h-[calc(100vh-5.5rem)] lg:overflow-hidden',
         block.soon && 'opacity-95',
       )}
     >
@@ -61,8 +61,8 @@ function FeatureTourCard({
         />
       ) : null}
 
-      <div className="grid h-full min-h-0 flex-1 items-stretch gap-6 p-5 md:p-6 lg:grid-cols-[minmax(0,11fr)_minmax(0,13fr)] lg:gap-8 lg:p-8">
-        <div className="flex min-h-0 min-w-0 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 lg:grid lg:grid-cols-[minmax(0,11fr)_minmax(0,13fr)] lg:items-stretch lg:gap-8 lg:p-8">
+        <div className="flex shrink-0 flex-col lg:min-h-0 lg:min-w-0">
           <span className="mb-2 inline-flex items-center gap-2 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
             <span
               className={cn(
@@ -84,16 +84,16 @@ function FeatureTourCard({
             {block.moment}
           </p>
           <p
-            className={`mb-4 text-sm leading-relaxed md:text-base ${marketingMutedText}`}
+            className={`mb-3 text-sm leading-relaxed md:mb-4 md:text-base ${marketingMutedText}`}
           >
             {block.desc}
           </p>
 
-          <div className="mb-4">
+          <div className="mb-3 shrink-0 md:mb-4">
             <p className="mb-2 text-xs font-medium tracking-[0.08em] text-[var(--workspace-shell-text-muted)] uppercase">
               Includes
             </p>
-            <ul className="space-y-2">
+            <ul className="space-y-1.5 md:space-y-2">
               {block.highlights.map((highlight) => (
                 <li
                   key={highlight}
@@ -115,7 +115,7 @@ function FeatureTourCard({
           {block.soon ? (
             <span
               className={cn(
-                'mt-4 inline-block w-fit rounded-full px-3 py-1.5 text-xs font-bold',
+                'mt-1 inline-block w-fit rounded-full px-3 py-1.5 text-xs font-bold md:mt-2',
                 EARLY_ACCESS_ACCENT_SOFT_CLASS[block.accent],
               )}
             >
@@ -127,7 +127,7 @@ function FeatureTourCard({
         <FeatureTourMock
           type={block.mock}
           accent={block.accent}
-          className="h-full min-h-[14rem] w-full lg:min-h-0"
+          className="h-36 w-full shrink-0 sm:h-44 md:h-52 lg:h-full lg:min-h-0 lg:shrink"
         />
       </div>
     </div>
@@ -215,7 +215,7 @@ function FeatureTourSlidePanel({
   }
 
   return (
-    <div className="relative max-h-[calc(100vh-5.5rem)] min-h-[22rem] lg:min-h-[calc(100vh-7rem)]">
+    <div className="relative h-[calc(100dvh-10.5rem)] lg:h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-7rem)] lg:max-h-[calc(100vh-7rem)]">
       <AnimatePresence initial={false} mode="sync">
         <motion.article
           key={activeBlock.id}
@@ -265,18 +265,58 @@ function FeatureTourNav({
   activeId: string;
   onNavigate: (id: string, index: number) => void;
 }) {
+  const scrollerRef = useRef<HTMLUListElement>(null);
+  const itemRefs = useRef(new Map<string, HTMLAnchorElement>());
+  const reduceMotion = useReducedMotion();
+
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current;
+    const active = itemRefs.current.get(activeId);
+
+    if (!scroller || !active) {
+      return;
+    }
+
+    if (scroller.scrollWidth <= scroller.clientWidth) {
+      return;
+    }
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const nextLeft =
+      scroller.scrollLeft +
+      (activeRect.left - scrollerRect.left) -
+      scrollerRect.width / 2 +
+      activeRect.width / 2;
+
+    scroller.scrollTo({
+      left: Math.max(0, nextLeft),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
+  }, [activeId, reduceMotion]);
+
   return (
     <nav aria-label="Features" className="lg:sticky lg:top-24 lg:self-start">
       <p className="mb-2 px-2 text-[11px] font-medium tracking-[0.08em] text-[var(--workspace-shell-text-muted)] uppercase">
         Features
       </p>
-      <ul className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0">
+      <ul
+        ref={scrollerRef}
+        className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden"
+      >
         {FEATURE_TOUR_BLOCKS.map((block, index) => {
           const isActive = activeId === block.id;
 
           return (
             <li key={block.id} className="shrink-0 lg:shrink">
               <a
+                ref={(node) => {
+                  if (node) {
+                    itemRefs.current.set(block.id, node);
+                  } else {
+                    itemRefs.current.delete(block.id);
+                  }
+                }}
                 href={`#${block.id}`}
                 onClick={(event) => {
                   event.preventDefault();
@@ -390,7 +430,7 @@ function ScrollPinnedFeatureTour() {
     >
       <div className="sticky top-20 lg:top-24">
         <div className="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-x-10 xl:grid-cols-[12.5rem_minmax(0,1fr)] xl:gap-x-12">
-          <div className="mb-6 lg:mb-0">
+          <div className="mb-4 lg:mb-0">
             <FeatureTourNav activeId={activeId} onNavigate={scrollToFeature} />
           </div>
 
