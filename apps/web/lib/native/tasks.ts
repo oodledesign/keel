@@ -201,5 +201,6 @@ export async function updateNativeTask(input: {
     name: workspaceSlug,
     profile: 'personal',
     isPersonal: false,
+    image: null,
   });
 }

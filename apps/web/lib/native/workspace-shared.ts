@@ -15,6 +15,8 @@ export type NativeWorkspace = {
   name: string;
   profile: NativeWorkspaceProfile;
   isPersonal: boolean;
+  /** Public HTTPS logo or photo. Null when the account has no mark. */
+  image: string | null;
 };
 
 const UUID_RE =
@@ -87,6 +89,24 @@ export function findNativeWorkspace(
   return findWorkspaceByAlias(workspaces, ref.toLowerCase());
 }
 
+/** Keep only https:// URLs so native clients never follow http or relative paths. */
+export function publicHttpsImageUrl(
+  url: string | null | undefined,
+): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:') {
+      return null;
+    }
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
 export function publicNativeWorkspace(workspace: NativeWorkspace) {
   return {
     id: workspace.id,
@@ -94,5 +114,6 @@ export function publicNativeWorkspace(workspace: NativeWorkspace) {
     name: workspace.name,
     profile: workspace.profile,
     isPersonal: workspace.isPersonal,
+    image: publicHttpsImageUrl(workspace.image),
   };
 }

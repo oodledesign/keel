@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   type NativeWorkspace,
   findNativeWorkspace,
+  publicHttpsImageUrl,
+  publicNativeWorkspace,
   toNativeWorkspaceProfile,
 } from './workspace-shared';
 
@@ -12,6 +14,7 @@ const personal: NativeWorkspace = {
   name: 'Dan',
   profile: 'personal',
   isPersonal: true,
+  image: 'https://cdn.example.com/dan.jpg',
 };
 
 const studio: NativeWorkspace = {
@@ -20,6 +23,7 @@ const studio: NativeWorkspace = {
   name: 'Studio',
   profile: 'work_design',
   isPersonal: false,
+  image: 'https://cdn.example.com/oodle.png',
 };
 
 const family: NativeWorkspace = {
@@ -28,6 +32,7 @@ const family: NativeWorkspace = {
   name: 'The House',
   profile: 'family',
   isPersonal: false,
+  image: null,
 };
 
 describe('native workspaces', () => {
@@ -81,11 +86,35 @@ describe('native workspaces', () => {
       name: 'Village',
       profile: 'community',
       isPersonal: false,
+      image: null,
     };
 
     expect(findNativeWorkspace([personal], 'family')).toBeNull();
     expect(findNativeWorkspace([personal], 'business')).toBeNull();
     expect(findNativeWorkspace([family, studio], 'personal')).toBeNull();
     expect(findNativeWorkspace([personal, community], 'business')).toBeNull();
+  });
+
+  it('keeps https image URLs and drops anything else', () => {
+    expect(publicHttpsImageUrl('https://cdn.example.com/oodle.png')).toBe(
+      'https://cdn.example.com/oodle.png',
+    );
+    expect(publicHttpsImageUrl(' http://cdn.example.com/oodle.png ')).toBeNull();
+    expect(publicHttpsImageUrl('/storage/v1/object/public/logos/o.png')).toBeNull();
+    expect(publicHttpsImageUrl('')).toBeNull();
+    expect(publicHttpsImageUrl(null)).toBeNull();
+  });
+
+  it('publishes image on the native workspace payload', () => {
+    expect(publicNativeWorkspace(studio)).toEqual({
+      id: studio.id,
+      slug: studio.slug,
+      name: studio.name,
+      profile: studio.profile,
+      isPersonal: false,
+      image: 'https://cdn.example.com/oodle.png',
+    });
+    expect(publicNativeWorkspace({ ...studio, image: 'http://insecure' }).image).toBeNull();
+    expect(publicNativeWorkspace(family).image).toBeNull();
   });
 });

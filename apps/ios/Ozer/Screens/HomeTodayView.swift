@@ -204,6 +204,9 @@ struct WorkspaceChip: View {
             showSwitcher = true
         } label: {
             HStack(spacing: 6) {
+                if let workspace = session.selectedWorkspace {
+                    WorkspaceLogoView(workspace: workspace, size: 22)
+                }
                 Text(session.selectedWorkspaceTitle)
                     .font(.subheadline.weight(.medium))
                     .lineLimit(1)
