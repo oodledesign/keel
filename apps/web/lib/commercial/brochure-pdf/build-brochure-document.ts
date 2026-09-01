@@ -144,10 +144,7 @@ export function buildAmenities(data: PublicBrochureData): Array<{
   index: number;
 }> {
   if (data.nearbyAmenities && data.nearbyAmenities.length > 0) {
-    return sanitizeBrochureAmenities(
-      data.nearbyAmenities,
-      data.listing.town,
-    );
+    return sanitizeBrochureAmenities(data.nearbyAmenities, data.listing.town);
   }
 
   const amenities: Array<{ label: string; index: number }> = [

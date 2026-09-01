@@ -82,14 +82,12 @@ async function searchNearbyPoi(
   url.searchParams.set('country', 'GB');
   url.searchParams.set('limit', '1');
   url.searchParams.set('types', 'poi');
-  url.searchParams.set(
-    'proximity',
-    `${origin.longitude},${origin.latitude}`,
-  );
+  url.searchParams.set('proximity', `${origin.longitude},${origin.latitude}`);
 
   const res = await fetch(url.toString(), {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) return null;
 
@@ -111,7 +109,8 @@ async function searchNearbyPoi(
   const km = haversineKm(origin, { latitude, longitude });
   if (km > MAX_DISTANCE_KM) return null;
 
-  const name = feature.text?.trim() || feature.place_name?.split(',')[0]?.trim();
+  const name =
+    feature.text?.trim() || feature.place_name?.split(',')[0]?.trim();
   if (!name) return null;
   return { name, km };
 }

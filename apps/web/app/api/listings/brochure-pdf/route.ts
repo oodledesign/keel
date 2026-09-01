@@ -90,9 +90,7 @@ export const GET = enhanceRouteHandler(
         templateId: saved?.templateId ?? template,
         document: saved,
         // Facts bake into saved pages; reduced sash can still apply at render.
-        display: saved
-          ? { showReducedPrice }
-          : display,
+        display: saved ? { showReducedPrice } : display,
       });
 
       // Persist auto pack when downloading without a saved doc so the editor starts warm

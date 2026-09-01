@@ -130,6 +130,7 @@ async function fetchMapBytes(
       // Avoid Next data-cache retaining a failed Mapbox response
       cache: 'no-store',
       headers: { Accept: 'image/png,image/jpeg,image/*' },
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');

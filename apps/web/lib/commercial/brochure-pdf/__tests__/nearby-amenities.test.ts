@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { fetchNearbyBrochureAmenities } from '../nearby-amenities';
 import {
   buildFallbackNearbyAmenities,
   formatNearbyAmenityLabel,
   isDummyLocalAreaAmenity,
   sanitizeBrochureAmenities,
 } from '../nearby-amenities.shared';
-import { fetchNearbyBrochureAmenities } from '../nearby-amenities';
 
 describe('nearby amenity labels', () => {
   it('formats a human name with distance', () => {

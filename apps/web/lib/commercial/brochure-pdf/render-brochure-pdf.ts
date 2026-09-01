@@ -475,7 +475,11 @@ async function renderCover(
         ? 18
         : 22;
   const priceSize =
-    ctx.templateId === 'editorial' ? 18 : ctx.templateId === 'compact' ? 14 : 16;
+    ctx.templateId === 'editorial'
+      ? 18
+      : ctx.templateId === 'compact'
+        ? 14
+        : 16;
 
   if (landscape) {
     const bandW = Math.round(width * bandRatio);
@@ -760,9 +764,7 @@ async function renderFacts(
 
   if (body || highlightLines.length > 0) {
     y -= 12;
-    const copyW = landscape
-      ? tableW
-      : width - margin * 2;
+    const copyW = landscape ? tableW : width - margin * 2;
     if (body) {
       y = drawWrapped(page, body, {
         x: tableX,
@@ -829,11 +831,9 @@ async function renderDescription(
   const fullW = width - margin * 2;
   const colW = landscape && hasHighlights ? (width - margin * 3) / 2 : fullW;
   const estimatedLines =
-    Math.ceil(body.length / 72) + (hasHighlights ? highlightLines.length * 2 + 3 : 0);
-  const panelH = Math.min(
-    height - 72,
-    Math.max(120, 36 + estimatedLines * 15),
-  );
+    Math.ceil(body.length / 72) +
+    (hasHighlights ? highlightLines.length * 2 + 3 : 0);
+  const panelH = Math.min(height - 72, Math.max(120, 36 + estimatedLines * 15));
   if (ctx.templateId !== 'editorial') {
     page.drawRectangle({
       x: margin,

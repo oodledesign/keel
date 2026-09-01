@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildBrochureMapStaticUrls,
-  toMapboxPinHex,
-} from '../mapbox-static';
+import { buildBrochureMapStaticUrls, toMapboxPinHex } from '../mapbox-static';
 
 describe('toMapboxPinHex', () => {
   it('strips # and uppercases a brand hex', () => {

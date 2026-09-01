@@ -105,9 +105,10 @@ function mapListingRow(listingRow: Record<string, unknown>): BrochureListing {
   };
 }
 
-function pickStaffPhone(
-  row: { phone_direct?: string | null; phone_mobile?: string | null },
-): string | null {
+function pickStaffPhone(row: {
+  phone_direct?: string | null;
+  phone_mobile?: string | null;
+}): string | null {
   return row.phone_direct?.trim() || row.phone_mobile?.trim() || null;
 }
 

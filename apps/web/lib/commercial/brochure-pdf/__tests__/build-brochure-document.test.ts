@@ -1,22 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  DEFAULT_BROCHURE_DISPLAY_OPTIONS,
-} from '../brochure-document';
+import type {
+  BrochureListing,
+  PublicBrochureData,
+} from '~/lib/commercial/public-brochure.shared';
+
+import { DEFAULT_BROCHURE_DISPLAY_OPTIONS } from '../brochure-document';
 import {
   buildAmenities,
   buildBrochureDocument,
   coverSlots,
 } from '../build-brochure-document';
 import { brochureSashHex, buildCoverPriceLines } from '../cover-prices';
-import type {
-  BrochureListing,
-  PublicBrochureData,
-} from '~/lib/commercial/public-brochure.shared';
 
-function listing(
-  overrides: Partial<BrochureListing> = {},
-): BrochureListing {
+function listing(overrides: Partial<BrochureListing> = {}): BrochureListing {
   return {
     id: '11111111-1111-1111-1111-111111111111',
     accountId: '22222222-2222-2222-2222-222222222222',
@@ -94,9 +91,12 @@ function brochureData(
   };
 }
 
-function text(slots: Record<string, { type: string }>, key: string): string {
+function text(
+  slots: Record<string, { type: string; text?: string }>,
+  key: string,
+): string {
   const slot = slots[key];
-  return slot && slot.type === 'text' ? (slot as { text: string }).text : '';
+  return slot?.type === 'text' ? (slot.text ?? '') : '';
 }
 
 describe('buildCoverPriceLines', () => {
@@ -153,9 +153,9 @@ describe('buildAmenities', () => {
     expect(amenities.map((item) => item.label)).toEqual([
       'Crowborough town centre',
     ]);
-    expect(
-      amenities.some((item) => /local area\s*\(/i.test(item.label)),
-    ).toBe(false);
+    expect(amenities.some((item) => /local area\s*\(/i.test(item.label))).toBe(
+      false,
+    );
   });
 
   it('uses fetched nearby labels when provided', () => {
@@ -210,8 +210,8 @@ describe('buildBrochureDocument', () => {
       .map((page) => page.layoutId);
 
     expect(photoLayouts).toContain('photo_grid_2');
-    expect(photoLayouts.filter((id) => id === 'photo_full').length).toBeLessThan(
-      5,
-    );
+    expect(
+      photoLayouts.filter((id) => id === 'photo_full').length,
+    ).toBeLessThan(5);
   });
 });
