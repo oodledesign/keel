@@ -13,7 +13,10 @@ export function isNativeMeetingNote(note: {
   );
 }
 
-export function nativeNoteTitleFromBody(body: string, fallback = 'Note'): string {
+export function nativeNoteTitleFromBody(
+  body: string,
+  fallback = 'Note',
+): string {
   const line =
     body
       .split('\n')
