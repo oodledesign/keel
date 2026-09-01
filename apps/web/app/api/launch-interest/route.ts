@@ -7,7 +7,13 @@ import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 export const dynamic = 'force-dynamic';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VALID_INTERESTS = ['property', 'community', 'rankly', 'feeds'] as const;
+const VALID_INTERESTS = [
+  'ios',
+  'property',
+  'community',
+  'rankly',
+  'feeds',
+] as const;
 const DEFAULT_INTERESTS = [...VALID_INTERESTS];
 
 type LaunchInterest = (typeof VALID_INTERESTS)[number];

@@ -32,6 +32,7 @@ import {
   replacedStackMonthlyTotal,
 } from '~/lib/marketing/pricing-content';
 
+import { WorkspaceFeatureComparison } from '../../_components/workspace-feature-comparison';
 import { PlanRecommender } from './plan-recommender';
 
 const FEATURE_MATRIX: Array<{
@@ -312,70 +313,81 @@ export function PricingConversion() {
         </p>
       </section>
 
-      {/* Crawlable feature matrix */}
+      <WorkspaceFeatureComparison variant="full" />
+
       <section aria-labelledby="matrix-heading">
         <h2
           id="matrix-heading"
           className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]"
         >
-          Feature-by-tier compare
+          Free, Starter, and Pro seats
         </h2>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Free vs Starter vs Pro. Use the seat calculator above for exact
-          monthly totals.
+          Seat limits inside Business. Use the calculator above for monthly
+          totals — or open the comparison when you want the tier list.
         </p>
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">
-          <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead>
-              <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
-                <th className="px-4 py-3 font-semibold">Feature</th>
-                <th className="px-4 py-3 font-semibold">Free</th>
-                <th className="px-4 py-3 font-semibold">Starter</th>
-                <th className="px-4 py-3 font-semibold">Pro</th>
-              </tr>
-            </thead>
-            <tbody>
-              {FEATURE_MATRIX.map((row) => (
-                <tr
-                  key={row.feature}
-                  className="border-b border-[color:var(--workspace-shell-border)] last:border-b-0"
-                >
-                  <th scope="row" className="px-4 py-3 font-medium">
-                    {row.href ? (
-                      <Link
-                        href={row.href}
-                        className="underline-offset-2 hover:underline"
-                      >
-                        {row.feature}
-                      </Link>
-                    ) : (
-                      row.feature
-                    )}
-                    {row.hint ? (
-                      <span
-                        className={cn(
-                          'mt-0.5 block text-xs font-normal',
-                          marketingMutedText,
-                        )}
-                      >
-                        {row.hint}
-                      </span>
-                    ) : null}
-                  </th>
-                  <td className={cn('px-4 py-3', marketingMutedText)}>
-                    {cell(row.lite)}
-                  </td>
-                  <td className={cn('px-4 py-3', marketingMutedText)}>
-                    {cell(row.starter)}
-                  </td>
-                  <td className={cn('px-4 py-3', marketingMutedText)}>
-                    {cell(row.pro)}
-                  </td>
+        <details className="mt-4">
+          <summary
+            className={cn(
+              marketingBtnOutline,
+              'inline-flex cursor-pointer list-none items-center gap-2 px-5 py-2.5 text-sm font-medium [&::-webkit-details-marker]:hidden',
+            )}
+          >
+            Compare plans in detail
+          </summary>
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">
+            <table className="w-full min-w-[28rem] text-left text-sm">
+              <thead>
+                <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+                  <th className="px-4 py-3 font-semibold">Feature</th>
+                  <th className="px-4 py-3 font-semibold">Free</th>
+                  <th className="px-4 py-3 font-semibold">Starter</th>
+                  <th className="px-4 py-3 font-semibold">Pro</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {FEATURE_MATRIX.map((row) => (
+                  <tr
+                    key={row.feature}
+                    className="border-b border-[color:var(--workspace-shell-border)] last:border-b-0"
+                  >
+                    <th scope="row" className="px-4 py-3 font-medium">
+                      {row.href ? (
+                        <Link
+                          href={row.href}
+                          className="underline-offset-2 hover:underline"
+                        >
+                          {row.feature}
+                        </Link>
+                      ) : (
+                        row.feature
+                      )}
+                      {row.hint ? (
+                        <span
+                          className={cn(
+                            'mt-0.5 block text-xs font-normal',
+                            marketingMutedText,
+                          )}
+                        >
+                          {row.hint}
+                        </span>
+                      ) : null}
+                    </th>
+                    <td className={cn('px-4 py-3', marketingMutedText)}>
+                      {cell(row.lite)}
+                    </td>
+                    <td className={cn('px-4 py-3', marketingMutedText)}>
+                      {cell(row.starter)}
+                    </td>
+                    <td className={cn('px-4 py-3', marketingMutedText)}>
+                      {cell(row.pro)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
         {tiers.map((plan) => {
           const pct = annualSavingPercent(plan);
           return pct != null && pct > 0 ? (

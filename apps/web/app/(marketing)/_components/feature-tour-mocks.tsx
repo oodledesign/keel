@@ -4,20 +4,21 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 import { cn } from '@kit/ui/utils';
 
-import { EarlyAccessEmailPageMock } from '~/(marketing)/early-access/_components/early-access-email-page-mock';
 import {
   DemoCursor,
   DemoFrame,
   DemoHighlight,
   DemoPulse,
   FEATURE_DEMO_SHELL_CLASS,
-} from '~/(marketing)/early-access/_components/early-access-feature-demo-primitives';
+} from '~/(marketing)/_components/feature-tour-demo-primitives';
+import { FeatureTourEmailPageMock } from '~/(marketing)/_components/feature-tour-email-page-mock';
 import {
   EARLY_ACCESS_ACCENT_CLASS,
   EARLY_ACCESS_ACCENT_SOFT_CLASS,
   EARLY_ACCESS_ACCENT_TEXT_CLASS,
   type EarlyAccessAccent,
 } from '~/lib/marketing/early-access-content';
+import type { FeatureTourMock as FeatureTourMockType } from '~/lib/marketing/feature-tour-content';
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
 
 const LOOP = 5.5;
@@ -352,7 +353,7 @@ function NotesMock() {
 }
 
 function EmailMock() {
-  return <EarlyAccessEmailPageMock />;
+  return <FeatureTourEmailPageMock />;
 }
 
 function PlannerMock({ accent }: { accent: EarlyAccessAccent }) {
@@ -514,19 +515,73 @@ function RequestsMock({ accent }: { accent: EarlyAccessAccent }) {
   );
 }
 
-export function EarlyAccessFeatureMock({
+function IosMock({ accent }: { accent: EarlyAccessAccent }) {
+  const reduced = useReducedMotion();
+  const rows = [
+    { label: 'Call Aimee back', meta: 'Task' },
+    { label: 'Site note — 14 High St', meta: 'Note' },
+    { label: 'Dictate meeting notes', meta: 'Meeting' },
+  ];
+
+  return (
+    <DemoFrame>
+      <div className="relative flex h-full items-center justify-center">
+        <div className="w-[11.5rem] rounded-[1.75rem] border-2 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 pt-3 pb-4">
+          <div
+            className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[var(--workspace-shell-text-muted)]/30"
+            aria-hidden
+          />
+          <p className="mb-2 text-xs font-semibold text-[var(--workspace-shell-text)]">
+            Today
+          </p>
+          <div className="space-y-1.5">
+            {rows.map((row, index) => (
+              <motion.div
+                key={row.label}
+                className="relative rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2 py-1.5"
+                animate={
+                  reduced
+                    ? { opacity: 1 }
+                    : {
+                        opacity: index === 1 ? [0.55, 1, 1, 0.55] : 1,
+                      }
+                }
+                transition={{
+                  duration: LOOP,
+                  repeat: reduced ? 0 : Infinity,
+                  times: [0, 0.35, 0.75, 1],
+                }}
+              >
+                {index === 1 ? <DemoPulse delay={0.8} /> : null}
+                <p className="text-[10px] font-medium text-[var(--workspace-shell-text)]">
+                  {row.label}
+                </p>
+                <p className="text-[9px] text-[var(--workspace-shell-text-muted)]">
+                  {row.meta}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+          <span
+            className={cn(
+              'mt-3 inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold',
+              EARLY_ACCESS_ACCENT_SOFT_CLASS[accent],
+            )}
+          >
+            Coming soon
+          </span>
+        </div>
+      </div>
+    </DemoFrame>
+  );
+}
+
+export function FeatureTourMock({
   type,
   accent,
   className,
 }: {
-  type:
-    | 'kanban'
-    | 'invoice'
-    | 'portal'
-    | 'notes'
-    | 'email'
-    | 'requests'
-    | 'planner';
+  type: FeatureTourMockType;
   accent: EarlyAccessAccent;
   className?: string;
 }) {
@@ -546,6 +601,8 @@ export function EarlyAccessFeatureMock({
         return <RequestsMock accent={accent} />;
       case 'planner':
         return <PlannerMock accent={accent} />;
+      case 'ios':
+        return <IosMock accent={accent} />;
       default:
         return null;
     }

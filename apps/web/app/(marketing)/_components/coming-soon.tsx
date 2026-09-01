@@ -13,6 +13,12 @@ import {
 
 const ITEMS = [
   {
+    id: 'ios',
+    title: 'iOS app',
+    description:
+      'Native iPhone app for tasks, notes, people, and meetings with on-device dictation. In progress — not in the App Store yet.',
+  },
+  {
     id: 'property',
     title: 'Property workspace',
     description:
@@ -111,7 +117,7 @@ export function ComingSoon() {
         </p>
       </div>
 
-      <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {ITEMS.map((item) => (
           <article key={item.id} className={cn(marketingFeatureCard, 'p-5')}>
             <div className="flex items-start justify-between gap-3">

@@ -10,7 +10,7 @@ import {
   DemoFrame,
   DemoHighlight,
   DemoPulse,
-} from '~/(marketing)/early-access/_components/early-access-feature-demo-primitives';
+} from '~/(marketing)/_components/feature-tour-demo-primitives';
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
 
 const LOOP = 8;
@@ -118,7 +118,7 @@ function InboxRow({
   );
 }
 
-export function EarlyAccessEmailPageMock() {
+export function FeatureTourEmailPageMock() {
   const reduced = useReducedMotion();
 
   return (

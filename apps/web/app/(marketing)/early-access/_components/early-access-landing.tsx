@@ -2,10 +2,10 @@ import { Check } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
+import { FeatureTour } from '~/(marketing)/_components/feature-tour';
 import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
 import { EarlyAccessBentoGrid } from '~/(marketing)/early-access/_components/early-access-bento-grid';
 import { EarlyAccessEmailCapture } from '~/(marketing)/early-access/_components/early-access-email-capture';
-import { EarlyAccessFeatureTour } from '~/(marketing)/early-access/_components/early-access-feature-tour';
 import {
   EARLY_ACCESS_ACCENT_CLASS,
   EARLY_ACCESS_FAQS,
@@ -180,7 +180,7 @@ export function EarlyAccessLanding() {
             eyebrow="A closer look"
             title="What it feels like in practice."
           />
-          <EarlyAccessFeatureTour />
+          <FeatureTour />
         </div>
       </section>
 
