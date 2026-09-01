@@ -83,3 +83,6 @@ node-compile-cache/
 **/DerivedData/
 *.xcuserstate
 apps/ios/Config/Local.xcconfig
+
+# Local Ozer OS database password (never commit)
+.ozer-db-pass
