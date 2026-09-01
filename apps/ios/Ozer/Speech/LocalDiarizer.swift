@@ -2,12 +2,6 @@ import AVFoundation
 import CoreML
 import Foundation
 
-struct DiarizedSpan: Sendable, Equatable {
-    var speakerIndex: Int
-    var start: TimeInterval
-    var end: TimeInterval
-}
-
 /// Pyannote segmentation-3.0 + WeSpeaker ResNet34-LM, then in-process clustering.
 /// Runs off the main actor. Live captions stay on Apple Speech.
 actor LocalDiarizer {
@@ -20,7 +14,6 @@ actor LocalDiarizer {
     private static let speakerSlots = 3
     private static let embeddingSize = 256
     private static let minActiveFrames: Float = 10
-    private static let clusterThreshold: Float = 0.55
 
     private static let powerset: [[Int]] = [
         [],
@@ -60,7 +53,9 @@ actor LocalDiarizer {
             progress(min(0.95, Double(end) / Double(total)))
         }
 
-        let clustered = Self.cluster(observations)
+        let clustered = SpeakerClustering.cluster(
+            observations.map { SpeakerClustering.Observation(embedding: $0.embedding, start: $0.start, end: $0.end) }
+        )
         progress(1)
         return clustered
     }
@@ -191,70 +186,6 @@ actor LocalDiarizer {
         let start = mask.firstIndex(where: { $0 > 0.5 }) ?? 0
         let end = mask.lastIndex(where: { $0 > 0.5 }).map { $0 + 1 } ?? mask.count
         return (start, end)
-    }
-
-    private static func cluster(_ observations: [Observation]) -> [DiarizedSpan] {
-        guard !observations.isEmpty else { return [] }
-        var labels = Array(0 ..< observations.count)
-
-        func root(_ index: Int) -> Int {
-            var current = index
-            while labels[current] != current {
-                labels[current] = labels[labels[current]]
-                current = labels[current]
-            }
-            return current
-        }
-
-        for i in 0 ..< observations.count {
-            for j in (i + 1) ..< observations.count {
-                let distance = cosineDistance(observations[i].embedding, observations[j].embedding)
-                if distance <= clusterThreshold {
-                    labels[root(j)] = root(i)
-                }
-            }
-        }
-
-        var firstSeen: [Int: Int] = [:]
-        var remapped: [Int] = []
-        remapped.reserveCapacity(observations.count)
-        for index in observations.indices {
-            let parent = root(index)
-            if firstSeen[parent] == nil {
-                firstSeen[parent] = firstSeen.count
-            }
-            remapped.append(firstSeen[parent] ?? 0)
-        }
-
-        var spans: [DiarizedSpan] = observations.enumerated().map { index, item in
-            DiarizedSpan(speakerIndex: remapped[index], start: item.start, end: item.end)
-        }
-        spans.sort { $0.start < $1.start }
-
-        var merged: [DiarizedSpan] = []
-        for span in spans {
-            if let last = merged.last, last.speakerIndex == span.speakerIndex, span.start <= last.end + 0.4 {
-                merged[merged.count - 1].end = max(last.end, span.end)
-            } else {
-                merged.append(span)
-            }
-        }
-        return merged
-    }
-
-    private static func cosineDistance(_ a: [Float], _ b: [Float]) -> Float {
-        guard a.count == b.count, !a.isEmpty else { return .infinity }
-        var dot: Float = 0
-        var magA: Float = 0
-        var magB: Float = 0
-        for index in 0 ..< a.count {
-            dot += a[index] * b[index]
-            magA += a[index] * a[index]
-            magB += b[index] * b[index]
-        }
-        let denom = magA.squareRoot() * magB.squareRoot()
-        guard denom > 0 else { return .infinity }
-        return 1 - min(max(dot / denom, -1), 1)
     }
 
     private static func normalize(_ vector: [Float]) -> [Float] {
