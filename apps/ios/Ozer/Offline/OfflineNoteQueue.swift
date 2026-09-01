@@ -76,6 +76,7 @@ final class OfflineNoteQueue {
     private static let fileName = "pending-notes.json"
 
     private(set) var pending: [PendingNote] = []
+    private(set) var lastFlushError: String?
     private var isFlushing = false
 
     private var fileURL: URL {
@@ -112,6 +113,7 @@ final class OfflineNoteQueue {
             clientId: clientId
         )
         pending.insert(note, at: 0)
+        lastFlushError = nil
         persist()
         return note
     }
@@ -128,6 +130,7 @@ final class OfflineNoteQueue {
 
         let client = NativeAPIClient()
         let snapshot = pending
+        var lastError: String?
         for note in snapshot {
             do {
                 let created = try await client.createNote(
@@ -144,12 +147,14 @@ final class OfflineNoteQueue {
                     MeetingStore.shared.markSynced(id: meetingId, remoteNoteId: created.id)
                 }
             } catch let error as NativeAPIError where error == .unauthorized {
+                lastFlushError = error.localizedDescription
                 return
             } catch {
                 if error.isTaskCancellation { return }
-                continue
+                lastError = error.localizedDescription
             }
         }
+        lastFlushError = lastError
     }
 
     private func persist() {

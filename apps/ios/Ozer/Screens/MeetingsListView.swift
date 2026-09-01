@@ -2,12 +2,14 @@ import SwiftUI
 
 struct MeetingsListView: View {
     @Environment(AppSession.self) private var session
-    @State private var remoteNotes: [NoteItem] = []
+    @State private var remoteMeetings: [MeetingItem] = []
     @State private var loadError: NativeAPIError?
     @State private var isLoading = false
     @State private var isRecording = false
     @State private var selectedMeeting: LocalMeeting?
     @State private var meetingStore = MeetingStore.shared
+    @State private var meetingQueue = OfflineMeetingQueue.shared
+    @State private var noteQueue = OfflineNoteQueue.shared
 
     private let client = NativeAPIClient()
 
@@ -28,7 +30,7 @@ struct MeetingsListView: View {
     }
 
     private var rows: [MeetingListRow] {
-        Self.merge(local: localMeetings, remote: remoteNotes)
+        Self.merge(local: localMeetings, remote: remoteMeetings)
     }
 
     var body: some View {
@@ -105,6 +107,15 @@ struct MeetingsListView: View {
                 }
                 .buttonStyle(OzerPrimaryButtonStyle())
 
+                if let flushError = meetingQueue.lastFlushError ?? noteQueue.lastFlushError {
+                    Text(flushError)
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+                }
+
                 ForEach(rows) { row in
                     if let meeting = row.local {
                         NavigationLink {
@@ -113,9 +124,9 @@ struct MeetingsListView: View {
                             meetingRow(row)
                         }
                         .buttonStyle(.plain)
-                    } else if let note = row.note {
+                    } else if let remote = row.remote {
                         NavigationLink {
-                            NoteDetailView(note: note)
+                            MeetingDetailView(meeting: remote.asLocalMeeting())
                         } label: {
                             meetingRow(row)
                         }
@@ -141,7 +152,9 @@ struct MeetingsListView: View {
                     .lineLimit(2)
             }
             if row.waiting {
-                Text("Waiting to sync")
+                Text(meetingQueue.lastFlushError == nil
+                     ? "Waiting to sync"
+                     : "Couldn’t sync")
                     .font(.caption)
                     .foregroundStyle(OzerPalette.plumSoft)
             }
@@ -207,7 +220,7 @@ struct MeetingsListView: View {
             Text("No meetings yet")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(OzerPalette.plum)
-            Text("Record a meeting in this room. Captions stay on this iPhone, and the transcript syncs as a note when you’re online.")
+            Text("Record a meeting in this room. Captions stay on this iPhone, and the transcript syncs to Ozer Meetings when you’re online.")
                 .font(.body)
                 .foregroundStyle(OzerPalette.plumMuted)
                 .multilineTextAlignment(.center)
@@ -254,7 +267,7 @@ struct MeetingsListView: View {
 
     private func load() async {
         guard showsMeetings else {
-            remoteNotes = []
+            remoteMeetings = []
             loadError = nil
             return
         }
@@ -267,16 +280,16 @@ struct MeetingsListView: View {
             }
             try Task.checkCancellation()
             guard !workspace.isEmpty else {
-                remoteNotes = []
+                remoteMeetings = []
                 loadError = nil
                 return
             }
             await session.flushOfflineWork()
-            let payload = try await client.notes(
+            let payload = try await client.meetings(
                 workspace: workspace,
                 accessToken: token
             )
-            remoteNotes = payload.items.filter(\.isMeetingNote)
+            remoteMeetings = payload.items
             loadError = nil
         } catch is CancellationError {
             return
@@ -295,7 +308,7 @@ struct MeetingsListView: View {
         }
     }
 
-    static func merge(local: [LocalMeeting], remote: [NoteItem]) -> [MeetingListRow] {
+    static func merge(local: [LocalMeeting], remote: [MeetingItem]) -> [MeetingListRow] {
         let linkedIds = Set(local.compactMap(\.remoteNoteId))
         let localRows = local.map { meeting in
             MeetingListRow(
@@ -304,18 +317,18 @@ struct MeetingsListView: View {
                 subtitle: Self.subtitle(for: meeting),
                 waiting: meeting.isWaitingToSync,
                 local: meeting,
-                note: nil
+                remote: nil
             )
         }
-        let remoteRows = remote.compactMap { note -> MeetingListRow? in
-            if linkedIds.contains(note.id) { return nil }
+        let remoteRows = remote.compactMap { item -> MeetingListRow? in
+            if linkedIds.contains(item.id) { return nil }
             return MeetingListRow(
-                id: note.id,
-                title: note.displayTitle,
-                subtitle: note.displaySubtitle,
+                id: item.id,
+                title: item.displayTitle,
+                subtitle: item.displaySubtitle,
                 waiting: false,
                 local: nil,
-                note: note
+                remote: item
             )
         }
         return localRows + remoteRows
@@ -339,5 +352,5 @@ struct MeetingListRow: Identifiable, Equatable {
     var subtitle: String?
     var waiting: Bool
     var local: LocalMeeting?
-    var note: NoteItem?
+    var remote: MeetingItem?
 }

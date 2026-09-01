@@ -1,6 +1,20 @@
 import Foundation
 
 /// Persisted native workspace pick. Stores the account id (or slug) — not Personal / Family / Business.
+enum CaptureSaveDestination: String, CaseIterable, Identifiable, Codable {
+    case meeting
+    case note
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .meeting: return "Meeting"
+        case .note: return "Note"
+        }
+    }
+}
+
 enum WorkspaceSelection {
     static let storageKey = "so.ozer.app.workspace"
 
@@ -125,6 +139,22 @@ extension NativeWorkspace {
         default:
             return false
         }
+    }
+
+    var isSurveyorWorkspace: Bool {
+        profile == "building_surveyor"
+    }
+
+    /// Meeting destination is offered on workspaces that have an Ozer Meetings page.
+    var allowsMeetingDestination: Bool {
+        showsMeetings
+    }
+
+    /// Surveyor defaults to a note (later hangs off a survey). Studio / commercial default to a meeting.
+    var defaultCaptureDestination: CaptureSaveDestination {
+        if !allowsMeetingDestination { return .note }
+        if isSurveyorWorkspace { return .note }
+        return .meeting
     }
 
     /// Menu body for the selected space. Workspaces themselves stay in the picker.
