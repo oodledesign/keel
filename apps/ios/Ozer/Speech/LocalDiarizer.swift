@@ -259,7 +259,7 @@ actor LocalDiarizer {
             guard end - start > 0.04 else { continue }
             let mid = (start + end) / 2
             let covering = spans.filter { $0.start <= mid && mid < $0.end }
-            guard let winner = covering.min(by: {
+            guard let winner = covering.max(by: {
                 ($0.end - $0.start) < ($1.end - $1.start)
             }) ?? covering.first else { continue }
             if let last = pieces.last, last.speakerIndex == winner.speakerIndex {

@@ -84,14 +84,26 @@ async function loadClientRows(
   return map;
 }
 
-function insertFailed(message: string): never {
-  if (/row-level security|permission denied|policy/i.test(message)) {
+function insertFailed(
+  error: {
+    message?: string;
+    code?: string;
+  } | null,
+): never {
+  const message = error?.message ?? 'Failed to create meeting transcript';
+  if (
+    error?.code === '42501' ||
+    /row-level security|permission denied|policy/i.test(message)
+  ) {
     throw new NativeHttpError(
       403,
       'You cannot save meetings in this workspace',
     );
   }
-  if (/client_or_deal|a client or deal/i.test(message)) {
+  if (
+    error?.code === '23514' ||
+    /client_or_deal|a client or deal/i.test(message)
+  ) {
     throw new NativeHttpError(400, 'A client is required');
   }
   if (/source/i.test(message) && /check/i.test(message)) {
@@ -188,7 +200,7 @@ export async function createNativeMeeting(input: {
     .single();
 
   if (error || !data) {
-    insertFailed(error?.message ?? 'Failed to create meeting transcript');
+    insertFailed(error);
   }
 
   const row = data as NativeMeetingRow;
