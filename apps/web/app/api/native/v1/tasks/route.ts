@@ -45,6 +45,8 @@ export async function GET(request: Request) {
       {
         day: url.searchParams.get('day'),
         clientId: url.searchParams.get('client'),
+        status: url.searchParams.get('status'),
+        q: url.searchParams.get('q'),
       },
     );
     return NextResponse.json({ items: tasks });

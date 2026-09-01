@@ -1,13 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { NativeHttpError } from './http';
 import {
+  DONE_NATIVE_TASK_DB_STATUSES,
+  OPEN_NATIVE_TASK_DB_STATUSES,
   canSeeNativeTask,
   isPersonalNativeWorkspace,
   nativeClientName,
+  nativeTaskTitleIlike,
+  parseNativeTaskListStatus,
+  parseNativeTaskSearch,
   parseOptionalClientId,
   toNativeTask,
 } from './task-map';
+import { listNativeTasks } from './tasks';
 import { uiStatusToDb } from './task-status';
 import type { NativeWorkspace } from './workspace-shared';
 
@@ -189,5 +195,145 @@ describe('isPersonalNativeWorkspace', () => {
   it('treats the personal profile as personal-only scoping', () => {
     expect(isPersonalNativeWorkspace(personal)).toBe(true);
     expect(isPersonalNativeWorkspace(studio)).toBe(false);
+  });
+});
+
+describe('parseNativeTaskListStatus', () => {
+  it('defaults to open and accepts done / all', () => {
+    expect(parseNativeTaskListStatus(undefined)).toBe('open');
+    expect(parseNativeTaskListStatus(null)).toBe('open');
+    expect(parseNativeTaskListStatus('')).toBe('open');
+    expect(parseNativeTaskListStatus('open')).toBe('open');
+    expect(parseNativeTaskListStatus('done')).toBe('done');
+    expect(parseNativeTaskListStatus('completed')).toBe('done');
+    expect(parseNativeTaskListStatus('ALL')).toBe('all');
+  });
+
+  it('rejects unknown list statuses', () => {
+    expect(() => parseNativeTaskListStatus('nope')).toThrow(NativeHttpError);
+  });
+});
+
+describe('parseNativeTaskSearch', () => {
+  it('trims, ignores empty, and escapes ilike wildcards', () => {
+    expect(parseNativeTaskSearch(undefined)).toBeNull();
+    expect(parseNativeTaskSearch('  ')).toBeNull();
+    expect(parseNativeTaskSearch(' invoice ')).toBe('invoice');
+    expect(nativeTaskTitleIlike('100%_off')).toBe('%100\\%\\_off%');
+  });
+
+  it('rejects an oversized q', () => {
+    expect(() => parseNativeTaskSearch('x'.repeat(201))).toThrow(NativeHttpError);
+  });
+});
+
+function createTaskListQuery(rows: unknown[] = []) {
+  const result = { data: rows, error: null };
+  const chain = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    is: vi.fn(),
+    in: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
+    or: vi.fn(),
+    ilike: vi.fn(),
+    then(
+      onfulfilled: (value: typeof result) => unknown,
+      onrejected?: (reason: unknown) => unknown,
+    ) {
+      return Promise.resolve(result).then(onfulfilled, onrejected);
+    },
+  };
+
+  for (const key of [
+    'select',
+    'eq',
+    'is',
+    'in',
+    'order',
+    'limit',
+    'or',
+    'ilike',
+  ] as const) {
+    chain[key].mockReturnValue(chain);
+  }
+
+  return chain;
+}
+
+describe('listNativeTasks query params', () => {
+  it('filters open statuses by default and a specific client', async () => {
+    const chain = createTaskListQuery();
+    const from = vi.fn(() => chain);
+    const client = { from } as never;
+    const clientId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+    await expect(
+      listNativeTasks(client, userId, studio, { clientId }),
+    ).resolves.toEqual([]);
+
+    expect(from).toHaveBeenCalledWith('tasks');
+    expect(chain.eq).toHaveBeenCalledWith('account_id', studio.id);
+    expect(chain.is).toHaveBeenCalledWith('assignee_contact_id', null);
+    expect(chain.in).toHaveBeenCalledWith('status', [
+      ...OPEN_NATIVE_TASK_DB_STATUSES,
+    ]);
+    expect(chain.eq).toHaveBeenCalledWith('client_id', clientId);
+    expect(chain.ilike).not.toHaveBeenCalled();
+    expect(chain.or).not.toHaveBeenCalled();
+  });
+
+  it('uses done statuses when status=done', async () => {
+    const chain = createTaskListQuery();
+    const client = { from: vi.fn(() => chain) } as never;
+
+    await expect(
+      listNativeTasks(client, userId, studio, { status: 'done' }),
+    ).resolves.toEqual([]);
+
+    expect(chain.in).toHaveBeenCalledWith('status', [
+      ...DONE_NATIVE_TASK_DB_STATUSES,
+    ]);
+  });
+
+  it('skips the status filter when status=all', async () => {
+    const chain = createTaskListQuery();
+    const client = { from: vi.fn(() => chain) } as never;
+
+    await expect(
+      listNativeTasks(client, userId, studio, { status: 'all' }),
+    ).resolves.toEqual([]);
+
+    expect(chain.in).not.toHaveBeenCalled();
+  });
+
+  it('applies an escaped title ilike when q is set', async () => {
+    const chain = createTaskListQuery();
+    const client = { from: vi.fn(() => chain) } as never;
+
+    await expect(
+      listNativeTasks(client, userId, studio, { q: 'invoice' }),
+    ).resolves.toEqual([]);
+
+    expect(chain.ilike).toHaveBeenCalledWith(
+      'title',
+      nativeTaskTitleIlike('invoice'),
+    );
+  });
+
+  it('keeps personal user scoping when listing all statuses', async () => {
+    const chain = createTaskListQuery();
+    const client = { from: vi.fn(() => chain) } as never;
+
+    await expect(
+      listNativeTasks(client, userId, personal, { status: 'all' }),
+    ).resolves.toEqual([]);
+
+    expect(chain.or).toHaveBeenCalledWith(
+      `user_id.eq.${userId},user_id.is.null`,
+    );
+    expect(chain.is).toHaveBeenCalledWith('assignee_contact_id', null);
+    expect(chain.in).not.toHaveBeenCalled();
   });
 });

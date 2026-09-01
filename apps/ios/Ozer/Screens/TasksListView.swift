@@ -8,6 +8,12 @@ struct TasksListView: View {
     @State private var completingIds: Set<String> = []
     @State private var showEditor = false
     @State private var editorTask: TaskItem?
+    @State private var searchText = ""
+    @State private var dueFilter: TaskDueFilter = .all
+    @State private var statusFilter: TaskStatusFilter = .open
+    @State private var clientFilter: TaskClientFilter = .all
+    @State private var clients: [ClientItem] = []
+    @State private var showClientFilter = false
 
     private let client = NativeAPIClient()
 
@@ -16,22 +22,57 @@ struct TasksListView: View {
         session.workspaceContentKey
     }
 
+    /// Reload when the workspace, status, or specific client changes.
+    private var fetchKey: String {
+        "\(reloadKey)|\(statusFilter.rawValue)|\(clientFilter.apiClientId ?? "")"
+    }
+
+    private var showsClientFilter: Bool {
+        session.selectedWorkspace?.showsClients == true
+    }
+
+    private var visibleItems: [TaskItem] {
+        guard let items = payload?.items else { return [] }
+        return items.filter { item in
+            item.matchesSearch(searchText)
+                && item.matchesDue(dueFilter)
+                && item.matchesClient(clientFilter)
+        }
+    }
+
+    private var hasActiveFilters: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || dueFilter != .all
+            || statusFilter != .open
+            || clientFilter != .all
+    }
+
+    private var showsFilterBar: Bool {
+        !session.workspaceQueryValue.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
-            Group {
-                if isLoading && payload == nil && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let loadError {
-                    statusCard(error: loadError)
-                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
-                    membershipsEmptyCard
-                } else if let payload, !payload.items.isEmpty {
-                    content(payload)
-                } else {
-                    emptyCard()
+            VStack(spacing: 0) {
+                if showsFilterBar {
+                    filterBar
                 }
+                Group {
+                    if isLoading && payload == nil && loadError == nil {
+                        ProgressView()
+                            .tint(OzerPalette.coral)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let loadError {
+                        statusCard(error: loadError)
+                    } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                        membershipsEmptyCard
+                    } else if !visibleItems.isEmpty {
+                        content(visibleItems)
+                    } else {
+                        emptyCard()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 88)
@@ -39,6 +80,7 @@ struct TasksListView: View {
             .background(OzerPalette.cream.ignoresSafeArea())
             .navigationTitle("Tasks")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search tasks")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     WorkspaceChip()
@@ -56,12 +98,17 @@ struct TasksListView: View {
                     .disabled(session.workspaceQueryValue.isEmpty)
                 }
             }
-            .task(id: reloadKey) {
+            .onChange(of: session.workspaceContentKey) { _, _ in
+                resetFilters(clearClients: true)
+            }
+            .task(id: fetchKey) {
                 await load()
+                await loadClients()
             }
             .refreshable {
                 await session.refreshWorkspaces()
                 await load()
+                await loadClients()
             }
             .sheet(isPresented: $showEditor) {
                 TaskEditorView(
@@ -75,12 +122,68 @@ struct TasksListView: View {
                 )
                 .presentationDetents([.medium, .large])
             }
+            .sheet(isPresented: $showClientFilter) {
+                TaskClientFilterSheet(
+                    clients: clients,
+                    selection: clientFilter,
+                    onSelect: { clientFilter = $0 }
+                )
+                .presentationDetents([.medium, .large])
+            }
         }
     }
 
-    private func content(_ payload: TasksPayload) -> some View {
+    private var filterBar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            chipRow(TaskDueFilter.allCases, selection: dueFilter) { dueFilter = $0 }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(TaskStatusFilter.allCases) { item in
+                        TaskFilterChip(
+                            title: item.label,
+                            isSelected: item == statusFilter
+                        ) {
+                            statusFilter = item
+                        }
+                    }
+                    if showsClientFilter {
+                        TaskFilterChip(
+                            title: clientFilter.label,
+                            isSelected: clientFilter != .all
+                        ) {
+                            showClientFilter = true
+                        }
+                        .accessibilityLabel("Client filter, \(clientFilter.label)")
+                    }
+                }
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+    }
+
+    private func chipRow<Item: TaskFilterChipItem>(
+        _ items: [Item],
+        selection: Item,
+        set: @escaping (Item) -> Void
+    ) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(items) { item in
+                    TaskFilterChip(
+                        title: item.label,
+                        isSelected: item == selection
+                    ) {
+                        set(item)
+                    }
+                }
+            }
+        }
+    }
+
+    private func content(_ items: [TaskItem]) -> some View {
         List {
-            ForEach(payload.items) { item in
+            ForEach(items) { item in
                 Button {
                     editorTask = item
                     showEditor = true
@@ -178,21 +281,37 @@ struct TasksListView: View {
 
     private func emptyCard() -> some View {
         VStack(spacing: 10) {
-            Text("Nothing on this list")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(OzerPalette.plum)
-            Text("When there are tasks in this workspace, they will land here.")
-                .font(.body)
-                .foregroundStyle(OzerPalette.plumMuted)
-                .multilineTextAlignment(.center)
-            Button("Add a task") {
-                editorTask = nil
-                showEditor = true
+            if hasActiveFilters {
+                Text("Nothing matches")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plum)
+                Text("Nothing matches these filters. Clear them to see the full list.")
+                    .font(.body)
+                    .foregroundStyle(OzerPalette.plumMuted)
+                    .multilineTextAlignment(.center)
+                Button("Clear filters") {
+                    resetFilters(clearClients: false)
+                }
+                .buttonStyle(OzerPrimaryButtonStyle())
+                .frame(width: 160)
+                .padding(.top, 4)
+            } else {
+                Text("Nothing on this list")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plum)
+                Text("When there are tasks in this workspace, they will land here.")
+                    .font(.body)
+                    .foregroundStyle(OzerPalette.plumMuted)
+                    .multilineTextAlignment(.center)
+                Button("Add a task") {
+                    editorTask = nil
+                    showEditor = true
+                }
+                .buttonStyle(OzerPrimaryButtonStyle())
+                .frame(width: 160)
+                .padding(.top, 4)
+                .disabled(session.workspaceQueryValue.isEmpty)
             }
-            .buttonStyle(OzerPrimaryButtonStyle())
-            .frame(width: 160)
-            .padding(.top, 4)
-            .disabled(session.workspaceQueryValue.isEmpty)
         }
         .padding(28)
         .frame(maxWidth: .infinity)
@@ -229,6 +348,16 @@ struct TasksListView: View {
         }
     }
 
+    private func resetFilters(clearClients: Bool) {
+        searchText = ""
+        dueFilter = .all
+        statusFilter = .open
+        clientFilter = .all
+        if clearClients {
+            clients = []
+        }
+    }
+
     private func complete(_ item: TaskItem) async {
         completingIds.insert(item.id)
         do {
@@ -252,6 +381,27 @@ struct TasksListView: View {
         }
     }
 
+    private func loadClients() async {
+        guard showsClientFilter else {
+            clients = []
+            return
+        }
+        do {
+            let token = try await session.validAccessToken()
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else {
+                clients = []
+                return
+            }
+            let payload = try await client.clients(workspace: workspace, accessToken: token)
+            clients = payload.items
+        } catch let error as NativeAPIError where error == .unauthorized {
+            await session.handleUnauthorized()
+        } catch {
+            if error.isTaskCancellation { return }
+        }
+    }
+
     private func load() async {
         isLoading = true
         defer { isLoading = false }
@@ -269,6 +419,8 @@ struct TasksListView: View {
             }
             payload = try await client.tasks(
                 workspace: workspace,
+                clientId: clientFilter.apiClientId,
+                status: statusFilter.queryValue,
                 accessToken: token
             )
             completingIds = []

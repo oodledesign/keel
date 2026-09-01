@@ -87,11 +87,15 @@ actor NativeAPIClient {
     func tasks(
         workspace: String,
         clientId: String? = nil,
+        status: String? = nil,
         accessToken: String
     ) async throws -> TasksPayload {
         var query = [URLQueryItem(name: "workspace", value: workspace)]
         if let clientId, !clientId.isEmpty {
             query.append(URLQueryItem(name: "client", value: clientId))
+        }
+        if let status, !status.isEmpty, status != "open" {
+            query.append(URLQueryItem(name: "status", value: status))
         }
         let data = try await send(
             method: "GET",

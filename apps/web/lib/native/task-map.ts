@@ -10,6 +10,12 @@ export const OPEN_NATIVE_TASK_DB_STATUSES = [
   'client_review',
 ] as const;
 
+export const DONE_NATIVE_TASK_DB_STATUSES = ['done', 'cancelled'] as const;
+
+export type NativeTaskListStatus = 'open' | 'done' | 'all';
+
+const TASK_SEARCH_MAX_LENGTH = 200;
+
 export type NativeTask = {
   id: string;
   title: string;
@@ -54,6 +60,44 @@ export function parseOptionalClientId(
     throw new NativeHttpError(400, 'client_id must be a uuid');
   }
   return trimmed;
+}
+
+/** List filter: `open` (default), `done`, or `all`. */
+export function parseNativeTaskListStatus(
+  value: string | null | undefined,
+): NativeTaskListStatus {
+  if (value == null || value.trim() === '') {
+    return 'open';
+  }
+
+  switch (value.trim().toLowerCase()) {
+    case 'open':
+      return 'open';
+    case 'done':
+    case 'completed':
+      return 'done';
+    case 'all':
+      return 'all';
+    default:
+      throw new NativeHttpError(400, 'status must be open, done, or all');
+  }
+}
+
+/** Optional title search. Empty is ignored; `%` / `_` are escaped for `ilike`. */
+export function parseNativeTaskSearch(
+  value: string | null | undefined,
+): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > TASK_SEARCH_MAX_LENGTH) {
+    throw new NativeHttpError(400, 'q is too long');
+  }
+  return trimmed;
+}
+
+export function nativeTaskTitleIlike(value: string): string {
+  return `%${value.replace(/[%_\\]/g, '\\$&')}%`;
 }
 
 /**

@@ -29,6 +29,9 @@ curl -sS "$ORIGIN/api/native/v1/today?workspace=YOUR_SLUG" \
 curl -sS "$ORIGIN/api/native/v1/tasks?workspace=YOUR_SLUG&day=2026-08-31" \
   -H "Authorization: Bearer $TOKEN"
 
+curl -sS "$ORIGIN/api/native/v1/tasks?workspace=YOUR_SLUG&status=done&client=CLIENT_UUID&q=invoice" \
+  -H "Authorization: Bearer $TOKEN"
+
 curl -sS -X POST "$ORIGIN/api/native/v1/tasks" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -45,6 +48,8 @@ curl -sS "$ORIGIN/api/native/v1/clients/CLIENT_ID?workspace=YOUR_SLUG" \
 ```
 
 `workspace` accepts an account slug, UUID, or the chip aliases `personal`, `family`, and `business` (`business` maps to the first `work_design` workspace). Exact slug or UUID wins when they collide with an alias. Personal is always included in `/workspaces` (empty slug falls back to the account id). `/clients` includes `image` / `logo` HTTPS URLs; `GET /clients/:id` adds `contacts`.
+
+`GET /tasks` query flags: `status=open|done|all` (default `open`; portal assignee rows stay out), optional `client=<uuid>`, optional `q` (case-insensitive title match). Personal still hides other people’s life tasks.
 
 ## Apple Sign In (optional)
 

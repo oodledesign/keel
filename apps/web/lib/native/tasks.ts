@@ -9,10 +9,14 @@ import {
   type NativeTask,
   type NativeTaskClientRow,
   type NativeTaskRow,
+  DONE_NATIVE_TASK_DB_STATUSES,
   OPEN_NATIVE_TASK_DB_STATUSES,
   canSeeNativeTask,
   isPersonalNativeWorkspace,
   nativeClientName,
+  nativeTaskTitleIlike,
+  parseNativeTaskListStatus,
+  parseNativeTaskSearch,
   parseOptionalClientId,
   toNativeTask,
 } from './task-map';
@@ -24,6 +28,9 @@ export { uiStatusToDb } from './task-status';
 export {
   canSeeNativeTask,
   isPersonalNativeWorkspace,
+  nativeTaskTitleIlike,
+  parseNativeTaskListStatus,
+  parseNativeTaskSearch,
   parseOptionalClientId,
   toNativeTask,
 } from './task-map';
@@ -142,17 +149,31 @@ export async function listNativeTasks(
   client: SupabaseClient,
   userId: string,
   workspace: NativeWorkspace,
-  options?: { day?: string | null; clientId?: string | null },
+  options?: {
+    day?: string | null;
+    clientId?: string | null;
+    status?: string | null;
+    q?: string | null;
+  },
 ) {
   const dueDay = options?.day ? parseDue(options.day) : null;
   const clientId = parseOptionalClientId(options?.clientId ?? undefined);
+  const listStatus = parseNativeTaskListStatus(options?.status);
+  const search = parseNativeTaskSearch(options?.q);
 
   let query = client
     .from('tasks')
     .select(TASK_SELECT)
     .eq('account_id', workspace.id)
-    .is('assignee_contact_id', null)
-    .in('status', [...OPEN_NATIVE_TASK_DB_STATUSES])
+    .is('assignee_contact_id', null);
+
+  if (listStatus === 'open') {
+    query = query.in('status', [...OPEN_NATIVE_TASK_DB_STATUSES]);
+  } else if (listStatus === 'done') {
+    query = query.in('status', [...DONE_NATIVE_TASK_DB_STATUSES]);
+  }
+
+  query = query
     .order('due_date', { ascending: true, nullsFirst: false })
     .limit(TASK_LIST_LIMIT);
 
@@ -166,6 +187,10 @@ export async function listNativeTasks(
 
   if (clientId) {
     query = query.eq('client_id', clientId);
+  }
+
+  if (search) {
+    query = query.ilike('title', nativeTaskTitleIlike(search));
   }
 
   const { data, error } = await query;
