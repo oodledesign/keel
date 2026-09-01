@@ -463,13 +463,13 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
             // Title came from the first body line — subtitle is the rest, else a date.
             let remainder = bodyRemainderAfterFirstLine
             if !remainder.isEmpty { return remainder }
-            return relativeDateLabel(updatedAt ?? createdAt)
+            return Self.relativeDateLabel(updatedAt ?? createdAt)
         }
         let collapsed = collapsedBody
         if !collapsed.isEmpty, collapsed != displayTitle {
             return collapsed
         }
-        return relativeDateLabel(updatedAt ?? createdAt)
+        return Self.relativeDateLabel(updatedAt ?? createdAt)
     }
 
     var collapsedBody: String {
