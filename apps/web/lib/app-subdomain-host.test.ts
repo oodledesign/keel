@@ -21,6 +21,12 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBe('https://app.ozer.so/auth/sign-in?next=%2Fapp');
 
     expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://www.ozer.so/auth/native?code=pkce'),
+      ),
+    ).toBe('https://app.ozer.so/auth/native?code=pkce');
+
+    expect(
       resolveAppSubdomainRedirect(new URL('https://ozer.so/app/potters')),
     ).toBe('https://app.ozer.so/app/potters');
   });

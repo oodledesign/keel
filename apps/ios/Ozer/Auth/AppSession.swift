@@ -76,10 +76,20 @@ final class AppSession {
         lastError = nil
         do {
             try await auth.sendMagicLink(email: email)
-            return "Check your email for a sign-in link."
+            return "Check your email. If you opened it on this phone, tap the link. If you opened it on a computer, type the code here."
         } catch {
             lastError = error.localizedDescription
             return nil
+        }
+    }
+
+    func verifyEmailOTP(email: String, token: String) async {
+        lastError = nil
+        do {
+            let next = try await auth.verifyEmailOTP(email: email, token: token)
+            try persist(next)
+        } catch {
+            lastError = error.localizedDescription
         }
     }
 

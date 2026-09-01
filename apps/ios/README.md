@@ -41,15 +41,25 @@ Sign in with **Apple**, **Google**, or a **magic-link email**. Access and refres
 
 - Apple: `AuthenticationServices` → GoTrue `grant_type=id_token`
 - Google: ephemeral `ASWebAuthenticationSession` + PKCE (no cookies)
-- Magic link: `POST /auth/v1/otp`, then `so.ozer.app://auth-callback`
+- Magic link (app): `POST /auth/v1/otp?redirect_to=https://app.ozer.so/auth/native`. Mail opens that HTTPS page, which hops to `so.ozer.app://auth-callback`. After “Email me a link”, the sign-in screen also accepts the 6-digit email code via `POST /auth/v1/verify`.
+- Magic link (website): unchanged — Makerkit still uses `/auth/callback`. Do not point web `emailRedirectTo` at `/auth/native`.
 
-Add this redirect URL in the Supabase dashboard:
+Add these redirect URLs in **Supabase → Authentication → URL Configuration → Redirect URLs**:
 
 ```
 so.ozer.app://auth-callback
+https://app.ozer.so/auth/native
+```
+
+If the project uses wildcards, also add:
+
+```
+https://app.ozer.so/auth/native/**
 ```
 
 Enable Apple and Google providers there as well. A 401 from the native API signs the user out.
+
+**Magic Link email template:** the hosted template is not changed in this repo. In **Authentication → Email Templates → Magic Link**, include the OTP so the iPhone field can be filled (`{{ .Token }}` in the default GoTrue variables). Keep `{{ .ConfirmationURL }}` as the single link — one ConfirmationURL per email, chosen by where the OTP was requested.
 
 ## Today API
 

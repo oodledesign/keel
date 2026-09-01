@@ -57,21 +57,37 @@ actor SupabaseAuthClient {
         let pkce = PKCE.generate()
         pendingPKCE = pkce
 
+        // GoTrue reads `redirect_to` as a query param (supabase-js `options.emailRedirectTo`).
+        // A nested JSON `options.email_redirect_to` is ignored, so the mail link never
+        // pointed at the HTTPS bounce page.
         let body: [String: Any] = [
             "email": email,
             "create_user": true,
             "code_challenge": pkce.challenge,
             "code_challenge_method": "s256",
             "gotrue_meta_security": [String: String](),
-            "options": [
-                "email_redirect_to": AppConfiguration.authCallbackURL.absoluteString,
-            ],
         ]
 
         var request = try authRequest(path: "auth/v1/otp")
         request.httpMethod = "POST"
+        request.url = withRedirectTo(request.url, AppConfiguration.nativeAuthRedirectURL)
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         _ = try await send(request, expecting: [200, 201, 204])
+    }
+
+    func verifyEmailOTP(email: String, token: String) async throws -> AuthSession {
+        try requireAnonKey()
+        pendingPKCE = nil
+        let body: [String: String] = [
+            "type": "email",
+            "email": email,
+            "token": token,
+        ]
+        var request = try authRequest(path: "auth/v1/verify")
+        request.httpMethod = "POST"
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let data = try await send(request, expecting: [200])
+        return try decodeSession(data)
     }
 
     func handleRedirect(_ url: URL) async throws -> AuthSession {
@@ -142,6 +158,16 @@ actor SupabaseAuthClient {
             userId: payload.user?.id ?? "",
             email: payload.user?.email
         )
+    }
+
+    private func withRedirectTo(_ url: URL?, _ redirect: URL) -> URL? {
+        guard let url else { return nil }
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        var items = components?.queryItems ?? []
+        items.removeAll { $0.name == "redirect_to" }
+        items.append(URLQueryItem(name: "redirect_to", value: redirect.absoluteString))
+        components?.queryItems = items
+        return components?.url ?? url
     }
 
     private func authRequest(path: String) throws -> URLRequest {
