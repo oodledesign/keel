@@ -4,7 +4,7 @@ Configure agency marketing destinations under **Website & portals** at `/app/[ac
 
 This page is for commercial publishing only:
 
-1. **Property Hive** — website sync (XML feed and optional WordPress REST)
+1. **Property Hive** — website sync (XML feed for Property Hive Import)
 2. **Rightmove** — UK property portal
 3. **EACH / EG** — commercial portal publishing (EG / EACH credentials)
 
@@ -21,14 +21,13 @@ It is **not** Site Studio. Site Studio is a Business-workspace website builder a
 Preferred path: Kato-compatible **XML feed** that Property Hive pulls on a schedule.
 
 1. Open `/app/[account]/commercial-publishing`.
-2. Find the **Property Hive** section.
-3. Click **Enable feed** (or equivalent) to generate a secret feed URL.
+2. Find the **Property Hive XML feed** section.
+3. Click **Enable XML feed** to generate a secret feed URL.
 4. Copy the feed URL.
 5. In Property Hive → **Property Import**, create or edit an import source and paste the feed URL.
 6. Set Property Hive to pull on your usual cadence (for example every 15 minutes).
-7. Optionally save WordPress REST credentials (site URL, username, application password, office ID) for live push — only if you need REST instead of, or in addition to, the feed.
-8. Run a test publish for a marketing disposal from the test controls on the same page.
-9. If you rotate the feed token, paste the new URL into Property Hive immediately or imports will stop.
+7. Run a test publish for a marketing disposal from the test controls on the same page.
+8. If you rotate the feed token, paste the new URL into Property Hive immediately or imports will stop.
 
 Each property in the feed includes the Ozer listing UUID as custom field **`ozer_listing_id`** (Kato child element and a `custom_fields` pair). In Property Hive Import, map that field to a custom field with the same meta key so a single-property template can embed an Ozer form with `?listing=` or `data-listing`. A ready-made WordPress snippet is on the form share panel.
 
