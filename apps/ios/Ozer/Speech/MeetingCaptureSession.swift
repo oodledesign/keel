@@ -76,6 +76,8 @@ final class MeetingCaptureSession {
         restartTask?.cancel()
         pauseTask = nil
         restartTask = nil
+        elapsedTimer?.invalidate()
+        elapsedTimer = nil
         request?.endAudio()
         task?.cancel()
         if engine.isRunning {

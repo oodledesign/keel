@@ -88,7 +88,7 @@ export async function updateNativeNote(input: {
   const { data: existing, error: loadError } = await input.client
     .from('notes')
     .select(
-      'id, title, content, account_id, created_by, created_at, updated_at',
+      'id, title, content, account_id, created_by, category, tags, created_at, updated_at',
     )
     .eq('id', input.noteId)
     .maybeSingle();
@@ -126,7 +126,9 @@ export async function updateNativeNote(input: {
     .update(updates)
     .eq('id', input.noteId)
     .eq('created_by', input.userId)
-    .select('id, title, content, account_id, created_at, updated_at')
+    .select(
+      'id, title, content, account_id, category, tags, created_at, updated_at',
+    )
     .maybeSingle();
 
   if (error) {
@@ -152,8 +154,13 @@ export async function updateNativeNote(input: {
     title: ((data.title as string | null)?.trim() || 'Note') as string,
     body: (data.content as string | null) ?? '',
     workspace: workspaceSlug,
-    category: 'idea',
-    tags: [],
+    category: ((data.category as string | null)?.trim() || 'idea') as string,
+    tags: Array.isArray(data.tags)
+      ? (data.tags as unknown[]).filter(
+          (tag): tag is string =>
+            typeof tag === 'string' && tag.trim().length > 0,
+        )
+      : [],
     created_at: data.created_at as string,
     updated_at: data.updated_at as string,
   };

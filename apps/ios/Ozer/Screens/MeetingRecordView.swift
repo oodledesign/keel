@@ -111,8 +111,8 @@ struct MeetingRecordView: View {
                 )
                 await session.flushOfflineWork()
             }
-            dismiss()
             await onFinished(meeting)
+            dismiss()
         } catch {
             startError = error.localizedDescription
         }

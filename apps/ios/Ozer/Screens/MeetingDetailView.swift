@@ -8,6 +8,7 @@ struct MeetingDetailView: View {
     @State private var player: AVAudioPlayer?
     @State private var isPlaying = false
     @State private var confirmDelete = false
+    @State private var playback = MeetingAudioPlayback()
 
     private var current: LocalMeeting {
         MeetingStore.shared.meeting(id: meeting.id) ?? meeting
@@ -93,6 +94,11 @@ struct MeetingDetailView: View {
             try AVAudioSession.sharedInstance().setCategory(.playback)
             try AVAudioSession.sharedInstance().setActive(true)
             let next = try AVAudioPlayer(contentsOf: url)
+            playback.onFinish = {
+                isPlaying = false
+                player = nil
+            }
+            next.delegate = playback
             next.play()
             player = next
             isPlaying = true
@@ -106,5 +112,15 @@ struct MeetingDetailView: View {
         player = nil
         isPlaying = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
+
+final class MeetingAudioPlayback: NSObject, AVAudioPlayerDelegate {
+    var onFinish: (() -> Void)?
+
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor in
+            self.onFinish?()
+        }
     }
 }

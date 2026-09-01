@@ -207,7 +207,8 @@ export async function listRecorderNotes(params: {
       category: ((row.category as string | null)?.trim() || 'idea') as string,
       tags: Array.isArray(row.tags)
         ? (row.tags as unknown[]).filter(
-            (tag): tag is string => typeof tag === 'string' && tag.trim().length > 0,
+            (tag): tag is string =>
+              typeof tag === 'string' && tag.trim().length > 0,
           )
         : [],
       created_at: row.created_at as string,
