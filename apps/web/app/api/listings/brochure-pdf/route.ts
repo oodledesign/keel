@@ -25,6 +25,7 @@ export const GET = enhanceRouteHandler(
       showRates: searchParams.get('showRates') ?? undefined,
       showServiceCharge: searchParams.get('showServiceCharge') ?? undefined,
       showEstateCharge: searchParams.get('showEstateCharge') ?? undefined,
+      showReducedPrice: searchParams.get('showReducedPrice') ?? undefined,
     });
 
     if (!parsed.success) {
@@ -46,6 +47,7 @@ export const GET = enhanceRouteHandler(
       showRates,
       showServiceCharge,
       showEstateCharge,
+      showReducedPrice,
     } = parsed.data;
     const client = getSupabaseServerClient();
 
@@ -78,6 +80,7 @@ export const GET = enhanceRouteHandler(
         showRates,
         showServiceCharge,
         showEstateCharge,
+        showReducedPrice,
       };
 
       const { bytes, filename, document } = await generateListingBrochurePdf({
@@ -86,8 +89,10 @@ export const GET = enhanceRouteHandler(
         orientation: saved?.orientation ?? orientation,
         templateId: saved?.templateId ?? template,
         document: saved,
-        // Saved docs already bake facts in; display only applies to fresh packs.
-        display: saved ? undefined : display,
+        // Facts bake into saved pages; reduced sash can still apply at render.
+        display: saved
+          ? { showReducedPrice }
+          : display,
       });
 
       // Persist auto pack when downloading without a saved doc so the editor starts warm

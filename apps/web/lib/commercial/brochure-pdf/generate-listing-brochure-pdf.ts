@@ -27,6 +27,10 @@ export async function generateListingBrochurePdf(input: {
     throw new Error('Listing not found');
   }
 
+  if (input.display?.showReducedPrice != null) {
+    data.showReducedPrice = input.display.showReducedPrice;
+  }
+
   const document =
     input.document ??
     buildBrochureDocument(data, {

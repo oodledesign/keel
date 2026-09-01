@@ -100,7 +100,9 @@ export const publishListingBrochurePdf = enhanceAction(
       orientation: saved?.orientation ?? input.orientation,
       templateId: saved?.templateId ?? input.templateId,
       document: saved,
-      display: saved ? undefined : input.display,
+      display: saved
+        ? { showReducedPrice: input.display?.showReducedPrice }
+        : input.display,
     });
 
     if (!saved) {

@@ -9,6 +9,11 @@ import {
   DEFAULT_BROCHURE_DISPLAY_OPTIONS,
   newBrochurePageId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { buildCoverPriceLines } from '~/lib/commercial/brochure-pdf/cover-prices';
+import {
+  buildFallbackNearbyAmenities,
+  sanitizeBrochureAmenities,
+} from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
 import {
   formatBrochureAddress,
@@ -134,25 +139,22 @@ function buildFactsRows(
   return rows;
 }
 
-function buildAmenities(data: PublicBrochureData): Array<{
+export function buildAmenities(data: PublicBrochureData): Array<{
   label: string;
   index: number;
 }> {
-  const amenities: Array<{ label: string; index: number }> = [];
-  const town = data.listing.town?.trim();
-  const postcode = data.listing.postcode?.trim();
-
-  if (town) {
-    amenities.push({ label: `${town} town centre`, index: 1 });
-  }
-  if (postcode) {
-    amenities.push({
-      label: `Local area (${postcode.split(' ')[0] ?? postcode})`,
-      index: amenities.length + 1,
-    });
+  if (data.nearbyAmenities && data.nearbyAmenities.length > 0) {
+    return sanitizeBrochureAmenities(
+      data.nearbyAmenities,
+      data.listing.town,
+    );
   }
 
-  // Pull short location bullets from location copy if present
+  const amenities: Array<{ label: string; index: number }> = [
+    ...buildFallbackNearbyAmenities(data.listing.town),
+  ];
+
+  // Short location bullets from listing copy — never a dummy outward-postcode line
   const locationBits = (data.listing.locationCopy ?? '')
     .split(/[\n•·]/)
     .map((s) => s.trim())
@@ -164,14 +166,10 @@ function buildAmenities(data: PublicBrochureData): Array<{
     amenities.push({ label: bit, index: amenities.length + 1 });
   }
 
-  if (amenities.length === 0) {
-    amenities.push({ label: 'Property location', index: 1 });
-  }
-
-  return amenities;
+  return sanitizeBrochureAmenities(amenities, data.listing.town);
 }
 
-function coverSlots(
+export function coverSlots(
   data: PublicBrochureData,
   display: BrochureDisplayOptions,
 ): Record<string, BrochureSlotValue> {
@@ -190,15 +188,52 @@ function coverSlots(
         hidePriceFromMarketing: false,
       })
     : null;
-  const priceLine = [size, rent, price].filter(Boolean).join('  ·  ');
+  const priceLines = buildCoverPriceLines(data.listing, display);
+  const showReduced =
+    display.showReducedPrice || Boolean(data.showReducedPrice);
 
   return {
     hero: imageSlot(cover?.id ?? null, cover?.url ?? null),
     title: textSlot(data.listing.name),
     address: textSlot(address || data.listing.name),
     disposal: textSlot(formatDisposalLabel(data.listing.disposalType)),
-    headline: textSlot(priceLine),
+    headline: textSlot(priceLines.join('\n')),
+    size: textSlot(size ?? ''),
+    rent: textSlot(rent ?? ''),
+    price: textSlot(price ?? ''),
+    reducedBadge: textSlot(showReduced ? 'REDUCED PRICE' : ''),
     brandName: textSlot(data.accountName ?? 'Agency'),
+  };
+}
+
+function isShortBrochureCopy(
+  descSlots: Record<string, BrochureSlotValue> | null,
+): boolean {
+  if (!descSlots) return true;
+  const body =
+    descSlots.body?.type === 'text' ? descSlots.body.text.trim() : '';
+  const highlights =
+    descSlots.highlights?.type === 'text'
+      ? descSlots.highlights.text
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+      : [];
+  return body.length <= 500 && highlights.length <= 5;
+}
+
+function contactSlots(
+  data: PublicBrochureData,
+  notice: string,
+): Record<string, BrochureSlotValue> {
+  return {
+    title: textSlot('Contact'),
+    notice: textSlot(notice),
+    agents: { type: 'agents' },
+    branchName: textSlot(data.branch?.name ?? data.accountName ?? ''),
+    branchAddress: textSlot(data.branch?.address ?? ''),
+    branchPhone: textSlot(data.branch?.phone ?? ''),
+    branchEmail: textSlot(data.branch?.email ?? ''),
   };
 }
 
@@ -220,10 +255,9 @@ function photoPages(
   let i = 0;
   let section = 1;
 
-  // Editorial + landscape classic: prefer full-bleed so photos aren't squeezed
-  const preferFullBleed =
-    templateId === 'editorial' ||
-    (orientation === 'landscape' && templateId === 'classic');
+  // Editorial stays photo-led (one hero frame per page). Classic/compact pack
+  // interiors so landscape packs are not a run of near-blank full-bleed pages.
+  const preferFullBleed = templateId === 'editorial';
 
   while (i < pool.length) {
     const remaining = pool.length - i;
@@ -349,17 +383,21 @@ export function buildBrochureDocument(
   );
 
   if (templateId === 'compact') {
-    // Short pack: cover, facts, optional copy, one photo, map, contact
+    // Short pack: cover, facts (+ copy when brief), one photo, map, contact
+    const combineCopy = isShortBrochureCopy(descSlots);
     if (facts.length > 0) {
       pages.push(
         page('facts_table', {
           facts: { type: 'facts', rows: facts },
           title: textSlot('The offering'),
+          ...(combineCopy && descSlots
+            ? { body: descSlots.body, highlights: descSlots.highlights }
+            : {}),
         }),
       );
     }
 
-    if (descSlots) {
+    if (descSlots && (!combineCopy || facts.length === 0)) {
       pages.push(page('description_highlights', descSlots));
     }
 
@@ -381,13 +419,13 @@ export function buildBrochureDocument(
     }
 
     pages.push(
-      page('contact', {
-        title: textSlot('Contact'),
-        notice: textSlot(
+      page(
+        'contact',
+        contactSlots(
+          data,
           'Important notice: These particulars are for guidance only and do not constitute any part of an offer or contract. All descriptions, dimensions and other details are given in good faith but should not be relied upon as statements of fact.',
         ),
-        agents: { type: 'agents' },
-      }),
+      ),
     );
 
     return {
@@ -401,6 +439,8 @@ export function buildBrochureDocument(
   }
 
   // Classic + Editorial fuller packs
+  const combineCopy =
+    templateId === 'classic' && isShortBrochureCopy(descSlots);
   if (facts.length > 0) {
     pages.push(
       page(
@@ -410,6 +450,9 @@ export function buildBrochureDocument(
           title: textSlot(
             templateId === 'editorial' ? 'The offering' : 'Summary',
           ),
+          ...(combineCopy && descSlots
+            ? { body: descSlots.body, highlights: descSlots.highlights }
+            : {}),
         },
         templateId === 'editorial'
           ? { sectionNumber: '02', sectionLabel: 'The offering' }
@@ -418,7 +461,7 @@ export function buildBrochureDocument(
     );
   }
 
-  if (descSlots) {
+  if (descSlots && (!combineCopy || facts.length === 0)) {
     pages.push(
       page(
         'description_highlights',
@@ -467,13 +510,10 @@ export function buildBrochureDocument(
   pages.push(
     page(
       'contact',
-      {
-        title: textSlot('Contact'),
-        notice: textSlot(
-          'Important notice: These particulars are believed to be correct but their accuracy is not guaranteed and they do not form part of any contract. Interested parties should satisfy themselves by inspection or otherwise as to the correctness of each statement.',
-        ),
-        agents: { type: 'agents' },
-      },
+      contactSlots(
+        data,
+        'Important notice: These particulars are believed to be correct but their accuracy is not guaranteed and they do not form part of any contract. Interested parties should satisfy themselves by inspection or otherwise as to the correctness of each statement.',
+      ),
       templateId === 'editorial'
         ? { sectionNumber: '05', sectionLabel: 'Contact' }
         : undefined,
@@ -554,6 +594,10 @@ export function createBlankBrochurePage(
         address: textSlot(''),
         disposal: textSlot(''),
         headline: textSlot(''),
+        size: textSlot(''),
+        rent: textSlot(''),
+        price: textSlot(''),
+        reducedBadge: textSlot(''),
         brandName: textSlot(''),
       });
     case 'facts_table':
@@ -601,6 +645,10 @@ export function createBlankBrochurePage(
         title: textSlot('Contact'),
         notice: textSlot(''),
         agents: { type: 'agents' },
+        branchName: textSlot(''),
+        branchAddress: textSlot(''),
+        branchPhone: textSlot(''),
+        branchEmail: textSlot(''),
       });
     default:
       return page(layoutId, {});

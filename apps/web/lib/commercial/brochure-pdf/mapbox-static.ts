@@ -24,7 +24,28 @@ export type FetchBrochureMapImageInput = {
   height: number;
   zoom?: number;
   amenities?: BrochureMapAmenity[];
+  /** Workspace brand pin (`#RRGGBB` or `RRGGBB`). Overlay is `pin-l+RRGGBB`. */
+  pinColor?: string;
 };
+
+const MAP_STYLES = ['mapbox/streets-v12', 'mapbox/light-v11'] as const;
+const PIN_HEX_FALLBACK = 'FF5C34';
+
+/** Mapbox Static overlay pin colour: 6 hex digits, no `#`. */
+export function toMapboxPinHex(
+  hex: string | null | undefined,
+  fallback = PIN_HEX_FALLBACK,
+): string {
+  const cleaned = (hex ?? '').replace('#', '').trim().toUpperCase();
+  if (/^[0-9A-F]{6}$/.test(cleaned)) return cleaned;
+  if (/^[0-9A-F]{3}$/.test(cleaned)) {
+    return cleaned
+      .split('')
+      .map((ch) => `${ch}${ch}`)
+      .join('');
+  }
+  return fallback;
+}
 
 type TokenSource =
   | 'MAPBOX_SECRET_TOKEN'
@@ -68,19 +89,28 @@ export function buildBrochureMapStaticUrls(
   const height = clampSize(input.height);
   const zoom = input.zoom ?? 14;
   const { longitude: lng, latitude: lat } = input;
-  const style = 'mapbox/light-v11';
-  const base = `https://api.mapbox.com/styles/v1/${style}/static`;
   const tokenQs = `access_token=${encodeURIComponent(token)}`;
+  const pinHex = toMapboxPinHex(input.pinColor);
+  const pin = `pin-l+${pinHex}(${lng},${lat})`;
 
-  // Simple coloured pin (no Maki icon name — fewer 422s)
-  const pin = `pin-l+FF5C34(${lng},${lat})`;
+  const urls: string[] = [];
+  for (const style of MAP_STYLES) {
+    const base = `https://api.mapbox.com/styles/v1/${style}/static`;
+    urls.push(
+      `${base}/${pin}/${lng},${lat},${zoom},0/${width}x${height}@2x?${tokenQs}`,
+    );
+    urls.push(
+      `${base}/${pin}/${lng},${lat},${zoom},0/${width}x${height}?${tokenQs}`,
+    );
+  }
 
-  return [
-    `${base}/${pin}/${lng},${lat},${zoom},0/${width}x${height}@2x?${tokenQs}`,
-    `${base}/${pin}/${lng},${lat},${zoom},0/${width}x${height}?${tokenQs}`,
-    // Bare map, no overlay — last resort
-    `${base}/${lng},${lat},${zoom},0/${width}x${height}@2x?${tokenQs}`,
-  ];
+  // Bare streets map if every overlay 422s
+  const streetsBase = `https://api.mapbox.com/styles/v1/${MAP_STYLES[0]}/static`;
+  urls.push(
+    `${streetsBase}/${lng},${lat},${zoom},0/${width}x${height}@2x?${tokenQs}`,
+  );
+
+  return urls;
 }
 
 /** @deprecated Prefer buildBrochureMapStaticUrls — kept for callers/tests. */

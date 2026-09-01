@@ -21,6 +21,18 @@ export type BrochureAgent = {
   pictureUrl: string | null;
 };
 
+export type BrochureBranch = {
+  name: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+};
+
+export type BrochureAmenity = {
+  label: string;
+  index: number;
+};
+
 export type BrochureListing = {
   id: string;
   accountId: string;
@@ -68,6 +80,12 @@ export type PublicBrochureData = {
   agents: BrochureAgent[];
   images: BrochureMediaItem[];
   floorplans: BrochureMediaItem[];
+  /** Workspace office used on the contact page (listing branch, else default). */
+  branch?: BrochureBranch | null;
+  /** Real nearby places from Mapbox; omit or empty to fall back to town centre. */
+  nearbyAmenities?: BrochureAmenity[];
+  /** Render-time reduced sash; also baked into the cover `reducedBadge` slot. */
+  showReducedPrice?: boolean;
 };
 
 export function formatBrochureAddress(listing: BrochureListing): string {

@@ -65,6 +65,7 @@ const DISPLAY_TOGGLES: Array<{
   { key: 'showRates', label: 'Display business rates' },
   { key: 'showServiceCharge', label: 'Display service charge' },
   { key: 'showEstateCharge', label: 'Display estate charge' },
+  { key: 'showReducedPrice', label: 'Reduced price badge' },
 ];
 
 function safeFileName(name: string) {
@@ -118,6 +119,7 @@ export function ListingBrochurePublishSheet({
     params.set('showRates', display.showRates ? '1' : '0');
     params.set('showServiceCharge', display.showServiceCharge ? '1' : '0');
     params.set('showEstateCharge', display.showEstateCharge ? '1' : '0');
+    params.set('showReducedPrice', display.showReducedPrice ? '1' : '0');
     return params;
   }
 
@@ -357,7 +359,9 @@ export function ListingBrochurePublishSheet({
                   <span className="text-sm">{item.label}</span>
                   <Switch
                     checked={display[item.key]}
-                    disabled={busy || useSaved}
+                    disabled={
+                      busy || (useSaved && item.key !== 'showReducedPrice')
+                    }
                     onCheckedChange={(checked) =>
                       setDisplay((current) => ({
                         ...current,

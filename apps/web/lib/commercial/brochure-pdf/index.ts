@@ -13,9 +13,12 @@ export {
 } from './brochure-document';
 export {
   BROCHURE_LAYOUT_OPTIONS,
+  buildAmenities,
   buildBrochureDocument,
+  coverSlots,
   createBlankBrochurePage,
 } from './build-brochure-document';
+export { buildCoverPriceLines } from './cover-prices';
 export { generateListingBrochurePdf } from './generate-listing-brochure-pdf';
 export { loadListingBrochureData } from './load-listing-brochure-data';
 export {
