@@ -10,7 +10,7 @@ enum NativeAPIError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notFound:
-            "Today isn’t available yet for this workspace."
+            "This isn’t available yet for this workspace."
         case .unauthorized:
             "Your session expired. Please sign in again."
         case .http(let code):
@@ -62,6 +62,22 @@ actor NativeAPIClient {
         }
         do {
             return try JSONDecoder().decode(TodayPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func tasks(workspace: String, accessToken: String) async throws -> TasksPayload {
+        let data = try await get(
+            path: "api/native/v1/tasks",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return TasksPayload.empty
+        }
+        do {
+            return try JSONDecoder().decode(TasksPayload.self, from: data)
         } catch {
             throw NativeAPIError.decoding
         }
@@ -218,6 +234,95 @@ struct TodayPayload: Decodable, Equatable {
     var supportingText: String? {
         message ?? summary
     }
+}
+
+struct TasksPayload: Decodable, Equatable {
+    var items: [TaskItem]
+
+    static let empty = TasksPayload(items: [])
+
+    enum CodingKeys: String, CodingKey {
+        case items, tasks
+    }
+
+    init(items: [TaskItem]) {
+        self.items = items
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let items = try container.decodeIfPresent([TaskItem].self, forKey: .items) {
+            self.items = items
+        } else if let tasks = try container.decodeIfPresent([TaskItem].self, forKey: .tasks) {
+            self.items = tasks
+        } else {
+            items = []
+        }
+    }
+}
+
+struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
+    var id: String
+    var title: String
+    var due: String?
+    var subtitle: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, due, subtitle, name, description, body
+    }
+
+    init(id: String, title: String, due: String?, subtitle: String?) {
+        self.id = id
+        self.title = title
+        self.due = due
+        self.subtitle = subtitle
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let id = try container.decodeIfPresent(String.self, forKey: .id) {
+            self.id = id
+        } else {
+            id = UUID().uuidString
+        }
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+            ?? container.decodeIfPresent(String.self, forKey: .name)
+            ?? "Untitled"
+        due = try container.decodeIfPresent(String.self, forKey: .due)
+        subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
+            ?? container.decodeIfPresent(String.self, forKey: .description)
+            ?? container.decodeIfPresent(String.self, forKey: .body)
+    }
+
+    var displaySubtitle: String? {
+        subtitle ?? Self.dueLabel(due)
+    }
+
+    /// Calendar date only. Parse and format in UTC so the day does not shift.
+    /// `en_GB` matches the web recorder short label (`Mon 1 Sep`).
+    static func dueLabel(_ due: String?) -> String? {
+        guard let due, !due.isEmpty else { return nil }
+        guard let date = Self.dueParser.date(from: due) else { return due }
+        return Self.dueDisplay.string(from: date)
+    }
+
+    private static let dueParser: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    private static let dueDisplay: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_GB")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE d MMM"
+        return formatter
+    }()
 }
 
 struct TodayItem: Decodable, Identifiable, Equatable, Hashable {
