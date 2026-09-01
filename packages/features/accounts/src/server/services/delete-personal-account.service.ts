@@ -191,6 +191,7 @@ class DeletePersonalAccountService {
         subject,
         status,
         errorMessage,
+        htmlBody: html,
         metadata: { kind: 'account_deletion' },
       });
     }

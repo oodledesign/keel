@@ -12651,6 +12651,7 @@ export type Database = {
           created_at: string
           email_type: string
           error_message: string | null
+          html_body: string | null
           id: string
           metadata: Json
           recipient_email: string
@@ -12663,6 +12664,7 @@ export type Database = {
           created_at?: string
           email_type: string
           error_message?: string | null
+          html_body?: string | null
           id?: string
           metadata?: Json
           recipient_email: string
@@ -12675,6 +12677,7 @@ export type Database = {
           created_at?: string
           email_type?: string
           error_message?: string | null
+          html_body?: string | null
           id?: string
           metadata?: Json
           recipient_email?: string

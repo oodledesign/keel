@@ -734,5 +734,29 @@ export async function circulateListing(
     })
     .eq('id', sendId);
 
+  if (!input.dryRun && sent > 0) {
+    try {
+      const { recordCommercialAccountEvent } =
+        await import('~/lib/commercial/account-events');
+      await recordCommercialAccountEvent(client, {
+        accountId: input.accountId,
+        entityType: 'listing',
+        entityId: input.listingId,
+        eventType: 'circulation_sent',
+        summary: `Circulation emailed to ${sent} contact${sent === 1 ? '' : 's'}`,
+        actorUserId: input.sentBy ?? null,
+        metadata: {
+          sendId,
+          sent,
+          skipped,
+          failed,
+          sendKind: 'listing',
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+
   return { sendId, sent, skipped, failed, dryRunEligible };
 }

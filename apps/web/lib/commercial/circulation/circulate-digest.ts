@@ -184,6 +184,30 @@ export async function circulateContactDigests(
     })
     .eq('id', sendId);
 
+  if (!input.dryRun && mailed > 0) {
+    try {
+      const { recordCommercialAccountEvent } =
+        await import('~/lib/commercial/account-events');
+      await recordCommercialAccountEvent(client, {
+        accountId: input.accountId,
+        entityType: input.triggerListingId ? 'listing' : 'other',
+        entityId: input.triggerListingId ?? sendId,
+        eventType: 'circulation_sent',
+        summary: `Circulation digest emailed to ${mailed} contact${mailed === 1 ? '' : 's'}`,
+        actorUserId: input.sentBy ?? null,
+        metadata: {
+          sendId,
+          mailed,
+          skipped,
+          failed,
+          sendKind: 'digest',
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+  }
+
   return {
     sendId,
     mailed,

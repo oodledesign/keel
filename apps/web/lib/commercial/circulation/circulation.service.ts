@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 import { createSesMailer } from '@kit/ses';
+import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
 import {
   type CirculationConsentStatus,
@@ -345,6 +346,12 @@ class CommercialCirculationService {
     return data as { account_id: string; auto_send_enabled: boolean };
   }
 
+  /**
+   * Pause/resume auto-send for a contact. Enabling someone who is not yet
+   * subscribed creates a preference with lawful_basis = manual_opt_in
+   * (agent attestation from the Circulation UI). Never re-opts unsubscribed
+   * or suppressed addresses.
+   */
   async setContactAutoSend(input: {
     accountId: string;
     email: string;
@@ -353,19 +360,77 @@ class CommercialCirculationService {
     const email = normalizeEmail(input.email);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
-    const { data, error } = await db
+
+    const { data: existing, error: loadError } = await db
       .from('commercial_marketing_preferences')
-      .update({ auto_send_enabled: input.enabled })
+      .select('id, marketing_status')
       .eq('account_id', input.accountId)
       .eq('email', email)
       .eq('purpose', PURPOSE)
-      .select('id')
       .maybeSingle();
 
-    if (error) throw new Error(error.message);
-    if (!data) {
-      throw new Error('No circulation preference found for that address');
+    if (loadError) throw new Error(loadError.message);
+
+    const status = existing?.marketing_status as string | undefined;
+
+    if (status === 'unsubscribed' || status === 'suppressed') {
+      throw new Error(
+        status === 'unsubscribed'
+          ? 'This address unsubscribed — they cannot be re-enabled from here'
+          : 'This address is suppressed and cannot receive circulation',
+      );
     }
+
+    if (!input.enabled) {
+      if (!existing) return;
+      const { error } = await db
+        .from('commercial_marketing_preferences')
+        .update({ auto_send_enabled: false })
+        .eq('id', existing.id);
+      if (error) throw new Error(error.message);
+      return;
+    }
+
+    if (existing && status === 'subscribed') {
+      const { error } = await db
+        .from('commercial_marketing_preferences')
+        .update({ auto_send_enabled: true })
+        .eq('id', existing.id);
+      if (error) throw new Error(error.message);
+      return;
+    }
+
+    // Existing row that is not subscribed/unsubscribed/suppressed (e.g. legacy
+    // status) — agent opt-in promotes to subscribed with manual_opt_in.
+    if (existing) {
+      const { error } = await db
+        .from('commercial_marketing_preferences')
+        .update({
+          marketing_status: 'subscribed',
+          lawful_basis: 'manual_opt_in',
+          consent_source: 'agent_circulation_ui',
+          consent_copy_version: CONSENT_COPY_VERSION,
+          consented_at: new Date().toISOString(),
+          auto_send_enabled: true,
+          unsubscribed_at: null,
+        })
+        .eq('id', existing.id);
+      if (error) throw new Error(error.message);
+      return;
+    }
+
+    const { error } = await db.from('commercial_marketing_preferences').insert({
+      account_id: input.accountId,
+      email,
+      purpose: PURPOSE,
+      marketing_status: 'subscribed',
+      lawful_basis: 'manual_opt_in',
+      consent_source: 'agent_circulation_ui',
+      consent_copy_version: CONSENT_COPY_VERSION,
+      consented_at: new Date().toISOString(),
+      auto_send_enabled: true,
+    });
+    if (error) throw new Error(error.message);
   }
 
   async ensurePublicAccessToken(accountId: string, email: string) {
@@ -565,9 +630,6 @@ export async function sendCirculationEmailViaSes(input: {
   sesConfigurationSet?: string;
   metadata?: Record<string, unknown>;
 }): Promise<{ messageId: string | null }> {
-  const { insertPlatformEmailLog } =
-    await import('@kit/supabase/platform-email-log');
-
   let status: 'sent' | 'failed' = 'sent';
   let errorMessage: string | null = null;
   let messageId: string | null = null;
@@ -609,6 +671,7 @@ export async function sendCirculationEmailViaSes(input: {
         ses_message_id: messageId,
         ...(input.metadata ?? {}),
       },
+      htmlBody: input.html,
     });
   }
 

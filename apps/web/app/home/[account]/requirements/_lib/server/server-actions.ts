@@ -66,7 +66,7 @@ export const createRequirement = enhanceAction(
 );
 
 export const updateRequirement = enhanceAction(
-  async (input) => {
+  async (input, user) => {
     const { requireCommercialBillableActor } =
       await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
@@ -78,6 +78,7 @@ export const updateRequirement = enhanceAction(
       requirementId,
       accountId,
       rest,
+      { actorUserId: user.id },
     );
     const { revalidateMatchRequirementsCache } =
       await import('~/lib/cache/disposals-data-cache');

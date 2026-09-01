@@ -121,13 +121,22 @@ export function CirculationWorkspaceClient({
     setContacts((current) =>
       current.map((contact) =>
         contact.email === email
-          ? { ...contact, autoSendEnabled: enabled }
+          ? {
+              ...contact,
+              autoSendEnabled: enabled,
+              ...(enabled ? { consentStatus: 'subscribed' as const } : {}),
+            }
           : contact,
       ),
     );
     startContactTransition(async () => {
       try {
         await setCirculationContactAutoSend({ accountId, email, enabled });
+        toast.success(
+          enabled
+            ? 'Contact opted in for matching emails'
+            : 'Automatic emails paused for this contact',
+        );
       } catch (error) {
         setContacts(previous);
         toast.error(
@@ -225,8 +234,9 @@ export function CirculationWorkspaceClient({
         <CardContent>
           <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
             {subscribedCount} subscribed · {contacts.length} with current
-            matches. Pause someone to keep them subscribed without automatic
-            emails.
+            matches. Turn someone on to opt them into matching emails (only if
+            you have a lawful basis). Pause keeps them subscribed without
+            automatic emails.
           </p>
           {contacts.length === 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -235,7 +245,12 @@ export function CirculationWorkspaceClient({
             </p>
           ) : (
             <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
-              {contacts.map((contact) => (
+              {contacts.map((contact) => {
+                const blocked =
+                  contact.consentStatus === 'unsubscribed' ||
+                  contact.consentStatus === 'suppressed';
+
+                return (
                 <li
                   key={contact.email}
                   className="flex flex-wrap items-center justify-between gap-3 py-3"
@@ -266,16 +281,15 @@ export function CirculationWorkspaceClient({
                       contact.consentStatus === 'subscribed' &&
                       contact.autoSendEnabled
                     }
-                    disabled={
-                      contactPending || contact.consentStatus !== 'subscribed'
-                    }
+                    disabled={contactPending || blocked}
                     onCheckedChange={(enabled) =>
                       toggleContact(contact.email, enabled)
                     }
                     aria-label={`Auto-send for ${contact.email}`}
                   />
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </CardContent>

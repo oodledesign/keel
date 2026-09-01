@@ -174,42 +174,63 @@ async function enrichCommercialAccountEvents(
         .map((event) => event.entityId),
     ),
   ];
+  const requirementIds = [
+    ...new Set(
+      events
+        .filter((event) => event.entityType === 'requirement')
+        .map((event) => event.entityId),
+    ),
+  ];
 
-  const [actorsRes, listingsRes, clientsRes] = await Promise.all([
-    actorIds.length
-      ? client
-          .from('accounts')
-          .select('id, name, picture_url')
-          .in('id', actorIds)
-      : Promise.resolve({
-          data: [] as Array<{
-            id: string;
-            name: string | null;
-            picture_url: string | null;
-          }>,
-        }),
-    listingIds.length
-      ? fromTable(client, 'commercial_listings')
-          .select('id, name')
-          .eq('account_id', accountId)
-          .in('id', listingIds)
-      : Promise.resolve({
-          data: [] as Array<{ id: string; name: string | null }>,
-        }),
-    clientIds.length
-      ? client
-          .from('clients')
-          .select('id, display_name, company_name')
-          .eq('account_id', accountId)
-          .in('id', clientIds)
-      : Promise.resolve({
-          data: [] as Array<{
-            id: string;
-            display_name: string | null;
-            company_name: string | null;
-          }>,
-        }),
-  ]);
+  const [actorsRes, listingsRes, clientsRes, requirementsRes] =
+    await Promise.all([
+      actorIds.length
+        ? client
+            .from('accounts')
+            .select('id, name, picture_url')
+            .in('id', actorIds)
+        : Promise.resolve({
+            data: [] as Array<{
+              id: string;
+              name: string | null;
+              picture_url: string | null;
+            }>,
+          }),
+      listingIds.length
+        ? fromTable(client, 'commercial_listings')
+            .select('id, name')
+            .eq('account_id', accountId)
+            .in('id', listingIds)
+        : Promise.resolve({
+            data: [] as Array<{ id: string; name: string | null }>,
+          }),
+      clientIds.length
+        ? client
+            .from('clients')
+            .select('id, display_name, company_name')
+            .eq('account_id', accountId)
+            .in('id', clientIds)
+        : Promise.resolve({
+            data: [] as Array<{
+              id: string;
+              display_name: string | null;
+              company_name: string | null;
+            }>,
+          }),
+      requirementIds.length
+        ? fromTable(client, 'commercial_requirements')
+            .select('id, company_name, contact_name, location_text')
+            .eq('account_id', accountId)
+            .in('id', requirementIds)
+        : Promise.resolve({
+            data: [] as Array<{
+              id: string;
+              company_name: string | null;
+              contact_name: string | null;
+              location_text: string | null;
+            }>,
+          }),
+    ]);
 
   const actorMap = new Map(
     (
@@ -237,6 +258,22 @@ async function enrichCommercialAccountEvents(
       row.display_name?.trim() || row.company_name?.trim() || null,
     ]),
   );
+  const requirementMap = new Map(
+    (
+      (requirementsRes.data ?? []) as Array<{
+        id: string;
+        company_name: string | null;
+        contact_name: string | null;
+        location_text: string | null;
+      }>
+    ).map((row) => [
+      row.id,
+      row.company_name?.trim() ||
+        row.contact_name?.trim() ||
+        row.location_text?.trim() ||
+        null,
+    ]),
+  );
 
   return events.map((event) => {
     const actor = event.actorUserId
@@ -251,6 +288,8 @@ async function enrichCommercialAccountEvents(
           : null);
     } else if (event.entityType === 'client') {
       entityLabel = clientMap.get(event.entityId) ?? null;
+    } else if (event.entityType === 'requirement') {
+      entityLabel = requirementMap.get(event.entityId) ?? null;
     }
 
     return {

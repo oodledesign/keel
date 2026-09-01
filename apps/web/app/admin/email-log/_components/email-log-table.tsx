@@ -29,6 +29,7 @@ import type {
   GroupedEmailLogCampaignRow,
   PlatformEmailLogRow,
 } from '../_lib/server/admin-email-log.loader';
+import { EmailLogPreviewButton } from './email-log-preview-sheet';
 
 const FILTER_ALL = '__email_log_filter_all__';
 
@@ -214,13 +215,16 @@ export function EmailLogTable({
                 <TableHead className="text-[var(--workspace-shell-text-muted)]">
                   Status
                 </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow className="border-[color:var(--workspace-shell-border)]">
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="py-10 text-center text-[var(--workspace-shell-text-muted)]"
                   >
                     No emails logged yet.
@@ -280,6 +284,9 @@ export function EmailLogTable({
                           {row.error_message}
                         </p>
                       ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <EmailLogPreviewButton emailLogId={row.id} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -413,7 +420,7 @@ function GroupedEmailLogTable({
                 1
               </TableCell>
               <TableCell className="text-[var(--workspace-shell-text-muted)]">
-                —
+                <EmailLogPreviewButton emailLogId={row.id} />
               </TableCell>
             </TableRow>
           ))}

@@ -112,6 +112,7 @@ export async function notifyPlatformTeamInviteAccepted(input: {
       subject,
       status,
       errorMessage,
+      htmlBody: html,
       metadata: {
         user_id: input.userId,
         email: input.email,

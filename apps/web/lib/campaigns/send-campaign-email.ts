@@ -56,6 +56,7 @@ export async function sendCampaignEmailViaSes(input: {
         ses_message_id: messageId,
         ...(input.metadata ?? {}),
       },
+      htmlBody: input.html,
     });
   }
 

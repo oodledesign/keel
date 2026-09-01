@@ -101,6 +101,7 @@ export async function sendPlatformEmail(params: {
     errorMessage = formatEmailDeliveryError(error);
     throw new Error(errorMessage);
   } finally {
+    const htmlBody = 'html' in mail ? mail.html : undefined;
     await insertPlatformEmailLog({
       emailType: params.type,
       accountId: params.accountId ?? null,
@@ -110,6 +111,7 @@ export async function sendPlatformEmail(params: {
       status,
       errorMessage,
       metadata: params.metadata ?? {},
+      htmlBody: htmlBody ?? null,
     });
   }
 }

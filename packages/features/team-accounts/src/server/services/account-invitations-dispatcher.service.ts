@@ -235,6 +235,7 @@ class AccountInvitationsDispatchService {
         subject,
         status,
         errorMessage,
+        htmlBody: html,
         metadata: {
           kind: 'team_invitation',
           invitation_id: invitation.id,

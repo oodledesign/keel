@@ -977,19 +977,19 @@ export function EmailThreadPanel({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {/* Mobile: one scroll for messages + todos + draft. Desktop: messages scroll; side panels stay below. */}
+          {/* One scroll for messages + todos + draft so nothing is crushed to fit the viewport. */}
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain lg:overflow-hidden',
+              'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain',
               MOBILE_FLOATING_CHROME_SCROLL_PB,
-              'lg:pb-0',
+              'lg:pb-4',
             )}
           >
-            <div className="shrink-0 px-3 py-3 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-y-auto lg:px-4">
+            <div className="shrink-0 px-3 py-3 lg:px-4">
               <ThreadMessages messages={detail.messages} />
             </div>
 
-            <div className="shrink-0 space-y-4 border-t border-[color:var(--workspace-shell-border)] px-3 py-3 lg:max-h-[min(28vh,16rem)] lg:overflow-y-auto lg:px-4">
+            <div className="shrink-0 space-y-4 border-t border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Suggested to-dos

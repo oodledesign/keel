@@ -13,7 +13,17 @@ export type PlatformEmailLogEntry = {
   status: PlatformEmailLogStatus;
   errorMessage?: string | null;
   metadata?: Record<string, unknown>;
+  /** Rendered HTML for admin preview. Truncated if very large. */
+  htmlBody?: string | null;
 };
+
+const HTML_BODY_MAX_CHARS = 500_000;
+
+function truncateHtmlBody(html: string | null | undefined): string | null {
+  if (!html?.trim()) return null;
+  if (html.length <= HTML_BODY_MAX_CHARS) return html;
+  return `${html.slice(0, HTML_BODY_MAX_CHARS)}\n<!-- truncated -->`;
+}
 
 /**
  * Persist an outbound email event. Failures are logged to stderr only so email
@@ -44,6 +54,7 @@ export async function insertPlatformEmailLog(
         status: entry.status,
         error_message: entry.errorMessage ?? null,
         metadata: entry.metadata ?? {},
+        html_body: truncateHtmlBody(entry.htmlBody),
       });
 
     if (error) {

@@ -16,8 +16,10 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  type BusinessPaidPlan,
   buildBusinessSetupNext,
   buildBusinessSignupContext,
+  resolveBusinessPaidPlan,
 } from '~/lib/auth/signup-context-business';
 import {
   type SignupContext,
@@ -26,10 +28,13 @@ import {
 import {
   aiCreditsForBillableSeats,
   clampBillableSeats,
-  estimateMonthlyGbp,
-  illustrativeTierForSeats,
+  estimateMonthlyBreakdownGbp,
   maxProjectGuestsForBillableSeats,
 } from '~/lib/billing/business-graduated-pricing';
+import {
+  estimateStarterMonthlyBreakdownGbp,
+  maxProjectGuestsForStarterBillableSeats,
+} from '~/lib/billing/business-starter-pricing';
 import { formatGbp } from '~/lib/billing/pricing-marketing';
 import { marketingBtnGradient } from '~/lib/marketing/marketing-ui';
 
@@ -52,6 +57,9 @@ export function BusinessSignUpFlow({
   const initialSeats = clampBillableSeats(initialContext.intent?.seats ?? 4);
   const [step, setStep] = useState<'plan' | 'account'>('plan');
   const [seats, setSeats] = useState(initialSeats);
+  const [paidPlan, setPaidPlan] = useState<BusinessPaidPlan>(() =>
+    resolveBusinessPaidPlan(initialContext.intent),
+  );
 
   const context = useMemo(
     () =>
@@ -62,13 +70,15 @@ export function BusinessSignUpFlow({
           seats: initialSeats,
         },
         seats,
+        paidPlan,
       ),
-    [initialContext.intent, initialSeats, seats],
+    [initialContext.intent, initialSeats, seats, paidPlan],
   );
 
   const nextPath = buildBusinessSetupNext(
     seats,
     initialContext.intent?.interval,
+    paidPlan,
   );
   const paths = {
     callback: pathsConfig.auth.callback,
@@ -77,10 +87,15 @@ export function BusinessSignUpFlow({
   const signInHref = buildAuthLinkWithNext(pathsConfig.auth.signIn, nextPath);
 
   const billable = clampBillableSeats(seats);
-  const monthly = estimateMonthlyGbp(billable);
-  const credits = aiCreditsForBillableSeats(billable);
-  const guests = maxProjectGuestsForBillableSeats(billable);
-  const tier = illustrativeTierForSeats(billable);
+  const isStarter = paidPlan === 'starter';
+  const { lines, totalGbp: monthly } = isStarter
+    ? estimateStarterMonthlyBreakdownGbp(billable)
+    : estimateMonthlyBreakdownGbp(billable);
+  const guests = isStarter
+    ? maxProjectGuestsForStarterBillableSeats(billable)
+    : maxProjectGuestsForBillableSeats(billable);
+  const credits = isStarter ? null : aiCreditsForBillableSeats(billable);
+  const planLabel = isStarter ? 'Starter' : 'Pro';
 
   return (
     <AuthSplitShell
@@ -90,26 +105,37 @@ export function BusinessSignUpFlow({
       formTitle={step === 'plan' ? 'Confirm your plan' : context.formTitle}
       formSubtitle={
         step === 'plan'
-          ? 'Choose how many seats you need, then create your account. 14-day trial — no card.'
+          ? 'Choose Starter or Pro, set your seats, then create your account. 14-day trial — no card.'
           : context.formSubtitle
       }
     >
       {step === 'plan' ? (
         <div className="space-y-6" data-test="business-signup-plan-step">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div
+            className="grid gap-3 sm:grid-cols-2"
+            role="group"
+            aria-label="Business plan"
+          >
             {(
               [
-                { id: 'solo', seats: 1, label: 'Solo' },
-                { id: 'team', seats: 4, label: 'Team' },
-                { id: 'scale', seats: 10, label: 'Scale' },
+                {
+                  id: 'starter' as const,
+                  label: 'Starter',
+                  caption: '£14 first seat, £9 each extra',
+                },
+                {
+                  id: 'pro' as const,
+                  label: 'Pro',
+                  caption: '£29 first seat, £22 each extra',
+                },
               ] as const
             ).map((option) => {
-              const active = tier.id === option.id;
+              const active = paidPlan === option.id;
               return (
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => setSeats(option.seats)}
+                  onClick={() => setPaidPlan(option.id)}
                   className={cn(
                     'rounded-xl border px-3 py-3 text-left transition',
                     active
@@ -121,11 +147,7 @@ export function BusinessSignUpFlow({
                     {option.label}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-                    {option.seats === 1
-                      ? '1 seat'
-                      : option.seats === 4
-                        ? '2–5 seats'
-                        : '6+ seats'}
+                    {option.caption}
                   </p>
                 </button>
               );
@@ -141,6 +163,7 @@ export function BusinessSignUpFlow({
                 min={1}
                 max={30}
                 value={billable}
+                aria-valuetext={`${billable} billable seat${billable === 1 ? '' : 's'} on ${planLabel}`}
                 className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--ozer-plum-alpha-08)] accent-[var(--ozer-coral-500)]"
                 onChange={(event) =>
                   setSeats(
@@ -172,19 +195,45 @@ export function BusinessSignUpFlow({
 
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] p-4">
             <p className="text-xs tracking-[0.08em] text-[var(--workspace-shell-text-muted)] uppercase">
-              {tier.label} · estimated monthly
+              {planLabel} · estimated monthly
             </p>
-            <p className="mt-1 text-3xl font-bold text-[var(--workspace-shell-text)]">
+            <dl
+              className="mt-3 space-y-1.5 text-sm text-[var(--workspace-shell-text-muted)]"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {lines.map((line) => (
+                <div
+                  key={line.bandLabel}
+                  className="flex items-baseline justify-between gap-3"
+                >
+                  <dt>
+                    {line.bandLabel}{' '}
+                    <span className="opacity-80">
+                      ({line.seatsInBand} × {formatGbp(line.unitGbp)})
+                    </span>
+                  </dt>
+                  <dd className="text-[var(--workspace-shell-text)] tabular-nums">
+                    {formatGbp(line.subtotalGbp)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-3xl font-bold text-[var(--workspace-shell-text)]">
               {formatGbp(monthly)}
               <span className="text-sm font-normal text-[var(--workspace-shell-text-muted)]">
                 /mo
               </span>
             </p>
             <ul className="mt-2 space-y-1 text-sm text-[var(--workspace-shell-text-muted)]">
-              <li>{credits.toLocaleString()} shared AI credits</li>
+              {credits != null ? (
+                <li>{credits.toLocaleString()} shared AI credits</li>
+              ) : (
+                <li>Shared AI credit pool</li>
+              )}
               <li>
-                {guests} project guest{guests === 1 ? '' : 's'} · unlimited
-                portals
+                {guests} project guest{guests === 1 ? '' : 's'} ·{' '}
+                {isStarter ? '10 GB' : '25 GB'} portal storage
               </li>
               <li>14-day trial · no card required</li>
             </ul>
@@ -207,7 +256,7 @@ export function BusinessSignUpFlow({
             className="text-left text-sm text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:text-[var(--workspace-shell-text)] hover:underline"
             onClick={() => setStep('plan')}
           >
-            ← {tier.label} · {billable} seat{billable === 1 ? '' : 's'} ·{' '}
+            ← {planLabel} · {billable} seat{billable === 1 ? '' : 's'} ·{' '}
             {formatGbp(monthly)}/mo
           </button>
 

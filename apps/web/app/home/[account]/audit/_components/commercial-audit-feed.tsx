@@ -12,7 +12,7 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import type { CommercialAccountEvent } from '~/lib/commercial/account-events';
 
-type EntityFilter = 'all' | 'listing' | 'client';
+type EntityFilter = 'all' | 'listing' | 'client' | 'requirement';
 
 function formatWhen(iso: string) {
   try {
@@ -74,6 +74,12 @@ function entityHref(
       .replace('[account]', accountSlug)
       .replace('[clientId]', event.entityId);
   }
+  if (event.entityType === 'requirement') {
+    return pathsConfig.app.accountRequirements.replace(
+      '[account]',
+      accountSlug,
+    );
+  }
   return null;
 }
 
@@ -83,6 +89,9 @@ function EntityIcon({ entityType }: { entityType: string }) {
   }
   if (entityType === 'listing') {
     return <Building2 className="h-3.5 w-3.5" />;
+  }
+  if (entityType === 'requirement') {
+    return <ScrollText className="h-3.5 w-3.5" />;
   }
   return <CircleDot className="h-3.5 w-3.5" />;
 }
@@ -115,6 +124,7 @@ export function CommercialAuditFeed({
     { key: 'all', label: 'All' },
     { key: 'listing', label: 'Disposals' },
     { key: 'client', label: 'Contacts' },
+    { key: 'requirement', label: 'Requirements' },
   ];
 
   return (
@@ -211,12 +221,14 @@ export function CommercialAuditFeed({
                           </Link>
                         ) : (
                           <span>
-                            {event.entityLabel ??
+                              {event.entityLabel ??
                               (event.entityType === 'listing'
                                 ? 'Disposal'
                                 : event.entityType === 'client'
                                   ? 'Contact'
-                                  : event.entityType)}
+                                  : event.entityType === 'requirement'
+                                    ? 'Requirement'
+                                    : event.entityType)}
                           </span>
                         )}
                       </span>

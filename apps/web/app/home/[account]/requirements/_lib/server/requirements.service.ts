@@ -197,13 +197,38 @@ export function createRequirementsService(client: SupabaseClient) {
       if (error || !data) {
         throw new Error(error?.message ?? 'Failed to create requirement');
       }
-      return mapRequirement(data as Row);
+      const requirement = mapRequirement(data as Row);
+      try {
+        const { recordCommercialAccountEvent } =
+          await import('~/lib/commercial/account-events');
+        const label =
+          requirement.companyName?.trim() ||
+          requirement.contactName?.trim() ||
+          requirement.locationText?.trim() ||
+          'Requirement';
+        await recordCommercialAccountEvent(client, {
+          accountId: input.accountId,
+          entityType: 'requirement',
+          entityId: requirement.id,
+          eventType: 'requirement_created',
+          summary: `Requirement created — ${label}`,
+          actorUserId: input.createdBy ?? null,
+          metadata: {
+            stage: requirement.stage,
+            sector: requirement.sector,
+          },
+        });
+      } catch {
+        /* best-effort */
+      }
+      return requirement;
     },
 
     async updateRequirement(
       requirementId: string,
       accountId: string,
       input: Omit<UpdateRequirementInput, 'requirementId' | 'accountId'>,
+      options?: { actorUserId?: string | null },
     ): Promise<CommercialRequirement> {
       const { data: existingRow, error: existingError } = await client
         .from('commercial_requirements')
@@ -310,7 +335,28 @@ export function createRequirementsService(client: SupabaseClient) {
       if (error || !data) {
         throw new Error(error?.message ?? 'Failed to update requirement');
       }
-      return mapRequirement(data as Row);
+      const requirement = mapRequirement(data as Row);
+      if (input.stage && input.stage !== existing.stage) {
+        try {
+          const { recordCommercialAccountEvent } =
+            await import('~/lib/commercial/account-events');
+          await recordCommercialAccountEvent(client, {
+            accountId,
+            entityType: 'requirement',
+            entityId: requirement.id,
+            eventType: 'requirement_stage_changed',
+            summary: `Requirement stage ${existing.stage} → ${input.stage}`,
+            actorUserId: options?.actorUserId ?? null,
+            metadata: {
+              previousStage: existing.stage,
+              stage: input.stage,
+            },
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
+      return requirement;
     },
 
     async appendNotes(

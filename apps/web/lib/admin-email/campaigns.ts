@@ -1130,6 +1130,7 @@ export async function sendCampaign(campaignId: string) {
               campaign_title: campaign.title,
               recipient_list: campaign.recipient_list,
             },
+            htmlBody: html,
           });
         }
       }),
@@ -1186,6 +1187,7 @@ export async function sendTestCampaignEmail(params: {
     senderEmail: from,
     subject,
     status: 'sent',
+    htmlBody: html,
     metadata: { test: true, copy: label === 'Copy' },
   });
 }
