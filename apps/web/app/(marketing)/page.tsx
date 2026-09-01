@@ -1,13 +1,4 @@
-import Image from 'next/image';
 import Link from 'next/link';
-
-import {
-  Activity,
-  Calendar,
-  CreditCard,
-  MessagesSquare,
-  Users,
-} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -38,15 +29,12 @@ import {
 } from '~/lib/seo/schema';
 
 import { ComingSoon } from './_components/coming-soon';
+import { FeatureTourSection } from './_components/feature-tour-section';
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
-import {
-  MarketingBentoGrid,
-  MarketingBentoTile,
-} from './_components/marketing-bento';
 import { MarketingFaqsSection } from './_components/marketing-faqs';
 import { MarketingFinalCta } from './_components/marketing-final-cta';
 import { MarketingHomeHero } from './_components/marketing-home-hero';
-import { OzerVsOthersSection } from './_components/ozer-vs-others-section';
+import { WorkspaceFeatureComparison } from './_components/workspace-feature-comparison';
 
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS for studios — Ozer',
@@ -61,45 +49,6 @@ export const metadata = buildMarketingMetadata({
     'small business workspace',
   ],
 });
-
-const lifeFeatures = [
-  {
-    icon: Users,
-    title: 'People on the record',
-    description:
-      'Clients, collaborators, and family contacts — context stays with the relationship.',
-    span: 'sm' as const,
-  },
-  {
-    icon: Calendar,
-    title: 'One plan for the day',
-    description:
-      'Work priorities and personal plans on one timeline, not three calendars.',
-    span: 'tall' as const,
-  },
-  {
-    icon: CreditCard,
-    title: 'Money next to the work',
-    description:
-      'Invoices and outstanding amounts sit on the job — Ozer surfaces what to chase.',
-    span: 'sm' as const,
-  },
-  {
-    icon: MessagesSquare,
-    title: 'Chat on the project',
-    description:
-      'Updates and next steps live on the job record, not in personal WhatsApp.',
-    span: 'sm' as const,
-  },
-  {
-    icon: Activity,
-    title: 'Activity on your Mac',
-    description:
-      'Ozer Assistant captures app and website sessions — assign time to clients and projects from one view.',
-    href: '/features/activity',
-    span: 'wide' as const,
-  },
-];
 
 async function Home() {
   const viewer = await loadMarketingViewer();
@@ -141,82 +90,9 @@ async function Home() {
 
       <InterconnectedWorkspacesSection tone="light" />
 
-      <OzerVsOthersSection />
+      <FeatureTourSection />
 
-      <section className="relative mx-auto w-full max-w-7xl px-6 pt-16 pb-24 md:pt-24">
-        <div className="mb-8 max-w-2xl">
-          <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
-            Your life connects too — free forever
-          </h2>
-          <p className="mt-3 text-[var(--workspace-shell-text-muted)]">
-            Every other tool stops at the office door. Ozer&apos;s personal and
-            family workspaces are free forever, and they share one planner and
-            one today view with your studio — school runs and client calls on
-            the same timeline.
-          </p>
-        </div>
-
-        <MarketingBentoGrid>
-          {lifeFeatures.map((feature) => {
-            const Icon = feature.icon;
-            const isActivity = feature.title === 'Activity on your Mac';
-
-            return (
-              <MarketingBentoTile
-                key={feature.title}
-                span={feature.span}
-                variant={feature.span === 'wide' ? 'cream' : 'muted'}
-                href={'href' in feature ? feature.href : undefined}
-                visual={
-                  isActivity ? (
-                    <div className="relative -mx-1 flex h-28 w-full items-center justify-center overflow-hidden rounded-xl">
-                      <Image
-                        src="/brand/marketing/activity-on-your-mac.png"
-                        alt=""
-                        width={440}
-                        height={214}
-                        className="h-full w-auto max-w-none object-contain object-left"
-                        sizes="(max-width: 768px) 90vw, 420px"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex w-full justify-start">
-                      <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--ozer-accent)]">
-                        <Icon className="size-5" aria-hidden />
-                      </span>
-                    </div>
-                  )
-                }
-              >
-                <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
-                  {feature.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-                  {feature.description}
-                </p>
-              </MarketingBentoTile>
-            );
-          })}
-
-          <MarketingBentoTile span="sm" variant="cream" href="/personal">
-            <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
-              Personal &amp; family
-            </h3>
-            <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-              Free hub — tasks and planner across every workspace.
-            </p>
-          </MarketingBentoTile>
-
-          <MarketingBentoTile span="sm" variant="cream" href="/work">
-            <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
-              Business
-            </h3>
-            <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-              Clients, jobs, and invoices inside the Workspace OS.
-            </p>
-          </MarketingBentoTile>
-        </MarketingBentoGrid>
-      </section>
+      <WorkspaceFeatureComparison variant="preview" />
 
       <section
         id="pricing"

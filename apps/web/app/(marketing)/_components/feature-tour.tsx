@@ -15,12 +15,15 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import { FeatureLandingIcon } from '~/(marketing)/_components/feature-landing-icon';
-import { EarlyAccessFeatureMock } from '~/(marketing)/early-access/_components/early-access-feature-mocks';
+import { FeatureTourMock } from '~/(marketing)/_components/feature-tour-mocks';
 import {
   EARLY_ACCESS_ACCENT_CLASS,
   EARLY_ACCESS_ACCENT_SOFT_CLASS,
-  EARLY_ACCESS_FEATURE_BLOCKS,
 } from '~/lib/marketing/early-access-content';
+import {
+  FEATURE_TOUR_BLOCKS,
+  type FeatureTourBlock,
+} from '~/lib/marketing/feature-tour-content';
 import {
   marketingCard,
   marketingHeroEase,
@@ -28,11 +31,11 @@ import {
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
 
-const FEATURE_COUNT = EARLY_ACCESS_FEATURE_BLOCKS.length;
+const FEATURE_COUNT = FEATURE_TOUR_BLOCKS.length;
 const SCROLL_VH_PER_FEATURE = 72;
 const FEATURE_SWITCH_FADE_S = 0.32;
 
-type FeatureBlock = (typeof EARLY_ACCESS_FEATURE_BLOCKS)[number];
+type FeatureBlock = FeatureTourBlock;
 
 function FeatureTourCard({
   block,
@@ -116,12 +119,12 @@ function FeatureTourCard({
                 EARLY_ACCESS_ACCENT_SOFT_CLASS[block.accent],
               )}
             >
-              Included in testing — unlocks automatically when ready
+              {block.soonLabel ?? 'Coming soon'}
             </span>
           ) : null}
         </div>
 
-        <EarlyAccessFeatureMock
+        <FeatureTourMock
           type={block.mock}
           accent={block.accent}
           className="h-full min-h-[14rem] w-full lg:min-h-0"
@@ -163,7 +166,7 @@ function FeatureStepProgress({
   const isLast = activeIndex >= FEATURE_COUNT - 1;
   const nextLabel = isLast
     ? null
-    : EARLY_ACCESS_FEATURE_BLOCKS[activeIndex + 1]?.eyebrow;
+    : FEATURE_TOUR_BLOCKS[activeIndex + 1]?.eyebrow;
 
   return (
     <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-5 pt-4 pb-3 md:px-6 lg:px-8">
@@ -203,8 +206,8 @@ function FeatureTourSlidePanel({
   scrollYProgress: MotionValue<number>;
 }) {
   const activeBlock =
-    EARLY_ACCESS_FEATURE_BLOCKS.find((block) => block.id === activeId) ??
-    EARLY_ACCESS_FEATURE_BLOCKS[0];
+    FEATURE_TOUR_BLOCKS.find((block) => block.id === activeId) ??
+    FEATURE_TOUR_BLOCKS[0];
 
   if (!activeBlock) {
     return null;
@@ -267,7 +270,7 @@ function FeatureTourNav({
         Features
       </p>
       <ul className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0">
-        {EARLY_ACCESS_FEATURE_BLOCKS.map((block, index) => {
+        {FEATURE_TOUR_BLOCKS.map((block, index) => {
           const isActive = activeId === block.id;
 
           return (
@@ -317,11 +320,11 @@ function FeatureTourNav({
 function ScrollPinnedFeatureTour() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeId, setActiveId] = useState(
-    EARLY_ACCESS_FEATURE_BLOCKS[0]?.id ?? '',
+    FEATURE_TOUR_BLOCKS[0]?.id ?? '',
   );
   const activeIndex = Math.max(
     0,
-    EARLY_ACCESS_FEATURE_BLOCKS.findIndex((block) => block.id === activeId),
+    FEATURE_TOUR_BLOCKS.findIndex((block) => block.id === activeId),
   );
 
   const { scrollYProgress } = useScroll({
@@ -331,7 +334,7 @@ function ScrollPinnedFeatureTour() {
 
   useMotionValueEvent(scrollYProgress, 'change', (progress) => {
     const index = scrollProgressToFeatureIndex(progress);
-    const nextId = EARLY_ACCESS_FEATURE_BLOCKS[index]?.id;
+    const nextId = FEATURE_TOUR_BLOCKS[index]?.id;
 
     if (nextId) {
       setActiveId((current) => (current === nextId ? current : nextId));
@@ -367,7 +370,7 @@ function ScrollPinnedFeatureTour() {
       return;
     }
 
-    const index = EARLY_ACCESS_FEATURE_BLOCKS.findIndex(
+    const index = FEATURE_TOUR_BLOCKS.findIndex(
       (block) => block.id === hash,
     );
 
@@ -407,11 +410,11 @@ function ScrollPinnedFeatureTour() {
 
 function StackedFeatureTour() {
   const [activeId, setActiveId] = useState(
-    EARLY_ACCESS_FEATURE_BLOCKS[0]?.id ?? '',
+    FEATURE_TOUR_BLOCKS[0]?.id ?? '',
   );
 
   useEffect(() => {
-    const sections = EARLY_ACCESS_FEATURE_BLOCKS.map((block) =>
+    const sections = FEATURE_TOUR_BLOCKS.map((block) =>
       document.getElementById(block.id),
     ).filter((element): element is HTMLElement => Boolean(element));
 
@@ -480,7 +483,7 @@ function StackedFeatureTour() {
       </div>
 
       <div className="flex min-w-0 flex-col gap-6 md:gap-8">
-        {EARLY_ACCESS_FEATURE_BLOCKS.map((block) => (
+        {FEATURE_TOUR_BLOCKS.map((block) => (
           <article key={block.id} id={block.id} className="scroll-mt-28">
             <FeatureTourCard block={block} />
           </article>
@@ -490,7 +493,7 @@ function StackedFeatureTour() {
   );
 }
 
-export function EarlyAccessFeatureTour() {
+export function FeatureTour() {
   const reducedMotion = useReducedMotion();
 
   if (reducedMotion) {
