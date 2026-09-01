@@ -145,12 +145,12 @@ struct SignInView: View {
     }
 
     private var sanitizedOTP: String {
-        String(otpCode.filter(\.isNumber).prefix(6))
+        String(otpCode.filter(\.isNumber).prefix(8))
     }
 
     private var otpFields: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TextField("6-digit code", text: otpCodeBinding)
+            TextField("8-digit code", text: otpCodeBinding)
                 .textContentType(.oneTimeCode)
                 .keyboardType(.numberPad)
                 .textInputAutocapitalization(.never)
@@ -162,7 +162,7 @@ struct SignInView: View {
                     RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous)
                         .stroke(OzerPalette.border, lineWidth: 1)
                 }
-                .accessibilityLabel("6-digit code")
+                .accessibilityLabel("8-digit code")
 
             Button {
                 Task {
@@ -177,7 +177,7 @@ struct SignInView: View {
                     .frame(height: 52)
             }
             .buttonStyle(OzerPrimaryButtonStyle())
-            .disabled(sanitizedOTP.count != 6 || trimmedEmail.isEmpty)
+            .disabled(!(sanitizedOTP.count == 6 || sanitizedOTP.count == 8) || trimmedEmail.isEmpty)
             .accessibilityLabel("Verify code")
         }
     }
@@ -185,7 +185,7 @@ struct SignInView: View {
     private var otpCodeBinding: Binding<String> {
         Binding(
             get: { otpCode },
-            set: { otpCode = String($0.filter(\.isNumber).prefix(6)) }
+            set: { otpCode = String($0.filter(\.isNumber).prefix(8)) }
         )
     }
 

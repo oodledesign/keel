@@ -41,7 +41,7 @@ Sign in with **Apple**, **Google**, or a **magic-link email**. Access and refres
 
 - Apple: `AuthenticationServices` → GoTrue `grant_type=id_token`
 - Google: ephemeral `ASWebAuthenticationSession` + PKCE (no cookies)
-- Magic link (app): `POST /auth/v1/otp?redirect_to=https://app.ozer.so/auth/native`. Mail opens that HTTPS page, which hops to `so.ozer.app://auth-callback`. After “Email me a link”, the sign-in screen also accepts the 6-digit email code via `POST /auth/v1/verify`.
+- Magic link (app): `POST /auth/v1/otp?redirect_to=https://app.ozer.so/auth/native`. Mail opens that HTTPS page, which hops to `so.ozer.app://auth-callback`. After “Email me a link”, the sign-in screen also accepts the 8-digit email code via `POST /auth/v1/verify`.
 - Magic link (website): unchanged — Makerkit still uses `/auth/callback`. Do not point web `emailRedirectTo` at `/auth/native`.
 
 Add these redirect URLs in **Supabase → Authentication → URL Configuration → Redirect URLs**:
