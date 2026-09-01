@@ -477,8 +477,7 @@ class CampaignsService {
 
     const fromName = resolved.fromName;
     const fromHeader = resolved.fromHeader ?? `${fromName} <${fromEmail}>`;
-    const replyTo =
-      campaign.replyTo?.trim() || resolved.replyTo || fromEmail;
+    const replyTo = campaign.replyTo?.trim() || resolved.replyTo || fromEmail;
     const limit = Math.max(1, Math.min(input.batchSize ?? 40, 100));
 
     const { data, error } = await fromTable(
