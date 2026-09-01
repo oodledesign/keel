@@ -67,8 +67,9 @@ extension NativeWorkspace {
         isPersonal || profile == "personal"
     }
 
-    /// Chip and list title — the account name (Oodle, Bracketts, Personal).
+    /// Chip and list title. Personal is always labeled “Personal”.
     var displayName: String {
+        if isPersonalAccount { return "Personal" }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty { return trimmed }
         if !slug.isEmpty { return slug }
@@ -129,7 +130,18 @@ extension NativeWorkspace {
     }
 
     /// Secondary type label only. Hidden when it repeats the name.
+    /// Personal uses the account name (Dan Potter) under the “Personal” title.
     var profileSubtitle: String? {
+        if isPersonalAccount {
+            let accountName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !accountName.isEmpty,
+               accountName.caseInsensitiveCompare("Personal") != .orderedSame
+            {
+                return accountName
+            }
+            return nil
+        }
+
         let label: String
         switch profile {
         case "personal":

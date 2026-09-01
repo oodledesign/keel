@@ -74,16 +74,20 @@ struct ClientsListView: View {
     }
 
     private func clientRow(_ item: ClientItem) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(item.displayName)
-                .font(.body.weight(.medium))
-                .foregroundStyle(OzerPalette.plum)
-            if let subtitle = item.displaySubtitle {
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(OzerPalette.plumMuted)
-                    .lineLimit(1)
+        HStack(alignment: .center, spacing: 12) {
+            HttpsMarkView(url: item.httpsImageURL, initials: item.initials, size: 40)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.displayName)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+                if let subtitle = item.displaySubtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .lineLimit(1)
+                }
             }
+            Spacer(minLength: 0)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -231,6 +235,7 @@ struct ClientDetailView: View {
     @Environment(AppSession.self) private var session
     let client: ClientItem
 
+    @State private var detail: ClientItem
     @State private var tasks: [TaskItem] = []
     @State private var loadError: NativeAPIError?
     @State private var isLoading = false
@@ -239,14 +244,45 @@ struct ClientDetailView: View {
 
     private let api = NativeAPIClient()
 
+    init(client: ClientItem) {
+        self.client = client
+        _detail = State(initialValue: client)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(client.displayName)
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(OzerPalette.plum)
-                    if let email = client.displaySubtitle {
+                    HStack(alignment: .center, spacing: 14) {
+                        HttpsMarkView(
+                            url: detail.httpsImageURL,
+                            initials: detail.initials,
+                            size: 64
+                        )
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(detail.displayName)
+                                .font(.title2.weight(.semibold))
+                                .foregroundStyle(OzerPalette.plum)
+                            if let company = detail.displayCompany {
+                                Text(company)
+                                    .font(.subheadline)
+                                    .foregroundStyle(OzerPalette.plumMuted)
+                            }
+                        }
+                    }
+
+                    if let email = detail.displaySubtitle,
+                       let mailURL = Self.mailtoURL(email)
+                    {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Email")
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(OzerPalette.plumMuted)
+                            Link(email, destination: mailURL)
+                                .font(.body)
+                                .foregroundStyle(OzerPalette.coral)
+                        }
+                    } else if let email = detail.displaySubtitle {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Email")
                                 .font(.footnote.weight(.medium))
@@ -263,6 +299,10 @@ struct ClientDetailView: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
                         .stroke(OzerPalette.border, lineWidth: 1)
+                }
+
+                if !detail.contacts.isEmpty {
+                    contactsSection
                 }
 
                 HStack {
@@ -338,14 +378,82 @@ struct ClientDetailView: View {
         .navigationTitle("Client")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: session.workspaceContentKey) {
+            await loadDetail()
             await loadTasks()
         }
         .sheet(isPresented: $showEditor) {
-            TaskEditorView(initialClient: client) { _ in
+            TaskEditorView(initialClient: detail) { _ in
                 Task { await loadTasks() }
             }
             .presentationDetents([.medium, .large])
         }
+    }
+
+    private var contactsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Contacts")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+
+            ForEach(detail.contacts) { contact in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(contact.displayName)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(OzerPalette.plum)
+                        if contact.isPrimary {
+                            Text("Primary")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(OzerPalette.coral)
+                        }
+                    }
+                    if let role = contact.displayRole {
+                        Text(role)
+                            .font(.subheadline)
+                            .foregroundStyle(OzerPalette.plumMuted)
+                    }
+                    if let email = trimmed(contact.email),
+                       let mailURL = Self.mailtoURL(email)
+                    {
+                        Link(email, destination: mailURL)
+                            .font(.subheadline)
+                            .foregroundStyle(OzerPalette.coral)
+                    }
+                    if let phone = trimmed(contact.phone),
+                       let telURL = Self.telURL(phone)
+                    {
+                        Link(phone, destination: telURL)
+                            .font(.subheadline)
+                            .foregroundStyle(OzerPalette.coral)
+                    } else if let phone = trimmed(contact.phone) {
+                        Text(phone)
+                            .font(.subheadline)
+                            .foregroundStyle(OzerPalette.plum)
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                        .stroke(OzerPalette.border, lineWidth: 1)
+                }
+            }
+        }
+    }
+
+    private static func mailtoURL(_ email: String) -> URL? {
+        ClientItem.mailtoURL(email)
+    }
+
+    private static func telURL(_ phone: String) -> URL? {
+        ClientItem.telURL(phone)
+    }
+
+    private func trimmed(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func complete(_ item: TaskItem) async {
@@ -364,6 +472,26 @@ struct ClientDetailView: View {
             completingIds.remove(item.id)
             if error.isTaskCancellation { return }
             loadError = .transport(error.localizedDescription)
+        }
+    }
+
+    private func loadDetail() async {
+        do {
+            let token = try await session.validAccessToken()
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else { return }
+            detail = try await api.client(
+                id: client.id,
+                workspace: workspace,
+                accessToken: token
+            )
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            // Keep the list row. Contacts just stay empty.
+        } catch {
+            if error.isTaskCancellation { return }
         }
     }
 

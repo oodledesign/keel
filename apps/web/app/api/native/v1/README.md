@@ -36,9 +36,15 @@ curl -sS -X POST "$ORIGIN/api/native/v1/tasks" \
 
 curl -sS "$ORIGIN/api/native/v1/notes?workspace=YOUR_SLUG" \
   -H "Authorization: Bearer $TOKEN"
+
+curl -sS "$ORIGIN/api/native/v1/clients?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS "$ORIGIN/api/native/v1/clients/CLIENT_ID?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-`workspace` accepts an account slug, UUID, or the chip aliases `personal`, `family`, and `business` (`business` maps to the first `work_design` workspace). Exact slug or UUID wins when they collide with an alias. Personal is always included in `/workspaces`.
+`workspace` accepts an account slug, UUID, or the chip aliases `personal`, `family`, and `business` (`business` maps to the first `work_design` workspace). Exact slug or UUID wins when they collide with an alias. Personal is always included in `/workspaces` (empty slug falls back to the account id). `/clients` includes `image` / `logo` HTTPS URLs; `GET /clients/:id` adds `contacts`.
 
 ## Apple Sign In (optional)
 

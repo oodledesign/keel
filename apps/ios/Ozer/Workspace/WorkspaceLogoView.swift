@@ -89,3 +89,70 @@ struct WorkspaceLogoView: View {
         }
     }
 }
+
+/// Cookie-free HTTPS mark with initials fallback. Used for client logos.
+struct HttpsMarkView: View {
+    let url: URL?
+    let initials: String
+    var size: CGFloat = 40
+
+    @State private var bitmap: UIImage?
+
+    var body: some View {
+        ZStack {
+            if bitmap != nil {
+                markShape.fill(OzerPalette.creamDeep)
+            } else {
+                fallback
+            }
+            if let bitmap {
+                Image(uiImage: bitmap)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFill()
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(markShape)
+        .overlay {
+            markShape.stroke(OzerPalette.border, lineWidth: 1)
+        }
+        .accessibilityHidden(true)
+        .task(id: url) {
+            bitmap = nil
+            guard let url else { return }
+            var request = URLRequest(url: url)
+            request.httpShouldHandleCookies = false
+            do {
+                let (data, response) = try await WorkspaceImageSession.shared.data(for: request)
+                guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+                      let image = UIImage(data: data)
+                else { return }
+                bitmap = image
+            } catch {
+                // Keep initials. The row is already on screen.
+            }
+        }
+    }
+
+    private var markShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+    }
+
+    private var fallback: some View {
+        ZStack {
+            markShape.fill(OzerPalette.plum)
+            if !initials.isEmpty {
+                Text(initials)
+                    .font(.system(size: size * 0.38, weight: .semibold, design: .rounded))
+                    .foregroundStyle(OzerPalette.cream)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+            } else {
+                Image(systemName: "building.2.fill")
+                    .font(.system(size: size * 0.38, weight: .medium))
+                    .foregroundStyle(OzerPalette.cream)
+            }
+        }
+    }
+}

@@ -200,6 +200,21 @@ actor NativeAPIClient {
         }
     }
 
+    func client(id: String, workspace: String, accessToken: String) async throws -> ClientItem {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/clients/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(ClientItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func notes(workspace: String, accessToken: String) async throws -> NotesPayload {
         let data = try await send(
             method: "GET",
@@ -592,15 +607,78 @@ struct ClientsPayload: Decodable, Equatable {
     }
 }
 
+struct ClientContact: Decodable, Identifiable, Equatable, Hashable {
+    var id: String
+    var name: String
+    var role: String?
+    var email: String?
+    var phone: String?
+    var isPrimary: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, role, email, phone
+        case isPrimary = "is_primary"
+        case fullName = "full_name"
+    }
+
+    init(
+        id: String,
+        name: String,
+        role: String? = nil,
+        email: String? = nil,
+        phone: String? = nil,
+        isPrimary: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.role = role
+        self.email = email
+        self.phone = phone
+        self.isPrimary = isPrimary
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let id = try container.decodeIfPresent(String.self, forKey: .id) {
+            self.id = id
+        } else {
+            id = UUID().uuidString
+        }
+        let decodedName = try container.decodeIfPresent(String.self, forKey: .name)
+            ?? container.decodeIfPresent(String.self, forKey: .fullName)
+            ?? ""
+        name = decodedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Contact"
+            : decodedName
+        role = try container.decodeIfPresent(String.self, forKey: .role)
+        email = try container.decodeIfPresent(String.self, forKey: .email)
+        phone = try container.decodeIfPresent(String.self, forKey: .phone)
+        isPrimary = try container.decodeIfPresent(Bool.self, forKey: .isPrimary) ?? false
+    }
+
+    var displayName: String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Contact" : trimmed
+    }
+
+    var displayRole: String? {
+        let trimmed = role?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
 struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
     var id: String
     var name: String
     var email: String?
     var companyName: String?
     var clientType: String?
+    var image: String?
+    var logo: String?
+    var contacts: [ClientContact]
 
     enum CodingKeys: String, CodingKey {
-        case id, name, email
+        case id, name, email, image, logo, contacts
         case companyName = "company_name"
         case clientType = "client_type"
         case displayName = "display_name"
@@ -611,13 +689,19 @@ struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
         name: String,
         email: String? = nil,
         companyName: String? = nil,
-        clientType: String? = nil
+        clientType: String? = nil,
+        image: String? = nil,
+        logo: String? = nil,
+        contacts: [ClientContact] = []
     ) {
         self.id = id
         self.name = name
         self.email = email
         self.companyName = companyName
         self.clientType = clientType
+        self.image = image
+        self.logo = logo
+        self.contacts = contacts
     }
 
     init(from decoder: Decoder) throws {
@@ -636,6 +720,9 @@ struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
         email = try container.decodeIfPresent(String.self, forKey: .email)
         companyName = try container.decodeIfPresent(String.self, forKey: .companyName)
         clientType = try container.decodeIfPresent(String.self, forKey: .clientType)
+        image = try container.decodeIfPresent(String.self, forKey: .image)
+        logo = try container.decodeIfPresent(String.self, forKey: .logo)
+        contacts = try container.decodeIfPresent([ClientContact].self, forKey: .contacts) ?? []
     }
 
     var displayName: String {
@@ -646,6 +733,56 @@ struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
     var displaySubtitle: String? {
         let mail = email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return mail.isEmpty ? nil : mail
+    }
+
+    var displayCompany: String? {
+        let company = companyName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if company.isEmpty { return nil }
+        if company.caseInsensitiveCompare(displayName) == .orderedSame { return nil }
+        return company
+    }
+
+    var initials: String {
+        let words = displayName.split { $0.isWhitespace || $0 == "-" }.filter { !$0.isEmpty }
+        let letters = words.compactMap { word in word.first(where: \.isLetter) }
+        switch letters.count {
+        case 0:
+            return ""
+        case 1:
+            return String(letters[0]).uppercased()
+        default:
+            return String([letters[0], letters[1]]).uppercased()
+        }
+    }
+
+    /// HTTPS logo only. Relative, http, and junk values are ignored.
+    var httpsImageURL: URL? {
+        Self.httpsURL(image) ?? Self.httpsURL(logo)
+    }
+
+    static func httpsURL(_ raw: String?) -> URL? {
+        guard let raw,
+              let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.scheme?.lowercased() == "https"
+        else {
+            return nil
+        }
+        return url
+    }
+
+    static func mailtoURL(_ email: String) -> URL? {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = trimmed
+        return components.url
+    }
+
+    static func telURL(_ phone: String) -> URL? {
+        let digits = phone.filter { $0.isNumber || $0 == "+" }
+        guard !digits.isEmpty else { return nil }
+        return URL(string: "tel:\(digits)")
     }
 }
 
