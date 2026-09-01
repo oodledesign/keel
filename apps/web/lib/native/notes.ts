@@ -10,7 +10,7 @@ import {
 import { NativeHttpError } from './http';
 import { toNativeNote } from './notes-shared';
 import { parseOptionalClientId } from './task-map';
-import type { NativeWorkspace } from './workspace';
+import type { NativeWorkspace } from './workspace-shared';
 
 export type { NativeNote } from './notes-shared';
 
