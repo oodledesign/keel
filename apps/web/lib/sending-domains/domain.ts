@@ -21,6 +21,7 @@ export const DEFAULT_SENDING_LOCAL_PARTS = [
   'mail',
   'listings',
   'hello',
+  'no-reply',
 ] as const;
 
 export const DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS = [
@@ -71,7 +72,7 @@ export function normalizeSendingLocalPart(input: string): string {
 
   if (!LOCAL_PART_RE.test(value) || value.length > 64) {
     throw new SendingDomainError(
-      'Use a simple From name such as mail, listings, or hello.',
+      'Use a simple From name such as mail, listings, hello, or no-reply.',
     );
   }
 
@@ -93,7 +94,7 @@ export function normalizeSendingSubdomain(
 
   if (!SUBDOMAIN_RE.test(value)) {
     throw new SendingDomainError(
-      'Use a simple subdomain such as mail, listings, or go — or choose apex.',
+      'Use a simple subdomain such as mail, go, or agency — one label, no dots. Or choose apex.',
     );
   }
 

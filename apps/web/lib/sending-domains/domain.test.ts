@@ -69,17 +69,26 @@ describe('sending host', () => {
         sendingSubdomain: null,
       }),
     ).toBe('mail@example.co.uk');
-    expect(resolveMailFromHost('example.co.uk')).toBe(
-      'bounce.example.co.uk',
-    );
+    expect(resolveMailFromHost('example.co.uk')).toBe('bounce.example.co.uk');
   });
 
   it('accepts other single-label subdomains', () => {
     expect(normalizeSendingSubdomain('Listings')).toBe('listings');
     expect(normalizeSendingSubdomain('go')).toBe('go');
+    expect(normalizeSendingSubdomain('Agency')).toBe('agency');
     expect(resolveSendingHost('example.co.uk', 'hello')).toBe(
       'hello.example.co.uk',
     );
+    expect(resolveSendingHost('example.co.uk', 'agency')).toBe(
+      'agency.example.co.uk',
+    );
+    expect(
+      formatSendingFromAddress({
+        localPart: 'info',
+        domain: 'example.co.uk',
+        sendingSubdomain: 'agency',
+      }),
+    ).toBe('info@agency.example.co.uk');
   });
 
   it('rejects multi-label or invalid subdomains', () => {
@@ -93,16 +102,24 @@ describe('sending host', () => {
 });
 
 describe('normalizeSendingLocalPart', () => {
-  it('accepts listings, hello, and mail', () => {
+  it('accepts listings, hello, mail, and hyphenated custom names', () => {
     expect(normalizeSendingLocalPart('Listings')).toBe('listings');
     expect(normalizeSendingLocalPart('hello')).toBe('hello');
     expect(normalizeSendingLocalPart('mail')).toBe('mail');
+    expect(normalizeSendingLocalPart('no-reply')).toBe('no-reply');
+    expect(normalizeSendingLocalPart('No-Reply')).toBe('no-reply');
+    expect(normalizeSendingLocalPart('accounts')).toBe('accounts');
+    expect(normalizeSendingLocalPart('info')).toBe('info');
   });
 
-  it('rejects spaces and symbols', () => {
+  it('rejects spaces, leading hyphens, and trailing hyphens', () => {
     expect(() => normalizeSendingLocalPart('hello world')).toThrow(
       SendingDomainError,
     );
+    expect(() => normalizeSendingLocalPart('-reply')).toThrow(
+      SendingDomainError,
+    );
+    expect(() => normalizeSendingLocalPart('no-')).toThrow(SendingDomainError);
   });
 });
 
