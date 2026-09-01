@@ -284,7 +284,7 @@ final class MeetingCaptureSession {
             guard let self, !Task.isCancelled, self.isRecording else { return }
             self.request?.endAudio()
             try? await Task.sleep(for: .seconds(Self.restartFallback))
-            guard let self, !Task.isCancelled, self.isRecording, !self.isRestartingSpeech else { return }
+            guard !Task.isCancelled, self.isRecording, !self.isRestartingSpeech else { return }
             self.queueSpeechRestart()
         }
     }

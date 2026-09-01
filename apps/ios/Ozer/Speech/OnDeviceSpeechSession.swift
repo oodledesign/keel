@@ -111,7 +111,7 @@ final class OnDeviceSpeechSession {
             guard let self, !Task.isCancelled, self.isListening else { return }
             self.request?.endAudio()
             try? await Task.sleep(for: .seconds(Self.restartFallback))
-            guard let self, !Task.isCancelled, self.isListening, !self.isRestartingSpeech else { return }
+            guard !Task.isCancelled, self.isListening, !self.isRestartingSpeech else { return }
             self.queueSpeechRestart()
         }
     }
