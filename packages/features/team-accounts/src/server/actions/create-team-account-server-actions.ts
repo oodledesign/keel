@@ -69,6 +69,10 @@ export const createTeamAccountAction = enhanceAction(
 
     logger.info(ctx, `Team account created`);
 
+    if (!data?.slug) {
+      throw new Error('Team account created without a slug');
+    }
+
     redirect(workspaceAccountHomePath(data.slug));
   },
   {

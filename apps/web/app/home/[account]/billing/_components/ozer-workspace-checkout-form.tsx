@@ -27,6 +27,7 @@ import {
   estimateMonthlyGbp as estimateBusinessMonthlyGbp,
   maxProjectGuestsForBillableSeats,
 } from '~/lib/billing/business-graduated-pricing';
+import { estimateStarterMonthlyGbp } from '~/lib/billing/business-starter-pricing';
 import {
   clampBillableSeats as clampCommercialBillableSeats,
   estimateMonthlyGbp as estimateCommercialMonthlyGbp,
@@ -79,16 +80,17 @@ export function OzerWorkspaceCheckoutForm(params: {
       : 1,
   );
 
+  const productParam = searchParams.get('product');
+  const selectedProductId = productParam ?? '';
+  const isStarterSelected = selectedProductId === 'ozer-business-starter';
+  const starterEstimate = estimateStarterMonthlyGbp(billableSeats);
+  const proEstimate = estimateBusinessMonthlyGbp(billableSeats);
   const monthlyEstimate = isCommercial
     ? estimateCommercialMonthlyGbp(billableSeats)
-    : estimateBusinessMonthlyGbp(billableSeats);
+    : isStarterSelected
+      ? starterEstimate
+      : proEstimate;
   const supportSeats = isCommercial ? freeSupportSeats(billableSeats) : 0;
-  const businessGuests = isBusiness
-    ? maxProjectGuestsForBillableSeats(billableSeats)
-    : 0;
-  const businessCredits = isBusiness
-    ? aiCreditsForBillableSeats(billableSeats)
-    : 0;
 
   const filteredConfig = useMemo(() => {
     const allowedProductIds = new Set(
@@ -104,7 +106,6 @@ export function OzerWorkspaceCheckoutForm(params: {
   }, [params.workspaceProfile]);
 
   const setupMode = searchParams.get('setup') === '1';
-  const productParam = searchParams.get('product');
   const planParam = searchParams.get('plan');
   const intervalParam = searchParams.get('interval');
 
@@ -134,7 +135,7 @@ export function OzerWorkspaceCheckoutForm(params: {
       <CardHeader>
         <CardTitle>
           {params.upgradeFromLite ? (
-            'Upgrade to full business'
+            'Upgrade to Starter or Pro'
           ) : setupMode ? (
             'Choose your workspace plan'
           ) : (
@@ -144,12 +145,12 @@ export function OzerWorkspaceCheckoutForm(params: {
 
         <CardDescription>
           {params.upgradeFromLite ? (
-            'Paid Business includes clients, projects, invoicing, and finances with graduated seats. Your installed apps stay on this workspace.'
+            'Starter or Pro lifts Free caps and uses graduated seats. Starter is recording-only; Pro adds planner, email assistant, and coaching. Your installed apps stay on this workspace.'
           ) : setupMode ? (
             isCommercial ? (
               'Graduated per-seat pricing in GBP. Seat 1 is £89, seats 2–7 are £55, seats 8+ are £39.'
             ) : isBusiness ? (
-              'Graduated per-seat pricing in GBP. Seat 1 is £29, seats 2–5 are £22, seats 6+ are £16.'
+              'Choose Starter or Pro. Starter is £14 for seat 1 then £9 each extra. Pro is £29 for seat 1 then £22 each extra.'
             ) : (
               'Start a 14-day trial or subscribe to unlock this workspace. All prices in GBP.'
             )
@@ -176,10 +177,26 @@ export function OzerWorkspaceCheckoutForm(params: {
               />
             </div>
             <p className="text-sm text-[var(--workspace-shell-text)]">
-              Estimated total{' '}
-              <span className="font-semibold">
-                {formatGbp(monthlyEstimate)}/mo
-              </span>
+              {isBusiness ? (
+                <>
+                  Starter{' '}
+                  <span className="font-semibold">
+                    {formatGbp(starterEstimate)}/mo
+                  </span>
+                  {' · '}
+                  Pro{' '}
+                  <span className="font-semibold">
+                    {formatGbp(proEstimate)}/mo
+                  </span>
+                </>
+              ) : (
+                <>
+                  Estimated total{' '}
+                  <span className="font-semibold">
+                    {formatGbp(monthlyEstimate)}/mo
+                  </span>
+                </>
+              )}
             </p>
             <ul className="space-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
               {isCommercial ? (
@@ -191,11 +208,10 @@ export function OzerWorkspaceCheckoutForm(params: {
               ) : (
                 <>
                   <li>
-                    {businessCredits.toLocaleString()} shared AI credits / month
-                  </li>
-                  <li>
-                    {businessGuests} project guest
-                    {businessGuests === 1 ? '' : 's'}
+                    Starter: 1 project guest per seat, same AI credit pool. Pro:{' '}
+                    {maxProjectGuestsForBillableSeats(billableSeats)} guests and{' '}
+                    {aiCreditsForBillableSeats(billableSeats).toLocaleString()}{' '}
+                    shared AI credits (drafts, coaching, summaries)
                   </li>
                   <li>Unlimited client portal access</li>
                 </>
@@ -209,7 +225,18 @@ export function OzerWorkspaceCheckoutForm(params: {
           config={filteredConfig as typeof billingConfig}
           canStartTrial={canStartTrial}
           value={defaultPickerValue}
-          displayCostOverride={usesGraduatedSeats ? monthlyEstimate : undefined}
+          displayCostOverride={
+            isCommercial
+              ? monthlyEstimate
+              : isBusiness
+                ? (productId) =>
+                    productId === 'ozer-business-starter'
+                      ? starterEstimate
+                      : productId === 'ozer-business'
+                        ? proEstimate
+                        : undefined
+                : undefined
+          }
           onSubmit={({ planId, productId }) => {
             startTransition(async () => {
               const slug = routeParams.account as string;

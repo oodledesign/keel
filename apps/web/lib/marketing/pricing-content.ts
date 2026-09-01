@@ -123,7 +123,7 @@ export function annualCostForTeamSize(teamSize: number): {
 }
 
 export function philosophyLine(): string {
-  return 'Graduated per-seat pricing in pounds — seat 1 at £29, then cheaper add-on seats, with shared AI and project guests that scale with your team.';
+  return 'Free, Starter, and Pro in pounds. Starter is £14 for seat 1 then £9 for each extra seat. Pro is £29 for seat 1 then £22 for each extra seat. No transaction fees on your subscription.';
 }
 
 export function ozerTeamAnnualGbp(): number {
@@ -132,6 +132,7 @@ export function ozerTeamAnnualGbp(): number {
 
 export function pricingFaqs() {
   const business = getBillingProductPrice('ozer-business');
+  const starter = getBillingProductPrice('ozer-business-starter');
   const lite = getBillingProductPrice('ozer-business-lite');
 
   return [
@@ -147,7 +148,7 @@ export function pricingFaqs() {
     },
     {
       question: 'What happens when the team grows?',
-      answer: `Pro uses graduated seats from ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for seats 2–5, then £16 for seats 6+. Shared AI credits and project guests (3 per seat) scale with the seats you buy. Client portals stay unlimited.`,
+      answer: `Starter is ${formatGbp(starter?.monthlyPriceGbp ?? 14)} for seat 1, then £9 for every extra seat. Pro is ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for every extra seat. One shared AI credit pool covers drafts, summaries, coaching, and other model use — it scales with seats on Pro. Client portals stay unlimited.`,
     },
     {
       question: 'Is there a free trial?',

@@ -28,7 +28,7 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_BUSINESS_STARTER_MONTHLY',
     'price_ozer_business_starter_monthly',
   ),
-  /** Graduated per-seat Price (seat 1 £29, 2–5 £22, 6+ £16). */
+  /** Graduated per-seat Price (seat 1 £29, seats 2+ £22). Live id may still be the three-band Price until Step 0. */
   business_monthly: price(
     'STRIPE_PRICE_BUSINESS_MONTHLY',
     'price_ozer_business_monthly',

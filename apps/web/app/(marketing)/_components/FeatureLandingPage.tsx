@@ -216,7 +216,7 @@ export function FeatureLandingPage({
               href="/pricing"
               className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
             >
-              Ozer pricing — flat price for the whole team
+              Ozer pricing — graduated seats from £14
             </Link>
             <Link
               href={relatedBlog.href}
@@ -246,7 +246,7 @@ export function FeatureLandingPage({
       ) : null}
 
       <section
-        id="early-access"
+        id="get-started"
         className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-6 pt-4 pb-20"
       >
         <div className={`${marketingPanelDeep} p-8 text-center md:p-12`}>
@@ -256,8 +256,8 @@ export function FeatureLandingPage({
           <p
             className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed md:text-base ${marketingBodyText}`}
           >
-            Start free. Personal and family stay free. Pay when you add a paid
-            workspace — one price covers the team.
+            Start free. Personal and family stay free. Business is Free, Starter
+            from £14, or Pro from £29 — extra seats stay cheaper.
           </p>
           <Button asChild size="lg" className={`mt-6 ${marketingBtnGradient}`}>
             <Link href={ctaHref}>

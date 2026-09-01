@@ -13,12 +13,12 @@ export const OZER_FAQS: OzerFaqItem[] = [
   {
     question: 'Is there a free plan?',
     answer:
-      'Yes. Personal home and one family workspace are free with no card and no time limit. Business Lite is also free if you mainly need apps. Paid workspaces include a 14-day trial on your first paid plan — no credit card required to start.',
+      'Yes. Personal home and one family workspace are free with no card and no time limit. Business Free is £0 with 2 seats and capped clients and invoices. Paid workspaces include a 14-day trial on your first paid plan — no credit card required to start.',
   },
   {
     question: 'Do I pay per seat?',
     answer:
-      'No. One workspace price covers the team. Invited members do not pay — billing stays with the workspace owner.',
+      'Yes on paid Business. Starter is £14 for seat 1 then £9 for each extra seat. Pro is £29 for seat 1 then £22 for each extra seat. Invited members do not pay separately — billing stays with the workspace owner.',
   },
   {
     question: 'Can I cancel anytime?',

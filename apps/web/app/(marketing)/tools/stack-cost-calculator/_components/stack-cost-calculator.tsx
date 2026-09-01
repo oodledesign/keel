@@ -21,9 +21,10 @@ import {
 import {
   CALCULATOR_FAQS,
   STACK_TOOLS,
+  type StackOzerPlan,
   type StackTool,
-  ozerAnnualFromBilling,
-  ozerMonthlyFromBilling,
+  ozerAnnualForPlan,
+  ozerMonthlyForPlan,
 } from '~/lib/marketing/stack-calculator-data';
 
 type ToolState = {
@@ -37,6 +38,8 @@ function parseState(params: URLSearchParams): {
   revenue: number;
   transactions: number;
   includeFees: boolean;
+  ozerPlan: StackOzerPlan;
+  ozerSeats: number;
 } {
   const tools: Record<string, ToolState> = {};
   for (const tool of STACK_TOOLS) {
@@ -66,12 +69,20 @@ function parseState(params: URLSearchParams): {
   const revenue = Number(params.get('rev') ?? 40000);
   const transactions = Number(params.get('txn') ?? 80);
   const includeFees = params.get('fees') === '1';
+  const ozerPlan: StackOzerPlan =
+    params.get('ozer') === 'starter' ? 'starter' : 'pro';
+  const ozerSeatsRaw = Number(params.get('seats') ?? 4);
 
   return {
     tools,
     revenue: Number.isFinite(revenue) ? revenue : 40000,
     transactions: Number.isFinite(transactions) ? transactions : 80,
     includeFees,
+    ozerPlan,
+    ozerSeats:
+      Number.isFinite(ozerSeatsRaw) && ozerSeatsRaw >= 1
+        ? Math.min(200, Math.floor(ozerSeatsRaw))
+        : 4,
   };
 }
 
@@ -80,6 +91,8 @@ function buildParams(state: {
   revenue: number;
   transactions: number;
   includeFees: boolean;
+  ozerPlan: StackOzerPlan;
+  ozerSeats: number;
 }): URLSearchParams {
   const params = new URLSearchParams();
   for (const tool of STACK_TOOLS) {
@@ -92,6 +105,8 @@ function buildParams(state: {
   params.set('rev', String(state.revenue));
   params.set('txn', String(state.transactions));
   if (state.includeFees) params.set('fees', '1');
+  params.set('ozer', state.ozerPlan);
+  params.set('seats', String(state.ozerSeats));
   return params;
 }
 
@@ -118,10 +133,12 @@ export function StackCostCalculatorClient() {
   const [revenue, setRevenue] = useState(initial.revenue);
   const [transactions, setTransactions] = useState(initial.transactions);
   const [includeFees, setIncludeFees] = useState(initial.includeFees);
+  const [ozerPlan, setOzerPlan] = useState<StackOzerPlan>(initial.ozerPlan);
+  const [ozerSeats, setOzerSeats] = useState(initial.ozerSeats);
   const [copied, setCopied] = useState(false);
 
-  const ozerAnnual = ozerAnnualFromBilling();
-  const ozerMonthly = ozerMonthlyFromBilling();
+  const ozerMonthly = ozerMonthlyForPlan(ozerPlan, ozerSeats);
+  const ozerAnnual = ozerAnnualForPlan(ozerPlan, ozerSeats);
 
   const stackMonthly = useMemo(() => {
     let total = 0;
@@ -141,6 +158,8 @@ export function StackCostCalculatorClient() {
       revenue: number;
       transactions: number;
       includeFees: boolean;
+      ozerPlan: StackOzerPlan;
+      ozerSeats: number;
     }) => {
       const params = buildParams(next);
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
@@ -154,6 +173,8 @@ export function StackCostCalculatorClient() {
       revenue: number;
       transactions: number;
       includeFees: boolean;
+      ozerPlan: StackOzerPlan;
+      ozerSeats: number;
     }>,
   ) => {
     const next = {
@@ -161,11 +182,15 @@ export function StackCostCalculatorClient() {
       revenue: patch.revenue ?? revenue,
       transactions: patch.transactions ?? transactions,
       includeFees: patch.includeFees ?? includeFees,
+      ozerPlan: patch.ozerPlan ?? ozerPlan,
+      ozerSeats: patch.ozerSeats ?? ozerSeats,
     };
     if (patch.tools) setTools(patch.tools);
     if (patch.revenue != null) setRevenue(patch.revenue);
     if (patch.transactions != null) setTransactions(patch.transactions);
     if (patch.includeFees != null) setIncludeFees(patch.includeFees);
+    if (patch.ozerPlan) setOzerPlan(patch.ozerPlan);
+    if (patch.ozerSeats != null) setOzerSeats(patch.ozerSeats);
     syncUrl(next);
   };
 
@@ -176,6 +201,8 @@ export function StackCostCalculatorClient() {
           revenue,
           transactions,
           includeFees,
+          ozerPlan,
+          ozerSeats,
         }).toString()}`
       : '';
 
@@ -393,12 +420,56 @@ export function StackCostCalculatorClient() {
               That is {formatGbp(Math.round(stackMonthly))} per month with your
               current selections.
             </p>
-            <div className="mt-6 border-t border-[color:var(--workspace-shell-border)] pt-4">
+            <div className="mt-6 space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-semibold',
+                    ozerPlan === 'starter'
+                      ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                      : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]',
+                  )}
+                  onClick={() => update({ ozerPlan: 'starter' })}
+                >
+                  Starter
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-semibold',
+                    ozerPlan === 'pro'
+                      ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                      : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]',
+                  )}
+                  onClick={() => update({ ozerPlan: 'pro' })}
+                >
+                  Pro
+                </button>
+              </div>
+              <label className="block text-sm">
+                <span className={cn('text-xs', marketingMutedText)}>
+                  Ozer billable seats
+                </span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={ozerSeats}
+                  className="mt-1 h-9 w-24"
+                  onChange={(e) =>
+                    update({
+                      ozerSeats: Math.max(1, Number(e.target.value) || 1),
+                    })
+                  }
+                />
+              </label>
               <p className="text-sm text-[var(--workspace-shell-text)]">
-                Ozer Business Team:{' '}
+                Ozer {ozerPlan === 'starter' ? 'Starter' : 'Pro'} for{' '}
+                {ozerSeats} seat{ozerSeats === 1 ? '' : 's'}:{' '}
                 <strong>{formatGbp(ozerAnnual)}/year</strong> (
-                {formatGbp(ozerMonthly)} per month), flat price for the whole
-                team (up to 5 members).
+                {formatGbp(ozerMonthly)} per month) on graduated seats. Annual
+                is 10× monthly.
               </p>
               <p className={cn('mt-2 text-sm', marketingMutedText)}>
                 Difference:{' '}

@@ -17,7 +17,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 export type WorkspaceSetupSelection = {
   profile: WorkspaceProfile;
   name: string;
-  /** Business workspaces only: lite (free apps shell) vs full CRM (paid). */
+  /** Business workspaces only: Free vs paid Starter/Pro. */
   businessMode?: 'lite' | 'full';
 };
 

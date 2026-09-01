@@ -114,7 +114,7 @@ export function listBillingProductPlanPrices(
 }
 
 export function listBusinessWorkspacePrices(): BillingPlanPrice[] {
-  return ['ozer-business-lite', 'ozer-business']
+  return ['ozer-business-lite', 'ozer-business-starter', 'ozer-business']
     .map((id) => productPrices(id))
     .filter((p): p is BillingPlanPrice => Boolean(p));
 }
@@ -188,6 +188,14 @@ export function translationLine(plan: BillingPlanPrice): string {
     return '£0 per month — free forever for this workspace type.';
   }
 
+  if (plan.productId === 'ozer-business-starter') {
+    return `${formatGbp(plan.monthlyPriceGbp)} for seat 1, then £9 for every extra seat.`;
+  }
+
+  if (plan.productId === 'ozer-business') {
+    return `${formatGbp(plan.monthlyPriceGbp)} for seat 1, then £22 for every extra seat. Annual is 10× monthly (16.7% less than 12×).`;
+  }
+
   if (plan.maxTeamMembers === 1) {
     return `Less than one billable hour a month at a £50/hour rate (£${plan.monthlyPriceGbp} per month).`;
   }
@@ -195,7 +203,7 @@ export function translationLine(plan: BillingPlanPrice): string {
   if (plan.maxTeamMembers && plan.maxTeamMembers >= 4) {
     const seats = plan.maxTeamMembers;
     const perPerson = plan.monthlyPriceGbp / seats;
-    return `For a ${seats}-person studio, that is ${formatGbp(perPerson, 2)} per person per month (flat price for the whole team, up to ${seats} members).`;
+    return `For a ${seats}-person studio, that is ${formatGbp(perPerson, 2)} per person per month, up to ${seats} members.`;
   }
 
   if (plan.maxTeamMembers) {
@@ -203,7 +211,7 @@ export function translationLine(plan: BillingPlanPrice): string {
     return `Up to ${plan.maxTeamMembers} members — ${formatGbp(perPerson, 2)} per person per month if you fill every seat.`;
   }
 
-  return `${formatGbp(plan.monthlyPriceGbp)} per month, flat price for the whole team.`;
+  return `${formatGbp(plan.monthlyPriceGbp)} per month.`;
 }
 
 export function trialLabel(plan: BillingPlanPrice): string {

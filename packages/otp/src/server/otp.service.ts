@@ -38,10 +38,38 @@ type CreateNonceRpcParams = {
 
 type VerifyNonceRpcParams = {
   p_token: string;
+  p_user_id?: string;
   p_purpose: string;
   p_required_scopes?: string[];
   p_max_verification_attempts?: number;
 };
+
+/**
+ * Service-role nonce RPCs exist in the database but are not always present
+ * in the generated `Database['public']['Functions']` union. Call them
+ * through this helper so the rest of the service stays typed.
+ */
+type NonceRpcName =
+  | 'create_nonce'
+  | 'verify_nonce'
+  | 'revoke_nonce'
+  | 'get_nonce_status';
+
+type RpcResult<T> = PromiseLike<{
+  data: T | null;
+  error: { message: string } | null;
+}>;
+
+function callNonceRpc<T>(
+  client: SupabaseClient<Database>,
+  fn: NonceRpcName,
+  params?: object,
+) {
+  return (client.rpc as (name: string, args?: object) => RpcResult<T>)(
+    fn,
+    params,
+  );
+}
 
 /**
  * @name OtpService
@@ -74,16 +102,20 @@ class OtpService {
     logger.info(ctx, 'Creating one-time token');
 
     try {
-      const result = await this.client.rpc('create_nonce', {
-        p_user_id: userId,
-        p_purpose: purpose,
-        p_expires_in_seconds: expiresInSeconds,
-        p_metadata: metadata as Json,
-        p_description: description,
-        p_tags: tags,
-        p_scopes: scopes,
-        p_revoke_previous: revokePrevious,
-      } as CreateNonceRpcParams);
+      const result = await callNonceRpc<CreateNonceResult>(
+        this.client,
+        'create_nonce',
+        {
+          p_user_id: userId,
+          p_purpose: purpose,
+          p_expires_in_seconds: expiresInSeconds,
+          p_metadata: metadata as Json,
+          p_description: description,
+          p_tags: tags,
+          p_scopes: scopes,
+          p_revoke_previous: revokePrevious,
+        } satisfies CreateNonceRpcParams,
+      );
 
       if (result.error) {
         logger.error(
@@ -135,13 +167,17 @@ class OtpService {
     logger.info(ctx, 'Verifying one-time token');
 
     try {
-      const result = await this.client.rpc('verify_nonce', {
-        p_token: token,
-        p_user_id: params.userId,
-        p_purpose: purpose,
-        p_required_scopes: requiredScopes,
-        p_max_verification_attempts: maxVerificationAttempts,
-      } as VerifyNonceRpcParams);
+      const result = await callNonceRpc<VerifyNonceResult>(
+        this.client,
+        'verify_nonce',
+        {
+          p_token: token,
+          p_user_id: params.userId,
+          p_purpose: purpose,
+          p_required_scopes: requiredScopes,
+          p_max_verification_attempts: maxVerificationAttempts,
+        } satisfies VerifyNonceRpcParams,
+      );
 
       if (result.error) {
         logger.error(
@@ -184,10 +220,14 @@ class OtpService {
     logger.info(ctx, 'Revoking one-time token');
 
     try {
-      const { data, error } = await this.client.rpc('revoke_nonce', {
-        p_id: id,
-        p_reason: reason,
-      });
+      const { data, error } = await callNonceRpc<boolean>(
+        this.client,
+        'revoke_nonce',
+        {
+          p_id: id,
+          p_reason: reason,
+        },
+      );
 
       if (error) {
         logger.error(
@@ -225,9 +265,13 @@ class OtpService {
     logger.info(ctx, 'Getting one-time token status');
 
     try {
-      const result = await this.client.rpc('get_nonce_status', {
-        p_id: id,
-      });
+      const result = await callNonceRpc<GetNonceStatusResult>(
+        this.client,
+        'get_nonce_status',
+        {
+          p_id: id,
+        },
+      );
 
       if (result.error) {
         logger.error(

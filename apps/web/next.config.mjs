@@ -517,6 +517,11 @@ async function getRedirects() {
   return [
     ...legacyHomeRedirects,
     {
+      source: '/early-access',
+      destination: '/pricing',
+      permanent: true,
+    },
+    {
       source: '/app/:account/jobs',
       destination: '/app/:account/projects',
       permanent: true,

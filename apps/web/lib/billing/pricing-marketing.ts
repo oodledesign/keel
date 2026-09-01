@@ -35,6 +35,7 @@ export type MarketingAddonPlan = {
 const PRODUCT_PROFILE: Record<string, WorkspaceProfile> = {
   'ozer-community': 'community',
   'ozer-business-lite': 'work_design',
+  'ozer-business-starter': 'work_design',
   'ozer-business': 'work_design',
   'ozer-property-starter': 'work_property',
   'ozer-property-portfolio': 'work_property',
@@ -64,7 +65,12 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] =
     name: plan.productName,
     description: plan.description,
     monthlyPriceGbp: plan.monthlyPriceGbp,
-    yearlyPriceGbp: plan.yearlyPriceGbp ?? plan.monthlyPriceGbp * 12,
+    yearlyPriceGbp:
+      plan.yearlyPriceGbp ??
+      (plan.productId === 'ozer-business-starter' ||
+      plan.productId === 'ozer-business'
+        ? plan.monthlyPriceGbp * 10
+        : plan.monthlyPriceGbp * 12),
     features: plan.features,
     maxTeamMembers: plan.maxTeamMembers,
     highlighted: plan.highlighted,
@@ -79,6 +85,7 @@ const ADDON_PRODUCT_IDS = [
 
 const PRODUCT_URL_ALIASES = {
   'ozer-business-lite': 'business-lite',
+  'ozer-business-starter': 'business-starter',
   'ozer-business': 'business',
   'ozer-addon-signatures': 'signatures',
   'ozer-addon-site-studio': 'site-studio',
@@ -89,7 +96,8 @@ const PRODUCT_ID_BY_URL_ALIAS = new Map<string, string>([
   ...Object.entries(PRODUCT_URL_ALIASES).map(
     ([productId, alias]) => [alias, productId] as const,
   ),
-  // Legacy Solo/Team/Scale URL aliases → graduated Business
+  ['starter', 'ozer-business-starter'],
+  // Legacy Solo/Team/Scale URL aliases → Pro
   ['business-solo', 'ozer-business'],
   ['business-team', 'ozer-business'],
   ['business-scale', 'ozer-business'],
@@ -175,7 +183,7 @@ export function buildPricingSignupUrl(params: {
 
 /**
  * Default marketing "Start free": chooser that makes personal-first obvious,
- * then optional workspace (Solo / Team / Lite / family / community).
+ * then optional workspace (Free / Starter / Pro / family / community).
  */
 export const MARKETING_FREE_SIGNUP_URL = '/start';
 

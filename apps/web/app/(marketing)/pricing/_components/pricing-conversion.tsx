@@ -9,7 +9,6 @@ import {
   annualSavingPercent,
   formatAnnualSavingPercent,
   formatGbp,
-  listBusinessWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
 import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 import {
@@ -40,89 +39,103 @@ const FEATURE_MATRIX: Array<{
   href?: string;
   hint?: string;
   lite: boolean | string;
-  business: boolean | string;
+  starter: boolean | string;
+  pro: boolean | string;
 }> = [
   {
     feature: 'Monthly price',
-    hint: 'Business uses graduated per-seat pricing',
+    hint: 'Starter and Pro use graduated seats',
     lite: 'Free',
-    business: 'From £29 / seat',
+    starter: 'From £14 / seat',
+    pro: 'From £29 / seat',
   },
   {
     feature: 'Billable seats',
     hint: 'Owners, admins, staff, and contractors',
-    lite: 'Up to 3 members',
-    business: 'Pay per seat (graduated)',
+    lite: 'Up to 2 members',
+    starter: '£14 then £9 extra',
+    pro: '£29 then £22 extra',
   },
   {
     feature: 'Project guests',
     hint: 'External collaborators on one project — not paid seats',
     lite: '1',
-    business: '3 per billable seat',
+    starter: '1 per billable seat',
+    pro: '3 per billable seat',
   },
   {
     feature: 'Client portal contacts',
     lite: 'Unlimited',
-    business: 'Unlimited',
+    starter: 'Unlimited',
+    pro: 'Unlimited',
   },
   {
     feature: 'Share with other paid workspaces',
     lite: false,
-    business: true,
+    starter: false,
+    pro: true,
   },
   {
     feature: '14-day free trial',
     hint: 'On your first paid workspace — no card required',
     lite: false,
-    business: true,
+    starter: true,
+    pro: true,
   },
   {
     feature: 'Apps marketplace',
     href: '/apps',
     lite: true,
-    business: true,
+    starter: true,
+    pro: true,
   },
   {
     feature: 'Monthly AI credits',
-    hint: 'Shared pool — scales with seats on Business',
+    hint: 'One shared workspace pool for drafts, summaries, coaching, and other model use. Pro scales with seats.',
     lite: '200',
-    business: 'From 3,000',
+    starter: 'Same workspace pool',
+    pro: 'From 3,000',
   },
   {
-    feature: 'Clients & pipeline',
+    feature: 'Clients & invoices',
     href: '/features/pipeline',
-    lite: false,
-    business: true,
+    lite: '3 clients · 5 invoices/mo',
+    starter: 'Unlimited',
+    pro: 'Unlimited',
   },
   {
-    feature: 'Jobs & projects',
-    href: '/features/project-management',
-    lite: false,
-    business: true,
+    feature: 'Open tasks & bookings',
+    lite: '20 tasks · 5 bookings/mo',
+    starter: 'Unlimited',
+    pro: 'Unlimited',
   },
   {
-    feature: 'Invoices & client portal',
-    href: '/features/invoicing',
+    feature: 'Planner',
+    href: '/features/planner',
     lite: false,
-    business: true,
+    starter: false,
+    pro: true,
   },
   {
-    feature: 'Meeting Assistant',
+    feature: 'Meeting recording & transcription',
     href: '/features/desktop-assistant',
-    lite: '2 hrs/mo',
-    business: true,
+    lite: '5 hrs/mo',
+    starter: 'Unlimited',
+    pro: 'Unlimited',
   },
   {
-    feature: 'Email Assistant',
+    feature: 'Email assistant, coaching & auto tasks',
     href: '/features/email-assistant',
-    lite: 'Add-on',
-    business: 'Add-on',
+    lite: false,
+    starter: false,
+    pro: true,
   },
   {
     feature: 'Signatures / Media Generate',
     href: '/apps',
     lite: 'Add-on',
-    business: 'Add-on',
+    starter: 'Add-on',
+    pro: 'Add-on',
   },
 ];
 
@@ -163,7 +176,7 @@ export function PricingConversion() {
         <h2 id="tier-cards-heading" className="sr-only">
           Business workspace tiers
         </h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {tiers.map((plan) => {
             const saving = formatAnnualSavingPercent(plan);
             const signup = buildPricingSignupUrl({
@@ -283,9 +296,9 @@ export function PricingConversion() {
         <p className="mt-4 text-sm text-[var(--workspace-shell-text)]">
           Typical stack total:{' '}
           <strong>{formatGbp(stackMonthly)} per month</strong> (
-          {formatGbp(stackMonthly * 12)} per year). Ozer Business Team is{' '}
-          <strong>{formatGbp(teamMonthly)} per month</strong> for a typical
-          4-seat studio on graduated Business pricing.
+          {formatGbp(stackMonthly * 12)} per year). Ozer Pro for four seats is{' '}
+          <strong>{formatGbp(teamMonthly)} per month</strong> on graduated
+          pricing (£29 + 3 × £22).
         </p>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
           Run your own numbers in the{' '}
@@ -308,16 +321,17 @@ export function PricingConversion() {
           Feature-by-tier compare
         </h2>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Lite vs paid Business. Use the seat calculator above for exact monthly
-          totals.
+          Free vs Starter vs Pro. Use the seat calculator above for exact
+          monthly totals.
         </p>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[28rem] text-left text-sm">
             <thead>
               <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
                 <th className="px-4 py-3 font-semibold">Feature</th>
-                <th className="px-4 py-3 font-semibold">Lite</th>
-                <th className="px-4 py-3 font-semibold">Business</th>
+                <th className="px-4 py-3 font-semibold">Free</th>
+                <th className="px-4 py-3 font-semibold">Starter</th>
+                <th className="px-4 py-3 font-semibold">Pro</th>
               </tr>
             </thead>
             <tbody>
@@ -352,7 +366,10 @@ export function PricingConversion() {
                     {cell(row.lite)}
                   </td>
                   <td className={cn('px-4 py-3', marketingMutedText)}>
-                    {cell(row.business)}
+                    {cell(row.starter)}
+                  </td>
+                  <td className={cn('px-4 py-3', marketingMutedText)}>
+                    {cell(row.pro)}
                   </td>
                 </tr>
               ))}

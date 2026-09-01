@@ -34,7 +34,8 @@ export type AccountPlanLimitsRow = {
   max_bookings_per_month?: number | null;
   max_portal_storage_bytes?: number | null;
   /**
-   * NULL = zero credits / feature not available (unlike other max_* where NULL = unlimited).
+   * Unused for platform pricing. Businesses manage their own client-request
+   * library — not an Ozer-billed monthly pile. NULL = unset / not sold.
    */
   client_request_credit_allowance?: number | null;
   meeting_coaching_enabled?: boolean;
@@ -506,8 +507,8 @@ export async function assertVideoCreateAllowed(
 }
 
 /**
- * Client-request credit allotment for an account.
- * Unlike other max_* columns, NULL means zero / feature not available — not unlimited.
+ * Unused platform quota. NULL means unset / not sold — do not treat as unlimited
+ * and do not invent a marketing allotment.
  */
 export function clientRequestCreditAllowance(
   limits: AccountPlanLimitsRow | null | undefined,

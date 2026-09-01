@@ -31,7 +31,7 @@ export const productiveIoComparison: ComparisonConfig = {
   },
   inBrief: [
     'Productive is an agency PSA (professional services automation) platform with per-user pricing and deep resourcing, often aimed at larger teams.',
-    'Ozer is a Workspace OS for freelancers and small studios with flat team pricing, EU data residency, and Mac meeting capture.',
+    'Ozer is a Workspace OS for freelancers and small studios with graduated Starter and Pro seats, EU data residency, and Mac meeting capture.',
     'Choose Productive if you need heavy PSA/resourcing for 10+ seats; choose Ozer if a four-person UK studio wants simpler ops without steep onboarding.',
   ],
   glanceRows: [
@@ -145,7 +145,7 @@ export const productiveIoComparison: ComparisonConfig = {
     competitorTotalGbp: c(2182, 'https://productive.io/pricing/', '2026-07-04'),
     ozerLines: [
       {
-        label: 'Business Team annual (up to 5 members)',
+        label: 'Pro annual for 4 billable seats',
         amountGbp: OZER_TEAM_OF_FOUR.teamOfFourAnnualGbp,
       },
       {
@@ -153,7 +153,7 @@ export const productiveIoComparison: ComparisonConfig = {
         amountGbp: c(1160, 'https://stripe.com/gb/pricing', '2026-07-04'),
       },
     ],
-    ozerTotalGbp: c(1950, 'https://ozer.so/pricing', '2026-07-04'),
+    ozerTotalGbp: c(2110, 'https://ozer.so/pricing', '2026-07-04'),
     footnotes: [
       {
         text: 'Public Productive pricing is often described in a roughly $9–$28+ per user per month band — confirm live packages.',
@@ -175,7 +175,7 @@ export const productiveIoComparison: ComparisonConfig = {
     'Per-user pricing is acceptable because utilisation reporting is the priority.',
   ],
   chooseOzerIf: [
-    'You are a freelancer or small UK studio (around four people) and want flat team pricing without PSA complexity.',
+    'You are a freelancer or small UK studio (around four people) and want graduated GBP seats without PSA complexity.',
     'You need EU data residency and Mac meeting capture without permanent audio files.',
     'You want personal and business workspaces connected, not only agency delivery tooling.',
     'You want to avoid a long implementation project before day-to-day work feels normal.',
@@ -189,7 +189,7 @@ export const productiveIoComparison: ComparisonConfig = {
     {
       question: "What's the best Productive.io alternative in the UK?",
       answer:
-        'Ozer is aimed at smaller UK/EU studios that want a Workspace OS with flat team pricing. Other PSAs may still fit if you need enterprise-style resourcing.',
+        'Ozer is aimed at smaller UK/EU studios that want a Workspace OS with graduated Starter and Pro seats. Other PSAs may still fit if you need enterprise-style resourcing.',
     },
     {
       question: 'Is Productive overkill for a small studio?',
@@ -199,7 +199,7 @@ export const productiveIoComparison: ComparisonConfig = {
     {
       question: 'How does Productive pricing scale vs Ozer?',
       answer:
-        'Productive scales with seats. Ozer Business Team is a flat workspace price up to five members (£790/year on annual billing). Model both with verified list prices.',
+        'Productive scales with seats. Ozer Pro for four seats is £95/mo or £950/year on annual billing. Model both with verified list prices.',
     },
     {
       question: 'Does Ozer include time tracking like Productive?',

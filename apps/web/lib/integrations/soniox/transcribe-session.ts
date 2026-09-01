@@ -76,7 +76,7 @@ export async function createSonioxTranscribeSession(
     summary.remainingDurationSeconds < MIN_REMAINING_SECONDS
   ) {
     throw new SonioxTranscribeSessionError(
-      'Desktop recorder recording time limit reached for this month. Upgrade to Business Solo (or higher) for unlimited recording time.',
+      'Desktop recorder recording time limit reached for this month. Upgrade to Starter or Pro for unlimited recording time.',
       429,
     );
   }

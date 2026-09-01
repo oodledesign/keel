@@ -8,7 +8,7 @@ import {
 } from './business-lite';
 import { hasEntitlement } from './entitlements';
 
-/** True when the workspace is on the free apps shell (not full Business CRM). */
+/** True when the workspace is on Business Free (not Starter or Pro). */
 export async function isBusinessLiteWorkspace(
   client: SupabaseClient,
   accountId: string,

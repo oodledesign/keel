@@ -52,7 +52,7 @@ export function PlanPicker(
      * Override the plan card price (major currency units). Used for graduated
      * seat totals that differ from the flat primary line-item cost.
      */
-    displayCostOverride?: number;
+    displayCostOverride?: number | ((productId: string) => number | undefined);
   }>,
 ) {
   const { t } = useTranslation(`billing`);
@@ -262,109 +262,118 @@ export function PlanPicker(
                                 'flex w-full flex-col content-center gap-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0'
                               }
                             >
-                            <Label
-                              htmlFor={plan.id}
-                              className={
-                                'flex flex-col justify-center space-y-2.5'
-                              }
-                            >
-                              <div className={'flex items-center space-x-2.5'}>
-                                <RadioGroupItem
-                                  data-test-plan={plan.id}
-                                  key={plan.id + selected}
-                                  id={plan.id}
-                                  value={plan.id}
-                                  onClick={() => {
-                                    if (selected) {
-                                      return;
+                              <Label
+                                htmlFor={plan.id}
+                                className={
+                                  'flex flex-col justify-center space-y-2.5'
+                                }
+                              >
+                                <div
+                                  className={'flex items-center space-x-2.5'}
+                                >
+                                  <RadioGroupItem
+                                    data-test-plan={plan.id}
+                                    key={plan.id + selected}
+                                    id={plan.id}
+                                    value={plan.id}
+                                    onClick={() => {
+                                      if (selected) {
+                                        return;
+                                      }
+
+                                      form.setValue('planId', planId, {
+                                        shouldValidate: true,
+                                      });
+
+                                      form.setValue('productId', product.id, {
+                                        shouldValidate: true,
+                                      });
+                                    }}
+                                  />
+
+                                  <span className="font-semibold">
+                                    <Trans
+                                      i18nKey={`billing:plans.${product.id}.name`}
+                                      defaults={product.name}
+                                    />
+                                  </span>
+
+                                  <If
+                                    condition={
+                                      plan.trialDays && props.canStartTrial
                                     }
+                                  >
+                                    <div>
+                                      <Badge
+                                        className={'px-1 py-0.5 text-xs'}
+                                        variant={'success'}
+                                      >
+                                        <Trans
+                                          i18nKey={`billing:trialPeriod`}
+                                          values={{
+                                            period: plan.trialDays,
+                                          }}
+                                        />
+                                      </Badge>
+                                    </div>
+                                  </If>
+                                </div>
 
-                                    form.setValue('planId', planId, {
-                                      shouldValidate: true,
-                                    });
-
-                                    form.setValue('productId', product.id, {
-                                      shouldValidate: true,
-                                    });
-                                  }}
-                                />
-
-                                <span className="font-semibold">
+                                <span className={'text-muted-foreground'}>
                                   <Trans
-                                    i18nKey={`billing:plans.${product.id}.name`}
-                                    defaults={product.name}
+                                    i18nKey={`billing:plans.${product.id}.description`}
+                                    defaults={product.description}
                                   />
                                 </span>
+                              </Label>
 
-                                <If
-                                  condition={
-                                    plan.trialDays && props.canStartTrial
-                                  }
-                                >
-                                  <div>
-                                    <Badge
-                                      className={'px-1 py-0.5 text-xs'}
-                                      variant={'success'}
-                                    >
-                                      <Trans
-                                        i18nKey={`billing:trialPeriod`}
-                                        values={{
-                                          period: plan.trialDays,
-                                        }}
-                                      />
-                                    </Badge>
-                                  </div>
-                                </If>
-                              </div>
-
-                              <span className={'text-muted-foreground'}>
-                                <Trans
-                                  i18nKey={`billing:plans.${product.id}.description`}
-                                  defaults={product.description}
-                                />
-                              </span>
-                            </Label>
-
-                            <div
-                              className={
-                                'flex flex-col gap-y-3 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-4 lg:text-right'
-                              }
-                            >
-                              <div>
-                                <Price key={plan.id}>
-                                  <PlanCostDisplay
-                                    primaryLineItem={primaryLineItem}
-                                    currencyCode={product.currency}
-                                    interval={selectedInterval}
-                                    alwaysDisplayMonthlyPrice={true}
-                                    displayCostOverride={
-                                      props.displayCostOverride
-                                    }
-                                  />
-                                </Price>
-
+                              <div
+                                className={
+                                  'flex flex-col gap-y-3 lg:flex-row lg:items-center lg:space-y-0 lg:space-x-4 lg:text-right'
+                                }
+                              >
                                 <div>
-                                  <span className={'text-muted-foreground'}>
-                                    <If
-                                      condition={
-                                        plan.paymentType === 'recurring'
+                                  <Price key={plan.id}>
+                                    <PlanCostDisplay
+                                      primaryLineItem={primaryLineItem}
+                                      currencyCode={product.currency}
+                                      interval={selectedInterval}
+                                      alwaysDisplayMonthlyPrice={true}
+                                      displayCostOverride={
+                                        typeof props.displayCostOverride ===
+                                        'function'
+                                          ? props.displayCostOverride(
+                                              product.id,
+                                            )
+                                          : props.displayCostOverride
                                       }
-                                      fallback={
-                                        <Trans i18nKey={`billing:lifetime`} />
-                                      }
-                                    >
-                                      <Trans i18nKey={`billing:perMonth`} />
-                                    </If>
-                                  </span>
+                                    />
+                                  </Price>
+
+                                  <div>
+                                    <span className={'text-muted-foreground'}>
+                                      <If
+                                        condition={
+                                          plan.paymentType === 'recurring'
+                                        }
+                                        fallback={
+                                          <Trans i18nKey={`billing:lifetime`} />
+                                        }
+                                      >
+                                        <Trans i18nKey={`billing:perMonth`} />
+                                      </If>
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
                             </div>
 
                             {selected ? (
                               <PlanDetails
                                 embedded
-                                selectedInterval={selectedInterval}
+                                selectedInterval={
+                                  selectedInterval ?? intervals[0] ?? 'month'
+                                }
                                 selectedPlan={plan}
                                 selectedProduct={product}
                               />
@@ -437,7 +446,7 @@ function PlanDetails({
       className={cn(
         'fade-in animate-in flex w-full flex-col space-y-2',
         embedded
-          ? 'border-[color:var(--workspace-shell-border)] mt-1 border-t pt-3'
+          ? 'mt-1 border-t border-[color:var(--workspace-shell-border)] pt-3'
           : 'rounded-md border p-4',
       )}
     >

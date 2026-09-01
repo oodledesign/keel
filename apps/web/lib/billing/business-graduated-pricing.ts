@@ -1,8 +1,8 @@
 /**
- * Business graduated per-seat pricing — single source of truth.
+ * Pro graduated per-seat pricing — single source of truth.
  * Must match the Stripe Price (`billing_scheme: tiered`, `tiers_mode: graduated`).
  *
- * Seat 1 → £29, seats 2–5 → £22 each, seats 6+ → £16 each.
+ * Two bands only: seat 1 → £29, every additional seat → £22.
  * Shared AI pool and project-guest allowance scale with billable seats.
  */
 
@@ -11,15 +11,14 @@ export const BUSINESS_GRADUATED_PLAN_ID = 'business-monthly';
 
 export const BUSINESS_GRADUATED_TIERS = [
   { upTo: 1, unitGbp: 29, bandLabel: 'Seat 1' },
-  { upTo: 5, unitGbp: 22, bandLabel: 'Seats 2–5' },
-  { upTo: Infinity, unitGbp: 16, bandLabel: 'Seats 6+' },
+  { upTo: Infinity, unitGbp: 22, bandLabel: 'Seats 2+' },
 ] as const;
 
 /** Illustrative marketing card seat counts (wrappers around the same Price). */
 export const BUSINESS_ILLUSTRATIVE_TIERS = [
   {
     id: 'solo',
-    label: 'Business Solo',
+    label: '1 seat',
     billableSeats: 1,
     description: 'Solo freelancer / one-person studio',
     seatRangeLabel: '1 billable seat',
@@ -28,20 +27,20 @@ export const BUSINESS_ILLUSTRATIVE_TIERS = [
   },
   {
     id: 'team',
-    label: 'Business Team',
+    label: '4 seats',
     billableSeats: 4,
     description: 'Small studio / growing practice',
-    seatRangeLabel: '2–5 billable seats',
-    bandTitle: 'Seats 2–5',
+    seatRangeLabel: '4 billable seats',
+    bandTitle: 'Example · 4 seats',
     highlighted: true,
   },
   {
     id: 'scale',
-    label: 'Business Scale',
+    label: '10 seats',
     billableSeats: 10,
     description: 'Larger studio / multi-role desk',
-    seatRangeLabel: '6+ billable seats',
-    bandTitle: 'Seats 6+',
+    seatRangeLabel: '10 billable seats',
+    bandTitle: 'Example · 10 seats',
     highlighted: false,
   },
 ] as const;
@@ -49,7 +48,7 @@ export const BUSINESS_ILLUSTRATIVE_TIERS = [
 /** Lite (free) project-guest allowance. */
 export const BUSINESS_LITE_MAX_PROJECT_GUESTS = 1;
 
-/** Project guests per billable seat on paid Business (workspace-wide pool). */
+/** Project guests per billable seat on Pro (workspace-wide pool). */
 export const BUSINESS_PROJECT_GUESTS_PER_SEAT = 3;
 
 export function clampBillableSeats(seats: number): number {
@@ -136,28 +135,17 @@ export function formatGraduatedWorkedExample(
 }
 
 /**
- * Shared AI credit pool for paid Business from billable seat count.
- * Seat 1 → 3,000; seats 2–5 → +1,500 each; seats 6+ → +1,000 each.
+ * Shared AI credit pool for Pro from billable seat count.
+ * Seat 1 → 3,000; every additional seat → +1,500.
  */
 export function aiCreditsForBillableSeats(billableSeats: number): number {
   const seats = clampBillableSeats(billableSeats);
-  let credits = 0;
-
-  for (let seat = 1; seat <= seats; seat += 1) {
-    if (seat === 1) {
-      credits += 3000;
-    } else if (seat <= 5) {
-      credits += 1500;
-    } else {
-      credits += 1000;
-    }
-  }
-
-  return credits;
+  if (seats <= 0) return 0;
+  return 3000 + (seats - 1) * 1500;
 }
 
 /**
- * Workspace-wide project-guest allowance for paid Business.
+ * Workspace-wide project-guest allowance for Pro.
  * Lite uses BUSINESS_LITE_MAX_PROJECT_GUESTS separately.
  */
 export function maxProjectGuestsForBillableSeats(
@@ -177,10 +165,10 @@ export function illustrativeTierForSeats(billableSeats: number): {
 } {
   const seats = clampBillableSeats(billableSeats);
   if (seats <= 1) {
-    return { id: 'solo', label: 'Business Solo' };
+    return { id: 'solo', label: '1 seat' };
   }
   if (seats <= 5) {
-    return { id: 'team', label: 'Business Team' };
+    return { id: 'team', label: '4-seat studio' };
   }
-  return { id: 'scale', label: 'Business Scale' };
+  return { id: 'scale', label: '10-seat studio' };
 }

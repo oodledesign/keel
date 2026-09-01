@@ -1,4 +1,5 @@
 import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
+import { estimateStarterMonthlyGbp } from '~/lib/billing/business-starter-pricing';
 
 export type StackTool = {
   id: string;
@@ -85,13 +86,28 @@ export const STACK_TOOLS: StackTool[] = [
   },
 ];
 
-/** 4-seat Business annual (10× monthly) for stack comparisons. */
+export type StackOzerPlan = 'starter' | 'pro';
+
+export function ozerMonthlyForPlan(
+  plan: StackOzerPlan,
+  seats: number,
+): number {
+  return plan === 'starter'
+    ? estimateStarterMonthlyGbp(seats)
+    : estimateMonthlyGbp(seats);
+}
+
+export function ozerAnnualForPlan(plan: StackOzerPlan, seats: number): number {
+  return ozerMonthlyForPlan(plan, seats) * 10;
+}
+
+/** 4-seat Pro annual (10× monthly) for stack comparisons. */
 export function ozerAnnualFromBilling(): number {
-  return estimateMonthlyGbp(4) * 10;
+  return ozerAnnualForPlan('pro', 4);
 }
 
 export function ozerMonthlyFromBilling(): number {
-  return estimateMonthlyGbp(4);
+  return ozerMonthlyForPlan('pro', 4);
 }
 
 export const CALCULATOR_FAQS = [
@@ -114,6 +130,6 @@ export const CALCULATOR_FAQS = [
   {
     question: 'Is Ozer’s comparison price per seat?',
     answer:
-      'Ozer Business uses graduated per-seat pricing on one product. The comparison figure is a 4-seat worked total (£29 + 3 × £22 = £95/mo), not a flat Team product.',
+      'Starter and Pro both use graduated seats. The default comparison is 4-seat Pro (£29 + 3 × £22 = £95/mo). Change seats or switch to Starter (£14 + extra seats at £9) in the calculator.',
   },
 ];

@@ -28,7 +28,7 @@ export const COMPETITOR_MATRIX_COLUMNS: CompetitorMatrixColumn[] = [
     blurb: 'Ideal for freelancers and small studios',
     initials: 'Oz',
     highlighted: true,
-    price: 'From £29/mo',
+    price: 'From £14/mo',
   },
   {
     id: 'bloom',
@@ -248,8 +248,8 @@ export const COMPETITOR_MATRIX_ROWS: CompetitorMatrixRow[] = [
     },
   },
   {
-    id: 'flat-pricing',
-    feature: 'Flat team price (no per-seat maths)',
+    id: 'graduated-seats',
+    feature: 'Graduated seats (Starter + Pro)',
     values: {
       ozer: true,
       bloom: 'partial',

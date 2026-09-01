@@ -295,7 +295,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           title={
             userFirstName ? `Welcome back, ${userFirstName}` : accountLabel
           }
-          description="Your apps workspace — install add-ons or upgrade to full business."
+          description="Free workspace — capped clients and invoices. Upgrade to Starter or Pro when you need more."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           <Suspense fallback={null}></Suspense>

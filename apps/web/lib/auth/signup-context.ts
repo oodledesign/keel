@@ -212,7 +212,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
   return withPersonalDefaults({
     heading: 'Create your free personal account',
     subheading:
-      'After you sign up, add workspaces for business, family, or community. Most studios start on graduated Business from £29 for seat 1.',
+      'After you sign up, add workspaces for business, family, or community. Most studios start on Starter from £14 or Pro from £29.',
     badge: 'Free to start',
     highlights: [...PERSONAL_FIRST_HIGHLIGHTS],
     intent,

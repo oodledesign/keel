@@ -11,6 +11,13 @@ const provider = BillingProviderSchema.parse(
 
 const TRIAL_DAYS = 14;
 
+/**
+ * Business AI is one shared workspace pool (Free 200; Pro scales with seats).
+ * Email drafts, summaries, coaching, and auto tasks draw from that pool.
+ * `client_request_credit_allowance` is unused for platform pricing — do not
+ * invent Starter/Pro request-credit numbers on plan cards or marketing.
+ */
+
 export default createBillingSchema({
   provider,
   products: [
@@ -63,7 +70,7 @@ export default createBillingSchema({
       id: 'ozer-business-lite',
       name: 'Free',
       description:
-        'Free workspace with Meeting Assistant (5 hrs/mo) and apps — install Signatures, Site Studio, Media Generate, and more',
+        'Free workspace — 2 seats, capped clients and invoices, meeting recording 5 hrs/mo',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       plans: [
@@ -83,20 +90,21 @@ export default createBillingSchema({
         },
       ],
       features: [
-        'Apps marketplace access',
-        'Team & brand settings',
-        'Up to 2 team members',
+        '2 seats',
+        '3 active clients · 5 invoices/month',
+        '20 open tasks · 5 bookings/month',
+        '250 MB portal storage',
+        'Unlimited messaging & dictation',
+        'Meeting recording & transcription — 5 hrs/mo',
         '200 AI credits / month',
-        '1 project guest',
-        'Meeting Assistant — 5 hrs/mo',
-        'Pay only for the apps you use',
+        'No planner, email assistant, or meeting coaching',
       ],
     },
     {
       id: 'ozer-business-starter',
       name: 'Starter',
       description:
-        'Clients, projects, invoices, and AI for solo freelancers — £14 for the first seat, £9 for each additional seat',
+        'Clients, projects, and invoices — £14 for the first seat, £9 for each additional seat',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       plans: [
@@ -125,11 +133,12 @@ export default createBillingSchema({
       ],
       features: [
         '£14/mo for seat 1, then £9 per extra seat',
-        'Clients, projects, invoices & pipeline',
-        'Unlimited active clients, invoices & open tasks',
+        'Unlimited clients, invoices, tasks & scheduling',
         '10 GB client portal storage',
-        'Meeting Assistant — unlimited',
+        'Meeting recording & transcription — unlimited',
+        'Shared AI credits (workspace pool)',
         '1 project guest per billable seat',
+        'No planner, email assistant, or meeting coaching',
       ],
     },
     {
@@ -138,7 +147,7 @@ export default createBillingSchema({
       highlighted: true,
       badge: 'Popular',
       description:
-        'Graduated per-seat pricing for freelancers and studios — clients, projects, invoices, and AI',
+        'Studio workspace — £29 for the first seat, £22 for each extra, with planner, email assistant, and coaching',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       plans: [
@@ -156,11 +165,10 @@ export default createBillingSchema({
               type: 'per_seat',
               unit: 'seat',
               description:
-                'Graduated: £29 for seat 1, £22 for seats 2–5, £16 for seats 6+',
+                'Graduated: £29 for seat 1, £22 for every additional seat',
               tiers: [
                 { upTo: 1, cost: 29 },
-                { upTo: 5, cost: 22 },
-                { upTo: 'unlimited', cost: 16 },
+                { upTo: 'unlimited', cost: 22 },
               ],
             },
           ],
@@ -179,26 +187,25 @@ export default createBillingSchema({
               type: 'per_seat',
               unit: 'seat',
               description:
-                'Graduated yearly (10× monthly): £290 for seat 1, £220 for seats 2–5, £160 for seats 6+',
+                'Graduated yearly (10× monthly): £290 for seat 1, £220 for every additional seat',
               tiers: [
                 { upTo: 1, cost: 290 },
-                { upTo: 5, cost: 220 },
-                { upTo: 'unlimited', cost: 160 },
+                { upTo: 'unlimited', cost: 220 },
               ],
             },
           ],
         },
       ],
       features: [
-        'Graduated per-seat pricing (from £29/mo)',
-        'Clients, projects, invoices & pipeline',
+        '£29/mo for seat 1, then £22 per extra seat',
+        'Unlimited clients, invoices, tasks & scheduling',
         'Shared AI credits that scale with seats',
+        'Planner, email assistant, coaching & auto tasks (same AI pool)',
+        'Meeting recording & transcription — unlimited',
+        'Second brain indexes meeting transcripts',
         '3 project guests per billable seat',
-        'Unlimited client portal access',
         '25 GB client portal storage',
-        'Unlimited client & project sharing with other paid workspaces',
-        'Meeting Assistant — unlimited',
-        'Meeting coaching & auto task extraction',
+        'Unlimited sharing with other paid workspaces',
       ],
     },
     {

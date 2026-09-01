@@ -31,8 +31,8 @@ export const honeybookComparison: ComparisonConfig = {
   },
   inBrief: [
     'HoneyBook is a client-flow platform popular with US creatives, with tiered subscriptions and card processing fees on payments.',
-    'Ozer is a UK-built Workspace OS with flat team pricing, EU data residency, and Mac meeting capture without permanent audio storage.',
-    'Choose HoneyBook if you want its US client-flow playbook; choose Ozer if UK/EU residency and a flat team price matter more than HoneyBook’s ecosystem.',
+    'Ozer is a UK-built Workspace OS with graduated Starter and Pro seats, EU data residency, and Mac meeting capture without permanent audio storage.',
+    'Choose HoneyBook if you want its US client-flow playbook; choose Ozer if UK/EU residency and graduated GBP seats matter more than HoneyBook’s ecosystem.',
   ],
   glanceRows: [
     {
@@ -149,7 +149,7 @@ export const honeybookComparison: ComparisonConfig = {
     ),
     ozerLines: [
       {
-        label: 'Business Team annual (up to 5 members)',
+        label: 'Pro annual for 4 billable seats',
         amountGbp: OZER_TEAM_OF_FOUR.teamOfFourAnnualGbp,
       },
       {
@@ -157,7 +157,7 @@ export const honeybookComparison: ComparisonConfig = {
         amountGbp: c(1160, 'https://stripe.com/gb/pricing', '2026-07-04'),
       },
     ],
-    ozerTotalGbp: c(1950, 'https://ozer.so/pricing', '2026-07-04'),
+    ozerTotalGbp: c(2110, 'https://ozer.so/pricing', '2026-07-04'),
     footnotes: [
       {
         text: 'Public commentary in early 2025 described a large Starter-plan price increase (often cited around ~89%). Treat as historical context until you verify HoneyBook’s archive or announcements.',
@@ -175,11 +175,11 @@ export const honeybookComparison: ComparisonConfig = {
   },
   chooseCompetitorIf: [
     'Your clients and collaborators already live in HoneyBook’s US creative ecosystem.',
-    'You prioritise HoneyBook’s specific client-flow templates over EU residency or flat UK team pricing.',
+    'You prioritise HoneyBook’s specific client-flow templates over EU residency or graduated UK seat pricing.',
     'You are comfortable with tier jumps and card fees as part of the total cost of ownership.',
   ],
   chooseOzerIf: [
-    'You want a flat price for the whole team rather than tier surprises as you grow.',
+    'You want cheaper extra seats (Starter £9 / Pro £22) rather than surprise US tier jumps as you grow.',
     'You need EU data residency and a UK-built Trust Centre narrative for clients.',
     'You want Mac meeting transcription processed on-device without permanent audio retention.',
     'You want business tools connected to personal and family workspaces in one account.',
@@ -193,12 +193,12 @@ export const honeybookComparison: ComparisonConfig = {
     {
       question: "What's the best HoneyBook alternative in the UK?",
       answer:
-        'It depends on requirements. Ozer targets UK/EU studios that want flat team pricing, EU residency, and Mac meeting capture. Other CRMs may fit if you need a US-only stack.',
+        'It depends on requirements. Ozer targets UK/EU studios that want graduated Starter and Pro seats, EU residency, and Mac meeting capture. Other CRMs may fit if you need a US-only stack.',
     },
     {
       question: 'How do HoneyBook fees compare to Ozer?',
       answer:
-        'HoneyBook charges a subscription tier plus card processing on payments. Ozer charges a flat workspace subscription; client card fees go to Stripe, not an Ozer platform cut on the subscription.',
+        'HoneyBook charges a subscription tier plus card processing on payments. Ozer charges a graduated Starter or Pro subscription; client card fees go to Stripe, not an Ozer platform cut on the subscription.',
     },
     {
       question: 'Is HoneyBook suitable for UK agencies?',

@@ -19,12 +19,15 @@ import {
   BUSINESS_GRADUATED_PLAN_ID,
   BUSINESS_GRADUATED_PRODUCT_ID,
   BUSINESS_GRADUATED_TIERS,
-  BUSINESS_ILLUSTRATIVE_TIERS,
-  aiCreditsForBillableSeats,
-  estimateMonthlyBreakdownGbp as estimateBusinessMonthlyBreakdownGbp,
+  estimateMonthlyGbp as estimateBusinessMonthlyGbp,
   formatGraduatedWorkedExample as formatBusinessGraduatedWorkedExample,
-  maxProjectGuestsForBillableSeats,
 } from '~/lib/billing/business-graduated-pricing';
+import {
+  BUSINESS_STARTER_PLAN_ID,
+  BUSINESS_STARTER_PRODUCT_ID,
+  estimateStarterMonthlyGbp,
+  formatStarterWorkedExample,
+} from '~/lib/billing/business-starter-pricing';
 import {
   COMMERCIAL_GRADUATED_PLAN_ID,
   COMMERCIAL_GRADUATED_PRODUCT_ID,
@@ -196,66 +199,48 @@ function relatedExcept(current: SegmentSlug) {
 }
 
 function businessPricingCards(): SegmentPricingCard[] {
-  const unitGbpForSeats = (seats: number) =>
-    estimateBusinessMonthlyBreakdownGbp(seats).lines.at(-1)?.unitGbp ??
-    BUSINESS_GRADUATED_TIERS[0]!.unitGbp;
+  const starter = MARKETING_WORKSPACE_PLANS.find(
+    (plan) => plan.productId === BUSINESS_STARTER_PRODUCT_ID,
+  );
+  const pro = MARKETING_WORKSPACE_PLANS.find(
+    (plan) => plan.productId === BUSINESS_GRADUATED_PRODUCT_ID,
+  );
 
-  const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
-
-  const soloFeatures = [
-    'Clients, projects, invoices & pipeline',
-    `${aiCreditsForBillableSeats(1).toLocaleString()} shared AI credits / mo`,
-    `${maxProjectGuestsForBillableSeats(1)} project guests`,
-    'Unlimited client portal access',
-    'Meeting Assistant — unlimited',
-  ];
-
-  return BUSINESS_ILLUSTRATIVE_TIERS.map((tier) => {
-    const isSolo = tier.id === 'solo';
-    const unitGbp = unitGbpForSeats(tier.billableSeats);
-    const guests = maxProjectGuestsForBillableSeats(tier.billableSeats);
-    const credits = aiCreditsForBillableSeats(tier.billableSeats);
-
-    const features = isSolo
-      ? soloFeatures
-      : [
-          'Everything in Business Solo, plus…',
-          `${credits.toLocaleString()} shared AI credits / mo`,
-          `${guests} project guests`,
-          'Unlimited sharing with other paid workspaces',
-        ];
-
-    const thenLabel =
-      tier.id === 'team'
-        ? `for ${seats2to5!.bandLabel.toLowerCase()}`
-        : tier.id === 'scale'
-          ? `for ${seats6plus!.bandLabel.toLowerCase()}`
-          : '/mo';
-
-    return {
-      id: tier.id,
-      name: tier.label,
-      bandTitle: tier.bandTitle,
-      description: tier.description,
-      priceGbp: unitGbp,
-      priceUnit: isSolo ? 'month' : 'then_band',
-      priceUnitLabel: isSolo ? '/mo' : thenLabel,
-      priceLabel: isSolo
-        ? `${formatGbp(unitGbp)}/mo`
-        : `${formatGbp(unitGbp)} ${thenLabel}`,
-      priceCaption: isSolo ? seat1!.bandLabel : undefined,
-      priceExample: isSolo
-        ? undefined
-        : formatBusinessGraduatedWorkedExample(tier.billableSeats, formatGbp),
-      features,
-      highlighted: tier.highlighted,
-      badge: tier.highlighted ? 'Popular' : undefined,
-      signupProfile: 'work_design' as const,
+  return [
+    ...MARKETING_WORKSPACE_PLANS.filter(
+      (plan) => plan.productId === 'ozer-business-lite',
+    ).map((plan) => planToCard(plan)),
+    {
+      name: starter?.name ?? 'Starter',
+      description:
+        starter?.description ??
+        'Clients, projects, and invoices — £14 for seat 1, then £9 for every extra seat',
+      priceGbp: estimateStarterMonthlyGbp(1),
+      priceLabel: `${formatGbp(estimateStarterMonthlyGbp(1))}/mo`,
+      priceExample: formatStarterWorkedExample(4, formatGbp),
+      features: starter?.features ?? [],
+      signupProfile: 'work_design',
+      productId: BUSINESS_STARTER_PRODUCT_ID,
+      planId: starter?.monthlyPlanId ?? BUSINESS_STARTER_PLAN_ID,
+      seats: 1,
+    },
+    {
+      name: pro?.name ?? 'Pro',
+      description:
+        pro?.description ??
+        'Graduated seats for studios — £29 for seat 1, then £22 for every extra seat',
+      priceGbp: estimateBusinessMonthlyGbp(1),
+      priceLabel: `${formatGbp(estimateBusinessMonthlyGbp(1))}/mo`,
+      priceExample: formatBusinessGraduatedWorkedExample(4, formatGbp),
+      features: pro?.features ?? [],
+      highlighted: true,
+      badge: 'Popular',
+      signupProfile: 'work_design',
       productId: BUSINESS_GRADUATED_PRODUCT_ID,
-      planId: BUSINESS_GRADUATED_PLAN_ID,
-      seats: tier.billableSeats,
-    };
-  });
+      planId: pro?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
+      seats: 1,
+    },
+  ];
 }
 
 function commercialPricingCards(): SegmentPricingCard[] {
@@ -404,7 +389,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
       ],
       pricingPlans: [freePersonalCard()],
       pricingNote:
-        'Personal and family stay free. You pay only when you add community, business, or property — and one workspace price covers the team, not a per-seat tax.',
+        'Personal and family stay free. You pay only when you add community, business, or property. Business uses graduated seats (Starter from £14, Pro from £29) — extra seats are cheaper than seat 1.',
       faqs: [
         {
           question: 'Is Ozer really free for personal use?',
@@ -429,7 +414,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           question: 'Can I freelance on the free plan?',
           answer:
-            'Personal is for life organisation. For clients, invoices, and jobs, add a business workspace — free Business Lite or a 14-day Solo trial.',
+            'Personal is for life organisation. For clients, invoices, and jobs, add a business workspace — free Business Lite, or a 14-day trial on Starter or Pro.',
         },
       ],
       relatedSegments: relatedExcept('personal'),
@@ -441,7 +426,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
       seo: {
         title: 'Business CRM in Workspace OS — Ozer',
         description:
-          'Clients, jobs, invoices, activity tracking, and pipeline in a business workspace linked to free personal home. Flat price for the whole team from £0–£29 per month.',
+          'Clients, jobs, invoices, activity tracking, and pipeline in a business workspace linked to free personal home. Free, Starter from £14, or Pro from £29 — extra seats stay cheaper.',
         keywords: [
           'workspace OS for business',
           'small business CRM UK',
@@ -455,12 +440,12 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         title: 'Run the studio without',
         titleAccent: 'seven tools and Zapier',
         subtitle:
-          'Ozer’s business workspace answers “where do clients, jobs, and invoices live?” Pipeline, delivery, billing, activity tracking, and portals in one workspace — while personal home still sees today’s tasks. One account. One price for the team.',
+          'Ozer’s business workspace answers “where do clients, jobs, and invoices live?” Pipeline, delivery, billing, activity tracking, and portals in one workspace — while personal home still sees today’s tasks. One account. Graduated seats from £14 on Starter or £29 on Pro.',
       },
       stats: [
-        { value: '£0', label: 'Business Lite — apps and team' },
+        { value: '£0', label: 'Free — 2 seats, capped clients' },
         { value: '1 login', label: 'Personal and business together' },
-        { value: 'Team price', label: 'Not a per-seat tax' },
+        { value: '£14 / £29', label: 'Starter or Pro, extra seats cheaper' },
       ],
       features: [
         {
@@ -516,7 +501,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           title: 'Start free or trial',
           description:
-            'Business Lite at £0 for apps and team settings, or a 14-day trial on graduated Business seats.',
+            'Start on Free at £0 with 2 seats and capped clients, or take a 14-day trial on Starter or Pro.',
         },
         {
           title: 'Add clients and jobs',
@@ -529,15 +514,10 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
             'Staff and contractors take paid seats; project guests and client portals are included.',
         },
       ],
-      pricingPlans: [
-        ...MARKETING_WORKSPACE_PLANS.filter(
-          (p) => p.productId === 'ozer-business-lite',
-        ).map((p) => planToCard(p)),
-        ...businessPricingCards(),
-      ],
+      pricingPlans: businessPricingCards(),
       pricingNote: (() => {
-        const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
-        return `One graduated Business price: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to5!.unitGbp)} for seats 2–5, then ${formatGbp(seats6plus!.unitGbp)} for seats 6+. Solo / Team / Scale describe those bands — not separate products. Project guests scale at 3 per seat; client portals are unlimited.`;
+        const [seat1, extraSeats] = BUSINESS_GRADUATED_TIERS;
+        return `Three public products: Free, Starter, and Pro. Starter is £14 for seat 1 then £9 for every extra seat. Pro is ${formatGbp(seat1!.unitGbp)} for seat 1 then ${formatGbp(extraSeats!.unitGbp)} for every extra seat. 1 / 4 / 10 seat figures are examples on those products — not separate SKUs.`;
       })(),
       faqs: [
         {
@@ -551,9 +531,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
             'Yes. Planner and Today pull from workspaces you enable. Client work and personal errands in one day — then push blocks to Google Calendar if you want.',
         },
         {
-          question: 'What is Business Lite vs paid Business?',
+          question: 'What is Free vs Starter vs Pro?',
           answer:
-            'Business Lite is free: apps marketplace, team settings, brand basics, 200 AI credits, and 1 project guest. Paid Business unlocks full CRM with graduated seats, shared AI that scales, more project guests, and unlimited sharing with other paid workspaces.',
+            'Free is £0 with 2 seats and capped clients, invoices, and tasks. Starter is unlimited ops from £14, then £9 per extra seat — recording unlimited, no planner or coaching. Pro adds planner, email assistant, meeting coaching, and a shared AI pool that scales, from £29 then £22.',
         },
         {
           question: 'Do clients pay for Ozer?',
