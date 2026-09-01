@@ -38,7 +38,9 @@ export function WorkspaceFeatureComparison({
 }: WorkspaceFeatureComparisonProps) {
   const [showAll, setShowAll] = useState(variant === 'full');
   const previewRows =
-    variant === 'full' ? WORKSPACE_FEATURE_ROWS : WORKSPACE_FEATURE_PREVIEW_ROWS;
+    variant === 'full'
+      ? WORKSPACE_FEATURE_ROWS
+      : WORKSPACE_FEATURE_PREVIEW_ROWS;
   const extraRows = variant === 'full' ? [] : WORKSPACE_FEATURE_EXTRA_ROWS;
   const headingId =
     variant === 'full'
@@ -56,7 +58,11 @@ export function WorkspaceFeatureComparison({
       )}
       aria-labelledby={headingId}
     >
-      <div className={cn(variant === 'full' ? 'max-w-3xl' : 'mx-auto max-w-3xl text-center')}>
+      <div
+        className={cn(
+          variant === 'full' ? 'max-w-3xl' : 'mx-auto max-w-3xl text-center',
+        )}
+      >
         <h2
           id={headingId}
           className={cn(
@@ -202,10 +208,22 @@ export function WorkspaceFeatureComparison({
         </div>
       </div>
 
-      <p className={cn('mt-4 text-sm', marketingMutedText, variant !== 'full' && 'text-center')}>
+      <p
+        className={cn(
+          'mt-4 text-sm',
+          marketingMutedText,
+          variant !== 'full' && 'text-center',
+        )}
+      >
         {WORKSPACE_FEATURE_SURVEYOR_NOTE}
       </p>
-      <p className={cn('mt-2 text-xs', marketingMutedText, variant !== 'full' && 'text-center')}>
+      <p
+        className={cn(
+          'mt-2 text-xs',
+          marketingMutedText,
+          variant !== 'full' && 'text-center',
+        )}
+      >
         iOS is a native iPhone app in progress — not in the App Store yet.
         Personal and family stay free and are not shown on this business table.
       </p>

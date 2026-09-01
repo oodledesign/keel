@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   AnimatePresence,
+  type MotionValue,
   motion,
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useTransform,
-  type MotionValue,
 } from 'framer-motion';
 
 import { cn } from '@kit/ui/utils';
@@ -181,6 +181,7 @@ function FeatureStepProgress({
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
+        aria-valuenow={Math.round(((activeIndex + 1) / FEATURE_COUNT) * 100)}
         aria-label={
           nextLabel
             ? `Scroll progress to ${nextLabel}`
@@ -319,9 +320,7 @@ function FeatureTourNav({
 
 function ScrollPinnedFeatureTour() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [activeId, setActiveId] = useState(
-    FEATURE_TOUR_BLOCKS[0]?.id ?? '',
-  );
+  const [activeId, setActiveId] = useState(FEATURE_TOUR_BLOCKS[0]?.id ?? '');
   const activeIndex = Math.max(
     0,
     FEATURE_TOUR_BLOCKS.findIndex((block) => block.id === activeId),
@@ -370,9 +369,7 @@ function ScrollPinnedFeatureTour() {
       return;
     }
 
-    const index = FEATURE_TOUR_BLOCKS.findIndex(
-      (block) => block.id === hash,
-    );
+    const index = FEATURE_TOUR_BLOCKS.findIndex((block) => block.id === hash);
 
     if (index < 0) {
       return;
@@ -409,9 +406,7 @@ function ScrollPinnedFeatureTour() {
 }
 
 function StackedFeatureTour() {
-  const [activeId, setActiveId] = useState(
-    FEATURE_TOUR_BLOCKS[0]?.id ?? '',
-  );
+  const [activeId, setActiveId] = useState(FEATURE_TOUR_BLOCKS[0]?.id ?? '');
 
   useEffect(() => {
     const sections = FEATURE_TOUR_BLOCKS.map((block) =>

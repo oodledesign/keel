@@ -4,7 +4,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 import { cn } from '@kit/ui/utils';
 
-import { FeatureTourEmailPageMock } from '~/(marketing)/_components/feature-tour-email-page-mock';
 import {
   DemoCursor,
   DemoFrame,
@@ -12,6 +11,7 @@ import {
   DemoPulse,
   FEATURE_DEMO_SHELL_CLASS,
 } from '~/(marketing)/_components/feature-tour-demo-primitives';
+import { FeatureTourEmailPageMock } from '~/(marketing)/_components/feature-tour-email-page-mock';
 import {
   EARLY_ACCESS_ACCENT_CLASS,
   EARLY_ACCESS_ACCENT_SOFT_CLASS,

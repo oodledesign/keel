@@ -33,7 +33,6 @@ import {
 } from '~/lib/marketing/pricing-content';
 
 import { WorkspaceFeatureComparison } from '../../_components/workspace-feature-comparison';
-
 import { PlanRecommender } from './plan-recommender';
 
 const FEATURE_MATRIX: Array<{
