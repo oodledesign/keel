@@ -167,6 +167,7 @@ struct HomeTodayView: View {
             if !session.workspacesLoaded {
                 await session.refreshWorkspaces()
             }
+            try Task.checkCancellation()
             let workspace = session.workspaceQueryValue
             guard !workspace.isEmpty else {
                 payload = nil
@@ -178,6 +179,8 @@ struct HomeTodayView: View {
                 accessToken: token
             )
             loadError = nil
+        } catch is CancellationError {
+            return
         } catch let error as NativeAPIError {
             if error == .unauthorized {
                 await session.handleUnauthorized()
@@ -185,6 +188,7 @@ struct HomeTodayView: View {
             payload = nil
             loadError = error
         } catch {
+            if error.isTaskCancellation { return }
             payload = nil
             loadError = .transport(error.localizedDescription)
         }

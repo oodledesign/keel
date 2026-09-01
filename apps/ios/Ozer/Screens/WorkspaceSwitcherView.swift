@@ -29,6 +29,7 @@ struct WorkspaceSwitcherView: View {
         }
         .presentationDragIndicator(.visible)
         .task {
+            // Always refetch so a revoked membership drops before the user picks.
             await session.refreshWorkspaces()
         }
     }

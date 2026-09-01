@@ -1,5 +1,11 @@
 import Foundation
 
+extension Error {
+    var isTaskCancellation: Bool {
+        self is CancellationError || (self as? URLError)?.code == .cancelled
+    }
+}
+
 enum NativeAPIError: LocalizedError, Equatable {
     case notFound
     case unauthorized

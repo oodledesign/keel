@@ -90,6 +90,7 @@ extension NativeWorkspace {
         case "community":
             label = "Community"
         case "work_property":
+            // Server currently maps work_property → work_design; keep for a future pass-through.
             label = "Property"
         case "work_design":
             label = "Studio"
