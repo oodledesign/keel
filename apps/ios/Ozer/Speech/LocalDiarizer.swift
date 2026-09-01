@@ -239,7 +239,36 @@ actor LocalDiarizer {
                 merged.append(span)
             }
         }
-        return merged
+        return partitionNonOverlapping(merged)
+    }
+
+    /// Overlapping hops (`windowSamples/2`) otherwise map the same audio onto
+    /// two spans; `splitTurn` then concatenates overlapping character slices.
+    nonisolated static func partitionNonOverlapping(_ spans: [DiarizedSpan]) -> [DiarizedSpan] {
+        guard spans.count > 1 else { return spans }
+        var points = Set<TimeInterval>()
+        for span in spans {
+            points.insert(span.start)
+            points.insert(span.end)
+        }
+        let times = points.sorted()
+        var pieces: [DiarizedSpan] = []
+        for index in 0 ..< (times.count - 1) {
+            let start = times[index]
+            let end = times[index + 1]
+            guard end - start > 0.04 else { continue }
+            let mid = (start + end) / 2
+            let covering = spans.filter { $0.start <= mid && mid < $0.end }
+            guard let winner = covering.min(by: {
+                ($0.end - $0.start) < ($1.end - $1.start)
+            }) ?? covering.first else { continue }
+            if let last = pieces.last, last.speakerIndex == winner.speakerIndex {
+                pieces[pieces.count - 1].end = end
+            } else {
+                pieces.append(DiarizedSpan(speakerIndex: winner.speakerIndex, start: start, end: end))
+            }
+        }
+        return pieces.isEmpty ? spans : pieces
     }
 
     private static func cosineDistance(_ a: [Float], _ b: [Float]) -> Float {

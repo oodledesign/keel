@@ -226,6 +226,7 @@ actor NativeAPIClient {
         workspace: String,
         tags: [String] = [],
         category: String? = nil,
+        clientId: String? = nil,
         accessToken: String
     ) async throws -> NoteItem {
         var payload: [String: Any] = [
@@ -239,6 +240,9 @@ actor NativeAPIClient {
         if let category, !category.isEmpty {
             payload["category"] = category
         }
+        if let clientId, !clientId.isEmpty {
+            payload["client_id"] = clientId
+        }
         let data = try await send(
             method: "POST",
             path: "api/native/v1/notes",
@@ -248,6 +252,61 @@ actor NativeAPIClient {
         )
         do {
             return try JSONDecoder().decode(NoteItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func createMeeting(
+        title: String,
+        content: String,
+        workspace: String,
+        clientId: String,
+        meetingDate: String?,
+        source: String = "iphone",
+        durationSeconds: Int? = nil,
+        accessToken: String
+    ) async throws -> MeetingItem {
+        var payload: [String: Any] = [
+            "title": title,
+            "content": content,
+            "workspace": workspace,
+            "client_id": clientId,
+            "source": source,
+        ]
+        if let meetingDate, !meetingDate.isEmpty {
+            payload["meeting_date"] = meetingDate
+        }
+        if let durationSeconds {
+            payload["duration_seconds"] = durationSeconds
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/meetings",
+            queryItems: [],
+            body: payload,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(MeetingItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func meetings(workspace: String, accessToken: String) async throws -> MeetingsPayload {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/meetings",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return MeetingsPayload.empty
+        }
+        do {
+            return try JSONDecoder().decode(MeetingsPayload.self, from: data)
         } catch {
             throw NativeAPIError.decoding
         }
@@ -824,6 +883,127 @@ struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
     }
 }
 
+struct MeetingsPayload: Decodable, Equatable {
+    var items: [MeetingItem]
+
+    static let empty = MeetingsPayload(items: [])
+
+    enum CodingKeys: String, CodingKey {
+        case items, meetings
+    }
+
+    init(items: [MeetingItem]) {
+        self.items = items
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let items = try container.decodeIfPresent([MeetingItem].self, forKey: .items) {
+            self.items = items
+        } else if let meetings = try container.decodeIfPresent([MeetingItem].self, forKey: .meetings) {
+            self.items = meetings
+        } else {
+            items = []
+        }
+    }
+}
+
+struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
+    var id: String
+    var title: String
+    var content: String
+    var workspace: String?
+    var clientId: String?
+    var clientName: String?
+    var meetingDate: String?
+    var source: String?
+    var createdAt: String?
+    var updatedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, content, workspace, source
+        case clientId = "client_id"
+        case clientName = "client_name"
+        case meetingDate = "meeting_date"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    init(
+        id: String,
+        title: String,
+        content: String,
+        workspace: String? = nil,
+        clientId: String? = nil,
+        clientName: String? = nil,
+        meetingDate: String? = nil,
+        source: String? = nil,
+        createdAt: String? = nil,
+        updatedAt: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.content = content
+        self.workspace = workspace
+        self.clientId = clientId
+        self.clientName = clientName
+        self.meetingDate = meetingDate
+        self.source = source
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let id = try container.decodeIfPresent(String.self, forKey: .id) {
+            self.id = id
+        } else {
+            id = UUID().uuidString
+        }
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Meeting transcript"
+        content = try container.decodeIfPresent(String.self, forKey: .content) ?? ""
+        workspace = try container.decodeIfPresent(String.self, forKey: .workspace)
+        clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
+        clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
+        meetingDate = try container.decodeIfPresent(String.self, forKey: .meetingDate)
+        source = try container.decodeIfPresent(String.self, forKey: .source)
+        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+    }
+
+    var displayTitle: String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return SpeakerTurnSplitter.title(from: content, fallback: "Meeting transcript")
+    }
+
+    var displaySubtitle: String? {
+        let client = clientName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let date = NoteItem.relativeDateLabel(updatedAt ?? createdAt)
+        if !client.isEmpty, let date {
+            return "\(client) · \(date)"
+        }
+        if !client.isEmpty { return client }
+        return date
+    }
+
+    func asLocalMeeting() -> LocalMeeting {
+        LocalMeeting(
+            id: id,
+            workspace: workspace ?? "",
+            title: displayTitle,
+            transcript: content,
+            createdAt: createdAt ?? updatedAt ?? OfflineNoteQueue.isoString(from: Date()),
+            durationSeconds: 0,
+            audioFileName: nil,
+            remoteNoteId: id,
+            clientId: clientId,
+            clientName: clientName,
+            syncTarget: "meeting"
+        )
+    }
+}
+
 struct NotesPayload: Decodable, Equatable {
     var items: [NoteItem]
 
@@ -858,10 +1038,12 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
     var updatedAt: String?
     var category: String?
     var tags: [String]
+    var clientId: String?
     var isPendingSync: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, title, body, workspace, category, tags
+        case clientId = "client_id"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -875,6 +1057,7 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         updatedAt: String?,
         category: String? = nil,
         tags: [String] = [],
+        clientId: String? = nil,
         isPendingSync: Bool = false
     ) {
         self.id = id
@@ -885,6 +1068,7 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         self.updatedAt = updatedAt
         self.category = category
         self.tags = tags
+        self.clientId = clientId
         self.isPendingSync = isPendingSync
     }
 
@@ -902,6 +1086,7 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
         category = try container.decodeIfPresent(String.self, forKey: .category)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
         isPendingSync = false
     }
 

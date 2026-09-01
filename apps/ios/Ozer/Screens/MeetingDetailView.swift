@@ -25,7 +25,9 @@ struct MeetingDetailView: View {
                         .font(.subheadline)
                         .foregroundStyle(OzerPalette.plumMuted)
                     if current.isWaitingToSync {
-                        Text("Waiting to sync")
+                        Text(current.syncTarget == "note"
+                             ? (OfflineNoteQueue.shared.lastFlushError ?? "Waiting to sync as a note")
+                             : (OfflineMeetingQueue.shared.lastFlushError ?? "Waiting to sync"))
                             .font(.caption)
                             .foregroundStyle(OzerPalette.plumSoft)
                     }
@@ -73,7 +75,7 @@ struct MeetingDetailView: View {
         .background(OzerPalette.cream.ignoresSafeArea())
         .navigationTitle("Meeting")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Delete this meeting from the phone? The audio is removed. A synced note stays in Notes.", isPresented: $confirmDelete, titleVisibility: .visible) {
+        .confirmationDialog("Delete this meeting from the phone? The audio is removed. A synced meeting stays in Ozer.", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 stopPlayback()
                 MeetingStore.shared.delete(id: current.id)

@@ -85,12 +85,20 @@ struct SpeakerTurnSplitter {
         }
 
         let stable = currentSessionText
-        let delta: String
+        var delta: String
         if !committedSessionText.isEmpty, stable.hasPrefix(committedSessionText) {
             delta = String(stable.dropFirst(committedSessionText.count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         } else {
             delta = stable
+        }
+
+        if let last = turns.last {
+            delta = Self.strippingRedundantPrefix(delta, after: last.text)
+            if delta.isEmpty {
+                lastSpeechAt = time
+                return
+            }
         }
 
         openText = [carriedText, delta]
@@ -122,6 +130,16 @@ struct SpeakerTurnSplitter {
         carriedText = ""
         openStart = nil
         guard !trimmed.isEmpty else { return }
+        if let last = turns.last {
+            if Self.isRedundant(trimmed, after: last.text) { return }
+            let remainder = Self.strippingRedundantPrefix(trimmed, after: last.text)
+            if remainder.isEmpty { return }
+            if remainder != trimmed {
+                turns.append(SpeakerTurn(speaker: Self.speakerName(for: 0), text: remainder, start: start, end: end))
+                committedSessionText = currentSessionText
+                return
+            }
+        }
         turns.append(SpeakerTurn(speaker: Self.speakerName(for: 0), text: trimmed, start: start, end: end))
         committedSessionText = currentSessionText
     }
@@ -140,9 +158,16 @@ struct SpeakerTurnSplitter {
 
         var labelled: [SpeakerTurn] = []
         for turn in turns {
-            for piece in Self.splitTurn(turn, spans: spans) {
+            for piece in Self.splitTurn(turn, spans: Self.partitionNonOverlapping(spans)) {
+                guard !piece.text.isEmpty else { continue }
+                if let last = labelled.last, Self.isRedundant(piece.text, after: last.text) {
+                    labelled[labelled.count - 1].end = max(last.end, piece.end)
+                    continue
+                }
                 if let last = labelled.last, last.speaker == piece.speaker {
-                    labelled[labelled.count - 1].text = [last.text, piece.text]
+                    let remainder = Self.strippingRedundantPrefix(piece.text, after: last.text)
+                    guard !remainder.isEmpty else { continue }
+                    labelled[labelled.count - 1].text = [last.text, remainder]
                         .filter { !$0.isEmpty }
                         .joined(separator: "\n\n")
                     labelled[labelled.count - 1].end = max(last.end, piece.end)
@@ -174,16 +199,19 @@ struct SpeakerTurnSplitter {
             return [copy]
         }
 
+        let unique = partitionNonOverlapping(clipped)
         let duration = max(0.001, turn.end - turn.start)
         let chars = Array(turn.text)
         guard !chars.isEmpty else { return [turn] }
 
         var pieces: [SpeakerTurn] = []
-        for span in clipped {
+        var cursor = 0
+        for span in unique {
             let i0 = Int(((span.start - turn.start) / duration * Double(chars.count)).rounded(.down))
             let i1 = Int(((span.end - turn.start) / duration * Double(chars.count)).rounded(.up))
-            let lo = min(max(0, i0), chars.count)
+            let lo = min(max(cursor, i0), chars.count)
             let hi = min(max(lo, i1), chars.count)
+            cursor = hi
             let text = String(chars[lo..<hi]).trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { continue }
             pieces.append(
@@ -191,6 +219,47 @@ struct SpeakerTurnSplitter {
             )
         }
         return pieces.isEmpty ? [turn] : pieces
+    }
+
+    static func partitionNonOverlapping(_ spans: [DiarizedSpan]) -> [DiarizedSpan] {
+        LocalDiarizer.partitionNonOverlapping(spans)
+    }
+
+    static func compacted(_ text: String) -> String {
+        text.lowercased()
+            .split { $0.isWhitespace || $0.isNewline }
+            .joined(separator: " ")
+    }
+
+    /// True when `next` is empty or its compacted form is a suffix of / contained in `previous`.
+    static func isRedundant(_ next: String, after previous: String) -> Bool {
+        let incoming = compacted(next)
+        let existing = compacted(previous)
+        if incoming.isEmpty { return true }
+        if existing.isEmpty { return false }
+        if incoming == existing { return true }
+        if existing.hasSuffix(incoming) { return true }
+        if existing.contains(incoming) { return true }
+        return false
+    }
+
+    /// Drop a re-emitted prefix that overlaps the end of `previous` (Speech resume).
+    static func strippingRedundantPrefix(_ next: String, after previous: String) -> String {
+        if isRedundant(next, after: previous) { return "" }
+        let prevWords = compacted(previous).split(separator: " ").map(String.init)
+        let nextWords = compacted(next).split(separator: " ").map(String.init)
+        let maxOverlap = min(prevWords.count, nextWords.count)
+        var overlap = 0
+        for count in stride(from: maxOverlap, through: 3, by: -1) {
+            if Array(prevWords.suffix(count)) == Array(nextWords.prefix(count)) {
+                overlap = count
+                break
+            }
+        }
+        if overlap == 0 { return next }
+        let rawWords = next.split { $0.isWhitespace || $0.isNewline }.map(String.init)
+        guard rawWords.count > overlap else { return "" }
+        return rawWords.dropFirst(overlap).joined(separator: " ")
     }
 
     static func speakerName(for index: Int) -> String {
@@ -231,7 +300,7 @@ struct SpeakerTurnSplitter {
             guard let speaker = currentSpeaker else { return }
             let body = paragraphs.joined(separator: "\n\n")
             if !body.isEmpty {
-                blocks.append("\(speaker)\n\n\(body)")
+                blocks.append("\(speaker): \(body)")
             }
             paragraphs = []
         }
@@ -250,7 +319,7 @@ struct SpeakerTurnSplitter {
         if !live.isEmpty {
             if liveSpeaker != currentSpeaker {
                 flush()
-                blocks.append("\(liveSpeaker)\n\n\(live)")
+                blocks.append("\(liveSpeaker): \(live)")
             } else {
                 paragraphs.append(live)
                 flush()
@@ -266,10 +335,32 @@ struct SpeakerTurnSplitter {
         let line = body
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty && $0 != "Me" && !$0.hasPrefix("Speaker ") }
+            .compactMap { raw -> String? in
+                if raw.isEmpty { return nil }
+                if raw == "Me" || (raw.hasPrefix("Speaker ") && !raw.contains(":")) {
+                    return nil
+                }
+                if let stripped = stripSpeakerPrefix(raw), !stripped.isEmpty {
+                    return stripped
+                }
+                return raw
+            }
+            .first
         if let line, !line.isEmpty {
             return String(line.prefix(80))
         }
         return fallback
+    }
+
+    static func stripSpeakerPrefix(_ line: String) -> String? {
+        if line.hasPrefix("Me:") {
+            let rest = line.dropFirst(3).trimmingCharacters(in: .whitespacesAndNewlines)
+            return rest.isEmpty ? nil : rest
+        }
+        if line.hasPrefix("Speaker "), let colon = line.firstIndex(of: ":") {
+            let rest = line[line.index(after: colon)...].trimmingCharacters(in: .whitespacesAndNewlines)
+            return rest.isEmpty ? nil : String(rest)
+        }
+        return nil
     }
 }

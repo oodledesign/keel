@@ -10,6 +10,9 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
     var durationSeconds: Int
     var audioFileName: String?
     var remoteNoteId: String?
+    var clientId: String?
+    var clientName: String?
+    var syncTarget: String?
 
     var isWaitingToSync: Bool {
         remoteNoteId == nil
@@ -56,7 +59,10 @@ final class MeetingStore {
         title: String,
         transcript: String,
         duration: TimeInterval,
-        audioURL: URL?
+        audioURL: URL?,
+        clientId: String? = nil,
+        clientName: String? = nil,
+        syncTarget: String? = nil
     ) -> LocalMeeting {
         let id = audioURL?.deletingPathExtension().lastPathComponent ?? UUID().uuidString
         var fileName: String?
@@ -71,7 +77,10 @@ final class MeetingStore {
             createdAt: OfflineNoteQueue.isoString(from: Date()),
             durationSeconds: max(0, Int(duration.rounded())),
             audioFileName: fileName,
-            remoteNoteId: nil
+            remoteNoteId: nil,
+            clientId: clientId,
+            clientName: clientName,
+            syncTarget: syncTarget
         )
         meetings.removeAll { $0.id == id }
         meetings.insert(meeting, at: 0)

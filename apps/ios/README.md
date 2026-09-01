@@ -127,10 +127,29 @@ The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tag
 
 ```
 POST {OZER_API_BASE}/api/native/v1/notes
-{ "title?", "body", "workspace", "category?", "tags?" }
+{ "title?", "body", "workspace", "category?", "tags?", "client_id?" }
 ```
 
-`body` is required. `category` of `meeting_transcript` marks an in-room meeting. The phone never calls `/api/recorder/transcribe-session` (that route is 503; cloud STT is off).
+`body` is required. Optional `client_id` must belong to the workspace (left for a later survey/job attach — do not invent a survey hook here). In-room capture can POST here with `category: meeting_transcript`, or POST `/meetings` for the Ozer Meetings page. The phone never calls `/api/recorder/transcribe-session` (that route is 503; cloud STT is off).
+
+## Meetings API
+
+Same workspace query and error mapping as Tasks (401 / 403 / 404). Writes `meeting_transcripts` — the table the web Meetings page reads.
+
+```
+GET {OZER_API_BASE}/api/native/v1/meetings?workspace=<slug-or-uuid>
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+The list is `{ "items": [{ "id", "title", "content", "workspace", "client_id", "client_name", "meeting_date", "source", "created_at", "updated_at" }] }`.
+
+```
+POST {OZER_API_BASE}/api/native/v1/meetings
+{ "title?", "content", "workspace", "client_id", "meeting_date?", "source?", "duration_seconds?" }
+```
+
+`content` is Markdown. `client_id` must belong to the workspace (web create also requires a client or deal). `source` of `iphone` is stored as `desktop_recorder` so the existing CHECK holds. `speaker_segments` are parsed when labels exist (`Me: …`).
 
 ### Field dictation
 
@@ -145,8 +164,9 @@ Surveyor, studio (`work_design` / `work_property`), and commercial property work
 - Audio stays on the phone as m4a (excluded from iCloud backup) until the user deletes the meeting
 - Live captions stay on **Me**. After stop, on-device diarization (pyannote segmentation-3.0 + WeSpeaker ResNet34-LM, ~32 MB downloaded once into Application Support, excluded from iCloud) labels **Me** then **Speaker 1 / Speaker 2**. The same voice can return as Me. Not NVIDIA Sortformer. If models fail, the meeting stays Me-only — it does not invent speakers from short pauses. Mic only — no computer-audio “Them”
 - On-device Speech sessions are ended and restarted around 50s so live captions continue; the m4a/caf recording is not restarted. If a restart fails, the meeting screen shows an error and keeps retrying — the timer is not a silent freeze.
-- The transcript is saved as a note (`category: meeting_transcript`) when sync is possible; otherwise it stays local and syncs later
-- The list shows local meetings plus synced meeting notes
+- On Stop a save sheet picks **Meeting** or **Note**. Surveyor (`building_surveyor`) defaults to Note; studio / commercial / `work_design` / `work_property` default to Meeting; personal and family are Note only. Meeting requires a client. Note keeps optional `client_id` + `category: meeting_transcript`.
+- Meeting syncs `POST /api/native/v1/meetings`. Note syncs `POST /api/native/v1/notes`. Flush errors stay visible; a 400 is not swallowed
+- The Meetings list shows local recordings plus remote `meeting_transcripts`
 
 Linux cannot compile this Xcode project. Open `apps/ios/Ozer.xcodeproj` on a Mac to build.
 

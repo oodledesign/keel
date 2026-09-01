@@ -80,6 +80,15 @@ struct NotesListView: View {
     private func content(_ items: [NoteItem]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                if let flushError = noteQueue.lastFlushError {
+                    Text(flushError)
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+                }
+
                 ForEach(items) { item in
                     NavigationLink {
                         NoteDetailView(note: item)
@@ -105,7 +114,7 @@ struct NotesListView: View {
                     .lineLimit(2)
             }
             if item.isPendingSync {
-                Text("Waiting to sync")
+                Text(noteQueue.lastFlushError == nil ? "Waiting to sync" : "Couldn’t sync")
                     .font(.caption)
                     .foregroundStyle(OzerPalette.plumSoft)
             }

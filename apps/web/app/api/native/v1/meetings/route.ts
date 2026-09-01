@@ -8,19 +8,27 @@ import {
   nativeBadRequest,
   readJsonBody,
 } from '~/lib/native/http';
-import { createNativeNote, listNativeNotes } from '~/lib/native/notes';
+import { createNativeMeeting, listNativeMeetings } from '~/lib/native/meetings';
 import { requireNativeWorkspace } from '~/lib/native/workspace';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const CreateNoteBodySchema = z.object({
+const CreateMeetingBodySchema = z.object({
   title: z.string().optional(),
-  body: z.string().min(1),
+  content: z.string().min(1),
   workspace: z.string().min(1),
-  category: z.string().min(1).max(64).optional(),
-  tags: z.array(z.string().min(1).max(40)).max(12).optional(),
-  client_id: z.string().uuid().optional().nullable(),
+  client_id: z.string().uuid(),
+  meeting_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable(),
+  source: z
+    .enum(['paste', 'upload', 'desktop_recorder', 'iphone'])
+    .optional()
+    .nullable(),
+  duration_seconds: z.number().nonnegative().optional().nullable(),
 });
 
 export async function GET(request: Request) {
@@ -35,10 +43,10 @@ export async function GET(request: Request) {
       auth.context.userId,
       new URL(request.url).searchParams.get('workspace'),
     );
-    const items = await listNativeNotes(auth.context.userId, workspace);
+    const items = await listNativeMeetings(auth.context.supabase, workspace);
     return NextResponse.json({ items });
   } catch (error) {
-    return handleNativeError(error, 'notes');
+    return handleNativeError(error, 'meetings');
   }
 }
 
@@ -49,7 +57,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const parsed = CreateNoteBodySchema.safeParse(await readJsonBody(request));
+    const parsed = CreateMeetingBodySchema.safeParse(
+      await readJsonBody(request),
+    );
     if (!parsed.success) {
       return nativeBadRequest('Invalid request body');
     }
@@ -59,18 +69,19 @@ export async function POST(request: Request) {
       auth.context.userId,
       parsed.data.workspace,
     );
-    const note = await createNativeNote({
+    const meeting = await createNativeMeeting({
+      client: auth.context.supabase,
       userId: auth.context.userId,
       workspace,
-      body: parsed.data.body,
       title: parsed.data.title,
-      category: parsed.data.category,
-      tags: parsed.data.tags,
+      content: parsed.data.content,
       clientId: parsed.data.client_id,
-      client: auth.context.supabase,
+      meetingDate: parsed.data.meeting_date,
+      source: parsed.data.source,
+      durationSeconds: parsed.data.duration_seconds,
     });
-    return NextResponse.json(note);
+    return NextResponse.json(meeting);
   } catch (error) {
-    return handleNativeError(error, 'notes');
+    return handleNativeError(error, 'meetings');
   }
 }

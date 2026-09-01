@@ -8,6 +8,7 @@ import {
 } from '~/lib/recorder/create-note';
 
 import { NativeHttpError } from './http';
+import { parseOptionalClientId } from './task-map';
 import type { NativeWorkspace } from './workspace';
 
 export type NativeNote = {
@@ -17,6 +18,7 @@ export type NativeNote = {
   workspace: string;
   category: string;
   tags: string[];
+  client_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -38,6 +40,7 @@ export async function listNativeNotes(
     workspace: workspace.slug,
     category: item.category,
     tags: item.tags,
+    client_id: item.client_id ?? null,
     created_at: item.created_at,
     updated_at: item.updated_at,
   }));
@@ -50,10 +53,32 @@ export async function createNativeNote(input: {
   title?: string | null;
   category?: string | null;
   tags?: string[] | null;
+  clientId?: string | null;
+  client?: SupabaseClient;
 }) {
   const body = input.body.trim();
   if (!body) {
     throw new NativeHttpError(400, 'body is required');
+  }
+
+  const clientId = parseOptionalClientId(input.clientId ?? undefined) ?? null;
+  if (clientId) {
+    if (!input.client) {
+      throw new NativeHttpError(400, 'client_id must belong to this workspace');
+    }
+    const { data, error } = await input.client
+      .from('clients')
+      .select('id')
+      .eq('id', clientId)
+      .eq('account_id', input.workspace.id)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (!data) {
+      throw new NativeHttpError(400, 'client_id must belong to this workspace');
+    }
   }
 
   const created = await createRecorderNote({
@@ -61,6 +86,7 @@ export async function createNativeNote(input: {
     content: body,
     title: input.title,
     accountId: input.workspace.id,
+    clientId,
     source: 'native',
     category: input.category,
     tags: input.tags,
@@ -73,6 +99,7 @@ export async function createNativeNote(input: {
     workspace: input.workspace.slug,
     category: input.category?.trim() || 'idea',
     tags: (input.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
+    client_id: clientId,
     created_at: created.created_at ?? new Date().toISOString(),
     updated_at: created.updated_at ?? new Date().toISOString(),
   };
@@ -88,7 +115,7 @@ export async function updateNativeNote(input: {
   const { data: existing, error: loadError } = await input.client
     .from('notes')
     .select(
-      'id, title, content, account_id, created_by, category, tags, created_at, updated_at',
+      'id, title, content, account_id, created_by, category, tags, client_id, created_at, updated_at',
     )
     .eq('id', input.noteId)
     .maybeSingle();
@@ -127,7 +154,7 @@ export async function updateNativeNote(input: {
     .eq('id', input.noteId)
     .eq('created_by', input.userId)
     .select(
-      'id, title, content, account_id, category, tags, created_at, updated_at',
+      'id, title, content, account_id, category, tags, client_id, created_at, updated_at',
     )
     .maybeSingle();
 
@@ -161,6 +188,7 @@ export async function updateNativeNote(input: {
             typeof tag === 'string' && tag.trim().length > 0,
         )
       : [],
+    client_id: (data.client_id as string | null) ?? null,
     created_at: data.created_at as string,
     updated_at: data.updated_at as string,
   };
