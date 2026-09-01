@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   NATIVE_APP_CALLBACK_HREF,
   buildNativeAppCallbackHref,
-} from './native-app-callback-url';
+} from './app-callback-url';
 
 describe('buildNativeAppCallbackHref', () => {
   it('hops to the custom scheme with no query or hash', () => {

@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 enum PKCE {
-    struct Pair {
+    struct Pair: Codable {
         let verifier: String
         let challenge: String
     }

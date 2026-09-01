@@ -262,7 +262,6 @@ function isAuthCompletionPath(pathname: string) {
   return (
     pathname === pathsConfig.auth.callback ||
     pathname === pathsConfig.auth.native ||
-    pathname.startsWith(`${pathsConfig.auth.native}/`) ||
     pathname === '/auth/confirm' ||
     pathname.startsWith('/auth/callback/')
   );

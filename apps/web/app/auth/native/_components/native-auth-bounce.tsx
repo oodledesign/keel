@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { Heading } from '@kit/ui/heading';
 import { Trans } from '@kit/ui/trans';
 
-import { buildNativeAppCallbackHref } from '../_lib/native-app-callback-url';
+import { buildNativeAppCallbackHref } from '~/lib/native/app-callback-url';
 
 /**
  * App-only hop. Immediately replace with the custom scheme so Mail on iPhone
@@ -20,7 +20,10 @@ export function NativeAuthBounce() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-3 text-center">
+    <div
+      className="flex flex-col items-center gap-3 text-center"
+      data-test="native-auth-bounce"
+    >
       <Heading
         level={4}
         className="tracking-tight text-[var(--workspace-shell-text)]"
@@ -30,10 +33,6 @@ export function NativeAuthBounce() {
 
       <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         <Trans i18nKey="auth:nativeAuthBody" />
-      </p>
-
-      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-        <Trans i18nKey="auth:nativeAuthHint" />
       </p>
     </div>
   );
