@@ -34,17 +34,6 @@ async function landingAfterAuth(
     );
 
     if (isBrandNew && hasOAuthIdentity && user.email) {
-      void getSupabaseServerAdminClient()
-        .then((admin) =>
-          attributeReferralAtSignup({ referredUserId: user.id, admin }),
-        )
-        .catch((err) => {
-          console.error(
-            '[auth/callback] Referral attribution failed:',
-            err instanceof Error ? err.message : err,
-          );
-        });
-
       void import('~/lib/admin/platform-lifecycle-notifications')
         .then(({ notifyPlatformNewSignup }) =>
           notifyPlatformNewSignup({
@@ -59,6 +48,24 @@ async function landingAfterAuth(
             err instanceof Error ? err.message : err,
           );
         });
+
+      try {
+        const admin = getSupabaseServerAdminClient();
+        void attributeReferralAtSignup({
+          referredUserId: user.id,
+          admin,
+        }).catch((err) => {
+          console.error(
+            '[auth/callback] Referral attribution failed:',
+            err instanceof Error ? err.message : err,
+          );
+        });
+      } catch (err) {
+        console.error(
+          '[auth/callback] Referral attribution failed:',
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
   } catch (err) {
     console.error(

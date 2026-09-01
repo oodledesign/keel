@@ -19,87 +19,141 @@ const SignUpSchema = z.object({
   captchaToken: z.string().optional(),
 });
 
+type SignUpSuccessPayload = {
+  user: unknown;
+  session: unknown;
+};
+
+function signUpSuccessResponse(payload: SignUpSuccessPayload) {
+  return NextResponse.json(payload);
+}
+
+function queueSignupSideEffects(user: { id: string; email: string }) {
+  // Notify first so a referral setup failure cannot skip ops mail.
+  void import('~/lib/admin/platform-lifecycle-notifications')
+    .then(({ notifyPlatformNewSignup }) =>
+      notifyPlatformNewSignup({
+        email: user.email,
+        userId: user.id,
+        source: 'email_password',
+      }),
+    )
+    .catch((err) => {
+      console.error(
+        '[sign-up] Failed to queue signup notification:',
+        err instanceof Error ? err.message : err,
+      );
+    });
+
+  try {
+    const admin = getSupabaseServerAdminClient();
+    void attributeReferralAtSignup({
+      referredUserId: user.id,
+      admin,
+    }).catch((err) => {
+      console.error(
+        '[sign-up] Referral attribution failed:',
+        err instanceof Error ? err.message : err,
+      );
+    });
+  } catch (err) {
+    console.error(
+      '[sign-up] Referral attribution failed:',
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  const parsed = SignUpSchema.safeParse(body);
+  let created: SignUpSuccessPayload | null = null;
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid_sign_up' }, { status: 400 });
-  }
+  try {
+    const body = await request.json().catch(() => null);
+    const parsed = SignUpSchema.safeParse(body);
 
-  const { email, password, emailRedirectTo, captchaToken } = parsed.data;
-  const rateLimitKey = authRateLimitKey('sign-up', email, request);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'invalid_sign_up' }, { status: 400 });
+    }
 
-  if (isAuthRateLimited(rateLimitKey)) {
-    return authRateLimitResponse();
-  }
+    const { email, password, emailRedirectTo, captchaToken } = parsed.data;
+    const rateLimitKey = authRateLimitKey('sign-up', email, request);
 
-  const client = getSupabaseServerClient();
-  const { data, error } = await client.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo,
-      captchaToken,
-    },
-  });
+    if (isAuthRateLimited(rateLimitKey)) {
+      return authRateLimitResponse();
+    }
 
-  if (error) {
-    if (error.code === 'weak_password') {
-      const reasons =
-        (error as unknown as { reasons?: string[] }).reasons ?? [];
+    const client = getSupabaseServerClient();
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo,
+        captchaToken,
+      },
+    });
+
+    if (error) {
+      console.error('[sign-up] signUp failed', {
+        code: error.code,
+        status: error.status,
+        message: error.message,
+      });
+
+      if (error.code === 'weak_password') {
+        const reasons =
+          (error as unknown as { reasons?: string[] }).reasons ?? [];
+        return NextResponse.json(
+          { error: 'weak_password', reasons },
+          { status: 400 },
+        );
+      }
+
       return NextResponse.json(
-        { error: 'weak_password', reasons },
-        { status: 400 },
+        { error: error.code ?? error.message },
+        { status: error.status ?? 400 },
       );
     }
 
-    return NextResponse.json(
-      { error: error.code ?? error.message },
-      { status: error.status ?? 400 },
+    const user = data.user;
+    const identities = user?.identities ?? [];
+
+    if (identities.length === 0) {
+      return NextResponse.json(
+        { error: 'User already registered' },
+        { status: 409 },
+      );
+    }
+
+    if (user) {
+      created = {
+        user,
+        session: data.session,
+      };
+
+      if (user.id && user.email) {
+        queueSignupSideEffects({ id: user.id, email: user.email });
+      }
+
+      return signUpSuccessResponse(created);
+    }
+
+    return signUpSuccessResponse({
+      user: data.user,
+      session: data.session,
+    });
+  } catch (err) {
+    if (created) {
+      console.error(
+        '[sign-up] Post-signup error (user already created):',
+        err instanceof Error ? err.message : err,
+      );
+      return signUpSuccessResponse(created);
+    }
+
+    console.error(
+      '[sign-up] Uncaught error:',
+      err instanceof Error ? err.message : err,
     );
+    return NextResponse.json({ error: 'sign_up_failed' }, { status: 500 });
   }
-
-  const user = data.user;
-  const identities = user?.identities ?? [];
-
-  if (identities.length === 0) {
-    return NextResponse.json(
-      { error: 'User already registered' },
-      { status: 409 },
-    );
-  }
-
-  if (user?.id && user.email) {
-    void getSupabaseServerAdminClient()
-      .then((admin) =>
-        attributeReferralAtSignup({ referredUserId: user.id!, admin }),
-      )
-      .catch((err) => {
-        console.error(
-          '[sign-up] Referral attribution failed:',
-          err instanceof Error ? err.message : err,
-        );
-      });
-
-    void import('~/lib/admin/platform-lifecycle-notifications')
-      .then(({ notifyPlatformNewSignup }) =>
-        notifyPlatformNewSignup({
-          email: user.email!,
-          userId: user.id,
-          source: 'email_password',
-        }),
-      )
-      .catch((err) => {
-        console.error(
-          '[sign-up] Failed to queue signup notification:',
-          err instanceof Error ? err.message : err,
-        );
-      });
-  }
-
-  return NextResponse.json({
-    user: data.user,
-    session: data.session,
-  });
 }
