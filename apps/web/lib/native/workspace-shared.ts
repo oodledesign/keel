@@ -107,6 +107,30 @@ export function publicHttpsImageUrl(
   }
 }
 
+/** Slug when present, otherwise the account id — never drop Personal for a blank slug. */
+export function nativeWorkspaceQueryValue(workspace: NativeWorkspace) {
+  return workspace.slug.trim() || workspace.id;
+}
+
+export function toPersonalNativeWorkspace(input: {
+  id: string;
+  name?: string | null;
+  slug?: string | null;
+  image?: string | null;
+}): NativeWorkspace {
+  const slug = input.slug?.trim() ?? '';
+  const name = input.name?.trim() || slug || 'Personal';
+
+  return {
+    id: input.id,
+    slug,
+    name,
+    profile: 'personal',
+    isPersonal: true,
+    image: publicHttpsImageUrl(input.image),
+  };
+}
+
 export function publicNativeWorkspace(workspace: NativeWorkspace) {
   return {
     id: workspace.id,
@@ -116,4 +140,8 @@ export function publicNativeWorkspace(workspace: NativeWorkspace) {
     isPersonal: workspace.isPersonal,
     image: publicHttpsImageUrl(workspace.image),
   };
+}
+
+export function publicNativeWorkspaces(workspaces: NativeWorkspace[]) {
+  return workspaces.map(publicNativeWorkspace);
 }

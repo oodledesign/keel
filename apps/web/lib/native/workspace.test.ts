@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { loadPersonalNativeWorkspace } from './workspace';
 import {
   type NativeWorkspace,
   findNativeWorkspace,
+  nativeWorkspaceQueryValue,
   publicHttpsImageUrl,
   publicNativeWorkspace,
+  publicNativeWorkspaces,
   toNativeWorkspaceProfile,
+  toPersonalNativeWorkspace,
 } from './workspace-shared';
 
 const personal: NativeWorkspace = {
@@ -122,5 +126,178 @@ describe('native workspaces', () => {
       publicNativeWorkspace({ ...studio, image: 'http://insecure' }).image,
     ).toBeNull();
     expect(publicNativeWorkspace(family).image).toBeNull();
+  });
+
+  it('serializes Personal when the slug is empty and keeps it in the public list', () => {
+    const unnamed = toPersonalNativeWorkspace({
+      id: personal.id,
+      name: 'Dan Potter',
+      slug: '   ',
+      image: null,
+    });
+
+    expect(unnamed).toMatchObject({
+      id: personal.id,
+      slug: '',
+      name: 'Dan Potter',
+      profile: 'personal',
+      isPersonal: true,
+    });
+    expect(nativeWorkspaceQueryValue(unnamed)).toBe(personal.id);
+    expect(
+      findNativeWorkspace([unnamed, studio], personal.id)?.isPersonal,
+    ).toBe(true);
+    expect(findNativeWorkspace([unnamed, studio], 'personal')?.id).toBe(
+      personal.id,
+    );
+
+    const published = publicNativeWorkspaces([unnamed, studio]);
+    expect(published).toHaveLength(2);
+    expect(published[0]).toEqual({
+      id: personal.id,
+      slug: '',
+      name: 'Dan Potter',
+      profile: 'personal',
+      isPersonal: true,
+      image: null,
+    });
+    expect(published.some((workspace) => workspace.isPersonal)).toBe(true);
+  });
+});
+
+describe('loadPersonalNativeWorkspace', () => {
+  const userId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+  function accountsMaybeSingle(result: {
+    data: {
+      id: string;
+      name: string | null;
+      slug: string | null;
+      picture_url: string | null;
+    } | null;
+    error: { message: string } | null;
+  }) {
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue(result),
+    };
+  }
+
+  it('keeps Personal when the slug is empty', async () => {
+    const accounts = accountsMaybeSingle({
+      data: {
+        id: userId,
+        name: 'Dan Potter',
+        slug: '',
+        picture_url: null,
+      },
+      error: null,
+    });
+    const brand = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const from = vi.fn((table: string) =>
+      table === 'account_brand_settings' ? brand : accounts,
+    );
+
+    const workspace = await loadPersonalNativeWorkspace(
+      { from } as never,
+      userId,
+      { adminClient: null },
+    );
+
+    expect(workspace).toMatchObject({
+      id: userId,
+      slug: '',
+      name: 'Dan Potter',
+      isPersonal: true,
+      profile: 'personal',
+    });
+    expect(nativeWorkspaceQueryValue(workspace!)).toBe(userId);
+  });
+
+  it('falls back to the personal membership row when the owner query is empty', async () => {
+    const accounts = accountsMaybeSingle({ data: null, error: null });
+    const memberships = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({
+        data: [
+          {
+            account: {
+              id: userId,
+              name: 'Dan',
+              slug: null,
+              picture_url: null,
+              is_personal_account: true,
+            },
+          },
+        ],
+        error: null,
+      }),
+    };
+    const brand = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === 'accounts_memberships') return memberships;
+      if (table === 'account_brand_settings') return brand;
+      return accounts;
+    });
+
+    const workspace = await loadPersonalNativeWorkspace(
+      { from } as never,
+      userId,
+      { adminClient: null },
+    );
+
+    expect(from).toHaveBeenCalledWith('accounts_memberships');
+    expect(workspace?.id).toBe(userId);
+    expect(workspace?.isPersonal).toBe(true);
+    expect(workspace?.slug).toBe('');
+  });
+
+  it('uses the admin client when the user-scoped lookups miss', async () => {
+    const emptyAccounts = accountsMaybeSingle({ data: null, error: null });
+    const emptyMemberships = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+    };
+    const userFrom = vi.fn((table: string) =>
+      table === 'accounts_memberships' ? emptyMemberships : emptyAccounts,
+    );
+
+    const adminAccounts = accountsMaybeSingle({
+      data: {
+        id: userId,
+        name: 'Dan Potter',
+        slug: null,
+        picture_url: null,
+      },
+      error: null,
+    });
+    const adminBrand = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const adminFrom = vi.fn((table: string) =>
+      table === 'account_brand_settings' ? adminBrand : adminAccounts,
+    );
+
+    const workspace = await loadPersonalNativeWorkspace(
+      { from: userFrom } as never,
+      userId,
+      { adminClient: { from: adminFrom } as never },
+    );
+
+    expect(userFrom).toHaveBeenCalled();
+    expect(adminFrom).toHaveBeenCalledWith('accounts');
+    expect(workspace?.id).toBe(userId);
+    expect(workspace?.isPersonal).toBe(true);
   });
 });

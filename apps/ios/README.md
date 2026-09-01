@@ -63,7 +63,7 @@ Enable Apple and Google providers there as well. A 401 from the native API signs
 
 ## Workspaces
 
-After sign-in the shell loads `{OZER_API_BASE}/api/native/v1/workspaces` — the same memberships as the web switcher (personal account plus every team). The chip title is the account **name** (Personal, Oodle, Bracketts). Profile is a subtitle only (Family, Surveyor, Commercial property, Studio).
+After sign-in the shell loads `{OZER_API_BASE}/api/native/v1/workspaces` — the same memberships as the web switcher (personal account plus every team). Personal is always first and labeled **Personal** (the account name is the subtitle). Other chips use the account name (Oodle, Bracketts). Profile is a subtitle only (Family, Surveyor, Commercial property, Studio).
 
 Selection is a real `{ id, slug }` row, stored in UserDefaults. Today and Tasks send that slug (or id). If the saved row is gone (membership revoked), the shell falls back to personal, then the first remaining space. An empty list is a calm retry — not fake Personal / Family / Business chips.
 
@@ -133,7 +133,13 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "name", "email", "company_name", "client_type" }] }`. `name` uses the same display rules as web (`display_name` or first + last). Tap a client for a read-only card and that client’s open tasks, plus add-task pre-filled with `client_id`.
+The list is `{ "items": [{ "id", "name", "email", "company_name", "client_type", "image", "logo" }] }`. `name` uses the same display rules as web (`display_name` or first + last). `image` / `logo` are the same public HTTPS company mark (`clients.picture_url`), or null. Tap a client for a logo, company, email, contacts, and that client’s open tasks, plus add-task pre-filled with `client_id`.
+
+```
+GET {OZER_API_BASE}/api/native/v1/clients/{id}?workspace=<slug-or-uuid>
+```
+
+Detail adds `contacts: [{ id, name, role, email, phone, is_primary }]`, scoped to that client and workspace. Email and phone are tappable (`mailto:` / `tel:`). Personal and family still return an empty list (not 403); a missing client is 404.
 
 ## Menu
 

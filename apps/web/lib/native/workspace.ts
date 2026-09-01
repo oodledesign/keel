@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
@@ -11,6 +13,7 @@ import {
   findNativeWorkspace,
   publicHttpsImageUrl,
   toNativeWorkspaceProfile,
+  toPersonalNativeWorkspace,
 } from './workspace-shared';
 
 export type {
@@ -20,14 +23,29 @@ export type {
 export {
   findNativeWorkspace,
   NATIVE_WORKSPACE_PROFILES,
+  nativeWorkspaceQueryValue,
   publicNativeWorkspace,
+  publicNativeWorkspaces,
   toNativeWorkspaceProfile,
+  toPersonalNativeWorkspace,
 } from './workspace-shared';
 
-export async function loadPersonalNativeWorkspace(
+type PersonalAccountRow = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  picture_url: string | null;
+};
+
+export type LoadPersonalNativeWorkspaceOptions = {
+  /** Pass `null` in tests to skip the service-role fallback. */
+  adminClient?: SupabaseClient | null;
+};
+
+async function lookupPersonalByOwner(
   client: SupabaseClient,
   userId: string,
-): Promise<NativeWorkspace | null> {
+): Promise<PersonalAccountRow | null> {
   const { data, error } = await client
     .from('accounts')
     .select('id, name, slug, picture_url')
@@ -35,27 +53,129 @@ export async function loadPersonalNativeWorkspace(
     .eq('is_personal_account', true)
     .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const slug = data?.slug?.trim();
-  if (!data?.id || !slug) {
+  if (error || !data?.id) {
     return null;
   }
 
-  return {
-    id: data.id,
-    slug,
-    name: data.name?.trim() || slug,
-    profile: 'personal',
-    isPersonal: true,
-    image: await resolvePersonalWorkspaceImage(
-      client,
-      data.id,
-      data.picture_url,
-    ),
+  return data as PersonalAccountRow;
+}
+
+async function lookupPersonalByMembership(
+  client: SupabaseClient,
+  userId: string,
+): Promise<PersonalAccountRow | null> {
+  const { data, error } = await client
+    .from('accounts_memberships')
+    .select(
+      'account:accounts!inner(id, name, slug, picture_url, is_personal_account)',
+    )
+    .eq('user_id', userId);
+
+  if (error) {
+    return null;
+  }
+
+  type MembershipRow = {
+    account:
+      | (PersonalAccountRow & { is_personal_account?: boolean | null })
+      | Array<PersonalAccountRow & { is_personal_account?: boolean | null }>
+      | null;
   };
+
+  for (const row of (data ?? []) as MembershipRow[]) {
+    const acc = Array.isArray(row.account) ? row.account[0] : row.account;
+    if (acc?.id && acc.is_personal_account) {
+      return {
+        id: acc.id,
+        name: acc.name ?? null,
+        slug: acc.slug ?? null,
+        picture_url: acc.picture_url ?? null,
+      };
+    }
+  }
+
+  return null;
+}
+
+async function lookupPersonalByUserId(
+  client: SupabaseClient,
+  userId: string,
+): Promise<PersonalAccountRow | null> {
+  const { data, error } = await client
+    .from('accounts')
+    .select('id, name, slug, picture_url')
+    .eq('id', userId)
+    .eq('is_personal_account', true)
+    .maybeSingle();
+
+  if (error || !data?.id) {
+    return null;
+  }
+
+  return data as PersonalAccountRow;
+}
+
+async function lookupPersonalAccount(
+  client: SupabaseClient,
+  userId: string,
+): Promise<PersonalAccountRow | null> {
+  return (
+    (await lookupPersonalByOwner(client, userId)) ??
+    (await lookupPersonalByMembership(client, userId)) ??
+    (await lookupPersonalByUserId(client, userId))
+  );
+}
+
+function resolveAdminClient(
+  override?: SupabaseClient | null,
+): SupabaseClient | null {
+  if (override === null) {
+    return null;
+  }
+
+  if (override) {
+    return override;
+  }
+
+  try {
+    return getSupabaseServerAdminClient() as unknown as SupabaseClient;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadPersonalNativeWorkspace(
+  client: SupabaseClient,
+  userId: string,
+  options?: LoadPersonalNativeWorkspaceOptions,
+): Promise<NativeWorkspace | null> {
+  let row = await lookupPersonalAccount(client, userId);
+  let imageClient = client;
+
+  if (!row) {
+    const admin = resolveAdminClient(options?.adminClient);
+    if (admin) {
+      row = await lookupPersonalAccount(admin, userId);
+      if (row) {
+        imageClient = admin;
+      }
+    }
+  }
+
+  if (!row) {
+    return null;
+  }
+
+  return toPersonalNativeWorkspace({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    image: await resolvePersonalWorkspaceImage(
+      imageClient,
+      row.id,
+      row.picture_url,
+    ),
+  });
 }
 
 export async function loadNativeWorkspaces(
@@ -68,12 +188,19 @@ export async function loadNativeWorkspaces(
   ]);
 
   const workspaces: NativeWorkspace[] = [];
+  const seen = new Set<string>();
 
   if (personal) {
     workspaces.push(personal);
+    seen.add(personal.id);
   }
 
   for (const team of teams) {
+    if (seen.has(team.id)) {
+      continue;
+    }
+
+    seen.add(team.id);
     workspaces.push({
       id: team.id,
       slug: team.slug,
