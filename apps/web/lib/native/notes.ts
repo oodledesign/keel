@@ -15,6 +15,8 @@ export type NativeNote = {
   title: string;
   body: string;
   workspace: string;
+  category: string;
+  tags: string[];
   created_at: string;
   updated_at: string;
 };
@@ -34,6 +36,8 @@ export async function listNativeNotes(
     title: item.title,
     body: item.content,
     workspace: workspace.slug,
+    category: item.category,
+    tags: item.tags,
     created_at: item.created_at,
     updated_at: item.updated_at,
   }));
@@ -44,6 +48,8 @@ export async function createNativeNote(input: {
   workspace: NativeWorkspace;
   body: string;
   title?: string | null;
+  category?: string | null;
+  tags?: string[] | null;
 }) {
   const body = input.body.trim();
   if (!body) {
@@ -56,6 +62,8 @@ export async function createNativeNote(input: {
     title: input.title,
     accountId: input.workspace.id,
     source: 'native',
+    category: input.category,
+    tags: input.tags,
   });
 
   return {
@@ -63,6 +71,8 @@ export async function createNativeNote(input: {
     title: created.title,
     body: created.content,
     workspace: input.workspace.slug,
+    category: input.category?.trim() || 'idea',
+    tags: (input.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
     created_at: created.created_at ?? new Date().toISOString(),
     updated_at: created.updated_at ?? new Date().toISOString(),
   };
@@ -78,7 +88,7 @@ export async function updateNativeNote(input: {
   const { data: existing, error: loadError } = await input.client
     .from('notes')
     .select(
-      'id, title, content, account_id, created_by, created_at, updated_at',
+      'id, title, content, account_id, created_by, category, tags, created_at, updated_at',
     )
     .eq('id', input.noteId)
     .maybeSingle();
@@ -116,7 +126,9 @@ export async function updateNativeNote(input: {
     .update(updates)
     .eq('id', input.noteId)
     .eq('created_by', input.userId)
-    .select('id, title, content, account_id, created_at, updated_at')
+    .select(
+      'id, title, content, account_id, category, tags, created_at, updated_at',
+    )
     .maybeSingle();
 
   if (error) {
@@ -142,6 +154,13 @@ export async function updateNativeNote(input: {
     title: ((data.title as string | null)?.trim() || 'Note') as string,
     body: (data.content as string | null) ?? '',
     workspace: workspaceSlug,
+    category: ((data.category as string | null)?.trim() || 'idea') as string,
+    tags: Array.isArray(data.tags)
+      ? (data.tags as unknown[]).filter(
+          (tag): tag is string =>
+            typeof tag === 'string' && tag.trim().length > 0,
+        )
+      : [],
     created_at: data.created_at as string,
     updated_at: data.updated_at as string,
   };

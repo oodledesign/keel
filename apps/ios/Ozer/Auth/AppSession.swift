@@ -169,6 +169,16 @@ final class AppSession {
         WorkspaceSelection.persist(workspace)
     }
 
+    func flushOfflineWork() async {
+        guard phase == .signedIn else { return }
+        do {
+            let token = try await validAccessToken()
+            await OfflineNoteQueue.shared.flush(accessToken: token)
+        } catch {
+            return
+        }
+    }
+
     func refreshWorkspaces() async {
         guard phase == .signedIn else { return }
         isRefreshingWorkspaces = true
@@ -190,6 +200,7 @@ final class AppSession {
         workspaces = WorkspaceSelection.sorted(incoming)
         workspacesLoaded = true
         reconcileSelection()
+        Task { await flushOfflineWork() }
     }
 
     private func reconcileSelection() {

@@ -23,6 +23,8 @@ export type RecorderNoteItem = {
   account_id: string;
   client_id: string | null;
   project_id: string | null;
+  category: string;
+  tags: string[];
   created_at: string;
   updated_at: string;
   detail_path: string;
@@ -37,6 +39,8 @@ export async function createRecorderNote(params: {
   projectId?: string | null;
   createdAt?: string | null;
   source?: string | null;
+  category?: string | null;
+  tags?: string[] | null;
 }): Promise<{
   id: string;
   detail_path: string;
@@ -88,14 +92,18 @@ export async function createRecorderNote(params: {
   }
 
   const title = params.title?.trim() || firstLineTitle(content);
+  const category = params.category?.trim() || 'idea';
+  const tags = (params.tags ?? [])
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
   const { data, error } = await admin
     .from('notes')
     .insert({
       account_id: accountId,
       title,
       content,
-      category: 'idea',
-      tags: [],
+      category,
+      tags,
       is_pinned: false,
       client_id: clientId,
       project_id: projectId,
@@ -158,7 +166,7 @@ export async function listRecorderNotes(params: {
   const { data, error } = await admin
     .from('notes')
     .select(
-      'id, title, content, account_id, client_id, project_id, created_at, updated_at',
+      'id, title, content, account_id, client_id, project_id, category, tags, created_at, updated_at',
     )
     .eq('account_id', accountId)
     .eq('created_by', params.userId)
@@ -196,6 +204,13 @@ export async function listRecorderNotes(params: {
       account_id: row.account_id as string,
       client_id: (row.client_id as string | null) ?? null,
       project_id: (row.project_id as string | null) ?? null,
+      category: ((row.category as string | null)?.trim() || 'idea') as string,
+      tags: Array.isArray(row.tags)
+        ? (row.tags as unknown[]).filter(
+            (tag): tag is string =>
+              typeof tag === 'string' && tag.trim().length > 0,
+          )
+        : [],
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
       detail_path: detailPath,

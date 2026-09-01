@@ -23,6 +23,10 @@ cp apps/ios/Config/Local.xcconfig.example apps/ios/Config/Local.xcconfig
 
 `Local.xcconfig` is gitignored. Never commit a real Supabase anon key.
 
+## Permissions
+
+`Ozer/Info.plist` asks for the microphone and on-device speech recognition (Ozer-specific strings, not generic). `UIBackgroundModes` includes `audio` so a meeting can keep recording when the screen locks. No iCloud. Speech uses Apple’s Speech framework with `requiresOnDeviceRecognition` and locale `en-GB`.
+
 ## Config keys
 
 Set in `Config/Shared.xcconfig` (defaults) and optional `Config/Local.xcconfig` (overrides). Values are copied into `Info.plist` at build time.
@@ -115,7 +119,31 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "body", "workspace", "created_at", "updated_at" }] }`. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens a read-only title + body screen. No create or edit on the phone yet.
+The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tags?", "created_at", "updated_at" }] }`. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens a read-only title + body screen.
+
+```
+POST {OZER_API_BASE}/api/native/v1/notes
+{ "title?", "body", "workspace", "category?", "tags?" }
+```
+
+`body` is required. `category` of `meeting_transcript` marks an in-room meeting. The phone never calls `/api/recorder/transcribe-session` (that route is 503; cloud STT is off).
+
+### Field dictation
+
+Notes has a mic. Hold or tap to dictate a new note. Transcription is **on-device** (Speech framework, `requiresOnDeviceRecognition`, locale `en-GB`). The note is saved locally immediately (title from the first line). If the phone is online it POSTs the native notes API; if not, it queues and flushes on reconnect or next foreground. Failed sync stays on the list as **Waiting to sync**.
+
+### Meetings
+
+Surveyor, studio (`work_design` / `work_property`), and commercial property workspaces get a **Meetings** item in the Menu (the tab bar still has only Home + 3 pins + Menu). Personal and family do not. Record in-room:
+
+- Start / stop, elapsed time, live captions, screen stays awake
+- Background audio mode so a lock-screen meeting is not killed
+- Audio stays on the phone as m4a (excluded from iCloud backup) until the user deletes the meeting
+- After stop, the transcript is labelled **Me** for the first voice, then **Speaker 1 / Speaker 2** on pauses of ~1.2s. Apple Speech does not give speaker IDs. Later turns never go back to Me. Mic only — no computer-audio “Them”
+- The transcript is saved as a note (`category: meeting_transcript`) when sync is possible; otherwise it stays local and syncs later
+- The list shows local meetings plus synced meeting notes
+
+Linux cannot compile this Xcode project. Open `apps/ios/Ozer.xcodeproj` on a Mac to build.
 
 ## People API
 
@@ -147,13 +175,13 @@ Detail adds `contacts: [{ id, name, role, email, phone, is_primary }]`, scoped t
 
 ## Menu
 
-Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; People on personal / family; Clients on business profiles; Shopping stays a stub. Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
+Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; Meetings on surveyor / studio / commercial spaces; People on personal / family; Clients on business profiles; Shopping stays a stub. Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
 
 ## Tab bar
 
 Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, People. Shopping is in the Menu and is still a navigation stub.
 
-Out of scope: PowerSync, camera, Whisper, invoices, secrets, App Store submit, `WKWebView` of the web app.
+Out of scope: PowerSync, camera, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoices, secrets, App Store submit, `WKWebView` of the web app.
 
 ## Monorepo
 

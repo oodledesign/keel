@@ -5,6 +5,8 @@ struct NotesListView: View {
     @State private var payload: NotesPayload?
     @State private var loadError: NativeAPIError?
     @State private var isLoading = false
+    @State private var showDictation = false
+    @State private var noteQueue = OfflineNoteQueue.shared
 
     private let client = NativeAPIClient()
 
@@ -13,19 +15,26 @@ struct NotesListView: View {
         session.workspaceContentKey
     }
 
+    private var displayedItems: [NoteItem] {
+        Self.merge(
+            pending: noteQueue.pending(for: session.workspaceQueryValue),
+            remote: payload?.items ?? []
+        )
+    }
+
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading && payload == nil && loadError == nil {
+                if isLoading && displayedItems.isEmpty && loadError == nil {
                     ProgressView()
                         .tint(OzerPalette.coral)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let loadError {
+                } else if let loadError, displayedItems.isEmpty {
                     statusCard(error: loadError)
                 } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
                     membershipsEmptyCard
-                } else if let payload, !payload.items.isEmpty {
-                    content(payload)
+                } else if !displayedItems.isEmpty {
+                    content(displayedItems)
                 } else {
                     emptyCard()
                 }
@@ -40,21 +49,38 @@ struct NotesListView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     WorkspaceChip()
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showDictation = true
+                    } label: {
+                        Image(systemName: "mic")
+                            .foregroundStyle(OzerPalette.coral)
+                    }
+                    .accessibilityLabel("Dictate a note")
+                    .disabled(session.workspaceQueryValue.isEmpty)
+                }
             }
             .task(id: reloadKey) {
+                await session.flushOfflineWork()
                 await load()
             }
             .refreshable {
+                await session.flushOfflineWork()
                 await session.refreshWorkspaces()
                 await load()
+            }
+            .sheet(isPresented: $showDictation) {
+                DictationSheet { title, body in
+                    await saveDictation(title: title, body: body)
+                }
             }
         }
     }
 
-    private func content(_ payload: NotesPayload) -> some View {
+    private func content(_ items: [NoteItem]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                ForEach(payload.items) { item in
+                ForEach(items) { item in
                     NavigationLink {
                         NoteDetailView(note: item)
                     } label: {
@@ -77,6 +103,11 @@ struct NotesListView: View {
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
                     .lineLimit(2)
+            }
+            if item.isPendingSync {
+                Text("Waiting to sync")
+                    .font(.caption)
+                    .foregroundStyle(OzerPalette.plumSoft)
             }
         }
         .padding(16)
@@ -121,7 +152,7 @@ struct NotesListView: View {
             Text("Nothing on this list")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(OzerPalette.plum)
-            Text("When there are notes in this workspace, they will land here.")
+            Text("When there are notes in this workspace, they will land here. Use the mic to dictate a new one — that works offline.")
                 .font(.body)
                 .foregroundStyle(OzerPalette.plumMuted)
                 .multilineTextAlignment(.center)
@@ -187,13 +218,33 @@ struct NotesListView: View {
             if error == .unauthorized {
                 await session.handleUnauthorized()
             }
-            payload = nil
-            loadError = error
+            if displayedItems.isEmpty {
+                payload = nil
+                loadError = error
+            }
         } catch {
             if error.isTaskCancellation { return }
-            payload = nil
-            loadError = .transport(error.localizedDescription)
+            if displayedItems.isEmpty {
+                payload = nil
+                loadError = .transport(error.localizedDescription)
+            }
         }
+    }
+
+    private func saveDictation(title: String, body: String) async {
+        let workspace = session.workspaceQueryValue
+        guard !workspace.isEmpty, !body.isEmpty else { return }
+        _ = noteQueue.enqueue(
+            workspace: workspace,
+            title: title,
+            body: body
+        )
+        await session.flushOfflineWork()
+        await load()
+    }
+
+    static func merge(pending: [PendingNote], remote: [NoteItem]) -> [NoteItem] {
+        pending.map { $0.asNoteItem() } + remote
     }
 }
 

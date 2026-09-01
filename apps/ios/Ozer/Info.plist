@@ -8,6 +8,14 @@
 	<string>$(OZER_SUPABASE_URL)</string>
 	<key>OZER_SUPABASE_ANON_KEY</key>
 	<string>$(OZER_SUPABASE_ANON_KEY)</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Ozer uses the microphone so you can dictate survey notes in the field and record in-room meetings. Audio stays on this iPhone.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Ozer transcribes dictation and meetings on this iPhone in British English, so notes still work offline. Speech is not sent to a cloud service.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
