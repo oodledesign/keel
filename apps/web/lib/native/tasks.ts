@@ -220,7 +220,7 @@ export async function createNativeTask(input: {
   title: string;
   due?: string | null;
   clientId?: string | null;
-  client?: SupabaseClient;
+  client: SupabaseClient;
 }) {
   const title = input.title.trim();
   if (!title) {
@@ -231,7 +231,7 @@ export async function createNativeTask(input: {
   const clientId = parseOptionalClientId(input.clientId ?? undefined) ?? null;
 
   let clientRow: NativeTaskClientRow | null = null;
-  if (clientId && input.client) {
+  if (clientId) {
     clientRow = await requireClientInWorkspace(
       input.client,
       clientId,

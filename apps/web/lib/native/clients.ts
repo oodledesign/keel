@@ -41,6 +41,7 @@ export async function listNativeClients(
     .order('display_name', { ascending: true, nullsFirst: false })
     .limit(CLIENT_LIST_LIMIT);
 
+  // Soft-delete column may be missing until that migration is applied.
   query = query.is('archived_at', null);
 
   const { data, error } = await query;

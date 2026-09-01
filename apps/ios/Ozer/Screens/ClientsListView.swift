@@ -354,8 +354,16 @@ struct ClientDetailView: View {
             let token = try await session.validAccessToken()
             _ = try await api.updateTask(id: item.id, status: "completed", accessToken: token)
             await loadTasks()
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            completingIds.remove(item.id)
+            loadError = error
         } catch {
             completingIds.remove(item.id)
+            if error.isTaskCancellation { return }
+            loadError = .transport(error.localizedDescription)
         }
     }
 
