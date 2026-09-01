@@ -8,6 +8,7 @@ struct TasksListView: View {
 
     private let client = NativeAPIClient()
 
+    /// Chip kind plus resolved slug/id, so we refetch after `/workspaces` lands.
     private var reloadKey: String {
         "\(session.workspace.rawValue)|\(session.workspaceQueryValue)"
     }

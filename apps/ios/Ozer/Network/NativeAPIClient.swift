@@ -292,13 +292,14 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
             ?? container.decodeIfPresent(String.self, forKey: .description)
             ?? container.decodeIfPresent(String.self, forKey: .body)
-            ?? Self.dueLabel(due)
     }
 
     var displaySubtitle: String? {
         subtitle ?? Self.dueLabel(due)
     }
 
+    /// Calendar date only. Parse and format in UTC so the day does not shift.
+    /// `en_GB` matches the web recorder short label (`Mon 1 Sep`).
     static func dueLabel(_ due: String?) -> String? {
         guard let due, !due.isEmpty else { return nil }
         guard let date = Self.dueParser.date(from: due) else { return due }
@@ -309,7 +310,7 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.current
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
@@ -318,6 +319,7 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_GB")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "EEE d MMM"
         return formatter
     }()

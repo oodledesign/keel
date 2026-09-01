@@ -87,7 +87,7 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "status", "due", "workspace" }] }`. Title plus due/subtitle. Empty only when `items` is empty. A 403 is an error, not an empty list. Reloads when the workspace chip changes or `/workspaces` finishes resolving the slug.
+The list is `{ "items": [{ "id", "title", "due", "subtitle" }] }`. Title plus due/subtitle. Empty only when `items` is empty. A 403 is an error, not an empty list. Reloads when the workspace chip changes or `/workspaces` finishes resolving the slug.
 
 ## Tab bar
 
