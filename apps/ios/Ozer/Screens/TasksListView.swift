@@ -8,9 +8,9 @@ struct TasksListView: View {
 
     private let client = NativeAPIClient()
 
-    /// Chip kind plus resolved slug/id, so we refetch after `/workspaces` lands.
+    /// Selected account id, or a pending/empty token until `/workspaces` lands.
     private var reloadKey: String {
-        "\(session.workspace.rawValue)|\(session.workspaceQueryValue)"
+        session.workspaceContentKey
     }
 
     var body: some View {
@@ -22,6 +22,8 @@ struct TasksListView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let loadError {
                     statusCard(error: loadError)
+                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                    membershipsEmptyCard
                 } else if let payload, !payload.items.isEmpty {
                     content(payload)
                 } else {
@@ -43,6 +45,7 @@ struct TasksListView: View {
                 await load()
             }
             .refreshable {
+                await session.refreshWorkspaces()
                 await load()
             }
         }
@@ -72,6 +75,34 @@ struct TasksListView: View {
                 }
             }
             .padding(.top, 8)
+        }
+    }
+
+    private var membershipsEmptyCard: some View {
+        VStack(spacing: 12) {
+            Text("No workspaces yet")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+            Text("When your memberships load, tasks will land here.")
+                .font(.body)
+                .foregroundStyle(OzerPalette.plumMuted)
+                .multilineTextAlignment(.center)
+            Button("Try again") {
+                Task {
+                    await session.refreshWorkspaces()
+                    await load()
+                }
+            }
+            .buttonStyle(OzerPrimaryButtonStyle())
+            .frame(width: 140)
+            .disabled(session.isRefreshingWorkspaces)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
         }
     }
 
@@ -125,11 +156,17 @@ struct TasksListView: View {
         defer { isLoading = false }
         do {
             let token = try await session.validAccessToken()
-            if session.workspaces.isEmpty {
+            if !session.workspacesLoaded {
                 await session.refreshWorkspaces()
             }
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else {
+                payload = nil
+                loadError = nil
+                return
+            }
             payload = try await client.tasks(
-                workspace: session.workspaceQueryValue,
+                workspace: workspace,
                 accessToken: token
             )
             loadError = nil

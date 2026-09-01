@@ -61,9 +61,13 @@ Enable Apple and Google providers there as well. A 401 from the native API signs
 
 **Magic Link email template:** the hosted template is not changed in this repo. In **Authentication → Email Templates → Magic Link**, include the OTP so the iPhone field can be filled (`{{ .Token }}` in the default GoTrue variables). Keep `{{ .ConfirmationURL }}` as the single link — one ConfirmationURL per email, chosen by where the OTP was requested.
 
-## Today API
+## Workspaces
 
-After sign-in the shell loads `{OZER_API_BASE}/api/native/v1/workspaces` and maps the Personal / Family / Business chips to a real account (`isPersonal` or `profile=personal`, `family`, `work_design`). Today then sends that slug or UUID:
+After sign-in the shell loads `{OZER_API_BASE}/api/native/v1/workspaces` — the same memberships as the web switcher (personal account plus every team). The chip title is the account **name** (Personal, Oodle, Bracketts). Profile is a subtitle only (Family, Surveyor, Commercial property, Studio).
+
+Selection is a real `{ id, slug }` row, stored in UserDefaults. Today and Tasks send that slug (or id). If the saved row is gone (membership revoked), the shell falls back to personal, then the first remaining space. An empty list is a calm retry — not fake Personal / Family / Business chips.
+
+## Today API
 
 ```
 GET {OZER_API_BASE}/api/native/v1/today?workspace=<slug-or-uuid>
@@ -71,11 +75,9 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The server also accepts the chip aliases `personal`, `family`, and `business` if the list has not loaded yet. Home decodes `tasks_due_today` then `overdue_tasks` (title + subtitle). A 403 is shown as an error, not an empty day.
+The server still accepts the legacy aliases `personal`, `family`, and `business`. The iPhone client sends a real slug or UUID. Home decodes `tasks_due_today` then `overdue_tasks` (title + subtitle). A 403 is shown as an error, not an empty day.
 
-No cookies. A 404 is shown as a calm empty state.
-
-Workspace switcher is **Personal / Family / Business** only.
+No cookies. A 404 is shown as a calm empty state. Reloads when the selected workspace **id** changes, and when the membership list first arrives.
 
 ## Tasks API
 
@@ -87,7 +89,7 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "due", "subtitle" }] }`. Title plus due/subtitle. Empty only when `items` is empty. A 403 is an error, not an empty list. Reloads when the workspace chip changes or `/workspaces` finishes resolving the slug.
+The list is `{ "items": [{ "id", "title", "due", "subtitle" }] }`. Title plus due/subtitle. Empty only when `items` is empty. A 403 is an error, not an empty list. Reloads when the selected workspace **id** changes, and when `/workspaces` first arrives.
 
 ## Tab bar
 

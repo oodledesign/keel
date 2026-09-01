@@ -17,6 +17,8 @@ struct HomeTodayView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let loadError {
                     statusCard(error: loadError)
+                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                    membershipsEmptyCard
                 } else if let payload, !payload.items.isEmpty {
                     content(payload)
                 } else {
@@ -34,10 +36,11 @@ struct HomeTodayView: View {
                     WorkspaceChip()
                 }
             }
-            .task(id: session.workspace) {
+            .task(id: session.workspaceContentKey) {
                 await load()
             }
             .refreshable {
+                await session.refreshWorkspaces()
                 await load()
             }
         }
@@ -75,6 +78,34 @@ struct HomeTodayView: View {
                 }
             }
             .padding(.top, 8)
+        }
+    }
+
+    private var membershipsEmptyCard: some View {
+        VStack(spacing: 12) {
+            Text("No workspaces yet")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+            Text("When your memberships load, Today will open here.")
+                .font(.body)
+                .foregroundStyle(OzerPalette.plumMuted)
+                .multilineTextAlignment(.center)
+            Button("Try again") {
+                Task {
+                    await session.refreshWorkspaces()
+                    await load()
+                }
+            }
+            .buttonStyle(OzerPrimaryButtonStyle())
+            .frame(width: 140)
+            .disabled(session.isRefreshingWorkspaces)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
         }
     }
 
@@ -133,11 +164,17 @@ struct HomeTodayView: View {
         defer { isLoading = false }
         do {
             let token = try await session.validAccessToken()
-            if session.workspaces.isEmpty {
+            if !session.workspacesLoaded {
                 await session.refreshWorkspaces()
             }
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else {
+                payload = nil
+                loadError = nil
+                return
+            }
             payload = try await client.today(
-                workspace: session.workspaceQueryValue,
+                workspace: workspace,
                 accessToken: token
             )
             loadError = nil
@@ -163,8 +200,9 @@ struct WorkspaceChip: View {
             showSwitcher = true
         } label: {
             HStack(spacing: 6) {
-                Text(session.workspace.title)
+                Text(session.selectedWorkspaceTitle)
                     .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.caption.weight(.semibold))
             }
@@ -173,9 +211,10 @@ struct WorkspaceChip: View {
             .padding(.vertical, 6)
             .background(OzerPalette.creamDeep, in: Capsule())
         }
+        .accessibilityLabel("Workspace, \(session.selectedWorkspaceTitle)")
         .sheet(isPresented: $showSwitcher) {
             WorkspaceSwitcherView()
-                .presentationDetents([.medium])
+                .presentationDetents([.medium, .large])
         }
     }
 }

@@ -16,18 +16,37 @@ final class AppSession {
     private(set) var phase: Phase = .loading
     private(set) var session: AuthSession?
     private(set) var workspaces: [NativeWorkspace] = []
-    var workspace: WorkspaceKind = .stored {
-        didSet { workspace.persist() }
-    }
+    private(set) var workspacesLoaded = false
+    private(set) var isRefreshingWorkspaces = false
+    private(set) var selectedWorkspace: NativeWorkspace?
 
     var lastError: String?
 
     private let auth = SupabaseAuthClient()
     private let api = NativeAPIClient()
 
-    /// Slug or UUID for native `?workspace=`. Chip alias if the list has no match yet.
+    /// Slug or UUID for native `?workspace=`. Empty until a real membership is known.
     var workspaceQueryValue: String {
-        workspace.resolvedQueryValue(in: workspaces)
+        if let selectedWorkspace {
+            return selectedWorkspace.queryValue
+        }
+        if let stored = WorkspaceSelection.storedRef,
+           !Self.legacyChipAliases.contains(stored.lowercased()) {
+            return stored
+        }
+        return ""
+    }
+
+    /// Reload Today / Tasks when the selected account id changes, or the list first arrives.
+    var workspaceContentKey: String {
+        if let selectedWorkspace {
+            return selectedWorkspace.id
+        }
+        return workspacesLoaded ? "empty" : "pending"
+    }
+
+    var selectedWorkspaceTitle: String {
+        selectedWorkspace?.displayName ?? "Workspace"
     }
 
     var userEmail: String? { session?.email }
@@ -136,6 +155,8 @@ final class AppSession {
         let token = session?.accessToken
         session = nil
         workspaces = []
+        workspacesLoaded = false
+        selectedWorkspace = nil
         phase = .signedOut
         try? KeychainStore.deleteAll()
         if let token {
@@ -143,17 +164,42 @@ final class AppSession {
         }
     }
 
+    func selectWorkspace(_ workspace: NativeWorkspace) {
+        selectedWorkspace = workspace
+        WorkspaceSelection.persist(workspace)
+    }
+
     func refreshWorkspaces() async {
         guard phase == .signedIn else { return }
+        isRefreshingWorkspaces = true
+        defer { isRefreshingWorkspaces = false }
         do {
             let token = try await validAccessToken()
-            workspaces = try await api.workspaces(accessToken: token)
+            applyWorkspaces(try await api.workspaces(accessToken: token))
         } catch let error as NativeAPIError {
+            workspacesLoaded = true
             if error == .unauthorized {
                 await handleUnauthorized()
             }
         } catch {
-            // Keep the last list (or empty). Today still tries the chip alias.
+            workspacesLoaded = true
+        }
+    }
+
+    private func applyWorkspaces(_ incoming: [NativeWorkspace]) {
+        workspaces = WorkspaceSelection.sorted(incoming)
+        workspacesLoaded = true
+        reconcileSelection()
+    }
+
+    private func reconcileSelection() {
+        let next = WorkspaceSelection.resolve(
+            storedRef: selectedWorkspace?.id ?? WorkspaceSelection.storedRef,
+            in: workspaces
+        )
+        selectedWorkspace = next
+        if let next {
+            WorkspaceSelection.persist(next)
         }
     }
 
@@ -167,4 +213,6 @@ final class AppSession {
             Task { await refreshWorkspaces() }
         }
     }
+
+    private static let legacyChipAliases: Set<String> = ["personal", "family", "business"]
 }

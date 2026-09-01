@@ -9,26 +9,41 @@ struct MenuView: View {
         NavigationStack {
             List {
                 Section("Workspace") {
-                    ForEach(WorkspaceKind.allCases) { kind in
-                        Button {
-                            session.workspace = kind
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(kind.title)
-                                        .foregroundStyle(OzerPalette.plum)
-                                    Text(kind.subtitle)
-                                        .font(.footnote)
-                                        .foregroundStyle(OzerPalette.plumMuted)
-                                }
-                                Spacer()
-                                if session.workspace == kind {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(OzerPalette.coral)
-                                }
-                            }
+                    if !session.workspacesLoaded && session.workspaces.isEmpty {
+                        HStack {
+                            ProgressView()
+                                .tint(OzerPalette.coral)
+                            Text("Loading memberships")
+                                .foregroundStyle(OzerPalette.plumMuted)
                         }
                         .listRowBackground(OzerPalette.panel)
+                    } else if session.workspaces.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("No workspaces yet")
+                                .foregroundStyle(OzerPalette.plum)
+                            Text("When your memberships load, they will show here.")
+                                .font(.footnote)
+                                .foregroundStyle(OzerPalette.plumMuted)
+                            Button("Try again") {
+                                Task { await session.refreshWorkspaces() }
+                            }
+                            .foregroundStyle(OzerPalette.coral)
+                            .disabled(session.isRefreshingWorkspaces)
+                        }
+                        .listRowBackground(OzerPalette.panel)
+                    } else {
+                        ForEach(session.workspaces) { workspace in
+                            Button {
+                                session.selectWorkspace(workspace)
+                            } label: {
+                                WorkspaceMembershipRow(
+                                    workspace: workspace,
+                                    isSelected: session.selectedWorkspace?.id == workspace.id,
+                                    emphasizeTitle: false
+                                )
+                            }
+                            .listRowBackground(OzerPalette.panel)
+                        }
                     }
                 }
 
@@ -63,6 +78,11 @@ struct MenuView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close", action: onClose)
                         .foregroundStyle(OzerPalette.plumMuted)
+                }
+            }
+            .task {
+                if !session.workspacesLoaded {
+                    await session.refreshWorkspaces()
                 }
             }
         }
