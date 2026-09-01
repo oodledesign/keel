@@ -21,6 +21,7 @@ export const DEFAULT_SENDING_LOCAL_PARTS = [
   'mail',
   'listings',
   'hello',
+  'no-reply',
 ] as const;
 
 export const DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS = [
@@ -38,7 +39,7 @@ export function normalizeSendingDomain(input: string): string {
 
   if (!value) {
     throw new SendingDomainError(
-      'Enter a domain such as bracketts.co.uk — not a full email address.',
+      'Enter a domain such as your-domain.co.uk — not a full email address.',
     );
   }
 
@@ -59,7 +60,7 @@ export function normalizeSendingDomain(input: string): string {
 
   if (!DOMAIN_RE.test(value)) {
     throw new SendingDomainError(
-      'That does not look like a valid domain. Try something like bracketts.co.uk.',
+      'That does not look like a valid domain. Try something like your-domain.co.uk.',
     );
   }
 
@@ -71,7 +72,7 @@ export function normalizeSendingLocalPart(input: string): string {
 
   if (!LOCAL_PART_RE.test(value) || value.length > 64) {
     throw new SendingDomainError(
-      'Use a simple From name such as mail, listings, or hello.',
+      'Use a simple From name such as mail, listings, hello, or no-reply.',
     );
   }
 
@@ -93,7 +94,7 @@ export function normalizeSendingSubdomain(
 
   if (!SUBDOMAIN_RE.test(value)) {
     throw new SendingDomainError(
-      'Use a simple subdomain such as mail, listings, or go — or choose apex.',
+      'Use a simple subdomain such as mail, go, or agency — one label, no dots. Or choose apex.',
     );
   }
 

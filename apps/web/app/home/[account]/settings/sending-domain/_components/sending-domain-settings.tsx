@@ -59,6 +59,50 @@ function chipClass(active: boolean) {
   );
 }
 
+function SendingLocalPartField({
+  id,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Input
+        id={id}
+        data-test={`${id}-input`}
+        value={value}
+        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+          onChange(event.target.value)
+        }
+        placeholder="mail"
+        disabled={disabled}
+        spellCheck={false}
+        autoCapitalize="none"
+        autoCorrect="off"
+      />
+      <div data-test={id} className="flex flex-wrap gap-1.5">
+        {DEFAULT_SENDING_LOCAL_PARTS.map((part) => (
+          <button
+            key={part}
+            type="button"
+            data-test={`sending-local-part-${part}`}
+            className={chipClass(value.trim().toLowerCase() === part)}
+            disabled={disabled}
+            onClick={() => onChange(part)}
+          >
+            {part}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function previewApex(input: string) {
   const trimmed = input.trim();
   if (!trimmed) {
@@ -88,7 +132,8 @@ function previewFromAddress(input: {
     : input.subdomain.trim().toLowerCase() || DEFAULT_SENDING_SUBDOMAIN;
 
   return formatSendingFromAddress({
-    localPart: input.localPart,
+    localPart:
+      input.localPart.trim().toLowerCase() || DEFAULT_SENDING_LOCAL_PART,
     domain,
     sendingSubdomain,
   });
@@ -163,13 +208,13 @@ export function SendingDomainSettings({
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-2">
-        <h1 className="font-heading text-2xl text-[var(--workspace-shell-text)]">
+        <h1 className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]">
           Sending domain
         </h1>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Send circulation and campaign email from your own domain, for example{' '}
           <span className="font-medium text-[var(--workspace-shell-text)]">
-            mail@mail.bracketts.co.uk
+            mail@mail.your-domain.co.uk
           </span>
           . Invites and sign-in emails still come from Ozer.
         </p>
@@ -195,7 +240,7 @@ export function SendingDomainSettings({
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setDomainInput(event.target.value)
               }
-              placeholder="bracketts.co.uk"
+              placeholder="your-domain.co.uk"
               disabled={!canEdit || pending}
               spellCheck={false}
               autoCapitalize="none"
@@ -206,6 +251,9 @@ export function SendingDomainSettings({
           <div className="space-y-2">
             <Label htmlFor="sending-subdomain">Sending subdomain</Label>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Type any single-label subdomain, for example{' '}
+              <span className="font-medium">go</span> or{' '}
+              <span className="font-medium">agency</span>. Chips are shortcuts.
               Default is <span className="font-medium">mail</span>. Choose Apex
               to send from the domain itself.
             </p>
@@ -229,7 +277,9 @@ export function SendingDomainSettings({
                   key={label}
                   type="button"
                   data-test={`sending-subdomain-${label}`}
-                  className={chipClass(!useApex && subdomainInput === label)}
+                  className={chipClass(
+                    !useApex && subdomainInput.trim().toLowerCase() === label,
+                  )}
                   disabled={!canEdit || pending}
                   onClick={() => {
                     setUseApex(false);
@@ -254,27 +304,18 @@ export function SendingDomainSettings({
           <div className="space-y-2">
             <Label htmlFor="sending-local-part">Default From address</Label>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Mail will come from {accountName} using this address once the
-              domain is verified.
+              Type the left-hand side of the address, for example{' '}
+              <span className="font-medium">accounts</span>,{' '}
+              <span className="font-medium">info</span>, or{' '}
+              <span className="font-medium">no-reply</span>. Mail will come from{' '}
+              {accountName} once the domain is verified.
             </p>
-            <div
+            <SendingLocalPartField
               id="sending-local-part"
-              data-test="sending-local-part"
-              className="flex flex-wrap gap-1.5"
-            >
-              {DEFAULT_SENDING_LOCAL_PARTS.map((part) => (
-                <button
-                  key={part}
-                  type="button"
-                  data-test={`sending-local-part-${part}`}
-                  className={chipClass(localPart === part)}
-                  disabled={!canEdit || pending}
-                  onClick={() => setLocalPart(part)}
-                >
-                  {part}
-                </button>
-              ))}
-            </div>
+              value={localPart}
+              disabled={!canEdit || pending}
+              onChange={setLocalPart}
+            />
             <p
               data-test="sending-from-preview"
               className="text-sm font-medium text-[var(--workspace-shell-text)]"
@@ -302,8 +343,7 @@ export function SendingDomainSettings({
                     sendingSubdomain: useApex
                       ? null
                       : subdomainInput.trim() || DEFAULT_SENDING_SUBDOMAIN,
-                    localPart:
-                      localPart as (typeof DEFAULT_SENDING_LOCAL_PARTS)[number],
+                    localPart: localPart.trim() || DEFAULT_SENDING_LOCAL_PART,
                   });
                   setDomainInput('');
                   setUseApex(false);
@@ -342,8 +382,7 @@ export function SendingDomainSettings({
             run(async () => {
               await updateSendingLocalPartAction({
                 accountId,
-                localPart:
-                  localPart as (typeof DEFAULT_SENDING_LOCAL_PARTS)[number],
+                localPart: localPart.trim() || DEFAULT_SENDING_LOCAL_PART,
               });
             }, 'From address saved')
           }
@@ -415,6 +454,11 @@ function ConnectedDomain({
                 Apex {domain.domain}
               </p>
             ) : null}
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              The sending host is locked after you add the domain. Changing it
+              needs a new mail identity — remove this domain and add it again if
+              you need a different subdomain.
+            </p>
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               {domain.verification_status === 'verified'
                 ? `${accountName} <${fromAddress}>`
@@ -549,25 +593,23 @@ function ConnectedDomain({
         <div className="space-y-1">
           <Label htmlFor="connected-local-part">Default From address</Label>
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Recipients see {accountName} as the sender name.
+            Type any From name, for example{' '}
+            <span className="font-medium">accounts</span> or{' '}
+            <span className="font-medium">no-reply</span>. Recipients see{' '}
+            {accountName} as the sender name. The sending host stays{' '}
+            <span className="font-medium">{sendingHost}</span>.
           </p>
         </div>
-        <div id="connected-local-part" className="flex flex-wrap gap-1.5">
-          {DEFAULT_SENDING_LOCAL_PARTS.map((part) => (
-            <button
-              key={part}
-              type="button"
-              className={chipClass(localPart === part)}
-              disabled={!canEdit || pending}
-              onClick={() => onLocalPartChange(part)}
-            >
-              {part}
-            </button>
-          ))}
-        </div>
+        <SendingLocalPartField
+          id="connected-local-part"
+          value={localPart}
+          disabled={!canEdit || pending}
+          onChange={onLocalPartChange}
+        />
         <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
           {formatSendingFromAddress({
-            localPart,
+            localPart:
+              localPart.trim().toLowerCase() || domain.default_local_part,
             domain: domain.domain,
             sendingSubdomain: domain.sending_subdomain,
           })}
@@ -576,6 +618,7 @@ function ConnectedDomain({
           <Button
             type="button"
             variant="outline"
+            data-test="save-sending-local-part"
             disabled={pending || localPart === domain.default_local_part}
             onClick={onSaveLocalPart}
           >

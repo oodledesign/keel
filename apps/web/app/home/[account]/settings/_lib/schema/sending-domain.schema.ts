@@ -1,8 +1,26 @@
 import { z } from 'zod';
 
-import { DEFAULT_SENDING_LOCAL_PARTS } from '~/lib/sending-domains';
+import { normalizeSendingLocalPart } from '~/lib/sending-domains';
 
 const SENDING_SUBDOMAIN_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+
+function isSendingLocalPart(value: string) {
+  try {
+    normalizeSendingLocalPart(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const sendingLocalPartSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .refine(
+    isSendingLocalPart,
+    'Use a simple From name such as mail, listings, hello, or no-reply.',
+  );
 
 export const AddSendingDomainSchema = z.object({
   accountId: z.string().uuid(),
@@ -17,9 +35,9 @@ export const AddSendingDomainSchema = z.object({
         value == null ||
         value.trim() === '' ||
         SENDING_SUBDOMAIN_RE.test(value.trim().toLowerCase()),
-      'Use a simple subdomain such as mail, or choose apex.',
+      'Use a simple subdomain such as mail, go, or agency — or choose apex.',
     ),
-  localPart: z.enum(DEFAULT_SENDING_LOCAL_PARTS).optional(),
+  localPart: sendingLocalPartSchema.optional(),
 });
 
 export const SendingDomainAccountSchema = z.object({
@@ -28,7 +46,7 @@ export const SendingDomainAccountSchema = z.object({
 
 export const UpdateSendingLocalPartSchema = z.object({
   accountId: z.string().uuid(),
-  localPart: z.enum(DEFAULT_SENDING_LOCAL_PARTS),
+  localPart: sendingLocalPartSchema,
 });
 
 export type AddSendingDomainInput = z.infer<typeof AddSendingDomainSchema>;

@@ -15,7 +15,7 @@ function createMockSes(): SesIdentityAdmin {
     createDomainIdentity: vi.fn().mockResolvedValue({
       tokens: ['aaa', 'bbb', 'ccc'],
       identityArn:
-        'arn:aws:ses:eu-west-2:123456789012:identity/mail.bracketts.co.uk',
+        'arn:aws:ses:eu-west-2:123456789012:identity/mail.example.co.uk',
     }),
     getDomainIdentity: vi.fn().mockResolvedValue({
       dkimStatus: 'success',
@@ -23,7 +23,7 @@ function createMockSes(): SesIdentityAdmin {
       verifiedForSending: true,
       tokens: ['aaa', 'bbb', 'ccc'],
       identityArn:
-        'arn:aws:ses:eu-west-2:123456789012:identity/mail.bracketts.co.uk',
+        'arn:aws:ses:eu-west-2:123456789012:identity/mail.example.co.uk',
     }),
     putMailFrom: vi.fn().mockResolvedValue(undefined),
     deleteIdentity: vi.fn().mockResolvedValue(undefined),
@@ -46,7 +46,7 @@ function createMockClient(options?: {
 }) {
   const account = options?.account ?? {
     id: accountId,
-    name: 'Bracketts',
+    name: 'Example',
     is_personal_account: false,
     space_type: 'commercial-property',
   };
@@ -54,14 +54,14 @@ function createMockClient(options?: {
   const inserted = options?.inserted ?? {
     id: 'dom-1',
     account_id: accountId,
-    domain: 'bracketts.co.uk',
+    domain: 'example.co.uk',
     sending_subdomain: 'mail',
-    sending_host: 'mail.bracketts.co.uk',
+    sending_host: 'mail.example.co.uk',
     mail_from_subdomain: 'bounce',
     default_local_part: 'mail',
-    ses_identity_name: 'mail.bracketts.co.uk',
+    ses_identity_name: 'mail.example.co.uk',
     ses_identity_arn:
-      'arn:aws:ses:eu-west-2:123456789012:identity/mail.bracketts.co.uk',
+      'arn:aws:ses:eu-west-2:123456789012:identity/mail.example.co.uk',
     ses_tenant_name: `ozer-account-${accountId}`,
     ses_configuration_set: 'ozer-custom-domains',
     dkim_tokens: ['aaa', 'bbb', 'ccc'],
@@ -121,21 +121,19 @@ describe('SendingDomainService', () => {
 
     const result = await service.createDomain({
       accountId,
-      domain: 'https://www.Bracketts.co.uk',
+      domain: 'https://www.Example.co.uk',
       userId,
     });
 
-    expect(result.domain).toBe('bracketts.co.uk');
+    expect(result.domain).toBe('example.co.uk');
     expect(result.sending_subdomain).toBe('mail');
-    expect(result.sending_host).toBe('mail.bracketts.co.uk');
+    expect(result.sending_host).toBe('mail.example.co.uk');
     expect(result.default_local_part).toBe('mail');
     expect(result.ses_tenant_name).toBe(`ozer-account-${accountId}`);
-    expect(ses.createDomainIdentity).toHaveBeenCalledWith(
-      'mail.bracketts.co.uk',
-    );
+    expect(ses.createDomainIdentity).toHaveBeenCalledWith('mail.example.co.uk');
     expect(ses.putMailFrom).toHaveBeenCalledWith(
-      'mail.bracketts.co.uk',
-      'bounce.mail.bracketts.co.uk',
+      'mail.example.co.uk',
+      'bounce.mail.example.co.uk',
     );
     expect(ses.ensureTenant).toHaveBeenCalledWith(`ozer-account-${accountId}`);
     expect(ses.associateTenantResource).toHaveBeenCalledTimes(2);
@@ -146,14 +144,14 @@ describe('SendingDomainService', () => {
       inserted: {
         id: 'dom-1',
         account_id: accountId,
-        domain: 'bracketts.co.uk',
+        domain: 'example.co.uk',
         sending_subdomain: null,
-        sending_host: 'bracketts.co.uk',
+        sending_host: 'example.co.uk',
         mail_from_subdomain: 'bounce',
         default_local_part: 'mail',
-        ses_identity_name: 'bracketts.co.uk',
+        ses_identity_name: 'example.co.uk',
         ses_identity_arn:
-          'arn:aws:ses:eu-west-2:123456789012:identity/bracketts.co.uk',
+          'arn:aws:ses:eu-west-2:123456789012:identity/example.co.uk',
         ses_tenant_name: `ozer-account-${accountId}`,
         ses_configuration_set: 'ozer-custom-domains',
         dkim_tokens: ['aaa', 'bbb', 'ccc'],
@@ -172,18 +170,109 @@ describe('SendingDomainService', () => {
 
     const result = await service.createDomain({
       accountId,
-      domain: 'bracketts.co.uk',
+      domain: 'example.co.uk',
       userId,
       sendingSubdomain: null,
     });
 
     expect(result.sending_subdomain).toBeNull();
-    expect(result.sending_host).toBe('bracketts.co.uk');
-    expect(ses.createDomainIdentity).toHaveBeenCalledWith('bracketts.co.uk');
+    expect(result.sending_host).toBe('example.co.uk');
+    expect(ses.createDomainIdentity).toHaveBeenCalledWith('example.co.uk');
     expect(ses.putMailFrom).toHaveBeenCalledWith(
-      'bracketts.co.uk',
-      'bounce.bracketts.co.uk',
+      'example.co.uk',
+      'bounce.example.co.uk',
     );
+  });
+
+  it('creates a custom sending subdomain and From local-part', async () => {
+    const client = createMockClient({
+      inserted: {
+        id: 'dom-1',
+        account_id: accountId,
+        domain: 'example.co.uk',
+        sending_subdomain: 'agency',
+        sending_host: 'agency.example.co.uk',
+        mail_from_subdomain: 'bounce',
+        default_local_part: 'no-reply',
+        ses_identity_name: 'agency.example.co.uk',
+        ses_identity_arn:
+          'arn:aws:ses:eu-west-2:123456789012:identity/agency.example.co.uk',
+        ses_tenant_name: `ozer-account-${accountId}`,
+        ses_configuration_set: 'ozer-custom-domains',
+        dkim_tokens: ['aaa', 'bbb', 'ccc'],
+        dns_records: [],
+        dkim_status: 'pending',
+        mail_from_status: 'pending',
+        verification_status: 'pending',
+        verified_at: null,
+        created_by: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    const ses = createMockSes();
+    const service = createSendingDomainService(client as never, ses);
+
+    const result = await service.createDomain({
+      accountId,
+      domain: 'example.co.uk',
+      userId,
+      sendingSubdomain: 'agency',
+      localPart: 'No-Reply',
+    });
+
+    expect(result.sending_subdomain).toBe('agency');
+    expect(result.sending_host).toBe('agency.example.co.uk');
+    expect(result.default_local_part).toBe('no-reply');
+    expect(ses.createDomainIdentity).toHaveBeenCalledWith(
+      'agency.example.co.uk',
+    );
+    expect(ses.putMailFrom).toHaveBeenCalledWith(
+      'agency.example.co.uk',
+      'bounce.agency.example.co.uk',
+    );
+  });
+
+  it('updates a custom From local-part including no-reply', async () => {
+    const existing = {
+      id: 'dom-1',
+      account_id: accountId,
+      domain: 'example.co.uk',
+      sending_subdomain: 'mail',
+      sending_host: 'mail.example.co.uk',
+      mail_from_subdomain: 'bounce',
+      default_local_part: 'mail',
+      ses_identity_name: 'mail.example.co.uk',
+      ses_identity_arn:
+        'arn:aws:ses:eu-west-2:123456789012:identity/mail.example.co.uk',
+      ses_tenant_name: `ozer-account-${accountId}`,
+      ses_configuration_set: 'ozer-custom-domains',
+      dkim_tokens: ['aaa', 'bbb', 'ccc'],
+      dns_records: [],
+      dkim_status: 'success',
+      mail_from_status: 'success',
+      verification_status: 'verified',
+      verified_at: new Date().toISOString(),
+      created_by: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const client = createMockClient({
+      existing,
+      inserted: { ...existing, default_local_part: 'no-reply' },
+    });
+    const ses = createMockSes();
+    const service = createSendingDomainService(client as never, ses);
+
+    const result = await service.updateLocalPart(accountId, 'no-reply');
+
+    expect(result.default_local_part).toBe('no-reply');
+    expect(ses.createDomainIdentity).not.toHaveBeenCalled();
+    expect(ses.deleteIdentity).not.toHaveBeenCalled();
+
+    await expect(
+      service.updateLocalPart(accountId, 'hello world'),
+    ).rejects.toBeInstanceOf(SendingDomainError);
   });
 
   it('rejects personal and family workspaces', async () => {
@@ -248,14 +337,14 @@ describe('SendingDomainService', () => {
     const existing = {
       id: 'dom-1',
       account_id: accountId,
-      domain: 'bracketts.co.uk',
+      domain: 'example.co.uk',
       sending_subdomain: 'mail',
-      sending_host: 'mail.bracketts.co.uk',
+      sending_host: 'mail.example.co.uk',
       mail_from_subdomain: 'bounce',
       default_local_part: 'mail',
-      ses_identity_name: 'mail.bracketts.co.uk',
+      ses_identity_name: 'mail.example.co.uk',
       ses_identity_arn:
-        'arn:aws:ses:eu-west-2:123456789012:identity/mail.bracketts.co.uk',
+        'arn:aws:ses:eu-west-2:123456789012:identity/mail.example.co.uk',
       ses_tenant_name: `ozer-account-${accountId}`,
       ses_configuration_set: 'ozer-custom-domains',
       dkim_tokens: [],
@@ -278,7 +367,7 @@ describe('SendingDomainService', () => {
           maybeSingle: vi.fn().mockResolvedValue({
             data: {
               id: accountId,
-              name: 'Bracketts',
+              name: 'Example',
               is_personal_account: false,
               space_type: 'commercial-property',
             },
