@@ -370,8 +370,8 @@ export function CommercialPublishingSettings({
             Rightmove Commercial Listings uses platform OAuth (env). Rightmove
             Branch IDs live on each workspace office under Brand settings →
             Branches, and disposals pick an office on Management. EACH and
-            Property Hive use XML feed URLs (EACH has its own token so stock
-            can diverge later).
+            Property Hive use XML feed URLs (EACH has its own token so stock can
+            diverge later).
           </p>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
