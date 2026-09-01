@@ -57,8 +57,10 @@ enum TaskClientFilter: Hashable, Identifiable {
 
     var label: String {
         switch self {
-        case .all: "All clients"
-        case .none: "No client"
+        case .all:
+            return "All clients"
+        case .none:
+            return "No client"
         case .client(_, let name):
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? "Client" : trimmed
@@ -117,13 +119,13 @@ extension TaskItem {
         let todayDay = calendar.startOfDay(for: today)
         switch filter {
         case .today:
-            dueDay == todayDay
+            return dueDay == todayDay
         case .overdue:
-            dueDay < todayDay
+            return dueDay < todayDay
         case .upcoming:
-            dueDay > todayDay
+            return dueDay > todayDay
         default:
-            true
+            return true
         }
     }
 }
