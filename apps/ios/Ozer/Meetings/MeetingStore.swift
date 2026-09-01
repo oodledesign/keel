@@ -13,6 +13,7 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
     var turns: [SpeakerTurn]
     var clientId: String?
     var clientName: String?
+    var syncTarget: String?
 
     var isWaitingToSync: Bool {
         remoteNoteId == nil
@@ -35,7 +36,7 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, workspace, title, transcript, createdAt, durationSeconds
-        case audioFileName, remoteNoteId, turns, clientId, clientName
+        case audioFileName, remoteNoteId, turns, clientId, clientName, syncTarget
     }
 
     init(
@@ -49,7 +50,8 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
         remoteNoteId: String?,
         turns: [SpeakerTurn] = [],
         clientId: String? = nil,
-        clientName: String? = nil
+        clientName: String? = nil,
+        syncTarget: String? = nil
     ) {
         self.id = id
         self.workspace = workspace
@@ -62,6 +64,7 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
         self.turns = turns
         self.clientId = clientId
         self.clientName = clientName
+        self.syncTarget = syncTarget
     }
 
     init(from decoder: Decoder) throws {
@@ -77,6 +80,7 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
         turns = try container.decodeIfPresent([SpeakerTurn].self, forKey: .turns) ?? []
         clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
         clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
+        syncTarget = try container.decodeIfPresent(String.self, forKey: .syncTarget)
     }
 }
 
@@ -113,7 +117,8 @@ final class MeetingStore {
         audioURL: URL?,
         turns: [SpeakerTurn] = [],
         clientId: String? = nil,
-        clientName: String? = nil
+        clientName: String? = nil,
+        syncTarget: String? = nil
     ) -> LocalMeeting {
         let id = audioURL?.deletingPathExtension().lastPathComponent ?? UUID().uuidString
         var fileName: String?
@@ -131,7 +136,8 @@ final class MeetingStore {
             remoteNoteId: nil,
             turns: turns,
             clientId: clientId,
-            clientName: clientName
+            clientName: clientName,
+            syncTarget: syncTarget
         )
         meetings.removeAll { $0.id == id }
         meetings.insert(meeting, at: 0)

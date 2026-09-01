@@ -40,6 +40,19 @@ curl -sS -X POST "$ORIGIN/api/native/v1/tasks" \
 curl -sS "$ORIGIN/api/native/v1/notes?workspace=YOUR_SLUG" \
   -H "Authorization: Bearer $TOKEN"
 
+curl -sS -X POST "$ORIGIN/api/native/v1/notes" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Site visit","body":"Me: Hello","workspace":"YOUR_SLUG","category":"meeting_transcript","client_id":"CLIENT_UUID"}'
+
+curl -sS "$ORIGIN/api/native/v1/meetings?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS -X POST "$ORIGIN/api/native/v1/meetings" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Site visit","content":"Me: Hello","workspace":"YOUR_SLUG","client_id":"CLIENT_UUID","source":"iphone"}'
+
 curl -sS "$ORIGIN/api/native/v1/clients?workspace=YOUR_SLUG" \
   -H "Authorization: Bearer $TOKEN"
 
