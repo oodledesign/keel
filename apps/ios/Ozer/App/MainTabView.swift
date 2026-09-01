@@ -16,6 +16,8 @@ struct MainTabView: View {
                     NotesListView()
                 case .people:
                     PeopleListView()
+                case .clients:
+                    ClientsListView()
                 case .shopping:
                     StubFeatureView(feature: .shopping)
                 }

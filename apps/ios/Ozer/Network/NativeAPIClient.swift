@@ -9,6 +9,7 @@ extension Error {
 enum NativeAPIError: LocalizedError, Equatable {
     case notFound
     case unauthorized
+    case badRequest(String)
     case http(Int)
     case decoding
     case transport(String)
@@ -19,6 +20,8 @@ enum NativeAPIError: LocalizedError, Equatable {
             "This isn’t available yet for this workspace."
         case .unauthorized:
             "Your session expired. Please sign in again."
+        case .badRequest(let message):
+            message
         case .http(let code):
             "The server returned \(code)."
         case .decoding:
@@ -27,6 +30,10 @@ enum NativeAPIError: LocalizedError, Equatable {
             message
         }
     }
+}
+
+private struct NativeErrorBody: Decodable {
+    var error: String?
 }
 
 /// Bearer JSON client for `{OZER_API_BASE}/api/native/v1`. No cookies.
@@ -42,9 +49,11 @@ actor NativeAPIClient {
     }
 
     func workspaces(accessToken: String) async throws -> [NativeWorkspace] {
-        let data = try await get(
+        let data = try await send(
+            method: "GET",
             path: "api/native/v1/workspaces",
             queryItems: [],
+            body: nil,
             accessToken: accessToken
         )
         if data.isEmpty {
@@ -58,9 +67,11 @@ actor NativeAPIClient {
     }
 
     func today(workspace: String, accessToken: String) async throws -> TodayPayload {
-        let data = try await get(
+        let data = try await send(
+            method: "GET",
             path: "api/native/v1/today",
             queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
             accessToken: accessToken
         )
         if data.isEmpty {
@@ -73,10 +84,20 @@ actor NativeAPIClient {
         }
     }
 
-    func tasks(workspace: String, accessToken: String) async throws -> TasksPayload {
-        let data = try await get(
+    func tasks(
+        workspace: String,
+        clientId: String? = nil,
+        accessToken: String
+    ) async throws -> TasksPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let clientId, !clientId.isEmpty {
+            query.append(URLQueryItem(name: "client", value: clientId))
+        }
+        let data = try await send(
+            method: "GET",
             path: "api/native/v1/tasks",
-            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            queryItems: query,
+            body: nil,
             accessToken: accessToken
         )
         if data.isEmpty {
@@ -89,10 +110,102 @@ actor NativeAPIClient {
         }
     }
 
+    func createTask(
+        title: String,
+        due: String?,
+        clientId: String?,
+        workspace: String,
+        accessToken: String
+    ) async throws -> TaskItem {
+        var body: [String: Any] = [
+            "title": title,
+            "workspace": workspace,
+        ]
+        if let due, !due.isEmpty {
+            body["due"] = due
+        }
+        if let clientId, !clientId.isEmpty {
+            body["client_id"] = clientId
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/tasks",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(TaskItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func updateTask(
+        id: String,
+        title: String? = nil,
+        due: String? = nil,
+        clearDue: Bool = false,
+        clientId: String? = nil,
+        clearClient: Bool = false,
+        status: String? = nil,
+        accessToken: String
+    ) async throws -> TaskItem {
+        var body: [String: Any] = [:]
+        if let title {
+            body["title"] = title
+        }
+        if clearDue {
+            body["due"] = NSNull()
+        } else if let due {
+            body["due"] = due
+        }
+        if clearClient {
+            body["client_id"] = NSNull()
+        } else if let clientId {
+            body["client_id"] = clientId
+        }
+        if let status {
+            body["status"] = status
+        }
+        let data = try await send(
+            method: "PATCH",
+            path: "api/native/v1/tasks/\(id)",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(TaskItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func clients(workspace: String, accessToken: String) async throws -> ClientsPayload {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/clients",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return ClientsPayload.empty
+        }
+        do {
+            return try JSONDecoder().decode(ClientsPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func notes(workspace: String, accessToken: String) async throws -> NotesPayload {
-        let data = try await get(
+        let data = try await send(
+            method: "GET",
             path: "api/native/v1/notes",
             queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
             accessToken: accessToken
         )
         if data.isEmpty {
@@ -106,9 +219,11 @@ actor NativeAPIClient {
     }
 
     func people(workspace: String, accessToken: String) async throws -> PeoplePayload {
-        let data = try await get(
+        let data = try await send(
+            method: "GET",
             path: "api/native/v1/people",
             queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
             accessToken: accessToken
         )
         if data.isEmpty {
@@ -121,9 +236,11 @@ actor NativeAPIClient {
         }
     }
 
-    private func get(
+    private func send(
+        method: String,
         path: String,
         queryItems: [URLQueryItem],
+        body: [String: Any]?,
         accessToken: String
     ) async throws -> Data {
         var components = URLComponents(
@@ -138,10 +255,18 @@ actor NativeAPIClient {
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.httpShouldHandleCookies = false
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            do {
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            } catch {
+                throw NativeAPIError.transport("Could not encode the request.")
+            }
+        }
 
         let data: Data
         let http: HTTPURLResponse
@@ -159,8 +284,11 @@ actor NativeAPIClient {
         }
 
         switch http.statusCode {
-        case 200:
+        case 200, 201:
             return data
+        case 400:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "Invalid request.")
         case 401:
             throw NativeAPIError.unauthorized
         case 404:
@@ -313,18 +441,34 @@ struct TasksPayload: Decodable, Equatable {
 struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
     var id: String
     var title: String
+    var status: String?
     var due: String?
     var subtitle: String?
+    var clientId: String?
+    var clientName: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, due, subtitle, name, description, body
+        case id, title, status, due, subtitle, name, description, body
+        case clientId = "client_id"
+        case clientName = "client_name"
     }
 
-    init(id: String, title: String, due: String?, subtitle: String?) {
+    init(
+        id: String,
+        title: String,
+        status: String? = nil,
+        due: String?,
+        subtitle: String?,
+        clientId: String? = nil,
+        clientName: String? = nil
+    ) {
         self.id = id
         self.title = title
+        self.status = status
         self.due = due
         self.subtitle = subtitle
+        self.clientId = clientId
+        self.clientName = clientName
     }
 
     init(from decoder: Decoder) throws {
@@ -337,14 +481,38 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
         title = try container.decodeIfPresent(String.self, forKey: .title)
             ?? container.decodeIfPresent(String.self, forKey: .name)
             ?? "Untitled"
+        status = try container.decodeIfPresent(String.self, forKey: .status)
         due = try container.decodeIfPresent(String.self, forKey: .due)
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
             ?? container.decodeIfPresent(String.self, forKey: .description)
             ?? container.decodeIfPresent(String.self, forKey: .body)
+        clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
+        clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
     }
 
+    var isCompleted: Bool {
+        switch status?.lowercased() {
+        case "completed", "done", "complete":
+            true
+        default:
+            false
+        }
+    }
+
+    /// Due date plus client name when present.
     var displaySubtitle: String? {
-        subtitle ?? Self.dueLabel(due)
+        let dueText = Self.dueLabel(due)
+        let client = clientName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if let dueText, !client.isEmpty {
+            return "\(dueText) · \(client)"
+        }
+        if let dueText {
+            return dueText
+        }
+        if !client.isEmpty {
+            return client
+        }
+        return subtitle
     }
 
     /// Calendar date only. Parse and format in UTC so the day does not shift.
@@ -353,6 +521,31 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
         guard let due, !due.isEmpty else { return nil }
         guard let date = Self.dueParser.date(from: due) else { return due }
         return Self.dueDisplay.string(from: date)
+    }
+
+    static func dueDate(from due: String?) -> Date? {
+        guard let due, !due.isEmpty else { return nil }
+        let parts = due.split(separator: "-")
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2])
+        else {
+            return Self.dueParser.date(from: due)
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+    }
+
+    static func dueString(from date: Date) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        guard let year = parts.year, let month = parts.month, let day = parts.day else {
+            return Self.dueParser.string(from: date)
+        }
+        return String(format: "%04d-%02d-%02d", year, month, day)
     }
 
     private static let dueParser: DateFormatter = {
@@ -372,6 +565,88 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
         formatter.dateFormat = "EEE d MMM"
         return formatter
     }()
+}
+
+struct ClientsPayload: Decodable, Equatable {
+    var items: [ClientItem]
+
+    static let empty = ClientsPayload(items: [])
+
+    enum CodingKeys: String, CodingKey {
+        case items, clients
+    }
+
+    init(items: [ClientItem]) {
+        self.items = items
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let items = try container.decodeIfPresent([ClientItem].self, forKey: .items) {
+            self.items = items
+        } else if let clients = try container.decodeIfPresent([ClientItem].self, forKey: .clients) {
+            self.items = clients
+        } else {
+            items = []
+        }
+    }
+}
+
+struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
+    var id: String
+    var name: String
+    var email: String?
+    var companyName: String?
+    var clientType: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email
+        case companyName = "company_name"
+        case clientType = "client_type"
+        case displayName = "display_name"
+    }
+
+    init(
+        id: String,
+        name: String,
+        email: String? = nil,
+        companyName: String? = nil,
+        clientType: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.companyName = companyName
+        self.clientType = clientType
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let id = try container.decodeIfPresent(String.self, forKey: .id) {
+            self.id = id
+        } else {
+            id = UUID().uuidString
+        }
+        let decodedName = try container.decodeIfPresent(String.self, forKey: .name)
+            ?? container.decodeIfPresent(String.self, forKey: .displayName)
+            ?? ""
+        name = decodedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Untitled"
+            : decodedName
+        email = try container.decodeIfPresent(String.self, forKey: .email)
+        companyName = try container.decodeIfPresent(String.self, forKey: .companyName)
+        clientType = try container.decodeIfPresent(String.self, forKey: .clientType)
+    }
+
+    var displayName: String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Untitled" : trimmed
+    }
+
+    var displaySubtitle: String? {
+        let mail = email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return mail.isEmpty ? nil : mail
+    }
 }
 
 struct NotesPayload: Decodable, Equatable {

@@ -5,6 +5,7 @@ enum AppScreen: Hashable {
     case tasks
     case notes
     case people
+    case clients
     /// Menu only — not one of the three tab-bar pin slots.
     case shopping
 
@@ -23,7 +24,30 @@ enum AppScreen: Hashable {
         case .tasks: .tasks
         case .notes: .notes
         case .people: .people
+        case .clients: nil
         case .shopping: .shopping
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .home: "Home"
+        case .tasks: "Tasks"
+        case .notes: "Notes"
+        case .people: "People"
+        case .clients: "Clients"
+        case .shopping: "Shopping"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .home: "house"
+        case .tasks: "checkmark.square"
+        case .notes: "note.text"
+        case .people: "person.2"
+        case .clients: "building.2"
+        case .shopping: "cart"
         }
     }
 }

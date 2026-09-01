@@ -6,28 +6,35 @@ import { createRecorderTask } from '~/lib/recorder/create-task';
 
 import { NativeHttpError } from './http';
 import {
-  type NativeTaskStatus,
-  mapNativeTaskStatus,
-  uiStatusToDb,
-} from './task-status';
+  type NativeTask,
+  type NativeTaskClientRow,
+  type NativeTaskRow,
+  OPEN_NATIVE_TASK_DB_STATUSES,
+  canSeeNativeTask,
+  isPersonalNativeWorkspace,
+  nativeClientName,
+  parseOptionalClientId,
+  toNativeTask,
+} from './task-map';
+import { uiStatusToDb } from './task-status';
+import { loadNativeWorkspaces } from './workspace';
 import type { NativeWorkspace } from './workspace-shared';
 
 export { uiStatusToDb } from './task-status';
+export {
+  canSeeNativeTask,
+  isPersonalNativeWorkspace,
+  parseOptionalClientId,
+  toNativeTask,
+} from './task-map';
+export type { NativeTask } from './task-map';
 
 const TASK_LIST_LIMIT = 300;
 
 const TASK_SELECT =
-  'id, title, status, priority, due_date, account_id, user_id, assignee_contact_id';
+  'id, title, status, priority, due_date, account_id, user_id, assignee_contact_id, client_id';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-export type NativeTask = {
-  id: string;
-  title: string;
-  status: NativeTaskStatus;
-  due: string | null;
-  workspace: string;
-};
 
 function parseDue(value: string | null | undefined) {
   if (value == null || value === '') return null;
@@ -38,49 +45,127 @@ function parseDue(value: string | null | undefined) {
   return trimmed;
 }
 
-type TaskRow = {
-  id: string;
-  title?: string | null;
-  status?: string | null;
-  due_date?: string | null;
-  account_id?: string | null;
-  user_id?: string | null;
-  assignee_contact_id?: string | null;
-};
+async function loadClientRows(
+  client: SupabaseClient,
+  clientIds: string[],
+): Promise<Map<string, NativeTaskClientRow>> {
+  const unique = [...new Set(clientIds.filter(Boolean))];
+  if (unique.length === 0) {
+    return new Map();
+  }
 
-function toNativeTask(row: TaskRow, workspace: NativeWorkspace): NativeTask {
-  return {
-    id: row.id,
-    title: row.title?.trim() || 'Untitled task',
-    status: mapNativeTaskStatus(row.status),
-    due: row.due_date?.trim() || null,
-    workspace: workspace.slug,
-  };
+  const { data, error } = await client
+    .from('clients')
+    .select(
+      'id, display_name, first_name, last_name, company_name, client_type',
+    )
+    .in('id', unique);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const map = new Map<string, NativeTaskClientRow>();
+  for (const row of (data ?? []) as NativeTaskClientRow[]) {
+    map.set(row.id, row);
+  }
+  return map;
 }
 
-function isSignedInUserTask(row: TaskRow, userId: string) {
-  return row.user_id === userId && !row.assignee_contact_id;
+async function mapTasksWithClients(
+  client: SupabaseClient,
+  rows: NativeTaskRow[],
+  workspace: NativeWorkspace,
+): Promise<NativeTask[]> {
+  const names = await loadClientRows(
+    client,
+    rows.map((row) => row.client_id ?? '').filter(Boolean),
+  );
+
+  return rows.map((row) =>
+    toNativeTask(
+      row,
+      workspace,
+      nativeClientName(row.client_id ? names.get(row.client_id) : null),
+    ),
+  );
+}
+
+async function requireClientInWorkspace(
+  client: SupabaseClient,
+  clientId: string,
+  accountId: string,
+): Promise<NativeTaskClientRow> {
+  const { data, error } = await client
+    .from('clients')
+    .select(
+      'id, display_name, first_name, last_name, company_name, client_type',
+    )
+    .eq('id', clientId)
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new NativeHttpError(400, 'client_id must belong to this workspace');
+  }
+
+  return data as NativeTaskClientRow;
+}
+
+async function workspaceForAccount(
+  client: SupabaseClient,
+  userId: string,
+  accountId: string | null | undefined,
+): Promise<NativeWorkspace | null> {
+  if (!accountId) return null;
+  const workspaces = await loadNativeWorkspaces(client, userId);
+  return workspaces.find((workspace) => workspace.id === accountId) ?? null;
+}
+
+function recorderCreateError(error: unknown): never {
+  const message =
+    error instanceof Error ? error.message : 'Failed to create task';
+  if (/invalid client/i.test(message)) {
+    throw new NativeHttpError(400, 'client_id must belong to this workspace');
+  }
+  if (/title is required/i.test(message)) {
+    throw new NativeHttpError(400, 'title is required');
+  }
+  throw error instanceof Error ? error : new Error(message);
 }
 
 export async function listNativeTasks(
   client: SupabaseClient,
   userId: string,
   workspace: NativeWorkspace,
-  day?: string | null,
+  options?: { day?: string | null; clientId?: string | null },
 ) {
-  const dueDay = day ? parseDue(day) : null;
+  const dueDay = options?.day ? parseDue(options.day) : null;
+  const clientId = parseOptionalClientId(options?.clientId ?? undefined);
 
   let query = client
     .from('tasks')
     .select(TASK_SELECT)
-    .eq('user_id', userId)
     .eq('account_id', workspace.id)
     .is('assignee_contact_id', null)
+    .in('status', [...OPEN_NATIVE_TASK_DB_STATUSES])
     .order('due_date', { ascending: true, nullsFirst: false })
     .limit(TASK_LIST_LIMIT);
 
+  if (isPersonalNativeWorkspace(workspace)) {
+    query = query.or(`user_id.eq.${userId},user_id.is.null`);
+  }
+
   if (dueDay) {
     query = query.eq('due_date', dueDay);
+  }
+
+  if (clientId) {
+    query = query.eq('client_id', clientId);
   }
 
   const { data, error } = await query;
@@ -89,9 +174,44 @@ export async function listNativeTasks(
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as TaskRow[])
-    .filter((row) => isSignedInUserTask(row, userId))
-    .map((row) => toNativeTask(row, workspace));
+  const visible = ((data ?? []) as NativeTaskRow[]).filter((row) =>
+    canSeeNativeTask(row, userId, workspace),
+  );
+
+  return mapTasksWithClients(client, visible, workspace);
+}
+
+export async function getNativeTask(input: {
+  client: SupabaseClient;
+  userId: string;
+  taskId: string;
+  workspace: NativeWorkspace;
+}) {
+  const { data, error } = await input.client
+    .from('tasks')
+    .select(TASK_SELECT)
+    .eq('id', input.taskId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new NativeHttpError(404, 'Task not found');
+  }
+
+  const row = data as NativeTaskRow;
+  if (!canSeeNativeTask(row, input.userId, input.workspace)) {
+    throw new NativeHttpError(404, 'Task not found');
+  }
+
+  const [mapped] = await mapTasksWithClients(
+    input.client,
+    [row],
+    input.workspace,
+  );
+  return mapped;
 }
 
 export async function createNativeTask(input: {
@@ -99,26 +219,52 @@ export async function createNativeTask(input: {
   workspace: NativeWorkspace;
   title: string;
   due?: string | null;
+  clientId?: string | null;
+  client?: SupabaseClient;
 }) {
   const title = input.title.trim();
   if (!title) {
     throw new NativeHttpError(400, 'title is required');
   }
 
-  const created = await createRecorderTask({
-    userId: input.userId,
-    accountId: input.workspace.id,
-    title,
-    dueDate: parseDue(input.due),
-  });
+  const due = parseDue(input.due);
+  const clientId = parseOptionalClientId(input.clientId ?? undefined) ?? null;
 
-  return {
-    id: created.id,
-    title,
-    status: 'pending' as const,
-    due: parseDue(input.due),
-    workspace: input.workspace.slug,
-  };
+  let clientRow: NativeTaskClientRow | null = null;
+  if (clientId && input.client) {
+    clientRow = await requireClientInWorkspace(
+      input.client,
+      clientId,
+      input.workspace.id,
+    );
+  }
+
+  let created: { id: string };
+  try {
+    created = await createRecorderTask({
+      userId: input.userId,
+      accountId: input.workspace.id,
+      title,
+      dueDate: due,
+      clientId,
+    });
+  } catch (error) {
+    recorderCreateError(error);
+  }
+
+  return toNativeTask(
+    {
+      id: created.id,
+      title,
+      status: 'todo',
+      due_date: due,
+      account_id: input.workspace.id,
+      user_id: input.userId,
+      client_id: clientId,
+    },
+    input.workspace,
+    nativeClientName(clientRow),
+  );
 }
 
 export async function updateNativeTask(input: {
@@ -128,6 +274,7 @@ export async function updateNativeTask(input: {
   status?: string;
   due?: string | null;
   title?: string;
+  clientId?: string | null;
 }) {
   const { data: existing, error: loadError } = await input.client
     .from('tasks')
@@ -143,8 +290,14 @@ export async function updateNativeTask(input: {
     throw new NativeHttpError(404, 'Task not found');
   }
 
-  const row = existing as TaskRow;
-  if (!isSignedInUserTask(row, input.userId)) {
+  const row = existing as NativeTaskRow;
+  const workspace = await workspaceForAccount(
+    input.client,
+    input.userId,
+    row.account_id,
+  );
+
+  if (!workspace || !canSeeNativeTask(row, input.userId, workspace)) {
     throw new NativeHttpError(404, 'Task not found');
   }
 
@@ -162,6 +315,13 @@ export async function updateNativeTask(input: {
   if (input.due !== undefined) {
     updates.due_date = parseDue(input.due);
   }
+  if (input.clientId !== undefined) {
+    const clientId = parseOptionalClientId(input.clientId);
+    if (clientId) {
+      await requireClientInWorkspace(input.client, clientId, workspace.id);
+    }
+    updates.client_id = clientId ?? null;
+  }
 
   if (Object.keys(updates).length === 0) {
     throw new NativeHttpError(400, 'No task fields to update');
@@ -171,7 +331,7 @@ export async function updateNativeTask(input: {
     .from('tasks')
     .update(updates)
     .eq('id', input.taskId)
-    .eq('user_id', input.userId)
+    .eq('account_id', workspace.id)
     .select(TASK_SELECT)
     .maybeSingle();
 
@@ -183,24 +343,10 @@ export async function updateNativeTask(input: {
     throw new NativeHttpError(404, 'Task not found');
   }
 
-  const updated = data as TaskRow;
-  let workspaceSlug = '';
-
-  if (updated.account_id) {
-    const { data: account } = await input.client
-      .from('accounts')
-      .select('slug')
-      .eq('id', updated.account_id)
-      .maybeSingle();
-    workspaceSlug = account?.slug?.trim() || '';
-  }
-
-  return toNativeTask(updated, {
-    id: updated.account_id ?? '',
-    slug: workspaceSlug,
-    name: workspaceSlug,
-    profile: 'personal',
-    isPersonal: false,
-    image: null,
-  });
+  const [mapped] = await mapTasksWithClients(
+    input.client,
+    [data as NativeTaskRow],
+    workspace,
+  );
+  return mapped;
 }

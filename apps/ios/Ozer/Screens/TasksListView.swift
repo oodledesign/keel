@@ -5,6 +5,9 @@ struct TasksListView: View {
     @State private var payload: TasksPayload?
     @State private var loadError: NativeAPIError?
     @State private var isLoading = false
+    @State private var completingIds: Set<String> = []
+    @State private var showEditor = false
+    @State private var editorTask: TaskItem?
 
     private let client = NativeAPIClient()
 
@@ -40,6 +43,18 @@ struct TasksListView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     WorkspaceChip()
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        editorTask = nil
+                        showEditor = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundStyle(OzerPalette.coral)
+                    .accessibilityLabel("Add task")
+                    .disabled(session.workspaceQueryValue.isEmpty)
+                }
             }
             .task(id: reloadKey) {
                 await load()
@@ -48,33 +63,88 @@ struct TasksListView: View {
                 await session.refreshWorkspaces()
                 await load()
             }
+            .sheet(isPresented: $showEditor) {
+                TaskEditorView(
+                    existing: editorTask,
+                    initialClient: editorTask.flatMap { task in
+                        task.clientId.map { ClientItem(id: $0, name: task.clientName ?? "Client") }
+                    },
+                    onSaved: { _ in
+                        Task { await load() }
+                    }
+                )
+                .presentationDetents([.medium, .large])
+            }
         }
     }
 
     private func content(_ payload: TasksPayload) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(payload.items) { item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.title)
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(OzerPalette.plum)
-                        if let subtitle = item.displaySubtitle {
-                            Text(subtitle)
-                                .font(.subheadline)
-                                .foregroundStyle(OzerPalette.plumMuted)
+        List {
+            ForEach(payload.items) { item in
+                Button {
+                    editorTask = item
+                    showEditor = true
+                } label: {
+                    taskRow(item)
+                }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    if !item.isCompleted {
+                        Button {
+                            Task { await complete(item) }
+                        } label: {
+                            Label("Done", systemImage: "checkmark")
                         }
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
-                            .stroke(OzerPalette.border, lineWidth: 1)
+                        .tint(OzerPalette.coral)
                     }
                 }
             }
-            .padding(.top, 8)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+    }
+
+    private func taskRow(_ item: TaskItem) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                Task { await complete(item) }
+            } label: {
+                Image(systemName: item.isCompleted || completingIds.contains(item.id)
+                      ? "checkmark.circle.fill"
+                      : "circle")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(
+                        item.isCompleted || completingIds.contains(item.id)
+                            ? OzerPalette.coral
+                            : OzerPalette.plumMuted
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(item.isCompleted ? "Completed" : "Mark complete")
+            .disabled(item.isCompleted || completingIds.contains(item.id))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+                    .strikethrough(item.isCompleted || completingIds.contains(item.id))
+                if let subtitle = item.displaySubtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
         }
     }
 
@@ -115,6 +185,14 @@ struct TasksListView: View {
                 .font(.body)
                 .foregroundStyle(OzerPalette.plumMuted)
                 .multilineTextAlignment(.center)
+            Button("Add a task") {
+                editorTask = nil
+                showEditor = true
+            }
+            .buttonStyle(OzerPrimaryButtonStyle())
+            .frame(width: 160)
+            .padding(.top, 4)
+            .disabled(session.workspaceQueryValue.isEmpty)
         }
         .padding(28)
         .frame(maxWidth: .infinity)
@@ -151,6 +229,29 @@ struct TasksListView: View {
         }
     }
 
+    private func complete(_ item: TaskItem) async {
+        completingIds.insert(item.id)
+        do {
+            let token = try await session.validAccessToken()
+            _ = try await client.updateTask(
+                id: item.id,
+                status: "completed",
+                accessToken: token
+            )
+            await load()
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            completingIds.remove(item.id)
+            loadError = error
+        } catch {
+            completingIds.remove(item.id)
+            if error.isTaskCancellation { return }
+            loadError = .transport(error.localizedDescription)
+        }
+    }
+
     private func load() async {
         isLoading = true
         defer { isLoading = false }
@@ -170,6 +271,7 @@ struct TasksListView: View {
                 workspace: workspace,
                 accessToken: token
             )
+            completingIds = []
             loadError = nil
         } catch is CancellationError {
             return

@@ -100,6 +100,34 @@ extension NativeWorkspace {
         }
     }
 
+    /// People lives on personal and family, matching the web sidebar.
+    var showsPeople: Bool {
+        isPersonalAccount || profile == "family"
+    }
+
+    /// Clients on studio / surveyor / commercial property — not community.
+    var showsClients: Bool {
+        switch profile {
+        case "work_design", "commercial_property", "building_surveyor":
+            true
+        default:
+            false
+        }
+    }
+
+    /// Menu body for the selected space. Workspaces themselves stay in the picker.
+    var menuScreens: [AppScreen] {
+        var screens: [AppScreen] = [.home, .tasks, .notes]
+        if showsPeople {
+            screens.append(.people)
+        }
+        if showsClients {
+            screens.append(.clients)
+        }
+        screens.append(.shopping)
+        return screens
+    }
+
     /// Secondary type label only. Hidden when it repeats the name.
     var profileSubtitle: String? {
         let label: String

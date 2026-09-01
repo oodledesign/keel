@@ -89,7 +89,17 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "due", "subtitle" }] }`. Title plus due/subtitle. Empty only when `items` is empty. A 403 is an error, not an empty list. Reloads when the selected workspace **id** changes, and when `/workspaces` first arrives.
+The list is `{ "items": [{ "id", "title", "status", "due", "client_id", "client_name" }] }` — open tasks for the workspace (due today, overdue, later). Business lists include workspace tasks even when `user_id` is null. Title plus due and client name. Empty only when `items` is empty. A 403 is an error, not an empty list.
+
+```
+POST {OZER_API_BASE}/api/native/v1/tasks
+{ "title", "due?", "client_id?", "workspace" }
+
+PATCH {OZER_API_BASE}/api/native/v1/tasks/{id}
+{ "title?", "due?", "client_id?", "status?" }
+```
+
+`status` of `completed` or `done` marks the task done. `client_id` must belong to the workspace; `null` clears it. Optional `?client=<uuid>` filters the list. The iPhone list can add, edit, attach a client, and tick complete.
 
 ## Notes API
 
@@ -112,6 +122,22 @@ Accept: application/json
 ```
 
 The list is `{ "items": [{ "id", "full_name", "nickname", "relationship_label", "email", "phone", "avatar_url", … }] }`. The server filters `person.account_id === workspace.id`, so Personal usually has people and team workspaces may be empty. Row title is `full_name` (or nickname). Subtitle is relationship or email. A small `https` avatar is optional; initials show otherwise. Tap opens a read-only card from those list fields only (no extra GET).
+
+## Clients API
+
+Cookie-free Bearer JSON. Shown on studio / surveyor / commercial property workspaces (`work_design`, `commercial_property`, `building_surveyor`). Personal and family hide the menu link and receive an empty list (not 403).
+
+```
+GET {OZER_API_BASE}/api/native/v1/clients?workspace=<slug-or-uuid>
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+The list is `{ "items": [{ "id", "name", "email", "company_name", "client_type" }] }`. `name` uses the same display rules as web (`display_name` or first + last). Tap a client for a read-only card and that client’s open tasks, plus add-task pre-filled with `client_id`.
+
+## Menu
+
+Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; People on personal / family; Clients on business profiles; Shopping stays a stub. Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
 
 ## Tab bar
 

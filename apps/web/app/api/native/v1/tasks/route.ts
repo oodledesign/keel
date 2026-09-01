@@ -22,6 +22,7 @@ const CreateTaskBodySchema = z.object({
     .optional()
     .nullable(),
   workspace: z.string().min(1),
+  client_id: z.string().uuid().optional().nullable(),
 });
 
 export async function GET(request: Request) {
@@ -41,7 +42,10 @@ export async function GET(request: Request) {
       auth.context.supabase,
       auth.context.userId,
       workspace,
-      url.searchParams.get('day'),
+      {
+        day: url.searchParams.get('day'),
+        clientId: url.searchParams.get('client'),
+      },
     );
     return NextResponse.json({ items: tasks });
   } catch (error) {
@@ -71,6 +75,8 @@ export async function POST(request: Request) {
       workspace,
       title: parsed.data.title,
       due: parsed.data.due,
+      clientId: parsed.data.client_id,
+      client: auth.context.supabase,
     });
     return NextResponse.json(task);
   } catch (error) {
