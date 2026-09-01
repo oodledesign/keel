@@ -447,6 +447,13 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
 
     /// Truncated body when it adds more than the title; otherwise a relative date.
     var displaySubtitle: String? {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedTitle.isEmpty {
+            // Title came from the first body line — subtitle is the rest, else a date.
+            let remainder = bodyRemainderAfterFirstLine
+            if !remainder.isEmpty { return remainder }
+            return relativeDateLabel(updatedAt ?? createdAt)
+        }
         let collapsed = collapsedBody
         if !collapsed.isEmpty, collapsed != displayTitle {
             return collapsed
@@ -455,10 +462,17 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
     }
 
     var collapsedBody: String {
+        bodyLines.joined(separator: " ")
+    }
+
+    private var bodyLines: [String] {
         body.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-            .joined(separator: " ")
+    }
+
+    private var bodyRemainderAfterFirstLine: String {
+        bodyLines.dropFirst().joined(separator: " ")
     }
 
     static func relativeDateLabel(_ iso: String?) -> String? {

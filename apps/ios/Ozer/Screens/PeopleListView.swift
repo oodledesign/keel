@@ -214,8 +214,10 @@ struct PersonAvatarView: View {
                         image
                             .resizable()
                             .scaledToFill()
-                    default:
+                    case .failure:
                         initials
+                    default:
+                        OzerPalette.creamDeep
                     }
                 }
             } else {
