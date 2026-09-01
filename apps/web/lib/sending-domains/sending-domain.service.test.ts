@@ -115,10 +115,7 @@ describe('SendingDomainService', () => {
   it('creates a domain identity, tenant, and pending row', async () => {
     const client = createMockClient();
     const ses = createMockSes();
-    const service = createSendingDomainService(
-      client as never,
-      ses,
-    );
+    const service = createSendingDomainService(client as never, ses);
 
     const result = await service.createDomain({
       accountId,
@@ -133,9 +130,7 @@ describe('SendingDomainService', () => {
       'bracketts.co.uk',
       'bounce.bracketts.co.uk',
     );
-    expect(ses.ensureTenant).toHaveBeenCalledWith(
-      `ozer-account-${accountId}`,
-    );
+    expect(ses.ensureTenant).toHaveBeenCalledWith(`ozer-account-${accountId}`);
     expect(ses.associateTenantResource).toHaveBeenCalledTimes(2);
   });
 
@@ -158,7 +153,10 @@ describe('SendingDomainService', () => {
     });
 
     await expect(
-      createSendingDomainService(personal as never, createMockSes()).createDomain({
+      createSendingDomainService(
+        personal as never,
+        createMockSes(),
+      ).createDomain({
         accountId,
         domain: 'example.com',
         userId,
@@ -166,11 +164,13 @@ describe('SendingDomainService', () => {
     ).rejects.toBeInstanceOf(SendingDomainError);
 
     await expect(
-      createSendingDomainService(family as never, createMockSes()).createDomain({
-        accountId,
-        domain: 'example.com',
-        userId,
-      }),
+      createSendingDomainService(family as never, createMockSes()).createDomain(
+        {
+          accountId,
+          domain: 'example.com',
+          userId,
+        },
+      ),
     ).rejects.toMatchObject({
       message: expect.stringMatching(/family/i),
     });
@@ -182,11 +182,74 @@ describe('SendingDomainService', () => {
     });
 
     await expect(
-      createSendingDomainService(client as never, createMockSes()).createDomain({
-        accountId,
-        domain: 'other.co.uk',
-        userId,
-      }),
+      createSendingDomainService(client as never, createMockSes()).createDomain(
+        {
+          accountId,
+          domain: 'other.co.uk',
+          userId,
+        },
+      ),
     ).rejects.toThrow(/already has a sending domain/);
+  });
+
+  it('removes the workspace row even if SES identity delete fails', async () => {
+    const existing = {
+      id: 'dom-1',
+      account_id: accountId,
+      domain: 'bracketts.co.uk',
+      mail_from_subdomain: 'bounce',
+      default_local_part: 'listings',
+      ses_identity_name: 'bracketts.co.uk',
+      ses_identity_arn:
+        'arn:aws:ses:eu-west-2:123456789012:identity/bracketts.co.uk',
+      ses_tenant_name: `ozer-account-${accountId}`,
+      ses_configuration_set: 'ozer-custom-domains',
+      dkim_tokens: [],
+      dns_records: [],
+      dkim_status: 'pending',
+      mail_from_status: 'pending',
+      verification_status: 'pending',
+      verified_at: null,
+      created_by: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const deleted = { eq: vi.fn().mockResolvedValue({ error: null }) };
+    const from = vi.fn((table: string) => {
+      if (table === 'accounts') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              id: accountId,
+              name: 'Bracketts',
+              is_personal_account: false,
+              space_type: 'commercial-property',
+            },
+            error: null,
+          }),
+        };
+      }
+
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: existing, error: null }),
+        delete: vi.fn(() => deleted),
+      };
+    });
+
+    const ses = createMockSes();
+    ses.deleteIdentity = vi.fn().mockRejectedValue(new Error('SES throttled'));
+
+    const result = await createSendingDomainService(
+      { from } as never,
+      ses,
+    ).removeDomain(accountId);
+
+    expect(deleted.eq).toHaveBeenCalledWith('id', 'dom-1');
+    expect(result.sesCleanupFailed).toMatch(/SES throttled/);
   });
 });

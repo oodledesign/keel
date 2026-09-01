@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { type ChangeEvent, useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -34,9 +34,7 @@ function statusLabel(status: SendingDomainRecord['verification_status']) {
   return 'Waiting for DNS';
 }
 
-function statusBadgeClass(
-  status: SendingDomainRecord['verification_status'],
-) {
+function statusBadgeClass(status: SendingDomainRecord['verification_status']) {
   if (status === 'verified') {
     return 'border-[color:var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
   }
@@ -140,7 +138,9 @@ export function SendingDomainSettings({
               id="sending-domain"
               data-test="sending-domain-input"
               value={domainInput}
-              onChange={(event) => setDomainInput(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setDomainInput(event.target.value)
+              }
               placeholder="bracketts.co.uk"
               disabled={!canEdit || pending}
               spellCheck={false}
@@ -182,7 +182,8 @@ export function SendingDomainSettings({
                   await addSendingDomainAction({
                     accountId,
                     domain: domainInput,
-                    localPart: localPart as (typeof DEFAULT_SENDING_LOCAL_PARTS)[number],
+                    localPart:
+                      localPart as (typeof DEFAULT_SENDING_LOCAL_PARTS)[number],
                   });
                   setDomainInput('');
                 }, 'Domain added. Add the DNS records at your host.')
@@ -219,7 +220,8 @@ export function SendingDomainSettings({
             run(async () => {
               await updateSendingLocalPartAction({
                 accountId,
-                localPart: localPart as (typeof DEFAULT_SENDING_LOCAL_PARTS)[number],
+                localPart:
+                  localPart as (typeof DEFAULT_SENDING_LOCAL_PARTS)[number],
               });
             }, 'From address saved')
           }
@@ -286,7 +288,13 @@ function ConnectedDomain({
             </p>
           </div>
           <Badge
-            variant="outline"
+            variant={
+              domain.verification_status === 'verified'
+                ? 'success'
+                : domain.verification_status === 'failed'
+                  ? 'destructive'
+                  : 'warning'
+            }
             className={statusBadgeClass(domain.verification_status)}
           >
             {statusLabel(domain.verification_status)}
@@ -357,9 +365,9 @@ function ConnectedDomain({
           <table className="w-full min-w-[36rem] text-left text-sm">
             <thead>
               <tr className="text-[var(--workspace-shell-text-muted)]">
-                <th className="pb-2 pr-3 font-medium">Type</th>
-                <th className="pb-2 pr-3 font-medium">Host</th>
-                <th className="pb-2 pr-3 font-medium">Value</th>
+                <th className="pr-3 pb-2 font-medium">Type</th>
+                <th className="pr-3 pb-2 font-medium">Host</th>
+                <th className="pr-3 pb-2 font-medium">Value</th>
                 <th className="pb-2 font-medium">
                   <span className="sr-only">Copy</span>
                 </th>
@@ -377,7 +385,7 @@ function ConnectedDomain({
                     <td className="py-3 pr-3 font-mono text-xs">
                       {record.host}
                     </td>
-                    <td className="py-3 pr-3 break-all font-mono text-xs">
+                    <td className="py-3 pr-3 font-mono text-xs break-all">
                       {record.value}
                     </td>
                     <td className="py-3">

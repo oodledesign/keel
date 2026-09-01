@@ -32,9 +32,7 @@ describe('resolveWorkspaceMailFrom', () => {
 
     expect(resolved.source).toBe('custom_domain');
     expect(resolved.fromEmail).toBe('listings@bracketts.co.uk');
-    expect(resolved.fromHeader).toBe(
-      'Bracketts <listings@bracketts.co.uk>',
-    );
+    expect(resolved.fromHeader).toBe('Bracketts <listings@bracketts.co.uk>');
     expect(resolved.replyTo).toBe('office@bracketts.co.uk');
     expect(resolved.sesTenantName).toBe(verifiedDomain.ses_tenant_name);
     expect(resolved.sesConfigurationSet).toBe('ozer-custom-domains');

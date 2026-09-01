@@ -31,11 +31,9 @@ function isOnUnverifiedCustomDomain(
 }
 
 export function getPlatformSesFrom(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): string | null {
-  return (
-    env.SES_FROM_ADDRESS?.trim() || env.EMAIL_SENDER?.trim() || null
-  );
+  return env.SES_FROM_ADDRESS?.trim() || env.EMAIL_SENDER?.trim() || null;
 }
 
 export function resolveWorkspaceMailFrom(input: {
@@ -48,9 +46,7 @@ export function resolveWorkspaceMailFrom(input: {
 }): ResolvedWorkspaceMailFrom {
   const accountName = input.accountName.trim() || 'Agency';
   const replyFallback =
-    input.brandContactEmail?.trim() ||
-    input.proposedFromEmail?.trim() ||
-    null;
+    input.brandContactEmail?.trim() || input.proposedFromEmail?.trim() || null;
 
   if (input.sendingDomain && isSendingDomainVerified(input.sendingDomain)) {
     const fromEmail = `${input.sendingDomain.default_local_part}@${input.sendingDomain.domain}`;

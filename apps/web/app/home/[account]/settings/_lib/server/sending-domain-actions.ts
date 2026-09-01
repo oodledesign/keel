@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache';
 
 import { enhanceAction } from '@kit/next/actions';
-import { getLogger } from '@kit/shared/logger';
 import { createSesIdentityAdmin, createSesMailer } from '@kit/ses';
+import { getLogger } from '@kit/shared/logger';
+import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
@@ -38,7 +39,7 @@ async function getWritableService(accountId: string, userId: string) {
   const { accountSlug } = await assertCanEditBrandSettings(accountId, userId);
   const admin = getSupabaseServerAdminClient();
   const service = createSendingDomainService(admin, createSesIdentityAdmin());
-  return { accountSlug, service };
+  return { accountSlug, service, admin };
 }
 
 function toActionError(error: unknown): never {
@@ -72,10 +73,7 @@ export const addSendingDomainAction = enhanceAction(
         localPart: data.localPart,
       });
 
-      logger.info(
-        { ...ctx, domain: result.domain },
-        'Sending domain created',
-      );
+      logger.info({ ...ctx, domain: result.domain }, 'Sending domain created');
       revalidateSendingDomain(accountSlug);
       return result;
     } catch (error) {
@@ -134,8 +132,15 @@ export const removeSendingDomainAction = enhanceAction(
         data.accountId,
         user.id,
       );
-      await service.removeDomain(data.accountId);
-      logger.info(ctx, 'Sending domain removed');
+      const removed = await service.removeDomain(data.accountId);
+      if (removed.sesCleanupFailed) {
+        logger.warn(
+          { ...ctx, error: removed.sesCleanupFailed },
+          'Sending domain removed from workspace; mail-provider cleanup failed',
+        );
+      } else {
+        logger.info(ctx, 'Sending domain removed');
+      }
       revalidateSendingDomain(accountSlug);
       return { ok: true as const };
     } catch (error) {
@@ -148,7 +153,7 @@ export const removeSendingDomainAction = enhanceAction(
 export const sendSendingDomainTestAction = enhanceAction(
   async function (data, user) {
     try {
-      const { accountSlug, service } = await getWritableService(
+      const { accountSlug, service, admin } = await getWritableService(
         data.accountId,
         user.id,
       );
@@ -160,7 +165,6 @@ export const sendSendingDomainTestAction = enhanceAction(
         );
       }
 
-      const admin = getSupabaseServerAdminClient();
       const { data: account } = await admin
         .from('accounts')
         .select('name')
@@ -181,20 +185,48 @@ export const sendSendingDomainTestAction = enhanceAction(
       }
 
       const mailer = createSesMailer();
-      const result = await mailer.sendEmail({
-        to: user.email,
-        from: resolved.fromHeader,
-        subject: `Test email from ${accountName}`,
-        text:
-          `This is a test send from ${resolved.fromEmail}. ` +
-          'If you received this, your sending domain is ready for circulation and campaigns.',
-        replyTo: resolved.replyTo ?? undefined,
-        sesTenant: resolved.sesTenantName ?? undefined,
-        sesConfigurationSet: resolved.sesConfigurationSet ?? undefined,
-      });
+      const subject = `Test email from ${accountName}`;
+      let status: 'sent' | 'failed' = 'sent';
+      let errorMessage: string | null = null;
+      let messageId: string | null = null;
+
+      try {
+        const result = await mailer.sendEmail({
+          to: user.email,
+          from: resolved.fromHeader,
+          subject,
+          text:
+            `This is a test send from ${resolved.fromEmail}. ` +
+            'If you received this, your sending domain is ready for circulation and campaigns.',
+          replyTo: resolved.replyTo ?? undefined,
+          sesTenant: resolved.sesTenantName ?? undefined,
+          sesConfigurationSet: resolved.sesConfigurationSet ?? undefined,
+        });
+        messageId = result.messageId ?? null;
+      } catch (error) {
+        status = 'failed';
+        errorMessage = error instanceof Error ? error.message : String(error);
+        throw error;
+      } finally {
+        await insertPlatformEmailLog({
+          emailType: 'sending_domain_test',
+          accountId: data.accountId,
+          recipientEmail: user.email,
+          senderEmail: resolved.fromEmail,
+          subject,
+          status,
+          errorMessage,
+          metadata: {
+            provider: 'ses',
+            ses_message_id: messageId,
+            ses_tenant: resolved.sesTenantName,
+            domain: domain.domain,
+          },
+        });
+      }
 
       revalidateSendingDomain(accountSlug);
-      return { messageId: result.messageId ?? null };
+      return { messageId };
     } catch (error) {
       toActionError(error);
     }

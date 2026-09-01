@@ -2,11 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   DEFAULT_SES_CONFIGURATION_SET,
-  sesTenantNameForAccount,
   type SesIdentityAdmin,
+  sesTenantNameForAccount,
 } from '@kit/ses/identity';
 
-import { buildSendingDnsRecords, type SendingDnsRecord } from './dns-records';
+import { type SendingDnsRecord, buildSendingDnsRecords } from './dns-records';
 import {
   SendingDomainError,
   normalizeSendingDomain,
@@ -20,7 +20,9 @@ import {
 
 const MAIL_FROM_SUBDOMAIN = 'bounce';
 
-function isMissingTableError(error: { message?: string; code?: string } | null) {
+function isMissingTableError(
+  error: { message?: string; code?: string } | null,
+) {
   if (!error) return false;
   return (
     error.code === '42P01' ||
@@ -197,9 +199,8 @@ class SendingDomainService {
     const configurationSetName =
       process.env.SES_CONFIGURATION_SET?.trim() ||
       DEFAULT_SES_CONFIGURATION_SET;
-    const configSet = await this.ses.ensureConfigurationSet(
-      configurationSetName,
-    );
+    const configSet =
+      await this.ses.ensureConfigurationSet(configurationSetName);
     const tenantName = sesTenantNameForAccount(input.accountId);
     await this.ses.ensureTenant(tenantName);
     await this.ses.associateTenantResource(tenantName, identity.identityArn);
@@ -320,41 +321,16 @@ class SendingDomainService {
     return mapRow(data as Record<string, unknown>);
   }
 
-  async removeDomain(accountId: string): Promise<void> {
+  async removeDomain(
+    accountId: string,
+  ): Promise<{ sesCleanupFailed?: string }> {
     const existing = await this.getForAccount(accountId);
     if (!existing) {
-      return;
+      return {};
     }
 
-    if (existing.ses_tenant_name && existing.ses_identity_arn) {
-      await this.ses.disassociateTenantResource(
-        existing.ses_tenant_name,
-        existing.ses_identity_arn,
-      );
-    }
-
-    if (existing.ses_tenant_name && existing.ses_configuration_set) {
-      try {
-        const configArn = (
-          await this.ses.ensureConfigurationSet(existing.ses_configuration_set)
-        ).arn;
-        await this.ses.disassociateTenantResource(
-          existing.ses_tenant_name,
-          configArn,
-        );
-      } catch {
-        // Shared configuration set can stay; tenant teardown still proceeds.
-      }
-    }
-
-    if (existing.ses_tenant_name) {
-      await this.ses.deleteTenant(existing.ses_tenant_name);
-    }
-
-    if (existing.domain) {
-      await this.ses.deleteIdentity(existing.domain);
-    }
-
+    // Unblock the workspace first. Orphaned SES resources can be cleaned up
+    // after; a row that points at a half-deleted tenant cannot.
     const { error } = await fromTable(this.client)
       .delete()
       .eq('id', existing.id);
@@ -362,8 +338,49 @@ class SendingDomainService {
     if (error) {
       throw new SendingDomainError(error.message);
     }
-  }
 
+    try {
+      if (existing.ses_tenant_name && existing.ses_identity_arn) {
+        await this.ses.disassociateTenantResource(
+          existing.ses_tenant_name,
+          existing.ses_identity_arn,
+        );
+      }
+
+      if (existing.ses_tenant_name && existing.ses_configuration_set) {
+        try {
+          const configArn = (
+            await this.ses.ensureConfigurationSet(
+              existing.ses_configuration_set,
+            )
+          ).arn;
+          await this.ses.disassociateTenantResource(
+            existing.ses_tenant_name,
+            configArn,
+          );
+        } catch {
+          // Shared configuration set can stay; tenant teardown still proceeds.
+        }
+      }
+
+      if (existing.ses_tenant_name) {
+        await this.ses.deleteTenant(existing.ses_tenant_name);
+      }
+
+      if (existing.domain) {
+        await this.ses.deleteIdentity(existing.domain);
+      }
+    } catch (cleanupError) {
+      return {
+        sesCleanupFailed:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : 'Mail provider cleanup failed',
+      };
+    }
+
+    return {};
+  }
 }
 
 export async function loadAccountSendingDomain(

@@ -69,6 +69,9 @@ class SesMailer implements Mailer {
       new SendRawEmailCommand({
         Source: extractSesSourceAddress(config.from),
         Destinations: [config.to],
+        // Tenant routing is driven by X-SES-TENANT / X-SES-CONFIGURATION-SET
+        // on the raw MIME. ConfigurationSetName keeps SES v1 SendRawEmail
+        // aligned with the same set when one is supplied.
         ConfigurationSetName: config.sesConfigurationSet,
         RawMessage: {
           Data: Buffer.from(buildSesRawEmail(config), 'utf8'),

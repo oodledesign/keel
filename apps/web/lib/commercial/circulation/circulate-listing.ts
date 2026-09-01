@@ -568,7 +568,7 @@ export async function circulateListing(
       ? new URL(`/share/brochure/${brochureToken}`, input.siteUrl).toString()
       : null;
 
-  const fromHeader = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+  const fromHeader = resolved.fromHeader ?? fromEmail;
 
   let sent = 0;
   let skipped = 0;
