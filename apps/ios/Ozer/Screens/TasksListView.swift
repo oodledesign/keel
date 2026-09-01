@@ -77,7 +77,6 @@ struct TasksListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 88)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(OzerPalette.cream.ignoresSafeArea())
             .navigationTitle("Tasks")

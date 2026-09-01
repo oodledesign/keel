@@ -49,6 +49,7 @@ import {
   AnalyticsDateRangePicker,
   type DateRangeSelection,
 } from '~/components/date-range/analytics-date-range-picker';
+import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { parseCsv } from '~/lib/csv/parse-csv';
@@ -674,7 +675,10 @@ export function FinancesPageContent({
   const showSkeleton = loading || data === null;
 
   return (
-    <div className="space-y-6 px-4 lg:px-8" aria-busy={showSkeleton}>
+    <div
+      className={cn('space-y-6', workspacePageContentClassName)}
+      aria-busy={showSkeleton}
+    >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <AnalyticsDateRangePicker
           fromIso={dateFrom}

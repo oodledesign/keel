@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import { workspacePageBodyClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -65,7 +66,7 @@ async function FinancesPage({ params }: FinancesPageProps) {
         title="Finances"
         description="Income, expenses, forecasts, and bank imports — with optional FreeAgent sync."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)]">
+      <PageBody className={workspacePageBodyClassName}>
         <Suspense fallback={<FinancesDashboardSkeleton />}>
           <FinancesPageContent
             accountId={accountId}

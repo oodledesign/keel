@@ -5,27 +5,26 @@ struct MainTabView: View {
     @State private var menuOpen = false
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                switch screen {
-                case .home:
-                    HomeTodayView()
-                case .tasks:
-                    TasksListView()
-                case .notes:
-                    NotesListView()
-                case .people:
-                    PeopleListView()
-                case .clients:
-                    ClientsListView()
-                case .meetings:
-                    MeetingsListView()
-                case .shopping:
-                    StubFeatureView(feature: .shopping)
-                }
+        Group {
+            switch screen {
+            case .home:
+                HomeTodayView()
+            case .tasks:
+                TasksListView()
+            case .notes:
+                NotesListView()
+            case .people:
+                PeopleListView()
+            case .clients:
+                ClientsListView()
+            case .meetings:
+                MeetingsListView()
+            case .shopping:
+                StubFeatureView(feature: .shopping)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if !menuOpen {
                 OzerTabBar(screen: $screen, menuOpen: $menuOpen)
             }

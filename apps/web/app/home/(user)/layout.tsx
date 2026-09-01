@@ -225,7 +225,7 @@ async function SidebarLayout({
           <SidebarProvider defaultOpen={layoutState.open}>
             <Page
               style={'sidebar'}
-              contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
+              contentContainerClassName="mx-auto flex h-dvh max-h-dvh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
             >
               <PageNavigation>
                 <HomeSidebar
