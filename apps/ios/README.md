@@ -123,14 +123,14 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tags?", "created_at", "updated_at" }] }`. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens a read-only title + body screen.
+The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tags?", "client_id?", "created_at", "updated_at" }] }`. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens a read-only title + body screen.
 
 ```
 POST {OZER_API_BASE}/api/native/v1/notes
-{ "title?", "body", "workspace", "category?", "tags?" }
+{ "title?", "body", "workspace", "category?", "tags?", "client_id?" }
 ```
 
-`body` is required. `category` of `meeting_transcript` marks an in-room meeting. The phone never calls `/api/recorder/transcribe-session` (that route is 503; cloud STT is off).
+`body` is required. `category` of `meeting_transcript` marks an in-room meeting. `client_id` is optional and must belong to the workspace (same rule as tasks). The phone never calls `/api/recorder/transcribe-session` (that route is 503; cloud STT is off).
 
 ### Field dictation
 
@@ -140,12 +140,13 @@ Notes has a mic. Hold or tap to dictate a new note. Transcription is **on-device
 
 Surveyor, studio (`work_design` / `work_property`), and commercial property workspaces get a **Meetings** item in the Menu (the tab bar still has only Home + 3 pins + Menu). Personal and family do not. Record in-room:
 
-- Start / stop, elapsed time, live captions, screen stays awake
+- Pause / Resume / Stop on the same meeting. Pause freezes captions, stops Apple Speech, keeps the CAF open, pauses the timer, and runs local diarization on audio so far. Resume starts a new Speech session and keeps appending into the same file. Live captions after resume stay **Me** until the next Pause or Stop. Stop runs a final diarization pass, saves locally, and queues sync.
+- Elapsed time, live captions with coloured speaker pills, optional client picker (business workspaces only), screen stays awake
 - Background audio mode so a lock-screen meeting is not killed
 - Audio stays on the phone as m4a (excluded from iCloud backup) until the user deletes the meeting
-- Live captions stay on **Me**. After stop, on-device diarization (pyannote segmentation-3.0 + WeSpeaker ResNet34-LM, ~32 MB downloaded once into Application Support, excluded from iCloud) labels **Me** then **Speaker 1 / Speaker 2**. The same voice can return as Me. Not NVIDIA Sortformer. If models fail, the meeting stays Me-only — it does not invent speakers from short pauses. Mic only — no computer-audio “Them”
-- On-device Speech sessions are ended and restarted around 50s so live captions continue; the m4a/caf recording is not restarted. If a restart fails, the meeting screen shows an error and keeps retrying — the timer is not a silent freeze.
-- The transcript is saved as a note (`category: meeting_transcript`) when sync is possible; otherwise it stays local and syncs later
+- Live captions stay on **Me**. Pause and stop run on-device diarization (pyannote segmentation-3.0 + WeSpeaker ResNet34-LM, ~32 MB downloaded once into Application Support, excluded from iCloud) and label **Me** then **Speaker 1 / Speaker 2**. The same voice can return as Me. Not NVIDIA Sortformer. If models fail, the meeting stays Me-only — it does not invent speakers from short pauses. Mic only — no computer-audio “Them”
+- On-device Speech sessions are ended and restarted around 50s so live captions continue; the m4a/caf recording is not restarted. If a restart fails, the meeting screen shows an error and keeps retrying — the timer is not a silent freeze. A rewritten shorter hypothesis does not duplicate a committed paragraph.
+- The transcript is saved as a note (`category: meeting_transcript`, optional `client_id`) when sync is possible; otherwise it stays local and syncs later. Audio stays on the device.
 - The list shows local meetings plus synced meeting notes
 
 Linux cannot compile this Xcode project. Open `apps/ios/Ozer.xcodeproj` on a Mac to build.

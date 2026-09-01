@@ -8,18 +8,11 @@ import {
 } from '~/lib/recorder/create-note';
 
 import { NativeHttpError } from './http';
+import { toNativeNote } from './notes-shared';
+import { parseOptionalClientId } from './task-map';
 import type { NativeWorkspace } from './workspace';
 
-export type NativeNote = {
-  id: string;
-  title: string;
-  body: string;
-  workspace: string;
-  category: string;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-};
+export type { NativeNote } from './notes-shared';
 
 export async function listNativeNotes(
   userId: string,
@@ -31,16 +24,19 @@ export async function listNativeNotes(
     limit: 50,
   });
 
-  return items.map((item) => ({
-    id: item.id,
-    title: item.title,
-    body: item.content,
-    workspace: workspace.slug,
-    category: item.category,
-    tags: item.tags,
-    created_at: item.created_at,
-    updated_at: item.updated_at,
-  }));
+  return items.map((item) =>
+    toNativeNote({
+      id: item.id,
+      title: item.title,
+      body: item.content,
+      workspace: workspace.slug,
+      category: item.category,
+      tags: item.tags,
+      clientId: item.client_id,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }),
+  );
 }
 
 export async function createNativeNote(input: {
@@ -50,10 +46,28 @@ export async function createNativeNote(input: {
   title?: string | null;
   category?: string | null;
   tags?: string[] | null;
+  clientId?: string | null;
+  client?: SupabaseClient;
 }) {
   const body = input.body.trim();
   if (!body) {
     throw new NativeHttpError(400, 'body is required');
+  }
+
+  const clientId = parseOptionalClientId(input.clientId ?? undefined) ?? null;
+  if (clientId && input.client) {
+    const { data, error } = await input.client
+      .from('clients')
+      .select('id')
+      .eq('id', clientId)
+      .eq('account_id', input.workspace.id)
+      .maybeSingle();
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (!data) {
+      throw new NativeHttpError(400, 'client_id must belong to this workspace');
+    }
   }
 
   const created = await createRecorderNote({
@@ -61,21 +75,23 @@ export async function createNativeNote(input: {
     content: body,
     title: input.title,
     accountId: input.workspace.id,
+    clientId,
     source: 'native',
     category: input.category,
     tags: input.tags,
   });
 
-  return {
+  return toNativeNote({
     id: created.id,
     title: created.title,
     body: created.content,
     workspace: input.workspace.slug,
-    category: input.category?.trim() || 'idea',
-    tags: (input.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
-    created_at: created.created_at ?? new Date().toISOString(),
-    updated_at: created.updated_at ?? new Date().toISOString(),
-  };
+    category: input.category,
+    tags: input.tags,
+    clientId,
+    createdAt: created.created_at,
+    updatedAt: created.updated_at,
+  });
 }
 
 export async function updateNativeNote(input: {
@@ -149,19 +165,19 @@ export async function updateNativeNote(input: {
     workspaceSlug = account?.slug?.trim() || '';
   }
 
-  return {
+  return toNativeNote({
     id: data.id as string,
     title: ((data.title as string | null)?.trim() || 'Note') as string,
     body: (data.content as string | null) ?? '',
     workspace: workspaceSlug,
-    category: ((data.category as string | null)?.trim() || 'idea') as string,
+    category: (data.category as string | null) ?? undefined,
     tags: Array.isArray(data.tags)
       ? (data.tags as unknown[]).filter(
           (tag): tag is string =>
             typeof tag === 'string' && tag.trim().length > 0,
         )
       : [],
-    created_at: data.created_at as string,
-    updated_at: data.updated_at as string,
-  };
+    createdAt: data.created_at as string,
+    updatedAt: data.updated_at as string,
+  });
 }

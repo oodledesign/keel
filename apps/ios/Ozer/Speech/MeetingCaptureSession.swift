@@ -11,11 +11,13 @@ struct MeetingCaptureResult {
     var audioURL: URL?
 }
 
-/// In-room meeting: on-device captions, pause-split speakers, m4a on disk.
+/// In-room meeting: on-device captions, pause/resume on one CAF, m4a on disk.
 @MainActor
 @Observable
 final class MeetingCaptureSession {
     private(set) var isRecording = false
+    private(set) var isPaused = false
+    private(set) var isLabelling = false
     private(set) var elapsed: TimeInterval = 0
     private(set) var liveTranscript = ""
     private(set) var lastError: String?
@@ -28,7 +30,8 @@ final class MeetingCaptureSession {
     private var task: SFSpeechRecognitionTask?
     private var cafURL: URL?
     private var splitter = SpeakerTurnSplitter()
-    private var startedAt = Date()
+    private var accumulatedElapsed: TimeInterval = 0
+    private var runningSince: Date?
     private var elapsedTimer: Timer?
     private var sessionEndTask: Task<Void, Never>?
     private var restartTask: Task<Void, Never>?
@@ -48,13 +51,24 @@ final class MeetingCaptureSession {
         Self.formatElapsed(elapsed)
     }
 
+    var displayTurns: [SpeakerTurn] {
+        splitter.displayTurns
+    }
+
+    var committedTurns: [SpeakerTurn] {
+        splitter.turns
+    }
+
     func start() async throws {
         teardown(deactivateAudio: true)
         lastError = nil
         splitter = SpeakerTurnSplitter()
         liveTranscript = ""
         elapsed = 0
-        startedAt = Date()
+        accumulatedElapsed = 0
+        runningSince = Date()
+        isPaused = false
+        isLabelling = false
         recordingID = UUID()
         speechEpoch = 0
         isRestartingSpeech = false
@@ -110,11 +124,12 @@ final class MeetingCaptureSession {
         restartTask = nil
         elapsedTimer?.invalidate()
         elapsedTimer = nil
+        freezeElapsed()
         invalidateSpeech()
         audio.stop()
 
-        let duration = Date().timeIntervalSince(startedAt)
-        elapsed = duration
+        let duration = elapsed
+        isPaused = false
         isRecording = false
         UIApplication.shared.isIdleTimerDisabled = false
 
@@ -135,6 +150,48 @@ final class MeetingCaptureSession {
         )
     }
 
+    /// Freeze captions, stop Speech for this segment, keep the CAF, diarize audio so far.
+    func pause() async {
+        guard isRecording, !isPaused, !isLabelling else { return }
+        pauseTask?.cancel()
+        sessionEndTask?.cancel()
+        restartTask?.cancel()
+        pauseTask = nil
+        sessionEndTask = nil
+        restartTask = nil
+        elapsedTimer?.invalidate()
+        elapsedTimer = nil
+        freezeElapsed()
+        invalidateSpeech()
+        audio.setWritingEnabled(false)
+        isPaused = true
+        splitter.commitOpen()
+        liveTranscript = splitter.formattedBody
+        await relabelSpeakersIfPossible()
+    }
+
+    /// New Speech session on the same meeting. Live captions stay Me until the next pause/stop.
+    func resume() async throws {
+        guard isRecording, isPaused, !isLabelling else { return }
+        lastError = nil
+        statusMessage = nil
+        modelProgress = nil
+        audio.setWritingEnabled(true)
+        isPaused = false
+        unfreezeElapsed()
+        startElapsedTimer()
+
+        guard SpeechPermissions.liveOnDeviceSpeechSupported else { return }
+        if let recognizer {
+            do {
+                try startSpeech(recognizer: recognizer)
+                scheduleSessionEnd()
+            } catch {
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
     func cancel() {
         pauseTask?.cancel()
         sessionEndTask?.cancel()
@@ -147,6 +204,8 @@ final class MeetingCaptureSession {
         }
         UIApplication.shared.isIdleTimerDisabled = false
         isRecording = false
+        isPaused = false
+        isLabelling = false
     }
 
     private func beginSimulatorPlaceholder() {
@@ -164,11 +223,11 @@ final class MeetingCaptureSession {
         SpeechPermissions.configureOnDevice(request)
         self.request = request
         audio.attach(request)
-        speechSessionOrigin = Date().timeIntervalSince(startedAt)
+        speechSessionOrigin = currentElapsed()
         splitter.beginSession(at: speechSessionOrigin)
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor in
-                guard let self, self.isRecording, self.speechEpoch == epoch else { return }
+                guard let self, self.isRecording, !self.isPaused, self.speechEpoch == epoch else { return }
                 if let result {
                     self.lastError = nil
                     self.applyRecognition(result)
@@ -190,7 +249,7 @@ final class MeetingCaptureSession {
     }
 
     private func applyRecognition(_ result: SFSpeechRecognitionResult) {
-        let elapsedNow = Date().timeIntervalSince(startedAt)
+        let elapsedNow = currentElapsed()
         splitter.ingest(sessionText: result.bestTranscription.formattedString, at: elapsedNow)
         let captions = result.bestTranscription.segments.compactMap { segment -> TimedCaption? in
             let text = segment.substring.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -223,7 +282,7 @@ final class MeetingCaptureSession {
                 await MainActor.run {
                     guard let self, !Task.isCancelled else { return }
                     self.modelProgress = 1
-                    self.statusMessage = "Speaker models ready. Labels are applied when you stop."
+                    self.statusMessage = "Speaker models ready. Labels are applied when you pause or stop."
                 }
             } catch {
                 await MainActor.run {
@@ -239,6 +298,12 @@ final class MeetingCaptureSession {
     private func relabelSpeakersIfPossible() async {
         guard DiarizationModels.isSupported else { return }
         guard let cafURL else { return }
+        isLabelling = true
+        defer {
+            isLabelling = false
+            statusMessage = isPaused ? "Paused" : nil
+            modelProgress = nil
+        }
         if let prepareTask {
             _ = await prepareTask.value
         }
@@ -270,7 +335,7 @@ final class MeetingCaptureSession {
         pauseTask?.cancel()
         pauseTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(SpeakerTurnSplitter.paragraphThreshold))
-            guard let self, !Task.isCancelled, self.isRecording else { return }
+            guard let self, !Task.isCancelled, self.isRecording, !self.isPaused else { return }
             self.splitter.commitOpen()
             self.liveTranscript = self.splitter.formattedBody
         }
@@ -281,17 +346,17 @@ final class MeetingCaptureSession {
         sessionEndTask?.cancel()
         sessionEndTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.restartAfter))
-            guard let self, !Task.isCancelled, self.isRecording else { return }
+            guard let self, !Task.isCancelled, self.isRecording, !self.isPaused else { return }
             self.request?.endAudio()
             try? await Task.sleep(for: .seconds(Self.restartFallback))
-            guard !Task.isCancelled, self.isRecording, !self.isRestartingSpeech else { return }
+            guard !Task.isCancelled, self.isRecording, !self.isPaused, !self.isRestartingSpeech else { return }
             self.queueSpeechRestart()
         }
     }
 
     /// Keep the CAF/m4a tap running. Only swap the Speech request/task.
     private func queueSpeechRestart() {
-        guard isRecording, recognizer != nil else { return }
+        guard isRecording, !isPaused, recognizer != nil else { return }
         guard !isRestartingSpeech else { return }
         isRestartingSpeech = true
         splitter.commitOpen()
@@ -304,7 +369,7 @@ final class MeetingCaptureSession {
         restartTask?.cancel()
         restartTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.restartHandshake))
-            guard let self, !Task.isCancelled, self.isRecording else {
+            guard let self, !Task.isCancelled, self.isRecording, !self.isPaused else {
                 self?.isRestartingSpeech = false
                 return
             }
@@ -313,7 +378,7 @@ final class MeetingCaptureSession {
     }
 
     private func completeSpeechRestart() {
-        guard isRecording, let recognizer else {
+        guard isRecording, !isPaused, let recognizer else {
             isRestartingSpeech = false
             return
         }
@@ -328,7 +393,7 @@ final class MeetingCaptureSession {
             restartTask?.cancel()
             restartTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(Self.restartBackoff))
-                guard let self, !Task.isCancelled, self.isRecording else { return }
+                guard let self, !Task.isCancelled, self.isRecording, !self.isPaused else { return }
                 self.queueSpeechRestart()
             }
         }
@@ -348,8 +413,8 @@ final class MeetingCaptureSession {
         elapsedTimer?.invalidate()
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                guard let self, self.isRecording else { return }
-                self.elapsed = Date().timeIntervalSince(self.startedAt)
+                guard let self, self.isRecording, !self.isPaused else { return }
+                self.elapsed = self.currentElapsed()
             }
         }
     }
@@ -367,9 +432,26 @@ final class MeetingCaptureSession {
         prepareTask = nil
         invalidateSpeech()
         audio.stop()
+        isPaused = false
+        isLabelling = false
         if deactivateAudio {
             SpeechPermissions.deactivateAudioSession()
         }
+    }
+
+    private func currentElapsed() -> TimeInterval {
+        let extra = runningSince.map { Date().timeIntervalSince($0) } ?? 0
+        return max(0, accumulatedElapsed + extra)
+    }
+
+    private func freezeElapsed() {
+        accumulatedElapsed = currentElapsed()
+        runningSince = nil
+        elapsed = accumulatedElapsed
+    }
+
+    private func unfreezeElapsed() {
+        runningSince = Date()
     }
 
     nonisolated static func formatElapsed(_ seconds: TimeInterval) -> String {

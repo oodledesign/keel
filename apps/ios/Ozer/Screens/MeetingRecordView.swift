@@ -7,28 +7,57 @@ struct MeetingRecordView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var capture = MeetingCaptureSession()
     @State private var isStopping = false
+    @State private var isPausing = false
     @State private var startError: String?
+    @State private var selectedClientId: String?
+    @State private var clients: [ClientItem] = []
+
+    private let api = NativeAPIClient()
+
+    private var showsClientPicker: Bool {
+        session.selectedWorkspace?.showsClients == true
+    }
+
+    private var selectedClient: ClientItem? {
+        guard let selectedClientId else { return nil }
+        return clients.first { $0.id == selectedClientId }
+    }
+
+    private var controlsLocked: Bool {
+        isStopping || isPausing || capture.isLabelling
+    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                Text(capture.isRecording ? capture.elapsedLabel : "0:00")
-                    .font(.system(size: 48, weight: .semibold, design: .rounded))
-                    .foregroundStyle(OzerPalette.plum)
-                    .monospacedDigit()
+                VStack(spacing: 6) {
+                    Text(capture.isRecording ? capture.elapsedLabel : "0:00")
+                        .font(.system(size: 48, weight: .semibold, design: .rounded))
+                        .foregroundStyle(OzerPalette.plum)
+                        .monospacedDigit()
+                    if capture.isPaused {
+                        Text("Paused")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(OzerPalette.plumMuted)
+                    }
+                }
 
                 ScrollView {
-                    Text(capture.liveTranscript.isEmpty ? "Live captions will land here." : capture.liveTranscript)
-                        .font(.body)
-                        .foregroundStyle(capture.liveTranscript.isEmpty ? OzerPalette.plumMuted : OzerPalette.plum)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
+                    SpeakerTranscriptView(
+                        turns: capture.displayTurns,
+                        emptyMessage: "Live captions will land here."
+                    )
+                    .padding(16)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
                         .stroke(OzerPalette.border, lineWidth: 1)
+                }
+
+                if showsClientPicker {
+                    clientPicker
                 }
 
                 if let status = capture.statusMessage {
@@ -50,16 +79,29 @@ struct MeetingRecordView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Button {
-                    Task { await stopAndSave() }
-                } label: {
-                    Text(isStopping ? "Saving…" : "Stop")
-                        .font(.body.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                HStack(spacing: 12) {
+                    Button {
+                        Task { await togglePause() }
+                    } label: {
+                        Text(pauseResumeTitle)
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .buttonStyle(OzerSecondaryButtonStyle())
+                    .disabled(controlsLocked || !capture.isRecording)
+
+                    Button {
+                        Task { await stopAndSave() }
+                    } label: {
+                        Text(isStopping ? "Saving…" : "Stop")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .buttonStyle(OzerPrimaryButtonStyle())
+                    .disabled(controlsLocked || !capture.isRecording)
                 }
-                .buttonStyle(OzerPrimaryButtonStyle())
-                .disabled(isStopping || !capture.isRecording)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 28)
@@ -74,11 +116,12 @@ struct MeetingRecordView: View {
                         dismiss()
                     }
                     .foregroundStyle(OzerPalette.plumMuted)
-                    .disabled(isStopping)
+                    .disabled(controlsLocked)
                 }
             }
             .task {
                 await start()
+                await loadClients()
             }
             .onDisappear {
                 if capture.isRecording {
@@ -86,6 +129,45 @@ struct MeetingRecordView: View {
                 }
             }
         }
+    }
+
+    private var pauseResumeTitle: String {
+        if isPausing || (capture.isLabelling && capture.isPaused) {
+            return "Pausing…"
+        }
+        return capture.isPaused ? "Resume" : "Pause"
+    }
+
+    private var clientPicker: some View {
+        Menu {
+            Button("No client") {
+                selectedClientId = nil
+            }
+            ForEach(clients) { client in
+                Button(client.displayName) {
+                    selectedClientId = client.id
+                }
+            }
+        } label: {
+            HStack {
+                Text(selectedClient?.displayName ?? "Link a client")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+                Spacer()
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plumMuted)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous)
+                    .stroke(OzerPalette.border, lineWidth: 1)
+            }
+        }
+        .accessibilityLabel("Client")
+        .accessibilityValue(selectedClient?.displayName ?? "None")
     }
 
     private func start() async {
@@ -96,6 +178,35 @@ struct MeetingRecordView: View {
         } catch {
             startError = error.localizedDescription
         }
+    }
+
+    private func loadClients() async {
+        guard showsClientPicker else { return }
+        do {
+            let token = try await session.validAccessToken()
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else { return }
+            let payload = try await api.clients(workspace: workspace, accessToken: token)
+            clients = payload.items
+        } catch let error as NativeAPIError where error == .unauthorized {
+            await session.handleUnauthorized()
+        } catch {
+            // Picker stays empty; the meeting can still be saved without a client.
+        }
+    }
+
+    private func togglePause() async {
+        if capture.isPaused {
+            do {
+                try await capture.resume()
+            } catch {
+                startError = error.localizedDescription
+            }
+            return
+        }
+        isPausing = true
+        defer { isPausing = false }
+        await capture.pause()
     }
 
     private func stopAndSave() async {
@@ -112,7 +223,10 @@ struct MeetingRecordView: View {
                 title: title,
                 transcript: body.isEmpty ? title : body,
                 duration: result.duration,
-                audioURL: result.audioURL
+                audioURL: result.audioURL,
+                turns: result.turns,
+                clientId: selectedClient?.id,
+                clientName: selectedClient?.displayName
             )
             if !workspace.isEmpty, !meeting.transcript.isEmpty {
                 _ = OfflineNoteQueue.shared.enqueue(
@@ -121,7 +235,8 @@ struct MeetingRecordView: View {
                     body: meeting.transcript,
                     tags: ["meeting"],
                     category: "meeting_transcript",
-                    meetingId: meeting.id
+                    meetingId: meeting.id,
+                    clientId: meeting.clientId
                 )
                 await session.flushOfflineWork()
             }

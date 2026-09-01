@@ -10,6 +10,9 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
     var durationSeconds: Int
     var audioFileName: String?
     var remoteNoteId: String?
+    var turns: [SpeakerTurn]
+    var clientId: String?
+    var clientName: String?
 
     var isWaitingToSync: Bool {
         remoteNoteId == nil
@@ -23,6 +26,57 @@ struct LocalMeeting: Codable, Identifiable, Equatable, Hashable {
 
     var durationLabel: String {
         MeetingCaptureSession.formatElapsed(TimeInterval(durationSeconds))
+    }
+
+    var displayTurns: [SpeakerTurn] {
+        if !turns.isEmpty { return turns }
+        return SpeakerTurnSplitter.parseTurns(from: transcript)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, workspace, title, transcript, createdAt, durationSeconds
+        case audioFileName, remoteNoteId, turns, clientId, clientName
+    }
+
+    init(
+        id: String,
+        workspace: String,
+        title: String,
+        transcript: String,
+        createdAt: String,
+        durationSeconds: Int,
+        audioFileName: String?,
+        remoteNoteId: String?,
+        turns: [SpeakerTurn] = [],
+        clientId: String? = nil,
+        clientName: String? = nil
+    ) {
+        self.id = id
+        self.workspace = workspace
+        self.title = title
+        self.transcript = transcript
+        self.createdAt = createdAt
+        self.durationSeconds = durationSeconds
+        self.audioFileName = audioFileName
+        self.remoteNoteId = remoteNoteId
+        self.turns = turns
+        self.clientId = clientId
+        self.clientName = clientName
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        workspace = try container.decode(String.self, forKey: .workspace)
+        title = try container.decode(String.self, forKey: .title)
+        transcript = try container.decode(String.self, forKey: .transcript)
+        createdAt = try container.decode(String.self, forKey: .createdAt)
+        durationSeconds = try container.decode(Int.self, forKey: .durationSeconds)
+        audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
+        remoteNoteId = try container.decodeIfPresent(String.self, forKey: .remoteNoteId)
+        turns = try container.decodeIfPresent([SpeakerTurn].self, forKey: .turns) ?? []
+        clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
+        clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
     }
 }
 
@@ -56,7 +110,10 @@ final class MeetingStore {
         title: String,
         transcript: String,
         duration: TimeInterval,
-        audioURL: URL?
+        audioURL: URL?,
+        turns: [SpeakerTurn] = [],
+        clientId: String? = nil,
+        clientName: String? = nil
     ) -> LocalMeeting {
         let id = audioURL?.deletingPathExtension().lastPathComponent ?? UUID().uuidString
         var fileName: String?
@@ -71,7 +128,10 @@ final class MeetingStore {
             createdAt: OfflineNoteQueue.isoString(from: Date()),
             durationSeconds: max(0, Int(duration.rounded())),
             audioFileName: fileName,
-            remoteNoteId: nil
+            remoteNoteId: nil,
+            turns: turns,
+            clientId: clientId,
+            clientName: clientName
         )
         meetings.removeAll { $0.id == id }
         meetings.insert(meeting, at: 0)

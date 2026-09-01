@@ -322,11 +322,14 @@ struct MeetingsListView: View {
     }
 
     static func subtitle(for meeting: LocalMeeting) -> String {
-        let date = NoteItem.relativeDateLabel(meeting.createdAt)
-        if let date, !date.isEmpty {
-            return "\(meeting.durationLabel) · \(date)"
+        var parts: [String] = [meeting.durationLabel]
+        if let client = meeting.clientName?.trimmingCharacters(in: .whitespacesAndNewlines), !client.isEmpty {
+            parts.append(client)
         }
-        return meeting.durationLabel
+        if let date = NoteItem.relativeDateLabel(meeting.createdAt), !date.isEmpty {
+            parts.append(date)
+        }
+        return parts.joined(separator: " · ")
     }
 }
 

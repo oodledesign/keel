@@ -56,6 +56,23 @@ struct SpeakerTurnSplitter {
         Self.format(turns: turns, liveText: openText, liveSpeaker: liveSpeaker)
     }
 
+    /// Committed paragraphs plus the open live caption, for pill UI.
+    var displayTurns: [SpeakerTurn] {
+        var result = turns
+        let live = openText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !live.isEmpty {
+            result.append(
+                SpeakerTurn(
+                    speaker: liveSpeaker,
+                    text: live,
+                    start: openStart ?? lastSpeechAt ?? 0,
+                    end: lastSpeechAt ?? openStart ?? 0
+                )
+            )
+        }
+        return result
+    }
+
     mutating func beginSession(at origin: TimeInterval) {
         sessionOrigin = origin
         committedSessionText = ""
@@ -68,13 +85,21 @@ struct SpeakerTurnSplitter {
         if trimmed.isEmpty { return }
 
         // On-device Speech rewrites the hypothesis and often drops the start ~1 min in.
-        // Never shrink committed paragraphs; freeze the peak and treat the short rewrite as new.
+        // Freeze the peak, but do not start a new paragraph from a suffix of what we just committed.
         if !currentSessionText.isEmpty, trimmed.count < currentSessionText.count,
-           !currentSessionText.hasPrefix(trimmed) {
+           !currentSessionText.hasPrefix(trimmed)
+        {
             commitOpen()
             committedSessionText = ""
             carriedText = ""
             currentSessionText = trimmed
+            if let last = turns.last, Self.isRedundant(trimmed, after: last.text) {
+                committedSessionText = trimmed
+                openText = ""
+                openStart = nil
+                lastSpeechAt = time
+                return
+            }
             openStart = time
         } else if trimmed.count >= currentSessionText.count {
             currentSessionText = trimmed
@@ -91,6 +116,13 @@ struct SpeakerTurnSplitter {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         } else {
             delta = stable
+        }
+
+        if let last = turns.last, Self.isRedundant(delta, after: last.text) {
+            committedSessionText = stable
+            openText = carriedText
+            lastSpeechAt = time
+            return
         }
 
         openText = [carriedText, delta]
@@ -122,6 +154,10 @@ struct SpeakerTurnSplitter {
         carriedText = ""
         openStart = nil
         guard !trimmed.isEmpty else { return }
+        if let last = turns.last, Self.isRedundant(trimmed, after: last.text) {
+            committedSessionText = currentSessionText
+            return
+        }
         turns.append(SpeakerTurn(speaker: Self.speakerName(for: 0), text: trimmed, start: start, end: end))
         committedSessionText = currentSessionText
     }
@@ -198,6 +234,63 @@ struct SpeakerTurnSplitter {
         return "Speaker \(index)"
     }
 
+    static func speakerIndex(from name: String) -> Int {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed == "Me" { return 0 }
+        if trimmed.hasPrefix("Speaker ") {
+            let rest = trimmed.dropFirst("Speaker ".count)
+            if let value = Int(rest) {
+                return value
+            }
+        }
+        return 0
+    }
+
+    /// True when incoming is a suffix, overlap, or near-duplicate of the last committed paragraph.
+    static func isRedundant(_ incoming: String, after existing: String) -> Bool {
+        let next = compacted(incoming)
+        let prev = compacted(existing)
+        if next.isEmpty { return true }
+        if prev.isEmpty { return false }
+        if prev == next { return true }
+        if prev.hasSuffix(next) { return true }
+        if prev.contains(next), next.count >= 16 { return true }
+
+        let overlap = wordOverlapCount(prev, next)
+        if overlap >= 4 { return true }
+        let nextWords = next.split(whereSeparator: \.isWhitespace)
+        if overlap >= 2, overlap == nextWords.count { return true }
+        return false
+    }
+
+    static func compacted(_ text: String) -> String {
+        var chars: [Character] = []
+        var lastSpace = false
+        for character in text.lowercased() {
+            if character.isLetter || character.isNumber {
+                chars.append(character)
+                lastSpace = false
+            } else if !lastSpace {
+                chars.append(" ")
+                lastSpace = true
+            }
+        }
+        return String(chars).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func wordOverlapCount(_ prev: String, _ next: String) -> Int {
+        let left = prev.split(whereSeparator: \.isWhitespace).map(String.init)
+        let right = next.split(whereSeparator: \.isWhitespace).map(String.init)
+        let maxLen = min(left.count, right.count)
+        guard maxLen > 0 else { return 0 }
+        for length in stride(from: maxLen, through: 1, by: -1) {
+            if Array(left.suffix(length)) == Array(right.prefix(length)) {
+                return length
+            }
+        }
+        return 0
+    }
+
     static func speakerIndex(for caption: TimedCaption, in spans: [DiarizedSpan]) -> Int {
         var bestIndex = 0
         var bestOverlap: TimeInterval = -1
@@ -266,10 +359,46 @@ struct SpeakerTurnSplitter {
         let line = body
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty && $0 != "Me" && !$0.hasPrefix("Speaker ") }
+            .first { !$0.isEmpty && !isSpeakerLabel($0) }
         if let line, !line.isEmpty {
             return String(line.prefix(80))
         }
         return fallback
+    }
+
+    static func isSpeakerLabel(_ line: String) -> Bool {
+        if line == "Me" { return true }
+        guard line.hasPrefix("Speaker ") else { return false }
+        let rest = line.dropFirst("Speaker ".count)
+        return !rest.isEmpty && rest.allSatisfy(\.isNumber)
+    }
+
+    /// Fallback for older meetings that only stored the formatted string.
+    static func parseTurns(from body: String) -> [SpeakerTurn] {
+        let blocks = body
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        var turns: [SpeakerTurn] = []
+        var speaker = "Me"
+        var paragraphs: [String] = []
+
+        func flush() {
+            let text = paragraphs.joined(separator: "\n\n")
+            guard !text.isEmpty else { return }
+            turns.append(SpeakerTurn(speaker: speaker, text: text))
+            paragraphs = []
+        }
+
+        for block in blocks {
+            if isSpeakerLabel(block) {
+                flush()
+                speaker = block
+            } else {
+                paragraphs.append(block)
+            }
+        }
+        flush()
+        return turns
     }
 }

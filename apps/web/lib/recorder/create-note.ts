@@ -74,6 +74,7 @@ export async function createRecorderNote(params: {
       .from('clients')
       .select('id')
       .eq('id', clientId)
+      .eq('account_id', accountId)
       .maybeSingle();
     if (clientError || !client) {
       throw new Error('Client not found');

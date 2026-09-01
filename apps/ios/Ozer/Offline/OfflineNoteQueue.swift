@@ -10,6 +10,46 @@ struct PendingNote: Codable, Identifiable, Equatable, Hashable {
     var category: String?
     var createdAt: String
     var meetingId: String?
+    var clientId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, workspace, title, body, tags, category, createdAt, meetingId, clientId
+    }
+
+    init(
+        id: String,
+        workspace: String,
+        title: String,
+        body: String,
+        tags: [String],
+        category: String?,
+        createdAt: String,
+        meetingId: String?,
+        clientId: String? = nil
+    ) {
+        self.id = id
+        self.workspace = workspace
+        self.title = title
+        self.body = body
+        self.tags = tags
+        self.category = category
+        self.createdAt = createdAt
+        self.meetingId = meetingId
+        self.clientId = clientId
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        workspace = try container.decode(String.self, forKey: .workspace)
+        title = try container.decode(String.self, forKey: .title)
+        body = try container.decode(String.self, forKey: .body)
+        tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        createdAt = try container.decode(String.self, forKey: .createdAt)
+        meetingId = try container.decodeIfPresent(String.self, forKey: .meetingId)
+        clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
+    }
 
     func asNoteItem() -> NoteItem {
         NoteItem(
@@ -21,7 +61,8 @@ struct PendingNote: Codable, Identifiable, Equatable, Hashable {
             updatedAt: createdAt,
             category: category,
             tags: tags,
-            isPendingSync: true
+            isPendingSync: true,
+            clientId: clientId
         )
     }
 }
@@ -56,7 +97,8 @@ final class OfflineNoteQueue {
         body: String,
         tags: [String] = [],
         category: String? = nil,
-        meetingId: String? = nil
+        meetingId: String? = nil,
+        clientId: String? = nil
     ) -> PendingNote {
         let note = PendingNote(
             id: UUID().uuidString,
@@ -66,7 +108,8 @@ final class OfflineNoteQueue {
             tags: tags,
             category: category,
             createdAt: Self.isoString(from: Date()),
-            meetingId: meetingId
+            meetingId: meetingId,
+            clientId: clientId
         )
         pending.insert(note, at: 0)
         persist()
@@ -93,6 +136,7 @@ final class OfflineNoteQueue {
                     workspace: note.workspace,
                     tags: note.tags,
                     category: note.category,
+                    clientId: note.clientId,
                     accessToken: accessToken
                 )
                 remove(id: note.id)

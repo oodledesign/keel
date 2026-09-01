@@ -226,6 +226,7 @@ actor NativeAPIClient {
         workspace: String,
         tags: [String] = [],
         category: String? = nil,
+        clientId: String? = nil,
         accessToken: String
     ) async throws -> NoteItem {
         var payload: [String: Any] = [
@@ -238,6 +239,9 @@ actor NativeAPIClient {
         }
         if let category, !category.isEmpty {
             payload["category"] = category
+        }
+        if let clientId, !clientId.isEmpty {
+            payload["client_id"] = clientId
         }
         let data = try await send(
             method: "POST",
@@ -859,11 +863,13 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
     var category: String?
     var tags: [String]
     var isPendingSync: Bool
+    var clientId: String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, body, workspace, category, tags
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case clientId = "client_id"
     }
 
     init(
@@ -875,7 +881,8 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         updatedAt: String?,
         category: String? = nil,
         tags: [String] = [],
-        isPendingSync: Bool = false
+        isPendingSync: Bool = false,
+        clientId: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -886,6 +893,7 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         self.category = category
         self.tags = tags
         self.isPendingSync = isPendingSync
+        self.clientId = clientId
     }
 
     init(from decoder: Decoder) throws {
@@ -903,6 +911,7 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         category = try container.decodeIfPresent(String.self, forKey: .category)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         isPendingSync = false
+        clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
     }
 
     var isMeetingNote: Bool {

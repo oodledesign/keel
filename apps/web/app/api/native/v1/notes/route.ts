@@ -20,6 +20,7 @@ const CreateNoteBodySchema = z.object({
   workspace: z.string().min(1),
   category: z.string().min(1).max(64).optional(),
   tags: z.array(z.string().min(1).max(40)).max(12).optional(),
+  client_id: z.string().uuid().optional().nullable(),
 });
 
 export async function GET(request: Request) {
@@ -65,6 +66,8 @@ export async function POST(request: Request) {
       title: parsed.data.title,
       category: parsed.data.category,
       tags: parsed.data.tags,
+      clientId: parsed.data.client_id,
+      client: auth.context.supabase,
     });
     return NextResponse.json(note);
   } catch (error) {

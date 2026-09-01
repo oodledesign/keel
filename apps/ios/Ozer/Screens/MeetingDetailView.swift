@@ -24,6 +24,11 @@ struct MeetingDetailView: View {
                     Text("\(current.durationLabel) · \(NoteItem.relativeDateLabel(current.createdAt) ?? "Just now")")
                         .font(.subheadline)
                         .foregroundStyle(OzerPalette.plumMuted)
+                    if let clientName = current.clientName, !clientName.isEmpty {
+                        Text(clientName)
+                            .font(.subheadline)
+                            .foregroundStyle(OzerPalette.plumMuted)
+                    }
                     if current.isWaitingToSync {
                         Text("Waiting to sync")
                             .font(.caption)
@@ -43,10 +48,7 @@ struct MeetingDetailView: View {
                     .buttonStyle(OzerPrimaryButtonStyle())
                 }
 
-                Text(current.transcript.isEmpty ? "No transcript was captured." : current.transcript)
-                    .font(.body)
-                    .foregroundStyle(current.transcript.isEmpty ? OzerPalette.plumMuted : OzerPalette.plum)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                SpeakerTranscriptView(turns: current.displayTurns)
             }
             .padding(16)
             .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))

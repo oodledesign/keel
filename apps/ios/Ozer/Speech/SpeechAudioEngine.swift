@@ -9,6 +9,7 @@ final class SpeechAudioEngine: @unchecked Sendable {
     private let lock = NSLock()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var audioFile: AVAudioFile?
+    private var writesAudio = true
 
     func start(writingTo cafURL: URL?) throws {
         let input = engine.inputNode
@@ -21,6 +22,7 @@ final class SpeechAudioEngine: @unchecked Sendable {
         lock.lock()
         request = nil
         audioFile = nil
+        writesAudio = true
         if let cafURL {
             do {
                 audioFile = try AVAudioFile(forWriting: cafURL, settings: format.settings)
@@ -35,7 +37,7 @@ final class SpeechAudioEngine: @unchecked Sendable {
             guard let self else { return }
             self.lock.lock()
             let request = self.request
-            let file = self.audioFile
+            let file = self.writesAudio ? self.audioFile : nil
             self.lock.unlock()
             request?.append(buffer)
             try? file?.write(from: buffer)
@@ -59,9 +61,17 @@ final class SpeechAudioEngine: @unchecked Sendable {
         lock.unlock()
     }
 
+    /// Keep the engine and CAF open. Pause only stops Speech + disk writes.
+    func setWritingEnabled(_ enabled: Bool) {
+        lock.lock()
+        writesAudio = enabled
+        lock.unlock()
+    }
+
     func stop() {
         lock.lock()
         request = nil
+        writesAudio = false
         lock.unlock()
         engine.inputNode.removeTap(onBus: 0)
         if engine.isRunning {
