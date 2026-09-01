@@ -18,6 +18,8 @@ const CreateNoteBodySchema = z.object({
   title: z.string().optional(),
   body: z.string().min(1),
   workspace: z.string().min(1),
+  category: z.string().min(1).max(64).optional(),
+  tags: z.array(z.string().min(1).max(40)).max(12).optional(),
 });
 
 export async function GET(request: Request) {
@@ -61,6 +63,8 @@ export async function POST(request: Request) {
       workspace,
       body: parsed.data.body,
       title: parsed.data.title,
+      category: parsed.data.category,
+      tags: parsed.data.tags,
     });
     return NextResponse.json(note);
   } catch (error) {

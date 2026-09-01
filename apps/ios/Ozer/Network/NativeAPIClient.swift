@@ -220,6 +220,39 @@ actor NativeAPIClient {
         }
     }
 
+    func createNote(
+        title: String,
+        body: String,
+        workspace: String,
+        tags: [String] = [],
+        category: String? = nil,
+        accessToken: String
+    ) async throws -> NoteItem {
+        var payload: [String: Any] = [
+            "title": title,
+            "body": body,
+            "workspace": workspace,
+        ]
+        if !tags.isEmpty {
+            payload["tags"] = tags
+        }
+        if let category, !category.isEmpty {
+            payload["category"] = category
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/notes",
+            queryItems: [],
+            body: payload,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NoteItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func notes(workspace: String, accessToken: String) async throws -> NotesPayload {
         let data = try await send(
             method: "GET",
@@ -823,9 +856,12 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
     var workspace: String?
     var createdAt: String?
     var updatedAt: String?
+    var category: String?
+    var tags: [String]
+    var isPendingSync: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, title, body, workspace
+        case id, title, body, workspace, category, tags
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -836,7 +872,10 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         body: String,
         workspace: String?,
         createdAt: String?,
-        updatedAt: String?
+        updatedAt: String?,
+        category: String? = nil,
+        tags: [String] = [],
+        isPendingSync: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -844,6 +883,9 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         self.workspace = workspace
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.category = category
+        self.tags = tags
+        self.isPendingSync = isPendingSync
     }
 
     init(from decoder: Decoder) throws {
@@ -858,6 +900,14 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         workspace = try container.decodeIfPresent(String.self, forKey: .workspace)
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        isPendingSync = false
+    }
+
+    var isMeetingNote: Bool {
+        if category == "meeting_transcript" { return true }
+        return tags.contains { $0.caseInsensitiveCompare("meeting") == .orderedSame }
     }
 
     /// Explicit title, else first non-empty body line, else “Untitled”.

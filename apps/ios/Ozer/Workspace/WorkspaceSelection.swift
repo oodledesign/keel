@@ -116,9 +116,23 @@ extension NativeWorkspace {
         }
     }
 
+    /// In-room meetings on business / work / commercial / surveyor. Not personal or family.
+    var showsMeetings: Bool {
+        if isPersonalAccount { return false }
+        switch profile {
+        case "work_design", "work_property", "commercial_property", "building_surveyor":
+            true
+        default:
+            false
+        }
+    }
+
     /// Menu body for the selected space. Workspaces themselves stay in the picker.
     var menuScreens: [AppScreen] {
         var screens: [AppScreen] = [.home, .tasks, .notes]
+        if showsMeetings {
+            screens.append(.meetings)
+        }
         if showsPeople {
             screens.append(.people)
         }
