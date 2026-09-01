@@ -9,10 +9,25 @@ const DOMAIN_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
 const LOCAL_PART_RE = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 
+const SUBDOMAIN_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+export const DEFAULT_SENDING_SUBDOMAIN = 'mail';
+
+export const DEFAULT_SENDING_LOCAL_PART = 'mail';
+
+export const DEFAULT_MAIL_FROM_SUBDOMAIN = 'bounce';
+
 export const DEFAULT_SENDING_LOCAL_PARTS = [
+  'mail',
   'listings',
   'hello',
+] as const;
+
+export const DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS = [
   'mail',
+  'listings',
+  'hello',
+  'go',
 ] as const;
 
 export type DefaultSendingLocalPart =
@@ -56,11 +71,72 @@ export function normalizeSendingLocalPart(input: string): string {
 
   if (!LOCAL_PART_RE.test(value) || value.length > 64) {
     throw new SendingDomainError(
-      'Use a simple From name such as listings, hello, or mail.',
+      'Use a simple From name such as mail, listings, or hello.',
     );
   }
 
   return value;
+}
+
+export function normalizeSendingSubdomain(
+  input: string | null | undefined,
+): string | null {
+  if (input == null) {
+    return null;
+  }
+
+  const value = input.trim().toLowerCase();
+
+  if (!value) {
+    return null;
+  }
+
+  if (!SUBDOMAIN_RE.test(value)) {
+    throw new SendingDomainError(
+      'Use a simple subdomain such as mail, listings, or go — or choose apex.',
+    );
+  }
+
+  return value;
+}
+
+export function resolveSendingHost(
+  apex: string,
+  subdomain: string | null | undefined,
+): string {
+  const label = subdomain?.trim().toLowerCase();
+  if (!label) {
+    return apex;
+  }
+
+  return `${label}.${apex}`;
+}
+
+export function resolveMailFromHost(
+  sendingHost: string,
+  mailFromSubdomain = DEFAULT_MAIL_FROM_SUBDOMAIN,
+): string {
+  return `${mailFromSubdomain}.${sendingHost}`;
+}
+
+export function formatSendingFromAddress(input: {
+  localPart: string;
+  domain: string;
+  sendingSubdomain?: string | null;
+}): string {
+  return `${input.localPart}@${resolveSendingHost(input.domain, input.sendingSubdomain)}`;
+}
+
+export function dnsHostRelativeToApex(fqdn: string, apex: string): string {
+  if (fqdn === apex) {
+    return '@';
+  }
+
+  if (fqdn.endsWith(`.${apex}`)) {
+    return fqdn.slice(0, -(apex.length + 1));
+  }
+
+  return fqdn;
 }
 
 export function emailDomainOf(email: string): string | null {

@@ -71,6 +71,7 @@ export const addSendingDomainAction = enhanceAction(
         domain: data.domain,
         userId: user.id,
         localPart: data.localPart,
+        sendingSubdomain: data.sendingSubdomain,
       });
 
       logger.info({ ...ctx, domain: result.domain }, 'Sending domain created');

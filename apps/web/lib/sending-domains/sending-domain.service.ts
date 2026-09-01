@@ -8,17 +8,23 @@ import {
 
 import { type SendingDnsRecord, buildSendingDnsRecords } from './dns-records';
 import {
+  DEFAULT_MAIL_FROM_SUBDOMAIN,
+  DEFAULT_SENDING_LOCAL_PART,
+  DEFAULT_SENDING_SUBDOMAIN,
   SendingDomainError,
   normalizeSendingDomain,
   normalizeSendingLocalPart,
+  normalizeSendingSubdomain,
   overallVerificationStatus,
+  resolveMailFromHost,
+  resolveSendingHost,
 } from './domain';
 import {
   ACCOUNT_SENDING_DOMAINS_TABLE,
   type SendingDomainRecord,
 } from './types';
 
-const MAIL_FROM_SUBDOMAIN = 'bounce';
+const MAIL_FROM_SUBDOMAIN = DEFAULT_MAIL_FROM_SUBDOMAIN;
 
 function isMissingTableError(
   error: { message?: string; code?: string } | null,
@@ -71,8 +77,23 @@ function mapRow(row: Record<string, unknown>): SendingDomainRecord {
     id: String(row.id),
     account_id: String(row.account_id),
     domain: String(row.domain),
+    sending_subdomain:
+      typeof row.sending_subdomain === 'string' && row.sending_subdomain.trim()
+        ? row.sending_subdomain.trim().toLowerCase()
+        : null,
+    sending_host:
+      typeof row.sending_host === 'string' && row.sending_host.trim()
+        ? row.sending_host.trim().toLowerCase()
+        : resolveSendingHost(
+            String(row.domain),
+            typeof row.sending_subdomain === 'string'
+              ? row.sending_subdomain
+              : null,
+          ),
     mail_from_subdomain: String(row.mail_from_subdomain ?? MAIL_FROM_SUBDOMAIN),
-    default_local_part: String(row.default_local_part ?? 'listings'),
+    default_local_part: String(
+      row.default_local_part ?? DEFAULT_SENDING_LOCAL_PART,
+    ),
     ses_identity_name: (row.ses_identity_name as string | null) ?? null,
     ses_identity_arn: (row.ses_identity_arn as string | null) ?? null,
     ses_tenant_name: (row.ses_tenant_name as string | null) ?? null,
@@ -163,11 +184,17 @@ class SendingDomainService {
     domain: string;
     userId: string;
     localPart?: string;
+    sendingSubdomain?: string | null;
   }): Promise<SendingDomainRecord> {
     await assertBusinessWorkspace(this.client, input.accountId);
     const domain = normalizeSendingDomain(input.domain);
+    const sendingSubdomain =
+      input.sendingSubdomain === undefined
+        ? DEFAULT_SENDING_SUBDOMAIN
+        : normalizeSendingSubdomain(input.sendingSubdomain);
+    const sendingHost = resolveSendingHost(domain, sendingSubdomain);
     const localPart = normalizeSendingLocalPart(
-      input.localPart?.trim() || 'listings',
+      input.localPart?.trim() || DEFAULT_SENDING_LOCAL_PART,
     );
 
     const existing = await this.getForAccount(input.accountId);
@@ -177,24 +204,14 @@ class SendingDomainService {
       );
     }
 
-    const { data: claimed, error: claimedError } = await fromTable(this.client)
-      .select('account_id')
-      .eq('domain', domain)
-      .maybeSingle();
+    await this.assertUnclaimedIdentity(input.accountId, domain, sendingHost);
 
-    if (claimedError) {
-      throw new SendingDomainError(claimedError.message);
-    }
-
-    if (claimed && String(claimed.account_id) !== input.accountId) {
-      throw new SendingDomainError(
-        'That domain is already connected to another workspace.',
-      );
-    }
-
-    const identity = await this.ses.createDomainIdentity(domain);
-    const mailFromDomain = `${MAIL_FROM_SUBDOMAIN}.${domain}`;
-    await this.ses.putMailFrom(domain, mailFromDomain);
+    const identity = await this.ses.createDomainIdentity(sendingHost);
+    const mailFromDomain = resolveMailFromHost(
+      sendingHost,
+      MAIL_FROM_SUBDOMAIN,
+    );
+    await this.ses.putMailFrom(sendingHost, mailFromDomain);
 
     const configurationSetName =
       process.env.SES_CONFIGURATION_SET?.trim() ||
@@ -208,6 +225,7 @@ class SendingDomainService {
 
     const dnsRecords = buildSendingDnsRecords({
       domain,
+      sendingHost,
       tokens: identity.tokens,
       region: this.ses.getRegion(),
       mailFromSubdomain: MAIL_FROM_SUBDOMAIN,
@@ -217,9 +235,10 @@ class SendingDomainService {
       .insert({
         account_id: input.accountId,
         domain,
+        sending_subdomain: sendingSubdomain,
         mail_from_subdomain: MAIL_FROM_SUBDOMAIN,
         default_local_part: localPart,
-        ses_identity_name: domain,
+        ses_identity_name: sendingHost,
         ses_identity_arn: identity.identityArn,
         ses_tenant_name: tenantName,
         ses_configuration_set: configurationSetName,
@@ -247,13 +266,80 @@ class SendingDomainService {
     return mapRow(data as Record<string, unknown>);
   }
 
+  private async assertUnclaimedIdentity(
+    accountId: string,
+    apex: string,
+    sendingHost: string,
+  ) {
+    await this.assertUnclaimedField(accountId, 'domain', apex, 'domain');
+
+    if (sendingHost !== apex) {
+      await this.assertUnclaimedField(
+        accountId,
+        'domain',
+        sendingHost,
+        'domain',
+      );
+    }
+
+    await this.assertUnclaimedField(
+      accountId,
+      'ses_identity_name',
+      sendingHost,
+      'host',
+    );
+    await this.assertUnclaimedField(
+      accountId,
+      'sending_host',
+      sendingHost,
+      'host',
+      { ignoreMissingColumn: true },
+    );
+  }
+
+  private async assertUnclaimedField(
+    accountId: string,
+    field: 'domain' | 'ses_identity_name' | 'sending_host',
+    value: string,
+    kind: 'domain' | 'host',
+    options?: { ignoreMissingColumn?: boolean },
+  ) {
+    const { data, error } = await fromTable(this.client)
+      .select('account_id')
+      .eq(field, value)
+      .maybeSingle();
+
+    if (error) {
+      if (
+        options?.ignoreMissingColumn &&
+        (isMissingTableError(error) ||
+          /sending_host|column/i.test(error.message ?? ''))
+      ) {
+        return;
+      }
+      throw new SendingDomainError(error.message);
+    }
+
+    if (data && String(data.account_id) !== accountId) {
+      throw new SendingDomainError(
+        kind === 'domain'
+          ? 'That domain is already connected to another workspace.'
+          : 'That sending host is already connected to another workspace.',
+      );
+    }
+  }
+
   async refreshStatus(accountId: string): Promise<SendingDomainRecord | null> {
     const existing = await this.getForAccount(accountId);
     if (!existing) {
       return null;
     }
 
-    const snapshot = await this.ses.getDomainIdentity(existing.domain);
+    const sendingHost =
+      existing.ses_identity_name ||
+      existing.sending_host ||
+      resolveSendingHost(existing.domain, existing.sending_subdomain);
+    const snapshot = await this.ses.getDomainIdentity(sendingHost);
     const dkimStatus = snapshot.dkimStatus || 'pending';
     const mailFromStatus = snapshot.mailFromStatus || 'pending';
     const verificationStatus = overallVerificationStatus({
@@ -265,6 +351,7 @@ class SendingDomainService {
       : existing.dkim_tokens;
     const dnsRecords = buildSendingDnsRecords({
       domain: existing.domain,
+      sendingHost,
       tokens,
       region: this.ses.getRegion(),
       mailFromSubdomain: existing.mail_from_subdomain || MAIL_FROM_SUBDOMAIN,
@@ -367,8 +454,13 @@ class SendingDomainService {
         await this.ses.deleteTenant(existing.ses_tenant_name);
       }
 
-      if (existing.domain) {
-        await this.ses.deleteIdentity(existing.domain);
+      const identityName =
+        existing.ses_identity_name ||
+        existing.sending_host ||
+        resolveSendingHost(existing.domain, existing.sending_subdomain);
+
+      if (identityName) {
+        await this.ses.deleteIdentity(identityName);
       }
     } catch (cleanupError) {
       return {

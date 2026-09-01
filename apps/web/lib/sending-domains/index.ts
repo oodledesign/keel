@@ -1,12 +1,21 @@
 export {
+  DEFAULT_MAIL_FROM_SUBDOMAIN,
+  DEFAULT_SENDING_LOCAL_PART,
   DEFAULT_SENDING_LOCAL_PARTS,
+  DEFAULT_SENDING_SUBDOMAIN,
+  DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS,
   SendingDomainError,
+  dnsHostRelativeToApex,
   emailDomainOf,
   extractEmailAddress,
+  formatSendingFromAddress,
   isSendingDomainVerified,
   normalizeSendingDomain,
   normalizeSendingLocalPart,
+  normalizeSendingSubdomain,
   overallVerificationStatus,
+  resolveMailFromHost,
+  resolveSendingHost,
 } from './domain';
 export { buildSendingDnsRecords, type SendingDnsRecord } from './dns-records';
 export {

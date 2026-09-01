@@ -1,3 +1,5 @@
+import { dnsHostRelativeToApex, resolveMailFromHost } from './domain';
+
 export type SendingDnsRecord = {
   type: 'CNAME' | 'MX' | 'TXT';
   host: string;
@@ -9,23 +11,30 @@ export type SendingDnsRecord = {
 
 export function buildSendingDnsRecords(input: {
   domain: string;
+  sendingHost?: string;
   tokens: string[];
   region: string;
   mailFromSubdomain: string;
 }): SendingDnsRecord[] {
-  const mailFromHost = input.mailFromSubdomain.trim().toLowerCase();
+  const apex = input.domain;
+  const sendingHost = (input.sendingHost ?? apex).trim().toLowerCase();
+  const mailFromFqdn = resolveMailFromHost(
+    sendingHost,
+    input.mailFromSubdomain.trim().toLowerCase(),
+  );
+
   const records: SendingDnsRecord[] = input.tokens.map((token) => ({
     type: 'CNAME',
-    host: `${token}._domainkey`,
-    name: `${token}._domainkey.${input.domain}`,
+    host: dnsHostRelativeToApex(`${token}._domainkey.${sendingHost}`, apex),
+    name: `${token}._domainkey.${sendingHost}`,
     value: `${token}.dkim.amazonses.com`,
     purpose: 'dkim',
   }));
 
   records.push({
     type: 'MX',
-    host: mailFromHost,
-    name: `${mailFromHost}.${input.domain}`,
+    host: dnsHostRelativeToApex(mailFromFqdn, apex),
+    name: mailFromFqdn,
     value: `10 feedback-smtp.${input.region}.amazonses.com`,
     purpose: 'mail_from_mx',
     priority: 10,
@@ -33,8 +42,8 @@ export function buildSendingDnsRecords(input: {
 
   records.push({
     type: 'TXT',
-    host: mailFromHost,
-    name: `${mailFromHost}.${input.domain}`,
+    host: dnsHostRelativeToApex(mailFromFqdn, apex),
+    name: mailFromFqdn,
     value: 'v=spf1 include:amazonses.com ~all',
     purpose: 'mail_from_spf',
   });

@@ -4,6 +4,8 @@ export type SendingDomainRecord = {
   id: string;
   account_id: string;
   domain: string;
+  sending_subdomain: string | null;
+  sending_host: string;
   mail_from_subdomain: string;
   default_local_part: string;
   ses_identity_name: string | null;

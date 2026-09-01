@@ -1,12 +1,15 @@
 import {
   emailDomainOf,
   extractEmailAddress,
+  formatSendingFromAddress,
   isSendingDomainVerified,
+  resolveSendingHost,
 } from './domain';
 import type { ResolvedWorkspaceMailFrom } from './types';
 
 export type SendingDomainFromInput = {
   domain: string;
+  sending_subdomain?: string | null;
   default_local_part: string;
   dkim_status: string;
   mail_from_status: string;
@@ -27,7 +30,10 @@ function isOnUnverifiedCustomDomain(
     return false;
   }
 
-  return emailDomainOf(email) === sendingDomain.domain;
+  return (
+    emailDomainOf(email) ===
+    resolveSendingHost(sendingDomain.domain, sendingDomain.sending_subdomain)
+  );
 }
 
 export function getPlatformSesFrom(
@@ -49,7 +55,11 @@ export function resolveWorkspaceMailFrom(input: {
     input.brandContactEmail?.trim() || input.proposedFromEmail?.trim() || null;
 
   if (input.sendingDomain && isSendingDomainVerified(input.sendingDomain)) {
-    const fromEmail = `${input.sendingDomain.default_local_part}@${input.sendingDomain.domain}`;
+    const fromEmail = formatSendingFromAddress({
+      localPart: input.sendingDomain.default_local_part,
+      domain: input.sendingDomain.domain,
+      sendingSubdomain: input.sendingDomain.sending_subdomain,
+    });
     const fromName = accountName;
 
     return {

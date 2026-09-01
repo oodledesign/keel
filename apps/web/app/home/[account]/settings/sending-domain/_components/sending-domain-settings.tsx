@@ -12,11 +12,17 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
+  DEFAULT_SENDING_LOCAL_PART,
   DEFAULT_SENDING_LOCAL_PARTS,
+  DEFAULT_SENDING_SUBDOMAIN,
+  DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS,
   type SendingDomainRecord,
+  formatSendingFromAddress,
+  normalizeSendingDomain,
 } from '~/lib/sending-domains';
 import { workspaceBtnPrimary } from '~/lib/workspace-ui';
 
@@ -44,6 +50,50 @@ function statusBadgeClass(status: SendingDomainRecord['verification_status']) {
   return 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
 }
 
+function chipClass(active: boolean) {
+  return cn(
+    'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+    active
+      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+      : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+  );
+}
+
+function previewApex(input: string) {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return 'your-domain.co.uk';
+  }
+
+  try {
+    return normalizeSendingDomain(trimmed);
+  } catch {
+    return trimmed
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '')
+      .replace(/^www\./, '');
+  }
+}
+
+function previewFromAddress(input: {
+  apex: string;
+  useApex: boolean;
+  subdomain: string;
+  localPart: string;
+}) {
+  const domain = previewApex(input.apex);
+  const sendingSubdomain = input.useApex
+    ? null
+    : input.subdomain.trim().toLowerCase() || DEFAULT_SENDING_SUBDOMAIN;
+
+  return formatSendingFromAddress({
+    localPart: input.localPart,
+    domain,
+    sendingSubdomain,
+  });
+}
+
 export function SendingDomainSettings({
   accountId,
   accountName,
@@ -57,8 +107,12 @@ export function SendingDomainSettings({
 }) {
   const router = useRouter();
   const [domainInput, setDomainInput] = useState('');
+  const [useApex, setUseApex] = useState(false);
+  const [subdomainInput, setSubdomainInput] = useState(
+    DEFAULT_SENDING_SUBDOMAIN,
+  );
   const [localPart, setLocalPart] = useState(
-    initialDomain?.default_local_part ?? 'listings',
+    initialDomain?.default_local_part ?? DEFAULT_SENDING_LOCAL_PART,
   );
   const [pending, startTransition] = useTransition();
   const [copiedHost, setCopiedHost] = useState<string | null>(null);
@@ -115,7 +169,7 @@ export function SendingDomainSettings({
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Send circulation and campaign email from your own domain, for example{' '}
           <span className="font-medium text-[var(--workspace-shell-text)]">
-            listings@bracketts.co.uk
+            mail@mail.bracketts.co.uk
           </span>
           . Invites and sign-in emails still come from Ozer.
         </p>
@@ -150,25 +204,88 @@ export function SendingDomainSettings({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="sending-subdomain">Sending subdomain</Label>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Default is <span className="font-medium">mail</span>. Choose Apex
+              to send from the domain itself.
+            </p>
+            <Input
+              id="sending-subdomain"
+              data-test="sending-subdomain-input"
+              value={useApex ? '' : subdomainInput}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                setUseApex(false);
+                setSubdomainInput(event.target.value);
+              }}
+              placeholder={useApex ? 'Apex — no subdomain' : 'mail'}
+              disabled={!canEdit || pending || useApex}
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  data-test={`sending-subdomain-${label}`}
+                  className={chipClass(!useApex && subdomainInput === label)}
+                  disabled={!canEdit || pending}
+                  onClick={() => {
+                    setUseApex(false);
+                    setSubdomainInput(label);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                data-test="sending-subdomain-apex"
+                className={chipClass(useApex)}
+                disabled={!canEdit || pending}
+                onClick={() => setUseApex(true)}
+              >
+                Apex
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="sending-local-part">Default From address</Label>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               Mail will come from {accountName} using this address once the
               domain is verified.
             </p>
-            <select
+            <div
               id="sending-local-part"
               data-test="sending-local-part"
-              className="border-input bg-background h-10 w-full max-w-xs rounded-md border px-3 text-sm"
-              value={localPart}
-              onChange={(event) => setLocalPart(event.target.value)}
-              disabled={!canEdit || pending}
+              className="flex flex-wrap gap-1.5"
             >
               {DEFAULT_SENDING_LOCAL_PARTS.map((part) => (
-                <option key={part} value={part}>
-                  {part}@{domainInput.trim() || 'your-domain.co.uk'}
-                </option>
+                <button
+                  key={part}
+                  type="button"
+                  data-test={`sending-local-part-${part}`}
+                  className={chipClass(localPart === part)}
+                  disabled={!canEdit || pending}
+                  onClick={() => setLocalPart(part)}
+                >
+                  {part}
+                </button>
               ))}
-            </select>
+            </div>
+            <p
+              data-test="sending-from-preview"
+              className="text-sm font-medium text-[var(--workspace-shell-text)]"
+            >
+              {previewFromAddress({
+                apex: domainInput,
+                useApex,
+                subdomain: subdomainInput,
+                localPart,
+              })}
+            </p>
           </div>
 
           {canEdit ? (
@@ -182,10 +299,15 @@ export function SendingDomainSettings({
                   await addSendingDomainAction({
                     accountId,
                     domain: domainInput,
+                    sendingSubdomain: useApex
+                      ? null
+                      : subdomainInput.trim() || DEFAULT_SENDING_SUBDOMAIN,
                     localPart:
                       localPart as (typeof DEFAULT_SENDING_LOCAL_PARTS)[number],
                   });
                   setDomainInput('');
+                  setUseApex(false);
+                  setSubdomainInput(DEFAULT_SENDING_SUBDOMAIN);
                 }, 'Domain added. Add the DNS records at your host.')
               }
             >
@@ -233,7 +355,9 @@ export function SendingDomainSettings({
           onRemove={() =>
             run(async () => {
               await removeSendingDomainAction({ accountId });
-              setLocalPart('listings');
+              setLocalPart(DEFAULT_SENDING_LOCAL_PART);
+              setUseApex(false);
+              setSubdomainInput(DEFAULT_SENDING_SUBDOMAIN);
             }, 'Sending domain removed')
           }
         />
@@ -271,7 +395,12 @@ function ConnectedDomain({
   onTest: () => void;
   onRemove: () => void;
 }) {
-  const fromAddress = `${domain.default_local_part}@${domain.domain}`;
+  const fromAddress = formatSendingFromAddress({
+    localPart: domain.default_local_part,
+    domain: domain.domain,
+    sendingSubdomain: domain.sending_subdomain,
+  });
+  const sendingHost = domain.sending_host || domain.domain;
 
   return (
     <div className="grid gap-5">
@@ -279,8 +408,13 @@ function ConnectedDomain({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              {domain.domain}
+              {sendingHost}
             </p>
+            {sendingHost !== domain.domain ? (
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Apex {domain.domain}
+              </p>
+            ) : null}
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               {domain.verification_status === 'verified'
                 ? `${accountName} <${fromAddress}>`
@@ -418,19 +552,26 @@ function ConnectedDomain({
             Recipients see {accountName} as the sender name.
           </p>
         </div>
-        <select
-          id="connected-local-part"
-          className="border-input bg-background h-10 w-full max-w-xs rounded-md border px-3 text-sm"
-          value={localPart}
-          onChange={(event) => onLocalPartChange(event.target.value)}
-          disabled={!canEdit || pending}
-        >
+        <div id="connected-local-part" className="flex flex-wrap gap-1.5">
           {DEFAULT_SENDING_LOCAL_PARTS.map((part) => (
-            <option key={part} value={part}>
-              {part}@{domain.domain}
-            </option>
+            <button
+              key={part}
+              type="button"
+              className={chipClass(localPart === part)}
+              disabled={!canEdit || pending}
+              onClick={() => onLocalPartChange(part)}
+            >
+              {part}
+            </button>
           ))}
-        </select>
+        </div>
+        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+          {formatSendingFromAddress({
+            localPart,
+            domain: domain.domain,
+            sendingSubdomain: domain.sending_subdomain,
+          })}
+        </p>
         {canEdit ? (
           <Button
             type="button"

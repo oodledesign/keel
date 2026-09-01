@@ -39,6 +39,36 @@ describe('resolveWorkspaceMailFrom', () => {
     expect(resolved.verifiedCustomDomain).toBe(true);
   });
 
+  it('uses the mail sending host for a verified From', () => {
+    const resolved = resolveWorkspaceMailFrom({
+      accountName: 'Bracketts',
+      sendingDomain: {
+        ...verifiedDomain,
+        sending_subdomain: 'mail',
+        default_local_part: 'mail',
+      },
+      platformFrom: 'Ozer <hello@ozer.so>',
+    });
+
+    expect(resolved.fromEmail).toBe('mail@mail.bracketts.co.uk');
+    expect(resolved.fromHeader).toBe('Bracketts <mail@mail.bracketts.co.uk>');
+  });
+
+  it('uses the apex when sending_subdomain is empty', () => {
+    const resolved = resolveWorkspaceMailFrom({
+      accountName: 'Bracketts',
+      sendingDomain: {
+        ...verifiedDomain,
+        sending_subdomain: null,
+        default_local_part: 'mail',
+      },
+      platformFrom: 'Ozer <hello@ozer.so>',
+    });
+
+    expect(resolved.fromEmail).toBe('mail@bracketts.co.uk');
+    expect(resolved.fromHeader).toBe('Bracketts <mail@bracketts.co.uk>');
+  });
+
   it('does not use an unverified custom From and falls back to the platform sender', () => {
     const resolved = resolveWorkspaceMailFrom({
       accountName: 'Bracketts',

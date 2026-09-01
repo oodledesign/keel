@@ -4,10 +4,14 @@ import {
   SendingDomainError,
   emailDomainOf,
   extractEmailAddress,
+  formatSendingFromAddress,
   isSendingDomainVerified,
   normalizeSendingDomain,
   normalizeSendingLocalPart,
+  normalizeSendingSubdomain,
   overallVerificationStatus,
+  resolveMailFromHost,
+  resolveSendingHost,
 } from './domain';
 
 describe('normalizeSendingDomain', () => {
@@ -35,6 +39,58 @@ describe('normalizeSendingDomain', () => {
       /valid domain/,
     );
     expect(() => normalizeSendingDomain('localhost')).toThrow(/valid domain/);
+  });
+});
+
+describe('sending host', () => {
+  it('defaults the sending host to mail.{apex}', () => {
+    expect(resolveSendingHost('bracketts.co.uk', 'mail')).toBe(
+      'mail.bracketts.co.uk',
+    );
+    expect(
+      formatSendingFromAddress({
+        localPart: 'mail',
+        domain: 'bracketts.co.uk',
+        sendingSubdomain: 'mail',
+      }),
+    ).toBe('mail@mail.bracketts.co.uk');
+    expect(resolveMailFromHost('mail.bracketts.co.uk')).toBe(
+      'bounce.mail.bracketts.co.uk',
+    );
+  });
+
+  it('treats null or empty subdomain as apex opt-out', () => {
+    expect(normalizeSendingSubdomain(null)).toBeNull();
+    expect(normalizeSendingSubdomain('')).toBeNull();
+    expect(normalizeSendingSubdomain('  ')).toBeNull();
+    expect(resolveSendingHost('bracketts.co.uk', null)).toBe('bracketts.co.uk');
+    expect(
+      formatSendingFromAddress({
+        localPart: 'mail',
+        domain: 'bracketts.co.uk',
+        sendingSubdomain: null,
+      }),
+    ).toBe('mail@bracketts.co.uk');
+    expect(resolveMailFromHost('bracketts.co.uk')).toBe(
+      'bounce.bracketts.co.uk',
+    );
+  });
+
+  it('accepts other single-label subdomains', () => {
+    expect(normalizeSendingSubdomain('Listings')).toBe('listings');
+    expect(normalizeSendingSubdomain('go')).toBe('go');
+    expect(resolveSendingHost('bracketts.co.uk', 'hello')).toBe(
+      'hello.bracketts.co.uk',
+    );
+  });
+
+  it('rejects multi-label or invalid subdomains', () => {
+    expect(() => normalizeSendingSubdomain('mail.listings')).toThrow(
+      SendingDomainError,
+    );
+    expect(() => normalizeSendingSubdomain('hello world')).toThrow(
+      SendingDomainError,
+    );
   });
 });
 
