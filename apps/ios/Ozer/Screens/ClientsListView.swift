@@ -37,7 +37,6 @@ struct ClientsListView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 88)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(OzerPalette.cream.ignoresSafeArea())
             .navigationTitle("Clients")
@@ -372,7 +371,6 @@ struct ClientDetailView: View {
             .padding(.top, 8)
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 88)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OzerPalette.cream.ignoresSafeArea())
         .navigationTitle("Client")

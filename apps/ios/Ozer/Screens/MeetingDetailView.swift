@@ -72,7 +72,6 @@ struct MeetingDetailView: View {
             .padding(.top, 8)
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 88)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OzerPalette.cream.ignoresSafeArea())
         .navigationTitle("Meeting")

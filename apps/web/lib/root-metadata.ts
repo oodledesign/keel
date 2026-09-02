@@ -47,4 +47,5 @@ export const generateRootViewport = (): Viewport => ({
     { media: '(prefers-color-scheme: light)', color: appConfig.themeColor },
     { media: '(prefers-color-scheme: dark)', color: appConfig.themeColorDark },
   ],
+  viewportFit: 'cover',
 });

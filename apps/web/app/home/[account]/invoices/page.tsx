@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
+import { cn } from '@kit/ui/utils';
+
+import { workspacePageBodyClassName } from '~/components/workspace-shell/workspace-shell-styles';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import {
@@ -56,7 +59,7 @@ async function InvoicesPage({ params }: InvoicesPageProps) {
         account={accountSlug}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <PageBody className={cn(workspacePageBodyClassName, 'py-4 md:py-6')}>
         <InvoicesPageContent
           accountSlug={accountSlug}
           accountId={accountId}

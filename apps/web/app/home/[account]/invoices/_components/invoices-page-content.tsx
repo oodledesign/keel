@@ -27,8 +27,10 @@ import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import type { DateRangeSelection } from '~/components/date-range/analytics-date-range-picker';
+import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
@@ -387,18 +389,21 @@ export function InvoicesPageContent({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="px-4 md:px-0">
-        <InvoicesIncomeSummary
-          summary={summary}
-          dateFrom={summaryDateFrom}
-          dateTo={summaryDateTo}
-          isLoading={summaryLoading}
-          onDateRangeApply={onSummaryDateRangeApply}
-        />
-      </div>
+    <div
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-4',
+        workspacePageContentClassName,
+      )}
+    >
+      <InvoicesIncomeSummary
+        summary={summary}
+        dateFrom={summaryDateFrom}
+        dateTo={summaryDateTo}
+        isLoading={summaryLoading}
+        onDateRangeApply={onSummaryDateRangeApply}
+      />
 
-      <div className="rounded-none border-y border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-sm md:rounded-2xl md:border">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] p-4">
           <div className="inline-flex flex-wrap gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
             {tabs.map((item) => (
@@ -486,7 +491,7 @@ export function InvoicesPageContent({
           </div>
         ) : null}
 
-        <div className="overflow-auto p-4">
+        <div className="overflow-x-auto p-4">
           {loading ? (
             <p className="text-[var(--workspace-shell-text-muted)]">Loading…</p>
           ) : tab === 'recurring' ? (

@@ -2,7 +2,9 @@ import { notFound, redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
+import { cn } from '@kit/ui/utils';
 
+import { workspacePageBodyClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { resolveWorkspaceTimezoneForAccount } from '~/lib/invoices/resolve-workspace-timezone';
@@ -104,7 +106,9 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
     null;
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 md:px-6 md:py-6">
+    <PageBody
+      className={cn(workspacePageBodyClassName, 'px-4 py-4 md:px-6 md:py-6')}
+    >
       <InvoiceEditIndyContent
         accountSlug={accountSlug}
         accountId={accountId}

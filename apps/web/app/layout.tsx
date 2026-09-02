@@ -70,7 +70,7 @@ function getRootClassName(theme: string, textSizeClass: string) {
   const fontsClassName = getFontsClassName(theme);
 
   return cn(
-    'bg-background min-h-screen overscroll-y-none antialiased',
+    'bg-background min-h-dvh overscroll-y-none antialiased',
     fontsClassName,
     textSizeClass,
   );

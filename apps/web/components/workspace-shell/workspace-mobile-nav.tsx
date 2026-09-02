@@ -393,7 +393,7 @@ export function WorkspaceMobileHeaderBar({
   return (
     <header
       className={cn(
-        'z-30 flex h-12 shrink-0 items-center gap-2 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 lg:hidden',
+        'z-30 flex h-[calc(3rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 pt-[env(safe-area-inset-top)] lg:hidden',
         className,
       )}
     >
