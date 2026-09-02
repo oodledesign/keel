@@ -58,6 +58,7 @@ import {
 import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingCoAgentsCard } from './listing-co-agents-card';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
+import { ListingLinkedInCard } from './listing-linkedin-card';
 import {
   MarketingReadinessCard,
   confirmPublishIfNotReady,
@@ -101,6 +102,9 @@ export function ListingMarketingEditor({
   coAgents,
   publications,
   media = [],
+  linkedInConnection = null,
+  linkedInPost = null,
+  linkedInLastPosted = null,
 }: {
   listing: CommercialListing;
   accountId: string;
@@ -112,6 +116,15 @@ export function ListingMarketingEditor({
   coAgents: ListingCoAgent[];
   publications: CommercialPortalPublication[];
   media?: import('../_lib/server/listings.service').CommercialListingMedia[];
+  linkedInConnection?:
+    | import('~/lib/commercial/linkedin-publishing/types').LinkedInOrgConnectionPublic
+    | null;
+  linkedInPost?:
+    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
+    | null;
+  linkedInLastPosted?:
+    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
+    | null;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const readOnly = !canEditDisposals;
@@ -991,6 +1004,17 @@ export function ListingMarketingEditor({
             </Button>
           </CardContent>
         </Card>
+
+        <ListingLinkedInCard
+          listing={listing}
+          accountId={accountId}
+          accountSlug={accountSlug}
+          media={media}
+          publications={publications}
+          connection={linkedInConnection}
+          initialPost={linkedInPost}
+          lastPosted={linkedInLastPosted}
+        />
       </aside>
     </div>
   );

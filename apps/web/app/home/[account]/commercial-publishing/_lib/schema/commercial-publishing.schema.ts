@@ -41,6 +41,12 @@ export const SetEachListingFeedInclusionSchema = AccountIdSchema.extend({
   enabled: z.boolean(),
 });
 
+export const DisconnectLinkedInOrgSchema = AccountIdSchema;
+
+export const SelectLinkedInOrgSchema = AccountIdSchema.extend({
+  orgId: z.string().min(1).max(64),
+});
+
 export const SaveRightmoveWorkspaceBranchesSchema = z.object({
   accountId: z.string().uuid(),
   branches: z

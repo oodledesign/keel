@@ -5,6 +5,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { ListingMarketingEditor } from '../../_components/listing-marketing-editor';
+import { loadListingLinkedInCardData } from '../../_lib/server/listing-linkedin.loader';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
@@ -20,16 +21,27 @@ async function ListingMarketingPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [publications, members, assignment, coAgents, teams, branches, media] =
-    await Promise.all([
-      service.listPublicationsForListing(listingId),
-      service.listAccountMembers(slug),
-      service.getListingAssignment(listingId, accountId, slug),
-      service.listCoAgents(listingId, accountId),
-      service.listWorkspaceTeams(accountId),
-      loadAccountBranches(accountId),
-      service.listMedia(listingId),
-    ]);
+  const [
+    publications,
+    members,
+    assignment,
+    coAgents,
+    teams,
+    branches,
+    media,
+    linkedIn,
+  ] = await Promise.all([
+    service.listPublicationsForListing(listingId),
+    service.listAccountMembers(slug),
+    service.getListingAssignment(listingId, accountId, slug),
+    service.listCoAgents(listingId, accountId),
+    service.listWorkspaceTeams(accountId),
+    loadAccountBranches(accountId),
+    service.listMedia(listingId),
+    loadListingLinkedInCardData(accountId, listingId),
+  ]);
+
+  const mediaWithUrls = await service.withSignedMediaUrls(media);
 
   return (
     <ListingMarketingEditor
@@ -46,7 +58,10 @@ async function ListingMarketingPage({ params }: PageProps) {
       assignment={assignment}
       coAgents={coAgents}
       publications={publications}
-      media={media}
+      media={mediaWithUrls}
+      linkedInConnection={linkedIn.connection}
+      linkedInPost={linkedIn.draft}
+      linkedInLastPosted={linkedIn.lastPosted}
     />
   );
 }

@@ -74,6 +74,7 @@ export const OzerAIFeature = {
   admin_email_marketing: 'admin_email_marketing',
   commercial_requirement_draft: 'commercial_requirement_draft',
   commercial_listing_marketing_copy: 'commercial_listing_marketing_copy',
+  commercial_listing_linkedin_post: 'commercial_listing_linkedin_post',
   commercial_match_explain: 'commercial_match_explain',
   commercial_match_triage: 'commercial_match_triage',
   commercial_match_outreach: 'commercial_match_outreach',
@@ -488,6 +489,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     credits: 3,
     batchable: false,
     maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  commercial_listing_linkedin_post: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 1024,
     structuredOutput: true,
   },
   commercial_match_explain: {
