@@ -196,6 +196,7 @@ export function ListingLinkedInCard({
   const previewMediaId =
     overlayFirst && !readOnly ? (firstSelected?.id ?? null) : null;
 
+  // Server-compose a JPEG preview when the first selected photo changes.
   useEffect(() => {
     if (!previewMediaId) return;
     let cancelled = false;

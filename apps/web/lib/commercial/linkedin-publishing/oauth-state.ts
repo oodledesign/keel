@@ -1,4 +1,11 @@
+import 'server-only';
+
 import { createHmac, timingSafeEqual } from 'crypto';
+
+import {
+  decryptIgToken,
+  encryptIgToken,
+} from '~/lib/instagram-autoreply/token-crypto';
 
 export type LinkedInOrgOAuthStatePayload = {
   accountId: string;
@@ -77,6 +84,7 @@ export function verifyLinkedInOrgOAuthState(
 }
 
 export type PendingLinkedInOrgs = {
+  accountId: string;
   accessToken: string;
   refreshToken: string | null;
   expiresAt: string | null;
@@ -85,8 +93,15 @@ export type PendingLinkedInOrgs = {
 };
 
 export function signPendingLinkedInOrgs(payload: PendingLinkedInOrgs): string {
+  const sealed = {
+    ...payload,
+    accessToken: encryptIgToken(payload.accessToken),
+    refreshToken: payload.refreshToken
+      ? encryptIgToken(payload.refreshToken)
+      : null,
+  };
   return signLinkedInOrgOAuthState({
-    accountId: Buffer.from(JSON.stringify(payload)).toString('base64url'),
+    accountId: Buffer.from(JSON.stringify(sealed)).toString('base64url'),
     userId: 'pending-orgs',
     exp: payload.exp,
     returnPath: '/pending',
@@ -102,10 +117,20 @@ export function verifyPendingLinkedInOrgs(
     const parsed = JSON.parse(
       Buffer.from(state.accountId, 'base64url').toString('utf8'),
     ) as PendingLinkedInOrgs;
-    if (!Array.isArray(parsed.orgs) || typeof parsed.accessToken !== 'string') {
+    if (
+      !Array.isArray(parsed.orgs) ||
+      typeof parsed.accessToken !== 'string' ||
+      typeof parsed.accountId !== 'string'
+    ) {
       return null;
     }
-    return parsed;
+    return {
+      ...parsed,
+      accessToken: decryptIgToken(parsed.accessToken),
+      refreshToken: parsed.refreshToken
+        ? decryptIgToken(parsed.refreshToken)
+        : null,
+    };
   } catch {
     return null;
   }

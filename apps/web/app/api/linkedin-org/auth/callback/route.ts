@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
     }
 
     const pending = signPendingLinkedInOrgs({
+      accountId: payload.accountId,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresAt: expiresAtIso(tokens.expiresIn),

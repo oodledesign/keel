@@ -1,3 +1,5 @@
+import 'server-only';
+
 import {
   LINKEDIN_API_VERSION,
   LINKEDIN_REST_BASE,

@@ -466,6 +466,9 @@ export const selectLinkedInOrgAction = enhanceAction(
     if (!pending) {
       throw new Error('LinkedIn page selection expired. Connect again.');
     }
+    if (pending.accountId !== input.accountId) {
+      throw new Error('LinkedIn page selection does not match this workspace');
+    }
 
     const org = pending.orgs.find(
       (item) =>
