@@ -86,6 +86,7 @@ function brochureData(
       address: '27/29 High Street, Tunbridge Wells, Kent, TN1 1UU',
       phone: '01892 526111',
       email: 'info@bracketts.co.uk',
+      shopfrontUrl: null,
     },
     ...overrides,
   };
@@ -186,6 +187,15 @@ describe('buildAmenities', () => {
 });
 
 describe('buildBrochureDocument', () => {
+  it('defaults website and slideshow brochure buttons on', () => {
+    expect(DEFAULT_BROCHURE_DISPLAY_OPTIONS.showWebsiteListingButton).toBe(
+      true,
+    );
+    expect(DEFAULT_BROCHURE_DISPLAY_OPTIONS.showSlideshowBrochureButton).toBe(
+      true,
+    );
+  });
+
   it('includes branch text on the contact page even with zero agents', () => {
     const doc = buildBrochureDocument(brochureData(), {
       orientation: 'landscape',
@@ -198,6 +208,27 @@ describe('buildBrochureDocument', () => {
     );
     expect(text(contact!.slots, 'branchPhone')).toBe('01892 526111');
     expect(text(contact!.slots, 'branchEmail')).toBe('info@bracketts.co.uk');
+  });
+
+  it('stores key points without hyphen prefixes', () => {
+    const doc = buildBrochureDocument(
+      brochureData({
+        listing: listing({
+          description:
+            'A compact lock-up shop in Crowborough town centre. '.repeat(20),
+        }),
+      }),
+      {
+        orientation: 'landscape',
+        templateId: 'classic',
+      },
+    );
+    const description = doc.pages.find(
+      (page) => page.layoutId === 'description_highlights',
+    );
+    expect(text(description!.slots, 'highlights')).toBe(
+      'Town centre\nNew lease',
+    );
   });
 
   it('packs landscape classic interiors into photo_grid_2 instead of full-bleed pages', () => {

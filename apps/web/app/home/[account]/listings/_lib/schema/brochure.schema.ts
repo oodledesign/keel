@@ -129,6 +129,8 @@ export const BrochureDisplayOptionsSchema = z.object({
   showServiceCharge: z.boolean().optional(),
   showEstateCharge: z.boolean().optional(),
   showReducedPrice: z.boolean().optional(),
+  showWebsiteListingButton: z.boolean().optional(),
+  showSlideshowBrochureButton: z.boolean().optional(),
 });
 
 export const BrochurePdfQuerySchema = z.object({
@@ -165,6 +167,14 @@ export const BrochurePdfQuerySchema = z.object({
     .optional()
     .transform((v) => (v == null ? undefined : v === '1')),
   showReducedPrice: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+  showWebsiteListingButton: z
+    .enum(['0', '1'])
+    .optional()
+    .transform((v) => (v == null ? undefined : v === '1')),
+  showSlideshowBrochureButton: z
     .enum(['0', '1'])
     .optional()
     .transform((v) => (v == null ? undefined : v === '1')),

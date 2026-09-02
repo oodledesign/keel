@@ -101,7 +101,12 @@ export const publishListingBrochurePdf = enhanceAction(
       templateId: saved?.templateId ?? input.templateId,
       document: saved,
       display: saved
-        ? { showReducedPrice: input.display?.showReducedPrice }
+        ? {
+            showReducedPrice: input.display?.showReducedPrice,
+            showWebsiteListingButton: input.display?.showWebsiteListingButton,
+            showSlideshowBrochureButton:
+              input.display?.showSlideshowBrochureButton,
+          }
         : input.display,
     });
 

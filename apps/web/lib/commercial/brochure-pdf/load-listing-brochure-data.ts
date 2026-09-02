@@ -3,6 +3,7 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import {
   DEFAULT_BRAND_ACCENT,
   DEFAULT_BRAND_PRIMARY,
@@ -145,6 +146,9 @@ const LISTING_SELECT = [
   'location_copy',
   'key_points',
   'account_branch_id',
+  'website_url',
+  'brochure_share_token',
+  'brochure_share_enabled',
 ].join(', ');
 
 /**
@@ -209,7 +213,9 @@ export async function loadListingBrochureData(
       .order('created_at', { ascending: true }),
     client
       .from('account_branches')
-      .select('id, name, address, phone, email, is_default, sort_order')
+      .select(
+        'id, name, address, phone, email, is_default, sort_order, shopfront_url',
+      )
       .eq('account_id', listing.accountId)
       .order('sort_order', { ascending: true }),
     listing.latitude != null && listing.longitude != null
@@ -384,6 +390,7 @@ export async function loadListingBrochureData(
     phone: string | null;
     email: string | null;
     is_default: boolean | null;
+    shopfront_url?: string | null;
   }>;
   const listingBranch = listingBranchId
     ? branches.find((item) => item.id === listingBranchId)
@@ -399,7 +406,27 @@ export async function loadListingBrochureData(
     address: pickedBranch?.address?.trim() || brandContact.address,
     phone: pickedBranch?.phone?.trim() || brandContact.phone,
     email: pickedBranch?.email?.trim() || brandContact.email,
+    shopfrontUrl: pickedBranch?.shopfront_url?.trim() || null,
   };
+
+  const listingRow = row as unknown as Record<string, unknown>;
+  const websiteListingUrl =
+    (listingRow.website_url as string | null | undefined)?.trim() || null;
+  const brochureToken =
+    (listingRow.brochure_share_token as string | null | undefined)?.trim() ||
+    null;
+  const brochureEnabled = Boolean(listingRow.brochure_share_enabled);
+  let slideshowBrochureUrl: string | null = null;
+  if (brochureEnabled && brochureToken) {
+    try {
+      slideshowBrochureUrl = new URL(
+        `/share/brochure/${brochureToken}`,
+        getAppSiteOrigin(),
+      ).toString();
+    } catch {
+      slideshowBrochureUrl = `/share/brochure/${brochureToken}`;
+    }
+  }
 
   return {
     token: '',
@@ -411,5 +438,7 @@ export async function loadListingBrochureData(
     floorplans: media.filter((m) => m.mediaType === 'floorplan'),
     branch,
     nearbyAmenities,
+    websiteListingUrl,
+    slideshowBrochureUrl,
   };
 }

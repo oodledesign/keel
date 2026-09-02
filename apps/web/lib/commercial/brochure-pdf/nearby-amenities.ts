@@ -17,17 +17,21 @@ export {
   formatAmenityDistanceMiles,
   formatNearbyAmenityLabel,
   isDummyLocalAreaAmenity,
+  isThinNearbyAmenityList,
+  isTownCentreAmenity,
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
-const MAX_AMENITIES = 6;
+const MAX_AMENITIES = 8;
 const MAX_DISTANCE_KM = 12;
+const POI_LIMIT = 5;
 
 const POI_SEARCHES = [
-  { query: 'railway station', suffix: 'station' },
-  { query: 'supermarket', suffix: null },
-  { query: 'school', suffix: null },
-  { query: 'hospital', suffix: null },
+  { query: 'railway station', suffix: 'station', limit: 1 },
+  { query: 'supermarket', suffix: null, limit: 3 },
+  { query: 'hospital', suffix: null, limit: 1 },
+  { query: 'school', suffix: null, limit: 2 },
+  { query: 'park', suffix: null, limit: 1 },
 ] as const;
 
 function mapboxToken(): string | null {
@@ -70,17 +74,21 @@ type MapboxFeature = {
   center?: [number, number];
 };
 
-async function searchNearbyPoi(
+async function searchNearbyPois(
   query: string,
   origin: { latitude: number; longitude: number },
   token: string,
-): Promise<{ name: string; km: number } | null> {
+  limit: number,
+): Promise<Array<{ name: string; km: number }>> {
   const url = new URL(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   );
   url.searchParams.set('access_token', token);
   url.searchParams.set('country', 'GB');
-  url.searchParams.set('limit', '1');
+  url.searchParams.set(
+    'limit',
+    String(Math.min(POI_LIMIT, Math.max(1, limit))),
+  );
   url.searchParams.set('types', 'poi');
   url.searchParams.set('proximity', `${origin.longitude},${origin.latitude}`);
 
@@ -89,30 +97,35 @@ async function searchNearbyPoi(
     cache: 'no-store',
     signal: AbortSignal.timeout(8000),
   });
-  if (!res.ok) return null;
+  if (!res.ok) return [];
 
   const body = (await res.json()) as { features?: MapboxFeature[] };
-  const feature = body.features?.[0];
-  const center = feature?.center;
-  if (!center || center.length < 2) return null;
+  const hits: Array<{ name: string; km: number }> = [];
 
-  const [longitude, latitude] = center;
-  if (
-    typeof latitude !== 'number' ||
-    typeof longitude !== 'number' ||
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude)
-  ) {
-    return null;
+  for (const feature of body.features ?? []) {
+    const center = feature.center;
+    if (!center || center.length < 2) continue;
+
+    const [longitude, latitude] = center;
+    if (
+      typeof latitude !== 'number' ||
+      typeof longitude !== 'number' ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) {
+      continue;
+    }
+
+    const km = haversineKm(origin, { latitude, longitude });
+    if (km > MAX_DISTANCE_KM) continue;
+
+    const name =
+      feature.text?.trim() || feature.place_name?.split(',')[0]?.trim();
+    if (!name) continue;
+    hits.push({ name, km });
   }
 
-  const km = haversineKm(origin, { latitude, longitude });
-  if (km > MAX_DISTANCE_KM) return null;
-
-  const name =
-    feature.text?.trim() || feature.place_name?.split(',')[0]?.trim();
-  if (!name) return null;
-  return { name, km };
+  return hits;
 }
 
 /**
@@ -136,31 +149,34 @@ export async function fetchNearbyBrochureAmenities(input: {
       latitude: input.latitude,
       longitude: input.longitude,
     };
-    const hits = await Promise.all(
+    const groups = await Promise.all(
       POI_SEARCHES.map(async (search) => {
-        const hit = await searchNearbyPoi(search.query, origin, token);
-        if (!hit) return null;
-        const name = humanPoiName(hit.name, search.suffix);
-        if (!name) return null;
-        return formatNearbyAmenityLabel(
-          name,
-          formatAmenityDistanceMiles(hit.km),
+        const hits = await searchNearbyPois(
+          search.query,
+          origin,
+          token,
+          search.limit,
         );
+        return hits
+          .map((hit) => {
+            const name = humanPoiName(hit.name, search.suffix);
+            if (!name) return null;
+            return formatNearbyAmenityLabel(
+              name,
+              formatAmenityDistanceMiles(hit.km),
+            );
+          })
+          .filter((label): label is string => Boolean(label));
       }),
     );
 
-    const seen = new Set<string>();
-    const amenities: BrochureAmenityItem[] = [];
-    for (const label of hits) {
-      if (!label) continue;
-      const key = label.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      amenities.push({ label, index: amenities.length + 1 });
-      if (amenities.length >= MAX_AMENITIES) break;
-    }
+    const poiLabels = groups.flat();
+    if (poiLabels.length === 0) return fallback;
 
-    return amenities.length > 0 ? amenities : fallback;
+    return buildFallbackNearbyAmenities(input.town, poiLabels).slice(
+      0,
+      MAX_AMENITIES,
+    );
   } catch (err) {
     console.error(
       '[brochure-pdf] nearby amenities failed:',

@@ -138,6 +138,7 @@ export type Database = {
           name: string
           phone: string | null
           rightmove_branch_id: string | null
+          shopfront_url: string | null
           sort_order: number
           updated_at: string
         }
@@ -151,6 +152,7 @@ export type Database = {
           name: string
           phone?: string | null
           rightmove_branch_id?: string | null
+          shopfront_url?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -164,6 +166,7 @@ export type Database = {
           name?: string
           phone?: string | null
           rightmove_branch_id?: string | null
+          shopfront_url?: string | null
           sort_order?: number
           updated_at?: string
         }

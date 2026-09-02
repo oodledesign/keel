@@ -4,7 +4,7 @@ export type BrochureAmenityItem = {
 };
 
 const DUMMY_LOCAL_AREA_RE = /^local area\s*\(/i;
-const MAX_AMENITIES = 6;
+const MAX_AMENITIES = 8;
 
 export function isDummyLocalAreaAmenity(label: string): boolean {
   return DUMMY_LOCAL_AREA_RE.test(label.trim());
@@ -28,12 +28,54 @@ export function formatNearbyAmenityLabel(
   return `${trimmed} · ${distanceLabel}`;
 }
 
+const TOWN_CENTRE_RE = /town centre$/i;
+
+export function isTownCentreAmenity(label: string): boolean {
+  return TOWN_CENTRE_RE.test(label.trim());
+}
+
+/**
+ * True when the list is empty or only a town-centre / dummy line — i.e. we
+ * should still merge in Mapbox POIs when they exist.
+ */
+export function isThinNearbyAmenityList(
+  amenities: Array<{ label: string }> | null | undefined,
+): boolean {
+  if (!amenities?.length) return true;
+  const cleaned = amenities
+    .map((item) => item.label.trim())
+    .filter((label) => label && !isDummyLocalAreaAmenity(label));
+  if (cleaned.length === 0) return true;
+  return cleaned.every((label) => isTownCentreAmenity(label));
+}
+
 export function buildFallbackNearbyAmenities(
   town: string | null | undefined,
+  extraPois: Array<string | { label: string }> = [],
 ): BrochureAmenityItem[] {
-  const trimmed = town?.trim();
-  if (!trimmed) return [];
-  return [{ label: `${trimmed} town centre`, index: 1 }];
+  const items: BrochureAmenityItem[] = [];
+  const seen = new Set<string>();
+
+  const push = (label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed || isDummyLocalAreaAmenity(trimmed)) return;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({ label: trimmed, index: items.length + 1 });
+  };
+
+  const townName = town?.trim();
+  if (townName) {
+    push(`${townName} town centre`);
+  }
+
+  for (const poi of extraPois) {
+    if (items.length >= MAX_AMENITIES) break;
+    push(typeof poi === 'string' ? poi : poi.label);
+  }
+
+  return items;
 }
 
 export function sanitizeBrochureAmenities(

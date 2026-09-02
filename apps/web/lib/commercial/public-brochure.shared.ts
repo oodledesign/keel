@@ -26,6 +26,8 @@ export type BrochureBranch = {
   address: string | null;
   phone: string | null;
   email: string | null;
+  /** Public shopfront photo URL from workspace branch settings. */
+  shopfrontUrl?: string | null;
 };
 
 export type BrochureAmenity = {
@@ -86,6 +88,14 @@ export type PublicBrochureData = {
   nearbyAmenities?: BrochureAmenity[];
   /** Render-time reduced sash; also baked into the cover `reducedBadge` slot. */
   showReducedPrice?: boolean;
+  /** Public website listing URL (hidden when empty). */
+  websiteListingUrl?: string | null;
+  /** Ozer slideshow / online brochure share URL (hidden when empty). */
+  slideshowBrochureUrl?: string | null;
+  /** Render-time: include website listing button when a URL exists. Default true. */
+  showWebsiteListingButton?: boolean;
+  /** Render-time: include slideshow brochure button when a URL exists. Default true. */
+  showSlideshowBrochureButton?: boolean;
 };
 
 export function formatBrochureAddress(listing: BrochureListing): string {
