@@ -28,6 +28,7 @@ export type NativeNote = {
   category: string;
   tags: string[];
   client_id: string | null;
+  client_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -92,6 +93,7 @@ export function toNativeNote(input: {
   category?: string | null;
   tags?: string[] | null;
   clientId?: string | null;
+  clientName?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }): NativeNote {
@@ -106,6 +108,7 @@ export function toNativeNote(input: {
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0),
     client_id: input.clientId?.trim() || null,
+    client_name: input.clientName?.trim() || null,
     created_at: input.createdAt ?? now,
     updated_at: input.updatedAt ?? now,
   };

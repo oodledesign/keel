@@ -345,7 +345,8 @@ struct NotesListView: View {
         _ = noteQueue.enqueue(
             workspace: workspace,
             title: title,
-            body: body
+            body: body,
+            category: NoteCategory.defaultSlug
         )
         await session.flushOfflineWork()
         await load()

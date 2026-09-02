@@ -163,9 +163,9 @@ describe('listNativeNoteCategories', () => {
       label: 'Idea',
       is_custom: false,
     });
-    expect(items.some((item) => item.slug === NATIVE_MEETING_NOTE_CATEGORY)).toBe(
-      true,
-    );
+    expect(
+      items.some((item) => item.slug === NATIVE_MEETING_NOTE_CATEGORY),
+    ).toBe(true);
     expect(items.at(-1)).toEqual({
       slug: 'research',
       label: 'Research',
@@ -214,8 +214,28 @@ describe('updateNativeNote', () => {
     const clients = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: clientId,
+            display_name: 'Bracketts',
+            first_name: null,
+            last_name: null,
+            company_name: null,
+            client_type: null,
+          },
+        ],
+        error: null,
+      }),
       maybeSingle: vi.fn().mockResolvedValue({
-        data: { id: clientId },
+        data: {
+          id: clientId,
+          display_name: 'Bracketts',
+          first_name: null,
+          last_name: null,
+          company_name: null,
+          client_type: null,
+        },
         error: null,
       }),
     };
@@ -257,6 +277,7 @@ describe('updateNativeNote', () => {
       body: 'Scaffold is up',
       category: 'development',
       client_id: clientId,
+      client_name: 'Bracketts',
       workspace: studio.slug,
     });
   });

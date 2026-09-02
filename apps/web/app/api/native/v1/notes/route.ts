@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       new URL(request.url).searchParams.get('workspace'),
     );
     const [items, categories] = await Promise.all([
-      listNativeNotes(auth.context.userId, workspace),
+      listNativeNotes(auth.context.userId, workspace, auth.context.supabase),
       listNativeNoteCategories(auth.context.supabase, workspace),
     ]);
     return NextResponse.json({ items, categories });

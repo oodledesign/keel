@@ -123,7 +123,7 @@ extension NativeWorkspace {
     /// Clients on studio / surveyor / commercial property — not community.
     var showsClients: Bool {
         switch profile {
-        case "work_design", "commercial_property", "building_surveyor":
+        case "work_design", "work_property", "commercial_property", "building_surveyor":
             return true
         default:
             return false

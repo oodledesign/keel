@@ -102,6 +102,7 @@ describe('toNativeNote', () => {
       category: NATIVE_MEETING_NOTE_CATEGORY,
       tags: ['meeting'],
       client_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      client_name: null,
       created_at: '2026-09-01T12:00:00.000Z',
       updated_at: '2026-09-01T12:00:00.000Z',
     });
@@ -116,5 +117,18 @@ describe('toNativeNote', () => {
         workspace: 'oodle',
       }).client_id,
     ).toBeNull();
+  });
+
+  it('passes client_name through when provided', () => {
+    expect(
+      toNativeNote({
+        id: 'note-3',
+        title: 'Note',
+        body: 'Hello',
+        workspace: 'oodle',
+        clientId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        clientName: 'Bracketts',
+      }).client_name,
+    ).toBe('Bracketts');
   });
 });

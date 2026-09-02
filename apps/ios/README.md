@@ -123,7 +123,7 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tags?", "client_id?", "created_at", "updated_at" }], "categories": [{ "slug", "label", "is_custom" }] }`. `categories` is the web picker: Idea, Future, Development, Meeting transcript, plus any custom slugs on that account. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens the editor (title, body, category, optional client). Plus creates a typed note; the mic still dictates.
+The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tags?", "client_id?", "client_name?", "created_at", "updated_at" }], "categories": [{ "slug", "label", "is_custom" }] }`. `categories` is the web picker: Idea, Future, Development, Meeting transcript, plus any custom slugs on that account. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens the editor (title, body, category, optional client). Plus creates a typed note; the mic still dictates.
 
 ```
 POST {OZER_API_BASE}/api/native/v1/notes
