@@ -47,6 +47,7 @@ enum NoteMarkdown {
             if raw.trimmingCharacters(in: .whitespaces).isEmpty {
                 continue
             }
+            // Keep `## Me` / `## Speaker 1` as H2 — do not flatten transcript labels.
             if raw.hasPrefix("## ") {
                 blocks.append(
                     NoteBlock(kind: .heading2, runs: parseInlines(String(raw.dropFirst(3))))

@@ -441,10 +441,22 @@ struct SpeakerTurnSplitter {
     }
 
     static func isSpeakerLabel(_ line: String) -> Bool {
-        if line == "Me" { return true }
-        guard line.hasPrefix("Speaker ") else { return false }
-        let rest = line.dropFirst("Speaker ".count)
+        let name = speakerName(fromLabel: line)
+        if name == "Me" { return true }
+        guard name.hasPrefix("Speaker ") else { return false }
+        let rest = name.dropFirst("Speaker ".count)
         return !rest.isEmpty && rest.allSatisfy(\.isNumber)
+    }
+
+    /// `Me`, `Speaker 1`, or the same labels written as note markdown (`## Me`).
+    static func speakerName(fromLabel line: String) -> String {
+        var name = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.hasPrefix("## ") {
+            name = String(name.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+        } else if name.hasPrefix("# ") {
+            name = String(name.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+        }
+        return name
     }
 
     /// Fallback for older meetings that only stored the formatted string.
@@ -467,7 +479,7 @@ struct SpeakerTurnSplitter {
         for block in blocks {
             if isSpeakerLabel(block) {
                 flush()
-                speaker = block
+                speaker = speakerName(fromLabel: block)
             } else {
                 paragraphs.append(block)
             }

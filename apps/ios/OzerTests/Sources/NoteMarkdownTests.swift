@@ -43,6 +43,27 @@ enum NoteMarkdownTests {
                 && blocks[1].plainText == "Speaker 1: How are you"
         }
 
+        check("H2 speaker labels stay headings, not body paragraphs") {
+            let source = """
+            ## Me
+            Hello there
+            ## Speaker 1
+            How are you
+            """
+            let once = NoteMarkdown.roundTrip(source)
+            let blocks = NoteMarkdown.parse(once)
+            blocks.count == 4
+                && blocks[0].kind == .heading2
+                && blocks[0].plainText == "Me"
+                && blocks[1].kind == .paragraph
+                && blocks[1].plainText == "Hello there"
+                && blocks[2].kind == .heading2
+                && blocks[2].plainText == "Speaker 1"
+                && blocks[3].kind == .paragraph
+                && blocks[3].plainText == "How are you"
+                && NoteMarkdown.roundTrip(once) == once
+        }
+
         check("blank markdown is blank") {
             NoteMarkdown.isBlank("")
                 && NoteMarkdown.isBlank("   \n\n")
