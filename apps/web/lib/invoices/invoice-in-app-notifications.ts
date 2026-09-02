@@ -2,7 +2,25 @@ import 'server-only';
 
 import pathsConfig from '~/config/paths.config';
 import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
+import { sendNativeInvoicePush } from '~/lib/native/apns';
 import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
+
+async function notifyInvoiceApns(input: {
+  accountId: string;
+  kind: 'paid' | 'overdue';
+  invoiceId: string;
+  invoiceNumber: string;
+  body: string;
+}) {
+  try {
+    await sendNativeInvoicePush(input);
+  } catch (error) {
+    console.warn('[invoice-apns] send failed', {
+      invoiceId: input.invoiceId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 function invoiceEditLink(accountSlug: string, invoiceId: string) {
   return pathsConfig.app.accountInvoiceEdit
@@ -34,10 +52,20 @@ export async function notifyInvoicePaidInApp(params: {
   const amount = formatWorkspaceMoney(params.totalPence, params.currency);
   const method = paymentMethodLabel(params.paymentMethod);
 
+  const body = `Invoice ${params.invoiceNumber} paid (${amount}) by ${params.clientName} via ${method}`;
+
   await createInAppNotification({
     accountId: params.accountId,
-    body: `Invoice ${params.invoiceNumber} paid (${amount}) by ${params.clientName} via ${method}`,
+    body,
     link: invoiceEditLink(params.accountSlug, params.invoiceId),
+  });
+
+  await notifyInvoiceApns({
+    accountId: params.accountId,
+    kind: 'paid',
+    invoiceId: params.invoiceId,
+    invoiceNumber: params.invoiceNumber,
+    body,
   });
 }
 
@@ -48,9 +76,11 @@ export async function notifyInvoiceViewedInApp(params: {
   invoiceNumber: string;
   clientName: string;
 }) {
+  const body = `${params.clientName} opened invoice ${params.invoiceNumber}`;
+
   await createInAppNotification({
     accountId: params.accountId,
-    body: `${params.clientName} opened invoice ${params.invoiceNumber}`,
+    body,
     link: invoiceEditLink(params.accountSlug, params.invoiceId),
   });
 }
@@ -71,10 +101,20 @@ export async function notifyInvoiceOverdueInApp(params: {
   });
   const amount = formatWorkspaceMoney(params.balancePence, params.currency);
 
+  const body = `Invoice ${params.invoiceNumber} for ${params.clientName} is overdue (${amount} due ${dueLabel})`;
+
   await createInAppNotification({
     accountId: params.accountId,
     type: 'warning',
-    body: `Invoice ${params.invoiceNumber} for ${params.clientName} is overdue (${amount} due ${dueLabel})`,
+    body,
     link: invoiceEditLink(params.accountSlug, params.invoiceId),
+  });
+
+  await notifyInvoiceApns({
+    accountId: params.accountId,
+    kind: 'overdue',
+    invoiceId: params.invoiceId,
+    invoiceNumber: params.invoiceNumber,
+    body,
   });
 }

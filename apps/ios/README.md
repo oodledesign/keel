@@ -103,6 +103,24 @@ The list is `{ "items": [{ "id", "title", "status", "due", "client_id", "client_
 
 The iPhone list searches the loaded rows (title and client name) as you type, and filters by due (All / Today / Overdue / Upcoming / No date) and status (Open / Done / All). Business workspaces add a client chip (all, no client, or one client from `/clients`). `?client=` is sent only for a specific client. Completing a task still works; Add stays in the toolbar. Filter state resets when the workspace changes.
 
+Home is a pocket dashboard (greeting, date, outstanding money, tasks due / overdue, recent notes, meetings, quick actions). It reads the expanded `/today` payload — not a flat dump of Mac Assistant items. “See all” and the money card switch Menu screens the same way the Menu does.
+
+## Invoices
+
+Studio / surveyor / commercial property (`work_design`, `commercial_property`, `building_surveyor`) get an **Invoices** item in the Menu. Personal and family do not. The list is read-only: outstanding header, open / overdue / paid chips, then rows. Detail shows client, status, dates, line summary, and **Open in Ozer** when the API returns a hosted or workspace URL. No create, edit, PDF, or Stripe checkout on the phone.
+
+```
+GET {OZER_API_BASE}/api/native/v1/invoices?workspace=<slug-or-uuid>&status=open|paid|overdue|all
+GET {OZER_API_BASE}/api/native/v1/invoices/{id}?workspace=<slug-or-uuid>
+GET {OZER_API_BASE}/api/native/v1/finances?workspace=<slug-or-uuid>
+```
+
+## Push (APNs)
+
+After sign-in the app asks for notification permission, then POSTs the device token to `/api/native/v1/devices`. Opening a paid / overdue invoice push lands on that invoice (`so.ozer.app://invoice/{id}` or `invoice_id` in the payload). There is no in-app notification settings screen — iOS system permission only.
+
+The Xcode project has the Push Notifications capability (`aps-environment` = development in Debug entitlements). Server send needs `APNS_KEY_ID` and `APNS_P8` (or `APNS_P8_PATH`) on the web app; see `apps/web/app/api/native/v1/README.md`. Do not commit a `.p8`.
+
 ```
 POST {OZER_API_BASE}/api/native/v1/tasks
 { "title", "due?", "client_id?", "workspace" }
@@ -206,13 +224,13 @@ Detail adds `contacts: [{ id, name, role, email, phone, is_primary }]`, scoped t
 
 ## Menu
 
-Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; Meetings on surveyor / studio / commercial spaces; People on personal / family; Clients on business profiles; Shopping stays a stub. Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
+Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; Meetings on surveyor / studio / commercial spaces; People on personal / family; Clients and Invoices on business profiles; Shopping stays a stub. Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
 
 ## Tab bar
 
 Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, People. Shopping is in the Menu and is still a navigation stub.
 
-Out of scope: PowerSync, camera, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoices, secrets, App Store submit, `WKWebView` of the web app.
+Out of scope: PowerSync, camera, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
 
 ## Monorepo
 

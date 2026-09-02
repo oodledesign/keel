@@ -7,6 +7,8 @@ enum AppScreen: Hashable {
     case people
     case clients
     /// Menu only — not one of the three tab-bar pin slots.
+    case invoices
+    /// Menu only — not one of the three tab-bar pin slots.
     case meetings
     /// Menu only — not one of the three tab-bar pin slots.
     case shopping
@@ -27,6 +29,7 @@ enum AppScreen: Hashable {
         case .notes: .notes
         case .people: .people
         case .clients: nil
+        case .invoices: nil
         case .meetings: nil
         case .shopping: .shopping
         }
@@ -39,6 +42,7 @@ enum AppScreen: Hashable {
         case .notes: "Notes"
         case .people: "People"
         case .clients: "Clients"
+        case .invoices: "Invoices"
         case .meetings: "Meetings"
         case .shopping: "Shopping"
         }
@@ -51,6 +55,7 @@ enum AppScreen: Hashable {
         case .notes: "note.text"
         case .people: "person.2"
         case .clients: "building.2"
+        case .invoices: "doc.text"
         case .meetings: "waveform"
         case .shopping: "cart"
         }

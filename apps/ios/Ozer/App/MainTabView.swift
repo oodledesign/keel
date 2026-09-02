@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @Environment(AppSession.self) private var session
     @State private var screen: AppScreen = .home
     @State private var menuOpen = false
     @State private var tabBar = WorkspaceTabBarState()
@@ -9,7 +10,7 @@ struct MainTabView: View {
         Group {
             switch screen {
             case .home:
-                HomeTodayView()
+                HomeTodayView(onOpen: { screen = $0 })
             case .tasks:
                 TasksListView()
             case .notes:
@@ -18,6 +19,8 @@ struct MainTabView: View {
                 PeopleListView()
             case .clients:
                 ClientsListView()
+            case .invoices:
+                InvoicesListView()
             case .meetings:
                 MeetingsListView()
             case .shopping:
@@ -39,6 +42,27 @@ struct MainTabView: View {
                 },
                 onClose: { menuOpen = false }
             )
+        }
+        .onChange(of: session.pendingScreen) { _, next in
+            if let next {
+                screen = next
+                session.clearPendingScreen()
+            }
+        }
+        .task {
+            await PushRegistration.registerIfNeeded(session: session)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .ozerDidReceiveDeviceToken)) { note in
+            guard let hex = note.object as? String else { return }
+            Task { await PushRegistration.register(token: hex, session: session) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .ozerDidReceiveInvoicePush)) { note in
+            guard let value = note.object as? String else { return }
+            if let url = URL(string: value), url.scheme == AppConfiguration.authCallbackScheme {
+                Task { await session.handleOpenURL(url) }
+            } else {
+                session.openInvoice(id: value)
+            }
         }
     }
 }

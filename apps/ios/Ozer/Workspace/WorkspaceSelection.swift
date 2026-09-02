@@ -130,6 +130,9 @@ extension NativeWorkspace {
         }
     }
 
+    /// Invoices / finances on the same business-like spaces as Clients.
+    var showsInvoices: Bool { showsClients }
+
     /// In-room meetings on business / work / commercial / surveyor. Not personal or family.
     var showsMeetings: Bool {
         if isPersonalAccount { return false }
@@ -168,6 +171,9 @@ extension NativeWorkspace {
         }
         if showsClients {
             screens.append(.clients)
+        }
+        if showsInvoices {
+            screens.append(.invoices)
         }
         screens.append(.shopping)
         return screens
