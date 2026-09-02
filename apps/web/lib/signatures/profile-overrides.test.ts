@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applySignatureProfileOverrides,
   directoryResetLabel,
+  directoryValueHint,
   isSignatureProfileFieldOverridden,
   normalizeSignatureOverride,
   resolveSignatureProfileField,
@@ -143,5 +144,12 @@ describe('directoryResetLabel', () => {
   it('names the connected directory', () => {
     expect(directoryResetLabel('microsoft')).toBe('Reset to Microsoft');
     expect(directoryResetLabel('google')).toBe('Reset to Google');
+  });
+});
+
+describe('directoryValueHint', () => {
+  it('names the connected directory', () => {
+    expect(directoryValueHint('microsoft')).toBe('Microsoft 365');
+    expect(directoryValueHint('google')).toBe('Google Workspace');
   });
 });

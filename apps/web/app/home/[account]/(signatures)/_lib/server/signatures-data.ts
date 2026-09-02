@@ -252,12 +252,17 @@ export async function loadDepartments(accountId: string): Promise<string[]> {
     throw new Error(error.message);
   }
 
-  const names = (data ?? []).flatMap((row) => [
+  const names = (
+    (data ?? []) as Array<{
+      department: string | null;
+      department_override: string | null;
+    }>
+  ).flatMap((row) => [
     String(row.department ?? '').trim(),
     String(row.department_override ?? '').trim(),
   ]);
 
-  return [...new Set(names)].filter(Boolean).sort((a, b) => a.localeCompare(b));
+  return [...new Set(names.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
 export type StaffListFilters = {

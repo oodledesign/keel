@@ -110,12 +110,13 @@ export function staffProfileOverridePatch(input: {
 }
 
 export function isSignatureProfileFieldOverridden(
-  directoryValue: string | null | undefined,
+  _directoryValue: string | null | undefined,
   override: string | null | undefined,
 ): boolean {
   return normalizeSignatureOverride(override) != null;
 }
 
+/** Directory-synced staff only; manual/CSV callers never show this control. */
 export function directoryResetLabel(source: string | null | undefined): string {
   if (source === 'google') {
     return 'Reset to Google';

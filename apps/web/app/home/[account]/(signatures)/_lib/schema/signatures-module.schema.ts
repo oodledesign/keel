@@ -227,7 +227,6 @@ export const updateStaffActionSchema = z.object({
 const bulkStaffRowSchema = z.object({
   staffId: z.string().uuid(),
   full_name: emptyToNull,
-  credentials: emptyToNull,
   job_title: emptyToNull,
   department: emptyToNull,
   phone_direct: emptyToNull,

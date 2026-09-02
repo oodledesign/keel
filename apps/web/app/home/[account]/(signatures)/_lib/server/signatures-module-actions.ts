@@ -380,14 +380,29 @@ export const bulkUpdateSignatureStaff = enhanceAction(
       throw new Error(existingError.message);
     }
 
-    const existingById = new Map(
-      (existingRows ?? []).map((row) => [
-        row.id as string,
+    type ExistingStaffProfile = {
+      source: string;
+      full_name: string | null;
+      job_title: string | null;
+      department: string | null;
+    };
+
+    const existingById = new Map<string, ExistingStaffProfile>(
+      (
+        (existingRows ?? []) as Array<{
+          id: string;
+          source: string;
+          full_name: string | null;
+          job_title: string | null;
+          department: string | null;
+        }>
+      ).map((row) => [
+        row.id,
         {
-          source: row.source as string,
-          full_name: (row.full_name as string | null) ?? null,
-          job_title: (row.job_title as string | null) ?? null,
-          department: (row.department as string | null) ?? null,
+          source: row.source,
+          full_name: row.full_name ?? null,
+          job_title: row.job_title ?? null,
+          department: row.department ?? null,
         },
       ]),
     );
@@ -428,7 +443,6 @@ export const bulkUpdateSignatureStaff = enhanceAction(
       const update = manualEntry
         ? {
             full_name: row.full_name,
-            credentials: row.credentials,
             job_title: row.job_title,
             department: row.department,
             phone_direct: row.phone_direct,
@@ -448,9 +462,10 @@ export const bulkUpdateSignatureStaff = enhanceAction(
               ? (branchCache.get(row.branch_id) ?? null)
               : null,
             signature_email: row.signature_email,
-            credentials: row.credentials,
             phone_direct: row.phone_direct,
             phone_mobile: row.phone_mobile,
+            // No explicit clear* flags: empty or directory-matching values
+            // store null so reset works by value equality.
             ...staffProfileOverridePatch({
               existing: {
                 full_name: existing.full_name,
