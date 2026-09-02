@@ -65,6 +65,14 @@ describe('normalizeNativeMeetingContent', () => {
       ),
     ).toBe('Me: Hello from the site\n\nSpeaker 1: Thanks');
   });
+
+  it('converts markdown H2 speaker headings into Speaker: lines', () => {
+    expect(
+      normalizeNativeMeetingContent(
+        '## Me\n\nWelcome to the show\n\n## Speaker 1\n\nhonour',
+      ),
+    ).toBe('Me: Welcome to the show\n\nSpeaker 1: honour');
+  });
 });
 
 describe('toNativeMeeting', () => {

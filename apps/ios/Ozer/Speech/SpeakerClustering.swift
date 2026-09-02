@@ -8,12 +8,19 @@ struct DiarizedSpan: Sendable, Equatable {
 
 /// Union-find plus centroid merge so overlapping windows of the same voice
 /// collapse, and a meeting cannot invent Speaker 11–18.
+///
+/// Thresholds are tight enough that two distinct interview voices stay as
+/// Me + Speaker 1. A 0.72 centroid merge was collapsing those into Me.
 enum SpeakerClustering {
     static let maxSpeakers = 6
-    static let clusterThreshold: Float = 0.55
-    static let mergeThreshold: Float = 0.72
+    /// Pairwise union only when nearby windows are clearly the same voice.
+    static let clusterThreshold: Float = 0.40
+    /// Merge centroids only while they still look like one speaker.
+    static let mergeThreshold: Float = 0.50
     /// Nearby windows only for the pairwise pass; later centroid merge joins the same voice across the meeting.
     static let pairWindow: TimeInterval = 20
+    /// One-word / leftover islands do not keep their own label.
+    static let minClusterDuration: TimeInterval = 1.2
 
     struct Observation: Equatable, Sendable {
         var embedding: [Float]
@@ -113,6 +120,14 @@ enum SpeakerClustering {
             union(pair.0, pair.1)
         }
 
+        absorbTinyClusters(
+            items: items,
+            root: root,
+            union: union,
+            uniqueRoots: uniqueRoots,
+            centroid: centroid
+        )
+
         // Items are time-sorted and union keeps the lower index, so the earliest
         // observation's cluster is always root 0 and remaps to Me.
         var firstSeen: [Int: Int] = [:]
@@ -142,6 +157,53 @@ enum SpeakerClustering {
             }
         }
         return merged
+    }
+
+    /// Fold leftover islands into the nearest substantial voice so a cough
+    /// or one-word window cannot become Speaker 3.
+    private static func absorbTinyClusters(
+        items: [Observation],
+        root: (Int) -> Int,
+        union: (Int, Int) -> Void,
+        uniqueRoots: () -> [Int],
+        centroid: ([Int]) -> [Int: [Float]]
+    ) {
+        func duration(of rootID: Int) -> TimeInterval {
+            items.indices.reduce(0) { total, index in
+                guard root(index) == rootID else { return total }
+                return total + max(0, items[index].end - items[index].start)
+            }
+        }
+
+        var guardCount = 0
+        while guardCount < items.count {
+            guardCount += 1
+            let roots = uniqueRoots()
+            guard roots.count > 1 else { return }
+            let substantial = roots.filter { duration(of: $0) >= minClusterDuration }
+            let tiny = roots.filter { duration(of: $0) < minClusterDuration }
+            guard !tiny.isEmpty, !substantial.isEmpty else { return }
+
+            let centers = centroid(roots)
+            var mergedAny = false
+            for small in tiny {
+                var best = Float.greatestFiniteMagnitude
+                var target: Int?
+                for big in substantial {
+                    guard let left = centers[small], let right = centers[big] else { continue }
+                    let distance = cosineDistance(left, right)
+                    if distance < best {
+                        best = distance
+                        target = big
+                    }
+                }
+                if let target, best <= mergeThreshold {
+                    union(small, target)
+                    mergedAny = true
+                }
+            }
+            if !mergedAny { return }
+        }
     }
 
     static func cosineDistance(_ a: [Float], _ b: [Float]) -> Float {

@@ -28,13 +28,15 @@ struct TimedCaption: Equatable {
     var text: String
 }
 
-/// Live captions stay on Me. Short pauses become paragraphs.
-/// Speaker labels come from embeddings after the meeting, not from silence.
+/// Live captions stay on Me. Speaker labels come from embeddings after the
+/// meeting. Saved note bodies use ATX H2 labels (`## Me`) so they are headings,
+/// not body copy. Pills still use the plain speaker name.
 struct SpeakerTurnSplitter {
     static let paragraphThreshold: TimeInterval = 2
     static let pauseThreshold: TimeInterval = paragraphThreshold
     static let liveTurnID = "__live__"
     static let minSpeakerRun: TimeInterval = 1
+    static let maxIslandWords = 2
 
     private(set) var turns: [SpeakerTurn] = []
     private(set) var captions: [TimedCaption] = []
@@ -96,7 +98,7 @@ struct SpeakerTurnSplitter {
         if didRewrite {
             commitOpen()
             currentSessionText = trimmed
-            if let last = turns.last, Self.isRelatedHypothesis(trimmed, after: last.text) {
+            if replaceLastTurn(with: trimmed, at: time) {
                 committedSessionText = trimmed
                 openText = ""
                 openStart = nil
@@ -139,11 +141,11 @@ struct SpeakerTurnSplitter {
         carriedText = ""
         openStart = nil
         guard !trimmed.isEmpty else { return }
-        if growLastTurn(with: trimmed, at: end) {
+        if replaceLastTurn(with: trimmed, at: end) {
             committedSessionText = currentSessionText
             return
         }
-        if let last = turns.last, Self.isRedundant(trimmed, after: last.text) {
+        if appendToLastTurn(trimmed, at: end) {
             committedSessionText = currentSessionText
             return
         }
@@ -153,7 +155,7 @@ struct SpeakerTurnSplitter {
 
     mutating func finish() -> String {
         commitOpen()
-        collapseNearDuplicates()
+        turns = Self.polish(turns)
         return Self.format(turns: turns, liveText: "", liveSpeaker: liveSpeaker)
     }
 
@@ -162,13 +164,10 @@ struct SpeakerTurnSplitter {
     mutating func applyDiarization(_ spans: [DiarizedSpan]) {
         commitOpen()
         guard !turns.isEmpty else { return }
-        if spans.isEmpty {
-            collapseNearDuplicates()
-            return
+        if !spans.isEmpty {
+            turns = turns.flatMap { Self.splitTurn($0, spans: spans) }
         }
-        turns = turns.flatMap { Self.splitTurn($0, spans: spans) }
-        collapseNearDuplicates()
-        mergeAdjacentSameSpeaker()
+        turns = Self.polish(turns)
     }
 
     static func splitTurn(_ turn: SpeakerTurn, spans: [DiarizedSpan]) -> [SpeakerTurn] {
@@ -254,11 +253,16 @@ struct SpeakerTurnSplitter {
         return "Speaker \(index)"
     }
 
+    static func speakerHeading(for name: String) -> String {
+        "## \(name)"
+    }
+
     static func speakerIndex(from name: String) -> Int {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed == "Me" { return 0 }
-        if trimmed.hasPrefix("Speaker ") {
-            let rest = trimmed.dropFirst("Speaker ".count)
+        let canonical = canonicalSpeakerName(from: name) ?? name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if canonical == "Me" { return 0 }
+        if canonical == "Them" { return 1 }
+        if canonical.hasPrefix("Speaker ") {
+            let rest = canonical.dropFirst("Speaker ".count)
             if let value = Int(rest) {
                 return value
             }
@@ -267,7 +271,8 @@ struct SpeakerTurnSplitter {
     }
 
     /// True when incoming is the same hypothesis: prefix/suffix either way,
-    /// first ~12 words, or high word overlap.
+    /// first ~12 words, or high word overlap. Also treats a later Speech
+    /// rewrite that swaps a word or adds a clause as the same pass.
     static func isRedundant(_ incoming: String, after existing: String) -> Bool {
         let next = compacted(incoming)
         let prev = compacted(existing)
@@ -282,17 +287,36 @@ struct SpeakerTurnSplitter {
         let prevWords = words(prev)
         let nextWords = words(next)
         let prefixCount = min(12, prevWords.count, nextWords.count)
-        if prefixCount >= 8, Array(prevWords.prefix(prefixCount)) == Array(nextWords.prefix(prefixCount)) {
+        if prefixCount >= 8, tokensMatch(prevWords.prefix(prefixCount), nextWords.prefix(prefixCount)) {
             return true
         }
 
-        let overlap = wordOverlapCount(prev, next)
+        let overlap = max(wordOverlapCount(prev, next), fuzzyWordOverlapCount(prevWords, nextWords))
         // Incoming is entirely a tail of the last paragraph — a repeat, not new speech.
         if overlap >= 2, overlap == nextWords.count { return true }
-        if prevWords.count >= 4, nextWords.count >= 4, jaccard(prevWords, nextWords) >= 0.62 {
-            return true
+        if prevWords.count >= 4, nextWords.count >= 4 {
+            if jaccard(prevWords, nextWords) >= 0.58 { return true }
+            if fuzzyOverlapRatio(prevWords, nextWords) >= 0.70 { return true }
         }
         return false
+    }
+
+    /// Near-duplicate Speech hypotheses, including a later pass that adds a
+    /// clause or swaps a word (`reference` / `reverence`).
+    static func isRelatedHypothesis(_ incoming: String, after existing: String) -> Bool {
+        if isRedundant(incoming, after: existing) { return true }
+        let prev = words(compacted(existing))
+        let next = words(compacted(incoming))
+        if prev.isEmpty || next.isEmpty { return false }
+        let overlap = max(
+            wordOverlapCount(compacted(existing), compacted(incoming)),
+            fuzzyWordOverlapCount(prev, next)
+        )
+        let smaller = min(prev.count, next.count)
+        if overlap >= 3, overlap * 2 >= smaller { return true }
+        let shared = Double(fuzzyOverlapCount(prev, next))
+        if smaller >= 4, shared / Double(smaller) >= 0.68 { return true }
+        return jaccard(prev, next) >= 0.32 || fuzzyOverlapRatio(prev, next) >= 0.52
     }
 
     static func shouldGrow(_ existing: String, into incoming: String) -> Bool {
@@ -325,7 +349,10 @@ struct SpeakerTurnSplitter {
             return tail.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        let overlap = wordOverlapCount(prev, next)
+        let overlap = max(
+            wordOverlapCount(prev, next),
+            fuzzyWordOverlapCount(frozenWords, nextWords)
+        )
         if overlap >= 2 {
             return incomingWords.dropFirst(overlap).map(\.text).joined(separator: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -390,6 +417,19 @@ struct SpeakerTurnSplitter {
     }
 
     static func format(turns: [SpeakerTurn], liveText: String, liveSpeaker: String) -> String {
+        var prepared = polish(turns)
+        let live = liveText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !live.isEmpty {
+            let liveTurn = SpeakerTurn(
+                id: liveTurnID,
+                speaker: liveSpeaker,
+                text: live,
+                start: prepared.last?.end ?? 0,
+                end: (prepared.last?.end ?? 0) + 0.1
+            )
+            prepared = polish(prepared + [liveTurn])
+        }
+
         var blocks: [String] = []
         var currentSpeaker: String?
         var paragraphs: [String] = []
@@ -398,33 +438,27 @@ struct SpeakerTurnSplitter {
             guard let speaker = currentSpeaker else { return }
             let body = paragraphs.joined(separator: "\n\n")
             if !body.isEmpty {
-                blocks.append("\(speaker)\n\n\(body)")
+                blocks.append("\(speakerHeading(for: speaker))\n\n\(body)")
             }
             paragraphs = []
         }
 
-        for turn in turns {
+        for turn in prepared {
             let text = turn.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { continue }
-            if turn.speaker != currentSpeaker {
+            let speaker = canonicalSpeakerName(from: turn.speaker) ?? turn.speaker
+            if speaker != currentSpeaker {
                 flush()
-                currentSpeaker = turn.speaker
+                currentSpeaker = speaker
             }
-            paragraphs.append(text)
-        }
-
-        let live = liveText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !live.isEmpty {
-            if liveSpeaker != currentSpeaker {
-                flush()
-                blocks.append("\(liveSpeaker)\n\n\(live)")
-            } else {
-                paragraphs.append(live)
-                flush()
+            for part in text.components(separatedBy: "\n\n") {
+                let paragraph = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !paragraph.isEmpty {
+                    paragraphs.append(paragraph)
+                }
             }
-        } else {
-            flush()
         }
+        flush()
 
         return blocks.joined(separator: "\n\n")
     }
@@ -441,10 +475,28 @@ struct SpeakerTurnSplitter {
     }
 
     static func isSpeakerLabel(_ line: String) -> Bool {
-        if line == "Me" { return true }
-        guard line.hasPrefix("Speaker ") else { return false }
-        let rest = line.dropFirst("Speaker ".count)
-        return !rest.isEmpty && rest.allSatisfy(\.isNumber)
+        canonicalSpeakerName(from: line) != nil
+    }
+
+    /// `Me`, `Speaker 2`, `Them`, plus markdown `## Me` / `**Me**`.
+    static func canonicalSpeakerName(from line: String) -> String? {
+        var trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("#") {
+            trimmed = String(trimmed.drop(while: { $0 == "#" }))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if trimmed.hasPrefix("**"), trimmed.hasSuffix("**"), trimmed.count > 4 {
+            trimmed = String(trimmed.dropFirst(2).dropLast(2))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if trimmed == "Me" || trimmed == "Them" { return trimmed }
+        if trimmed.hasPrefix("Speaker ") {
+            let rest = trimmed.dropFirst("Speaker ".count)
+            if !rest.isEmpty, rest.allSatisfy(\.isNumber) {
+                return trimmed
+            }
+        }
+        return nil
     }
 
     /// Fallback for older meetings that only stored the formatted string.
@@ -465,9 +517,22 @@ struct SpeakerTurnSplitter {
         }
 
         for block in blocks {
-            if isSpeakerLabel(block) {
+            if let label = canonicalSpeakerName(from: block) {
                 flush()
-                speaker = block
+                speaker = label
+            } else if let colon = block.firstIndex(of: ":") {
+                let name = String(block[..<colon])
+                if let label = canonicalSpeakerName(from: name) {
+                    flush()
+                    speaker = label
+                    let rest = block[block.index(after: colon)...]
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !rest.isEmpty {
+                        paragraphs.append(rest)
+                    }
+                } else {
+                    paragraphs.append(block)
+                }
             } else {
                 paragraphs.append(block)
             }
@@ -548,64 +613,208 @@ struct SpeakerTurnSplitter {
 
     @discardableResult
     private mutating func growLastTurn(with text: String, at time: TimeInterval) -> Bool {
-        guard let last = turns.last, Self.shouldGrow(last.text, into: text) else {
-            return false
-        }
-        turns[turns.count - 1].text = Self.preferredText(existing: last.text, incoming: text)
+        replaceLastTurn(with: text, at: time)
+    }
+
+    @discardableResult
+    private mutating func replaceLastTurn(with text: String, at time: TimeInterval) -> Bool {
+        guard let last = turns.last, last.speaker == liveSpeaker else { return false }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        let related = Self.isRelatedHypothesis(trimmed, after: last.text)
+            || Self.isRelatedHypothesis(last.text, after: trimmed)
+        guard related || Self.shouldGrow(last.text, into: trimmed) else { return false }
+        turns[turns.count - 1].text = Self.combinedHypothesis(existing: last.text, incoming: trimmed)
         turns[turns.count - 1].end = max(last.end, time)
         openText = ""
         openStart = nil
         return true
     }
 
-    private mutating func collapseNearDuplicates() {
-        var result: [SpeakerTurn] = []
+    @discardableResult
+    private mutating func appendToLastTurn(_ text: String, at time: TimeInterval) -> Bool {
+        guard let last = turns.last, last.speaker == liveSpeaker else { return false }
+        let gap = max(0, time - last.end)
+        if Self.shouldStartParagraph(previous: last.text, next: text, gap: gap) {
+            return false
+        }
+        turns[turns.count - 1].text = Self.joinSameSpeaker(previous: last.text, next: text, gap: gap)
+        turns[turns.count - 1].end = max(last.end, time)
+        openText = ""
+        openStart = nil
+        return true
+    }
+
+    static func polish(_ turns: [SpeakerTurn]) -> [SpeakerTurn] {
+        var flattened: [SpeakerTurn] = []
         for turn in turns {
-            let text = turn.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { continue }
-            if let last = result.last,
-               Self.isRedundant(text, after: last.text) || Self.isRedundant(last.text, after: text)
-            {
-                if Self.compacted(text).count > Self.compacted(last.text).count {
-                    result[result.count - 1].text = text
-                    result[result.count - 1].speaker = last.speaker
+            let speaker = canonicalSpeakerName(from: turn.speaker) ?? turn.speaker
+            let parts = turn.text.components(separatedBy: "\n\n")
+            for (index, part) in parts.enumerated() {
+                let text = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+                let span = max(0.01, turn.end - turn.start)
+                let start = turn.start + span * Double(index) / Double(max(parts.count, 1))
+                let end = turn.start + span * Double(index + 1) / Double(max(parts.count, 1))
+                flattened.append(
+                    SpeakerTurn(
+                        id: index == 0 ? turn.id : UUID().uuidString,
+                        speaker: speaker,
+                        text: text,
+                        start: start,
+                        end: end
+                    )
+                )
+            }
+        }
+
+        var result: [SpeakerTurn] = []
+        for turn in flattened {
+            if let last = result.last {
+                let lastParagraph = last.text.components(separatedBy: "\n\n").last ?? last.text
+                let related = last.speaker == turn.speaker
+                    && (isRelatedHypothesis(turn.text, after: lastParagraph)
+                        || isRelatedHypothesis(lastParagraph, after: turn.text))
+                if related {
+                    result[result.count - 1].text = replaceLastParagraph(
+                        of: last.text,
+                        with: combinedHypothesis(existing: lastParagraph, incoming: turn.text)
+                    )
+                    result[result.count - 1].end = max(last.end, turn.end)
+                    continue
                 }
-                result[result.count - 1].end = max(last.end, turn.end)
+                // One-word leftovers are not a new speaker, even if labelled as one.
+                if isTinyFragment(turn.text) {
+                    result[result.count - 1].text = glue(last.text, turn.text)
+                    result[result.count - 1].end = max(last.end, turn.end)
+                    continue
+                }
+                if last.speaker == turn.speaker {
+                    let gap = max(0, turn.start - last.end)
+                    result[result.count - 1].text = joinSameSpeaker(
+                        previous: last.text,
+                        next: turn.text,
+                        gap: gap
+                    )
+                    result[result.count - 1].end = max(last.end, turn.end)
+                    continue
+                }
+            } else if isTinyFragment(turn.text) {
+                result.append(turn)
                 continue
             }
             result.append(turn)
         }
-        turns = result
-    }
 
-    private mutating func mergeAdjacentSameSpeaker() {
-        var merged: [SpeakerTurn] = []
-        for turn in turns {
-            if let last = merged.last, last.speaker == turn.speaker {
-                merged[merged.count - 1].text = [last.text, turn.text]
-                    .filter { !$0.isEmpty }
-                    .joined(separator: "\n\n")
-                merged[merged.count - 1].end = max(last.end, turn.end)
-            } else {
-                merged.append(turn)
-            }
+        if result.count >= 2, isTinyFragment(result[0].text) {
+            result[1].text = glue(result[0].text, result[1].text)
+            result[1].start = min(result[0].start, result[1].start)
+            result.removeFirst()
         }
-        turns = merged
+        return result
     }
 
-    private static func preferredText(existing: String, incoming: String) -> String {
+    static func replaceLastParagraph(of existing: String, with incoming: String) -> String {
+        let parts = existing.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if parts.count <= 1 {
+            return incoming.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return (parts.dropLast() + [incoming.trimmingCharacters(in: .whitespacesAndNewlines)])
+            .joined(separator: "\n\n")
+    }
+
+    static func combinedHypothesis(existing: String, incoming: String) -> String {
         let left = existing.trimmingCharacters(in: .whitespacesAndNewlines)
         let right = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
-        return compacted(right).count >= compacted(left).count ? right : left
+        if right.isEmpty { return left }
+        if left.isEmpty { return right }
+        if shouldGrow(left, into: right) {
+            return preferredText(existing: left, incoming: right)
+        }
+        if let replaced = replaceRelatedTail(of: left, with: right) {
+            return replaced
+        }
+        let novel = novelPortion(right, after: left)
+        if !novel.isEmpty, compacted(right).count + 8 < compacted(left).count + compacted(novel).count {
+            return glue(left, novel)
+        }
+        return preferredText(existing: left, incoming: right)
     }
 
-    private static func isRelatedHypothesis(_ incoming: String, after existing: String) -> Bool {
-        if isRedundant(incoming, after: existing) { return true }
-        let prev = words(compacted(existing))
-        let next = words(compacted(incoming))
-        if prev.isEmpty || next.isEmpty { return false }
-        if wordOverlapCount(compacted(existing), compacted(incoming)) >= 2 { return true }
-        return jaccard(prev, next) >= 0.35
+    static func replaceRelatedTail(of existing: String, with incoming: String) -> String? {
+        let prevTokens = wordTokens(existing)
+        let nextWords = words(compacted(incoming))
+        guard prevTokens.count > nextWords.count + 2, nextWords.count >= 4 else { return nil }
+
+        let maxLen = min(prevTokens.count, nextWords.count + 4)
+        for length in nextWords.count ... maxLen {
+            let tailTokens = Array(prevTokens.suffix(length))
+            let tail = tailTokens.map(\.text).joined(separator: " ")
+            let shared = Double(fuzzyOverlapCount(words(compacted(tail)), nextWords))
+            if shared / Double(nextWords.count) >= 0.68 {
+                let head = prevTokens.dropLast(length).map(\.text).joined(separator: " ")
+                return glue(head, preferredText(existing: tail, incoming: incoming))
+            }
+        }
+        return nil
+    }
+
+    static func looksComplete(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let last = trimmed.last else { return false }
+        if ".?!".contains(last) { return true }
+        if trimmed.hasSuffix(".\"" ) || trimmed.hasSuffix(".'") || trimmed.hasSuffix("?”") {
+            return true
+        }
+        return false
+    }
+
+    static func isTinyFragment(_ text: String) -> Bool {
+        let tokens = words(compacted(text))
+        if tokens.isEmpty { return true }
+        if looksComplete(text) { return false }
+        if tokens.count <= maxIslandWords { return true }
+        return false
+    }
+
+    static func shouldStartParagraph(previous: String, next: String, gap: TimeInterval) -> Bool {
+        if isTinyFragment(next) || isTinyFragment(previous) { return false }
+        if !looksComplete(previous) { return false }
+        return gap >= paragraphThreshold
+    }
+
+    static func joinSameSpeaker(previous: String, next: String, gap: TimeInterval) -> String {
+        if isRelatedHypothesis(next, after: previous) || isRelatedHypothesis(previous, after: next) {
+            return combinedHypothesis(existing: previous, incoming: next)
+        }
+        if shouldStartParagraph(previous: previous, next: next, gap: gap) {
+            return previous.trimmingCharacters(in: .whitespacesAndNewlines)
+                + "\n\n"
+                + next.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return glue(previous, next)
+    }
+
+    static func glue(_ previous: String, _ next: String) -> String {
+        let left = previous.trimmingCharacters(in: .whitespacesAndNewlines)
+        let right = next.trimmingCharacters(in: .whitespacesAndNewlines)
+        if left.isEmpty { return right }
+        if right.isEmpty { return left }
+        return left + " " + right
+    }
+
+    static func preferredText(existing: String, incoming: String) -> String {
+        let left = existing.trimmingCharacters(in: .whitespacesAndNewlines)
+        let right = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
+        let leftCount = compacted(left).count
+        let rightCount = compacted(right).count
+        if rightCount > leftCount + 2 { return right }
+        if leftCount > rightCount + 2 { return left }
+        if looksComplete(right) { return right }
+        if looksComplete(left) { return left }
+        return right.isEmpty ? left : right
     }
 
     private static func labelled(_ turn: SpeakerTurn, speaker index: Int) -> SpeakerTurn {
@@ -741,5 +950,73 @@ struct SpeakerTurnSplitter {
             }
         }
         return nil
+    }
+
+    private static func tokensMatch<S: Sequence>(_ left: S, _ right: S) -> Bool where S.Element == String {
+        zip(left, right).allSatisfy { tokensSimilar($0, $1) }
+    }
+
+    private static func tokensSimilar(_ left: String, _ right: String) -> Bool {
+        if left == right { return true }
+        if left.count >= 4, right.count >= 4 {
+            if left.hasPrefix(right) || right.hasPrefix(left) { return true }
+            if editDistance(left, right, limit: 2) <= 2 { return true }
+        }
+        return false
+    }
+
+    private static func fuzzyWordOverlapCount(_ prev: [String], _ next: [String]) -> Int {
+        let maxLen = min(prev.count, next.count)
+        guard maxLen > 0 else { return 0 }
+        for length in stride(from: maxLen, through: 1, by: -1) {
+            if tokensMatch(prev.suffix(length), next.prefix(length)) {
+                return length
+            }
+        }
+        return 0
+    }
+
+    private static func fuzzyOverlapCount(_ left: [String], _ right: [String]) -> Int {
+        var used = Array(repeating: false, count: right.count)
+        var count = 0
+        for word in left {
+            if let index = right.indices.first(where: { !used[$0] && tokensSimilar(word, right[$0]) }) {
+                used[index] = true
+                count += 1
+            }
+        }
+        return count
+    }
+
+    private static func fuzzyOverlapRatio(_ left: [String], _ right: [String]) -> Double {
+        let union = left.count + right.count
+        if union == 0 { return 1 }
+        let shared = fuzzyOverlapCount(left, right)
+        return Double(2 * shared) / Double(union)
+    }
+
+    private static func editDistance(_ left: String, _ right: String, limit: Int) -> Int {
+        if left == right { return 0 }
+        let a = Array(left)
+        let b = Array(right)
+        if abs(a.count - b.count) > limit { return limit + 1 }
+        var previous = Array(0 ... b.count)
+        for i in 1 ... a.count {
+            var current = [i]
+            var rowMin = i
+            for j in 1 ... b.count {
+                let cost = a[i - 1] == b[j - 1] ? 0 : 1
+                let value = min(
+                    previous[j] + 1,
+                    current[j - 1] + 1,
+                    previous[j - 1] + cost
+                )
+                current.append(value)
+                rowMin = min(rowMin, value)
+            }
+            if rowMin > limit { return limit + 1 }
+            previous = current
+        }
+        return previous[b.count]
     }
 }
