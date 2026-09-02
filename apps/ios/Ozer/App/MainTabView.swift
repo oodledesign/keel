@@ -3,6 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     @State private var screen: AppScreen = .home
     @State private var menuOpen = false
+    @State private var tabBar = WorkspaceTabBarState()
 
     var body: some View {
         Group {
@@ -24,8 +25,9 @@ struct MainTabView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .environment(tabBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !menuOpen {
+            if !menuOpen && !tabBar.isHidden {
                 OzerTabBar(screen: $screen, menuOpen: $menuOpen)
             }
         }

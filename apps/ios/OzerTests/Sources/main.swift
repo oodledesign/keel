@@ -1,4 +1,5 @@
 import Foundation
+@testable import OzerNotes
 @testable import OzerSpeech
 
 @main
@@ -192,6 +193,8 @@ struct SpeakerTranscriptTests {
                 && !labels.contains(where: { $0 >= SpeakerClustering.maxSpeakers })
                 && first?.speakerIndex == 0
         }
+
+        NoteMarkdownTests.run(check: check)
 
         if failed > 0 {
             fputs("\(failed) test(s) failed\n", stderr)

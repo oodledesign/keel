@@ -128,15 +128,17 @@ export function PersonalHomeMobileChrome({
         helpDefaultAccountId={workspace.workspace?.id ?? null}
       />
 
-      <WorkspaceMobileBottomNav
-        homePath={homePath}
-        bottomNavTabs={bottomNavTabs}
-        menuOpen={menuOpen}
-        onMenuOpenChange={setMenuOpen}
-        settingsHref={pathsConfig.app.personalAccountSettings}
-        settingsLabel="Personal settings"
-        newMenu={<WorkspaceMobileNewMenu variant="personal" />}
-      />
+      {noteEditorScroll ? null : (
+        <WorkspaceMobileBottomNav
+          homePath={homePath}
+          bottomNavTabs={bottomNavTabs}
+          menuOpen={menuOpen}
+          onMenuOpenChange={setMenuOpen}
+          settingsHref={pathsConfig.app.personalAccountSettings}
+          settingsLabel="Personal settings"
+          newMenu={<WorkspaceMobileNewMenu variant="personal" />}
+        />
+      )}
 
       <WorkspaceCreateTaskHost lifeOnly />
     </>

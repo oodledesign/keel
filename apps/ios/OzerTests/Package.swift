@@ -19,9 +19,16 @@ let package = Package(
                 "SpeakerClustering.swift",
             ]
         ),
+        .target(
+            name: "OzerNotes",
+            path: "../Ozer/Notes",
+            sources: [
+                "NoteMarkdown.swift",
+            ]
+        ),
         .executableTarget(
             name: "OzerSpeechTests",
-            dependencies: ["OzerSpeech"],
+            dependencies: ["OzerSpeech", "OzerNotes"],
             path: "Sources"
         ),
     ]

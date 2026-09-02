@@ -154,24 +154,26 @@ export function TeamWorkspaceMobileChrome({
         helpDefaultAccountId={accountId}
       />
 
-      <WorkspaceMobileBottomNav
-        homePath={homePath}
-        bottomNavTabs={bottomNavTabs}
-        menuOpen={menuOpen}
-        onMenuOpenChange={setMenuOpen}
-        settingsHref={settingsHref}
-        settingsLabel="Workspace settings"
-        newMenu={
-          showNewMenu ? (
-            <WorkspaceMobileNewMenu
-              variant="team"
-              account={account}
-              spaceType={spaceType}
-              canMutateCommercial={canMutateCommercial}
-            />
-          ) : null
-        }
-      />
+      {noteEditorScroll ? null : (
+        <WorkspaceMobileBottomNav
+          homePath={homePath}
+          bottomNavTabs={bottomNavTabs}
+          menuOpen={menuOpen}
+          onMenuOpenChange={setMenuOpen}
+          settingsHref={settingsHref}
+          settingsLabel="Workspace settings"
+          newMenu={
+            showNewMenu ? (
+              <WorkspaceMobileNewMenu
+                variant="team"
+                account={account}
+                spaceType={spaceType}
+                canMutateCommercial={canMutateCommercial}
+              />
+            ) : null
+          }
+        />
+      )}
 
       <WorkspaceCreateTaskHost
         accountId={accountId}

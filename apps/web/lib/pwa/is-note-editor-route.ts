@@ -1,4 +1,7 @@
-/** Full-screen note editor (not the notes list). */
+import { normalizePublicPathname } from './normalize-public-pathname';
+
+/** Full-screen note editor (create or edit — not the notes list). */
 export function isNoteEditorRoute(pathname: string): boolean {
-  return /\/notes\/(?!new(?:\/|$))[^/]+$/.test(pathname);
+  const normalized = normalizePublicPathname(pathname);
+  return /^\/app\/(?:[^/]+\/)?notes\/(?:new|[^/]+)\/?$/.test(normalized);
 }
