@@ -119,9 +119,12 @@ export type SignatureStaff = {
   source: StaffSource;
   email: string;
   full_name: string | null;
+  full_name_override?: string | null;
   credentials?: string | null;
   job_title: string | null;
+  job_title_override?: string | null;
   department: string | null;
+  department_override?: string | null;
   phone_direct: string | null;
   phone_mobile: string | null;
   branch: string | null;
@@ -242,17 +245,19 @@ export async function loadDepartmentBadges(accountId: string) {
 export async function loadDepartments(accountId: string): Promise<string[]> {
   const { data, error } = await signaturesClient()
     .from('staff')
-    .select('department')
-    .eq('account_id', accountId)
-    .not('department', 'is', null);
+    .select('department, department_override')
+    .eq('account_id', accountId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return [...new Set((data ?? []).map((row) => String(row.department).trim()))]
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+  const names = (data ?? []).flatMap((row) => [
+    String(row.department ?? '').trim(),
+    String(row.department_override ?? '').trim(),
+  ]);
+
+  return [...new Set(names)].filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
 export type StaffListFilters = {
@@ -288,7 +293,7 @@ function applyStaffListFilters<
   if (term && typeof next.or === 'function') {
     const escaped = term.replace(/[%_\\]/g, '\\$&');
     next = next.or(
-      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%,department.ilike.%${escaped}%`,
+      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%,department.ilike.%${escaped}%,full_name_override.ilike.%${escaped}%,job_title_override.ilike.%${escaped}%,department_override.ilike.%${escaped}%`,
     );
   }
 
@@ -563,7 +568,11 @@ export function getFilterOptions(staff: SignatureStaff[]) {
       ...new Set(staff.map((row) => row.branch).filter(Boolean)),
     ] as string[],
     departments: [
-      ...new Set(staff.map((row) => row.department).filter(Boolean)),
+      ...new Set(
+        staff
+          .flatMap((row) => [row.department, row.department_override])
+          .filter(Boolean),
+      ),
     ] as string[],
   };
 }

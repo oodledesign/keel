@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { applySignatureProfileOverrides } from '~/lib/signatures/profile-overrides';
 import { loadResolvedSignatureAssets } from '~/lib/signatures/signature-assets';
 import { loadSignaturesWorkspaceSettings } from '~/lib/signatures/workspace-settings';
 
@@ -35,7 +36,7 @@ export default async function SignatureTemplateDetailPage({
 
   const resolvedAssets = previewStaff
     ? await loadResolvedSignatureAssets(accountId, {
-        department: previewStaff.department,
+        department: applySignatureProfileOverrides(previewStaff).department,
         branch_id: previewStaff.branch_id,
       })
     : null;

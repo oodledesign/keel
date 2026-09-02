@@ -218,6 +218,9 @@ export const updateStaffActionSchema = z.object({
     .optional()
     .nullable(),
   clearPhotoOverride: z.boolean().optional(),
+  clearFullNameOverride: z.boolean().optional(),
+  clearJobTitleOverride: z.boolean().optional(),
+  clearDepartmentOverride: z.boolean().optional(),
   templateId: z.string().uuid().nullable().optional(),
 });
 

@@ -30,11 +30,7 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
-import {
-  normalizeLegacySignatureChrome,
-  stripEmptySignatureBlocks,
-  stripTransparentBadgeImages,
-} from '~/lib/signatures/signature-render-utils';
+import { applySignatureProfileOverrides } from '~/lib/signatures/profile-overrides';
 import {
   SIGNATURE_TEMPLATE_TOKENS,
   type SignatureBuilderDocument,
@@ -44,6 +40,11 @@ import {
   signatureBlocksToHtml,
 } from '~/lib/signatures/signature-blocks';
 import { buildSignaturePreviewDocument } from '~/lib/signatures/signature-preview-document';
+import {
+  normalizeLegacySignatureChrome,
+  stripEmptySignatureBlocks,
+  stripTransparentBadgeImages,
+} from '~/lib/signatures/signature-render-utils';
 import {
   SIGNATURE_DARK_MODE_CHECKLIST,
   lintSignatureTemplateHtml,
@@ -124,7 +125,9 @@ export function SignatureTemplateEditor({
   }, [html]);
 
   const previewBodyHtml = useMemo(() => {
-    const staff = previewStaff;
+    const staff = previewStaff
+      ? applySignatureProfileOverrides(previewStaff)
+      : previewStaff;
     let output = previewHtml;
     const staffPhoto = staff?.photo_url?.trim() || '';
     const showPhotoBadge = isPhotoBadgeEnabled(

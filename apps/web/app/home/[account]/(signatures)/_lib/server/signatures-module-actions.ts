@@ -27,6 +27,7 @@ import {
   revokeIntegrationConnectInvite,
 } from '~/lib/signatures/integration-invite';
 import { ensureSignaturePreviewShare } from '~/lib/signatures/preview-share';
+import { staffProfileOverridePatch } from '~/lib/signatures/profile-overrides';
 import {
   pushAllSignatures,
   pushSignatureToStaff,
@@ -230,7 +231,7 @@ export const updateSignatureStaff = enhanceAction(
 
     const { data: existingStaff, error: existingError } = await db
       .from('staff')
-      .select('id, source')
+      .select('id, source, full_name, job_title, department')
       .eq('id', input.staffId)
       .eq('account_id', input.accountId)
       .maybeSingle();
@@ -286,6 +287,23 @@ export const updateSignatureStaff = enhanceAction(
           credentials: input.credentials,
           phone_direct: input.phone_direct,
           phone_mobile: input.phone_mobile,
+          ...staffProfileOverridePatch({
+            existing: {
+              full_name: (existingStaff.full_name as string | null) ?? null,
+              job_title: (existingStaff.job_title as string | null) ?? null,
+              department: (existingStaff.department as string | null) ?? null,
+            },
+            submitted: {
+              full_name: input.full_name,
+              job_title: input.job_title,
+              department: input.department,
+            },
+            clear: {
+              full_name: input.clearFullNameOverride,
+              job_title: input.clearJobTitleOverride,
+              department: input.clearDepartmentOverride,
+            },
+          }),
           ...(input.clearPhotoOverride
             ? { photo_url: null, photo_overridden: false }
             : photoUrl
@@ -354,7 +372,7 @@ export const bulkUpdateSignatureStaff = enhanceAction(
     const staffIds = input.rows.map((row) => row.staffId);
     const { data: existingRows, error: existingError } = await db
       .from('staff')
-      .select('id, source')
+      .select('id, source, full_name, job_title, department')
       .eq('account_id', input.accountId)
       .in('id', staffIds);
 
@@ -362,10 +380,15 @@ export const bulkUpdateSignatureStaff = enhanceAction(
       throw new Error(existingError.message);
     }
 
-    const sourceById = new Map(
+    const existingById = new Map(
       (existingRows ?? []).map((row) => [
         row.id as string,
-        row.source as string,
+        {
+          source: row.source as string,
+          full_name: (row.full_name as string | null) ?? null,
+          job_title: (row.job_title as string | null) ?? null,
+          department: (row.department as string | null) ?? null,
+        },
       ]),
     );
 
@@ -386,12 +409,12 @@ export const bulkUpdateSignatureStaff = enhanceAction(
     let updated = 0;
 
     for (const row of input.rows) {
-      const source = sourceById.get(row.staffId);
-      if (!source) {
+      const existing = existingById.get(row.staffId);
+      if (!existing) {
         throw new Error(`Staff member not found: ${row.staffId}`);
       }
 
-      const manualEntry = isManualStaffSource(source);
+      const manualEntry = isManualStaffSource(existing.source);
 
       let photoUrl: string | null | undefined;
       if (row.photoDataUrl) {
@@ -428,6 +451,18 @@ export const bulkUpdateSignatureStaff = enhanceAction(
             credentials: row.credentials,
             phone_direct: row.phone_direct,
             phone_mobile: row.phone_mobile,
+            ...staffProfileOverridePatch({
+              existing: {
+                full_name: existing.full_name,
+                job_title: existing.job_title,
+                department: existing.department,
+              },
+              submitted: {
+                full_name: row.full_name,
+                job_title: row.job_title,
+                department: row.department,
+              },
+            }),
             ...(photoUrl
               ? { photo_url: photoUrl, photo_overridden: true }
               : {}),
@@ -850,7 +885,7 @@ export const sendSignatureInstallInstructionsAction = enhanceAction(
     const db = getSignaturesSupabaseClient();
     const { data: staff, error: staffError } = await db
       .from('staff')
-      .select('id, email, signature_email, full_name')
+      .select('id, email, signature_email, full_name, full_name_override')
       .eq('id', input.staffId)
       .eq('account_id', input.accountId)
       .maybeSingle();
@@ -913,7 +948,10 @@ export const sendSignatureInstallInstructionsAction = enhanceAction(
       (staff.email as string).trim();
 
     const email = buildSignatureInstallEmail({
-      recipientName: (staff.full_name as string | null) ?? null,
+      recipientName:
+        ((staff.full_name_override as string | null)?.trim() ||
+          (staff.full_name as string | null)) ??
+        null,
       accountName: (account?.name as string | null | undefined) ?? accountSlug,
       installUrl: share.url,
     });

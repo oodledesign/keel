@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { listOpenChangeRequestsForStaff } from '~/lib/signatures/change-requests';
+import { applySignatureProfileOverrides } from '~/lib/signatures/profile-overrides';
 
 import { ModuleDataSection } from '../../../../_components/module-data-section';
 import { SignatureStaffEditor } from '../../../_components/signature-staff-editor';
@@ -30,7 +31,10 @@ export default async function SignatureStaffDetailPage({
 
   return (
     <ModuleDataSection
-      title={detail.staff.full_name ?? detail.staff.email}
+      title={
+        applySignatureProfileOverrides(detail.staff).full_name ??
+        detail.staff.email
+      }
       description="Edit staff profile details, assign a template, and preview the rendered Outlook signature."
     >
       <SignatureStaffEditor

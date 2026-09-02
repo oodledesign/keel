@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -33,6 +33,11 @@ import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBranch } from '~/lib/brand/account-branches';
 import type { SignatureChangeRequest } from '~/lib/signatures/change-request-fields';
 import { labelForChangeRequestField } from '~/lib/signatures/change-request-fields';
+import {
+  directoryResetLabel,
+  directoryValueHint,
+  isSignatureProfileFieldOverridden,
+} from '~/lib/signatures/profile-overrides';
 import {
   isManualStaffSource,
   staffSourceLabel,
@@ -131,6 +136,33 @@ export function SignatureStaffEditor({
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] =
     useState<SignaturePreviewTheme>('light');
+  const [previewRevision, setPreviewRevision] = useState(0);
+  const [fullName, setFullName] = useState(
+    () => staff.full_name_override?.trim() || staff.full_name || '',
+  );
+  const [jobTitle, setJobTitle] = useState(
+    () => staff.job_title_override?.trim() || staff.job_title || '',
+  );
+  const [department, setDepartment] = useState(
+    () => staff.department_override?.trim() || staff.department || '',
+  );
+
+  useEffect(() => {
+    setFullName(staff.full_name_override?.trim() || staff.full_name || '');
+    setJobTitle(staff.job_title_override?.trim() || staff.job_title || '');
+    setDepartment(staff.department_override?.trim() || staff.department || '');
+  }, [
+    staff.id,
+    staff.full_name,
+    staff.full_name_override,
+    staff.job_title,
+    staff.job_title_override,
+    staff.department,
+    staff.department_override,
+  ]);
+
+  const resetLabel = directoryResetLabel(staff.source);
+  const directoryHint = directoryValueHint(staff.source);
 
   const selectedBranch = useMemo(
     () => branches.find((b) => b.id === branchId) ?? null,
@@ -173,14 +205,23 @@ export function SignatureStaffEditor({
 
   const buildStaffUpdatePayload = (
     formData: FormData,
-    options?: { photoDataUrl?: string | null; clearPhotoOverride?: boolean },
+    options?: {
+      photoDataUrl?: string | null;
+      clearPhotoOverride?: boolean;
+      clearFullNameOverride?: boolean;
+      clearJobTitleOverride?: boolean;
+      clearDepartmentOverride?: boolean;
+      full_name?: string;
+      job_title?: string;
+      department?: string;
+    },
   ) => ({
     accountId,
     staffId: staff.id,
-    full_name: String(formData.get('full_name') ?? ''),
+    full_name: options?.full_name ?? fullName,
     credentials: String(formData.get('credentials') ?? ''),
-    job_title: String(formData.get('job_title') ?? ''),
-    department: String(formData.get('department') ?? ''),
+    job_title: options?.job_title ?? jobTitle,
+    department: options?.department ?? department,
     phone_direct: String(formData.get('phone_direct') ?? ''),
     phone_mobile: String(formData.get('phone_mobile') ?? ''),
     signature_email: String(formData.get('signature_email') ?? ''),
@@ -190,16 +231,24 @@ export function SignatureStaffEditor({
         ? null
         : (options?.photoDataUrl ?? photoDataUrl),
     clearPhotoOverride: options?.clearPhotoOverride,
+    clearFullNameOverride: options?.clearFullNameOverride,
+    clearJobTitleOverride: options?.clearJobTitleOverride,
+    clearDepartmentOverride: options?.clearDepartmentOverride,
     templateId: templateId === NO_TEMPLATE ? null : templateId,
   });
+
+  const afterSave = () => {
+    setPhotoDataUrl(null);
+    setPreviewRevision((value) => value + 1);
+    router.refresh();
+  };
 
   const save = async (formData: FormData) => {
     setSaving(true);
     try {
       await updateSignatureStaff(buildStaffUpdatePayload(formData));
-      setPhotoDataUrl(null);
       toast.success('Staff member saved');
-      router.refresh();
+      afterSave();
     } catch (e) {
       toast.error(getErrorMessage(e));
     } finally {
@@ -221,11 +270,89 @@ export function SignatureStaffEditor({
           clearPhotoOverride: true,
         }),
       );
-      setPhotoDataUrl(null);
       toast.success(
         'Photo override cleared — run directory sync to refresh from Microsoft/Google.',
       );
-      router.refresh();
+      afterSave();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetProfileField = async (
+    field: 'full_name' | 'job_title' | 'department',
+  ) => {
+    const form = formRef.current;
+    if (!form) {
+      return;
+    }
+
+    const directory =
+      field === 'full_name'
+        ? (staff.full_name ?? '')
+        : field === 'job_title'
+          ? (staff.job_title ?? '')
+          : (staff.department ?? '');
+
+    if (field === 'full_name') setFullName(directory);
+    if (field === 'job_title') setJobTitle(directory);
+    if (field === 'department') setDepartment(directory);
+
+    if (manualEntry) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateSignatureStaff(
+        buildStaffUpdatePayload(new FormData(form), {
+          full_name: field === 'full_name' ? directory : fullName,
+          job_title: field === 'job_title' ? directory : jobTitle,
+          department: field === 'department' ? directory : department,
+          clearFullNameOverride: field === 'full_name',
+          clearJobTitleOverride: field === 'job_title',
+          clearDepartmentOverride: field === 'department',
+        }),
+      );
+      toast.success(
+        `${resetLabel} — using the latest ${directoryHint} value from the last directory sync.`,
+      );
+      afterSave();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetAllProfileFields = async () => {
+    const form = formRef.current;
+    if (!form || manualEntry) {
+      return;
+    }
+
+    setFullName(staff.full_name ?? '');
+    setJobTitle(staff.job_title ?? '');
+    setDepartment(staff.department ?? '');
+
+    setSaving(true);
+    try {
+      await updateSignatureStaff(
+        buildStaffUpdatePayload(new FormData(form), {
+          full_name: staff.full_name ?? '',
+          job_title: staff.job_title ?? '',
+          department: staff.department ?? '',
+          clearFullNameOverride: true,
+          clearJobTitleOverride: true,
+          clearDepartmentOverride: true,
+        }),
+      );
+      toast.success(
+        `Name, title, and department reset to the latest ${directoryHint} values.`,
+      );
+      afterSave();
     } catch (e) {
       toast.error(getErrorMessage(e));
     } finally {
@@ -279,7 +406,7 @@ export function SignatureStaffEditor({
             <p className="text-muted-foreground mt-1 text-xs">
               Source: {staffSourceLabel(staff.source)}
               {!manualEntry
-                ? ' · name and title sync from your directory; you can override the photo, branch, phones, and template here.'
+                ? ` · ${directoryHint} name, title, and department can be overridden here for signatures only. Reset restores the latest directory value. This never writes back to Entra or Google Directory.`
                 : ' · fully editable in Ozer.'}
             </p>
           </div>
@@ -349,9 +476,33 @@ export function SignatureStaffEditor({
               <Field
                 name="full_name"
                 label="Full name"
-                defaultValue={staff.full_name}
+                value={fullName}
+                onChange={setFullName}
+                placeholder={staff.full_name ?? undefined}
                 hasRequest={requestedFields.has('full_name')}
-                disabled={!manualEntry}
+                hint={
+                  manualEntry
+                    ? undefined
+                    : profileFieldHint({
+                        directoryValue: staff.full_name,
+                        override: staff.full_name_override,
+                        directoryHint,
+                      })
+                }
+                resetLabel={manualEntry ? undefined : resetLabel}
+                onReset={
+                  manualEntry
+                    ? undefined
+                    : () => void resetProfileField('full_name')
+                }
+                resetDisabled={
+                  saving ||
+                  !canResetProfileField({
+                    directoryValue: staff.full_name,
+                    override: staff.full_name_override,
+                    currentValue: fullName,
+                  })
+                }
               />
               <Field
                 name="credentials"
@@ -363,17 +514,98 @@ export function SignatureStaffEditor({
               <Field
                 name="job_title"
                 label="Job title"
-                defaultValue={staff.job_title}
+                value={jobTitle}
+                onChange={setJobTitle}
+                placeholder={staff.job_title ?? undefined}
                 hasRequest={requestedFields.has('job_title')}
-                disabled={!manualEntry}
+                hint={
+                  manualEntry
+                    ? undefined
+                    : profileFieldHint({
+                        directoryValue: staff.job_title,
+                        override: staff.job_title_override,
+                        directoryHint,
+                      })
+                }
+                resetLabel={manualEntry ? undefined : resetLabel}
+                onReset={
+                  manualEntry
+                    ? undefined
+                    : () => void resetProfileField('job_title')
+                }
+                resetDisabled={
+                  saving ||
+                  !canResetProfileField({
+                    directoryValue: staff.job_title,
+                    override: staff.job_title_override,
+                    currentValue: jobTitle,
+                  })
+                }
               />
               <Field
                 name="department"
                 label="Department"
-                defaultValue={staff.department}
+                value={department}
+                onChange={setDepartment}
+                placeholder={staff.department ?? undefined}
                 hasRequest={requestedFields.has('department')}
-                disabled={!manualEntry}
+                hint={
+                  manualEntry
+                    ? undefined
+                    : profileFieldHint({
+                        directoryValue: staff.department,
+                        override: staff.department_override,
+                        directoryHint,
+                      })
+                }
+                resetLabel={manualEntry ? undefined : resetLabel}
+                onReset={
+                  manualEntry
+                    ? undefined
+                    : () => void resetProfileField('department')
+                }
+                resetDisabled={
+                  saving ||
+                  !canResetProfileField({
+                    directoryValue: staff.department,
+                    override: staff.department_override,
+                    currentValue: department,
+                  })
+                }
               />
+              {!manualEntry ? (
+                <div className="md:col-span-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-0 text-xs"
+                    disabled={
+                      saving ||
+                      !(
+                        canResetProfileField({
+                          directoryValue: staff.full_name,
+                          override: staff.full_name_override,
+                          currentValue: fullName,
+                        }) ||
+                        canResetProfileField({
+                          directoryValue: staff.job_title,
+                          override: staff.job_title_override,
+                          currentValue: jobTitle,
+                        }) ||
+                        canResetProfileField({
+                          directoryValue: staff.department,
+                          override: staff.department_override,
+                          currentValue: department,
+                        })
+                      )
+                    }
+                    onClick={() => void resetAllProfileFields()}
+                  >
+                    Reset name, title & department to {directoryHint}
+                  </Button>
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label>Branch</Label>
                 <Select value={branchId} onValueChange={setBranchId}>
@@ -565,7 +797,7 @@ export function SignatureStaffEditor({
             >
               {({ viewport, theme }) => (
                 <iframe
-                  key={`${previewUrl}-${viewport}`}
+                  key={`${previewUrl}-${viewport}-${previewRevision}`}
                   src={`${previewUrl}&viewport=${viewport}`}
                   sandbox=""
                   className={cn(
@@ -588,20 +820,63 @@ export function SignatureStaffEditor({
   );
 }
 
+function profileFieldHint({
+  directoryValue,
+  override,
+  directoryHint,
+}: {
+  directoryValue: string | null;
+  override: string | null | undefined;
+  directoryHint: string;
+}) {
+  if (isSignatureProfileFieldOverridden(directoryValue, override)) {
+    return `Ozer override — ${directoryHint} value is “${directoryValue?.trim() || 'blank'}”. Reset uses that live directory value (refreshed on the next sync).`;
+  }
+
+  return `Using the ${directoryHint} directory value. Edit to override for signatures only — this does not change Entra or Google Directory.`;
+}
+
+function canResetProfileField({
+  directoryValue,
+  override,
+  currentValue,
+}: {
+  directoryValue: string | null;
+  override: string | null | undefined;
+  currentValue: string;
+}) {
+  return (
+    isSignatureProfileFieldOverridden(directoryValue, override) ||
+    currentValue.trim() !== (directoryValue ?? '').trim()
+  );
+}
+
 function Field({
   name,
   label,
   defaultValue,
+  value,
+  onChange,
+  placeholder,
   hint,
   hasRequest = false,
   disabled = false,
+  resetLabel,
+  onReset,
+  resetDisabled = false,
 }: {
   name: string;
   label: string;
-  defaultValue: string | null;
+  defaultValue?: string | null;
+  value?: string;
+  onChange?: (value: string) => void;
+  placeholder?: string;
   hint?: string;
   hasRequest?: boolean;
   disabled?: boolean;
+  resetLabel?: string;
+  onReset?: () => void;
+  resetDisabled?: boolean;
 }) {
   return (
     <div
@@ -610,16 +885,35 @@ function Field({
         hasRequest && 'border border-amber-500/35 bg-amber-500/5 p-3',
       )}
     >
-      <Label htmlFor={name} className="inline-flex items-center gap-1.5">
-        {label}
-        {hasRequest ? (
-          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+      <div className="flex items-center justify-between gap-3">
+        <Label htmlFor={name} className="inline-flex items-center gap-1.5">
+          {label}
+          {hasRequest ? (
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+          ) : null}
+        </Label>
+        {onReset && resetLabel ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-auto shrink-0 px-0 text-xs"
+            disabled={disabled || resetDisabled}
+            onClick={onReset}
+          >
+            {resetLabel}
+          </Button>
         ) : null}
-      </Label>
+      </div>
       <Input
         id={name}
         name={name}
-        defaultValue={defaultValue ?? ''}
+        value={value}
+        defaultValue={value === undefined ? (defaultValue ?? '') : undefined}
+        onChange={
+          onChange ? (event) => onChange(event.target.value) : undefined
+        }
+        placeholder={placeholder}
         disabled={disabled}
         className={
           hasRequest

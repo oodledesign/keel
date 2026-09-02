@@ -21,6 +21,10 @@ import { cn } from '@kit/ui/utils';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBranch } from '~/lib/brand/account-branches';
 import {
+  directoryResetLabel,
+  isSignatureProfileFieldOverridden,
+} from '~/lib/signatures/profile-overrides';
+import {
   isManualStaffSource,
   staffSourceLabel,
 } from '~/lib/signatures/staff-source';
@@ -40,8 +44,14 @@ type DraftRow = {
   source: SignatureStaff['source'];
   email: string;
   full_name: string;
+  directory_full_name: string;
+  full_name_override: string | null;
   job_title: string;
+  directory_job_title: string;
+  job_title_override: string | null;
   department: string;
+  directory_department: string;
+  department_override: string | null;
   phone_direct: string;
   phone_mobile: string;
   signature_email: string;
@@ -90,9 +100,15 @@ function toDraft(staff: SignatureStaff): DraftRow {
     staffId: staff.id,
     source: staff.source,
     email: staff.email,
-    full_name: staff.full_name ?? '',
-    job_title: staff.job_title ?? '',
-    department: staff.department ?? '',
+    full_name: staff.full_name_override?.trim() || staff.full_name || '',
+    directory_full_name: staff.full_name ?? '',
+    full_name_override: staff.full_name_override ?? null,
+    job_title: staff.job_title_override?.trim() || staff.job_title || '',
+    directory_job_title: staff.job_title ?? '',
+    job_title_override: staff.job_title_override ?? null,
+    department: staff.department_override?.trim() || staff.department || '',
+    directory_department: staff.department ?? '',
+    department_override: staff.department_override ?? null,
     phone_direct: staff.phone_direct ?? '',
     phone_mobile: staff.phone_mobile ?? '',
     signature_email: staff.signature_email ?? '',
@@ -128,6 +144,59 @@ function CellInput({
         className,
       )}
     />
+  );
+}
+
+function storedOverride(
+  directoryValue: string,
+  currentValue: string,
+): string | null {
+  const next = currentValue.trim();
+  const directory = directoryValue.trim();
+  if (!next || next === directory) {
+    return null;
+  }
+  return next;
+}
+
+function BulkProfileCell({
+  value,
+  directoryValue,
+  override,
+  placeholder,
+  resetLabel,
+  showReset,
+  onChange,
+  onReset,
+}: {
+  value: string;
+  directoryValue: string;
+  override: string | null;
+  placeholder?: string;
+  resetLabel: string;
+  showReset: boolean;
+  onChange: (value: string) => void;
+  onReset: () => void;
+}) {
+  const canReset =
+    showReset &&
+    (isSignatureProfileFieldOverridden(directoryValue, override) ||
+      value.trim() !== directoryValue.trim());
+
+  return (
+    <div className="space-y-0.5">
+      <CellInput value={value} placeholder={placeholder} onChange={onChange} />
+      {showReset ? (
+        <button
+          type="button"
+          className="text-muted-foreground px-2 text-[11px] underline-offset-2 hover:text-[var(--workspace-shell-text)] hover:underline disabled:no-underline disabled:opacity-40"
+          disabled={!canReset}
+          onClick={onReset}
+        >
+          {resetLabel}
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -205,6 +274,18 @@ export function SignaturesStaffBulkEditor({
                 dirty: false,
                 photo_url: row.photoDataUrl || row.photo_url,
                 photoDataUrl: null,
+                full_name_override: storedOverride(
+                  row.directory_full_name,
+                  row.full_name,
+                ),
+                job_title_override: storedOverride(
+                  row.directory_job_title,
+                  row.job_title,
+                ),
+                department_override: storedOverride(
+                  row.directory_department,
+                  row.department,
+                ),
               }
             : row,
         ),
@@ -231,8 +312,8 @@ export function SignaturesStaffBulkEditor({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <Table2 className="h-4 w-4 text-[var(--ozer-accent)]" />
-          Profile fields are read-only for synced staff. Photos, branch,
-          template, and phone overrides remain editable.
+          Name, title, and department can be overridden for signatures without
+          changing Microsoft or Google. Reset restores the directory value.
         </div>
         <Button
           type="button"
@@ -268,6 +349,7 @@ export function SignaturesStaffBulkEditor({
             {rows.map((row) => {
               const photoSrc = row.photoDataUrl || row.photo_url;
               const editableProfile = isManualStaffSource(row.source);
+              const resetLabel = directoryResetLabel(row.source);
               return (
                 <tr
                   key={row.staffId}
@@ -322,29 +404,59 @@ export function SignaturesStaffBulkEditor({
                     </>
                   </td>
                   <td className="px-1 py-1">
-                    <CellInput
+                    <BulkProfileCell
                       value={row.full_name}
-                      disabled={!editableProfile}
+                      directoryValue={row.directory_full_name}
+                      override={row.full_name_override}
+                      placeholder={row.directory_full_name}
+                      resetLabel={resetLabel}
+                      showReset={!editableProfile}
                       onChange={(value) =>
                         patchRow(row.staffId, { full_name: value })
                       }
-                    />
-                  </td>
-                  <td className="px-1 py-1">
-                    <CellInput
-                      value={row.job_title}
-                      disabled={!editableProfile}
-                      onChange={(value) =>
-                        patchRow(row.staffId, { job_title: value })
+                      onReset={() =>
+                        patchRow(row.staffId, {
+                          full_name: row.directory_full_name,
+                          full_name_override: null,
+                        })
                       }
                     />
                   </td>
                   <td className="px-1 py-1">
-                    <CellInput
+                    <BulkProfileCell
+                      value={row.job_title}
+                      directoryValue={row.directory_job_title}
+                      override={row.job_title_override}
+                      placeholder={row.directory_job_title}
+                      resetLabel={resetLabel}
+                      showReset={!editableProfile}
+                      onChange={(value) =>
+                        patchRow(row.staffId, { job_title: value })
+                      }
+                      onReset={() =>
+                        patchRow(row.staffId, {
+                          job_title: row.directory_job_title,
+                          job_title_override: null,
+                        })
+                      }
+                    />
+                  </td>
+                  <td className="px-1 py-1">
+                    <BulkProfileCell
                       value={row.department}
-                      disabled={!editableProfile}
+                      directoryValue={row.directory_department}
+                      override={row.department_override}
+                      placeholder={row.directory_department}
+                      resetLabel={resetLabel}
+                      showReset={!editableProfile}
                       onChange={(value) =>
                         patchRow(row.staffId, { department: value })
+                      }
+                      onReset={() =>
+                        patchRow(row.staffId, {
+                          department: row.directory_department,
+                          department_override: null,
+                        })
                       }
                     />
                   </td>

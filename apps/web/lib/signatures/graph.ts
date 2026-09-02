@@ -238,6 +238,9 @@ export async function syncStaffFromM365(
           continue;
         }
 
+        // Directory columns stay the live Graph values. Do not write
+        // full_name_override / job_title_override / department_override —
+        // those are Ozer-only and must never be sent back to Entra.
         const baseRow = {
           account_id: accountId,
           ms_user_id: u.id,

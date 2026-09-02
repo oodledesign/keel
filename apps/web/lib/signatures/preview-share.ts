@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { getSignaturesSupabaseClient } from './graph';
+import { applySignatureProfileOverrides } from './profile-overrides';
 import { loadSignatureRenderOptions } from './render-context';
 import { type SignaturesStaffRow, renderTemplate } from './render-template';
 
@@ -238,7 +239,9 @@ export async function loadPublicSignaturePreview(
   return {
     templateName: String(template.name ?? 'Signature'),
     accountName: (account?.name as string | null | undefined)?.trim() || null,
-    fromName: staffRow.full_name?.trim() || 'Alex Morgan',
+    fromName:
+      applySignatureProfileOverrides(staffRow).full_name?.trim() ||
+      'Alex Morgan',
     fromEmail: staffRow.signature_email?.trim() || staffRow.email,
     signatureHtml,
     isPersonalShare: Boolean(share.staff_id && staff),
