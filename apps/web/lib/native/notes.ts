@@ -8,11 +8,107 @@ import {
 } from '~/lib/recorder/create-note';
 
 import { NativeHttpError } from './http';
-import { toNativeNote } from './notes-shared';
+import {
+  NATIVE_NOTE_CATEGORY_SLUG_RE,
+  isNativeSystemNoteCategory,
+  mergeNativeNoteCategories,
+  type NativeNoteCategory,
+  toNativeNote,
+} from './notes-shared';
 import { parseOptionalClientId } from './task-map';
 import type { NativeWorkspace } from './workspace-shared';
 
-export type { NativeNote } from './notes-shared';
+export type { NativeNote, NativeNoteCategory } from './notes-shared';
+
+function isTableMissing(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  const message = (error.message ?? '').toLowerCase();
+  return (
+    message.includes('schema cache') ||
+    message.includes('does not exist') ||
+    message.includes('could not find') ||
+    error.code === 'PGRST205' ||
+    error.code === '42P01'
+  );
+}
+
+async function requireClientInWorkspace(
+  client: SupabaseClient,
+  clientId: string,
+  accountId: string,
+) {
+  const { data, error } = await client
+    .from('clients')
+    .select('id')
+    .eq('id', clientId)
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new NativeHttpError(400, 'client_id must belong to this workspace');
+  }
+}
+
+async function loadCustomNoteCategories(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<Array<{ slug: string; label: string }>> {
+  const { data, error } = await client
+    .from('note_categories')
+    .select('slug, label')
+    .eq('account_id', accountId)
+    .order('label', { ascending: true });
+
+  if (error) {
+    if (isTableMissing(error)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .map((row) => ({
+      slug: typeof row.slug === 'string' ? row.slug.trim() : '',
+      label: typeof row.label === 'string' ? row.label.trim() : '',
+    }))
+    .filter((row) => row.slug.length > 0);
+}
+
+async function assertNativeNoteCategory(
+  client: SupabaseClient,
+  accountId: string,
+  slug: string,
+) {
+  if (isNativeSystemNoteCategory(slug)) {
+    return;
+  }
+
+  const custom = await loadCustomNoteCategories(client, accountId);
+  if (!custom.some((row) => row.slug === slug)) {
+    throw new NativeHttpError(400, 'Unknown note category');
+  }
+}
+
+function parseNoteCategory(value: string | null | undefined) {
+  if (value == null) {
+    return undefined;
+  }
+
+  const slug = value.trim();
+  if (!slug) {
+    return undefined;
+  }
+
+  if (!NATIVE_NOTE_CATEGORY_SLUG_RE.test(slug)) {
+    throw new NativeHttpError(400, 'Invalid note category');
+  }
+
+  return slug;
+}
 
 export async function listNativeNotes(
   userId: string,
@@ -39,6 +135,14 @@ export async function listNativeNotes(
   );
 }
 
+export async function listNativeNoteCategories(
+  client: SupabaseClient,
+  workspace: NativeWorkspace,
+): Promise<NativeNoteCategory[]> {
+  const custom = await loadCustomNoteCategories(client, workspace.id);
+  return mergeNativeNoteCategories(custom);
+}
+
 export async function createNativeNote(input: {
   userId: string;
   workspace: NativeWorkspace;
@@ -56,18 +160,20 @@ export async function createNativeNote(input: {
 
   const clientId = parseOptionalClientId(input.clientId ?? undefined) ?? null;
   if (clientId) {
-    const { data, error } = await input.client
-      .from('clients')
-      .select('id')
-      .eq('id', clientId)
-      .eq('account_id', input.workspace.id)
-      .maybeSingle();
-    if (error) {
-      throw new Error(error.message);
-    }
-    if (!data) {
-      throw new NativeHttpError(400, 'client_id must belong to this workspace');
-    }
+    await requireClientInWorkspace(
+      input.client,
+      clientId,
+      input.workspace.id,
+    );
+  }
+
+  const category = parseNoteCategory(input.category);
+  if (category) {
+    await assertNativeNoteCategory(
+      input.client,
+      input.workspace.id,
+      category,
+    );
   }
 
   const created = await createRecorderNote({
@@ -77,7 +183,7 @@ export async function createNativeNote(input: {
     accountId: input.workspace.id,
     clientId,
     source: 'native',
-    category: input.category,
+    category,
     tags: input.tags,
   });
 
@@ -86,7 +192,7 @@ export async function createNativeNote(input: {
     title: created.title,
     body: created.content,
     workspace: input.workspace.slug,
-    category: input.category,
+    category,
     tags: input.tags,
     clientId,
     createdAt: created.created_at,
@@ -100,6 +206,8 @@ export async function updateNativeNote(input: {
   noteId: string;
   title?: string;
   body?: string;
+  category?: string;
+  clientId?: string | null;
 }) {
   const { data: existing, error: loadError } = await input.client
     .from('notes')
@@ -131,6 +239,29 @@ export async function updateNativeNote(input: {
       throw new NativeHttpError(400, 'body is required');
     }
     updates.content = body;
+  }
+  if (input.category !== undefined) {
+    const category = parseNoteCategory(input.category);
+    if (!category) {
+      throw new NativeHttpError(400, 'category is required');
+    }
+    await assertNativeNoteCategory(
+      input.client,
+      existing.account_id as string,
+      category,
+    );
+    updates.category = category;
+  }
+  if (input.clientId !== undefined) {
+    const clientId = parseOptionalClientId(input.clientId) ?? null;
+    if (clientId) {
+      await requireClientInWorkspace(
+        input.client,
+        clientId,
+        existing.account_id as string,
+      );
+    }
+    updates.client_id = clientId;
   }
 
   if (Object.keys(updates).length === 0) {

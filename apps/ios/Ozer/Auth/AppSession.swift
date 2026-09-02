@@ -51,6 +51,11 @@ final class AppSession {
 
     var userEmail: String? { session?.email }
 
+    var userId: String? {
+        let id = session?.userId.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return id.isEmpty ? nil : id
+    }
+
     func hydrate() {
         do {
             if let data = try KeychainStore.data(account: Self.keychainAccount) {

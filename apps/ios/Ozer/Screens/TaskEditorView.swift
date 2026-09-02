@@ -185,6 +185,9 @@ struct TaskEditorView: View {
                     )
                 }
             }
+            if !markComplete {
+                persistCache(saved)
+            }
             onSaved(saved)
             dismiss()
         } catch let error as NativeAPIError {
@@ -195,5 +198,18 @@ struct TaskEditorView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func persistCache(_ task: TaskItem) {
+        guard let userId = session.userId,
+              let workspaceId = session.selectedWorkspace?.id
+        else {
+            return
+        }
+        WorkspaceListCache.upsertTask(
+            userId: userId,
+            workspaceId: workspaceId,
+            task: task
+        )
     }
 }

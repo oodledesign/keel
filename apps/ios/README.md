@@ -111,7 +111,7 @@ PATCH {OZER_API_BASE}/api/native/v1/tasks/{id}
 { "title?", "due?", "client_id?", "status?" }
 ```
 
-`status` of `completed` or `done` marks the task done. `client_id` must belong to the workspace; `null` clears it. The iPhone list can add, edit, attach a client, and tick complete.
+`status` of `completed` or `done` marks the task done. `client_id` must belong to the workspace; `null` clears it. The iPhone list can add, edit, attach a client, and tick complete. The first ~20 open tasks for the selected workspace are cached on disk so a cold launch (including after an Xcode rebuild) still shows the last list immediately, then refreshes.
 
 ## Notes API
 
@@ -123,14 +123,19 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tags?", "client_id?", "created_at", "updated_at" }] }`. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens a read-only title + body screen.
+The list is `{ "items": [{ "id", "title", "body", "workspace", "category?", "tags?", "client_id?", "created_at", "updated_at" }], "categories": [{ "slug", "label", "is_custom" }] }`. `categories` is the web picker: Idea, Future, Development, Meeting transcript, plus any custom slugs on that account. Row title falls back to the first body line, then “Untitled”. Subtitle is a truncated body or a relative date. Tap opens the editor (title, body, category, optional client). Plus creates a typed note; the mic still dictates.
 
 ```
 POST {OZER_API_BASE}/api/native/v1/notes
 { "title?", "body", "workspace", "category?", "tags?", "client_id?" }
 ```
 
-`body` is required. `category` of `meeting_transcript` marks an in-room meeting. `client_id` is optional and must belong to the workspace (same rule as tasks; left for a later survey/job attach — do not invent a survey hook here). In-room capture can POST here with `category: meeting_transcript`, or POST `/meetings` for the Ozer Meetings page. The phone never calls `/api/recorder/transcribe-session` (that route is 503; cloud STT is off).
+```
+PATCH {OZER_API_BASE}/api/native/v1/notes/{id}
+{ "title?", "body?", "category?", "client_id?" }
+```
+
+`body` is required on create. `category` must be a system slug or a custom slug for that workspace — do not invent extras. `category` of `meeting_transcript` marks an in-room meeting. `client_id` is optional and must belong to the workspace; `null` on PATCH clears it. Personal and family hide the client picker. New notes reuse `OfflineNoteQueue` so they still save offline. The first ~20 notes (with body) are cached on disk per workspace so a cold launch still opens the list and those details. In-room capture can POST here with `category: meeting_transcript`, or POST `/meetings` for the Ozer Meetings page. The phone never calls `/api/recorder/transcribe-session` (that route is 503; cloud STT is off).
 
 ## Meetings API
 

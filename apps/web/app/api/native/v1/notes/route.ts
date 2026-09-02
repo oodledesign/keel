@@ -8,7 +8,11 @@ import {
   nativeBadRequest,
   readJsonBody,
 } from '~/lib/native/http';
-import { createNativeNote, listNativeNotes } from '~/lib/native/notes';
+import {
+  createNativeNote,
+  listNativeNoteCategories,
+  listNativeNotes,
+} from '~/lib/native/notes';
 import { requireNativeWorkspace } from '~/lib/native/workspace';
 
 export const runtime = 'nodejs';
@@ -35,8 +39,11 @@ export async function GET(request: Request) {
       auth.context.userId,
       new URL(request.url).searchParams.get('workspace'),
     );
-    const items = await listNativeNotes(auth.context.userId, workspace);
-    return NextResponse.json({ items });
+    const [items, categories] = await Promise.all([
+      listNativeNotes(auth.context.userId, workspace),
+      listNativeNoteCategories(auth.context.supabase, workspace),
+    ]);
+    return NextResponse.json({ items, categories });
   } catch (error) {
     return handleNativeError(error, 'notes');
   }

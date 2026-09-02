@@ -6,6 +6,8 @@ struct NotesListView: View {
     @State private var loadError: NativeAPIError?
     @State private var isLoading = false
     @State private var showDictation = false
+    @State private var showEditor = false
+    @State private var isShowingStaleCache = false
     @State private var noteQueue = OfflineNoteQueue.shared
 
     private let client = NativeAPIClient()
@@ -49,18 +51,35 @@ struct NotesListView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     WorkspaceChip()
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showEditor = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundStyle(OzerPalette.coral)
+                    .accessibilityLabel("New note")
+                    .disabled(session.workspaceQueryValue.isEmpty)
+
                     Button {
                         showDictation = true
                     } label: {
                         Image(systemName: "mic")
-                            .foregroundStyle(OzerPalette.coral)
                     }
+                    .foregroundStyle(OzerPalette.coral)
                     .accessibilityLabel("Dictate a note")
                     .disabled(session.workspaceQueryValue.isEmpty)
                 }
             }
+            .onChange(of: reloadKey) { _, _ in
+                payload = nil
+                loadError = nil
+                isShowingStaleCache = false
+                hydrateFromCache()
+            }
             .task(id: reloadKey) {
+                hydrateFromCache()
                 await session.flushOfflineWork()
                 await load()
             }
@@ -73,6 +92,14 @@ struct NotesListView: View {
                 DictationSheet { title, body in
                     await saveDictation(title: title, body: body)
                 }
+            }
+            .sheet(isPresented: $showEditor) {
+                NoteEditorView(
+                    categories: payload?.categories ?? []
+                ) { _ in
+                    Task { await load() }
+                }
+                .presentationDetents([.large])
             }
         }
     }
@@ -89,9 +116,28 @@ struct NotesListView: View {
                         .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
                 }
 
+                if isShowingStaleCache {
+                    Text("Showing saved notes. Couldn’t refresh just now.")
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+                }
+
                 ForEach(items) { item in
                     NavigationLink {
-                        NoteDetailView(note: item)
+                        if item.isPendingSync {
+                            NoteDetailView(note: item)
+                        } else {
+                            NoteEditorView(
+                                existing: item,
+                                categories: payload?.categories ?? [],
+                                embedsNavigation: false
+                            ) { _ in
+                                Task { await load() }
+                            }
+                        }
                     } label: {
                         noteRow(item)
                     }
@@ -112,6 +158,11 @@ struct NotesListView: View {
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
                     .lineLimit(2)
+            }
+            if let category = item.categoryLabel(in: payload?.categories ?? []) {
+                Text(category)
+                    .font(.caption)
+                    .foregroundStyle(OzerPalette.plumSoft)
             }
             if item.isPendingSync {
                 Text(noteQueue.lastFlushError == nil ? "Waiting to sync" : "Couldn’t sync")
@@ -161,10 +212,17 @@ struct NotesListView: View {
             Text("Nothing on this list")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(OzerPalette.plum)
-            Text("When there are notes in this workspace, they will land here. Use the mic to dictate a new one — that works offline.")
+            Text("When there are notes in this workspace, they will land here. Add one with the plus button, or use the mic to dictate — that works offline.")
                 .font(.body)
                 .foregroundStyle(OzerPalette.plumMuted)
                 .multilineTextAlignment(.center)
+            Button("New note") {
+                showEditor = true
+            }
+            .buttonStyle(OzerPrimaryButtonStyle())
+            .frame(width: 160)
+            .padding(.top, 4)
+            .disabled(session.workspaceQueryValue.isEmpty)
         }
         .padding(28)
         .frame(maxWidth: .infinity)
@@ -201,6 +259,37 @@ struct NotesListView: View {
         }
     }
 
+    private func cacheIdentity() -> (userId: String, workspaceId: String)? {
+        guard let userId = session.userId,
+              let workspaceId = session.selectedWorkspace?.id,
+              !workspaceId.isEmpty
+        else {
+            return nil
+        }
+        return (userId, workspaceId)
+    }
+
+    private func hydrateFromCache() {
+        guard let identity = cacheIdentity() else { return }
+        let cached = WorkspaceListCache.loadNotes(
+            userId: identity.userId,
+            workspaceId: identity.workspaceId
+        )
+        if !cached.items.isEmpty {
+            payload = cached
+            loadError = nil
+        }
+    }
+
+    private func persistCache(_ next: NotesPayload) {
+        guard let identity = cacheIdentity() else { return }
+        WorkspaceListCache.saveNotes(
+            userId: identity.userId,
+            workspaceId: identity.workspaceId,
+            payload: next
+        )
+    }
+
     private func load() async {
         isLoading = true
         defer { isLoading = false }
@@ -214,13 +303,17 @@ struct NotesListView: View {
             guard !workspace.isEmpty else {
                 payload = nil
                 loadError = nil
+                isShowingStaleCache = false
                 return
             }
-            payload = try await client.notes(
+            let next = try await client.notes(
                 workspace: workspace,
                 accessToken: token
             )
+            payload = next
+            persistCache(next)
             loadError = nil
+            isShowingStaleCache = false
         } catch is CancellationError {
             return
         } catch let error as NativeAPIError {
@@ -230,12 +323,18 @@ struct NotesListView: View {
             if displayedItems.isEmpty {
                 payload = nil
                 loadError = error
+                isShowingStaleCache = false
+            } else {
+                isShowingStaleCache = true
             }
         } catch {
             if error.isTaskCancellation { return }
             if displayedItems.isEmpty {
                 payload = nil
                 loadError = .transport(error.localizedDescription)
+                isShowingStaleCache = false
+            } else {
+                isShowingStaleCache = true
             }
         }
     }

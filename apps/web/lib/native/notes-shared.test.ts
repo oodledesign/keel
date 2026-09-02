@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   NATIVE_MEETING_NOTE_CATEGORY,
   isNativeMeetingNote,
+  isNativeSystemNoteCategory,
+  mergeNativeNoteCategories,
+  nativeNoteCategoryLabel,
   nativeNoteTitleFromBody,
   toNativeNote,
 } from './notes-shared';
@@ -32,6 +35,48 @@ describe('nativeNoteTitleFromBody', () => {
 
   it('falls back when the body is blank', () => {
     expect(nativeNoteTitleFromBody('   ')).toBe('Note');
+  });
+});
+
+describe('native note categories', () => {
+  it('keeps the web system slugs', () => {
+    expect(isNativeSystemNoteCategory('idea')).toBe(true);
+    expect(isNativeSystemNoteCategory('future')).toBe(true);
+    expect(isNativeSystemNoteCategory('development')).toBe(true);
+    expect(isNativeSystemNoteCategory(NATIVE_MEETING_NOTE_CATEGORY)).toBe(true);
+    expect(isNativeSystemNoteCategory('research')).toBe(false);
+  });
+
+  it('uses the web labels', () => {
+    expect(nativeNoteCategoryLabel('idea')).toBe('Idea');
+    expect(nativeNoteCategoryLabel(NATIVE_MEETING_NOTE_CATEGORY)).toBe(
+      'Meeting transcript',
+    );
+    expect(nativeNoteCategoryLabel('site_visit')).toBe('Site Visit');
+  });
+
+  it('merges custom slugs after the system list', () => {
+    const merged = mergeNativeNoteCategories(
+      [
+        { slug: 'research', label: 'Research' },
+        { slug: 'idea', label: 'Should not replace' },
+      ],
+      'legacy_kind',
+    );
+
+    expect(merged.map((item) => item.slug)).toEqual([
+      'idea',
+      'future',
+      'development',
+      NATIVE_MEETING_NOTE_CATEGORY,
+      'research',
+      'legacy_kind',
+    ]);
+    expect(merged.find((item) => item.slug === 'research')).toEqual({
+      slug: 'research',
+      label: 'Research',
+      is_custom: true,
+    });
   });
 });
 
