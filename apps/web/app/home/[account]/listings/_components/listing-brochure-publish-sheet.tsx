@@ -66,6 +66,8 @@ const DISPLAY_TOGGLES: Array<{
   { key: 'showServiceCharge', label: 'Display service charge' },
   { key: 'showEstateCharge', label: 'Display estate charge' },
   { key: 'showReducedPrice', label: 'Reduced price badge' },
+  { key: 'showWebsiteListingButton', label: 'Website listing button' },
+  { key: 'showSlideshowBrochureButton', label: 'Online brochure button' },
 ];
 
 function safeFileName(name: string) {
@@ -120,6 +122,14 @@ export function ListingBrochurePublishSheet({
     params.set('showServiceCharge', display.showServiceCharge ? '1' : '0');
     params.set('showEstateCharge', display.showEstateCharge ? '1' : '0');
     params.set('showReducedPrice', display.showReducedPrice ? '1' : '0');
+    params.set(
+      'showWebsiteListingButton',
+      display.showWebsiteListingButton ? '1' : '0',
+    );
+    params.set(
+      'showSlideshowBrochureButton',
+      display.showSlideshowBrochureButton ? '1' : '0',
+    );
     return params;
   }
 
@@ -347,7 +357,9 @@ export function ListingBrochurePublishSheet({
             <div>
               <h3 className="text-sm font-medium">Details to include</h3>
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Applies when regenerating from the template (saved layout off).
+                Price and size apply when regenerating (saved layout off).
+                Website and online brochure buttons apply whenever those URLs
+                exist.
               </p>
             </div>
             <ul className="space-y-3">
@@ -360,7 +372,11 @@ export function ListingBrochurePublishSheet({
                   <Switch
                     checked={display[item.key]}
                     disabled={
-                      busy || (useSaved && item.key !== 'showReducedPrice')
+                      busy ||
+                      (useSaved &&
+                        item.key !== 'showReducedPrice' &&
+                        item.key !== 'showWebsiteListingButton' &&
+                        item.key !== 'showSlideshowBrochureButton')
                     }
                     onCheckedChange={(checked) =>
                       setDisplay((current) => ({

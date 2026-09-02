@@ -74,6 +74,7 @@ export const saveAccountBranchAction = enhanceAction(
       phone: input.phone?.trim() || null,
       email: input.email?.trim() || null,
       rightmove_branch_id: input.rightmove_branch_id?.trim() || null,
+      shopfront_url: input.shopfront_url?.trim() || null,
       is_default: input.is_default ?? false,
     };
 
@@ -151,6 +152,7 @@ export const saveAccountBranchesAction = enhanceAction(
         phone: branch.phone?.trim() || null,
         email: branch.email?.trim() || null,
         rightmove_branch_id: branch.rightmove_branch_id?.trim() || null,
+        shopfront_url: branch.shopfront_url?.trim() || null,
         is_default: index === defaultIndex,
         sort_order: index,
       };

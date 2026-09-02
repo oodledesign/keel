@@ -29,7 +29,22 @@ export type FetchBrochureMapImageInput = {
 };
 
 const MAP_STYLES = ['mapbox/streets-v12', 'mapbox/light-v11'] as const;
-const PIN_HEX_FALLBACK = 'FF5C34';
+const PIN_HEX_FALLBACK = '351E28';
+
+/**
+ * Property pin uses workspace brand primary (navy), not the coral accent.
+ * Mapbox streets-v12 already uses red-ish POI dots — the pin must contrast.
+ */
+export function brochureMapPinColor(brand: {
+  primaryColor?: string | null;
+  accentColor?: string | null;
+}): string {
+  const primary = brand.primaryColor?.trim();
+  if (primary) return primary;
+  const accent = brand.accentColor?.trim();
+  if (accent) return accent;
+  return `#${PIN_HEX_FALLBACK}`;
+}
 
 /** Mapbox Static overlay pin colour: 6 hex digits, no `#`. */
 export function toMapboxPinHex(

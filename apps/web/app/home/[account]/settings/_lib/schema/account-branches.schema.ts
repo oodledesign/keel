@@ -13,6 +13,24 @@ const branchFields = {
     .optional()
     .nullable(),
   is_default: z.boolean().optional(),
+  shopfront_url: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .nullable()
+    .refine(
+      (value) => {
+        if (!value) return true;
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+        } catch {
+          return false;
+        }
+      },
+      { message: 'Shopfront URL must be http(s)' },
+    ),
 };
 
 export const saveAccountBranchSchema = z.object({

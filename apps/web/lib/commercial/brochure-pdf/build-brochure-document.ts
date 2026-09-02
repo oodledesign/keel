@@ -223,6 +223,7 @@ function contactSlots(
   data: PublicBrochureData,
   notice: string,
 ): Record<string, BrochureSlotValue> {
+  const shopfront = data.branch?.shopfrontUrl?.trim() || null;
   return {
     title: textSlot('Contact'),
     notice: textSlot(notice),
@@ -231,6 +232,7 @@ function contactSlots(
     branchAddress: textSlot(data.branch?.address ?? ''),
     branchPhone: textSlot(data.branch?.phone ?? ''),
     branchEmail: textSlot(data.branch?.email ?? ''),
+    shopfront: imageSlot(null, shopfront),
   };
 }
 
@@ -333,9 +335,7 @@ function descriptionSlots(
     ),
     body: textSlot(description.slice(0, bodyLimit)),
     // Only populate when there are real key points — renderer omits empty section
-    highlights: textSlot(
-      highlights.length > 0 ? highlights.map((h) => `• ${h}`).join('\n') : '',
-    ),
+    highlights: textSlot(highlights.length > 0 ? highlights.join('\n') : ''),
   };
 }
 
@@ -646,6 +646,7 @@ export function createBlankBrochurePage(
         branchAddress: textSlot(''),
         branchPhone: textSlot(''),
         branchEmail: textSlot(''),
+        shopfront: emptyImage,
       });
     default:
       return page(layoutId, {});

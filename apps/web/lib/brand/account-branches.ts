@@ -16,6 +16,7 @@ export type AccountBranch = {
   phone: string | null;
   email: string | null;
   rightmoveBranchId: string | null;
+  shopfrontUrl: string | null;
   isDefault: boolean;
   sortOrder: number;
 };
@@ -28,6 +29,7 @@ type AccountBranchRow = {
   phone?: string | null;
   email?: string | null;
   rightmove_branch_id?: string | null;
+  shopfront_url?: string | null;
   is_default?: boolean | null;
   sort_order?: number | null;
 };
@@ -41,6 +43,7 @@ function mapBranch(row: AccountBranchRow): AccountBranch {
     phone: row.phone?.trim() || null,
     email: row.email?.trim() || null,
     rightmoveBranchId: row.rightmove_branch_id?.trim() || null,
+    shopfrontUrl: row.shopfront_url?.trim() || null,
     isDefault: Boolean(row.is_default),
     sortOrder: row.sort_order ?? 0,
   };

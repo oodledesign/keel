@@ -26,6 +26,10 @@ export const GET = enhanceRouteHandler(
       showServiceCharge: searchParams.get('showServiceCharge') ?? undefined,
       showEstateCharge: searchParams.get('showEstateCharge') ?? undefined,
       showReducedPrice: searchParams.get('showReducedPrice') ?? undefined,
+      showWebsiteListingButton:
+        searchParams.get('showWebsiteListingButton') ?? undefined,
+      showSlideshowBrochureButton:
+        searchParams.get('showSlideshowBrochureButton') ?? undefined,
     });
 
     if (!parsed.success) {
@@ -48,6 +52,8 @@ export const GET = enhanceRouteHandler(
       showServiceCharge,
       showEstateCharge,
       showReducedPrice,
+      showWebsiteListingButton,
+      showSlideshowBrochureButton,
     } = parsed.data;
     const client = getSupabaseServerClient();
 
@@ -81,6 +87,8 @@ export const GET = enhanceRouteHandler(
         showServiceCharge,
         showEstateCharge,
         showReducedPrice,
+        showWebsiteListingButton,
+        showSlideshowBrochureButton,
       };
 
       const { bytes, filename, document } = await generateListingBrochurePdf({
@@ -90,7 +98,13 @@ export const GET = enhanceRouteHandler(
         templateId: saved?.templateId ?? template,
         document: saved,
         // Facts bake into saved pages; reduced sash can still apply at render.
-        display: saved ? { showReducedPrice } : display,
+        display: saved
+          ? {
+              showReducedPrice,
+              showWebsiteListingButton,
+              showSlideshowBrochureButton,
+            }
+          : display,
       });
 
       // Persist auto pack when downloading without a saved doc so the editor starts warm

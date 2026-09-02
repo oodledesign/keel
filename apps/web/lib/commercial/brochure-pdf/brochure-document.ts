@@ -13,6 +13,10 @@ export type BrochureDisplayOptions = {
   showServiceCharge: boolean;
   showEstateCharge: boolean;
   showReducedPrice: boolean;
+  /** Clickable cover/contact button when a public website listing URL exists. */
+  showWebsiteListingButton: boolean;
+  /** Clickable cover/contact button when an Ozer slideshow brochure URL exists. */
+  showSlideshowBrochureButton: boolean;
 };
 
 export const DEFAULT_BROCHURE_DISPLAY_OPTIONS: BrochureDisplayOptions = {
@@ -23,6 +27,8 @@ export const DEFAULT_BROCHURE_DISPLAY_OPTIONS: BrochureDisplayOptions = {
   showServiceCharge: true,
   showEstateCharge: false,
   showReducedPrice: false,
+  showWebsiteListingButton: true,
+  showSlideshowBrochureButton: true,
 };
 
 export type BrochureSlotType = 'image' | 'text' | 'map' | 'agents' | 'facts';

@@ -2,13 +2,14 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { buildBrochureDocument } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import type {
   BrochureDocument,
   BrochureOrientation,
   BrochurePage,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { buildBrochureDocument } from '~/lib/commercial/brochure-pdf/build-brochure-document';
+import { hydrateBrochureDocument } from '~/lib/commercial/brochure-pdf/hydrate-brochure-document';
 import { loadListingBrochureData } from '~/lib/commercial/brochure-pdf/load-listing-brochure-data';
 
 type BrochureRow = {
@@ -75,7 +76,14 @@ class ListingBrochureService {
       input.accountId,
       input.orientation,
     );
-    if (existing) return existing;
+    if (existing) {
+      const data = await loadListingBrochureData(
+        input.listingId,
+        input.accountId,
+      );
+      if (!data) return existing;
+      return { ...existing, ...hydrateBrochureDocument(existing, data) };
+    }
 
     const data = await loadListingBrochureData(
       input.listingId,

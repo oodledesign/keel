@@ -162,7 +162,7 @@ function PreviewPage({
                   {disposal}
                 </p>
               ) : null}
-              <p className="line-clamp-4 text-sm leading-snug font-semibold">
+              <p className="line-clamp-5 text-base leading-tight font-semibold">
                 {title}
               </p>
               {slotText(page, 'address') ? (

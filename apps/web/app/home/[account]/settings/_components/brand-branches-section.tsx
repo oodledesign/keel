@@ -24,7 +24,9 @@ type BranchDraft = {
   phone: string;
   email: string;
   rightmoveBranchId: string;
+  shopfrontUrl: string;
   is_default: boolean;
+  uploadingShopfront?: boolean;
 };
 
 function toDraft(branch: AccountBranch): BranchDraft {
@@ -35,6 +37,7 @@ function toDraft(branch: AccountBranch): BranchDraft {
     phone: branch.phone ?? '',
     email: branch.email ?? '',
     rightmoveBranchId: branch.rightmoveBranchId ?? '',
+    shopfrontUrl: branch.shopfrontUrl ?? '',
     is_default: branch.isDefault,
   };
 }
@@ -46,6 +49,7 @@ function emptyDraft(isDefault: boolean): BranchDraft {
     phone: '',
     email: '',
     rightmoveBranchId: '',
+    shopfrontUrl: '',
     is_default: isDefault,
   };
 }
@@ -86,6 +90,46 @@ export function BrandBranchesSection({
     setBranches((rows) => [...rows, emptyDraft(rows.length === 0)]);
   };
 
+  const uploadShopfront = async (index: number, file: File | undefined) => {
+    if (!file || !canEdit) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Shopfront photo must be 8MB or smaller');
+      return;
+    }
+
+    updateRow(index, { uploadingShopfront: true });
+    try {
+      const form = new FormData();
+      form.set('accountId', accountId);
+      const branchId = branches[index]?.id;
+      if (branchId) form.set('branchId', branchId);
+      form.set('file', file);
+
+      const res = await fetch('/api/brand/upload-branch-shopfront', {
+        method: 'POST',
+        body: form,
+      });
+      const body = (await res.json().catch(() => null)) as {
+        shopfrontUrl?: string;
+        error?: string;
+      } | null;
+      if (!res.ok || !body?.shopfrontUrl) {
+        throw new Error(body?.error ?? 'Could not upload shopfront photo');
+      }
+      updateRow(index, {
+        shopfrontUrl: body.shopfrontUrl,
+        uploadingShopfront: false,
+      });
+    } catch (error) {
+      updateRow(index, { uploadingShopfront: false });
+      toast.error(getErrorMessage(error));
+    }
+  };
+
   const removeBranch = (index: number) => {
     setBranches((rows) => {
       const next = rows.filter((_, i) => i !== index);
@@ -115,6 +159,7 @@ export function BrandBranchesSection({
           phone: b.phone.trim() || null,
           email: b.email.trim() || null,
           rightmove_branch_id: b.rightmoveBranchId.trim() || null,
+          shopfront_url: b.shopfrontUrl.trim() || null,
           is_default: b.is_default,
         })),
       });
@@ -203,6 +248,43 @@ export function BrandBranchesSection({
                   placeholder="office@example.com"
                   disabled={!canEdit}
                 />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Shopfront photo</Label>
+                <p className="text-muted-foreground text-xs">
+                  Shown next to this office on the brochure contact page.
+                </p>
+                {branch.shopfrontUrl ? (
+                  <div className="flex items-start gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={branch.shopfrontUrl}
+                      alt=""
+                      className="h-20 w-28 rounded-md object-cover"
+                    />
+                    {canEdit ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updateRow(index, { shopfrontUrl: '' })}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {canEdit ? (
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    disabled={branch.uploadingShopfront}
+                    onChange={(e) => {
+                      void uploadShopfront(index, e.target.files?.[0]);
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                ) : null}
               </div>
               {showRightmoveBranchId ? (
                 <div className="space-y-2 md:col-span-2">

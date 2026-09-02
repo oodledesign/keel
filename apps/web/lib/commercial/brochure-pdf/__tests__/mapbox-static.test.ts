@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildBrochureMapStaticUrls, toMapboxPinHex } from '../mapbox-static';
+import {
+  brochureMapPinColor,
+  buildBrochureMapStaticUrls,
+  toMapboxPinHex,
+} from '../mapbox-static';
+
+describe('brochureMapPinColor', () => {
+  it('uses workspace brand primary, not the coral accent', () => {
+    expect(
+      brochureMapPinColor({
+        primaryColor: '#0D2344',
+        accentColor: '#FF5C34',
+      }),
+    ).toBe('#0D2344');
+    expect(
+      toMapboxPinHex(
+        brochureMapPinColor({
+          primaryColor: '#0D2344',
+          accentColor: '#C8102E',
+        }),
+      ),
+    ).toBe('0D2344');
+  });
+});
 
 describe('toMapboxPinHex', () => {
   it('strips # and uppercases a brand hex', () => {
