@@ -173,7 +173,7 @@ struct NoteEditorView: View {
         .onDisappear {
             tabBar.isHidden = false
             autosaveTask?.cancel()
-            Task { await persistIfNeeded() }
+            autosaveTask = Task { await persistIfNeeded() }
         }
         .onChange(of: title) { _, _ in markDirtyAndSchedule() }
         .onChange(of: bodyText) { _, _ in markDirtyAndSchedule() }
@@ -314,9 +314,8 @@ struct NoteEditorView: View {
                 category: snapshotCategory,
                 clientId: snapshotClientId
             )
-            isSaving = false
             if isDirty {
-                await persistIfNeeded()
+                scheduleAutosave()
             }
         }
     }

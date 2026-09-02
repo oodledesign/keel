@@ -72,7 +72,6 @@ export function NoteMarkdownToolbar({
     enabled = true,
   ) => (
     <button
-      key={label}
       type="button"
       disabled={!editor || !enabled}
       className={cn(

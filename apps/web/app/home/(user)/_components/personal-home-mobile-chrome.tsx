@@ -53,8 +53,7 @@ export function PersonalHomeMobileChrome({
 }: PersonalHomeMobileChromeProps) {
   const pathname = usePathname();
   const noteEditorScroll = isNoteEditorRoute(pathname);
-  const fullHeightPageScroll =
-    noteEditorScroll || isEmailRoute(pathname);
+  const fullHeightPageScroll = noteEditorScroll || isEmailRoute(pathname);
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
 
   useEffect(() => {

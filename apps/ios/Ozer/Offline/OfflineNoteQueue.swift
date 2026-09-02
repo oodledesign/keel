@@ -83,7 +83,7 @@ final class OfflineNoteQueue {
         Self.storageDirectory.appendingPathComponent(Self.fileName)
     }
 
-    init() {
+    private init() {
         pending = Self.load(from: fileURL)
     }
 
