@@ -1258,7 +1258,8 @@ struct NoteItem: Codable, Identifiable, Equatable, Hashable {
     var displayTitle: String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedTitle.isEmpty { return trimmedTitle }
-        if let line = body.split(whereSeparator: \.isNewline)
+        if let line = NoteMarkdown.plainText(from: body)
+            .split(whereSeparator: \.isNewline)
             .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
             .first(where: { !$0.isEmpty })
         {
@@ -1296,7 +1297,8 @@ struct NoteItem: Codable, Identifiable, Equatable, Hashable {
     }
 
     private var bodyLines: [String] {
-        body.split(whereSeparator: \.isNewline)
+        NoteMarkdown.plainText(from: body)
+            .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
     }

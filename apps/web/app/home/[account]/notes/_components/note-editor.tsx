@@ -159,6 +159,12 @@ export function NoteEditor({
 
   const persist = useCallback(async () => {
     const snapshot = latestRef.current;
+    const title = snapshot.title.trim();
+    const content = snapshot.content.trim();
+    if (!title && !content) {
+      isDirtyRef.current = false;
+      return;
+    }
 
     setSaveState('saving');
     try {
@@ -166,7 +172,7 @@ export function NoteEditor({
         accountId,
         accountSlug,
         noteId: note.id,
-        title: snapshot.title.trim(),
+        title,
         content: snapshot.content,
         isPinned: snapshot.isPinned,
         category: snapshot.category,
@@ -212,11 +218,18 @@ export function NoteEditor({
     if (!isDirtyRef.current) return;
 
     const snapshot = latestRef.current;
+    const title = snapshot.title.trim();
+    const content = snapshot.content.trim();
+    if (!title && !content) {
+      isDirtyRef.current = false;
+      return;
+    }
+
     await saveWorkspaceNoteAction({
       accountId,
       accountSlug,
       noteId: note.id,
-      title: snapshot.title.trim(),
+      title,
       content: snapshot.content,
       isPinned: snapshot.isPinned,
       category: snapshot.category,
@@ -244,24 +257,51 @@ export function NoteEditor({
   }, [flushBrainIndex, flushPendingSave, notesHref, router]);
 
   useEffect(() => {
+    const flushIfHidden = () => {
+      if (document.visibilityState !== 'hidden' || !isDirtyRef.current) {
+        return;
+      }
+      void persist();
+    };
+
+    const flushOnPageHide = () => {
+      if (!isDirtyRef.current) return;
+      void persist();
+    };
+
+    document.addEventListener('visibilitychange', flushIfHidden);
+    window.addEventListener('pagehide', flushOnPageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', flushIfHidden);
+      window.removeEventListener('pagehide', flushOnPageHide);
+    };
+  }, [persist]);
+
+  useEffect(() => {
     return () => {
       if (leavingRef.current) return;
 
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
       if (isDirtyRef.current) {
-        void saveWorkspaceNoteAction({
-          accountId,
-          accountSlug,
-          noteId: note.id,
-          title: latestRef.current.title.trim(),
-          content: latestRef.current.content,
-          isPinned: latestRef.current.isPinned,
-          category: latestRef.current.category,
-          tags: latestRef.current.tags,
-          link: latestRef.current.link,
-          personalScope,
-        });
+        const snapshot = latestRef.current;
+        const title = snapshot.title.trim();
+        const content = snapshot.content.trim();
+        if (title || content) {
+          void saveWorkspaceNoteAction({
+            accountId,
+            accountSlug,
+            noteId: note.id,
+            title,
+            content: snapshot.content,
+            isPinned: snapshot.isPinned,
+            category: snapshot.category,
+            tags: snapshot.tags,
+            link: snapshot.link,
+            personalScope,
+          });
+        }
       }
 
       flushBrainIndex();

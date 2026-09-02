@@ -83,7 +83,7 @@ final class OfflineNoteQueue {
         Self.storageDirectory.appendingPathComponent(Self.fileName)
     }
 
-    init() {
+    private init() {
         pending = Self.load(from: fileURL)
     }
 
@@ -116,6 +116,21 @@ final class OfflineNoteQueue {
         lastFlushError = nil
         persist()
         return note
+    }
+
+    func updatePending(
+        id: String,
+        title: String,
+        body: String,
+        category: String?,
+        clientId: String?
+    ) {
+        guard let index = pending.firstIndex(where: { $0.id == id }) else { return }
+        pending[index].title = title
+        pending[index].body = body
+        pending[index].category = category
+        pending[index].clientId = clientId
+        persist()
     }
 
     func remove(id: String) {

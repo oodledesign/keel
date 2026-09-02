@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import type { Editor } from '@tiptap/react';
 import {
   Bold,
@@ -7,7 +9,9 @@ import {
   Heading2,
   Italic,
   List,
+  Redo2,
   Underline,
+  Undo2,
 } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
@@ -17,32 +21,72 @@ type NoteMarkdownToolbarProps = {
   className?: string;
 };
 
+function useMobileKeyboardOffset() {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const update = () => {
+      if (window.matchMedia('(min-width: 1024px)').matches) {
+        setOffset(0);
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      if (!viewport) {
+        setOffset(0);
+        return;
+      }
+
+      setOffset(
+        Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop),
+      );
+    };
+
+    update();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('resize', update);
+    viewport?.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+
+    return () => {
+      viewport?.removeEventListener('resize', update);
+      viewport?.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, []);
+
+  return offset;
+}
+
 export function NoteMarkdownToolbar({
   editor,
   className,
 }: NoteMarkdownToolbarProps) {
+  const keyboardOffset = useMobileKeyboardOffset();
+
   const btn = (
     label: string,
     active: boolean,
     onClick: () => void,
     icon: React.ReactNode,
+    enabled = true,
   ) => (
     <button
-      key={label}
       type="button"
-      disabled={!editor}
+      disabled={!editor || !enabled}
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+        'flex h-10 w-10 items-center justify-center rounded-md transition-colors lg:h-8 lg:w-8',
         active
           ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
           : 'text-[var(--workspace-shell-text-muted)] hover:bg-white/6 hover:text-[var(--workspace-shell-text)]',
-        !editor && 'opacity-50',
+        (!editor || !enabled) && 'opacity-35',
       )}
       aria-label={label}
       title={label}
       aria-pressed={active}
       onMouseDown={(event) => {
         event.preventDefault();
+        if (!enabled) return;
         onClick();
       }}
     >
@@ -53,12 +97,29 @@ export function NoteMarkdownToolbar({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-0.5 border-b border-[color:var(--workspace-shell-border)] py-1.5',
+        'z-50 flex items-center gap-0.5 bg-[var(--workspace-shell-canvas)]',
+        'fixed inset-x-0 bottom-0 justify-around border-t border-[color:var(--workspace-shell-border)] px-3 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]',
+        'lg:static lg:z-auto lg:justify-start lg:border-t-0 lg:border-b lg:pb-1.5',
         className,
       )}
+      style={{ bottom: keyboardOffset }}
       role="toolbar"
       aria-label="Formatting"
     >
+      {btn(
+        'Undo',
+        false,
+        () => editor?.chain().focus().undo().run(),
+        <Undo2 className="h-4 w-4" />,
+        editor?.can().undo() ?? false,
+      )}
+      {btn(
+        'Redo',
+        false,
+        () => editor?.chain().focus().redo().run(),
+        <Redo2 className="h-4 w-4" />,
+        editor?.can().redo() ?? false,
+      )}
       {btn(
         'Bold',
         editor?.isActive('bold') ?? false,

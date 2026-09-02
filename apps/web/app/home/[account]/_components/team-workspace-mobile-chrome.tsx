@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 import type { JWTUserData } from '@kit/supabase/types';
+import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
 
 import { MobileTapHaptics } from '~/components/mobile-tap-haptics';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
@@ -25,8 +26,6 @@ import {
   WorkspaceMobileMenu,
   useWorkspaceMobileNav,
 } from '~/components/workspace-shell/workspace-mobile-nav';
-import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
-
 import { WorkspaceMobileNewMenu } from '~/components/workspace-shell/workspace-new-menu';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
@@ -72,7 +71,8 @@ export function TeamWorkspaceMobileChrome({
 }: TeamWorkspaceMobileChromeProps) {
   const workspace = useTeamAccountWorkspace();
   const canMutateCommercial =
-    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ?? true;
+    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ??
+    true;
   const pathname = usePathname();
   const noteEditorScroll = isNoteEditorRoute(pathname);
   const emailScroll = isEmailRoute(pathname);
@@ -154,24 +154,26 @@ export function TeamWorkspaceMobileChrome({
         helpDefaultAccountId={accountId}
       />
 
-      <WorkspaceMobileBottomNav
-        homePath={homePath}
-        bottomNavTabs={bottomNavTabs}
-        menuOpen={menuOpen}
-        onMenuOpenChange={setMenuOpen}
-        settingsHref={settingsHref}
-        settingsLabel="Workspace settings"
-        newMenu={
-          showNewMenu ? (
-            <WorkspaceMobileNewMenu
-              variant="team"
-              account={account}
-              spaceType={spaceType}
-              canMutateCommercial={canMutateCommercial}
-            />
-          ) : null
-        }
-      />
+      {noteEditorScroll ? null : (
+        <WorkspaceMobileBottomNav
+          homePath={homePath}
+          bottomNavTabs={bottomNavTabs}
+          menuOpen={menuOpen}
+          onMenuOpenChange={setMenuOpen}
+          settingsHref={settingsHref}
+          settingsLabel="Workspace settings"
+          newMenu={
+            showNewMenu ? (
+              <WorkspaceMobileNewMenu
+                variant="team"
+                account={account}
+                spaceType={spaceType}
+                canMutateCommercial={canMutateCommercial}
+              />
+            ) : null
+          }
+        />
+      )}
 
       <WorkspaceCreateTaskHost
         accountId={accountId}

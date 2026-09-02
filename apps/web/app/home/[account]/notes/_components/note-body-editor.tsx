@@ -59,8 +59,8 @@ export function NoteBodyEditor({
           'note-body-editor min-h-[50vh] w-full border-0 px-4 pt-1 text-base leading-relaxed text-[var(--workspace-shell-text)] shadow-none ring-0 outline-none',
           'focus:border-0 focus:shadow-none focus:ring-0 focus:outline-none',
           'focus-visible:border-0 focus-visible:shadow-none focus-visible:ring-0 focus-visible:outline-none',
-          // Extra mobile bottom space so the last lines can scroll above the shortcut bar
-          'pb-[calc(6.5rem+max(1.5rem,env(safe-area-inset-bottom)))] lg:pb-10',
+          // Extra mobile bottom space so the last lines can scroll above the format bar
+          'pb-[calc(4.75rem+max(0.5rem,env(safe-area-inset-bottom)))] lg:pb-10',
           'sm:px-6 lg:px-10 lg:text-[15px] xl:px-14',
           '[&_h1]:font-heading [&_h1]:mb-3 [&_h1]:text-[1.75rem] [&_h1]:leading-tight [&_h1]:font-bold [&_h1]:tracking-tight lg:[&_h1]:text-3xl',
           '[&_h2]:font-heading [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold lg:[&_h2]:text-2xl',

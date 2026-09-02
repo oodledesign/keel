@@ -53,8 +53,7 @@ export function PersonalHomeMobileChrome({
 }: PersonalHomeMobileChromeProps) {
   const pathname = usePathname();
   const noteEditorScroll = isNoteEditorRoute(pathname);
-  const fullHeightPageScroll =
-    noteEditorScroll || isEmailRoute(pathname);
+  const fullHeightPageScroll = noteEditorScroll || isEmailRoute(pathname);
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
 
   useEffect(() => {
@@ -128,15 +127,17 @@ export function PersonalHomeMobileChrome({
         helpDefaultAccountId={workspace.workspace?.id ?? null}
       />
 
-      <WorkspaceMobileBottomNav
-        homePath={homePath}
-        bottomNavTabs={bottomNavTabs}
-        menuOpen={menuOpen}
-        onMenuOpenChange={setMenuOpen}
-        settingsHref={pathsConfig.app.personalAccountSettings}
-        settingsLabel="Personal settings"
-        newMenu={<WorkspaceMobileNewMenu variant="personal" />}
-      />
+      {noteEditorScroll ? null : (
+        <WorkspaceMobileBottomNav
+          homePath={homePath}
+          bottomNavTabs={bottomNavTabs}
+          menuOpen={menuOpen}
+          onMenuOpenChange={setMenuOpen}
+          settingsHref={pathsConfig.app.personalAccountSettings}
+          settingsLabel="Personal settings"
+          newMenu={<WorkspaceMobileNewMenu variant="personal" />}
+        />
+      )}
 
       <WorkspaceCreateTaskHost lifeOnly />
     </>

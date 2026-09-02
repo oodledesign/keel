@@ -1,4 +1,5 @@
 import Foundation
+@testable import OzerNotes
 @testable import OzerSpeech
 
 @main
@@ -192,6 +193,16 @@ struct SpeakerTranscriptTests {
                 && !labels.contains(where: { $0 >= SpeakerClustering.maxSpeakers })
                 && first?.speakerIndex == 0
         }
+
+        check("isSpeakerLabel accepts markdown H2 labels") {
+            SpeakerTurnSplitter.isSpeakerLabel("## Me")
+                && SpeakerTurnSplitter.isSpeakerLabel("## Speaker 1")
+                && SpeakerTurnSplitter.speakerName(fromLabel: "## Speaker 1") == "Speaker 1"
+                && SpeakerTurnSplitter.title(from: "## Me\nHello there", fallback: "x") == "Hello there"
+                && !SpeakerTurnSplitter.isSpeakerLabel("Hello there")
+        }
+
+        NoteMarkdownTests.run(check: check)
 
         if failed > 0 {
             fputs("\(failed) test(s) failed\n", stderr)
