@@ -97,7 +97,16 @@ async function searchNearbyPois(
     cache: 'no-store',
     signal: AbortSignal.timeout(8000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      console.error(
+        '[brochure-pdf] nearby amenities Mapbox',
+        res.status,
+        '— set MAPBOX_SECRET_TOKEN if NEXT_PUBLIC_MAPBOX_TOKEN is URL-restricted',
+      );
+    }
+    return [];
+  }
 
   const body = (await res.json()) as { features?: MapboxFeature[] };
   const hits: Array<{ name: string; km: number }> = [];
@@ -178,10 +187,16 @@ export async function fetchNearbyBrochureAmenities(input: {
       MAX_AMENITIES,
     );
   } catch (err) {
-    console.error(
-      '[brochure-pdf] nearby amenities failed:',
-      err instanceof Error ? err.message : err,
-    );
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[brochure-pdf] nearby amenities failed:', message);
+    if (
+      token === process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() &&
+      (message.includes('401') || message.includes('403'))
+    ) {
+      console.error(
+        '[brochure-pdf] Hint: NEXT_PUBLIC_MAPBOX_TOKEN may have URL restrictions. Set MAPBOX_SECRET_TOKEN for server-side geocoding.',
+      );
+    }
     return fallback;
   }
 }

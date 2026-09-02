@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
+import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { assertCanEditBrandSettings } from '~/home/[account]/settings/_lib/server/brand-settings-access';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
@@ -18,97 +18,92 @@ function extensionForMime(mimeType: string) {
   return 'jpg';
 }
 
-export async function POST(request: Request) {
-  const userClient = getSupabaseServerClient();
-  const {
-    data: { user },
-  } = await userClient.auth.getUser();
+export const POST = enhanceRouteHandler(
+  async ({ request, user }) => {
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    }
 
-  let formData: FormData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
-  }
+    const accountId = String(formData.get('accountId') ?? '').trim();
+    const branchId = String(formData.get('branchId') ?? '').trim();
+    const file = formData.get('file');
 
-  const accountId = String(formData.get('accountId') ?? '').trim();
-  const branchId = String(formData.get('branchId') ?? '').trim();
-  const file = formData.get('file');
+    if (!accountId || !(file instanceof File)) {
+      return NextResponse.json(
+        { error: 'accountId and file are required.' },
+        { status: 400 },
+      );
+    }
 
-  if (!accountId || !(file instanceof File)) {
-    return NextResponse.json(
-      { error: 'accountId and file are required.' },
-      { status: 400 },
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json(
+        { error: 'Only image uploads are allowed.' },
+        { status: 400 },
+      );
+    }
+
+    if (file.size > MAX_SHOPFRONT_BYTES) {
+      return NextResponse.json(
+        { error: 'Shopfront photo is too large. Max size is 8MB.' },
+        { status: 400 },
+      );
+    }
+
+    try {
+      await assertCanEditBrandSettings(accountId, user.id);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'You cannot edit workspace settings.';
+      const status = message === 'Account not found' ? 404 : 403;
+      return NextResponse.json({ error: message }, { status });
+    }
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const ext = extensionForMime(file.type || 'image/jpeg');
+    const folder = branchId || 'new';
+    const path = `${accountId}/branches/${folder}/shopfront-${Date.now()}.${ext}`;
+    const admin = getSupabaseServerAdminClient();
+
+    const { error: uploadError } = await admin.storage
+      .from(BRAND_ASSETS_BUCKET)
+      .upload(path, bytes, {
+        contentType: file.type || 'image/jpeg',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('[brand] upload-branch-shopfront:', uploadError.message);
+      return NextResponse.json(
+        {
+          error:
+            uploadError.message ||
+            'Failed to upload shopfront photo. Ensure brand storage is configured.',
+        },
+        { status: 500 },
+      );
+    }
+
+    const shopfrontUrl = toSupabasePublicStorageUrl(
+      admin.storage.from(BRAND_ASSETS_BUCKET).getPublicUrl(path).data.publicUrl,
     );
-  }
 
-  if (!file.type.startsWith('image/')) {
-    return NextResponse.json(
-      { error: 'Only image uploads are allowed.' },
-      { status: 400 },
-    );
-  }
+    if (!shopfrontUrl) {
+      return NextResponse.json(
+        { error: 'Upload succeeded but public URL could not be generated.' },
+        { status: 500 },
+      );
+    }
 
-  if (file.size > MAX_SHOPFRONT_BYTES) {
-    return NextResponse.json(
-      { error: 'Shopfront photo is too large. Max size is 8MB.' },
-      { status: 400 },
-    );
-  }
-
-  try {
-    await assertCanEditBrandSettings(accountId, user.id);
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'You cannot edit workspace settings.';
-    const status = message === 'Account not found' ? 404 : 403;
-    return NextResponse.json({ error: message }, { status });
-  }
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const ext = extensionForMime(file.type || 'image/jpeg');
-  const folder = branchId || 'new';
-  const path = `${accountId}/branches/${folder}/shopfront-${Date.now()}.${ext}`;
-  const admin = getSupabaseServerAdminClient();
-
-  const { error: uploadError } = await admin.storage
-    .from(BRAND_ASSETS_BUCKET)
-    .upload(path, bytes, {
-      contentType: file.type || 'image/jpeg',
-      upsert: true,
-    });
-
-  if (uploadError) {
-    console.error('[brand] upload-branch-shopfront:', uploadError.message);
-    return NextResponse.json(
-      {
-        error:
-          uploadError.message ||
-          'Failed to upload shopfront photo. Ensure brand storage is configured.',
-      },
-      { status: 500 },
-    );
-  }
-
-  const publicUrl = toSupabasePublicStorageUrl(
-    admin.storage.from(BRAND_ASSETS_BUCKET).getPublicUrl(path).data.publicUrl,
-  );
-
-  if (!publicUrl) {
-    return NextResponse.json(
-      { error: 'Upload succeeded but public URL could not be generated.' },
-      { status: 500 },
-    );
-  }
-
-  const { nanoid } = await import('nanoid');
-  const shopfrontUrl = `${publicUrl}?v=${nanoid(16)}`;
-
-  return NextResponse.json({ shopfrontUrl });
-}
+    return NextResponse.json({ shopfrontUrl });
+  },
+  { auth: true },
+);

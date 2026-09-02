@@ -42,6 +42,15 @@ describe('resolveBrochureLinkButtons', () => {
     ]);
   });
 
+  it('rejects private or non-http URLs', () => {
+    expect(
+      resolveBrochureLinkButtons({
+        websiteListingUrl: 'http://192.168.1.10/listing',
+        slideshowBrochureUrl: 'javascript:alert(1)',
+      }),
+    ).toEqual([]);
+  });
+
   it('honours settings flags even when URLs exist', () => {
     expect(
       resolveBrochureLinkButtons({

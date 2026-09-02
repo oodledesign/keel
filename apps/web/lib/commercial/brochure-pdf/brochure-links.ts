@@ -4,10 +4,29 @@ export type BrochureLinkButton = {
   url: string;
 };
 
-function isHttpUrl(value: string): boolean {
+function isPublicHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return false;
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      host === '169.254.169.254' ||
+      host.startsWith('169.254.') ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    ) {
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -27,7 +46,7 @@ export function resolveBrochureLinkButtons(input: {
   const buttons: BrochureLinkButton[] = [];
 
   const website = input.websiteListingUrl?.trim() ?? '';
-  if (showWebsite && isHttpUrl(website)) {
+  if (showWebsite && isPublicHttpUrl(website)) {
     buttons.push({
       id: 'website',
       label: 'Website listing',
@@ -36,7 +55,7 @@ export function resolveBrochureLinkButtons(input: {
   }
 
   const slideshow = input.slideshowBrochureUrl?.trim() ?? '';
-  if (showSlideshow && isHttpUrl(slideshow)) {
+  if (showSlideshow && isPublicHttpUrl(slideshow)) {
     buttons.push({
       id: 'slideshow',
       label: 'Online brochure',

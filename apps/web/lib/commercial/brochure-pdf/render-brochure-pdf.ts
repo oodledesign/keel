@@ -382,6 +382,8 @@ type RenderCtx = {
   orientation: BrochureOrientation;
   templateId: BrochureTemplateId;
   imageCache: Map<string, PDFImage | null>;
+  imageById: Map<string, string>;
+  floorplanById: Map<string, string>;
   logo: PDFImage | null;
 };
 
@@ -404,8 +406,8 @@ async function resolveListingImage(
 ): Promise<PDFImage | null> {
   const tried = new Set<string>();
   const fromId = slot?.mediaId
-    ? (ctx.data.images.find((item) => item.id === slot.mediaId)?.url ??
-      ctx.data.floorplans.find((item) => item.id === slot.mediaId)?.url ??
+    ? (ctx.imageById.get(slot.mediaId) ??
+      ctx.floorplanById.get(slot.mediaId) ??
       null)
     : null;
   for (const url of [slot?.url, fromId, fallbackUrl]) {
@@ -1685,6 +1687,8 @@ export async function renderBrochurePdf(
     orientation: document.orientation,
     templateId: document.templateId,
     imageCache: new Map(),
+    imageById: new Map(data.images.map((item) => [item.id, item.url])),
+    floorplanById: new Map(data.floorplans.map((item) => [item.id, item.url])),
     logo,
   };
 

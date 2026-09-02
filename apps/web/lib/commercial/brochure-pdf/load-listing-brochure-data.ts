@@ -183,10 +183,10 @@ export async function loadListingBrochureData(
       | undefined) ?? null;
 
   const [
-    { data: accountRow },
-    { data: agentRows },
-    { data: mediaRows },
-    { data: branchRows },
+    { data: accountRow, error: accountErr },
+    { data: agentRows, error: agentErr },
+    { data: mediaRows, error: mediaErr },
+    { data: branchRows, error: branchErr },
     nearbyAmenities,
   ] = await Promise.all([
     client
@@ -226,6 +226,19 @@ export async function loadListingBrochureData(
         })
       : Promise.resolve([]),
   ]);
+
+  if (accountErr) {
+    console.error('[brochure-pdf] account load error:', accountErr.message);
+  }
+  if (agentErr) {
+    console.error('[brochure-pdf] agents load error:', agentErr.message);
+  }
+  if (mediaErr) {
+    console.error('[brochure-pdf] media load error:', mediaErr.message);
+  }
+  if (branchErr) {
+    console.error('[brochure-pdf] branches load error:', branchErr.message);
+  }
 
   const userIds = (
     (agentRows ?? []) as Array<{ user_id: string; sort_order: number }>
