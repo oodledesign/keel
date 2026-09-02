@@ -62,6 +62,7 @@ import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingCirculateDialog } from './listing-circulate-dialog';
 import { ListingCirculationLog } from './listing-circulation-log';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingLinkedInCard } from './listing-linkedin-card';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
 import { ListingPeopleStrip } from './listing-people-strip';
@@ -1164,11 +1165,25 @@ export function ListingManagementSection({
   publications,
   accountId,
   accountSlug,
+  media = [],
+  linkedInConnection = null,
+  linkedInPost = null,
+  linkedInLastPosted = null,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
   accountSlug: string;
+  media?: CommercialListingMedia[];
+  linkedInConnection?:
+    | import('~/lib/commercial/linkedin-publishing/types').LinkedInOrgConnectionPublic
+    | null;
+  linkedInPost?:
+    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
+    | null;
+  linkedInLastPosted?:
+    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
+    | null;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const { listing, setListing } = useListingState(initial);
@@ -1207,6 +1222,19 @@ export function ListingManagementSection({
           listing={listing}
           publications={publications}
           accountId={accountId}
+        />
+      </div>
+
+      <div className="md:col-span-2">
+        <ListingLinkedInCard
+          listing={listing}
+          accountId={accountId}
+          accountSlug={accountSlug}
+          media={media}
+          publications={publications}
+          connection={linkedInConnection}
+          initialPost={linkedInPost}
+          lastPosted={linkedInLastPosted}
         />
       </div>
 

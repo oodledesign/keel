@@ -1,10 +1,16 @@
 import 'server-only';
 
+import { cookies } from 'next/headers';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadAccountBranches } from '~/lib/brand/account-branches';
+import { loadLinkedInOrgConnection } from '~/lib/commercial/linkedin-publishing/connections';
+import { isLinkedInAppConfigured } from '~/lib/commercial/linkedin-publishing/env';
+import { verifyPendingLinkedInOrgs } from '~/lib/commercial/linkedin-publishing/oauth-state';
+import type { LinkedInOrgConnectionPublic } from '~/lib/commercial/linkedin-publishing/types';
 import {
   buildEachFeedUrl,
   buildPropertyHiveFeedUrl,
@@ -44,6 +50,11 @@ export type CommercialPublishingSettings = {
     configured: boolean;
     feedUrl: string | null;
     feedEnabled: boolean;
+  };
+  linkedin: {
+    configured: boolean;
+    connection: LinkedInOrgConnectionPublic | null;
+    pendingOrgs: Array<{ id: string; name: string }>;
   };
   recentPublicationIssues: Array<{
     id: string;
@@ -168,6 +179,21 @@ export async function loadCommercialPublishingSettings(
       feedUrl: eachFeedUrl,
       feedEnabled: eachFeedEnabled,
     },
+    linkedin: {
+      configured: isLinkedInAppConfigured(),
+      connection: await loadLinkedInOrgConnection(client, accountId),
+      pendingOrgs: await loadPendingLinkedInOrgs(),
+    },
     recentPublicationIssues,
   };
+}
+
+async function loadPendingLinkedInOrgs(): Promise<
+  Array<{ id: string; name: string }>
+> {
+  const jar = await cookies();
+  const token = jar.get('linkedin_org_pending')?.value;
+  const pending = token ? verifyPendingLinkedInOrgs(token) : null;
+  if (!pending) return [];
+  return pending.orgs.map((org) => ({ id: org.id, name: org.name }));
 }

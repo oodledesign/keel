@@ -14,6 +14,7 @@ import { ListingPartiesCard } from '../../_components/listing-parties-card';
 import { ListingPrivateMediaSection } from '../../_components/listing-private-media-section';
 import { ListingPropertyLinkCard } from '../../_components/listing-property-link-card';
 import { MarketingReadinessCard } from '../../_components/marketing-readiness-card';
+import { loadListingLinkedInCardData } from '../../_lib/server/listing-linkedin.loader';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
@@ -43,6 +44,7 @@ async function ListingManagementPage({ params }: PageProps) {
     landlords,
     otherParties,
     linkedProperty,
+    linkedIn,
   ] = await Promise.all([
     service.listPublicationsForListing(listingId),
     service.listAccountMembers(slug),
@@ -59,9 +61,13 @@ async function ListingManagementPage({ params }: PageProps) {
           getSupabaseServerClient(),
         ).getProperty(listing.commercialPropertyId, accountId)
       : Promise.resolve(null),
+    loadListingLinkedInCardData(accountId, listingId),
   ]);
 
-  const privateMediaWithUrls = await service.withSignedMediaUrls(privateMedia);
+  const [privateMediaWithUrls, publicMediaWithUrls] = await Promise.all([
+    service.withSignedMediaUrls(privateMedia),
+    service.withSignedMediaUrls(publicMedia),
+  ]);
   const privateImages = privateMediaWithUrls.filter(
     (item) =>
       item.mediaType === 'image' ||
@@ -147,6 +153,10 @@ async function ListingManagementPage({ params }: PageProps) {
           publications={publications}
           accountId={accountId}
           accountSlug={slug}
+          media={publicMediaWithUrls}
+          linkedInConnection={linkedIn.connection}
+          linkedInPost={linkedIn.draft}
+          linkedInLastPosted={linkedIn.lastPosted}
         />
       </section>
     </div>

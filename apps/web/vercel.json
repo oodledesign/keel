@@ -125,6 +125,14 @@
       "schedule": "0 2 * * *"
     },
     {
+      "path": "/api/cron/linkedin-token-refresh",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/linkedin-org-publish",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/feedflow-token-refresh",
       "schedule": "30 2 * * *"
     },

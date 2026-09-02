@@ -1,10 +1,21 @@
 'use server';
 
+import { cookies } from 'next/headers';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  deleteLinkedInOrgConnection,
+  upsertLinkedInOrgConnection,
+} from '~/lib/commercial/linkedin-publishing/connections';
+import {
+  organizationIdFromUrn,
+  organizationUrn,
+} from '~/lib/commercial/linkedin-publishing/linkedin-api';
+import { verifyPendingLinkedInOrgs } from '~/lib/commercial/linkedin-publishing/oauth-state';
 import {
   publishToEach,
   publishToRightmove,
@@ -24,6 +35,7 @@ import {
 } from '~/lib/commercial/property-hive-sync';
 
 import {
+  DisconnectLinkedInOrgSchema,
   EnsureEachFeedSchema,
   EnsurePropertyHiveFeedSchema,
   RotateEachFeedSchema,
@@ -31,10 +43,13 @@ import {
   SavePortalCredentialsSchema,
   SavePropertyHiveCredentialsSchema,
   SaveRightmoveWorkspaceBranchesSchema,
+  SelectLinkedInOrgSchema,
   SetEachListingFeedInclusionSchema,
   TestPublishListingSchema,
 } from '../schema/commercial-publishing.schema';
 import { loadCommercialPublishingSettings } from './commercial-publishing.loader';
+
+const PENDING_COOKIE = 'linkedin_org_pending';
 
 /** Untyped until `pnpm supabase:web:typegen` includes commercial_* tables. */
 function db(): SupabaseClient {
@@ -431,4 +446,52 @@ export const setEachListingFeedInclusionAction = enhanceAction(
     };
   },
   { schema: SetEachListingFeedInclusionSchema },
+);
+
+export const disconnectLinkedInOrgAction = enhanceAction(
+  async (input) => {
+    await deleteLinkedInOrgConnection(db(), input.accountId);
+    return loadCommercialPublishingSettings(input.accountId);
+  },
+  { schema: DisconnectLinkedInOrgSchema },
+);
+
+export const selectLinkedInOrgAction = enhanceAction(
+  async (input, user) => {
+    const jar = await cookies();
+    const pendingToken = jar.get(PENDING_COOKIE)?.value;
+    const pending = pendingToken
+      ? verifyPendingLinkedInOrgs(pendingToken)
+      : null;
+    if (!pending) {
+      throw new Error('LinkedIn page selection expired. Connect again.');
+    }
+    if (pending.accountId !== input.accountId) {
+      throw new Error('LinkedIn page selection does not match this workspace');
+    }
+
+    const org = pending.orgs.find(
+      (item) =>
+        item.id === input.orgId ||
+        organizationIdFromUrn(item.urn) === input.orgId,
+    );
+    if (!org) {
+      throw new Error('Choose a company page you administer');
+    }
+
+    await upsertLinkedInOrgConnection(db(), {
+      accountId: input.accountId,
+      orgId: organizationIdFromUrn(org.urn),
+      orgUrn: organizationUrn(org.urn),
+      orgName: org.name,
+      accessToken: pending.accessToken,
+      refreshToken: pending.refreshToken,
+      expiresAt: pending.expiresAt,
+      connectedBy: user.id,
+    });
+
+    jar.delete(PENDING_COOKIE);
+    return loadCommercialPublishingSettings(input.accountId);
+  },
+  { schema: SelectLinkedInOrgSchema },
 );

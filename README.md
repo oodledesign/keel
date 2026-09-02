@@ -8,6 +8,10 @@ A demo version of this project can be found at [makerkit/next-supabase-saas-kit-
 
 **Please remember to update the repository daily**.
 
+## LinkedIn company-page publishing (commercial)
+
+Commercial-property workspaces can post disposals to a LinkedIn **organization page** from Marketing / Management. Setup, Community Management API verification, env vars, and cron: [LINKEDIN_ORG_PUBLISHING.md](./LINKEDIN_ORG_PUBLISHING.md).
+
 ## Signatures module (Ozer)
 
 Ozer includes a **Signatures** workspace module for Microsoft 365–connected email signatures (staff sync, HTML templates, push to Outlook).
