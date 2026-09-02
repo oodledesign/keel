@@ -218,11 +218,7 @@ struct HomeTodayView: View {
             Text(item.title)
                 .font(.body.weight(.medium))
                 .foregroundStyle(OzerPalette.plum)
-            TaskDueClientSubtitle(
-                due: item.due,
-                clientName: item.clientName,
-                isOverdue: item.isOverdue && !item.isCompleted
-            )
+            TaskDueClientSubtitle(item: item)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
