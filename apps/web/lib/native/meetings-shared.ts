@@ -24,7 +24,8 @@ export type NativeMeetingStoredSource =
   (typeof NATIVE_MEETING_STORED_SOURCES)[number];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const IOS_SPEAKER_HEADING_RE = /^(Me|Speaker \d+)$/i;
+const IOS_SPEAKER_HEADING_RE =
+  /^(?:#{1,6}\s+|\*{2})?(Me|Them|Speaker \d+)(?:\*{2})?$/i;
 
 export type NativeMeeting = {
   id: string;
@@ -83,9 +84,14 @@ export function parseNativeMeetingSource(
   }
 }
 
+function iosSpeakerHeading(line: string): string | null {
+  const match = line.trim().match(IOS_SPEAKER_HEADING_RE);
+  return match?.[1] ?? null;
+}
+
 /**
- * iOS live captions use a speaker heading on its own line. Web parse
- * expects `Speaker: text`. Convert when labels are only headings.
+ * iOS live captions use a speaker heading on its own line (`Me`, `## Me`).
+ * Web parse expects `Speaker: text`. Convert when labels are only headings.
  */
 export function normalizeNativeMeetingContent(content: string): string {
   const trimmed = content.trim();
@@ -102,8 +108,9 @@ export function normalizeNativeMeetingContent(content: string): string {
   for (const raw of trimmed.split('\n')) {
     const line = raw.trim();
     if (!line) continue;
-    if (IOS_SPEAKER_HEADING_RE.test(line)) {
-      current = { speaker: line, lines: [] };
+    const heading = iosSpeakerHeading(line);
+    if (heading) {
+      current = { speaker: heading, lines: [] };
       segments.push(current);
       continue;
     }
@@ -116,7 +123,7 @@ export function normalizeNativeMeetingContent(content: string): string {
   }
 
   const labelled = segments.filter((segment) =>
-    IOS_SPEAKER_HEADING_RE.test(segment.speaker),
+    Boolean(iosSpeakerHeading(segment.speaker)),
   );
   if (labelled.length === 0) {
     return trimmed;
