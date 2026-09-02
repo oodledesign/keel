@@ -16,6 +16,7 @@ struct TasksListView: View {
     @State private var isLoadingClients = false
     @State private var clientsLoadError: NativeAPIError?
     @State private var showClientFilter = false
+    @State private var isShowingStaleCache = false
 
     private let client = NativeAPIClient()
 
@@ -101,8 +102,13 @@ struct TasksListView: View {
             }
             .onChange(of: session.workspaceContentKey) { _, _ in
                 resetFilters(clearClients: true)
+                payload = nil
+                loadError = nil
+                isShowingStaleCache = false
+                hydrateFromCache()
             }
             .task(id: fetchKey) {
+                hydrateFromCache()
                 await load()
             }
             .task(id: reloadKey) {
@@ -190,8 +196,24 @@ struct TasksListView: View {
         }
     }
 
+    private var shouldUseListCache: Bool {
+        statusFilter == .open && clientFilter.apiClientId == nil
+    }
+
     private func content(_ items: [TaskItem]) -> some View {
         List {
+            if isShowingStaleCache {
+                Text("Showing saved tasks. Couldn’t refresh just now.")
+                    .font(.subheadline)
+                    .foregroundStyle(OzerPalette.plumMuted)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+            }
+
             ForEach(items) { item in
                 Button {
                     editorTask = item
@@ -432,6 +454,37 @@ struct TasksListView: View {
         }
     }
 
+    private func cacheIdentity() -> (userId: String, workspaceId: String)? {
+        guard let userId = session.userId,
+              let workspaceId = session.selectedWorkspace?.id,
+              !workspaceId.isEmpty
+        else {
+            return nil
+        }
+        return (userId, workspaceId)
+    }
+
+    private func hydrateFromCache() {
+        guard shouldUseListCache, payload == nil, let identity = cacheIdentity() else { return }
+        let cached = WorkspaceListCache.loadTasks(
+            userId: identity.userId,
+            workspaceId: identity.workspaceId
+        )
+        if !cached.isEmpty {
+            payload = TasksPayload(items: cached)
+            loadError = nil
+        }
+    }
+
+    private func persistCache(_ items: [TaskItem]) {
+        guard shouldUseListCache, let identity = cacheIdentity() else { return }
+        WorkspaceListCache.saveTasks(
+            userId: identity.userId,
+            workspaceId: identity.workspaceId,
+            items: items
+        )
+    }
+
     private func load() async {
         isLoading = true
         defer { isLoading = false }
@@ -445,28 +498,42 @@ struct TasksListView: View {
             guard !workspace.isEmpty else {
                 payload = nil
                 loadError = nil
+                isShowingStaleCache = false
                 return
             }
-            payload = try await client.tasks(
+            let next = try await client.tasks(
                 workspace: workspace,
                 clientId: clientFilter.apiClientId,
                 status: statusFilter.queryValue,
                 accessToken: token
             )
+            payload = next
+            persistCache(next.items)
             completingIds = []
             loadError = nil
+            isShowingStaleCache = false
         } catch is CancellationError {
             return
         } catch let error as NativeAPIError {
             if error == .unauthorized {
                 await session.handleUnauthorized()
             }
-            payload = nil
-            loadError = error
+            if payload == nil || payload?.items.isEmpty == true {
+                payload = nil
+                loadError = error
+                isShowingStaleCache = false
+            } else {
+                isShowingStaleCache = true
+            }
         } catch {
             if error.isTaskCancellation { return }
-            payload = nil
-            loadError = .transport(error.localizedDescription)
+            if payload == nil || payload?.items.isEmpty == true {
+                payload = nil
+                loadError = .transport(error.localizedDescription)
+                isShowingStaleCache = false
+            } else {
+                isShowingStaleCache = true
+            }
         }
     }
 }

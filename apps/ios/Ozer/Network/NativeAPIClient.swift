@@ -257,6 +257,44 @@ actor NativeAPIClient {
         }
     }
 
+    func updateNote(
+        id: String,
+        title: String? = nil,
+        body: String? = nil,
+        category: String? = nil,
+        clientId: String? = nil,
+        clearClient: Bool = false,
+        accessToken: String
+    ) async throws -> NoteItem {
+        var payload: [String: Any] = [:]
+        if let title {
+            payload["title"] = title
+        }
+        if let body {
+            payload["body"] = body
+        }
+        if let category, !category.isEmpty {
+            payload["category"] = category
+        }
+        if clearClient {
+            payload["client_id"] = NSNull()
+        } else if let clientId {
+            payload["client_id"] = clientId
+        }
+        let data = try await send(
+            method: "PATCH",
+            path: "api/native/v1/notes/\(id)",
+            queryItems: [],
+            body: payload,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NoteItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func createMeeting(
         title: String,
         content: String,
@@ -525,7 +563,7 @@ struct TodayPayload: Decodable, Equatable {
     }
 }
 
-struct TasksPayload: Decodable, Equatable {
+struct TasksPayload: Codable, Equatable {
     var items: [TaskItem]
 
     static let empty = TasksPayload(items: [])
@@ -548,9 +586,14 @@ struct TasksPayload: Decodable, Equatable {
             items = []
         }
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(items, forKey: .items)
+    }
 }
 
-struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
+struct TaskItem: Codable, Identifiable, Equatable, Hashable {
     var id: String
     var title: String
     var status: String?
@@ -600,6 +643,17 @@ struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
             ?? container.decodeIfPresent(String.self, forKey: .body)
         clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
         clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(due, forKey: .due)
+        try container.encodeIfPresent(subtitle, forKey: .subtitle)
+        try container.encodeIfPresent(clientId, forKey: .clientId)
+        try container.encodeIfPresent(clientName, forKey: .clientName)
     }
 
     var isCompleted: Bool {
@@ -1018,17 +1072,80 @@ struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
     }
 }
 
-struct NotesPayload: Decodable, Equatable {
-    var items: [NoteItem]
+struct NoteCategory: Codable, Identifiable, Equatable, Hashable {
+    var slug: String
+    var label: String
+    var isCustom: Bool
 
-    static let empty = NotesPayload(items: [])
+    var id: String { slug }
 
     enum CodingKeys: String, CodingKey {
-        case items, notes
+        case slug, label
+        case isCustom = "is_custom"
     }
 
-    init(items: [NoteItem]) {
+    init(slug: String, label: String, isCustom: Bool = false) {
+        self.slug = slug
+        self.label = label
+        self.isCustom = isCustom
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        slug = try container.decode(String.self, forKey: .slug)
+        label = try container.decodeIfPresent(String.self, forKey: .label)
+            ?? Self.displayLabel(for: slug)
+        isCustom = try container.decodeIfPresent(Bool.self, forKey: .isCustom) ?? false
+    }
+
+    /// Same system slugs and labels as the web notes picker.
+    static let system: [NoteCategory] = [
+        NoteCategory(slug: "idea", label: "Idea"),
+        NoteCategory(slug: "future", label: "Future"),
+        NoteCategory(slug: "development", label: "Development"),
+        NoteCategory(slug: "meeting_transcript", label: "Meeting transcript"),
+    ]
+
+    static let defaultSlug = "idea"
+
+    static func displayLabel(for slug: String) -> String {
+        let trimmed = slug.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let system = system.first(where: { $0.slug == trimmed }) {
+            return system.label
+        }
+        return trimmed
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map(\.localizedCapitalized)
+            .joined(separator: " ")
+    }
+
+    static func merged(api: [NoteCategory], current: String? = nil) -> [NoteCategory] {
+        var items = system
+        for extra in api where !items.contains(where: { $0.slug == extra.slug }) {
+            items.append(extra)
+        }
+        let slug = current?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !slug.isEmpty, !items.contains(where: { $0.slug == slug }) {
+            items.append(NoteCategory(slug: slug, label: displayLabel(for: slug)))
+        }
+        return items
+    }
+}
+
+struct NotesPayload: Codable, Equatable {
+    var items: [NoteItem]
+    var categories: [NoteCategory]
+
+    static let empty = NotesPayload(items: [], categories: [])
+
+    enum CodingKeys: String, CodingKey {
+        case items, notes, categories
+    }
+
+    init(items: [NoteItem], categories: [NoteCategory] = []) {
         self.items = items
+        self.categories = categories
     }
 
     init(from decoder: Decoder) throws {
@@ -1040,10 +1157,17 @@ struct NotesPayload: Decodable, Equatable {
         } else {
             items = []
         }
+        categories = try container.decodeIfPresent([NoteCategory].self, forKey: .categories) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(items, forKey: .items)
+        try container.encode(categories, forKey: .categories)
     }
 }
 
-struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
+struct NoteItem: Codable, Identifiable, Equatable, Hashable {
     var id: String
     var title: String
     var body: String
@@ -1054,12 +1178,15 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
     var tags: [String]
     var isPendingSync: Bool
     var clientId: String?
+    var clientName: String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, body, workspace, category, tags
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case clientId = "client_id"
+        case clientName = "client_name"
+        case isPendingSync
     }
 
     init(
@@ -1072,7 +1199,8 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         category: String? = nil,
         tags: [String] = [],
         isPendingSync: Bool = false,
-        clientId: String? = nil
+        clientId: String? = nil,
+        clientName: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -1084,6 +1212,7 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         self.tags = tags
         self.isPendingSync = isPendingSync
         self.clientId = clientId
+        self.clientName = clientName
     }
 
     init(from decoder: Decoder) throws {
@@ -1100,8 +1229,24 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
         category = try container.decodeIfPresent(String.self, forKey: .category)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
-        isPendingSync = false
+        isPendingSync = try container.decodeIfPresent(Bool.self, forKey: .isPendingSync) ?? false
         clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
+        clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(body, forKey: .body)
+        try container.encodeIfPresent(workspace, forKey: .workspace)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
+        try container.encodeIfPresent(category, forKey: .category)
+        try container.encode(tags, forKey: .tags)
+        try container.encode(isPendingSync, forKey: .isPendingSync)
+        try container.encodeIfPresent(clientId, forKey: .clientId)
+        try container.encodeIfPresent(clientName, forKey: .clientName)
     }
 
     var isMeetingNote: Bool {
@@ -1120,6 +1265,14 @@ struct NoteItem: Decodable, Identifiable, Equatable, Hashable {
             return line
         }
         return "Untitled"
+    }
+
+    func categoryLabel(in categories: [NoteCategory]) -> String? {
+        let slug = category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !slug.isEmpty else { return nil }
+        return NoteCategory.merged(api: categories, current: slug)
+            .first { $0.slug == slug }?
+            .label
     }
 
     /// Truncated body when it adds more than the title; otherwise a relative date.

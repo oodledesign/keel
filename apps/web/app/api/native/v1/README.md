@@ -45,6 +45,11 @@ curl -sS -X POST "$ORIGIN/api/native/v1/notes" \
   -H "Content-Type: application/json" \
   -d '{"title":"Site visit","body":"Me: Hello","workspace":"YOUR_SLUG","category":"meeting_transcript","client_id":"CLIENT_UUID"}'
 
+curl -sS -X PATCH "$ORIGIN/api/native/v1/notes/NOTE_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Site visit","body":"Updated notes","category":"idea","client_id":"CLIENT_UUID"}'
+
 curl -sS "$ORIGIN/api/native/v1/meetings?workspace=YOUR_SLUG" \
   -H "Authorization: Bearer $TOKEN"
 

@@ -8,21 +8,171 @@ import {
 } from '~/lib/recorder/create-note';
 
 import { NativeHttpError } from './http';
-import { toNativeNote } from './notes-shared';
-import { parseOptionalClientId } from './task-map';
+import {
+  NATIVE_NOTE_CATEGORY_SLUG_RE,
+  type NativeNoteCategory,
+  isNativeSystemNoteCategory,
+  mergeNativeNoteCategories,
+  toNativeNote,
+} from './notes-shared';
+import {
+  type NativeTaskClientRow,
+  nativeClientName,
+  parseOptionalClientId,
+} from './task-map';
 import type { NativeWorkspace } from './workspace-shared';
 
-export type { NativeNote } from './notes-shared';
+export type { NativeNote, NativeNoteCategory } from './notes-shared';
+
+function isTableMissing(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  const message = (error.message ?? '').toLowerCase();
+  return (
+    message.includes('schema cache') ||
+    message.includes('does not exist') ||
+    message.includes('could not find') ||
+    error.code === 'PGRST205' ||
+    error.code === '42P01'
+  );
+}
+
+const NOTE_CLIENT_SELECT =
+  'id, display_name, first_name, last_name, company_name, client_type';
+
+async function requireClientInWorkspace(
+  client: SupabaseClient,
+  clientId: string,
+  accountId: string,
+): Promise<NativeTaskClientRow> {
+  const { data, error } = await client
+    .from('clients')
+    .select(NOTE_CLIENT_SELECT)
+    .eq('id', clientId)
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new NativeHttpError(400, 'client_id must belong to this workspace');
+  }
+
+  return data as NativeTaskClientRow;
+}
+
+async function loadNoteClientNames(
+  client: SupabaseClient,
+  clientIds: Array<string | null | undefined>,
+): Promise<Map<string, string>> {
+  const unique = [
+    ...new Set(clientIds.filter((id): id is string => Boolean(id))),
+  ];
+  if (unique.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await client
+    .from('clients')
+    .select(NOTE_CLIENT_SELECT)
+    .in('id', unique);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const names = new Map<string, string>();
+  for (const row of data ?? []) {
+    const name = nativeClientName(row as NativeTaskClientRow);
+    if (name) {
+      names.set((row as { id: string }).id, name);
+    }
+  }
+  return names;
+}
+
+function noteAccountId(existing: { account_id?: string | null }) {
+  const accountId =
+    typeof existing.account_id === 'string' ? existing.account_id.trim() : '';
+  if (!accountId) {
+    throw new NativeHttpError(500, 'Note has no account');
+  }
+  return accountId;
+}
+
+async function loadCustomNoteCategories(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<Array<{ slug: string; label: string }>> {
+  const { data, error } = await client
+    .from('note_categories')
+    .select('slug, label')
+    .eq('account_id', accountId)
+    .order('label', { ascending: true });
+
+  if (error) {
+    if (isTableMissing(error)) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .map((row) => ({
+      slug: typeof row.slug === 'string' ? row.slug.trim() : '',
+      label: typeof row.label === 'string' ? row.label.trim() : '',
+    }))
+    .filter((row) => row.slug.length > 0);
+}
+
+async function assertNativeNoteCategory(
+  client: SupabaseClient,
+  accountId: string,
+  slug: string,
+) {
+  if (isNativeSystemNoteCategory(slug)) {
+    return;
+  }
+
+  const custom = await loadCustomNoteCategories(client, accountId);
+  if (!custom.some((row) => row.slug === slug)) {
+    throw new NativeHttpError(400, 'Unknown note category');
+  }
+}
+
+function parseNoteCategory(value: string | null | undefined) {
+  if (value == null) {
+    return undefined;
+  }
+
+  const slug = value.trim();
+  if (!slug) {
+    return undefined;
+  }
+
+  if (!NATIVE_NOTE_CATEGORY_SLUG_RE.test(slug)) {
+    throw new NativeHttpError(400, 'Invalid note category');
+  }
+
+  return slug;
+}
 
 export async function listNativeNotes(
   userId: string,
   workspace: NativeWorkspace,
+  client: SupabaseClient,
 ) {
   const items = await listRecorderNotes({
     userId,
     accountId: workspace.id,
     limit: 50,
   });
+
+  const names = await loadNoteClientNames(
+    client,
+    items.map((item) => item.client_id),
+  );
 
   return items.map((item) =>
     toNativeNote({
@@ -33,10 +183,19 @@ export async function listNativeNotes(
       category: item.category,
       tags: item.tags,
       clientId: item.client_id,
+      clientName: item.client_id ? names.get(item.client_id) : null,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     }),
   );
+}
+
+export async function listNativeNoteCategories(
+  client: SupabaseClient,
+  workspace: NativeWorkspace,
+): Promise<NativeNoteCategory[]> {
+  const custom = await loadCustomNoteCategories(client, workspace.id);
+  return mergeNativeNoteCategories(custom);
 }
 
 export async function createNativeNote(input: {
@@ -55,19 +214,18 @@ export async function createNativeNote(input: {
   }
 
   const clientId = parseOptionalClientId(input.clientId ?? undefined) ?? null;
+  let clientRow: NativeTaskClientRow | null = null;
   if (clientId) {
-    const { data, error } = await input.client
-      .from('clients')
-      .select('id')
-      .eq('id', clientId)
-      .eq('account_id', input.workspace.id)
-      .maybeSingle();
-    if (error) {
-      throw new Error(error.message);
-    }
-    if (!data) {
-      throw new NativeHttpError(400, 'client_id must belong to this workspace');
-    }
+    clientRow = await requireClientInWorkspace(
+      input.client,
+      clientId,
+      input.workspace.id,
+    );
+  }
+
+  const category = parseNoteCategory(input.category);
+  if (category) {
+    await assertNativeNoteCategory(input.client, input.workspace.id, category);
   }
 
   const created = await createRecorderNote({
@@ -77,7 +235,7 @@ export async function createNativeNote(input: {
     accountId: input.workspace.id,
     clientId,
     source: 'native',
-    category: input.category,
+    category,
     tags: input.tags,
   });
 
@@ -86,9 +244,10 @@ export async function createNativeNote(input: {
     title: created.title,
     body: created.content,
     workspace: input.workspace.slug,
-    category: input.category,
+    category,
     tags: input.tags,
     clientId,
+    clientName: nativeClientName(clientRow),
     createdAt: created.created_at,
     updatedAt: created.updated_at,
   });
@@ -100,6 +259,8 @@ export async function updateNativeNote(input: {
   noteId: string;
   title?: string;
   body?: string;
+  category?: string;
+  clientId?: string | null;
 }) {
   const { data: existing, error: loadError } = await input.client
     .from('notes')
@@ -131,6 +292,29 @@ export async function updateNativeNote(input: {
       throw new NativeHttpError(400, 'body is required');
     }
     updates.content = body;
+  }
+  if (input.category !== undefined) {
+    const category = parseNoteCategory(input.category);
+    if (!category) {
+      throw new NativeHttpError(400, 'category is required');
+    }
+    await assertNativeNoteCategory(
+      input.client,
+      noteAccountId(existing),
+      category,
+    );
+    updates.category = category;
+  }
+  if (input.clientId !== undefined) {
+    const clientId = parseOptionalClientId(input.clientId) ?? null;
+    if (clientId) {
+      await requireClientInWorkspace(
+        input.client,
+        clientId,
+        noteAccountId(existing),
+      );
+    }
+    updates.client_id = clientId;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -165,6 +349,9 @@ export async function updateNativeNote(input: {
     workspaceSlug = account?.slug?.trim() || '';
   }
 
+  const clientId = (data.client_id as string | null) ?? null;
+  const names = await loadNoteClientNames(input.client, [clientId]);
+
   return toNativeNote({
     id: data.id as string,
     title: ((data.title as string | null)?.trim() || 'Note') as string,
@@ -177,7 +364,8 @@ export async function updateNativeNote(input: {
             typeof tag === 'string' && tag.trim().length > 0,
         )
       : [],
-    clientId: (data.client_id as string | null) ?? null,
+    clientId,
+    clientName: clientId ? names.get(clientId) : null,
     createdAt: data.created_at as string,
     updatedAt: data.updated_at as string,
   });

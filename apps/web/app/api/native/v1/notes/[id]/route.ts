@@ -17,10 +17,25 @@ const PatchNoteBodySchema = z
   .object({
     title: z.string().optional(),
     body: z.string().optional(),
+    category: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z0-9_]+$/)
+      .optional(),
+    client_id: z.string().uuid().nullable().optional(),
   })
-  .refine((value) => value.title !== undefined || value.body !== undefined, {
-    message: 'No note fields to update',
-  });
+  .refine(
+    (value) =>
+      value.title !== undefined ||
+      value.body !== undefined ||
+      value.category !== undefined ||
+      value.client_id !== undefined,
+    {
+      message: 'No note fields to update',
+    },
+  );
 
 export async function PATCH(
   request: Request,
@@ -44,6 +59,8 @@ export async function PATCH(
       noteId: id,
       title: parsed.data.title,
       body: parsed.data.body,
+      category: parsed.data.category,
+      clientId: parsed.data.client_id,
     });
     return NextResponse.json(note);
   } catch (error) {
