@@ -6,6 +6,7 @@ import {
   DEFAULT_BRAND_SECONDARY,
 } from '~/lib/brand/account-brand';
 
+import { applySignatureProfileOverrides } from './profile-overrides';
 import {
   TRANSPARENT_PIXEL_GIF,
   normalizeLegacySignatureChrome,
@@ -30,9 +31,12 @@ export type SignaturesStaffRow = {
   email: string;
   signature_email?: string | null;
   full_name: string | null;
+  full_name_override?: string | null;
   credentials?: string | null;
   job_title: string | null;
+  job_title_override?: string | null;
   department: string | null;
+  department_override?: string | null;
   phone_direct: string | null;
   phone_mobile: string | null;
   branch: string | null;
@@ -100,19 +104,23 @@ export function applySignatureContactFields(
   staff: SignaturesStaffRow,
   branch: AccountBranch | null | undefined,
 ): SignaturesStaffRow {
-  const phoneOverride = staff.phone_direct?.trim();
-  const emailOverride = staff.signature_email?.trim();
+  const profile = applySignatureProfileOverrides(staff);
+  const phoneOverride = profile.phone_direct?.trim();
+  const emailOverride = profile.signature_email?.trim();
 
   return {
-    ...staff,
-    branch: branch?.name?.trim() || staff.branch?.trim() || '',
+    ...profile,
+    branch: branch?.name?.trim() || profile.branch?.trim() || '',
     phone_direct: phoneOverride || branch?.phone?.trim() || '',
-    email: emailOverride || staff.email?.trim() || branch?.email?.trim() || '',
+    email:
+      emailOverride || profile.email?.trim() || branch?.email?.trim() || '',
   };
 }
 
 function brandLogoUrl(brand: AccountBrandResolved | null | undefined) {
-  return brand?.logo_url?.trim() ? brand.logo_url.trim() : TRANSPARENT_PIXEL_GIF;
+  return brand?.logo_url?.trim()
+    ? brand.logo_url.trim()
+    : TRANSPARENT_PIXEL_GIF;
 }
 
 /** Company logo with brand business logo fallback. */
@@ -138,9 +146,7 @@ export function resolvePhotoAndBadgeUrls(input: {
 }): { photoUrl: string; badgeUrl: string } {
   const photo = input.staffPhotoUrl?.trim() || '';
   const icon =
-    input.showPhotoBadge === false
-      ? ''
-      : input.companyIconUrl?.trim() || '';
+    input.showPhotoBadge === false ? '' : input.companyIconUrl?.trim() || '';
 
   if (photo) {
     return {

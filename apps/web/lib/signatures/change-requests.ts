@@ -54,7 +54,7 @@ export async function submitSignatureChangeRequest(input: {
   const db = getSignaturesSupabaseClient();
   const { data: staff, error: staffError } = await db
     .from('staff')
-    .select('id, email, full_name')
+    .select('id, email, full_name, full_name_override')
     .eq('id', share.staff_id)
     .eq('account_id', share.account_id)
     .maybeSingle();
@@ -71,6 +71,7 @@ export async function submitSignatureChangeRequest(input: {
       preview_share_id: share.id,
       requester_name:
         input.requesterName?.trim() ||
+        (staff.full_name_override as string | null)?.trim() ||
         (staff.full_name as string | null) ||
         null,
       requester_email: (staff.email as string | null) ?? null,
@@ -109,13 +110,14 @@ export async function listSignatureChangeRequests(accountId: string) {
   const staffIds = [...new Set(rows.map((row) => row.staff_id))];
   const { data: staffRows } = await db
     .from('staff')
-    .select('id, full_name, email')
+    .select('id, full_name, full_name_override, email')
     .eq('account_id', accountId)
     .in('id', staffIds);
 
   type StaffLookup = {
     id: string;
     full_name: string | null;
+    full_name_override?: string | null;
     email: string | null;
   };
   const staffList = (staffRows ?? []) as StaffLookup[];
@@ -123,7 +125,7 @@ export async function listSignatureChangeRequests(accountId: string) {
     staffList.map((row) => [
       row.id,
       {
-        name: row.full_name,
+        name: row.full_name_override?.trim() || row.full_name,
         email: row.email,
       },
     ]),

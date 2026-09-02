@@ -19,6 +19,7 @@ import {
 
 import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { applySignatureProfileOverrides } from '~/lib/signatures/profile-overrides';
 import { staffSourceLabel } from '~/lib/signatures/staff-source';
 
 import type { SignatureStaff } from '../_lib/server/signatures-data';
@@ -113,6 +114,7 @@ export function SignaturesStaffTable({
             const detailPath = pathsConfig.app.accountSignaturesStaffDetail
               .replace('[account]', accountSlug)
               .replace('[staffId]', row.id);
+            const profile = applySignatureProfileOverrides(row);
             const requestCount = openRequestCounts[row.id] ?? 0;
             const requestsPath = `${pathsConfig.app.accountSignaturesRequests.replace('[account]', accountSlug)}#staff-${row.id}`;
 
@@ -123,7 +125,7 @@ export function SignaturesStaffTable({
               >
                 <TableCell className="px-4 py-3">
                   <div className="font-medium text-[var(--workspace-shell-text)]">
-                    {row.full_name || row.email}
+                    {profile.full_name || row.email}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     {row.email}
@@ -133,7 +135,7 @@ export function SignaturesStaffTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground px-4 py-3">
-                  {row.job_title || '-'}
+                  {profile.job_title || '-'}
                 </TableCell>
                 <TableCell className="text-muted-foreground px-4 py-3">
                   {row.branch || '-'}

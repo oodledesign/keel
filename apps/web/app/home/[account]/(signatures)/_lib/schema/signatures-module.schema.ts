@@ -218,13 +218,15 @@ export const updateStaffActionSchema = z.object({
     .optional()
     .nullable(),
   clearPhotoOverride: z.boolean().optional(),
+  clearFullNameOverride: z.boolean().optional(),
+  clearJobTitleOverride: z.boolean().optional(),
+  clearDepartmentOverride: z.boolean().optional(),
   templateId: z.string().uuid().nullable().optional(),
 });
 
 const bulkStaffRowSchema = z.object({
   staffId: z.string().uuid(),
   full_name: emptyToNull,
-  credentials: emptyToNull,
   job_title: emptyToNull,
   department: emptyToNull,
   phone_direct: emptyToNull,

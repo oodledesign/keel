@@ -505,6 +505,8 @@ export async function syncStaffFromGoogleWorkspace(
           continue;
         }
 
+        // Directory columns stay the live Google values. Leave
+        // *_override columns untouched (Ozer-only; never write back).
         const baseRow = {
           account_id: accountId,
           google_user_id: user.id,

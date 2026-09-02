@@ -3,13 +3,11 @@ import 'server-only';
 import { resolveBranchForStaff } from '~/lib/brand/account-branches';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
+import { applySignatureProfileOverrides } from './profile-overrides';
 import type { SignaturesStaffRow } from './render-template';
 import type { RenderTemplateOptions } from './render-template';
 import { loadResolvedSignatureAssets } from './signature-assets';
-import {
-  htmlToSignatureBlocks,
-  isPhotoBadgeEnabled,
-} from './signature-blocks';
+import { htmlToSignatureBlocks, isPhotoBadgeEnabled } from './signature-blocks';
 import { loadSignaturesWorkspaceSettings } from './workspace-settings';
 
 export async function loadSignatureRenderOptions(
@@ -17,9 +15,10 @@ export async function loadSignatureRenderOptions(
   staff: SignaturesStaffRow,
   htmlTemplate?: string | null,
 ): Promise<RenderTemplateOptions> {
+  const profile = applySignatureProfileOverrides(staff);
   const [resolvedAssets, brand, branch, workspaceSettings] = await Promise.all([
     loadResolvedSignatureAssets(accountId, {
-      department: staff.department,
+      department: profile.department,
       branch_id: staff.branch_id ?? null,
     }),
     loadAccountBrandResolved(accountId),
@@ -30,9 +29,7 @@ export async function loadSignatureRenderOptions(
     loadSignaturesWorkspaceSettings(accountId),
   ]);
 
-  const builderDoc = htmlTemplate
-    ? htmlToSignatureBlocks(htmlTemplate)
-    : null;
+  const builderDoc = htmlTemplate ? htmlToSignatureBlocks(htmlTemplate) : null;
 
   return {
     awardBadgeUrl: resolvedAssets.awardBadgeUrl,

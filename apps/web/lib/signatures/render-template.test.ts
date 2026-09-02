@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type SignaturesStaffRow,
   TRANSPARENT_PIXEL_GIF,
   renderTemplate,
   resolveCompanyLogoUrl,
   resolvePhotoAndBadgeUrls,
   stripTransparentBadgeImages,
-  type SignaturesStaffRow,
 } from './render-template';
 import {
   createSignatureBlock,
@@ -145,10 +145,14 @@ describe('renderTemplate company assets', () => {
   });
 
   it('uses brand logo for company_logo_url when company logo is unset', () => {
-    const html = renderTemplate('<img src="{{company_logo_url}}" />', staffBase, {
-      brand,
-      companyLogoUrl: null,
-    });
+    const html = renderTemplate(
+      '<img src="{{company_logo_url}}" />',
+      staffBase,
+      {
+        brand,
+        companyLogoUrl: null,
+      },
+    );
 
     expect(html).toContain(brand.logo_url);
   });
@@ -172,6 +176,47 @@ describe('renderTemplate company assets', () => {
     expect(html).not.toContain('type="phone_direct"');
     expect(html).toContain('ada@example.com');
     expect(html).toContain('https://example.com');
+  });
+
+  it('uses Ozer profile overrides in merge tokens', () => {
+    const html = renderTemplate(
+      '{{full_name}} · {{job_title}} · {{department}}',
+      {
+        ...staffBase,
+        full_name: 'Ada Lovelace',
+        job_title: 'Engineer',
+        department: 'Mathematics',
+        full_name_override: 'Ada L.',
+        job_title_override: 'Partner',
+        department_override: 'Client Services',
+      },
+    );
+
+    expect(html).toContain('Ada L.');
+    expect(html).toContain('Partner');
+    expect(html).toContain('Client Services');
+    expect(html).not.toContain('Ada Lovelace');
+    expect(html).not.toContain('Engineer');
+    expect(html).not.toContain('Mathematics');
+  });
+
+  it('falls back to directory values when overrides are empty', () => {
+    const html = renderTemplate(
+      '{{full_name}} · {{job_title}} · {{department}}',
+      {
+        ...staffBase,
+        full_name: 'Ada Lovelace',
+        job_title: 'Engineer',
+        department: 'Mathematics',
+        full_name_override: '  ',
+        job_title_override: null,
+        department_override: null,
+      },
+    );
+
+    expect(html).toContain('Ada Lovelace');
+    expect(html).toContain('Engineer');
+    expect(html).toContain('Mathematics');
   });
 
   it('strips transparent badge images', () => {
