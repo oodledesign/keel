@@ -91,11 +91,9 @@ struct HomeTodayView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(OzerPalette.plumMuted)
             }
-            if let dateLabel = payload?.dateLabel ?? Self.todayLabel() {
-                Text(dateLabel)
-                    .font(.subheadline)
-                    .foregroundStyle(OzerPalette.plumSoft)
-            }
+            Text(payload?.dateLabel ?? Self.todayLabel())
+                .font(.subheadline)
+                .foregroundStyle(OzerPalette.plumSoft)
             if let supporting = payload?.supportingText {
                 Text(supporting)
                     .font(.body)

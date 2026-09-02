@@ -29,6 +29,8 @@ enum PushRegistration {
         }
     }
 
+    
+    @MainActor
     static func registerIfNeeded(session: AppSession) async {
         await requestAuthorization()
         if let lastToken {
@@ -36,6 +38,8 @@ enum PushRegistration {
         }
     }
 
+    
+    @MainActor
     static func register(token hex: String, session: AppSession) async {
         lastToken = hex
         do {
