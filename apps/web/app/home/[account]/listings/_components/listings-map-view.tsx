@@ -16,6 +16,7 @@ import MapboxMap, {
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
+import { formatListingRent } from '~/lib/commercial/listing-money';
 import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
@@ -127,10 +128,14 @@ function fitMapToListings(
 }
 
 function moneyLabel(listing: CommercialListing) {
-  const rent = formatMoney(listing.askingRentPence);
+  const rent = formatListingRent(
+    listing.askingRentPence,
+    listing.askingRentToPence,
+    listing.rentFrequency,
+  );
   const price = formatMoney(listing.askingPricePence);
   const parts: string[] = [];
-  if (rent) parts.push(`${rent} pa`);
+  if (rent) parts.push(rent);
   if (price) parts.push(price);
   return parts.join(' · ') || null;
 }

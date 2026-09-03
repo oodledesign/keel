@@ -65,6 +65,10 @@ import {
   type ListingStatus,
 } from '~/lib/commercial/commercial-constants';
 import {
+  formatListingRentAmount,
+  rentFrequencySuffix,
+} from '~/lib/commercial/listing-money';
+import {
   workspaceBtnPrimaryMd,
   workspaceCardHover,
   workspaceIconChip,
@@ -200,18 +204,24 @@ function formatMoney(pence: number | null) {
 /** Rent and/or sale price for list/card — show both when dual. */
 function formatListingMoneyParts(listing: CommercialListing): {
   rent: string | null;
+  rentSuffix: 'pcm' | 'pa' | null;
   price: string | null;
 } {
+  const rent = formatListingRentAmount(
+    listing.askingRentPence,
+    listing.askingRentToPence,
+  );
   return {
-    rent: formatMoney(listing.askingRentPence),
+    rent,
+    rentSuffix: rent ? rentFrequencySuffix(listing.rentFrequency) : null,
     price: formatMoney(listing.askingPricePence),
   };
 }
 
 function formatListingMoneyInline(listing: CommercialListing): string {
-  const { rent, price } = formatListingMoneyParts(listing);
+  const { rent, rentSuffix, price } = formatListingMoneyParts(listing);
   const parts: string[] = [];
-  if (rent) parts.push(`${rent} pa`);
+  if (rent) parts.push(`${rent} ${rentSuffix}`);
   if (price) parts.push(price);
   return parts.join(' · ') || '—';
 }
@@ -1491,7 +1501,7 @@ function ListingCard({
   onDelete: () => void;
 }) {
   const href = listingHref(accountSlug, listing.id);
-  const { rent, price } = formatListingMoneyParts(listing);
+  const { rent, rentSuffix, price } = formatListingMoneyParts(listing);
   const size = formatSize(listing);
   const location = locationLabel(listing);
   const updatedLabel = formatUpdatedAt(listing.updatedAt);
@@ -1588,9 +1598,11 @@ function ListingCard({
             {rent ? (
               <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 {rent}
-                <span className="ml-1 text-xs font-normal text-[var(--workspace-shell-text)]/45">
-                  pa
-                </span>
+                {rentSuffix ? (
+                  <span className="ml-1 text-xs font-normal text-[var(--workspace-shell-text)]/45">
+                    {rentSuffix}
+                  </span>
+                ) : null}
               </p>
             ) : null}
             {price ? (
