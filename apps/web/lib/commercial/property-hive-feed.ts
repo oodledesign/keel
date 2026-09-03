@@ -18,6 +18,7 @@ import {
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import { renderPropertyHiveOzerListingFields } from '~/lib/commercial/property-hive-custom-fields';
+import { collectPropertyHiveFeedMedia } from '~/lib/commercial/property-hive-feed-media';
 
 const FEED_TOKEN_META_KEY = 'xml_feed_token';
 
@@ -91,6 +92,7 @@ type MediaRow = {
   file_name: string | null;
   mime_type: string | null;
   sort_order: number;
+  created_at?: string | null;
 };
 
 type CoAgentFeedRow = {
@@ -367,31 +369,9 @@ function renderPropertyXml(
   const points = keyPoints(listing.key_points);
   const propertyId = feedPropertyId(listing);
 
-  const images: Array<{ name: string; url: string }> = [];
-  const files: Array<{ name: string; url: string; type: string }> = [];
-
-  for (const item of media
-    .slice()
-    .sort((a, b) => a.sort_order - b.sort_order)) {
-    const url = resolveMediaUrlFromMaps(item, signedByPath, siteUrl);
-    if (!url) continue;
-    const name = item.file_name || `${item.media_type}-${item.id}`;
-    const isImage =
-      item.media_type === 'image' ||
-      Boolean(item.mime_type?.startsWith('image/'));
-
-    if (isImage) {
-      images.push({ name, url });
-    } else {
-      const type =
-        item.media_type === 'floorplan'
-          ? '2'
-          : item.media_type === 'epc'
-            ? '3'
-            : '11';
-      files.push({ name, url, type });
-    }
-  }
+  const { images, files } = collectPropertyHiveFeedMedia(media, (item) =>
+    resolveMediaUrlFromMaps(item as MediaRow, signedByPath, siteUrl),
+  );
 
   const showRent =
     includesToLet &&
@@ -877,7 +857,9 @@ export async function buildCommercialFeedXml(
         .select('*')
         .in('listing_id', listingIds)
         .eq('is_private', false)
-        .order('sort_order'),
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true }),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (client as any)
         .from('commercial_listing_co_agents')

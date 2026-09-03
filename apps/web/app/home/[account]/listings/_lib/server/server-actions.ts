@@ -28,6 +28,7 @@ import {
   ListWorkspaceTeamsSchema,
   RemoveListingCoAgentSchema,
   RemoveListingPartySchema,
+  ReorderListingMediaSchema,
   SearchCoAgentClientsSchema,
   SearchListingPartyClientsSchema,
   SetAutoCirculateMatchesSchema,
@@ -50,10 +51,7 @@ function getService() {
 async function requireBillableDisposalActor(accountId: string) {
   const { requireCommercialBillableActor } =
     await import('~/lib/commercial/require-commercial-billable-actor');
-  await requireCommercialBillableActor(
-    accountId,
-    'create or edit disposals',
-  );
+  await requireCommercialBillableActor(accountId, 'create or edit disposals');
 }
 
 async function invalidateDisposalsData(input: {
@@ -366,6 +364,15 @@ export const deleteListingMedia = enhanceAction(
     return { success: true };
   },
   { schema: DeleteListingMediaSchema },
+);
+
+export const reorderListingMedia = enhanceAction(
+  async (input) => {
+    await requireBillableDisposalActor(input.accountId);
+    const media = await getService().reorderMedia(input);
+    return getService().withSignedMediaUrls(media);
+  },
+  { schema: ReorderListingMediaSchema },
 );
 
 export const createListingEnquiry = enhanceAction(

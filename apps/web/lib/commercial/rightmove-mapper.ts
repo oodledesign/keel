@@ -10,6 +10,7 @@ import {
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 
+import { sortListingMedia } from './listing-media-order';
 import { RIGHTMOVE_MEDIA_URL_MAX_LENGTH } from './listing-media-public-url';
 import type {
   RightmoveAreaSizeUnit,
@@ -86,12 +87,14 @@ export type RightmoveMapperUnit = {
 };
 
 export type RightmoveMapperMedia = {
+  id?: string;
   mediaType: string;
   mimeType: string | null;
   fileName: string | null;
   url: string | null;
   sortOrder: number;
   isCover: boolean;
+  createdAt?: string | null;
 };
 
 const REFERENCE_PATTERN = /^[a-zA-Z0-9-_]{1,100}$/;
@@ -685,10 +688,7 @@ export function mapListingMediaToRightmove(
   const brochures: RightmoveMediaAsset[] = [];
   const virtualTours: RightmoveMediaAsset[] = [];
 
-  const sorted = [...media].sort((a, b) => {
-    if (a.isCover !== b.isCover) return a.isCover ? -1 : 1;
-    return a.sortOrder - b.sortOrder;
-  });
+  const sorted = sortListingMedia(media);
 
   for (const item of sorted) {
     const url = item.url?.trim();

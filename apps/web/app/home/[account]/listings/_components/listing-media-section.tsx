@@ -1,14 +1,41 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  type CSSProperties,
+  type HTMLAttributes,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
   FileText,
+  GripVertical,
   ImageIcon,
   Loader2,
   MoreHorizontal,
@@ -43,6 +70,10 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
+import {
+  compareListingMediaOrder,
+  sortListingMedia,
+} from '~/lib/commercial/listing-media-order';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
@@ -53,6 +84,7 @@ import type { CommercialListingMedia } from '../_lib/server/listings.service';
 import {
   createListingMedia,
   deleteListingMedia,
+  reorderListingMedia,
   setListingMediaCover,
   updateListing,
   updateListingMedia,
@@ -79,7 +111,8 @@ const PRIMARY_FILE_SECTIONS: Array<{
   {
     type: 'image',
     title: 'Photos',
-    description: 'Primary gallery images. Set one as cover.',
+    description:
+      'Primary gallery images. Drag to set the order used on the website, portals, and brochure. The first photo is the cover.',
     accept: 'image/jpeg,image/png,image/webp,image/gif',
   },
   {
@@ -143,6 +176,62 @@ function mediaHref(item: CommercialListingMedia) {
   return item.url ?? item.externalUrl ?? null;
 }
 
+function applyPhotoOrder(
+  items: CommercialListingMedia[],
+  photoIds: string[],
+): CommercialListingMedia[] {
+  const indexById = new Map(photoIds.map((id, index) => [id, index]));
+  return items
+    .map((item) => {
+      const index = indexById.get(item.id);
+      if (index == null) return item;
+      return {
+        ...item,
+        sortOrder: index,
+        isCover: index === 0,
+      };
+    })
+    .sort(compareListingMediaOrder);
+}
+
+type PhotoDragBindings = {
+  setNodeRef: (node: HTMLElement | null) => void;
+  style: CSSProperties;
+  attributes: HTMLAttributes<HTMLElement>;
+  listeners?: HTMLAttributes<HTMLElement>;
+  isDragging: boolean;
+};
+
+function SortablePhotoCard({
+  item,
+  disabled,
+  children,
+}: {
+  item: CommercialListingMedia;
+  disabled: boolean;
+  children: (drag: PhotoDragBindings) => ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id, disabled });
+
+  return children({
+    setNodeRef,
+    style: {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    },
+    attributes,
+    listeners: disabled ? undefined : listeners,
+    isDragging,
+  });
+}
+
 export function ListingMediaSection({
   accountId,
   listingId,
@@ -156,6 +245,14 @@ export function ListingMediaSection({
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const readOnly = !canEditDisposals;
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -174,7 +271,7 @@ export function ListingMediaSection({
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
-    setMedia(initialMedia);
+    setMedia(sortListingMedia(initialMedia));
   }, [initialMedia]);
 
   useEffect(() => {
@@ -294,19 +391,65 @@ export function ListingMediaSection({
   };
 
   const handleSetCover = (mediaId: string) => {
+    const previous = media;
+    const target = media.find((item) => item.id === mediaId);
+    if (target?.mediaType === 'image') {
+      const photoIds = media
+        .filter((item) => item.mediaType === 'image')
+        .map((item) => item.id);
+      const nextIds = [mediaId, ...photoIds.filter((id) => id !== mediaId)];
+      setMedia(applyPhotoOrder(media, nextIds));
+    } else {
+      setMedia((prev) =>
+        prev.map((item) => ({
+          ...item,
+          isCover: item.id === mediaId,
+        })),
+      );
+    }
+
     startTransition(async () => {
       try {
         await setListingMediaCover({ mediaId, listingId, accountId });
-        setMedia((prev) =>
-          prev.map((item) => ({
-            ...item,
-            isCover: item.id === mediaId,
-          })),
-        );
         router.refresh();
         toast.success('Cover image updated');
       } catch (err) {
+        setMedia(previous);
         setError(err instanceof Error ? err.message : 'Could not set cover');
+      }
+    });
+  };
+
+  const handlePhotoDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const photos = media.filter((item) => item.mediaType === 'image');
+    const oldIndex = photos.findIndex((item) => item.id === active.id);
+    const newIndex = photos.findIndex((item) => item.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const nextIds = arrayMove(
+      photos.map((item) => item.id),
+      oldIndex,
+      newIndex,
+    );
+    const previous = media;
+    setMedia(applyPhotoOrder(media, nextIds));
+
+    startTransition(async () => {
+      try {
+        await reorderListingMedia({
+          accountId,
+          listingId,
+          mediaIds: nextIds,
+        });
+        router.refresh();
+      } catch (err) {
+        setMedia(previous);
+        toast.error(
+          err instanceof Error ? err.message : 'Could not save photo order',
+        );
       }
     });
   };
@@ -476,27 +619,48 @@ export function ListingMediaSection({
     });
   };
 
-  const renderMediaCard = (item: CommercialListingMedia) => {
+  const renderMediaCard = (
+    item: CommercialListingMedia,
+    drag?: PhotoDragBindings,
+  ) => {
     const href = mediaHref(item);
     const isImage = isImageMedia(item) && Boolean(href);
+    const canDrag = Boolean(drag?.listeners);
 
     return (
       <div
         key={item.id}
-        className="group relative overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
+        ref={drag?.setNodeRef}
+        style={drag?.style}
+        className={`group relative overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] ${
+          drag?.isDragging ? 'z-10 opacity-80 shadow-lg' : ''
+        } ${canDrag ? 'cursor-grab touch-none active:cursor-grabbing' : ''}`}
       >
+        {canDrag ? (
+          <button
+            type="button"
+            className="absolute top-2 left-2 z-10 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/90 p-1 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+            aria-label={`Drag to reorder ${item.fileName ?? 'photo'}`}
+            {...drag?.attributes}
+            {...drag?.listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        ) : null}
         {isImage ? (
           <button
             type="button"
             className="block w-full cursor-zoom-in text-left"
             onClick={() => openLightbox(item)}
             aria-label={`View ${item.fileName ?? 'image'}`}
+            {...(canDrag ? drag?.listeners : undefined)}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={href!}
               alt={item.fileName ?? 'Listing media'}
               className="aspect-[4/3] w-full object-cover transition-opacity group-hover:opacity-95"
+              draggable={false}
             />
           </button>
         ) : (
@@ -538,6 +702,7 @@ export function ListingMediaSection({
                 disabled={pending || readOnly}
                 className="h-7 w-7 text-[var(--workspace-shell-text-muted)]"
                 aria-label={`Actions for ${item.fileName ?? 'media'}`}
+                onPointerDown={(event) => event.stopPropagation()}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -675,9 +840,32 @@ export function ListingMediaSection({
                   <Plus className="h-5 w-5" />
                   Add {section.title.toLowerCase()}
                 </button>
+              ) : section.type === 'image' && !readOnly ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handlePhotoDragEnd}
+                >
+                  <SortableContext
+                    items={items.map((item) => item.id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {items.map((item) => (
+                        <SortablePhotoCard
+                          key={item.id}
+                          item={item}
+                          disabled={pending}
+                        >
+                          {(drag) => renderMediaCard(item, drag)}
+                        </SortablePhotoCard>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {items.map(renderMediaCard)}
+                  {items.map((item) => renderMediaCard(item))}
                 </div>
               )}
             </CardContent>
@@ -724,7 +912,7 @@ export function ListingMediaSection({
             </p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {videos.map(renderMediaCard)}
+              {videos.map((item) => renderMediaCard(item))}
             </div>
           )}
         </CardContent>
@@ -799,7 +987,7 @@ export function ListingMediaSection({
                 </button>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {items.map(renderMediaCard)}
+                  {items.map((item) => renderMediaCard(item))}
                 </div>
               )}
             </CardContent>

@@ -147,13 +147,14 @@ export async function loadListingCoverUrlsForDigest(
   const { data, error } = await db
     .from('commercial_listing_media')
     .select(
-      'id, listing_id, media_type, file_name, mime_type, storage_path, external_url, is_cover, sort_order',
+      'id, listing_id, media_type, file_name, mime_type, storage_path, external_url, is_cover, sort_order, created_at',
     )
     .in('listing_id', uniqueIds)
     .eq('is_private', false)
     .or('media_type.eq.image,mime_type.ilike.image/%')
-    .order('is_cover', { ascending: false })
-    .order('sort_order', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
 
   if (error) {
     console.error('[match-digest] cover media', error.message);

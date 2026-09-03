@@ -12,6 +12,7 @@ import {
 } from '~/lib/brand/account-brand';
 import { fetchNearbyBrochureAmenities } from '~/lib/commercial/brochure-pdf/nearby-amenities';
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
+import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import type {
   BrochureAgent,
@@ -203,14 +204,14 @@ export async function loadListingBrochureData(
     client
       .from('commercial_listing_media')
       .select(
-        'id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private',
+        'id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at',
       )
       .eq('listing_id', listing.id)
       .eq('is_private', false)
       .in('media_type', ['image', 'floorplan'])
-      .order('is_cover', { ascending: false })
       .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true }),
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
     client
       .from('account_branches')
       .select(
@@ -324,7 +325,7 @@ export async function loadListingBrochureData(
   }
 
   const signedMedia = await Promise.all(
-    (
+    sortListingMedia(
       (mediaRows ?? []) as Array<{
         id: string;
         media_type: string;
@@ -332,8 +333,10 @@ export async function loadListingBrochureData(
         external_url: string | null;
         file_name: string | null;
         mime_type: string | null;
+        sort_order: number | null;
+        created_at: string | null;
         is_cover: boolean | null;
-      }>
+      }>,
     ).map(async (item) => {
       const url = await signMediaUrl(
         admin,
