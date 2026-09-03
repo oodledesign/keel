@@ -4,7 +4,6 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { ListingPublishingSection } from '../../_components/listing-publishing-section';
-import { loadListingLinkedInCardData } from '../../_lib/server/listing-linkedin.loader';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
@@ -22,10 +21,9 @@ async function ListingPublishingPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [publications, media, linkedIn] = await Promise.all([
+  const [publications, media] = await Promise.all([
     service.listPublicationsForListing(listingId),
     service.listMedia(listingId, { privacy: 'public' }),
-    loadListingLinkedInCardData(accountId, listingId),
   ]);
 
   const mediaWithUrls = await service.withSignedMediaUrls(media);
@@ -37,9 +35,6 @@ async function ListingPublishingPage({ params }: PageProps) {
       accountId={accountId}
       accountSlug={slug}
       media={mediaWithUrls}
-      linkedInConnection={linkedIn.connection}
-      linkedInPost={linkedIn.draft}
-      linkedInLastPosted={linkedIn.lastPosted}
     />
   );
 }

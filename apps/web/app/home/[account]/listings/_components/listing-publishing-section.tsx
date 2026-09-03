@@ -23,7 +23,6 @@ import type {
 import { setBrochureShare } from '../_lib/server/server-actions';
 import { useDisposalAccess } from './disposal-access-context';
 import { ListingBrochureDownload } from './listing-brochure-download';
-import { ListingLinkedInCard } from './listing-linkedin-card';
 import { ListingPublishingChannels } from './listing-publishing-channels';
 import { MarketingReadinessCard } from './marketing-readiness-card';
 
@@ -41,24 +40,12 @@ export function ListingPublishingSection({
   accountId,
   accountSlug,
   media = [],
-  linkedInConnection = null,
-  linkedInPost = null,
-  linkedInLastPosted = null,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
   accountSlug: string;
   media?: CommercialListingMedia[];
-  linkedInConnection?:
-    | import('~/lib/commercial/linkedin-publishing/types').LinkedInOrgConnectionPublic
-    | null;
-  linkedInPost?:
-    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
-    | null;
-  linkedInLastPosted?:
-    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
-    | null;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const [listing, setListing] = useState(initial);
@@ -215,16 +202,18 @@ export function ListingPublishingSection({
         </CardContent>
       </Card>
 
-      <ListingLinkedInCard
-        listing={listing}
-        accountId={accountId}
-        accountSlug={accountSlug}
-        media={media}
-        publications={publications}
-        connection={linkedInConnection}
-        initialPost={linkedInPost}
-        lastPosted={linkedInLastPosted}
-      />
+      <Card className={`${workspacePanelCard} opacity-60`}>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              LinkedIn
+            </p>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Coming soon — post disposals to your company page.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className={workspacePanelCard}>
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -234,7 +223,7 @@ export function ListingPublishingSection({
               Workspace publishing settings
             </p>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Feed URLs, Property Hive credentials, and LinkedIn connection.
+              Feed URLs and Property Hive credentials.
             </p>
           </div>
           <Button asChild variant="outline" size="sm">

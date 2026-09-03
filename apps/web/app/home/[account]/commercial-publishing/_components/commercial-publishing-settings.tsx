@@ -27,13 +27,11 @@ import {
 import type { CommercialListing } from '../../listings/_lib/server/listings.service';
 import type { CommercialPublishingSettings } from '../_lib/server/commercial-publishing.loader';
 import {
-  disconnectLinkedInOrgAction,
   ensureEachFeedAction,
   ensurePropertyHiveFeedAction,
   rotateEachFeedAction,
   rotatePropertyHiveFeedAction,
   saveRightmoveWorkspaceBranchesAction,
-  selectLinkedInOrgAction,
   testPublishListingAction,
 } from '../_lib/server/server-actions';
 
@@ -76,6 +74,8 @@ export function CommercialPublishingSettings({
   portalPublishingUnlocked = true,
   linkedinBanner,
 }: CommercialPublishingSettingsProps) {
+  void accountSlug;
+  void linkedinBanner;
   const [settings, setSettings] = useState(initialSettings);
   const [rmPending, startRmTransition] = useTransition();
   const [testPending, startTestTransition] = useTransition();
@@ -102,50 +102,6 @@ export function CommercialPublishingSettings({
   const [testPortal, setTestPortal] = useState<
     'property_hive' | 'rightmove' | 'each'
   >('property_hive');
-  const [linkedinPending, startLinkedInTransition] = useTransition();
-  const [pendingOrgId, setPendingOrgId] = useState(
-    initialSettings.linkedin.pendingOrgs[0]?.id ?? '',
-  );
-
-  const linkedinConnectHref = `/api/linkedin-org/auth/start?account_id=${accountId}&return=${encodeURIComponent(
-    `/home/${accountSlug}/commercial-publishing`,
-  )}`;
-
-  const disconnectLinkedIn = () => {
-    startLinkedInTransition(async () => {
-      try {
-        const updated = await disconnectLinkedInOrgAction({ accountId });
-        setSettings(updated);
-        toast.success('LinkedIn company page disconnected');
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not disconnect LinkedIn',
-        );
-      }
-    });
-  };
-
-  const selectLinkedInOrg = () => {
-    if (!pendingOrgId) return;
-    startLinkedInTransition(async () => {
-      try {
-        const updated = await selectLinkedInOrgAction({
-          accountId,
-          orgId: pendingOrgId,
-        });
-        setSettings(updated);
-        toast.success('LinkedIn company page connected');
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not save company page',
-        );
-      }
-    });
-  };
 
   const saveRightmoveBranches = () => {
     startRmTransition(async () => {
@@ -308,12 +264,12 @@ export function CommercialPublishingSettings({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {linkedinBanner?.error ? (
+      {false && linkedinBanner?.error ? (
         <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
           {linkedinBanner.error}
         </p>
       ) : null}
-      {linkedinBanner?.connected ? (
+      {false && linkedinBanner?.connected ? (
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
           LinkedIn company page connected.
         </p>
@@ -587,7 +543,7 @@ export function CommercialPublishingSettings({
         </CardContent>
       </Card>
 
-      <Card className={workspacePanelCard}>
+      <Card className={`${workspacePanelCard} opacity-60`}>
         <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
             <Linkedin className="h-4 w-4" />
@@ -600,100 +556,15 @@ export function CommercialPublishingSettings({
             }
           />
         </CardHeader>
-        <CardContent className="space-y-4">
+                <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Post disposals to your LinkedIn business page from Marketing. Ozer
-            never posts automatically when a listing is published — only Post
-            now or Schedule.
+            Coming soon — post disposals to your LinkedIn company page from
+            Publishing.
           </p>
-          {!settings.linkedin.configured ? (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-              LinkedIn app not configured. Set LINKEDIN_CLIENT_ID,
-              LINKEDIN_CLIENT_SECRET, and LINKEDIN_REDIRECT_URI. LinkedIn must
-              also approve the Community Management API product on the Ozer
-              developer app before Connect works in production.
-            </p>
-          ) : null}
-          {settings.linkedin.pendingOrgs.length > 0 ? (
-            <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
-              <p className="text-sm text-[var(--workspace-shell-text)]">
-                Choose the company page to post as.
-              </p>
-              <Select
-                value={pendingOrgId || '__none__'}
-                onValueChange={(value: string) =>
-                  setPendingOrgId(value === '__none__' ? '' : value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a page" />
-                </SelectTrigger>
-                <SelectContent className={workspaceSelectContentClass}>
-                  {settings.linkedin.pendingOrgs.map((org) => (
-                    <SelectItem
-                      key={org.id}
-                      value={org.id}
-                      className={workspaceSelectItemClass}
-                    >
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                disabled={linkedinPending || !pendingOrgId}
-                onClick={selectLinkedInOrg}
-                className={workspaceBtnPrimaryMd}
-              >
-                {linkedinPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : null}
-                Use this page
-              </Button>
-            </div>
-          ) : null}
-          {settings.linkedin.connection ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                {settings.linkedin.connection.orgName ??
-                  `Organization ${settings.linkedin.connection.orgId}`}
-              </p>
-              {settings.linkedin.connection.status === 'needs_reconnect' ? (
-                <p className="text-xs text-amber-200/90">
-                  Token expired or was revoked. Reconnect as a page admin.
-                </p>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline">
-                  <a href={linkedinConnectHref}>Reconnect</a>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={linkedinPending}
-                  onClick={disconnectLinkedIn}
-                >
-                  {linkedinPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : null}
-                  Disconnect
-                </Button>
-              </div>
-            </div>
-          ) : settings.linkedin.configured ? (
-            <Button asChild className={workspaceBtnPrimaryMd}>
-              <a href={linkedinConnectHref}>Connect LinkedIn page</a>
-            </Button>
-          ) : (
-            <Button type="button" disabled className={workspaceBtnPrimaryMd}>
-              Connect LinkedIn page
-            </Button>
-          )}
         </CardContent>
       </Card>
 
-      <Card className={workspacePanelCard}>
+<Card className={workspacePanelCard}>
         <CardHeader>
           <CardTitle className="text-base text-[var(--workspace-shell-text)]">
             Test publish
