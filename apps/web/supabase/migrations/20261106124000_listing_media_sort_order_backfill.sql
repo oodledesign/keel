@@ -1,6 +1,8 @@
 -- Give every commercial listing a deterministic, unique media sort_order.
 -- Existing cover images stay first so listing cards / portals do not silently
 -- change the hero photo. Remaining items follow created_at then id.
+-- After this, applyPublicPhotoOrder / reorder_commercial_listing_photos keep
+-- is_cover in sync with sort_order 0 for public photos.
 
 WITH ordered AS (
   SELECT

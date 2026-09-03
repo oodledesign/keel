@@ -634,12 +634,12 @@ export function ListingMediaSection({
         style={drag?.style}
         className={`group relative overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] ${
           drag?.isDragging ? 'z-10 opacity-80 shadow-lg' : ''
-        } ${canDrag ? 'cursor-grab touch-none active:cursor-grabbing' : ''}`}
+        } ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
       >
         {canDrag ? (
           <button
             type="button"
-            className="absolute top-2 left-2 z-10 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/90 p-1 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+            className="absolute top-2 left-2 z-10 touch-none rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/90 p-1 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
             aria-label={`Drag to reorder ${item.fileName ?? 'photo'}`}
             {...drag?.attributes}
             {...drag?.listeners}
@@ -845,6 +845,41 @@ export function ListingMediaSection({
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handlePhotoDragEnd}
+                  accessibility={{
+                    announcements: {
+                      onDragStart: ({ active }) => {
+                        const photo = media.find(
+                          (item) => item.id === active.id,
+                        );
+                        return `Picked up ${photo?.fileName ?? 'photo'}`;
+                      },
+                      onDragOver: ({ active, over }) => {
+                        if (!over) return;
+                        const photo = media.find(
+                          (item) => item.id === active.id,
+                        );
+                        const target = media.find(
+                          (item) => item.id === over.id,
+                        );
+                        return `Moved ${photo?.fileName ?? 'photo'} over ${target?.fileName ?? 'another photo'}`;
+                      },
+                      onDragEnd: ({ active, over }) => {
+                        const photo = media.find(
+                          (item) => item.id === active.id,
+                        );
+                        if (!over) {
+                          return `Cancelled reordering ${photo?.fileName ?? 'photo'}`;
+                        }
+                        return `Dropped ${photo?.fileName ?? 'photo'}. First photo is the cover.`;
+                      },
+                      onDragCancel: ({ active }) => {
+                        const photo = media.find(
+                          (item) => item.id === active.id,
+                        );
+                        return `Cancelled reordering ${photo?.fileName ?? 'photo'}`;
+                      },
+                    },
+                  }}
                 >
                   <SortableContext
                     items={items.map((item) => item.id)}

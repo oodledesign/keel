@@ -682,29 +682,26 @@ async function applyPublicPhotoOrder(
     return [];
   }
 
-  await client
-    .from('commercial_listing_media')
-    .update({ is_cover: false })
-    .eq('listing_id', input.listingId)
-    .eq('account_id', input.accountId)
-    .eq('is_cover', true);
+  // RPC is added in 20261106124100; not yet in generated Database types.
+  const { error: reorderError } = await (
+    client as SupabaseClient & {
+      rpc: (
+        fn: string,
+        args: {
+          p_account_id: string;
+          p_listing_id: string;
+          p_ordered_ids: string[];
+        },
+      ) => Promise<{ error: { message: string } | null }>;
+    }
+  ).rpc('reorder_commercial_listing_photos', {
+    p_account_id: input.accountId,
+    p_listing_id: input.listingId,
+    p_ordered_ids: orderedIds,
+  });
 
-  const results = await Promise.all(
-    orderedIds.map((id, index) =>
-      client
-        .from('commercial_listing_media')
-        .update({
-          sort_order: index,
-          is_cover: index === 0,
-        })
-        .eq('id', id)
-        .eq('listing_id', input.listingId)
-        .eq('account_id', input.accountId),
-    ),
-  );
-
-  for (const result of results) {
-    if (result.error) throw new Error(result.error.message);
+  if (reorderError) {
+    throw new Error(reorderError.message);
   }
 
   const { data: refreshed, error: refreshError } = await client
