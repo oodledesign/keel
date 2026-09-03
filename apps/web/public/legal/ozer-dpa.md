@@ -2,9 +2,7 @@
 
 UK GDPR Article 28 terms for customers who use Ozer as a processor.
 
-**Under active legal review.** This Data Processing Agreement reflects Ozer's current Article 28 terms and is in effect for customers relying on it today. Counsel review of the full agreement remains in progress.
-
-**Version:** 17 August 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
+**Version:** 3 September 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
 
 ## 1. Roles and subject matter
 
@@ -39,7 +37,9 @@ Ozer shall:
 
 ## 6. Sub-processors
 
-The Controller authorises Ozer to engage the sub-processors listed in Annex B. Ozer will give the Controller **at least 30 days' notice** of intended additions or replacements of sub-processors, via the Trust Centre sub-processor register and email to workspace owners, and give the Controller an opportunity to object on reasonable grounds. If an objection cannot be resolved in good faith, the Controller may terminate the affected services.
+The Controller authorises Ozer to engage the sub-processors listed in Annex B. Ozer shall impose on each sub-processor data protection obligations that are in substance equivalent to those in this DPA, including by written contract, as required by UK GDPR Article 28(4). Ozer remains responsible to the Controller for that sub-processor's performance.
+
+Ozer will give the Controller **at least 30 days' notice** of intended additions or replacements of sub-processors, via the Trust Centre sub-processor register and email to workspace owners, and give the Controller an opportunity to object on reasonable grounds. If an objection cannot be resolved in good faith, the Controller may terminate the affected services.
 
 ## 7. International transfers
 
@@ -79,7 +79,8 @@ On data protection processing matters, this DPA prevails over the Terms of Servi
 
 - Account users: name, email, auth identifiers, workspace membership.
 - CRM: clients and contacts (name, email, phone, address, picture); tasks/notes/projects links.
-- Invoicing / proposals / contracts: recipient emails, templates, document metadata, portal tokens.
+- Invoicing / proposals / contracts: recipient emails, templates, document content, signature images, document metadata, portal tokens.
+- Commercial listings: particulars, photographs and media, addresses and coordinates, landlord and co-agent contacts you record, feed/portal identifiers, brochure and share tokens.
 - Email Assistant: OAuth tokens; email threads/messages; drafts; action items.
 - Calendar: events and attendees via connected calendars.
 - Bookings: invitee name, email, timezone, notes, guests, form answers, management tokens.
@@ -99,7 +100,8 @@ The authoritative register, kept current, is published on the Trust Centre. As a
 
 | Sub-processor | Service | Data categories | Location | Transfer mechanism |
 | --- | --- | --- | --- | --- |
-| Supabase / AWS | Database, auth, storage | Workspace and account data | EU West (Ireland) | Not a restricted transfer |
+| Supabase | Database, auth, storage (hosted on AWS EU West) | Workspace and account data | EU West (Ireland) | Not a restricted transfer |
+| Amazon Web Services (AWS) | Amazon SES (workspace sending domains and circulation email); EU cloud infrastructure | Sender/recipient, subject, body for SES mail; infrastructure for hosted data | EU (Ireland and other AWS EU regions we configure) | Not a restricted transfer |
 | Stripe | Billing and Connect payments | Billing identifiers, subscription status | US | Stripe Data Transfers Addendum (UK IDTA; EU-US DPF incl. UK Extension) |
 | Anthropic | AI language model features | Workspace/email/transcript text prompts | US | DPA with EU SCCs and UK Addendum; EU-US DPF |
 | Google (Gemini Flash / Flash-Lite) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace/email text prompts | US/global | Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US DPF (Google LLC). Free AI Studio tier is not used for customer personal data. |

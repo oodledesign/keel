@@ -257,15 +257,33 @@ function TrustCenterPage() {
                   </thead>
                   <tbody className="text-muted-foreground">
                     <tr className="border-border/60 border-b">
-                      <td className="py-2.5 pr-3 align-top">Supabase / AWS</td>
+                      <td className="py-2.5 pr-3 align-top">Supabase</td>
                       <td className="py-2.5 pr-3 align-top">
-                        Database, auth, storage
+                        Database, auth, storage (hosted on AWS EU West)
                       </td>
                       <td className="py-2.5 pr-3 align-top">
                         Workspace and account data
                       </td>
                       <td className="py-2.5 align-top">
                         EU West (Ireland) — no restricted transfer
+                      </td>
+                    </tr>
+                    <tr className="border-border/60 border-b">
+                      <td className="py-2.5 pr-3 align-top">
+                        Amazon Web Services (AWS)
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Amazon SES for workspace sending domains and
+                        circulation email; cloud infrastructure underlying EU
+                        hosting
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Sender/recipient addresses, subject, and body for SES
+                        mail; infrastructure for hosted data
+                      </td>
+                      <td className="py-2.5 align-top">
+                        EU (Ireland and other AWS EU regions we configure) —
+                        no restricted transfer
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">

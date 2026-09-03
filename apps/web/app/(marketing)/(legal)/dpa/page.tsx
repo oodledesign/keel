@@ -38,7 +38,7 @@ async function DpaPage() {
       />
       <SitePageHeader
         title="Data Processing Agreement"
-        subtitle="Under active legal review — Article 28 core terms are in effect; counsel review of the full agreement remains in progress."
+        subtitle="UK GDPR Article 28 terms for customers who use Ozer as a processor."
       />
 
       <div className="container mx-auto px-4 py-8">

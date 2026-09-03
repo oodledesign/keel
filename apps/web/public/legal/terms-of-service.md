@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last updated:** 18 August 2026
+**Last updated:** 3 September 2026
 
 These Terms govern use of Ozer, operated by Oodle Designs Ltd. By creating an account and accepting these Terms you agree to be bound by them.
 
@@ -21,6 +21,8 @@ Without limiting the above, you must not:
 - **Signatures:** connect Microsoft or Google tenant credentials without authority, or use Signatures for anything other than legitimate email signature management.
 - **Invoicing / Stripe Connect:** misuse payment features for fraud, chargeback abuse, or prohibited businesses under Stripe's terms.
 - **Public booking links:** collect invitee data without a lawful basis, or use booking forms for phishing or unlawful surveillance.
+- **Commercial listings:** publish false or misleading particulars, or send listing data to portals or feeds you are not authorised to use.
+- **Sending domain / email:** use workspace sending domains or mailouts to spam, impersonate others, or send unlawful marketing.
 
 ## Customer responsibilities as controller
 
@@ -33,6 +35,14 @@ Where you instruct Ozer to process personal data of your staff, clients, contact
 ## Meeting recording and attendee notice
 
 If you use meeting recording or transcription, you must inform attendees as required by applicable law and your own policies. Consent or enablement inside the Ozer product does **not** replace your duty to notify attendees.
+
+## Your content
+
+You retain all intellectual property rights in content you and your users create or upload in Ozer, including notes, files, listing photographs and particulars, contract wording, signatures, and templates. You grant Oodle Designs Ltd a worldwide, non-exclusive licence to host, store, display, transmit, and otherwise process that content solely to provide, maintain, secure, and support the service — including backups, AI features you enable, public portals and share links you enable, and property feeds or brochures you publish. We do not claim ownership of your content. You represent that you have the rights needed to upload and instruct us to process it.
+
+## Electronic signatures
+
+Ozer provides tools to prepare, send, and capture electronic signatures. You are responsible for deciding whether an electronic signature is appropriate for a given document under applicable law (including the UK Electronic Communications Act 2000 and, where it applies, UK/EU eIDAS), for any notices or consents that law requires, and for the legal effect of documents you send. A signature captured in Ozer is intended to be an electronic signature. It does not, by itself, create legal advice, execute a deed, or replace wet-ink or witnessed execution where the law requires a different form.
 
 ## Privacy and product analytics
 
@@ -59,6 +69,10 @@ Media Generate tokens (media units) are billed separately from Ozer AI text cred
 You may cancel your subscription via the billing portal or by contacting us. Cancelling stops billing and may lock access; we keep your workspace data so you can reactivate. Deleting your account is a separate action.
 
 **Deletion:** after you delete your account we remove customer data across our systems (database and storage, video hosting, and email logs) within 30 days. Database rows are removed immediately; remaining files are permanently deleted at the end of that window and cannot be recovered. We email the account owner before remaining files are wiped. Records we are required to retain by law are kept — billing and tax records for 6 years in line with HMRC requirements, and payment records held by Stripe are subject to Stripe's own retention obligations. Feature-specific retention periods are set out in our [Privacy Policy](/privacy-policy).
+
+## Customer indemnity
+
+You will indemnify Oodle Designs Ltd against claims, losses, damages, and reasonable legal costs arising from: (a) content you or your users upload or instruct us to process; (b) your use of Ozer in breach of these Terms or applicable law, including recording or transcribing without required notices, unlawful marketing, or publishing listing data you are not authorised to use; and (c) any claim that your content infringes a third party's rights. This does not require you to indemnify us for our own negligence, wilful misconduct, or a personal data breach caused by our failure to implement the security measures described in the DPA.
 
 ## Liability
 

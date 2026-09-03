@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 18 August 2026
+**Last updated:** 3 September 2026
 
 Oodle Designs Ltd ("Ozer", "we", "us") is the data controller for personal data we process for our own purposes (account and authentication data, product analytics and security logs, and SaaS billing records). Where you use Ozer to store or process your clients', staff, or invitees' personal data, we typically act as a **processor** on your instructions. See our [Data Processing Agreement](/dpa) for that relationship. We comply with the UK GDPR, EU GDPR, and the Data Protection Act 2018.
 
@@ -127,10 +127,9 @@ When an administrator connects Microsoft 365 for Signatures, Ozer requests:
 
 - `User.Read.All` (application) — read staff directory profiles to populate signature details.
 - `ProfilePhoto.Read.All` (application) — read profile photos for use in signatures.
-- `User.Read` (delegated) — sign in the connecting administrator.
-- `offline_access` — maintain the connection without repeated re-consent.
+- `openid` and `profile` (delegated) — sign in the connecting administrator.
 
-Ozer's Microsoft access is read-only: we read directory profiles and photos to build signatures. We do not read email content and we do not write to mailboxes or mailbox settings.
+Ozer does **not** request `MailboxSettings.ReadWrite`. Directory sync is read-only: we read profiles and photos to build signatures. We do not read email content and we do not write to Outlook mailboxes or mailbox settings. Staff paste their Outlook signature themselves.
 
 ### Google Workspace permissions
 
@@ -193,7 +192,7 @@ Further detail is available on our [Trust Centre](/trust).
 
 **Purpose:** product and transactional emails (invites, invoices, booking confirmations, etc.).
 
-**Sub-processors:** ZeptoMail (EU data centre).
+**Sub-processors:** ZeptoMail (EU data centre) for product mail such as invites and one-time codes; Amazon SES (AWS, EU regions we configure) for workspace sending domains and circulation mailouts once you verify a domain.
 
 **Retention:** delivery logs are retained for 12 months, then deleted.
 
@@ -207,15 +206,17 @@ Further detail is available on our [Trust Centre](/trust).
 
 **Retention:** videos and metadata are deleted within 30 days of account closure, or when you delete them.
 
-## Commercial maps and geocoding
+## Commercial property listings
 
-**Data:** property addresses and map coordinates when you use commercial listings, matching maps, or brochure map pages.
+**Data:** listing particulars and copy; property photographs and other media (including display order); addresses and map coordinates; landlord, co-agent, and branch contact details you record; portal and XML-feed identifiers; public brochure and share tokens.
 
-**Purpose:** show maps and geocode UK commercial addresses.
+**Purpose:** to market commercial property from your workspace, generate brochures, and publish to website XML feeds, EACH, and any other portals you enable.
 
-**Sub-processors:** Mapbox (geocoding and map tiles).
+**UK GDPR basis:** you are typically the controller of occupier, landlord, and enquiry data; we process on your instructions.
 
-**Retention:** coordinates are stored with the listing/requirement record for the life of your workspace (then deleted within 30 days of account termination).
+**Sub-processors:** Supabase; Mapbox (maps and geocoding); Amazon Web Services (SES where you send listing-related mail from a workspace sending domain).
+
+**Retention:** listing content, media, and coordinates are retained for the life of your workspace (then deleted within 30 days of account termination), unless you delete a listing sooner.
 
 ## MCP API
 
@@ -227,7 +228,8 @@ We use the following sub-processors to operate Ozer. A matching register is publ
 
 | Name | Purpose | Data (high level) | Location & transfer mechanism |
 | --- | --- | --- | --- |
-| Supabase / AWS | Database, auth, storage | Workspace and account data | EU West (Ireland) — no restricted transfer |
+| Supabase | Database, auth, storage (hosted on AWS EU West) | Workspace and account data | EU West (Ireland) — no restricted transfer |
+| Amazon Web Services (AWS) | Amazon SES for workspace sending domains and circulation email; cloud infrastructure underlying EU hosting | Sender/recipient addresses, subject, and body for SES mail; infrastructure for hosted data | EU (Ireland and other AWS EU regions we configure) — no restricted transfer |
 | Stripe | SaaS billing and Connect payments | Customer IDs, subscription status; card numbers stay with Stripe | US — Stripe Data Transfers Addendum (UK IDTA incorporated; EU-US Data Privacy Framework incl. UK Extension) |
 | Anthropic | AI language model features | Workspace / email / transcript text prompts | US — DPA with EU SCCs and UK Addendum (incorporated in commercial terms); EU-US Data Privacy Framework |
 | Google (Gemini Flash / Flash-Lite) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace / email text prompts | US/global — Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US Data Privacy Framework (Google LLC). Free AI Studio tier is not used for customer personal data. |
