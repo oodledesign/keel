@@ -796,7 +796,8 @@ async function findAccountIdByFeedToken(
 
 /**
  * Build Kato-compatible listing XML for a portal feed token.
- * EACH excludes opt-out (unpublished) listings; Property Hive includes all on-market.
+ * EACH and website (Property Hive) both exclude listings with an unpublished
+ * publication for that portal. Missing publication rows stay included.
  */
 export async function buildCommercialFeedXml(
   token: string,

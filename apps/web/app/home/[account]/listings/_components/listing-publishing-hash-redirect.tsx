@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -17,14 +17,18 @@ export function ListingPublishingHashRedirect({
   managementHref?: string;
 }) {
   const router = useRouter();
+  const redirected = useRef(false);
 
   useEffect(() => {
+    if (redirected.current) return;
     const hash = window.location.hash;
     if (hash === '#publishing' || hash === '#publish-options') {
+      redirected.current = true;
       router.replace(publishingHref);
       return;
     }
     if (hash === '#agent-contacts' && managementHref) {
+      redirected.current = true;
       router.replace(`${managementHref}#assignment`);
     }
   }, [managementHref, publishingHref, router]);

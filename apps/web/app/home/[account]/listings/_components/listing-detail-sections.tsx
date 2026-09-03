@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -137,6 +143,14 @@ function CopyBlock({ title, body }: { title: string; body: string }) {
         {body}
       </p>
     </div>
+  );
+}
+
+function useBrowserOrigin() {
+  return useSyncExternalStore(
+    () => () => undefined,
+    () => window.location.origin,
+    () => '',
   );
 }
 
@@ -1169,6 +1183,7 @@ export function ListingManagementSection({
   const [sharePending, startShareTransition] = useTransition();
   const [autoCirculatePending, startAutoCirculateTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+  const origin = useBrowserOrigin();
 
   const sharePath = listing.landlordShareToken
     ? pathsConfig.app.landlordShareListing.replace(
@@ -1176,10 +1191,7 @@ export function ListingManagementSection({
         listing.landlordShareToken,
       )
     : null;
-  const shareUrl =
-    typeof window !== 'undefined' && sharePath
-      ? `${window.location.origin}${sharePath}`
-      : sharePath;
+  const shareUrl = sharePath && origin ? `${origin}${sharePath}` : sharePath;
 
   return (
     <div className="grid gap-4 md:grid-cols-2">

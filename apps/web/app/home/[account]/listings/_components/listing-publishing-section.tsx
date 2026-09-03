@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useSyncExternalStore, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -26,6 +26,14 @@ import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingLinkedInCard } from './listing-linkedin-card';
 import { ListingPublishingChannels } from './listing-publishing-channels';
 import { MarketingReadinessCard } from './marketing-readiness-card';
+
+function useBrowserOrigin() {
+  return useSyncExternalStore(
+    () => () => undefined,
+    () => window.location.origin,
+    () => '',
+  );
+}
 
 export function ListingPublishingSection({
   listing: initial,
@@ -56,16 +64,17 @@ export function ListingPublishingSection({
   const [listing, setListing] = useState(initial);
   const [brochurePending, startBrochure] = useTransition();
   const [brochureCopied, setBrochureCopied] = useState(false);
+  const origin = useBrowserOrigin();
 
   const listingBase = pathsConfig.app.accountListingDetail
     .replace('[account]', accountSlug)
     .replace('[id]', listing.id);
   const brochureEditorHref = `${listingBase}/brochure`;
   const workspacePublishingHref =
-    pathsConfig.app.accountCommercialPublishing?.replace(
+    pathsConfig.app.accountCommercialPublishing.replace(
       '[account]',
       accountSlug,
-    ) ?? `/home/${accountSlug}/commercial-publishing`;
+    );
 
   const brochurePath = listing.brochureShareToken
     ? pathsConfig.app.brochureShare.replace(
@@ -74,9 +83,7 @@ export function ListingPublishingSection({
       )
     : null;
   const brochureUrl =
-    typeof window !== 'undefined' && brochurePath
-      ? `${window.location.origin}${brochurePath}`
-      : brochurePath;
+    brochurePath && origin ? `${origin}${brochurePath}` : brochurePath;
 
   return (
     <div id="publishing" className="space-y-4">
