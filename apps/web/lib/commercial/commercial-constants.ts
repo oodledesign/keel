@@ -65,6 +65,7 @@ export function disposalIncludesToLet(type: DisposalType): boolean {
  */
 export const COMMERCIAL_PROPERTY_TYPES = [
   'Offices',
+  'Serviced Office',
   'Industrial / Warehouse',
   'Retail',
   'Leisure',
