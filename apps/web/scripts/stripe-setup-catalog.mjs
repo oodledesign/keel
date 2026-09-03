@@ -100,6 +100,24 @@ const CATALOG = [
     ],
   },
   {
+    catalogId: 'ozer-business-starter',
+    productName: 'Ozer Starter',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_BUSINESS_STARTER_MONTHLY',
+        lookupKey: 'keel.business_starter.monthly',
+        interval: 'month',
+        /** Graduated per-seat — matches business-starter-pricing.ts */
+        billingScheme: 'tiered',
+        tiersMode: 'graduated',
+        tiers: [
+          { upTo: 1, unitAmount: 1400 },
+          { upTo: 'inf', unitAmount: 900 },
+        ],
+      },
+    ],
+  },
+  {
     catalogId: 'ozer-business',
     productName: 'Ozer Business',
     prices: [

@@ -43,7 +43,8 @@ If the count is **not** 0, do not archive/replace Pro Prices.
   - First 1 unit: £14.00 (`unit_amount` 1400)
   - Remaining (inf): £9.00 (`unit_amount` 900)
 
-Wire: set `STRIPE_PRICE_BUSINESS_STARTER_MONTHLY=price_...` after creation.
+Wire: set `STRIPE_PRICE_BUSINESS_STARTER_MONTHLY=price_1UBhoRBKQFpwsVSaBDAkwrR9`
+(live Price created 2026-09-03; product `prod_VC60ICBDZ5klpM`).
 
 **Why one graduated Price (not flat + per_seat):** MakerKit checkout sets
 `per_seat` quantity to **total** billable seats. A flat £14 + per_seat £9×N
