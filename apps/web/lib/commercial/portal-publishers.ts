@@ -237,13 +237,14 @@ async function loadPublicMediaForRightmove(
   const { data, error } = await db()
     .from('commercial_listing_media')
     .select(
-      'id, media_type, mime_type, file_name, storage_path, external_url, sort_order, is_cover',
+      'id, media_type, mime_type, file_name, storage_path, external_url, sort_order, is_cover, created_at',
     )
     .eq('listing_id', listingId)
     .eq('account_id', accountId)
     .eq('is_private', false)
-    .order('is_cover', { ascending: false })
-    .order('sort_order', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
 
   if (error) throw new Error(error.message);
 
@@ -337,12 +338,14 @@ async function loadPublicMediaForRightmove(
     }
 
     return {
+      id: mediaId ?? undefined,
       mediaType,
       mimeType,
       fileName,
       url,
       sortOrder: (row.sort_order as number) ?? 0,
       isCover: Boolean(row.is_cover),
+      createdAt: (row.created_at as string | null) ?? null,
     };
   });
 }

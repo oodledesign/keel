@@ -186,12 +186,15 @@ async function attachCoverUrls(
   const listingIds = listings.map((listing) => listing.id);
   const { data: mediaRows, error } = await client
     .from('commercial_listing_media')
-    .select('listing_id, storage_path, external_url, is_cover, sort_order')
+    .select(
+      'listing_id, storage_path, external_url, is_cover, sort_order, created_at, id',
+    )
     .in('listing_id', listingIds)
     .eq('is_private', false)
     .or('media_type.eq.image,mime_type.ilike.image/%')
-    .order('is_cover', { ascending: false })
-    .order('sort_order', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
 
   if (error) {
     console.error('[commercial-dashboard] cover media:', error.message);

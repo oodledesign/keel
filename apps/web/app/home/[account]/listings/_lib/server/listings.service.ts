@@ -21,6 +21,7 @@ import {
   type ListingEventType,
   recordListingEvent,
 } from '~/lib/commercial/listing-events';
+import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   persistPropertyHivePublicationError,
@@ -34,6 +35,7 @@ import type {
   CreateListingMediaInput,
   CreateListingUnitInput,
   MediaType,
+  ReorderListingMediaInput,
   UpdateListingEnquiryInput,
   UpdateListingInput,
   UpdateListingUnitInput,
@@ -620,6 +622,104 @@ function mapMedia(row: MediaRow): CommercialListingMedia {
   };
 }
 
+async function nextMediaSortOrder(
+  client: SupabaseClient,
+  listingId: string,
+): Promise<number> {
+  const { data, error } = await client
+    .from('commercial_listing_media')
+    .select('sort_order')
+    .eq('listing_id', listingId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+
+  const current = (data as { sort_order?: number | null } | null)?.sort_order;
+  return (
+    (typeof current === 'number' && Number.isFinite(current) ? current : -1) + 1
+  );
+}
+
+async function applyPublicPhotoOrder(
+  client: SupabaseClient,
+  input: {
+    listingId: string;
+    accountId: string;
+    mediaIds: string[];
+  },
+): Promise<CommercialListingMedia[]> {
+  const { data, error } = await client
+    .from('commercial_listing_media')
+    .select('*')
+    .eq('listing_id', input.listingId)
+    .eq('account_id', input.accountId)
+    .eq('is_private', false)
+    .eq('media_type', 'image');
+
+  if (error) throw new Error(error.message);
+
+  const existing = sortListingMedia((data ?? []) as MediaRow[]);
+  const existingById = new Map(existing.map((row) => [row.id, row]));
+  const seen = new Set<string>();
+  const orderedIds: string[] = [];
+
+  for (const id of input.mediaIds) {
+    if (seen.has(id)) continue;
+    if (!existingById.has(id)) {
+      throw new Error('Media not found');
+    }
+    seen.add(id);
+    orderedIds.push(id);
+  }
+
+  for (const row of existing) {
+    if (!seen.has(row.id)) orderedIds.push(row.id);
+  }
+
+  if (orderedIds.length === 0) {
+    return [];
+  }
+
+  // RPC is added in 20261106124100; not yet in generated Database types.
+  const { error: reorderError } = await (
+    client as SupabaseClient & {
+      rpc: (
+        fn: string,
+        args: {
+          p_account_id: string;
+          p_listing_id: string;
+          p_ordered_ids: string[];
+        },
+      ) => Promise<{ error: { message: string } | null }>;
+    }
+  ).rpc('reorder_commercial_listing_photos', {
+    p_account_id: input.accountId,
+    p_listing_id: input.listingId,
+    p_ordered_ids: orderedIds,
+  });
+
+  if (reorderError) {
+    throw new Error(reorderError.message);
+  }
+
+  const { data: refreshed, error: refreshError } = await client
+    .from('commercial_listing_media')
+    .select('*')
+    .eq('listing_id', input.listingId)
+    .eq('account_id', input.accountId)
+    .eq('is_private', false)
+    .eq('media_type', 'image')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (refreshError) throw new Error(refreshError.message);
+
+  return sortListingMedia(((refreshed ?? []) as MediaRow[]).map(mapMedia));
+}
+
 function mapEnquiry(row: EnquiryRow): CommercialEnquiry {
   return {
     id: row.id,
@@ -895,9 +995,9 @@ async function attachCoverUrls(
     .in('listing_id', listingIds)
     .eq('is_private', false)
     .or('media_type.eq.image,mime_type.ilike.image/%')
-    .order('is_cover', { ascending: false })
     .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
 
   if (error) {
     console.error('[listings] cover media error:', error.message);
@@ -2092,8 +2192,9 @@ export function createListingsService(client: SupabaseClient) {
         .from('commercial_listing_media')
         .select('*')
         .eq('listing_id', listingId)
-        .order('sort_order')
-        .order('created_at');
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
 
       if (options?.accountId) {
         query = query.eq('account_id', options.accountId);
@@ -2113,7 +2214,7 @@ export function createListingsService(client: SupabaseClient) {
         return [];
       }
 
-      return ((data ?? []) as MediaRow[]).map(mapMedia);
+      return sortListingMedia(((data ?? []) as MediaRow[]).map(mapMedia));
     },
 
     async createMedia(
@@ -2157,7 +2258,9 @@ export function createListingsService(client: SupabaseClient) {
           external_url: input.externalUrl ?? null,
           file_name: input.fileName ?? null,
           mime_type: input.mimeType ?? null,
-          sort_order: input.sortOrder ?? 0,
+          sort_order:
+            input.sortOrder ??
+            (await nextMediaSortOrder(client, input.listingId)),
           is_cover: isCover,
           is_private: isPrivate,
         })
@@ -2168,7 +2271,17 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to create media');
       }
 
-      const media = mapMedia(data as MediaRow);
+      let media = mapMedia(data as MediaRow);
+
+      if (isCover && media.mediaType === 'image' && !isPrivate) {
+        const ordered = await applyPublicPhotoOrder(client, {
+          listingId: input.listingId,
+          accountId: input.accountId,
+          mediaIds: [media.id],
+        });
+        media = ordered.find((item) => item.id === media.id) ?? media;
+      }
+
       try {
         await recordListingEvent(client, {
           accountId: input.accountId,
@@ -2192,6 +2305,30 @@ export function createListingsService(client: SupabaseClient) {
       listingId: string;
       accountId: string;
     }): Promise<CommercialListingMedia> {
+      const { data: existing, error: fetchError } = await client
+        .from('commercial_listing_media')
+        .select('*')
+        .eq('id', input.mediaId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (fetchError) throw new Error(fetchError.message);
+      if (!existing) throw new Error('Media not found');
+
+      const current = mapMedia(existing as MediaRow);
+
+      if (current.mediaType === 'image' && !current.isPrivate) {
+        const ordered = await applyPublicPhotoOrder(client, {
+          listingId: input.listingId,
+          accountId: input.accountId,
+          mediaIds: [input.mediaId],
+        });
+        const updated = ordered.find((item) => item.id === input.mediaId);
+        if (!updated) throw new Error('Failed to set cover image');
+        return updated;
+      }
+
       await client
         .from('commercial_listing_media')
         .update({ is_cover: false })
@@ -2213,6 +2350,33 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       return mapMedia(data as MediaRow);
+    },
+
+    async reorderMedia(
+      input: ReorderListingMediaInput,
+    ): Promise<CommercialListingMedia[]> {
+      const ordered = await applyPublicPhotoOrder(client, {
+        listingId: input.listingId,
+        accountId: input.accountId,
+        mediaIds: input.mediaIds,
+      });
+
+      try {
+        await recordListingEvent(client, {
+          accountId: input.accountId,
+          listingId: input.listingId,
+          eventType: 'media_changed',
+          summary: 'Photo order updated',
+          metadata: {
+            mediaIds: input.mediaIds,
+            coverMediaId: ordered[0]?.id ?? null,
+          },
+        });
+      } catch {
+        /* best-effort */
+      }
+
+      return ordered;
     },
 
     async updateMedia(input: {

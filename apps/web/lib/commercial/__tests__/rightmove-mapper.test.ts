@@ -199,6 +199,33 @@ describe('mapListingMediaToRightmove', () => {
     ]);
   });
 
+  it('orders photos by sort_order (cover flag does not reshuffle)', () => {
+    const media = mapListingMediaToRightmove([
+      {
+        mediaType: 'image',
+        mimeType: 'image/jpeg',
+        fileName: 'second.jpg',
+        url: 'https://app.ozer.so/api/commercial/listing-media/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/file.jpg',
+        sortOrder: 1,
+        isCover: true,
+      },
+      {
+        mediaType: 'image',
+        mimeType: 'image/jpeg',
+        fileName: 'first.jpg',
+        url: 'https://app.ozer.so/api/commercial/listing-media/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/file.jpg',
+        sortOrder: 0,
+        isCover: false,
+      },
+    ]);
+
+    expect(media?.photos?.map((asset) => asset.description)).toEqual([
+      'first.jpg',
+      'second.jpg',
+    ]);
+    expect(media?.photos?.map((asset) => asset.order)).toEqual([1, 2]);
+  });
+
   it('assigns unique 1-based order within each media type', () => {
     const media = mapListingMediaToRightmove([
       {
