@@ -18139,6 +18139,10 @@ export type Database = {
         Args: { p_account_id: string; p_addresses: Json; p_contact_id: string }
         Returns: undefined
       }
+      reorder_commercial_listing_photos: {
+        Args: { p_account_id: string; p_listing_id: string; p_ordered_ids: string[] }
+        Returns: undefined
+      }
       reset_ai_credits_if_expired: {
         Args: { p_account_id: string }
         Returns: {

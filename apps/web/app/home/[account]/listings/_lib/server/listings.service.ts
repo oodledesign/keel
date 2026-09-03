@@ -682,19 +682,7 @@ async function applyPublicPhotoOrder(
     return [];
   }
 
-  // RPC is added in 20261106124100; not yet in generated Database types.
-  const { error: reorderError } = await (
-    client as SupabaseClient & {
-      rpc: (
-        fn: string,
-        args: {
-          p_account_id: string;
-          p_listing_id: string;
-          p_ordered_ids: string[];
-        },
-      ) => Promise<{ error: { message: string } | null }>;
-    }
-  ).rpc('reorder_commercial_listing_photos', {
+  const { error: reorderError } = await client.rpc('reorder_commercial_listing_photos', {
     p_account_id: input.accountId,
     p_listing_id: input.listingId,
     p_ordered_ids: orderedIds,

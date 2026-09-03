@@ -7074,6 +7074,67 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_attachments: {
+        Row: {
+          account_id: string
+          byte_size: number | null
+          content_type: string | null
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          file_name: string
+          id: string
+          storage_path: string | null
+          version_id: string | null
+        }
+        Insert: {
+          account_id: string
+          byte_size?: number | null
+          content_type?: string | null
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          file_name: string
+          id?: string
+          storage_path?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          byte_size?: number | null
+          content_type?: string | null
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string
+          id?: string
+          storage_path?: string | null
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_attachments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_attachments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_attachments_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "contract_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_events: {
         Row: {
           account_id: string
@@ -7133,6 +7194,251 @@ export type Database = {
           },
         ]
       }
+      contract_signers: {
+        Row: {
+          account_id: string
+          company: string | null
+          contract_id: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          party_type: string | null
+          role: string
+          signature_data: string | null
+          signature_type: string | null
+          signed_at: string | null
+          signing_order: number
+          version_id: string | null
+        }
+        Insert: {
+          account_id: string
+          company?: string | null
+          contract_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          party_type?: string | null
+          role?: string
+          signature_data?: string | null
+          signature_type?: string | null
+          signed_at?: string | null
+          signing_order: number
+          version_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          company?: string | null
+          contract_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          party_type?: string | null
+          role?: string
+          signature_data?: string | null
+          signature_type?: string | null
+          signed_at?: string | null
+          signing_order?: number
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_signers_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_signers_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "contract_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          account_id: string
+          content_html: string
+          created_at: string
+          created_by: string | null
+          default_payment_plan: Json
+          default_title: string | null
+          default_total_pence: number
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          content_html?: string
+          created_at?: string
+          created_by?: string | null
+          default_payment_plan?: Json
+          default_title?: string | null
+          default_total_pence?: number
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          content_html?: string
+          created_at?: string
+          created_by?: string | null
+          default_payment_plan?: Json
+          default_title?: string | null
+          default_total_pence?: number
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_versions: {
+        Row: {
+          account_id: string
+          author_company: string | null
+          author_name: string | null
+          author_signature_data: string | null
+          author_signature_type: string | null
+          author_signed_at: string | null
+          author_type: string | null
+          content_hash: string
+          content_html: string
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          frozen_at: string | null
+          id: string
+          payment_plan: Json
+          recipient_company: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          recipient_signature_data: string | null
+          recipient_signature_type: string | null
+          recipient_signed_at: string | null
+          recipient_type: string | null
+          status: string
+          superseded_at: string | null
+          superseded_by: string | null
+          title: string
+          total_pence: number
+          version_number: number
+        }
+        Insert: {
+          account_id: string
+          author_company?: string | null
+          author_name?: string | null
+          author_signature_data?: string | null
+          author_signature_type?: string | null
+          author_signed_at?: string | null
+          author_type?: string | null
+          content_hash: string
+          content_html?: string
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          frozen_at?: string | null
+          id?: string
+          payment_plan?: Json
+          recipient_company?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_signature_data?: string | null
+          recipient_signature_type?: string | null
+          recipient_signed_at?: string | null
+          recipient_type?: string | null
+          status?: string
+          superseded_at?: string | null
+          superseded_by?: string | null
+          title?: string
+          total_pence?: number
+          version_number: number
+        }
+        Update: {
+          account_id?: string
+          author_company?: string | null
+          author_name?: string | null
+          author_signature_data?: string | null
+          author_signature_type?: string | null
+          author_signed_at?: string | null
+          author_type?: string | null
+          content_hash?: string
+          content_html?: string
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          frozen_at?: string | null
+          id?: string
+          payment_plan?: Json
+          recipient_company?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_signature_data?: string | null
+          recipient_signature_type?: string | null
+          recipient_signed_at?: string | null
+          recipient_type?: string | null
+          status?: string
+          superseded_at?: string | null
+          superseded_by?: string | null
+          title?: string
+          total_pence?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_versions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_versions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           account_id: string
@@ -7147,18 +7453,28 @@ export type Database = {
           content_html: string
           created_at: string
           created_by: string | null
+          archived_at: string | null
+          current_version_id: string | null
+          current_version_number: number
           currency: string
           deal_id: string | null
           email_body: string | null
+          email_delivery_error: string | null
+          email_delivery_status: string | null
           email_signature: string | null
           email_subject: string | null
           id: string
           invoices_generated_at: string | null
+          last_reminder_at: string | null
           payment_plan: Json
           private_note: string | null
           proposal_id: string | null
           public_token: string | null
+          public_token_expires_at: string | null
+          public_token_revoked_at: string | null
           read_at: string | null
+          recipient_declined_at: string | null
+          recipient_decline_reason: string | null
           recipient_company: string | null
           recipient_email: string | null
           recipient_name: string | null
@@ -7168,6 +7484,8 @@ export type Database = {
           recipient_type: string | null
           sent_at: string | null
           sent_to_email: string | null
+          sent_version_id: string | null
+          signing_expires_at: string | null
           status: string
           title: string
           total_pence: number
@@ -7186,18 +7504,28 @@ export type Database = {
           content_html?: string
           created_at?: string
           created_by?: string | null
+          archived_at?: string | null
+          current_version_id?: string | null
+          current_version_number?: number
           currency?: string
           deal_id?: string | null
           email_body?: string | null
+          email_delivery_error?: string | null
+          email_delivery_status?: string | null
           email_signature?: string | null
           email_subject?: string | null
           id?: string
           invoices_generated_at?: string | null
+          last_reminder_at?: string | null
           payment_plan?: Json
           private_note?: string | null
           proposal_id?: string | null
           public_token?: string | null
+          public_token_expires_at?: string | null
+          public_token_revoked_at?: string | null
           read_at?: string | null
+          recipient_declined_at?: string | null
+          recipient_decline_reason?: string | null
           recipient_company?: string | null
           recipient_email?: string | null
           recipient_name?: string | null
@@ -7207,6 +7535,8 @@ export type Database = {
           recipient_type?: string | null
           sent_at?: string | null
           sent_to_email?: string | null
+          sent_version_id?: string | null
+          signing_expires_at?: string | null
           status?: string
           title?: string
           total_pence?: number
@@ -7225,18 +7555,28 @@ export type Database = {
           content_html?: string
           created_at?: string
           created_by?: string | null
+          archived_at?: string | null
+          current_version_id?: string | null
+          current_version_number?: number
           currency?: string
           deal_id?: string | null
           email_body?: string | null
+          email_delivery_error?: string | null
+          email_delivery_status?: string | null
           email_signature?: string | null
           email_subject?: string | null
           id?: string
           invoices_generated_at?: string | null
+          last_reminder_at?: string | null
           payment_plan?: Json
           private_note?: string | null
           proposal_id?: string | null
           public_token?: string | null
+          public_token_expires_at?: string | null
+          public_token_revoked_at?: string | null
           read_at?: string | null
+          recipient_declined_at?: string | null
+          recipient_decline_reason?: string | null
           recipient_company?: string | null
           recipient_email?: string | null
           recipient_name?: string | null
@@ -7246,6 +7586,8 @@ export type Database = {
           recipient_type?: string | null
           sent_at?: string | null
           sent_to_email?: string | null
+          sent_version_id?: string | null
+          signing_expires_at?: string | null
           status?: string
           title?: string
           total_pence?: number
@@ -7292,6 +7634,20 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_current_version_id_fkey"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "contract_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_sent_version_id_fkey"
+            columns: ["sent_version_id"]
+            isOneToOne: false
+            referencedRelation: "contract_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -17781,6 +18137,10 @@ export type Database = {
       }
       replace_contact_email_addresses: {
         Args: { p_account_id: string; p_addresses: Json; p_contact_id: string }
+        Returns: undefined
+      }
+      reorder_commercial_listing_photos: {
+        Args: { p_account_id: string; p_listing_id: string; p_ordered_ids: string[] }
         Returns: undefined
       }
       reset_ai_credits_if_expired: {
