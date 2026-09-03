@@ -386,7 +386,7 @@ function validateEachCommercialFields(listing: {
 async function recordPublication(input: {
   accountId: string;
   listingId: string;
-  portal: 'rightmove' | 'each';
+  portal: 'rightmove' | 'each' | 'property_hive';
   status: PublicationStatus;
   lastError: string | null;
   externalId?: string | null;
@@ -789,6 +789,92 @@ export async function unpublishFromRightmove(
       },
     });
   }
+}
+
+/**
+ * Website (Property Hive XML) is opt-out of the dedicated XML feed.
+ * Off → unpublished (excluded from feed). On → published (included when on-market).
+ * Preserves existing Property Hive external ids so a toggle cannot drop a live post.
+ */
+export async function setWebsiteListingFeedInclusion(input: {
+  accountId: string;
+  listingId: string;
+  enabled: boolean;
+}): Promise<CommercialPortalPublication> {
+  const { accountId, listingId, enabled } = input;
+
+  const listing = await loadListingForPortalValidation(accountId, listingId);
+
+  const { data: existing, error: existingError } = await db()
+    .from('commercial_portal_publications')
+    .select('external_id, external_url, branch_ref, metadata')
+    .eq('account_id', accountId)
+    .eq('listing_id', listingId)
+    .eq('portal', 'property_hive')
+    .maybeSingle();
+
+  if (existingError) throw new Error(existingError.message);
+
+  const existingRow = existing as {
+    external_id: string | null;
+    external_url: string | null;
+    branch_ref: string | null;
+    metadata: Record<string, unknown> | null;
+  } | null;
+
+  const {
+    buildPropertyHiveFeedUrl,
+    ensurePropertyHiveFeedToken,
+    getPropertyHiveFeedToken,
+  } = await import('~/lib/commercial/property-hive-feed');
+
+  const onMarket =
+    listing.status === 'marketing' || listing.status === 'under_offer';
+
+  if (!enabled) {
+    const existingToken = await getPropertyHiveFeedToken(accountId);
+    return recordPublication({
+      accountId,
+      listingId,
+      portal: 'property_hive',
+      status: 'unpublished',
+      lastError: null,
+      externalId: existingRow?.external_id ?? null,
+      externalUrl:
+        existingRow?.external_url ??
+        (existingToken ? buildPropertyHiveFeedUrl(existingToken) : null),
+      branchRef: existingRow?.branch_ref ?? null,
+      metadata: {
+        ...(existingRow?.metadata ?? {}),
+        stage: 'feed_opt_out',
+        portalFeed: 'property_hive',
+        note: 'Excluded from website XML feed',
+      },
+    });
+  }
+
+  const { feedUrl } = await ensurePropertyHiveFeedToken(accountId);
+
+  return recordPublication({
+    accountId,
+    listingId,
+    portal: 'property_hive',
+    status: onMarket ? 'published' : 'draft',
+    lastError: onMarket
+      ? null
+      : `Listing is ${listing.status} — set Marketing or Under offer for website feed pickup`,
+    externalId: existingRow?.external_id ?? null,
+    externalUrl: existingRow?.external_url ?? feedUrl,
+    branchRef: existingRow?.branch_ref ?? null,
+    metadata: {
+      ...(existingRow?.metadata ?? {}),
+      stage: 'xml_feed',
+      portalFeed: 'property_hive',
+      note: onMarket
+        ? 'Included on the website XML feed'
+        : 'Website inclusion on; listing not yet on-market for export',
+    },
+  });
 }
 
 /**

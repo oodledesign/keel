@@ -1,6 +1,6 @@
 # LinkedIn company-page publishing (commercial disposals)
 
-Ozer can post a disposal to a workspace **LinkedIn organization (company) page** from the listing Marketing tab (and Management → publishing). Posts are never sent automatically when a listing is published — only **Post now** or **Schedule**.
+Ozer can post a disposal to a workspace **LinkedIn organization (company) page** from the listing **Publishing** tab. Posts are never sent automatically when a listing is published — only **Post now** or **Schedule**.
 
 This is separate from LinkedIn **contact import** (`apps/web/lib/integrations/linkedin/`).
 
@@ -73,8 +73,7 @@ If LinkedIn does not issue a refresh token, a 401 marks the connection `needs_re
 ## Workspace UX
 
 - **Website & portals** (`/home/[account]/commercial-publishing`): Connect / pick page / Disconnect
-- **Disposal → Marketing**: LinkedIn card (copy, photos, overlay, draft / post / schedule)
-- **Disposal → Management → publishing**: same card
+- **Disposal → Publishing**: LinkedIn card (copy, photos, overlay, draft / post / schedule)
 
 Public listing URL resolution (never invents a domain):
 

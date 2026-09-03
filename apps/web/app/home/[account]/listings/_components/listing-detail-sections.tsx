@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -45,28 +51,23 @@ import type {
   CommercialListing,
   CommercialListingMedia,
   CommercialListingUnit,
-  CommercialPortalPublication,
   ListingParty,
 } from '../_lib/server/listings.service';
 import {
   createListingEnquiry,
   deleteListingUnit,
   setAutoCirculateMatches,
-  setBrochureShare,
   setLandlordShare,
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
 import { CommercialInterestPanel } from './commercial-interest-panel';
 import { useDisposalAccess } from './disposal-access-context';
-import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingCirculateDialog } from './listing-circulate-dialog';
 import { ListingCirculationLog } from './listing-circulation-log';
 import { ListingFormModal } from './listing-form-modal';
-import { ListingLinkedInCard } from './listing-linkedin-card';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
 import { ListingPeopleStrip } from './listing-people-strip';
-import { ListingPortalSyncCard } from './listing-portal-sync-card';
 import { ListingUnitFormModal } from './listing-unit-form-modal';
 
 function formatMoney(pence: number | null) {
@@ -142,6 +143,14 @@ function CopyBlock({ title, body }: { title: string; body: string }) {
         {body}
       </p>
     </div>
+  );
+}
+
+function useBrowserOrigin() {
+  return useSyncExternalStore(
+    () => () => undefined,
+    () => window.location.origin,
+    () => '',
   );
 }
 
@@ -1162,36 +1171,19 @@ export function ListingAvailabilitySection({
 
 export function ListingManagementSection({
   listing: initial,
-  publications,
   accountId,
   accountSlug,
-  media = [],
-  linkedInConnection = null,
-  linkedInPost = null,
-  linkedInLastPosted = null,
 }: {
   listing: CommercialListing;
-  publications: CommercialPortalPublication[];
   accountId: string;
   accountSlug: string;
-  media?: CommercialListingMedia[];
-  linkedInConnection?:
-    | import('~/lib/commercial/linkedin-publishing/types').LinkedInOrgConnectionPublic
-    | null;
-  linkedInPost?:
-    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
-    | null;
-  linkedInLastPosted?:
-    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
-    | null;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const { listing, setListing } = useListingState(initial);
   const [sharePending, startShareTransition] = useTransition();
-  const [brochurePending, startBrochureTransition] = useTransition();
   const [autoCirculatePending, startAutoCirculateTransition] = useTransition();
   const [copied, setCopied] = useState(false);
-  const [brochureCopied, setBrochureCopied] = useState(false);
+  const origin = useBrowserOrigin();
 
   const sharePath = listing.landlordShareToken
     ? pathsConfig.app.landlordShareListing.replace(
@@ -1199,45 +1191,10 @@ export function ListingManagementSection({
         listing.landlordShareToken,
       )
     : null;
-  const shareUrl =
-    typeof window !== 'undefined' && sharePath
-      ? `${window.location.origin}${sharePath}`
-      : sharePath;
-
-  const brochurePath = listing.brochureShareToken
-    ? pathsConfig.app.brochureShare.replace(
-        '[token]',
-        listing.brochureShareToken,
-      )
-    : null;
-  const brochureUrl =
-    typeof window !== 'undefined' && brochurePath
-      ? `${window.location.origin}${brochurePath}`
-      : brochurePath;
+  const shareUrl = sharePath && origin ? `${origin}${sharePath}` : sharePath;
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <div data-tour="sop-listing-portal">
-        <ListingPortalSyncCard
-          listing={listing}
-          publications={publications}
-          accountId={accountId}
-        />
-      </div>
-
-      <div className="md:col-span-2">
-        <ListingLinkedInCard
-          listing={listing}
-          accountId={accountId}
-          accountSlug={accountSlug}
-          media={media}
-          publications={publications}
-          connection={linkedInConnection}
-          initialPost={linkedInPost}
-          lastPosted={linkedInLastPosted}
-        />
-      </div>
-
       <Card className={workspacePanelCard}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
@@ -1301,119 +1258,12 @@ export function ListingManagementSection({
 
       <Card className={`${workspacePanelCard} md:col-span-2`}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
-            <Link2 className="h-4 w-4" />
-            Brochures & sharing
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Circulate to requirements
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                  Online brochure share
-                </p>
-                <p className="text-sm text-[var(--workspace-shell-text)]/60">
-                  Branded photo slideshow at an Ozer link (enquiries come back
-                  here). This is not publishing to Rightmove or other portals.
-                </p>
-              </div>
-              <Switch
-                checked={listing.brochureShareEnabled}
-                disabled={brochurePending || !canEditDisposals}
-                onCheckedChange={(enabled) => {
-                  if (!canEditDisposals) return;
-                  startBrochureTransition(async () => {
-                    try {
-                      const updated = await setBrochureShare({
-                        listingId: listing.id,
-                        accountId,
-                        enabled,
-                      });
-                      setListing(updated);
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : 'Could not update brochure share',
-                      );
-                    }
-                  });
-                }}
-              />
-            </div>
-            {listing.brochureShareEnabled && brochurePath ? (
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text)]/70">
-                  {brochureUrl ?? brochurePath}
-                </code>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    if (!brochureUrl) return;
-                    await navigator.clipboard.writeText(brochureUrl);
-                    setBrochureCopied(true);
-                    setTimeout(() => setBrochureCopied(false), 2000);
-                  }}
-                  className="shrink-0 gap-1.5"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  {brochureCopied ? 'Copied' : 'Copy'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="shrink-0"
-                >
-                  <a href={brochurePath} target="_blank" rel="noreferrer">
-                    Open
-                  </a>
-                </Button>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="border-t border-[var(--workspace-shell-border)] pt-3">
-            <p className="mb-1 text-sm font-medium text-[var(--workspace-shell-text)]">
-              PDF brochure
-            </p>
-            <ListingBrochureDownload
-              listingId={listing.id}
-              accountId={accountId}
-              accountSlug={accountSlug}
-              listingName={listing.name}
-              listingAddress={[
-                listing.addressLine1,
-                listing.town,
-                listing.postcode,
-              ]
-                .filter(Boolean)
-                .join(', ')}
-              coverUrl={listing.coverUrl}
-              defaultShowRent={!listing.hideRentFromMarketing}
-              defaultShowPrice={!listing.hidePriceFromMarketing}
-            />
-          </div>
-
-          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-3 py-2.5 text-sm text-[var(--workspace-shell-text)]/70">
-            <p className="font-medium text-[var(--workspace-shell-text)]">
-              Portals (Rightmove, etc.)
-            </p>
-            <p className="mt-0.5">
-              Use <span className="font-medium">Publish</span> in the brochure
-              drawer (or upload under Media → Brochure), then republish from
-              Portal publishing. Online brochure share is a separate Ozer link.
-            </p>
-          </div>
-
-          <div className="border-t border-[var(--workspace-shell-border)] pt-3">
-            <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text)]">
-              Circulate to requirements
-            </p>
+          <div>
             <p className="mb-2 text-sm text-[var(--workspace-shell-text)]/60">
               Email matching applicants via Amazon SES as this workspace, not
               Ozer. From name, logo, and colours come from Brand settings.

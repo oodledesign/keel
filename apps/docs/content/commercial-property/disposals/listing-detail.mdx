@@ -5,11 +5,12 @@ Open any disposal from `/app/[account]/listings` to reach `/app/[account]/listin
 | Tab          | Path suffix     | Purpose                                                              |
 | ------------ | --------------- | -------------------------------------------------------------------- |
 | Overview     | (base)          | Snapshot of status, address, and key metrics                         |
-| Marketing    | `/marketing`    | Particulars, marketing copy, and public messaging                    |
+| Marketing    | `/marketing`    | Particulars copy only (summary, key points, amenities, POA)          |
+| Publishing   | `/publishing`   | Go-live channels: Website, EACH, Rightmove, brochure, LinkedIn       |
 | Media        | `/media`        | Public photos, floorplans, and brochure assets                       |
 | Interest     | `/interest`     | Interest schedule against contacts / requirements                    |
 | Availability | `/availability` | Units, floors, and availability schedule                             |
-| Management   | `/management`   | Instruction, assignment, parties, private media, portal publications |
+| Management   | `/management`   | Instruction, assignment, co-agents, parties, private media           |
 
 ## Overview
 
@@ -21,9 +22,20 @@ Open any disposal from `/app/[account]/listings` to reach `/app/[account]/listin
 ## Marketing
 
 1. Open **Marketing**.
-2. Complete headline particulars, description, and any AI-assisted draft fields you use.
-3. Align marketing text with the physical **Availability** schedule before going live.
-4. Save, then move listing status to **Marketing** only when content and media are ready.
+2. Complete headline particulars, description, amenities, and any AI-assisted draft fields you use.
+3. Hide rent or price as POA when figures should not appear on particulars.
+4. Align marketing text with the physical **Availability** schedule before going live.
+5. Team, co-agents, and channel toggles are not on this tab — use **Management** and **Publishing**.
+
+## Publishing
+
+1. Open **Publishing**.
+2. Check marketing readiness (missing EPC warns before enabling a live channel; it does not hard-block).
+3. Toggle **Website** to include or exclude this disposal from the website XML feed (included by default when on-market).
+4. Toggle **EACH** to include or exclude this disposal from the EACH XML feed.
+5. **Rightmove** is visible but not live yet.
+6. Share the online brochure or generate a PDF, and post to LinkedIn from this tab.
+7. Workspace feed URLs and credentials stay under **Website & portals**.
 
 ## Media
 
@@ -57,6 +69,6 @@ Open any disposal from `/app/[account]/listings` to reach `/app/[account]/listin
 5. Attach **landlord** and **other** parties from Contacts.
 6. Capture advanced attributes (for example BREEAM) when required for marketing or portals.
 7. Upload **private** media that must not publish.
-8. Review portal / Property Hive **publication** status for this listing.
+8. Share a landlord-only interest schedule when needed. Channel go-live lives on **Publishing**.
 
 You need a billable seat to mutate management fields. Support seats remain view / notes limited — see [Seats & billing](/commercial-property/seats-billing).

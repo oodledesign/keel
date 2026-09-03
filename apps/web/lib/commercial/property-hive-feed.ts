@@ -796,7 +796,8 @@ async function findAccountIdByFeedToken(
 
 /**
  * Build Kato-compatible listing XML for a portal feed token.
- * EACH excludes opt-out (unpublished) listings; Property Hive includes all on-market.
+ * EACH and website (Property Hive) both exclude listings with an unpublished
+ * publication for that portal. Missing publication rows stay included.
  */
 export async function buildCommercialFeedXml(
   token: string,
@@ -830,25 +831,28 @@ export async function buildCommercialFeedXml(
     );
   }
 
-  if (portal === 'each' && listingRows.length > 0) {
+  if (listingRows.length > 0) {
     const candidateIds = listingRows.map((l) => l.id);
+    const optOutPortal = portal === 'each' ? 'each' : 'property_hive';
     const { data: optedOut, error: pubError } = await client
       .from('commercial_portal_publications')
       .select('listing_id')
       .eq('account_id', accountId)
-      .eq('portal', 'each')
+      .eq('portal', optOutPortal)
       .eq('status', 'unpublished')
       .in('listing_id', candidateIds);
 
     if (pubError) throw new Error(pubError.message);
 
-    const unpublishedEachListingIds = new Set(
+    const unpublishedIds = new Set(
       (optedOut ?? []).map((row) => row.listing_id as string),
     );
     listingRows = filterOnMarketListingsForPortalFeed({
       portal,
       listings: listingRows,
-      unpublishedEachListingIds,
+      unpublishedEachListingIds: portal === 'each' ? unpublishedIds : new Set(),
+      unpublishedWebsiteListingIds:
+        portal === 'property_hive' ? unpublishedIds : new Set(),
     });
   }
 

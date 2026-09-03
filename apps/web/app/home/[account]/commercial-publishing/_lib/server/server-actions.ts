@@ -20,6 +20,7 @@ import {
   publishToEach,
   publishToRightmove,
   setEachListingFeedInclusion,
+  setWebsiteListingFeedInclusion,
 } from '~/lib/commercial/portal-publishers';
 import {
   ensureEachFeedToken,
@@ -45,6 +46,7 @@ import {
   SaveRightmoveWorkspaceBranchesSchema,
   SelectLinkedInOrgSchema,
   SetEachListingFeedInclusionSchema,
+  SetWebsiteListingFeedInclusionSchema,
   TestPublishListingSchema,
 } from '../schema/commercial-publishing.schema';
 import { loadCommercialPublishingSettings } from './commercial-publishing.loader';
@@ -446,6 +448,21 @@ export const setEachListingFeedInclusionAction = enhanceAction(
     };
   },
   { schema: SetEachListingFeedInclusionSchema },
+);
+
+export const setWebsiteListingFeedInclusionAction = enhanceAction(
+  async (input) => {
+    const publication = await setWebsiteListingFeedInclusion({
+      accountId: input.accountId,
+      listingId: input.listingId,
+      enabled: input.enabled,
+    });
+    return {
+      publication,
+      enabled: publication.status !== 'unpublished',
+    };
+  },
+  { schema: SetWebsiteListingFeedInclusionSchema },
 );
 
 export const disconnectLinkedInOrgAction = enhanceAction(

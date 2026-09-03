@@ -1,11 +1,11 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { loadAccountBranches } from '~/lib/brand/account-branches';
+import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { ListingMarketingEditor } from '../../_components/listing-marketing-editor';
-import { loadListingLinkedInCardData } from '../../_lib/server/listing-linkedin.loader';
+import { ListingPublishingHashRedirect } from '../../_components/listing-publishing-hash-redirect';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
@@ -21,48 +21,30 @@ async function ListingMarketingPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [
-    publications,
-    members,
-    assignment,
-    coAgents,
-    teams,
-    branches,
-    media,
-    linkedIn,
-  ] = await Promise.all([
+  const [publications, media] = await Promise.all([
     service.listPublicationsForListing(listingId),
-    service.listAccountMembers(slug),
-    service.getListingAssignment(listingId, accountId, slug),
-    service.listCoAgents(listingId, accountId),
-    service.listWorkspaceTeams(accountId),
-    loadAccountBranches(accountId),
     service.listMedia(listingId),
-    loadListingLinkedInCardData(accountId, listingId),
   ]);
 
   const mediaWithUrls = await service.withSignedMediaUrls(media);
+  const listingBase = pathsConfig.app.accountListingDetail
+    .replace('[account]', slug)
+    .replace('[id]', listingId);
 
   return (
-    <ListingMarketingEditor
-      listing={listing}
-      accountId={accountId}
-      accountSlug={slug}
-      members={members}
-      teams={teams}
-      branches={branches.map((branch) => ({
-        id: branch.id,
-        name: branch.name,
-        rightmoveBranchId: branch.rightmoveBranchId,
-      }))}
-      assignment={assignment}
-      coAgents={coAgents}
-      publications={publications}
-      media={mediaWithUrls}
-      linkedInConnection={linkedIn.connection}
-      linkedInPost={linkedIn.draft}
-      linkedInLastPosted={linkedIn.lastPosted}
-    />
+    <>
+      <ListingPublishingHashRedirect
+        publishingHref={`${listingBase}/publishing`}
+        managementHref={`${listingBase}/management`}
+      />
+      <ListingMarketingEditor
+        listing={listing}
+        accountId={accountId}
+        accountSlug={slug}
+        publications={publications}
+        media={mediaWithUrls}
+      />
+    </>
   );
 }
 

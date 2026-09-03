@@ -13,7 +13,7 @@ export type MarketingReadinessItem = {
   label: string;
   pass: boolean;
   hint: string;
-  hrefTab?: 'marketing' | 'media' | 'management' | 'overview';
+  hrefTab?: 'marketing' | 'media' | 'management' | 'overview' | 'publishing';
 };
 
 export type MarketingReadiness = {
@@ -133,8 +133,8 @@ export function getMarketingReadiness(input: {
       id: 'website_or_portal',
       label: 'Website URL or published portal',
       pass: websiteOrPortal,
-      hint: 'Add a website URL or publish to a portal',
-      hrefTab: 'marketing',
+      hint: 'Add a website URL or include this disposal on a live channel',
+      hrefTab: 'publishing',
     },
     {
       id: 'location',
@@ -147,8 +147,8 @@ export function getMarketingReadiness(input: {
       id: 'acting_agent',
       label: 'Acting agent assigned',
       pass: hasAgent,
-      hint: 'Assign an acting agent on Marketing',
-      hrefTab: 'marketing',
+      hint: 'Assign an acting agent on Management',
+      hrefTab: 'management',
     },
   ];
 
