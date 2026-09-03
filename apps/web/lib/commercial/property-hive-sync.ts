@@ -334,7 +334,7 @@ async function upsertPublication(input: {
 }
 
 /**
- * Persist a Property Hive failure so the Management portal card can show it.
+ * Persist a Property Hive failure so the Publishing channels card can show it.
  * Callers must already have authorised the listing write. Admin is used only
  * here so a session RLS miss cannot wipe external_id or hide the error.
  */

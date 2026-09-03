@@ -22,7 +22,7 @@ import type {
 function tabHref(
   accountSlug: string,
   listingId: string,
-  tab: 'marketing' | 'media' | 'management' | 'overview',
+  tab: 'marketing' | 'media' | 'management' | 'overview' | 'publishing',
 ) {
   const base = pathsConfig.app.accountListingDetail
     .replace('[account]', accountSlug)

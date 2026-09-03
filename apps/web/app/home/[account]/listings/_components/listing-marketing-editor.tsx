@@ -28,9 +28,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
-import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
-import { isEachFeedIncluded } from '~/lib/commercial/each-feed-inclusion';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -44,25 +42,10 @@ import { generateListingMarketingCopyAction } from '../_lib/server/listing-marke
 import type {
   CommercialListing,
   CommercialPortalPublication,
-  ListingAssignment,
-  ListingCoAgent,
-  ListingMemberOption,
-  WorkspaceTeam,
 } from '../_lib/server/listings.service';
-import { setBrochureShare, updateListing } from '../_lib/server/server-actions';
+import { updateListing } from '../_lib/server/server-actions';
 import { useDisposalAccess } from './disposal-access-context';
-import {
-  ListingAssignmentCard,
-  type ListingBranchOption,
-} from './listing-assignment-card';
-import { ListingBrochureDownload } from './listing-brochure-download';
-import { ListingCoAgentsCard } from './listing-co-agents-card';
-import { ListingEachFeedToggle } from './listing-each-feed-toggle';
-import { ListingLinkedInCard } from './listing-linkedin-card';
-import {
-  MarketingReadinessCard,
-  confirmPublishIfNotReady,
-} from './marketing-readiness-card';
+import { MarketingReadinessCard } from './marketing-readiness-card';
 
 const SUMMARY_MAX = 140;
 
@@ -95,36 +78,14 @@ export function ListingMarketingEditor({
   listing: initial,
   accountId,
   accountSlug,
-  members,
-  teams,
-  branches,
-  assignment,
-  coAgents,
   publications,
   media = [],
-  linkedInConnection = null,
-  linkedInPost = null,
-  linkedInLastPosted = null,
 }: {
   listing: CommercialListing;
   accountId: string;
   accountSlug: string;
-  members: ListingMemberOption[];
-  teams: WorkspaceTeam[];
-  branches: ListingBranchOption[];
-  assignment: ListingAssignment;
-  coAgents: ListingCoAgent[];
   publications: CommercialPortalPublication[];
   media?: import('../_lib/server/listings.service').CommercialListingMedia[];
-  linkedInConnection?:
-    | import('~/lib/commercial/linkedin-publishing/types').LinkedInOrgConnectionPublic
-    | null;
-  linkedInPost?:
-    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
-    | null;
-  linkedInLastPosted?:
-    | import('~/lib/commercial/linkedin-publishing/types').ListingLinkedInPostPublic
-    | null;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const readOnly = !canEditDisposals;
@@ -154,7 +115,6 @@ export function ListingMarketingEditor({
   const [newKeyPoint, setNewKeyPoint] = useState('');
   const [pending, startTransition] = useTransition();
   const [generating, startGenerate] = useTransition();
-  const [brochurePending, startBrochure] = useTransition();
 
   const {
     summary,
@@ -173,12 +133,6 @@ export function ListingMarketingEditor({
     .replace('[account]', accountSlug)
     .replace('[id]', listing.id)
     .concat('/availability');
-
-  const publishingHref =
-    pathsConfig.app.accountCommercialPublishing?.replace(
-      '[account]',
-      accountSlug,
-    ) ?? `/home/${accountSlug}/commercial-publishing`;
 
   const suggestedAmenities = useMemo(() => {
     const all = [...SUGGESTED_LISTING_AMENITIES];
@@ -836,25 +790,6 @@ export function ListingMarketingEditor({
             </Button>
           </CardContent>
         </Card>
-
-        <div
-          id="agent-contacts"
-          className="grid scroll-mt-36 gap-4 xl:grid-cols-2"
-        >
-          <ListingAssignmentCard
-            accountId={accountId}
-            accountSlug={accountSlug}
-            members={members}
-            teams={teams}
-            branches={branches}
-            assignment={assignment}
-          />
-          <ListingCoAgentsCard
-            accountId={accountId}
-            listingId={listing.id}
-            initialCoAgents={coAgents}
-          />
-        </div>
       </div>
 
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
@@ -875,80 +810,19 @@ export function ListingMarketingEditor({
         />
 
         <Card
-          id="publish-options"
+          id="price-display"
           className={`${workspacePanelCard} scroll-mt-36`}
         >
           <CardHeader>
             <CardTitle className="text-sm text-[var(--workspace-shell-text)]">
-              Publish options
+              Price display
             </CardTitle>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Hide figures as POA on particulars. Go-live channels live on
+              Publishing.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-[var(--workspace-shell-text)]/70">
-                Status
-              </span>
-              <span className="font-medium text-[var(--workspace-shell-text)]">
-                <ListingStatusBadge status={listing.status} />
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <span className="text-sm text-[var(--workspace-shell-text)]/70">
-                  Online brochure share
-                </span>
-                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  Public Ozer slideshow link — not a portal listing.
-                </p>
-              </div>
-              <Switch
-                checked={listing.brochureShareEnabled}
-                disabled={brochurePending}
-                onCheckedChange={(enabled) => {
-                  startBrochure(async () => {
-                    try {
-                      const updated = await setBrochureShare({
-                        listingId: listing.id,
-                        accountId,
-                        enabled,
-                      });
-                      setListing(updated);
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : 'Could not update brochure share',
-                      );
-                    }
-                  });
-                }}
-              />
-            </div>
-
-            <div className="border-t border-[var(--workspace-shell-border)] pt-4">
-              <p className="mb-1 text-sm font-medium text-[var(--workspace-shell-text)]">
-                PDF brochure
-              </p>
-              <p className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                Preview, publish to Media for portals, or upload an external
-                PDF.
-              </p>
-              <ListingBrochureDownload
-                listingId={listing.id}
-                accountId={accountId}
-                accountSlug={accountSlug}
-                listingName={listing.name}
-                listingAddress={[listing.town, listing.postcode]
-                  .filter(Boolean)
-                  .join(', ')}
-                coverUrl={listing.coverUrl}
-                defaultShowRent={!listing.hideRentFromMarketing}
-                defaultShowPrice={!listing.hidePriceFromMarketing}
-                compact
-              />
-            </div>
-
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-[var(--workspace-shell-text)]/70">
                 Hide rent (POA)
@@ -976,45 +850,8 @@ export function ListingMarketingEditor({
                 }}
               />
             </div>
-
-            <ListingEachFeedToggle
-              accountId={accountId}
-              listingId={listing.id}
-              initialEnabled={isEachFeedIncluded(publications)}
-              disabled={readOnly}
-              onBeforeEnable={() =>
-                confirmPublishIfNotReady(
-                  getMarketingReadiness({
-                    listing: {
-                      ...listing,
-                      summary,
-                      keyPoints: keyPoints
-                        .map((p) => p.text.trim())
-                        .filter(Boolean),
-                    },
-                    media,
-                    publications,
-                  }),
-                )
-              }
-            />
-
-            <Button asChild variant="outline" size="sm" className="w-full">
-              <Link href={publishingHref}>Portal publishing settings</Link>
-            </Button>
           </CardContent>
         </Card>
-
-        <ListingLinkedInCard
-          listing={listing}
-          accountId={accountId}
-          accountSlug={accountSlug}
-          media={media}
-          publications={publications}
-          connection={linkedInConnection}
-          initialPost={linkedInPost}
-          lastPosted={linkedInLastPosted}
-        />
       </aside>
     </div>
   );

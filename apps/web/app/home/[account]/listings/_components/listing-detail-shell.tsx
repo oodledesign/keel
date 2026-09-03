@@ -18,6 +18,7 @@ import {
   MapPin,
   Megaphone,
   Settings2,
+  Share2,
   Users,
 } from 'lucide-react';
 
@@ -64,6 +65,7 @@ import { ListingSectorPills } from './listing-sector-pills';
 type NavKey =
   | 'overview'
   | 'marketing'
+  | 'publishing'
   | 'media'
   | 'interest'
   | 'availability'
@@ -90,8 +92,19 @@ const NAV: Array<{
       { id: 'amenities', label: 'Amenities' },
       { id: 'marketing-text', label: 'Marketing text' },
       { id: 'accommodation', label: 'Accommodation' },
-      { id: 'agent-contacts', label: 'Agents' },
-      { id: 'publish-options', label: 'Publish' },
+      { id: 'price-display', label: 'Price display' },
+    ],
+  },
+  {
+    key: 'publishing',
+    label: 'Publishing',
+    icon: Share2,
+    href: '/publishing',
+    sections: [
+      { id: 'marketing-readiness', label: 'Readiness' },
+      { id: 'channels', label: 'Channels' },
+      { id: 'brochure', label: 'Brochure' },
+      { id: 'linkedin', label: 'LinkedIn' },
     ],
   },
   { key: 'media', label: 'Media', icon: Camera, href: '/media' },
@@ -115,7 +128,7 @@ const NAV: Array<{
       { id: 'parties', label: 'Parties' },
       { id: 'advanced-attrs', label: 'Attributes' },
       { id: 'private-media', label: 'Private media' },
-      { id: 'publishing', label: 'Publishing' },
+      { id: 'landlord-share', label: 'Landlord share' },
     ],
   },
   { key: 'activity', label: 'Activity', icon: Activity, href: '/activity' },
@@ -288,8 +301,8 @@ export function ListingDetailShell({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="gap-2">
-            <Link href={`${base}/management`}>
-              <Megaphone className="h-3.5 w-3.5" />
+            <Link href={`${base}/publishing`}>
+              <Share2 className="h-3.5 w-3.5" />
               Publishing
             </Link>
           </DropdownMenuItem>

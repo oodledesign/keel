@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -13,8 +14,8 @@ import { ListingInstructionCard } from '../../_components/listing-instruction-ca
 import { ListingPartiesCard } from '../../_components/listing-parties-card';
 import { ListingPrivateMediaSection } from '../../_components/listing-private-media-section';
 import { ListingPropertyLinkCard } from '../../_components/listing-property-link-card';
+import { ListingPublishingHashRedirect } from '../../_components/listing-publishing-hash-redirect';
 import { MarketingReadinessCard } from '../../_components/marketing-readiness-card';
-import { loadListingLinkedInCardData } from '../../_lib/server/listing-linkedin.loader';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
@@ -44,7 +45,6 @@ async function ListingManagementPage({ params }: PageProps) {
     landlords,
     otherParties,
     linkedProperty,
-    linkedIn,
   ] = await Promise.all([
     service.listPublicationsForListing(listingId),
     service.listAccountMembers(slug),
@@ -61,12 +61,10 @@ async function ListingManagementPage({ params }: PageProps) {
           getSupabaseServerClient(),
         ).getProperty(listing.commercialPropertyId, accountId)
       : Promise.resolve(null),
-    loadListingLinkedInCardData(accountId, listingId),
   ]);
 
-  const [privateMediaWithUrls, publicMediaWithUrls] = await Promise.all([
+  const [privateMediaWithUrls] = await Promise.all([
     service.withSignedMediaUrls(privateMedia),
-    service.withSignedMediaUrls(publicMedia),
   ]);
   const privateImages = privateMediaWithUrls.filter(
     (item) =>
@@ -78,8 +76,13 @@ async function ListingManagementPage({ params }: PageProps) {
       item.mediaType !== 'image' && !item.mimeType?.startsWith('image/'),
   );
 
+  const publishingHref = `${pathsConfig.app.accountListingDetail
+    .replace('[account]', slug)
+    .replace('[id]', listingId)}/publishing`;
+
   return (
     <div className="space-y-4">
+      <ListingPublishingHashRedirect publishingHref={publishingHref} />
       <section id="marketing-readiness" className={SECTION_CLASS}>
         <MarketingReadinessCard
           listing={listing}
@@ -147,16 +150,11 @@ async function ListingManagementPage({ params }: PageProps) {
           privateFiles={privateFiles}
         />
       </section>
-      <section id="publishing" className={SECTION_CLASS}>
+      <section id="landlord-share" className={SECTION_CLASS}>
         <ListingManagementSection
           listing={listing}
-          publications={publications}
           accountId={accountId}
           accountSlug={slug}
-          media={publicMediaWithUrls}
-          linkedInConnection={linkedIn.connection}
-          linkedInPost={linkedIn.draft}
-          linkedInLastPosted={linkedIn.lastPosted}
         />
       </section>
     </div>
