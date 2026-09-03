@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { DocumentHtmlPreview } from '~/components/document-rich-text';
 import {
@@ -16,10 +17,26 @@ import {
   SignatureDisplay,
 } from '~/components/signature-capture';
 import { getErrorMessage } from '~/home/[account]/contracts/_lib/error-message';
-import { signContractRecipientByTokenAction } from '~/home/[account]/contracts/_lib/server/server-actions';
+import {
+  declineContractRecipientByTokenAction,
+  signContractRecipientByTokenAction,
+} from '~/home/[account]/contracts/_lib/server/server-actions';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 
 type PartyType = 'individual' | 'company';
+
+type PortalSigner = {
+  id: string;
+  signing_order: number;
+  role: string;
+  name: string | null;
+  email: string | null;
+  company: string | null;
+  party_type: PartyType | null;
+  signature_type: string | null;
+  signature_data: string | null;
+  signed_at: string | null;
+};
 
 type ContractPayload = {
   id: string;
@@ -41,6 +58,12 @@ type ContractPayload = {
   recipient_signature_type: string | null;
   recipient_signature_data: string | null;
   recipient_signed_at: string | null;
+  version_id?: string | null;
+  version_number?: number | null;
+  content_hash?: string | null;
+  signing_expires_at?: string | null;
+  signing_expired?: boolean;
+  signers?: PortalSigner[];
   account: { name?: string | null } | null;
   client: {
     display_name?: string | null;
@@ -87,26 +110,60 @@ export function PortalContractView({
   token: string;
 }) {
   const data = contract as unknown as ContractPayload;
+  const signers = data.signers ?? [];
+  const nextSigner =
+    signers.find((signer) => !signer.signed_at && signer.role !== 'author') ??
+    signers.find((signer) => !signer.signed_at) ??
+    null;
+  const waitingOnAuthor = nextSigner?.role === 'author';
   const [recipientType, setRecipientType] = useState<PartyType>(
-    data.recipient_type ?? 'individual',
+    nextSigner?.party_type ?? data.recipient_type ?? 'individual',
   );
   const [recipientName, setRecipientName] = useState(
-    data.recipient_name ?? data.client?.display_name ?? '',
+    nextSigner?.name ??
+      data.recipient_name ??
+      data.client?.display_name ??
+      '',
   );
   const [recipientCompany, setRecipientCompany] = useState(
-    data.recipient_company ?? data.client?.company_name ?? '',
+    nextSigner?.company ?? data.recipient_company ?? data.client?.company_name ?? '',
   );
   const [signing, setSigning] = useState(false);
-  const [signed, setSigned] = useState(
-    Boolean(data.recipient_signed_at) || data.status === 'signed',
-  );
+  const [declining, setDeclining] = useState(false);
+  const [showDecline, setShowDecline] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [signed, setSigned] = useState(data.status === 'signed');
+  const [partyDone, setPartyDone] = useState(false);
+  const [declined, setDeclined] = useState(data.status === 'cancelled');
 
   const canSign =
     !signed &&
+    !partyDone &&
+    !declined &&
+    !data.signing_expired &&
+    !waitingOnAuthor &&
     Boolean(data.author_signed_at) &&
-    ['sent', 'ready_to_sign'].includes(data.status);
+    ['sent', 'ready_to_sign'].includes(data.status) &&
+    (signers.length === 0 ? !data.recipient_signed_at : Boolean(nextSigner));
 
   const pdfUrl = `/api/contracts/pdf?token=${encodeURIComponent(token)}`;
+
+  const handleDecline = async () => {
+    setDeclining(true);
+    try {
+      await declineContractRecipientByTokenAction({
+        token,
+        reason: declineReason.trim() || null,
+      });
+      toast.success('Agreement declined');
+      setDeclined(true);
+      setShowDecline(false);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setDeclining(false);
+    }
+  };
 
   const handleSign = async (signature: SignatureCaptureResult) => {
     if (!recipientName.trim()) {
@@ -120,7 +177,7 @@ export function PortalContractView({
 
     setSigning(true);
     try {
-      await signContractRecipientByTokenAction({
+      const result = await signContractRecipientByTokenAction({
         token,
         recipient_type: recipientType,
         recipient_name: recipientName.trim(),
@@ -128,9 +185,19 @@ export function PortalContractView({
           recipientType === 'company' ? recipientCompany.trim() || null : null,
         recipient_signature_type: signature.signature_type,
         recipient_signature_data: signature.signature_data,
+        version_id: data.version_id ?? undefined,
+        content_hash: data.content_hash ?? undefined,
+        signer_id: nextSigner?.id,
       });
-      toast.success('Agreement signed successfully');
-      setSigned(true);
+      const fullySigned =
+        (result as { status?: string } | null)?.status === 'signed';
+      toast.success(
+        fullySigned
+          ? 'Agreement signed successfully'
+          : 'Your signature has been recorded',
+      );
+      if (fullySigned) setSigned(true);
+      else setPartyDone(true);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -150,12 +217,25 @@ export function PortalContractView({
           <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">
             {data.title?.trim() || 'Agreement'}
           </h1>
+          {typeof data.version_number === 'number' ? (
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              Version {data.version_number}
+            </p>
+          ) : null}
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             {signed
               ? 'Fully executed agreement'
-              : canSign
-                ? 'Please review and sign below'
-                : 'Awaiting author signature'}
+              : partyDone
+                ? 'Your signature has been recorded. Waiting for remaining parties.'
+                : data.signing_expired
+                  ? 'Signing deadline has passed'
+                  : canSign
+                    ? nextSigner?.name
+                      ? `Please review and sign as ${nextSigner.name}`
+                      : 'Please review and sign below'
+                    : waitingOnAuthor
+                      ? 'Awaiting author signature'
+                      : 'Awaiting author signature'}
           </p>
         </div>
         <Button variant="outline" size="sm" asChild>
@@ -197,6 +277,23 @@ export function PortalContractView({
         </div>
       ) : null}
 
+      {signers.length > 2 ? (
+        <ol className="mt-6 space-y-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 p-4 text-sm">
+          <li className="mb-2 font-medium text-[var(--workspace-shell-text)]">
+            Signing order
+          </li>
+          {signers.map((signer) => (
+            <li
+              key={signer.id}
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
+              {signer.signing_order}. {signer.name || (signer.role === 'author' ? 'Author' : 'Signer')}
+              {signer.signed_at ? ' — signed' : nextSigner?.id === signer.id ? ' — your turn' : ' — waiting'}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 p-4">
           <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
@@ -211,7 +308,9 @@ export function PortalContractView({
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 p-4">
           <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
-            Recipient
+            {nextSigner && nextSigner.signing_order > 2
+              ? nextSigner.name || 'Additional signer'
+              : 'Recipient'}
           </h3>
           {signed || data.recipient_signed_at ? (
             <SignatureDisplay
@@ -265,12 +364,60 @@ export function PortalContractView({
         </div>
       </div>
 
-      {signed ? (
+      {canSign && !showDecline ? (
+        <div className="mt-6 text-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={declining}
+            onClick={() => setShowDecline(true)}
+          >
+            <X className="mr-2 h-4 w-4" /> Decline agreement
+          </Button>
+        </div>
+      ) : null}
+      {canSign && showDecline ? (
+        <div className="mt-6 space-y-3 rounded-lg border border-red-500/30 bg-red-500/5 p-4">
+          <Label>Reason (optional)</Label>
+          <Textarea
+            value={declineReason}
+            onChange={(e) => setDeclineReason(e.target.value)}
+            placeholder="Let us know why"
+            rows={3}
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowDecline(false)}
+              disabled={declining}
+            >
+              Keep agreement
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleDecline()}
+              disabled={declining}
+            >
+              {declining ? 'Declining…' : 'Confirm decline'}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {declined ? (
+        <div className="mt-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-center text-red-200">
+          You declined this agreement.
+        </div>
+      ) : null}
+
+      {signed || partyDone ? (
         <div className="mt-6 rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-center text-[#97D9AA]">
           {signing ? (
             <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-          ) : (
+          ) : signed ? (
             'Thank you — your signature has been recorded.'
+          ) : (
+            'Your signature has been recorded. Remaining parties still need to sign.'
           )}
         </div>
       ) : null}

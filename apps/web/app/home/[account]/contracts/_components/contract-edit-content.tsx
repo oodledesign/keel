@@ -6,8 +6,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
+  FileStack,
   Loader2,
   PlusCircle,
   Save,
@@ -38,8 +40,17 @@ import {
 
 import { getErrorMessage } from '../_lib/error-message';
 import type { PaymentPlanItem } from '../_lib/schema/contracts.schema';
-import { signAuthor, updateContract } from '../_lib/server/server-actions';
+import {
+  createContractVersion,
+  saveContractAsTemplate,
+  sendContractReminder,
+  signAuthor,
+  updateContract,
+  upsertContractSigners,
+} from '../_lib/server/server-actions';
+import { ContractActivityTimeline } from './contract-activity-timeline';
 import { ContractSendPanel } from './contract-send-panel';
+import { ContractSmartFieldChips } from './contract-smart-field-chips';
 import { ContractStatusBadge } from './contract-status-badge';
 
 type PartyType = 'individual' | 'company';
@@ -80,8 +91,35 @@ type ContractData = {
   email_subject: string | null;
   email_body: string | null;
   email_signature: string | null;
+  email_delivery_status?: string | null;
+  email_delivery_error?: string | null;
+  public_token_expires_at?: string | null;
+  public_token_revoked_at?: string | null;
+  last_reminder_at?: string | null;
+  recipient_declined_at?: string | null;
+  archived_at?: string | null;
   preferred_send_email?: string | null;
   preferred_send_source?: string | null;
+  current_version_number?: number | null;
+  sent_version_number?: number | null;
+  has_unpublished_version?: boolean;
+  signing_expires_at?: string | null;
+  signers?: Array<{
+    id: string;
+    signing_order: number;
+    role: string;
+    name: string | null;
+    email: string | null;
+    company: string | null;
+    party_type?: PartyType | null;
+    signed_at?: string | null;
+  }>;
+  attachments?: Array<{
+    id: string;
+    file_name: string;
+    content_type: string | null;
+    byte_size: number | null;
+  }>;
   client: ClientInfo | null;
 };
 
@@ -141,14 +179,20 @@ export function ContractEditContent({
     accountSlug,
   );
 
-  const isDraft = contract.status === 'draft';
+  const hasUnpublished = Boolean(contract.has_unpublished_version);
+  const isDraft = contract.status === 'draft' || hasUnpublished;
   const canEditBody = canEditContracts && isDraft;
+  const isFrozenView = !canEditBody && ['sent', 'signed', 'ready_to_sign'].includes(contract.status);
   const authorSigned = Boolean(contract.author_signed_at);
   const recipientSigned = Boolean(contract.recipient_signed_at);
   const showSendPanel =
     authorSigned &&
     !recipientSigned &&
-    ['ready_to_sign', 'sent'].includes(contract.status);
+    (['ready_to_sign', 'sent'].includes(contract.status) || hasUnpublished);
+
+  const additionalSigners = (contract.signers ?? []).filter(
+    (signer) => signer.signing_order >= 3,
+  );
 
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [title, setTitle] = useState(contract.title ?? 'Agreement');
@@ -193,9 +237,20 @@ export function ContractEditContent({
   );
 
   const [saving, setSaving] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [signing, setSigning] = useState(false);
   const [sendPanelOpen, setSendPanelOpen] = useState(
     searchParams.get('send') === '1',
+  );
+  const [creatingVersion, setCreatingVersion] = useState(false);
+  const [savingSigners, setSavingSigners] = useState(false);
+  const [extraSigners, setExtraSigners] = useState(
+    additionalSigners.map((signer) => ({
+      name: signer.name ?? '',
+      email: signer.email ?? '',
+      company: signer.company ?? '',
+      signing_order: signer.signing_order,
+    })),
   );
 
   useEffect(() => {
@@ -291,6 +346,79 @@ export function ContractEditContent({
       toast.error(getErrorMessage(error));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateVersion = async () => {
+    if (!canEditContracts || creatingVersion) return;
+    if (
+      !window.confirm(
+        'Create a new version? The current sent copy stays live until you send the new one. Recipients will need to re-sign.',
+      )
+    ) {
+      return;
+    }
+    setCreatingVersion(true);
+    try {
+      await createContractVersion({
+        accountId,
+        contractId: contract.id,
+      });
+      toast.success('New draft version created');
+      router.refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setCreatingVersion(false);
+    }
+  };
+
+  const handleSaveSigners = async () => {
+    if (!canEditBody) return;
+    setSavingSigners(true);
+    try {
+      await upsertContractSigners({
+        accountId,
+        contractId: contract.id,
+        signers: extraSigners
+          .filter((signer) => signer.name.trim())
+          .map((signer, index) => ({
+            name: signer.name.trim(),
+            email: signer.email.trim() || null,
+            company: signer.company.trim() || null,
+            signing_order: 3 + index,
+          })),
+      });
+      toast.success('Signers saved');
+      router.refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setSavingSigners(false);
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!canEditContracts) return;
+    const suggested = title.trim() || 'Agreement';
+    const name = window.prompt('Save as template named:', suggested);
+    if (!name?.trim()) return;
+    setSavingTemplate(true);
+    try {
+      if (canEditBody) {
+        await updateContract(buildUpdatePayload());
+        markClean();
+      }
+      await saveContractAsTemplate({
+        accountId,
+        contractId: contract.id,
+        name: name.trim(),
+      });
+      toast.success('Saved as template');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setSavingTemplate(false);
     }
   };
 
@@ -393,7 +521,15 @@ export function ContractEditContent({
             status={contract.status}
             authorSignedAt={contract.author_signed_at}
             recipientSignedAt={contract.recipient_signed_at}
+            recipientDeclinedAt={contract.recipient_declined_at}
+            archivedAt={contract.archived_at}
           />
+          {typeof contract.current_version_number === 'number' ? (
+            <span className="rounded-full border border-[color:var(--workspace-shell-border)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              v{contract.current_version_number}
+              {hasUnpublished ? ' draft' : ''}
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {canEditBody ? (
@@ -411,6 +547,34 @@ export function ContractEditContent({
               Save draft
             </Button>
           ) : null}
+          {canEditContracts ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={savingTemplate}
+              onClick={() => void handleSaveAsTemplate()}
+            >
+              {savingTemplate ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileStack className="mr-2 h-4 w-4" />
+              )}
+              Save as template
+            </Button>
+          ) : null}
+          {isFrozenView && canEditContracts ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={creatingVersion}
+              onClick={() => void handleCreateVersion()}
+            >
+              {creatingVersion ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Create new version
+            </Button>
+          ) : null}
           {showSendPanel && !sendPanelOpen ? (
             <Button
               size="sm"
@@ -422,6 +586,65 @@ export function ContractEditContent({
           ) : null}
         </div>
       </div>
+
+      {contract.email_delivery_status === 'failed' ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Email delivery failed</p>
+              <p className="text-xs text-red-200/80">
+                {contract.email_delivery_error ??
+                  'The contract email could not be delivered. The recipient has not received it.'}
+              </p>
+            </div>
+          </div>
+          {showSendPanel ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-400/40 text-red-100 hover:bg-red-500/10"
+              onClick={async () => {
+                if (!recipientEmail.trim()) {
+                  setSendPanelOpen(true);
+                  return;
+                }
+                try {
+                  await sendContractReminder({
+                    accountId,
+                    contractId: contract.id,
+                    sent_to_email: recipientEmail.trim(),
+                    kind: 'resend',
+                  });
+                  toast.success('Contract resent');
+                  router.refresh();
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                  setSendPanelOpen(true);
+                }
+              }}
+            >
+              Resend email
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {hasUnpublished ? (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <p>
+            Editing version {contract.current_version_number} (draft). Recipients
+            still see version {contract.sent_version_number ?? 'the live copy'}{' '}
+            until you send this one. They will need to re-sign.
+          </p>
+        </div>
+      ) : isFrozenView ? (
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
+          This version is frozen. Create a new version to change the body or
+          terms — the signed/sent copy is never overwritten.
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="space-y-4">
@@ -465,6 +688,13 @@ export function ContractEditContent({
                 />
               )}
             </div>
+            {canEditBody ? (
+              <ContractSmartFieldChips
+                onInsert={(token) =>
+                  setContentHtml((html) => `${html}${html ? ' ' : ''}${token}`)
+                }
+              />
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-6">
@@ -551,6 +781,135 @@ export function ContractEditContent({
                 </p>
               </div>
             )}
+          </div>
+
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-6">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-medium text-[var(--workspace-shell-text)]">
+                  Additional signers
+                </h3>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  Optional parties after the recipient. They sign in order via
+                  the same portal link.
+                </p>
+              </div>
+              {canEditBody ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setExtraSigners((rows) => [
+                      ...rows,
+                      {
+                        name: '',
+                        email: '',
+                        company: '',
+                        signing_order: 3 + rows.length,
+                      },
+                    ])
+                  }
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add signer
+                </Button>
+              ) : null}
+            </div>
+            {extraSigners.length === 0 && !canEditBody ? (
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                No additional signers.
+              </p>
+            ) : extraSigners.length === 0 ? (
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                Author signs first, then the recipient. Add anyone else here.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {extraSigners.map((signer, index) => (
+                  <div key={index} className="flex flex-wrap items-end gap-2">
+                    <div className="min-w-[160px] flex-1">
+                      <Label className="text-xs">Name</Label>
+                      <Input
+                        value={signer.name}
+                        disabled={!canEditBody}
+                        onChange={(e) =>
+                          setExtraSigners((rows) =>
+                            rows.map((row, i) =>
+                              i === index ? { ...row, name: e.target.value } : row,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="min-w-[180px] flex-1">
+                      <Label className="text-xs">Email</Label>
+                      <Input
+                        type="email"
+                        value={signer.email}
+                        disabled={!canEditBody}
+                        onChange={(e) =>
+                          setExtraSigners((rows) =>
+                            rows.map((row, i) =>
+                              i === index
+                                ? { ...row, email: e.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                    {canEditBody ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Remove signer"
+                        onClick={() =>
+                          setExtraSigners((rows) =>
+                            rows.filter((_, i) => i !== index),
+                          )
+                        }
+                      >
+                        <Trash2 className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+            {canEditBody && extraSigners.length > 0 ? (
+              <Button
+                className="mt-3"
+                variant="outline"
+                size="sm"
+                disabled={savingSigners}
+                onClick={() => void handleSaveSigners()}
+              >
+                {savingSigners ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Save signers
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-6">
+            <h3 className="font-medium text-[var(--workspace-shell-text)]">
+              Attachments
+            </h3>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+              File upload is not available yet. The agreement itself is stored
+              as versioned HTML; supporting files will land here in a later
+              slice.
+            </p>
+            {(contract.attachments?.length ?? 0) > 0 ? (
+              <ul className="mt-3 space-y-1 text-sm">
+                {contract.attachments!.map((file) => (
+                  <li key={file.id}>{file.file_name}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
           {canEditBody ? (
@@ -795,6 +1154,11 @@ export function ContractEditContent({
         </div>
       </div>
 
+      <ContractActivityTimeline
+        accountId={accountId}
+        contractId={contract.id}
+      />
+
       {showSendPanel && sendPanelOpen ? (
         <ContractSendPanel
           accountId={accountId}
@@ -806,6 +1170,11 @@ export function ContractEditContent({
           initialSubject={contract.email_subject}
           initialBody={contract.email_body}
           initialSignature={contract.email_signature}
+          initialExpiresAt={contract.public_token_expires_at}
+          initialRevokedAt={contract.public_token_revoked_at}
+          lastReminderAt={contract.last_reminder_at}
+          emailDeliveryStatus={contract.email_delivery_status}
+          initialSigningExpiresAt={contract.signing_expires_at}
           onSent={() => {
             setSendPanelOpen(false);
             router.refresh();

@@ -9,6 +9,9 @@ const STATUS_STYLES: Record<string, string> = {
     'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent)]/12 text-[#97D9AA]',
   cancelled:
     'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
+  declined: 'border-red-500/30 bg-red-500/10 text-red-200',
+  archived:
+    'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -17,17 +20,31 @@ const STATUS_LABELS: Record<string, string> = {
   sent: 'Sent',
   signed: 'Signed',
   cancelled: 'Cancelled',
+  declined: 'Declined',
+  archived: 'Archived',
 };
 
 export function ContractStatusBadge({
   status,
+  recipientDeclinedAt,
+  archivedAt,
 }: {
   status: string;
   authorSignedAt?: string | null;
   recipientSignedAt?: string | null;
+  recipientDeclinedAt?: string | null;
+  archivedAt?: string | null;
 }) {
-  const label = (STATUS_LABELS[status] ?? status).toUpperCase();
-  const classes = STATUS_STYLES[status] ?? STATUS_STYLES.draft;
+  const effectiveStatus =
+    recipientDeclinedAt && status === 'cancelled'
+      ? 'declined'
+      : archivedAt
+        ? 'archived'
+        : status;
+  const label = (
+    STATUS_LABELS[effectiveStatus] ?? effectiveStatus
+  ).toUpperCase();
+  const classes = STATUS_STYLES[effectiveStatus] ?? STATUS_STYLES.draft;
 
   return (
     <span

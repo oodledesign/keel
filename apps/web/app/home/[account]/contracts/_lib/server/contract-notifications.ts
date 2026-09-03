@@ -2,13 +2,13 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import pathsConfig from '~/config/paths.config';
 import {
   loadAccountBrandResolved,
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
-import pathsConfig from '~/config/paths.config';
 import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
   DEFAULT_CONTRACT_EMAIL_BODY,
@@ -16,6 +16,7 @@ import {
   DEFAULT_CONTRACT_EMAIL_SUBJECT,
   renderContractSmartFields,
 } from '../contract-smart-fields';
+import { buildSignedContractPdfAttachment } from './contract-pdf-payload';
 
 function formatPence(pence: number, currency = 'gbp') {
   return new Intl.NumberFormat('en-GB', {
@@ -40,7 +41,9 @@ export async function sendContractIssuedEmail(params: {
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
   if (!sender || !siteUrl) {
-    return;
+    throw new Error(
+      'Email is not configured (missing EMAIL_SENDER or NEXT_PUBLIC_SITE_URL)',
+    );
   }
 
   const admin = getSupabaseServerAdminClient();
@@ -54,7 +57,7 @@ export async function sendContractIssuedEmail(params: {
     .maybeSingle();
 
   if (contractError || !contract?.public_token) {
-    return;
+    throw new Error('Contract signing link is missing; the email was not sent');
   }
 
   const [{ data: account }, { data: client }] = await Promise.all([
@@ -142,9 +145,7 @@ export async function sendContractSignedNotifications(params: {
   const admin = getSupabaseServerAdminClient();
   const { data: contract, error: contractError } = await admin
     .from('contracts')
-    .select(
-      'id, account_id, client_id, title, total_pence, currency, public_token, sent_to_email, recipient_email, recipient_name',
-    )
+    .select('*')
     .eq('id', params.contractId)
     .eq('account_id', params.accountId)
     .maybeSingle();
@@ -219,6 +220,7 @@ export async function sendContractSignedNotifications(params: {
           ? `<p>You can view the signed agreement here: <a href="${portalContractUrl}">${portalContractUrl}</a></p>`
           : ''
       }
+      <p>A PDF copy of the signed agreement is attached.</p>
       <p>Thanks,<br />${productName}</p>
   `;
   const customerHtml = wrapEmailHtmlWithBrand({
@@ -231,11 +233,18 @@ export async function sendContractSignedNotifications(params: {
       <h2 style="margin:0 0 16px">Contract fully signed</h2>
       <p><strong>${contract.title ?? 'Agreement'}</strong> has been signed by ${clientName}.</p>
       <p><strong>Total value:</strong> ${amount}</p>
+      <p>A PDF copy of the signed agreement is attached.</p>
   `;
   const ownerHtml = wrapEmailHtmlWithBrand({
     brand,
     innerHtml: ownerInner,
   });
+
+  const pdfAttachment = await buildSignedContractPdfAttachment({
+    contract,
+    accountId: params.accountId,
+  });
+  const attachments = pdfAttachment ? [pdfAttachment] : undefined;
 
   const emailJobs: Promise<unknown>[] = [];
 
@@ -249,6 +258,7 @@ export async function sendContractSignedNotifications(params: {
           to: clientEmail,
           subject: customerSubject,
           html: customerHtml,
+          attachments,
         },
         metadata: { contract_id: params.contractId, event: 'signed_customer' },
       }),
@@ -265,6 +275,7 @@ export async function sendContractSignedNotifications(params: {
           to: email,
           subject: ownerSubject,
           html: ownerHtml,
+          attachments,
         },
         metadata: { contract_id: params.contractId, event: 'signed_owner' },
       }),
@@ -282,6 +293,45 @@ export async function sendContractSignedNotifications(params: {
   await createInAppNotification({
     accountId: params.accountId,
     body: `${clientName} signed contract “${contract.title ?? 'Agreement'}”`,
+    link,
+  });
+}
+
+export async function sendContractDeclinedNotification(params: {
+  accountId: string;
+  contractId: string;
+  reason?: string | null;
+}) {
+  const admin = getSupabaseServerAdminClient();
+  const [{ data: contract }, { data: account }] = await Promise.all([
+    admin
+      .from('contracts')
+      .select('id, title, recipient_name')
+      .eq('id', params.contractId)
+      .eq('account_id', params.accountId)
+      .maybeSingle(),
+    admin
+      .from('accounts')
+      .select('slug')
+      .eq('id', params.accountId)
+      .maybeSingle(),
+  ]);
+
+  if (!contract || !account?.slug) return;
+
+  const title = contract.title?.trim() || 'Agreement';
+  const who = contract.recipient_name?.trim() || 'The recipient';
+  const reason = params.reason?.trim() || null;
+  const link = pathsConfig.app.accountContractEdit
+    .replace('[account]', account.slug)
+    .replace('[id]', params.contractId);
+
+  await createInAppNotification({
+    accountId: params.accountId,
+    type: 'warning',
+    body: reason
+      ? `${who} declined contract “${title}”: ${reason}`
+      : `${who} declined contract “${title}”`,
     link,
   });
 }

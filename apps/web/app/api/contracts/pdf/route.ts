@@ -3,63 +3,30 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { buildContractPdf } from '~/home/[account]/contracts/_lib/server/contract-pdf';
+import { buildContractPdfPayload } from '~/home/[account]/contracts/_lib/server/contract-pdf-payload';
+import {
+  buildContractPdf,
+  contractPdfFilename,
+} from '~/lib/contracts/build-contract-pdf';
+import { loadFrozenContractSnapshot } from '~/home/[account]/contracts/_lib/server/contract-v2.server';
+import { checkContractTokenAccess } from '~/lib/contracts/token-access';
 
-async function buildPayload(
+async function pdfResponse(
   contract: Record<string, unknown>,
   accountId: string,
 ) {
-  const client = getSupabaseServerAdminClient();
-
-  const [{ data: clientRow }, { data: account }] = await Promise.all([
-    contract.client_id
-      ? client
-          .from('clients')
-          .select(
-            'display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country',
-          )
-          .eq('id', contract.client_id as string)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    client.from('accounts').select('name').eq('id', accountId).maybeSingle(),
-  ]);
-
-  const paymentPlan = Array.isArray(contract.payment_plan)
-    ? contract.payment_plan.filter(
-        (item): item is { label: string; percent: number } =>
-          item != null &&
-          typeof item === 'object' &&
-          typeof (item as { label?: unknown }).label === 'string' &&
-          typeof (item as { percent?: unknown }).percent === 'number',
-      )
-    : [];
-
-  return {
-    title: (contract.title as string) ?? 'Agreement',
-    status: (contract.status as string) ?? 'draft',
-    content_html: (contract.content_html as string) ?? '',
-    total_pence: (contract.total_pence as number) ?? 0,
-    currency: (contract.currency as string) ?? 'gbp',
-    payment_plan: paymentPlan,
-    author_name: contract.author_name as string | null,
-    author_company: contract.author_company as string | null,
-    author_type: contract.author_type as string | null,
-    author_signature_type: contract.author_signature_type as string | null,
-    author_signature_data: contract.author_signature_data as string | null,
-    author_signed_at: contract.author_signed_at as string | null,
-    recipient_name: contract.recipient_name as string | null,
-    recipient_company: contract.recipient_company as string | null,
-    recipient_type: contract.recipient_type as string | null,
-    recipient_signature_type: contract.recipient_signature_type as
-      | string
-      | null,
-    recipient_signature_data: contract.recipient_signature_data as
-      | string
-      | null,
-    recipient_signed_at: contract.recipient_signed_at as string | null,
-    brand_name: account?.name ?? null,
-    client: clientRow ?? null,
-  };
+  const payload = await buildContractPdfPayload(contract, accountId);
+  const pdfBytes = await buildContractPdf(payload);
+  const filename = contractPdfFilename(payload.title);
+  const body = Buffer.from(pdfBytes);
+  return new NextResponse(body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': String(body.length),
+    },
+  });
 }
 
 /**
@@ -86,19 +53,34 @@ export async function GET(request: Request) {
       );
     }
 
-    const payload = await buildPayload(contract, contract.account_id);
-    const pdfBytes = await buildContractPdf(payload);
-    const slug = (contract.title as string | null)?.trim() || 'agreement';
-    const filename = `contract-${slug.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`;
-    const body = Buffer.from(pdfBytes);
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': String(body.length),
-      },
-    });
+    // Reject draft, cancelled, revoked, and expired contracts — only
+    // ready_to_sign / sent / signed contracts with a live token can be
+    // downloaded via a public link.
+    if (!checkContractTokenAccess(contract).accessible) {
+      return NextResponse.json(
+        { error: 'Contract not found' },
+        { status: 404 },
+      );
+    }
+
+    // Audit trail for public-link access (best-effort; never blocks the
+    // download on a logging failure).
+    void client
+      .from('contract_events')
+      .insert({
+        account_id: contract.account_id,
+        contract_id: contract.id,
+        event_type: 'pdf_downloaded',
+        payload: { via: 'token' },
+        actor_id: null,
+      })
+      .then(
+        () => undefined,
+        () => undefined,
+      );
+
+    const snapshot = await loadFrozenContractSnapshot(contract);
+    return pdfResponse(snapshot.contract, contract.account_id);
   }
 
   if (contractId) {
@@ -115,19 +97,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const payload = await buildPayload(contract, contract.account_id);
-    const pdfBytes = await buildContractPdf(payload);
-    const slug = (contract.title as string | null)?.trim() || 'agreement';
-    const filename = `contract-${slug.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`;
-    const body = Buffer.from(pdfBytes);
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': String(body.length),
-      },
-    });
+    return pdfResponse(contract, contract.account_id);
   }
 
   return NextResponse.json(

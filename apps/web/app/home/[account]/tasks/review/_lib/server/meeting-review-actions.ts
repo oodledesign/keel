@@ -18,11 +18,14 @@ function revalidateReviewPages(accountSlug: string) {
 
   const reviewPath = workAccountPath(pathsConfig.app.accountTasksReview, slug);
   const tasksPath = workAccountPath(pathsConfig.app.accountTasks, slug);
+  const homePath = workAccountPath(pathsConfig.app.accountHome, slug);
 
   revalidatePath(reviewPath, 'page');
   revalidatePath(tasksPath, 'page');
+  revalidatePath(homePath, 'page');
   revalidatePath(`/home/${slug}/tasks/review`, 'page');
   revalidatePath(`/home/${slug}/tasks`, 'page');
+  revalidatePath(`/home/${slug}`, 'page');
 }
 
 async function assertWorkspaceMember(accountId: string, userId: string) {

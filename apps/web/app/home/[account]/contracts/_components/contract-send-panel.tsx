@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Download, Link2, Loader2, Send } from 'lucide-react';
+import { Download, Link2, Loader2, Send, ShieldOff } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -22,8 +22,20 @@ import {
 import { getErrorMessage } from '../_lib/error-message';
 import {
   getContractPortalLink,
+  revokeContractPortalLink,
   sendContract,
+  sendContractReminder,
+  setContractPortalLinkExpiry,
 } from '../_lib/server/server-actions';
+
+const EXPIRY_OPTIONS = [
+  { days: 7, label: '7 days' },
+  { days: 14, label: '14 days' },
+  { days: 30, label: '30 days' },
+  { days: 90, label: '90 days' },
+  { days: 180, label: '6 months' },
+  { days: 365, label: '1 year' },
+] as const;
 
 const SMART_FIELDS = [
   '{{client.firstName}}',
@@ -43,6 +55,11 @@ export function ContractSendPanel({
   initialSubject,
   initialBody,
   initialSignature,
+  initialExpiresAt,
+  initialRevokedAt,
+  lastReminderAt,
+  emailDeliveryStatus,
+  initialSigningExpiresAt,
   onSent,
   onClose,
 }: {
@@ -55,6 +72,11 @@ export function ContractSendPanel({
   initialSubject?: string | null;
   initialBody?: string | null;
   initialSignature?: string | null;
+  initialExpiresAt?: string | null;
+  initialRevokedAt?: string | null;
+  lastReminderAt?: string | null;
+  emailDeliveryStatus?: string | null;
+  initialSigningExpiresAt?: string | null;
   onSent: () => void;
   onClose?: () => void;
 }) {
@@ -67,14 +89,33 @@ export function ContractSendPanel({
     initialSignature ?? DEFAULT_CONTRACT_EMAIL_SIGNATURE,
   );
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState<'send' | 'test' | 'link' | null>(null);
+  const [expiresAt, setExpiresAt] = useState(initialExpiresAt ?? null);
+  const [revoked, setRevoked] = useState(Boolean(initialRevokedAt));
+  const [expiryDays, setExpiryDays] = useState(90);
+  const [signingExpiryDays, setSigningExpiryDays] = useState<number | null>(
+    null,
+  );
+  const [loading, setLoading] = useState<
+    'send' | 'test' | 'link' | 'reminder' | 'resend' | 'expiry' | null
+  >(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const loadPortalLink = async () => {
     if (portalUrl) return portalUrl;
     setLoading('link');
     try {
-      const result = await getContractPortalLink({ accountId, contractId });
+      const result = await getContractPortalLink({
+        accountId,
+        contractId,
+        expiry_days: expiryDays,
+      });
+      const expiry =
+        (result as { expires_at?: string | null } | null)?.expires_at ??
+        (result as { data?: { expires_at?: string | null } } | null)?.data
+          ?.expires_at ??
+        null;
+      setExpiresAt(expiry);
+      setRevoked(false);
       const token =
         (result as { token?: string } | null)?.token ??
         (result as { data?: { token?: string } } | null)?.data?.token;
@@ -102,6 +143,8 @@ export function ContractSendPanel({
         email_body: body,
         email_signature: signature,
         send_test_to_self: testOnly,
+        expiry_days: expiryDays,
+        signing_expiry_days: signingExpiryDays,
       });
       toast.success(testOnly ? 'Test email sent' : 'Contract sent');
       if (!testOnly) {
@@ -196,6 +239,47 @@ export function ContractSendPanel({
               </Button>
             ))}
           </div>
+          <div>
+            <Label>Signing deadline</Label>
+            <p className="text-muted-foreground mb-2 text-xs">
+              Optional. Blocks signing after this date, even if the shareable
+              link is still valid.
+              {initialSigningExpiresAt
+                ? ` Current deadline ${new Date(initialSigningExpiresAt).toLocaleDateString('en-GB')}.`
+                : ''}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={signingExpiryDays == null ? 'default' : 'outline'}
+                className={
+                  signingExpiryDays == null
+                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    : undefined
+                }
+                onClick={() => setSigningExpiryDays(null)}
+              >
+                No deadline
+              </Button>
+              {EXPIRY_OPTIONS.map((option) => (
+                <Button
+                  key={`sign-${option.days}`}
+                  type="button"
+                  size="sm"
+                  variant={signingExpiryDays === option.days ? 'default' : 'outline'}
+                  className={
+                    signingExpiryDays === option.days
+                      ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                      : undefined
+                  }
+                  onClick={() => setSigningExpiryDays(option.days)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-4 text-sm">
             <p className="font-medium">Preview summary</p>
             <p className="text-muted-foreground mt-2">
@@ -229,7 +313,61 @@ export function ContractSendPanel({
             >
               Send yourself a test
             </Button>
+            <Button
+              variant="outline"
+              disabled={loading != null || revoked}
+              onClick={async () => {
+                if (!email.trim()) {
+                  toast.error('Recipient email is required');
+                  return;
+                }
+                setLoading(
+                  emailDeliveryStatus === 'failed' ? 'resend' : 'reminder',
+                );
+                try {
+                  await sendContractReminder({
+                    accountId,
+                    contractId,
+                    sent_to_email: email.trim(),
+                    expiry_days: expiryDays,
+                    kind:
+                      emailDeliveryStatus === 'failed' ? 'resend' : 'reminder',
+                  });
+                  toast.success(
+                    emailDeliveryStatus === 'failed'
+                      ? 'Contract resent'
+                      : 'Reminder sent',
+                  );
+                  onSent();
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                } finally {
+                  setLoading(null);
+                }
+              }}
+            >
+              {loading === 'resend' || loading === 'reminder' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              {emailDeliveryStatus === 'failed'
+                ? 'Resend email'
+                : 'Send reminder'}
+            </Button>
           </div>
+          {lastReminderAt ? (
+            <p className="text-muted-foreground text-xs">
+              Last reminder{' '}
+              {new Date(lastReminderAt).toLocaleString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </p>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="link" className="mt-4 space-y-4">
@@ -249,6 +387,82 @@ export function ContractSendPanel({
             Copy shareable link
           </Button>
           {portalUrl ? <Input readOnly value={portalUrl} /> : null}
+          <p className="text-muted-foreground text-sm">
+            {revoked
+              ? 'This link has been revoked.'
+              : expiresAt
+                ? `Expires ${new Date(expiresAt).toLocaleDateString('en-GB')}`
+                : 'No expiry set'}
+          </p>
+          {portalUrl && !revoked ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await revokeContractPortalLink({ accountId, contractId });
+                  setRevoked(true);
+                  toast.success('Shareable link revoked');
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                }
+              }}
+            >
+              <ShieldOff className="mr-2 h-4 w-4" /> Revoke access
+            </Button>
+          ) : null}
+          <div className="space-y-2">
+            <Label>Link expiry</Label>
+            <div className="flex flex-wrap gap-2">
+              {EXPIRY_OPTIONS.map((option) => (
+                <Button
+                  key={option.days}
+                  type="button"
+                  size="sm"
+                  variant={expiryDays === option.days ? 'default' : 'outline'}
+                  className={
+                    expiryDays === option.days
+                      ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                      : undefined
+                  }
+                  onClick={() => setExpiryDays(option.days)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+            {portalUrl && !revoked ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading != null}
+                onClick={async () => {
+                  setLoading('expiry');
+                  try {
+                    const result = await setContractPortalLinkExpiry({
+                      accountId,
+                      contractId,
+                      expiry_days: expiryDays,
+                    });
+                    const next =
+                      (result as { expires_at?: string | null } | null)
+                        ?.expires_at ?? null;
+                    setExpiresAt(next);
+                    toast.success('Link expiry updated');
+                  } catch (error) {
+                    toast.error(getErrorMessage(error));
+                  } finally {
+                    setLoading(null);
+                  }
+                }}
+              >
+                {loading === 'expiry' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Update expiry
+              </Button>
+            ) : null}
+          </div>
         </TabsContent>
 
         <TabsContent value="pdf" className="mt-4">

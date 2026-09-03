@@ -20,13 +20,21 @@ import { cn } from '@kit/ui/utils';
 
 import { HapticLink } from '~/components/haptic-link';
 import pathsConfig from '~/config/paths.config';
+import { parseDueDateParts } from '~/home/_lib/due-date-ymd';
 import {
   acceptSuggestedEmailTaskAction,
   dismissSuggestedEmailTaskAction,
 } from '~/lib/email-assistant/email-assistant.actions';
+import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 
+import {
+  approveMeetingActionItem,
+  rejectMeetingActionItem,
+} from '../tasks/review/_lib/server/meeting-review-actions';
 import type {
+  DashboardMeetingReviewItem,
   DashboardMeetingReviewSummary,
+  DashboardSuggestedEmailTask,
   DashboardSuggestedEmailTasksSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
@@ -51,6 +59,20 @@ type Props = {
   density?: 'sm' | 'md' | 'lg';
 };
 
+function formatSuggestedDueDate(value: string | null | undefined): string | null {
+  const parts = parseDueDateParts(value);
+  if (!parts) return null;
+
+  return new Date(parts.y, parts.m - 1, parts.d, 12, 0, 0).toLocaleDateString(
+    'en-GB',
+    {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    },
+  );
+}
+
 export function DashboardTasksTabsCard({
   accountSlug,
   accountId,
@@ -61,13 +83,25 @@ export function DashboardTasksTabsCard({
   density = 'md',
 }: Props) {
   const router = useRouter();
+  const [meetingItems, setMeetingItems] = useState(meetingTaskReview.items);
   const [emailItems, setEmailItems] = useState(suggestedEmailTasks.items);
+  const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    setMeetingItems(meetingTaskReview.items);
+  }, [meetingTaskReview.items]);
+
+  useEffect(() => {
     setEmailItems(suggestedEmailTasks.items);
   }, [suggestedEmailTasks.items]);
+
+  const meetingCount = Math.max(
+    0,
+    meetingTaskReview.totalCount -
+      Math.max(0, meetingTaskReview.items.length - meetingItems.length),
+  );
 
   const emailCount = Math.max(
     0,
@@ -77,10 +111,10 @@ export function DashboardTasksTabsCard({
 
   const defaultTab = useMemo((): TabId => {
     if (upcomingTasksTotalCount > 0) return 'upcoming';
-    if (meetingTaskReview.totalCount > 0) return 'meeting';
+    if (meetingCount > 0) return 'meeting';
     if (emailCount > 0) return 'email';
     return 'upcoming';
-  }, [emailCount, meetingTaskReview.totalCount, upcomingTasksTotalCount]);
+  }, [emailCount, meetingCount, upcomingTasksTotalCount]);
 
   const [tab, setTab] = useState<TabId>(defaultTab);
 
@@ -89,18 +123,12 @@ export function DashboardTasksTabsCard({
       tab === 'upcoming'
         ? upcomingTasksTotalCount
         : tab === 'meeting'
-          ? meetingTaskReview.totalCount
+          ? meetingCount
           : emailCount;
     if (countForCurrentTab === 0) {
       setTab(defaultTab);
     }
-  }, [
-    defaultTab,
-    emailCount,
-    meetingTaskReview.totalCount,
-    tab,
-    upcomingTasksTotalCount,
-  ]);
+  }, [defaultTab, emailCount, meetingCount, tab, upcomingTasksTotalCount]);
 
   const tasksHref = pathsConfig.app.accountTasks.replace(
     '[account]',
@@ -122,8 +150,61 @@ export function DashboardTasksTabsCard({
         ? emailReviewHref
         : tasksHref;
 
+  function markPending(id: string, active: boolean) {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      if (active) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function runMeetingAction(
+    item: DashboardMeetingReviewItem,
+    kind: 'accept' | 'decline',
+  ) {
+    if (kind === 'accept' && !item.suggestedAssigneeId) {
+      toast.error('Open meeting review to choose an assignee first');
+      return;
+    }
+
+    markPending(item.id, true);
+    startTransition(async () => {
+      try {
+        if (kind === 'accept') {
+          await approveMeetingActionItem({
+            accountId,
+            accountSlug,
+            meetingActionItemId: item.id,
+            assigneeId: item.suggestedAssigneeId as string,
+            title: item.suggestedTitle,
+            dueDate: item.suggestedDueDate,
+          });
+          toast.success('Task added to planner');
+        } else {
+          await rejectMeetingActionItem({
+            accountId,
+            accountSlug,
+            meetingActionItemId: item.id,
+          });
+          toast.success('Suggestion declined');
+        }
+        setMeetingItems((prev) => prev.filter((row) => row.id !== item.id));
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not update meeting suggestion',
+        );
+      } finally {
+        markPending(item.id, false);
+      }
+    });
+  }
+
   function runEmailAction(actionItemId: string, kind: 'accept' | 'dismiss') {
-    setPendingIds((prev) => new Set(prev).add(actionItemId));
+    markPending(actionItemId, true);
     startTransition(async () => {
       try {
         if (kind === 'accept') {
@@ -144,6 +225,9 @@ export function DashboardTasksTabsCard({
         setEmailItems((prev) =>
           prev.filter((item) => item.id !== actionItemId),
         );
+        setExpandedEmailId((current) =>
+          current === actionItemId ? null : current,
+        );
         router.refresh();
       } catch (error) {
         toast.error(
@@ -152,11 +236,7 @@ export function DashboardTasksTabsCard({
             : 'Could not update suggestion',
         );
       } finally {
-        setPendingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(actionItemId);
-          return next;
-        });
+        markPending(actionItemId, false);
       }
     });
   }
@@ -176,7 +256,7 @@ export function DashboardTasksTabsCard({
     {
       id: 'meeting',
       label: 'Meeting review',
-      count: meetingTaskReview.totalCount,
+      count: meetingCount,
       icon: Mic,
     },
     { id: 'email', label: 'Email review', count: emailCount, icon: Mail },
@@ -244,61 +324,15 @@ export function DashboardTasksTabsCard({
 
       {tab === 'meeting' ? (
         <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
-          {meetingTaskReview.items.length === 0 ? (
+          {meetingItems.length === 0 ? (
             <li className="px-4 py-5 text-sm text-[var(--workspace-shell-text-muted)]">
               No meeting tasks waiting for review.
             </li>
           ) : (
-            meetingTaskReview.items.map((item) => (
-              <li key={item.id}>
-                <HapticLink
-                  href={meetingReviewHref}
-                  className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                >
-                  {item.clientName ? (
-                    <ProfileAvatar
-                      displayName={item.clientName}
-                      pictureUrl={item.clientPictureUrl}
-                      className="mt-0.5 h-8 w-8 shrink-0"
-                    />
-                  ) : (
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
-                      <Mic className="h-3.5 w-3.5" />
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                      {item.suggestedTitle}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                      {[
-                        item.clientName,
-                        item.meetingTitle,
-                        item.suggestedDueDate
-                          ? `due ${item.suggestedDueDate}`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </span>
-                </HapticLink>
-              </li>
-            ))
-          )}
-        </ul>
-      ) : null}
-
-      {tab === 'email' ? (
-        emailItems.length === 0 ? (
-          <div className="flex items-center gap-3 px-4 py-5 text-sm text-[var(--workspace-shell-text-muted)]">
-            <ListTodo className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-            No suggested email tasks right now.
-          </div>
-        ) : (
-          <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
-            {emailItems.map((item) => {
+            meetingItems.map((item) => {
               const busy = isPending && pendingIds.has(item.id);
+              const dueLabel = formatSuggestedDueDate(item.suggestedDueDate);
+
               return (
                 <li
                   key={item.id}
@@ -312,20 +346,18 @@ export function DashboardTasksTabsCard({
                     />
                   ) : (
                     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
-                      <Mail className="h-3.5 w-3.5" />
+                      <Mic className="h-3.5 w-3.5" />
                     </span>
                   )}
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                      {item.title}
+                      {item.suggestedTitle}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
                       {[
                         item.clientName,
-                        item.threadSubject,
-                        item.suggestedDueDate
-                          ? `due ${item.suggestedDueDate}`
-                          : null,
+                        item.meetingTitle,
+                        dueLabel ? `due ${dueLabel}` : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -334,9 +366,13 @@ export function DashboardTasksTabsCard({
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => runEmailAction(item.id, 'accept')}
-                    title="Accept task"
-                    aria-label="Accept task"
+                    onClick={() => runMeetingAction(item, 'accept')}
+                    title={
+                      item.suggestedAssigneeId
+                        ? 'Accept task'
+                        : 'Open meeting review to choose an assignee'
+                    }
+                    aria-label="Accept meeting task"
                     className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-2 text-[11px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)] disabled:opacity-50"
                   >
                     <Check className="h-3.5 w-3.5" />
@@ -345,19 +381,145 @@ export function DashboardTasksTabsCard({
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => runEmailAction(item.id, 'dismiss')}
-                    title="Dismiss suggestion"
-                    aria-label="Dismiss suggestion"
-                    className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
+                    onClick={() => runMeetingAction(item, 'decline')}
+                    title="Decline suggestion"
+                    aria-label="Decline meeting task"
+                    className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" />
+                    Decline
                   </button>
                 </li>
               );
-            })}
+            })
+          )}
+        </ul>
+      ) : null}
+
+      {tab === 'email' ? (
+        emailItems.length === 0 ? (
+          <div className="flex items-center gap-3 px-4 py-5 text-sm text-[var(--workspace-shell-text-muted)]">
+            <ListTodo className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
+            No suggested email tasks right now.
+          </div>
+        ) : (
+          <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
+            {emailItems.map((item) => (
+              <EmailReviewRow
+                key={item.id}
+                item={item}
+                busy={isPending && pendingIds.has(item.id)}
+                expanded={expandedEmailId === item.id}
+                onToggleExpand={() =>
+                  setExpandedEmailId((current) =>
+                    current === item.id ? null : item.id,
+                  )
+                }
+                onAccept={() => runEmailAction(item.id, 'accept')}
+                onDismiss={() => runEmailAction(item.id, 'dismiss')}
+              />
+            ))}
           </ul>
         )
       ) : null}
     </section>
+  );
+}
+
+function EmailReviewRow({
+  item,
+  busy,
+  expanded,
+  onToggleExpand,
+  onAccept,
+  onDismiss,
+}: {
+  item: DashboardSuggestedEmailTask;
+  busy: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onAccept: () => void;
+  onDismiss: () => void;
+}) {
+  const dueLabel = formatSuggestedDueDate(item.suggestedDueDate);
+  const sentLabel = formatEmailDateTime(item.emailSentAt);
+
+  return (
+    <li className="px-3 py-2.5 sm:px-4">
+      <div className="flex min-w-0 items-start gap-2">
+        {item.clientName ? (
+          <ProfileAvatar
+            displayName={item.clientName}
+            pictureUrl={item.clientPictureUrl}
+            className="mt-0.5 h-8 w-8 shrink-0"
+          />
+        ) : (
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--ozer-accent)]">
+            <Mail className="h-3.5 w-3.5" />
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          aria-expanded={expanded}
+          className="min-w-0 flex-1 overflow-hidden rounded-md text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]/60"
+        >
+          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+            {item.title}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+            {[
+              item.clientName,
+              item.threadSubject,
+              dueLabel ? `due ${dueLabel}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onAccept}
+          title="Accept task"
+          aria-label="Accept task"
+          className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-2 text-[11px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)] disabled:opacity-50"
+        >
+          <Check className="h-3.5 w-3.5" />
+          Accept
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onDismiss}
+          title="Dismiss suggestion"
+          aria-label="Dismiss suggestion"
+          className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {expanded ? (
+        <div className="mt-2 ml-10 space-y-1.5 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-3 py-2.5">
+          {item.detail ? (
+            <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]">
+              {item.detail}
+            </p>
+          ) : (
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              No extra task detail from this email.
+            </p>
+          )}
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Thread: {item.threadSubject || '(no subject)'}
+          </p>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Due: {dueLabel ?? 'No due date suggested'}
+            {sentLabel ? ` · Sent ${sentLabel}` : ''}
+          </p>
+        </div>
+      ) : null}
+    </li>
   );
 }

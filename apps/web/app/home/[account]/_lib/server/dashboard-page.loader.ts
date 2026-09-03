@@ -143,6 +143,7 @@ export type DashboardMeetingReviewItem = {
   suggestedTitle: string;
   meetingTitle: string;
   suggestedDueDate: string | null;
+  suggestedAssigneeId: string | null;
   clientName: string | null;
   clientPictureUrl: string | null;
 };
@@ -372,6 +373,7 @@ async function loadDashboardPageDataImpl(
         id,
         suggested_title,
         suggested_due_date,
+        suggested_assignee_id,
         meeting_transcripts:meeting_transcript_id (
           title,
           client_id,
@@ -760,6 +762,8 @@ async function loadDashboardPageDataImpl(
         suggestedDueDate: toIsoDateString(
           row.suggested_due_date as string | null | undefined,
         ),
+        suggestedAssigneeId:
+          (row.suggested_assignee_id as string | null | undefined) ?? null,
         clientName,
         clientPictureUrl:
           (clientRow?.picture_url as string | null | undefined)?.trim() || null,
@@ -807,7 +811,7 @@ async function loadDashboardPageDataImpl(
       id: item.id,
       title: item.title,
       detail: item.detail,
-      suggestedDueDate: item.suggestedDueDate,
+      suggestedDueDate: toIsoDateString(item.suggestedDueDate),
       threadId: item.threadId,
       threadSubject: item.threadSubject,
       emailSentAt: item.emailSentAt,
