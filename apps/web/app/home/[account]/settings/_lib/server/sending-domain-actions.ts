@@ -15,7 +15,7 @@ import {
   getPlatformSesFrom,
   isSendingDomainVerified,
   resolveWorkspaceMailFrom,
-} from '~/lib/sending-domains';
+} from '~/lib/sending-domains/server';
 
 import {
   AddSendingDomainSchema,

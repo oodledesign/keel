@@ -7,7 +7,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   createSendingDomainService,
   loadAccountSendingDomain,
-} from '~/lib/sending-domains';
+} from '~/lib/sending-domains/server';
 
 import {
   getDefaultAccountPath,

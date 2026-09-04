@@ -30,7 +30,7 @@ import {
   getPlatformSesFrom,
   loadAccountSendingDomain,
   resolveWorkspaceMailFrom,
-} from '~/lib/sending-domains';
+} from '~/lib/sending-domains/server';
 
 export type CirculationCandidate = {
   requirementId: string;

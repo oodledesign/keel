@@ -9,7 +9,7 @@ import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
 import {
   isSendingDomainVerified,
   loadAccountSendingDomain,
-} from '~/lib/sending-domains';
+} from '~/lib/sending-domains/server';
 import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
 
 export async function loadCampaignsPage(accountId: string) {

@@ -28,7 +28,7 @@ import {
   normalizeSendingLocalPart,
   resolveSendingHost,
   resolveWorkspaceMailFrom,
-} from '~/lib/sending-domains';
+} from '~/lib/sending-domains/server';
 import {
   buildWorkspaceMailingListUnsubscribeUrl,
   listWorkspaceMailingListSubscribers,

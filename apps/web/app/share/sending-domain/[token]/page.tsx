@@ -1,7 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { loadPublicSendingDomainInstructions } from '~/lib/sending-domains';
+import { loadPublicSendingDomainInstructions } from '~/lib/sending-domains/server';
 
 import { PublicSendingDomainInstructionsView } from './_components/public-sending-domain-instructions';
 
