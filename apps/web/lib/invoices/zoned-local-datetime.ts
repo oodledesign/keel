@@ -1,4 +1,8 @@
-import { parseYmd, zonedDateTimeToUtc } from '@kit/scheduling';
+import {
+  formatYmdInTimeZone,
+  parseYmd,
+  zonedDateTimeToUtc,
+} from '@kit/scheduling';
 
 /**
  * Convert a civil date + wall-clock time in `timeZone` to a UTC ISO string.
@@ -62,4 +66,28 @@ export function formatUtcInTimezone(
     time: timeStr,
     label: `${d}/${m}/${y} ${h}:${min} (${timeZone})`,
   };
+}
+
+/**
+ * Last instant of the civil calendar day that contains `now` in `timeZone`.
+ *
+ * Used as the recurring-invoice due cutoff so a series dated today in
+ * Europe/London is issued by the daily cron even when `next_issue_at`
+ * is still later that afternoon (e.g. noon UK / 11:00 UTC in BST).
+ */
+export function endOfZonedDay(now: Date, timeZone: string): Date {
+  const { year, monthIndex, day } = parseYmd(
+    formatYmdInTimeZone(now, timeZone),
+  );
+  const nextCivil = new Date(Date.UTC(year, monthIndex, day + 1));
+  const startOfNextDay = zonedDateTimeToUtc(
+    nextCivil.getUTCFullYear(),
+    nextCivil.getUTCMonth(),
+    nextCivil.getUTCDate(),
+    0,
+    0,
+    0,
+    timeZone,
+  );
+  return new Date(startOfNextDay.getTime() - 1);
 }
