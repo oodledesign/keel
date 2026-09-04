@@ -56,5 +56,9 @@ export {
 } from './public-requirement-form.schema';
 export {
   loadPublicMatchesByToken,
+  loadPublicRequirementForPreference,
+  updatePublicRequirementByToken,
+  type PublicMatchRequirement,
+  type PublicMatchRequirementUpdate,
   type PublicMatchesPage,
 } from './public-matches';

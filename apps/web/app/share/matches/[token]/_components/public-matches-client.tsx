@@ -1,12 +1,35 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
-import { updatePublicMatchSettings } from '../_lib/server/public-matches-actions';
+import {
+  REQUIREMENT_LOCATION_RADIUS_OPTIONS,
+  REQUIREMENT_PROPERTY_TYPES,
+  availabilityFromTenure,
+  radiusSelectValue,
+  tenureFromAvailability,
+} from '~/lib/commercial/requirement-form-fields';
+
+import {
+  updatePublicMatchRequirement,
+  updatePublicMatchSettings,
+} from '../_lib/server/public-matches-actions';
 
 export type PublicMatchesListing = {
   listingId: string;
@@ -21,6 +44,18 @@ export type PublicMatchesListing = {
   viewUrlLabel: string | null;
   websiteListingUrl: string | null;
   coverImageUrl: string | null;
+};
+
+export type PublicMatchesRequirement = {
+  id: string;
+  sector: string | null;
+  tenure: 'rent' | 'buy' | 'both' | null;
+  locationText: string | null;
+  searchRadiusMiles: number | null;
+  sizeMinSqft: number | null;
+  sizeMaxSqft: number | null;
+  budgetMinPence: number | null;
+  budgetMaxPence: number | null;
 };
 
 type Brand = {
@@ -38,8 +73,21 @@ type Props = {
   brand: Brand;
   initialUnsubscribed: boolean;
   initialNotifyOnNewMatch: boolean;
+  initialRequirement: PublicMatchesRequirement | null;
   listings: PublicMatchesListing[];
 };
+
+function penceToPoundsInput(pence: number | null | undefined): string {
+  if (pence == null || !Number.isFinite(pence)) return '';
+  return String(pence / 100);
+}
+
+function parseOptionalNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
 
 export function PublicMatchesClient({
   token,
@@ -49,15 +97,62 @@ export function PublicMatchesClient({
   brand,
   initialUnsubscribed,
   initialNotifyOnNewMatch,
+  initialRequirement,
   listings,
 }: Props) {
+  const router = useRouter();
   const [unsubscribed, setUnsubscribed] = useState(initialUnsubscribed);
   const [notifyOnNewMatch, setNotifyOnNewMatch] = useState(
     initialNotifyOnNewMatch,
   );
   const [pending, startTransition] = useTransition();
+  const [requirementPending, startRequirementTransition] = useTransition();
 
-  function save(next: { unsubscribed: boolean; notifyOnNewMatch: boolean }) {
+  const initialAvailability = useMemo(
+    () => availabilityFromTenure(initialRequirement?.tenure ?? null),
+    [initialRequirement?.tenure],
+  );
+
+  const [forSale, setForSale] = useState(initialAvailability.forSale);
+  const [toRent, setToRent] = useState(
+    initialAvailability.toRent ||
+      (!initialAvailability.forSale && !initialAvailability.toRent),
+  );
+  const [propertyType, setPropertyType] = useState(
+    initialRequirement?.sector &&
+      (REQUIREMENT_PROPERTY_TYPES as readonly string[]).includes(
+        initialRequirement.sector,
+      )
+      ? initialRequirement.sector
+      : 'all',
+  );
+  const [locationText, setLocationText] = useState(
+    initialRequirement?.locationText ?? '',
+  );
+  const [radiusMiles, setRadiusMiles] = useState(
+    radiusSelectValue(initialRequirement?.searchRadiusMiles),
+  );
+  const [sizeMin, setSizeMin] = useState(
+    initialRequirement?.sizeMinSqft != null
+      ? String(initialRequirement.sizeMinSqft)
+      : '',
+  );
+  const [sizeMax, setSizeMax] = useState(
+    initialRequirement?.sizeMaxSqft != null
+      ? String(initialRequirement.sizeMaxSqft)
+      : '',
+  );
+  const [budgetMin, setBudgetMin] = useState(
+    penceToPoundsInput(initialRequirement?.budgetMinPence),
+  );
+  const [budgetMax, setBudgetMax] = useState(
+    penceToPoundsInput(initialRequirement?.budgetMaxPence),
+  );
+
+  function saveEmailPrefs(next: {
+    unsubscribed: boolean;
+    notifyOnNewMatch: boolean;
+  }) {
     const previous = { unsubscribed, notifyOnNewMatch };
     setUnsubscribed(next.unsubscribed);
     setNotifyOnNewMatch(next.notifyOnNewMatch);
@@ -74,6 +169,63 @@ export function PublicMatchesClient({
         setNotifyOnNewMatch(previous.notifyOnNewMatch);
         toast.error(
           error instanceof Error ? error.message : 'Could not save preferences',
+        );
+      }
+    });
+  }
+
+  function saveRequirement() {
+    if (!initialRequirement) return;
+    if (!forSale && !toRent) {
+      toast.error('Select for sale, to rent, or both.');
+      return;
+    }
+
+    const sizeMinSqft = parseOptionalNumber(sizeMin);
+    const sizeMaxSqft = parseOptionalNumber(sizeMax);
+    const budgetMinPounds = parseOptionalNumber(budgetMin);
+    const budgetMaxPounds = parseOptionalNumber(budgetMax);
+
+    if (sizeMin !== '' && sizeMinSqft == null) {
+      toast.error('Enter a valid minimum size.');
+      return;
+    }
+    if (sizeMax !== '' && sizeMaxSqft == null) {
+      toast.error('Enter a valid maximum size.');
+      return;
+    }
+    if (budgetMin !== '' && budgetMinPounds == null) {
+      toast.error('Enter a valid minimum budget.');
+      return;
+    }
+    if (budgetMax !== '' && budgetMaxPounds == null) {
+      toast.error('Enter a valid maximum budget.');
+      return;
+    }
+
+    startRequirementTransition(async () => {
+      try {
+        await updatePublicMatchRequirement({
+          token,
+          sector:
+            propertyType === 'all'
+              ? null
+              : (propertyType as (typeof REQUIREMENT_PROPERTY_TYPES)[number]),
+          tenure: tenureFromAvailability(forSale, toRent),
+          locationText: locationText.trim() || null,
+          searchRadiusMiles: Number(radiusMiles),
+          sizeMinSqft,
+          sizeMaxSqft,
+          budgetMinPence:
+            budgetMinPounds == null ? null : Math.round(budgetMinPounds * 100),
+          budgetMaxPence:
+            budgetMaxPounds == null ? null : Math.round(budgetMaxPounds * 100),
+        });
+        toast.success('Requirement saved');
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save requirement',
         );
       }
     });
@@ -163,6 +315,159 @@ export function PublicMatchesClient({
 
           <div className="mt-8 space-y-4 border-t border-[#E4E2DC] pt-6">
             <h2 className="text-base font-semibold text-[#09111F]">
+              Your requirement
+            </h2>
+            {!initialRequirement ? (
+              <p className="text-sm text-[#6B6B6B]">
+                No requirement is linked to this address yet. Contact{' '}
+                {agencyName} if you need to register one.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-6">
+                  <label className="flex items-center gap-2 text-sm text-[#3D3D3D]">
+                    <Checkbox
+                      checked={forSale}
+                      onCheckedChange={(checked) =>
+                        setForSale(checked === true)
+                      }
+                      data-test="matches-req-for-sale"
+                    />
+                    For sale
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-[#3D3D3D]">
+                    <Checkbox
+                      checked={toRent}
+                      onCheckedChange={(checked) => setToRent(checked === true)}
+                      data-test="matches-req-to-rent"
+                    />
+                    To rent
+                  </label>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label>Property type</Label>
+                  <Select value={propertyType} onValueChange={setPropertyType}>
+                    <SelectTrigger data-test="matches-req-property-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All property types</SelectItem>
+                      {REQUIREMENT_PROPERTY_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label htmlFor="matches-req-location">Location</Label>
+                  <Input
+                    id="matches-req-location"
+                    data-test="matches-req-location"
+                    value={locationText}
+                    onChange={(e) => setLocationText(e.target.value)}
+                    placeholder="Town, area, or postcode"
+                  />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <Label>Location radius</Label>
+                  <Select value={radiusMiles} onValueChange={setRadiusMiles}>
+                    <SelectTrigger data-test="matches-req-radius">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REQUIREMENT_LOCATION_RADIUS_OPTIONS.map((option) => (
+                        <SelectItem
+                          key={option.miles}
+                          value={String(option.miles)}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="matches-req-size-min">
+                      Min floor area (sq ft)
+                    </Label>
+                    <Input
+                      id="matches-req-size-min"
+                      data-test="matches-req-size-min"
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={sizeMin}
+                      onChange={(e) => setSizeMin(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="matches-req-size-max">
+                      Max floor area (sq ft)
+                    </Label>
+                    <Input
+                      id="matches-req-size-max"
+                      data-test="matches-req-size-max"
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={sizeMax}
+                      onChange={(e) => setSizeMax(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="matches-req-budget-min">
+                      Budget min (£)
+                    </Label>
+                    <Input
+                      id="matches-req-budget-min"
+                      data-test="matches-req-budget-min"
+                      type="number"
+                      min={0}
+                      value={budgetMin}
+                      onChange={(e) => setBudgetMin(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="matches-req-budget-max">
+                      Budget max (£)
+                    </Label>
+                    <Input
+                      id="matches-req-budget-max"
+                      data-test="matches-req-budget-max"
+                      type="number"
+                      min={0}
+                      value={budgetMax}
+                      onChange={(e) => setBudgetMax(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  disabled={requirementPending}
+                  onClick={saveRequirement}
+                  data-test="matches-req-save"
+                  style={{ background: brand.accentColor }}
+                  className="text-white"
+                >
+                  {requirementPending ? 'Saving…' : 'Save requirement'}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-8 space-y-4 border-t border-[#E4E2DC] pt-6">
+            <h2 className="text-base font-semibold text-[#09111F]">
               Email preferences
             </h2>
             <label className="flex items-center justify-between gap-3">
@@ -173,7 +478,10 @@ export function PublicMatchesClient({
                 checked={!unsubscribed && notifyOnNewMatch}
                 disabled={pending || unsubscribed}
                 onCheckedChange={(enabled) =>
-                  save({ unsubscribed: false, notifyOnNewMatch: enabled })
+                  saveEmailPrefs({
+                    unsubscribed: false,
+                    notifyOnNewMatch: enabled,
+                  })
                 }
                 data-test="matches-notify-switch"
               />
@@ -182,7 +490,7 @@ export function PublicMatchesClient({
               variant={unsubscribed ? 'outline' : 'destructive'}
               disabled={pending}
               onClick={() =>
-                save({
+                saveEmailPrefs({
                   unsubscribed: !unsubscribed,
                   notifyOnNewMatch: unsubscribed,
                 })

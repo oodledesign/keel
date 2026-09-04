@@ -44,6 +44,7 @@ export default async function PublicMatchesPage({ params }: PageProps) {
       }}
       initialUnsubscribed={data.unsubscribed}
       initialNotifyOnNewMatch={data.notifyOnNewMatch}
+      initialRequirement={data.requirement}
       listings={data.listings}
     />
   );
