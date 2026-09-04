@@ -10,6 +10,11 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
+  RadioGroup,
+  RadioGroupItem,
+  RadioGroupItemLabel,
+} from '@kit/ui/radio-group';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -30,6 +35,11 @@ import {
   createWorkspaceFormField,
   ensureListingField,
 } from '~/lib/workspace-forms/form-fields';
+import {
+  WORKSPACE_FORM_PAGE_BACKGROUNDS,
+  WORKSPACE_FORM_PAGE_BACKGROUND_LABELS,
+  type WorkspaceFormPageBackground,
+} from '~/lib/workspace-forms/form-theme';
 import { ensureMailingListFields } from '~/lib/workspace-forms/mailing-list-fields';
 import {
   workspaceBtnPrimary,
@@ -78,6 +88,8 @@ export function FormBuilder({
   );
   const [fields, setFields] = useState(form.fields);
   const [enabled, setEnabled] = useState(form.enabled);
+  const [pageBackground, setPageBackground] =
+    useState<WorkspaceFormPageBackground>(form.theme.pageBackground);
 
   function updateField(id: string, patch: Partial<WorkspaceFormField>) {
     setFields((current) =>
@@ -114,6 +126,7 @@ export function FormBuilder({
           successMessage: successMessage.trim() || null,
           fields,
           enabled,
+          theme: { pageBackground },
         });
         toast.success('Form saved');
         router.refresh();
@@ -265,6 +278,40 @@ export function FormBuilder({
             </p>
           </div>
         ) : null}
+
+        <div className="grid gap-2">
+          <Label>Page background</Label>
+          <RadioGroup
+            value={pageBackground}
+            onValueChange={(value) =>
+              setPageBackground(value as WorkspaceFormPageBackground)
+            }
+            className="grid gap-2 sm:grid-cols-2"
+            data-test="form-page-background"
+          >
+            {WORKSPACE_FORM_PAGE_BACKGROUNDS.map((value) => {
+              const meta = WORKSPACE_FORM_PAGE_BACKGROUND_LABELS[value];
+              const selected = pageBackground === value;
+              return (
+                <RadioGroupItemLabel
+                  key={value}
+                  selected={selected}
+                  className="h-full items-start gap-3 space-x-0"
+                >
+                  <RadioGroupItem value={value} className="mt-0.5" />
+                  <span className="grid gap-0.5">
+                    <span className={`font-medium ${workspaceText}`}>
+                      {meta.label}
+                    </span>
+                    <span className={`text-xs ${workspaceTextMuted}`}>
+                      {meta.description}
+                    </span>
+                  </span>
+                </RadioGroupItemLabel>
+              );
+            })}
+          </RadioGroup>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-1.5">

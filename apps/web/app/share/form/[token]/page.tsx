@@ -1,4 +1,5 @@
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { brandPageGradientCss } from '~/lib/workspace-forms/form-theme';
 import { loadCachedPublicWorkspaceForm } from '~/lib/workspace-forms/public-form';
 
 import { PublicWorkspaceForm } from './_components/public-workspace-form';
@@ -48,10 +49,15 @@ async function PublicWorkspaceFormPage({
     );
   }
 
+  const brandGradient = form.theme.pageBackground === 'brand_gradient';
+  const pageBackground = brandGradient
+    ? brandPageGradientCss(form.brand.primary_color)
+    : form.brand.secondary_color || '#FBF6EC';
+
   return (
     <main
       className={`min-h-[100dvh] px-4 ${embed ? 'py-4' : 'py-10 sm:px-6'}`}
-      style={{ background: form.brand.secondary_color || '#FBF6EC' }}
+      style={{ background: pageBackground }}
     >
       <PublicWorkspaceForm
         token={token}
@@ -68,6 +74,7 @@ async function PublicWorkspaceFormPage({
         logoUrl={form.brand.logo_url}
         accentColor={form.brand.accent_color}
         primaryColor={form.brand.primary_color}
+        chromeOnDark={brandGradient}
       />
     </main>
   );

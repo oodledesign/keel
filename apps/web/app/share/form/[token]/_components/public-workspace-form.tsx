@@ -35,6 +35,8 @@ type Props = {
   logoUrl?: string | null;
   accentColor: string;
   primaryColor: string;
+  /** Light text for workspace name/title when page bg is dark brand gradient. */
+  chromeOnDark?: boolean;
 };
 
 export function PublicWorkspaceForm({
@@ -52,6 +54,7 @@ export function PublicWorkspaceForm({
   logoUrl,
   accentColor,
   primaryColor,
+  chromeOnDark = false,
 }: Props) {
   const visibleFields = useMemo(() => publicVisibleFields(fields), [fields]);
   const [values, setValues] = useState<Record<string, string | boolean>>(() => {
@@ -139,17 +142,27 @@ export function PublicWorkspaceForm({
             className="mx-auto mb-4 h-12 w-auto"
           />
         ) : null}
-        <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
+        <p
+          className={`text-xs font-medium tracking-wide uppercase ${
+            chromeOnDark ? 'text-white/70' : 'text-neutral-500'
+          }`}
+        >
           {accountName}
         </p>
         <h1
           className="font-heading mt-2 text-2xl font-bold"
-          style={{ color: primaryColor }}
+          style={{ color: chromeOnDark ? '#FFFFFF' : primaryColor }}
         >
           {formName}
         </h1>
         {description ? (
-          <p className="mt-2 text-sm text-neutral-600">{description}</p>
+          <p
+            className={`mt-2 text-sm ${
+              chromeOnDark ? 'text-white/80' : 'text-neutral-600'
+            }`}
+          >
+            {description}
+          </p>
         ) : null}
       </div>
 

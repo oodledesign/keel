@@ -10,12 +10,17 @@ import {
   type WorkspaceFormStatus,
   ensureListingField,
 } from '~/lib/workspace-forms/form-fields';
+import { workspaceFormCreateDefaultsForTemplate } from '~/lib/workspace-forms/form-templates';
+import {
+  type WorkspaceFormTheme,
+  parseWorkspaceFormTheme,
+  serializeWorkspaceFormTheme,
+} from '~/lib/workspace-forms/form-theme';
 import type {
   CreateWorkspaceFormInput,
   PublishWorkspaceFormInput,
   UpdateWorkspaceFormInput,
 } from '~/lib/workspace-forms/form.schema';
-import { workspaceFormCreateDefaultsForTemplate } from '~/lib/workspace-forms/form-templates';
 import {
   defaultMailingListFormFields,
   ensureMailingListFields,
@@ -45,6 +50,7 @@ export type WorkspaceFormRecord = {
   submitLabel: string;
   successMessage: string | null;
   fields: WorkspaceFormField[];
+  theme: WorkspaceFormTheme;
   createdAt: string;
   updatedAt: string;
   submissionCount: number;
@@ -84,6 +90,7 @@ type FormRow = {
   submit_label: string | null;
   success_message: string | null;
   fields: unknown;
+  theme: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -103,6 +110,7 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     submitLabel: row.submit_label?.trim() || 'Submit',
     successMessage: row.success_message,
     fields: parseFormFields(row.fields),
+    theme: parseWorkspaceFormTheme(row.theme),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     submissionCount,
@@ -293,6 +301,10 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         success_message: input.successMessage?.trim() || null,
         fields,
       };
+
+      if (input.theme) {
+        updates.theme = serializeWorkspaceFormTheme(input.theme);
+      }
 
       if (input.status) updates.status = input.status;
       if (typeof input.enabled === 'boolean') {

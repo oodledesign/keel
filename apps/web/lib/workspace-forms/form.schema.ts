@@ -6,6 +6,7 @@ import {
   WORKSPACE_FORM_STATUSES,
 } from './form-fields';
 import { WORKSPACE_FORM_TEMPLATES } from './form-templates';
+import { WORKSPACE_FORM_PAGE_BACKGROUNDS } from './form-theme';
 
 export const WorkspaceFormFieldSchema = z.object({
   id: z.string().min(1).max(80),
@@ -29,6 +30,10 @@ export const CreateWorkspaceFormSchema = z.object({
   template: z.enum(WORKSPACE_FORM_TEMPLATES).default('contact'),
 });
 
+export const WorkspaceFormThemeSchema = z.object({
+  pageBackground: z.enum(WORKSPACE_FORM_PAGE_BACKGROUNDS),
+});
+
 export const UpdateWorkspaceFormSchema = z.object({
   accountId: z.string().uuid(),
   formId: z.string().uuid(),
@@ -41,6 +46,7 @@ export const UpdateWorkspaceFormSchema = z.object({
   submitLabel: z.string().min(1).max(60).optional(),
   successMessage: z.string().max(400).optional().nullable(),
   fields: z.array(WorkspaceFormFieldSchema).min(1).max(40),
+  theme: WorkspaceFormThemeSchema.optional(),
 });
 
 export const DeleteWorkspaceFormSchema = z.object({

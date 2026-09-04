@@ -18,6 +18,7 @@ import {
   formatPipelineNotes,
   resolveBoundListingId,
 } from './form-fields';
+import { type WorkspaceFormTheme, parseWorkspaceFormTheme } from './form-theme';
 import type { PublicWorkspaceFormSubmitInput } from './form.schema';
 import {
   extractMailingListSpec,
@@ -45,6 +46,7 @@ export type PublicWorkspaceForm = {
   submitLabel: string;
   successMessage: string;
   fields: WorkspaceFormField[];
+  theme: WorkspaceFormTheme;
   brand: AccountBrandResolved;
   commercialProperty: boolean;
 };
@@ -63,6 +65,7 @@ type FormRow = {
   submit_label: string | null;
   success_message: string | null;
   fields: unknown;
+  theme: unknown;
 };
 
 export function parseFormFields(raw: unknown): WorkspaceFormField[] {
@@ -81,7 +84,7 @@ export async function loadPublicWorkspaceFormByToken(
   if (!token || token.length < 16) return null;
 
   const selectColumns =
-    'id, account_id, name, description, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields';
+    'id, account_id, name, description, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme';
 
   const byShare = await fromTable(admin, 'workspace_forms')
     .select(selectColumns)
@@ -138,6 +141,7 @@ export async function loadPublicWorkspaceFormByToken(
           ? 'Thank you — your response has been received.'
           : 'Thank you — we have received your enquiry.'),
     fields: parseFormFields(row.fields),
+    theme: parseWorkspaceFormTheme(row.theme),
     brand,
   };
 }
