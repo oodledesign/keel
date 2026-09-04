@@ -32,6 +32,7 @@ import {
   rotateEachFeedAction,
   rotatePropertyHiveFeedAction,
   saveRightmoveWorkspaceBranchesAction,
+  saveWebsiteListingUrlTemplateAction,
   testPublishListingAction,
 } from '../_lib/server/server-actions';
 
@@ -77,6 +78,10 @@ export function CommercialPublishingSettings({
   void accountSlug;
   void linkedinBanner;
   const [settings, setSettings] = useState(initialSettings);
+  const [listingUrlTemplate, setListingUrlTemplate] = useState(
+    initialSettings.propertyHive.listingUrlTemplate ?? '',
+  );
+  const [templatePending, startTemplateTransition] = useTransition();
   const [rmPending, startRmTransition] = useTransition();
   const [testPending, startTestTransition] = useTransition();
   const [feedPending, startFeedTransition] = useTransition();
@@ -370,6 +375,59 @@ export function CommercialPublishingSettings({
               </Button>
             ) : null}
           </div>
+
+          <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
+            <Label htmlFor="listing-url-template">
+              Public listing URL template
+            </Label>
+            <p className="text-xs text-[var(--workspace-shell-text)]/55">
+              For XML-only websites (no Property Hive REST), Ozer can store a
+              public page link when Website is on. Use{' '}
+              <code className="text-[11px]">{'{slug}'}</code> (address) or{' '}
+              <code className="text-[11px]">{'{external_id}'}</code>. Example:{' '}
+              <code className="text-[11px]">
+                https://www.bracketts.co.uk/property/{'{slug}'}/
+              </code>
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="listing-url-template"
+                value={listingUrlTemplate}
+                onChange={(event) => setListingUrlTemplate(event.target.value)}
+                placeholder="https://www.example.com/property/{slug}/"
+                className="font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={templatePending}
+                className="shrink-0"
+                onClick={() => {
+                  startTemplateTransition(async () => {
+                    try {
+                      const next = await saveWebsiteListingUrlTemplateAction({
+                        accountId,
+                        listingUrlTemplate: listingUrlTemplate.trim() || null,
+                      });
+                      setSettings(next);
+                      setListingUrlTemplate(
+                        next.propertyHive.listingUrlTemplate ?? '',
+                      );
+                      toast.success('Listing URL template saved');
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not save listing URL template',
+                      );
+                    }
+                  });
+                }}
+              >
+                {templatePending ? 'Saving…' : 'Save template'}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -556,7 +614,7 @@ export function CommercialPublishingSettings({
             }
           />
         </CardHeader>
-                <CardContent className="space-y-4">
+        <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
             Coming soon — post disposals to your LinkedIn company page from
             Publishing.
@@ -564,7 +622,7 @@ export function CommercialPublishingSettings({
         </CardContent>
       </Card>
 
-<Card className={workspacePanelCard}>
+      <Card className={workspacePanelCard}>
         <CardHeader>
           <CardTitle className="text-base text-[var(--workspace-shell-text)]">
             Test publish

@@ -16,14 +16,14 @@ import {
   type CirculationEmailBrand,
   buildCirculationEmailHtml,
 } from '~/lib/commercial/circulation/circulation-email';
-import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
-import { resolveSiteUrlForPublicMedia } from '~/lib/commercial/listing-media-public-url';
-import { isSafeHttpUrl } from '~/lib/commercial/linkedin-publishing/listing-public-url';
 import {
   createCirculationUnsubscribeToken,
   createCommercialCirculationService,
   sendCirculationEmailViaSes,
 } from '~/lib/commercial/circulation/circulation.service';
+import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
+import { resolveSiteUrlForPublicMedia } from '~/lib/commercial/listing-media-public-url';
+import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import {
   type MatchListingSnapshot,
   type MatchRequirementSnapshot,
@@ -632,7 +632,7 @@ export async function circulateListing(
     )?.external_url?.trim();
     if (
       url &&
-      isSafeHttpUrl(url) &&
+      isPublicListingPageUrl(url) &&
       ['published', 'live', 'synced'].includes(status)
     ) {
       propertyHiveUrl = url;
@@ -640,7 +640,7 @@ export async function circulateListing(
   }
 
   const websiteListingUrl =
-    listingWebsiteUrl && isSafeHttpUrl(listingWebsiteUrl)
+    listingWebsiteUrl && isPublicListingPageUrl(listingWebsiteUrl)
       ? listingWebsiteUrl
       : propertyHiveUrl;
   const viewUrl = websiteListingUrl ?? brochureUrl;
@@ -651,8 +651,7 @@ export async function circulateListing(
       : null;
 
   const mediaOrigin =
-    resolveSiteUrlForPublicMedia() ??
-    input.siteUrl.trim().replace(/\/+$/, '');
+    resolveSiteUrlForPublicMedia() ?? input.siteUrl.trim().replace(/\/+$/, '');
   const coverByListing = mediaOrigin
     ? await loadListingCoverUrlsForDigest(
         client,

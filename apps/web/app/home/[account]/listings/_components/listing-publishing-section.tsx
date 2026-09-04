@@ -40,12 +40,14 @@ export function ListingPublishingSection({
   accountId,
   accountSlug,
   media = [],
+  listingUrlTemplate = null,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
   accountSlug: string;
   media?: CommercialListingMedia[];
+  listingUrlTemplate?: string | null;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const [listing, setListing] = useState(initial);
@@ -93,6 +95,7 @@ export function ListingPublishingSection({
         publications={publications}
         accountId={accountId}
         media={media}
+        listingUrlTemplate={listingUrlTemplate}
       />
 
       <Card id="brochure" className={`${workspacePanelCard} scroll-mt-36`}>

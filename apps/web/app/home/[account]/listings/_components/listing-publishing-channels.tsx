@@ -16,8 +16,11 @@ import {
   getEachChannelStatus,
   getRightmoveChannelStatus,
   getWebsiteChannelStatus,
-  isSafeHttpUrl,
 } from '~/lib/commercial/channel-publish-status';
+import {
+  isPublicListingPageUrl,
+  resolveStoredOrTemplatedWebsiteUrl,
+} from '~/lib/commercial/listing-website-url';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -37,11 +40,14 @@ export function ListingPublishingChannels({
   publications,
   accountId,
   media = [],
+  listingUrlTemplate = null,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
   media?: CommercialListingMedia[];
+  /** Workspace Property Hive listing URL template (XML-only sites). */
+  listingUrlTemplate?: string | null;
 }) {
   const router = useRouter();
   const { canEditDisposals } = useDisposalAccess();
@@ -74,8 +80,24 @@ export function ListingPublishingChannels({
       getMarketingReadiness({ listing, media, publications }),
     );
 
-  const websiteUrl = listing.websiteUrl?.trim() ?? '';
-  const showWebsiteLink = websiteUrl.length > 0 && isSafeHttpUrl(websiteUrl);
+  const phPublication = publications.find((p) => p.portal === 'property_hive');
+  const resolvedWebsiteUrl =
+    resolveStoredOrTemplatedWebsiteUrl({
+      websiteUrl: listing.websiteUrl,
+      portalExternalUrl: phPublication?.externalUrl ?? null,
+      template: listingUrlTemplate,
+      listing: {
+        externalId: listing.externalId,
+        addressLine1: listing.addressLine1,
+        addressLine2: listing.addressLine2,
+        town: listing.town,
+        postcode: listing.postcode,
+        name: listing.name,
+      },
+    }) ?? '';
+  const websiteUrl = resolvedWebsiteUrl;
+  const showWebsiteLink =
+    websiteUrl.length > 0 && isPublicListingPageUrl(websiteUrl);
   const needsFeedIdFix =
     websiteStatus.state === 'blocked' &&
     websiteStatus.blockers.some((b) => /feed id/i.test(b));

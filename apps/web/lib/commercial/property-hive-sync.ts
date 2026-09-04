@@ -6,6 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { isBlockedLogoHostname } from '~/lib/clients/client-logo-icons';
+import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 
 import {
   type DisposalType,
@@ -491,6 +492,31 @@ export async function pushListingToPropertyHive(
       lastError: null,
       metadata: { department: payload.department },
     });
+
+    // REST workspaces: promote WP link into listing.website_url when empty.
+    if (externalUrl && isPublicListingPageUrl(externalUrl)) {
+      const { data: listingRow } = await db()
+        .from('commercial_listings')
+        .select('website_url')
+        .eq('id', listingId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+      const existing =
+        (
+          listingRow as { website_url?: string | null } | null
+        )?.website_url?.trim() ?? '';
+      if (!existing) {
+        await db()
+          .from('commercial_listings')
+          .update({
+            website_url: externalUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', listingId)
+          .eq('account_id', accountId)
+          .or('website_url.is.null,website_url.eq.');
+      }
+    }
 
     return { externalId, externalUrl };
   } catch (err) {

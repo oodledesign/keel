@@ -20,6 +20,11 @@ import {
   resolveSiteUrlForPublicMedia,
   withRightmoveMediaCacheBust,
 } from '~/lib/commercial/listing-media-public-url';
+import {
+  LISTING_URL_TEMPLATE_META_KEY,
+  applyListingWebsiteUrlTemplate,
+  isPublicListingPageUrl,
+} from '~/lib/commercial/listing-website-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   RightmoveApiError,
@@ -840,6 +845,70 @@ export async function ensureListingFeedExternalId(input: {
  * Off → unpublished (excluded from feed). On → published (included when on-market).
  * Preserves existing Property Hive external ids so a toggle cannot drop a live post.
  */
+
+async function loadWebsiteListingUrlTemplate(
+  accountId: string,
+): Promise<string | null> {
+  const { data } = await db()
+    .from('commercial_portal_credentials')
+    .select('metadata')
+    .eq('account_id', accountId)
+    .eq('portal', 'property_hive')
+    .maybeSingle();
+  const meta = (data?.metadata ?? {}) as Record<string, unknown>;
+  const template = meta[LISTING_URL_TEMPLATE_META_KEY];
+  return typeof template === 'string' && template.trim()
+    ? template.trim()
+    : null;
+}
+
+/**
+ * When website_url is empty and the workspace has a listing URL template,
+ * persist a durable public URL (XML-only agencies cannot get WP link via REST).
+ */
+export async function maybeFillListingWebsiteUrlFromTemplate(input: {
+  accountId: string;
+  listingId: string;
+}): Promise<string | null> {
+  const { data: listing, error } = await db()
+    .from('commercial_listings')
+    .select(
+      'id, website_url, external_id, address_line_1, address_line_2, town, postcode, name',
+    )
+    .eq('id', input.listingId)
+    .eq('account_id', input.accountId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!listing) return null;
+
+  const existing = (listing.website_url as string | null)?.trim() ?? '';
+  if (existing && isPublicListingPageUrl(existing)) return existing;
+
+  const template = await loadWebsiteListingUrlTemplate(input.accountId);
+  const built = applyListingWebsiteUrlTemplate(template, {
+    externalId: listing.external_id as string | null,
+    addressLine1: listing.address_line_1 as string | null,
+    addressLine2: listing.address_line_2 as string | null,
+    town: listing.town as string | null,
+    postcode: listing.postcode as string | null,
+    name: listing.name as string | null,
+  });
+  if (!built) return null;
+
+  const { error: updateError } = await db()
+    .from('commercial_listings')
+    .update({
+      website_url: built,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.listingId)
+    .eq('account_id', input.accountId)
+    .or('website_url.is.null,website_url.eq.');
+
+  if (updateError) throw new Error(updateError.message);
+  return built;
+}
+
 export async function setWebsiteListingFeedInclusion(input: {
   accountId: string;
   listingId: string;
@@ -909,7 +978,7 @@ export async function setWebsiteListingFeedInclusion(input: {
   });
   const { feedUrl } = await ensurePropertyHiveFeedToken(accountId);
 
-  return recordPublication({
+  const publication = await recordPublication({
     accountId,
     listingId,
     portal: 'property_hive',
@@ -926,6 +995,17 @@ export async function setWebsiteListingFeedInclusion(input: {
       note: 'Included on the website XML feed',
     },
   });
+
+  try {
+    await maybeFillListingWebsiteUrlFromTemplate({ accountId, listingId });
+  } catch (err) {
+    console.error(
+      '[portal] website_url template fill failed',
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  return publication;
 }
 
 /**

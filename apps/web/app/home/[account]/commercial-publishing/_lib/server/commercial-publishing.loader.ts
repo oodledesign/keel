@@ -34,6 +34,8 @@ export type CommercialPublishingSettings = {
     officeId: string | null;
     feedUrl: string | null;
     feedEnabled: boolean;
+    /** e.g. https://www.bracketts.co.uk/property/{slug}/ for XML-only sites */
+    listingUrlTemplate: string | null;
   };
   rightmove: {
     /** Platform OAuth client credentials present in env. */
@@ -114,6 +116,11 @@ export async function loadCommercialPublishingSettings(
   const eachFeedUrl = eachFeedToken ? buildEachFeedUrl(eachFeedToken) : null;
   const feedEnabled = Boolean(feedToken);
   const eachFeedEnabled = Boolean(eachFeedToken);
+  const listingUrlTemplate =
+    typeof phMetadata.listing_url_template === 'string' &&
+    phMetadata.listing_url_template.trim()
+      ? phMetadata.listing_url_template.trim()
+      : null;
 
   const oauthConfigured = isRightmoveOAuthConfigured();
   const workspaceBranches: RightmoveWorkspaceBranch[] = branches.map(
@@ -166,6 +173,7 @@ export async function loadCommercialPublishingSettings(
       officeId: (ph?.office_id as string | null | undefined) ?? null,
       feedUrl,
       feedEnabled,
+      listingUrlTemplate,
     },
     rightmove: {
       oauthConfigured,

@@ -46,6 +46,7 @@ import {
   SavePortalCredentialsSchema,
   SavePropertyHiveCredentialsSchema,
   SaveRightmoveWorkspaceBranchesSchema,
+  SaveWebsiteListingUrlTemplateSchema,
   SelectLinkedInOrgSchema,
   SetEachListingFeedInclusionSchema,
   SetWebsiteListingFeedInclusionSchema,
@@ -541,4 +542,49 @@ export const ensureWebsiteFeedReadyAction = enhanceAction(
     };
   },
   { schema: EnsureWebsiteFeedReadySchema },
+);
+
+export const saveWebsiteListingUrlTemplateAction = enhanceAction(
+  async (input) => {
+    const template = input.listingUrlTemplate?.trim() || null;
+    const client = db();
+    const { data: existing, error: loadError } = await client
+      .from('commercial_portal_credentials')
+      .select('id, metadata')
+      .eq('account_id', input.accountId)
+      .eq('portal', 'property_hive')
+      .maybeSingle();
+    if (loadError) throw new Error(loadError.message);
+
+    const metadata = {
+      ...((existing?.metadata as Record<string, unknown> | null) ?? {}),
+    };
+    if (template) {
+      metadata.listing_url_template = template;
+    } else {
+      delete metadata.listing_url_template;
+    }
+
+    const now = new Date().toISOString();
+    if (existing?.id) {
+      const { error } = await client
+        .from('commercial_portal_credentials')
+        .update({ metadata, updated_at: now })
+        .eq('id', existing.id as string);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await client
+        .from('commercial_portal_credentials')
+        .insert({
+          account_id: input.accountId,
+          portal: 'property_hive',
+          metadata,
+          updated_at: now,
+        });
+      if (error) throw new Error(error.message);
+    }
+
+    return loadCommercialPublishingSettings(input.accountId);
+  },
+  { schema: SaveWebsiteListingUrlTemplateSchema },
 );

@@ -75,3 +75,30 @@ export const EnsureWebsiteFeedReadySchema = z.object({
   accountId: z.string().uuid(),
   listingId: z.string().uuid(),
 });
+
+export const SaveWebsiteListingUrlTemplateSchema = AccountIdSchema.extend({
+  listingUrlTemplate: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .nullable()
+    .refine(
+      (value) => {
+        if (value == null || value === '') return true;
+        if (!value.includes('{')) return false;
+        try {
+          // Placeholder braces make URL() fail; validate scheme + host only.
+          const probe = value.replace(/\{[a-z0-9_]+\}/gi, 'x');
+          const parsed = new URL(probe);
+          return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+        } catch {
+          return false;
+        }
+      },
+      {
+        message:
+          'Use an http(s) URL template with placeholders like {slug} or {external_id}',
+      },
+    ),
+});

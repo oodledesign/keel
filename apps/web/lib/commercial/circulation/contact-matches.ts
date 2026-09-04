@@ -9,10 +9,10 @@ import {
   normalizeCirculationEmail,
 } from '~/lib/commercial/circulation/circulation-eligibility';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
-import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
 import { DISPOSAL_TYPE_LABELS } from '~/lib/commercial/commercial-constants';
+import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
 import { resolveSiteUrlForPublicMedia } from '~/lib/commercial/listing-media-public-url';
-import { isSafeHttpUrl } from '~/lib/commercial/linkedin-publishing/listing-public-url';
+import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import {
   ACTIVE_LISTING_STATUSES_FOR_MATCH,
   ACTIVE_REQUIREMENT_STAGES_FOR_MATCH,
@@ -198,9 +198,9 @@ function pickWebsiteListingUrl(
   portalUrl: string | null | undefined,
 ): string | null {
   const website = websiteUrl?.trim() ?? '';
-  if (website && isSafeHttpUrl(website)) return website;
+  if (website && isPublicListingPageUrl(website)) return website;
   const portal = portalUrl?.trim() ?? '';
-  if (portal && isSafeHttpUrl(portal)) return portal;
+  if (portal && isPublicListingPageUrl(portal)) return portal;
   return null;
 }
 
@@ -209,7 +209,10 @@ function resolveListingCta(input: {
   brochureUrl: string | null;
 }): { viewUrl: string | null; viewUrlLabel: string | null } {
   if (input.websiteListingUrl) {
-    return { viewUrl: input.websiteListingUrl, viewUrlLabel: 'View on website' };
+    return {
+      viewUrl: input.websiteListingUrl,
+      viewUrlLabel: 'View on website',
+    };
   }
   if (input.brochureUrl) {
     return { viewUrl: input.brochureUrl, viewUrlLabel: 'View details' };
@@ -252,7 +255,7 @@ async function loadPropertyHiveListingUrls(
     const status = (row.status ?? '').trim().toLowerCase();
     if (!listingId || map.has(listingId)) continue;
     if (!LIVE_PORTAL_STATUSES.has(status)) continue;
-    if (!url || !isSafeHttpUrl(url)) continue;
+    if (!url || !isPublicListingPageUrl(url)) continue;
     map.set(listingId, url);
   }
 
@@ -469,7 +472,9 @@ export async function listContactMatches(
 
   const matchedListingIds = [
     ...new Set(
-      contacts.flatMap((row) => row.listings.map((listing) => listing.listingId)),
+      contacts.flatMap((row) =>
+        row.listings.map((listing) => listing.listingId),
+      ),
     ),
   ];
   const mediaOrigin =

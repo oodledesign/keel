@@ -1,4 +1,5 @@
 import pathsConfig from '~/config/paths.config';
+import { isCommercialFeedUrl } from '~/lib/commercial/listing-website-url';
 
 export type ListingPublicUrlSource = 'website' | 'portal' | 'brochure';
 
@@ -48,7 +49,8 @@ function livePortalUrl(
     (row) =>
       LIVE_PORTAL_STATUSES.has(row.status) &&
       row.externalUrl &&
-      isSafeHttpUrl(row.externalUrl),
+      isSafeHttpUrl(row.externalUrl) &&
+      !isCommercialFeedUrl(row.externalUrl),
   );
   if (live.length === 0) return null;
 
@@ -75,7 +77,7 @@ export function resolveListingPublicUrl(
   input: ListingPublicUrlInput,
 ): ListingPublicUrlResult {
   const website = input.websiteUrl?.trim() ?? '';
-  if (website && isSafeHttpUrl(website)) {
+  if (website && isSafeHttpUrl(website) && !isCommercialFeedUrl(website)) {
     return { url: website, source: 'website', label: 'Website listing' };
   }
 
