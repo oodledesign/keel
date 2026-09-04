@@ -17,6 +17,7 @@ export const WORKSPACE_FORM_DESTINATIONS = [
   'pipeline',
   'listing_enquiry',
   'mailing_list',
+  'submission_list',
 ] as const;
 
 export type WorkspaceFormDestination =
@@ -48,6 +49,7 @@ export const WORKSPACE_FORM_DESTINATION_LABELS: Record<
   pipeline: 'Create pipeline enquiry',
   listing_enquiry: 'Create enquiry for a listing',
   mailing_list: 'Subscribe to mailing list',
+  submission_list: 'Collect submissions only',
 };
 
 export const WORKSPACE_FORM_FIELD_TYPE_LABELS: Record<

@@ -205,6 +205,9 @@ export function FormBuilder({
                 <SelectItem value="mailing_list">
                   {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
                 </SelectItem>
+                <SelectItem value="submission_list">
+                  {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
+                </SelectItem>
                 {showListingDestination || destination === 'listing_enquiry' ? (
                   <SelectItem value="listing_enquiry">
                     {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}
@@ -426,6 +429,7 @@ export function FormBuilder({
       <FormSubmissionsList
         accountSlug={accountSlug}
         submissions={submissions}
+        destination={destination}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

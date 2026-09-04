@@ -11,11 +11,12 @@ import {
 } from './form-fields';
 
 describe('workspace form fields', () => {
-  it('includes mailing_list alongside pipeline and listing enquiry', () => {
+  it('includes mailing_list and submission_list destinations', () => {
     expect(WORKSPACE_FORM_DESTINATIONS).toEqual([
       'pipeline',
       'listing_enquiry',
       'mailing_list',
+      'submission_list',
     ]);
   });
 

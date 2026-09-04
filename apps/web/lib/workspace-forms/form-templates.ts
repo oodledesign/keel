@@ -45,7 +45,7 @@ export const WORKSPACE_FORM_TEMPLATE_META: Record<
     label: 'RSVP',
     description: 'Attendance, guests, and dietary needs for events.',
     defaultName: 'Event RSVP',
-    suggestedDestination: 'pipeline',
+    suggestedDestination: 'submission_list',
     submitLabel: 'Send RSVP',
     successMessage: 'Thanks — your RSVP has been received.',
   },

@@ -200,6 +200,9 @@ export function CreateFormDialog({
                 <SelectItem value="mailing_list">
                   {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
                 </SelectItem>
+                <SelectItem value="submission_list">
+                  {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
+                </SelectItem>
                 {showListingDestination ? (
                   <SelectItem value="listing_enquiry">
                     {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}

@@ -16,6 +16,7 @@ import type { WorkspaceFormSubmissionRecord } from '../_lib/server/workspace-for
 type Props = {
   accountSlug: string;
   submissions: WorkspaceFormSubmissionRecord[];
+  destination?: string;
 };
 
 function recordHref(
@@ -48,21 +49,29 @@ function recordHref(
   return null;
 }
 
-export function FormSubmissionsList({ accountSlug, submissions }: Props) {
+export function FormSubmissionsList({
+  accountSlug,
+  submissions,
+  destination,
+}: Props) {
+  const submissionsOnly = destination === 'submission_list';
+
   return (
     <section className={`${workspacePanelCard} p-5`}>
       <h2 className={`text-base font-semibold ${workspaceText}`}>
         Submissions
       </h2>
       <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-        Open the contact, mailing-list, pipeline, or listing record created from
-        each submission.
+        {submissionsOnly
+          ? 'Responses are stored here only — no pipeline, mailing list, or listing enquiry is created.'
+          : 'Open the contact, mailing-list, pipeline, or listing record created from each submission.'}
       </p>
 
       {submissions.length === 0 ? (
         <p className={`mt-6 text-sm ${workspaceTextMuted}`}>
-          No submissions yet. Publish the form and send the public link to
-          collect the first one.
+          {submissionsOnly
+            ? 'No submissions yet. Publish the form and share the link to start collecting RSVPs or responses.'
+            : 'No submissions yet. Publish the form and send the public link to collect the first one.'}
         </p>
       ) : (
         <div className="mt-4 overflow-x-auto">
@@ -85,7 +94,9 @@ export function FormSubmissionsList({ accountSlug, submissions }: Props) {
                       ? 'Requirement'
                       : submission.pipelineDealId
                         ? 'Pipeline enquiry'
-                        : 'Stored only';
+                        : submissionsOnly
+                          ? 'Submission'
+                          : 'Stored only';
 
                 return (
                   <tr

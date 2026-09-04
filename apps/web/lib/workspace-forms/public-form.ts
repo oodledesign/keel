@@ -134,7 +134,9 @@ export async function loadPublicWorkspaceFormByToken(
       row.success_message?.trim() ||
       (row.destination === 'mailing_list'
         ? 'Thank you — you are on the mailing list.'
-        : 'Thank you — we have received your enquiry.'),
+        : row.destination === 'submission_list'
+          ? 'Thank you — your response has been received.'
+          : 'Thank you — we have received your enquiry.'),
     fields: parseFormFields(row.fields),
     brand,
   };
@@ -317,7 +319,7 @@ export async function submitPublicWorkspaceForm(
       contact,
       listing.id,
     );
-  } else {
+  } else if (form.destination === 'pipeline') {
     pipelineDealId = await createPipelineLead(
       admin,
       form,
@@ -325,6 +327,7 @@ export async function submitPublicWorkspaceForm(
       listing?.id ?? null,
     );
   }
+  // submission_list: store the submission row only — no CRM / mailing / listing side effects.
 
   const { data, error } = await fromTable(admin, 'workspace_form_submissions')
     .insert({

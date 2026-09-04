@@ -70,7 +70,7 @@ describe('workspace form templates', () => {
   it('provides create defaults for RSVP', () => {
     const defaults = workspaceFormCreateDefaultsForTemplate('rsvp');
     expect(defaults.defaultName).toBe('Event RSVP');
-    expect(defaults.suggestedDestination).toBe('pipeline');
+    expect(defaults.suggestedDestination).toBe('submission_list');
     expect(defaults.submitLabel).toBe('Send RSVP');
     expect(defaults.successMessage).toMatch(/RSVP/i);
     expect(defaults.fields.map((field) => field.key)).toContain('attendance');
