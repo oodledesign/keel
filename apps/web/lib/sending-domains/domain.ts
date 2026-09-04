@@ -26,8 +26,8 @@ export const DEFAULT_SENDING_LOCAL_PARTS = [
 
 export const DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS = [
   'mail',
+  'ozer',
   'listings',
-  'hello',
   'go',
 ] as const;
 
@@ -185,6 +185,40 @@ export function overallVerificationStatus(input: {
 
   if (isSendingDomainVerified(input)) {
     return 'verified';
+  }
+
+  return 'pending';
+}
+
+export type DnsRecordPurpose = 'dkim' | 'mail_from_mx' | 'mail_from_spf';
+
+export function dnsRecordPurposeLabel(purpose: DnsRecordPurpose): string {
+  switch (purpose) {
+    case 'dkim':
+      return 'Ozer DKIM';
+    case 'mail_from_mx':
+      return 'Ozer bounce (MX)';
+    case 'mail_from_spf':
+      return 'Ozer bounce (SPF)';
+  }
+}
+
+export type DnsRecordVerificationStatus = 'connected' | 'pending' | 'failed';
+
+/** Map a DNS row purpose to Connected / Pending / Failed from SES domain statuses. */
+export function recordVerificationStatus(
+  purpose: DnsRecordPurpose,
+  dkimStatus: string | null | undefined,
+  mailFromStatus: string | null | undefined,
+): DnsRecordVerificationStatus {
+  const sesStatus = purpose === 'dkim' ? dkimStatus : mailFromStatus;
+
+  if (isSesStatusSuccess(sesStatus)) {
+    return 'connected';
+  }
+
+  if (isSesStatusFailed(sesStatus)) {
+    return 'failed';
   }
 
   return 'pending';

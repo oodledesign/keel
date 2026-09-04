@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   DEFAULT_SES_CONFIGURATION_SET,
   type SesIdentityAdmin,
+  isSesAccessDeniedError,
+  mapSesIdentityAdminError,
   sesTenantNameForAccount,
 } from '@kit/ses/identity';
 
@@ -206,64 +208,123 @@ class SendingDomainService {
 
     await this.assertUnclaimedIdentity(input.accountId, domain, sendingHost);
 
-    const identity = await this.ses.createDomainIdentity(sendingHost);
-    const mailFromDomain = resolveMailFromHost(
-      sendingHost,
-      MAIL_FROM_SUBDOMAIN,
-    );
-    await this.ses.putMailFrom(sendingHost, mailFromDomain);
+    let identityCreated = false;
 
-    const configurationSetName =
-      process.env.SES_CONFIGURATION_SET?.trim() ||
-      DEFAULT_SES_CONFIGURATION_SET;
-    const configSet =
-      await this.ses.ensureConfigurationSet(configurationSetName);
-    const tenantName = sesTenantNameForAccount(input.accountId);
-    await this.ses.ensureTenant(tenantName);
-    await this.ses.associateTenantResource(tenantName, identity.identityArn);
-    await this.ses.associateTenantResource(tenantName, configSet.arn);
+    try {
+      const identity = await this.ses.createDomainIdentity(sendingHost);
+      identityCreated = true;
 
-    const dnsRecords = buildSendingDnsRecords({
-      domain,
-      sendingHost,
-      tokens: identity.tokens,
-      region: this.ses.getRegion(),
-      mailFromSubdomain: MAIL_FROM_SUBDOMAIN,
-    });
+      const mailFromDomain = resolveMailFromHost(
+        sendingHost,
+        MAIL_FROM_SUBDOMAIN,
+      );
+      await this.ses.putMailFrom(sendingHost, mailFromDomain);
 
-    const { data, error } = await fromTable(this.client)
-      .insert({
-        account_id: input.accountId,
+      const configurationSetName =
+        process.env.SES_CONFIGURATION_SET?.trim() ||
+        DEFAULT_SES_CONFIGURATION_SET;
+      const configSet =
+        await this.ses.ensureConfigurationSet(configurationSetName);
+
+      // Tenants isolate reputation via X-SES-TENANT. If the IAM user cannot
+      // create/associate tenants (feature not enabled or missing IAM), soft-fail
+      // and continue — sending still works without a tenant.
+      let tenantName: string | null = sesTenantNameForAccount(input.accountId);
+      try {
+        await this.ses.ensureTenant(tenantName);
+        await this.ses.associateTenantResource(
+          tenantName,
+          identity.identityArn,
+        );
+        await this.ses.associateTenantResource(tenantName, configSet.arn);
+      } catch (tenantError) {
+        if (!isSesAccessDeniedError(tenantError)) {
+          throw tenantError;
+        }
+
+        console.warn(
+          '[sending-domains] SES tenant setup AccessDenied; continuing without tenant',
+          {
+            accountId: input.accountId,
+            sendingHost,
+            tenantName,
+            errorName:
+              tenantError instanceof Error ? tenantError.name : undefined,
+            errorMessage:
+              tenantError instanceof Error
+                ? tenantError.message
+                : String(tenantError),
+          },
+        );
+        tenantName = null;
+      }
+
+      const dnsRecords = buildSendingDnsRecords({
         domain,
-        sending_subdomain: sendingSubdomain,
-        mail_from_subdomain: MAIL_FROM_SUBDOMAIN,
-        default_local_part: localPart,
-        ses_identity_name: sendingHost,
-        ses_identity_arn: identity.identityArn,
-        ses_tenant_name: tenantName,
-        ses_configuration_set: configurationSetName,
-        dkim_tokens: identity.tokens,
-        dns_records: dnsRecords,
-        dkim_status: 'pending',
-        mail_from_status: 'pending',
-        verification_status: 'pending',
-        created_by: input.userId,
-      })
-      .select('*')
-      .single();
+        sendingHost,
+        tokens: identity.tokens,
+        region: this.ses.getRegion(),
+        mailFromSubdomain: MAIL_FROM_SUBDOMAIN,
+      });
 
-    if (error || !data) {
-      if (error?.code === '23505') {
+      const { data, error } = await fromTable(this.client)
+        .insert({
+          account_id: input.accountId,
+          domain,
+          sending_subdomain: sendingSubdomain,
+          mail_from_subdomain: MAIL_FROM_SUBDOMAIN,
+          default_local_part: localPart,
+          ses_identity_name: sendingHost,
+          ses_identity_arn: identity.identityArn,
+          ses_tenant_name: tenantName,
+          ses_configuration_set: configurationSetName,
+          dkim_tokens: identity.tokens,
+          dns_records: dnsRecords,
+          dkim_status: 'pending',
+          mail_from_status: 'pending',
+          verification_status: 'pending',
+          created_by: input.userId,
+        })
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        if (error?.code === '23505') {
+          throw new SendingDomainError(
+            'That domain is already connected to another workspace.',
+          );
+        }
         throw new SendingDomainError(
-          'That domain is already connected to another workspace.',
+          error?.message ?? 'Could not save the sending domain.',
         );
       }
-      throw new SendingDomainError(
-        error?.message ?? 'Could not save the sending domain.',
-      );
-    }
 
-    return mapRow(data as Record<string, unknown>);
+      return mapRow(data as Record<string, unknown>);
+    } catch (error) {
+      if (identityCreated) {
+        try {
+          await this.ses.deleteIdentity(sendingHost);
+        } catch (cleanupError) {
+          console.warn(
+            '[sending-domains] Best-effort SES identity cleanup failed after create error',
+            {
+              sendingHost,
+              cleanupError:
+                cleanupError instanceof Error
+                  ? cleanupError.message
+                  : String(cleanupError),
+            },
+          );
+        }
+      }
+
+      if (error instanceof SendingDomainError) {
+        throw error;
+      }
+
+      const mapped = mapSesIdentityAdminError(error);
+      throw new SendingDomainError(mapped.message);
+    }
   }
 
   private async assertUnclaimedIdentity(

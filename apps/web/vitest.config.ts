@@ -18,7 +18,15 @@ export default defineConfig({
       ),
       '@kit/ses/identity': path.resolve(
         __dirname,
-        '../../packages/mailers/ses/src/identity.ts',
+        '../../packages/mailers/ses/src/identity-shared.ts',
+      ),
+      '@kit/ses/identity-shared': path.resolve(
+        __dirname,
+        '../../packages/mailers/ses/src/identity-shared.ts',
+      ),
+      '@kit/ses/identity-errors': path.resolve(
+        __dirname,
+        '../../packages/mailers/ses/src/identity-errors.ts',
       ),
       'server-only': path.resolve(__dirname, 'vitest.server-only.stub.ts'),
     },

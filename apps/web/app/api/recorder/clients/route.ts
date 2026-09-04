@@ -5,6 +5,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
 import { clientDisplayName } from '~/lib/recorder/client-display-name';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,7 @@ type ClientRow = {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  picture_url: string | null;
 };
 
 function badRequest(message: string) {
@@ -43,7 +45,9 @@ export async function GET(request: Request) {
 
   const { data, error } = await admin
     .from('clients')
-    .select('id, display_name, company_name, first_name, last_name, email')
+    .select(
+      'id, display_name, company_name, first_name, last_name, email, picture_url',
+    )
     .eq('account_id', accountId);
 
   if (error) {
@@ -58,6 +62,9 @@ export async function GET(request: Request) {
       id: row.id,
       name: clientDisplayName(row),
       email: row.email?.trim() || null,
+      picture_url:
+        toSupabasePublicStorageUrl(row.picture_url) ??
+        (row.picture_url?.trim() || null),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 

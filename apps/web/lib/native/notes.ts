@@ -161,7 +161,7 @@ function parseNoteCategory(value: string | null | undefined) {
 export async function listNativeNotes(
   userId: string,
   workspace: NativeWorkspace,
-  client: SupabaseClient,
+  client?: SupabaseClient,
 ) {
   const items = await listRecorderNotes({
     userId,
@@ -169,10 +169,13 @@ export async function listNativeNotes(
     limit: 50,
   });
 
-  const names = await loadNoteClientNames(
-    client,
-    items.map((item) => item.client_id),
-  );
+  const missingClientIds = items
+    .filter((item) => item.client_id && !item.client_name)
+    .map((item) => item.client_id);
+  const names =
+    client && missingClientIds.length > 0
+      ? await loadNoteClientNames(client, missingClientIds)
+      : new Map<string, string>();
 
   return items.map((item) =>
     toNativeNote({
@@ -183,7 +186,8 @@ export async function listNativeNotes(
       category: item.category,
       tags: item.tags,
       clientId: item.client_id,
-      clientName: item.client_id ? names.get(item.client_id) : null,
+      clientName:
+        item.client_name ?? (item.client_id ? names.get(item.client_id) : null),
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     }),

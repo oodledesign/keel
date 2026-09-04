@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_SENDING_SUBDOMAIN,
   SendingDomainError,
+  dnsRecordPurposeLabel,
   emailDomainOf,
   extractEmailAddress,
   formatSendingFromAddress,
@@ -10,6 +12,7 @@ import {
   normalizeSendingLocalPart,
   normalizeSendingSubdomain,
   overallVerificationStatus,
+  recordVerificationStatus,
   resolveMailFromHost,
   resolveSendingHost,
 } from './domain';
@@ -42,14 +45,15 @@ describe('normalizeSendingDomain', () => {
 
 describe('sending host', () => {
   it('defaults the sending host to mail.{apex}', () => {
-    expect(resolveSendingHost('example.co.uk', 'mail')).toBe(
+    expect(DEFAULT_SENDING_SUBDOMAIN).toBe('mail');
+    expect(resolveSendingHost('example.co.uk', DEFAULT_SENDING_SUBDOMAIN)).toBe(
       'mail.example.co.uk',
     );
     expect(
       formatSendingFromAddress({
         localPart: 'mail',
         domain: 'example.co.uk',
-        sendingSubdomain: 'mail',
+        sendingSubdomain: DEFAULT_SENDING_SUBDOMAIN,
       }),
     ).toBe('mail@mail.example.co.uk');
     expect(resolveMailFromHost('mail.example.co.uk')).toBe(
@@ -158,5 +162,39 @@ describe('verification status', () => {
         mail_from_status: 'pending',
       }),
     ).toBe('pending');
+  });
+});
+
+describe('recordVerificationStatus', () => {
+  it('maps dkim purpose to dkim_status', () => {
+    expect(recordVerificationStatus('dkim', 'success', 'pending')).toBe(
+      'connected',
+    );
+    expect(recordVerificationStatus('dkim', 'failed', 'success')).toBe(
+      'failed',
+    );
+    expect(recordVerificationStatus('dkim', 'pending', 'success')).toBe(
+      'pending',
+    );
+  });
+
+  it('maps mail_from purposes to mail_from_status', () => {
+    expect(
+      recordVerificationStatus('mail_from_mx', 'pending', 'success'),
+    ).toBe('connected');
+    expect(
+      recordVerificationStatus('mail_from_spf', 'success', 'failed'),
+    ).toBe('failed');
+    expect(
+      recordVerificationStatus('mail_from_mx', 'success', 'pending'),
+    ).toBe('pending');
+  });
+});
+
+describe('dnsRecordPurposeLabel', () => {
+  it('labels each DNS purpose as Ozer-related', () => {
+    expect(dnsRecordPurposeLabel('dkim')).toBe('Ozer DKIM');
+    expect(dnsRecordPurposeLabel('mail_from_mx')).toBe('Ozer bounce (MX)');
+    expect(dnsRecordPurposeLabel('mail_from_spf')).toBe('Ozer bounce (SPF)');
   });
 });

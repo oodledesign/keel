@@ -7,6 +7,7 @@ import {
   createRecorderNote,
   listRecorderNotes,
 } from '~/lib/recorder/create-note';
+import { parseRecorderNotesListQuery } from '~/lib/recorder/list-notes-query';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,18 +29,23 @@ export async function GET(request: Request) {
     return auth;
   }
 
-  const url = new URL(request.url);
-  const limitParam = url.searchParams.get('limit');
-  const limit = limitParam ? Number.parseInt(limitParam, 10) : 20;
-  const accountId = url.searchParams.get('account_id');
+  const query = parseRecorderNotesListQuery(new URL(request.url).searchParams);
 
   try {
-    const items = await listRecorderNotes({
+    const rows = await listRecorderNotes({
       userId: auth.user_id,
-      accountId,
-      limit: Number.isFinite(limit) ? limit : 20,
+      accountId: query.accountId,
+      limit: query.limit + 1,
+      offset: query.offset,
+      clientId: query.clientId,
+      category: query.category,
+      q: query.q,
     });
-    return NextResponse.json({ items });
+    const hasMore = rows.length > query.limit;
+    return NextResponse.json({
+      items: hasMore ? rows.slice(0, query.limit) : rows,
+      has_more: hasMore,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to load notes';

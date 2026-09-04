@@ -20,9 +20,12 @@ import {
   DEFAULT_SENDING_LOCAL_PARTS,
   DEFAULT_SENDING_SUBDOMAIN,
   DEFAULT_SENDING_SUBDOMAIN_SUGGESTIONS,
+  type DnsRecordVerificationStatus,
   type SendingDomainRecord,
+  dnsRecordPurposeLabel,
   formatSendingFromAddress,
   normalizeSendingDomain,
+  recordVerificationStatus,
 } from '~/lib/sending-domains';
 import { workspaceBtnPrimary } from '~/lib/workspace-ui';
 
@@ -42,6 +45,22 @@ function statusLabel(status: SendingDomainRecord['verification_status']) {
 
 function statusBadgeClass(status: SendingDomainRecord['verification_status']) {
   if (status === 'verified') {
+    return 'border-[color:var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
+  }
+  if (status === 'failed') {
+    return 'border-destructive/30 bg-destructive/10 text-destructive';
+  }
+  return 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
+}
+
+function dnsRecordStatusLabel(status: DnsRecordVerificationStatus) {
+  if (status === 'connected') return 'Connected';
+  if (status === 'failed') return 'Failed';
+  return 'Pending';
+}
+
+function dnsRecordStatusBadgeClass(status: DnsRecordVerificationStatus) {
+  if (status === 'connected') {
     return 'border-[color:var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
   }
   if (status === 'failed') {
@@ -160,7 +179,7 @@ export function SendingDomainSettings({
     initialDomain?.default_local_part ?? DEFAULT_SENDING_LOCAL_PART,
   );
   const [pending, startTransition] = useTransition();
-  const [copiedHost, setCopiedHost] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initialDomain || initialDomain.verification_status !== 'pending') {
@@ -198,8 +217,8 @@ export function SendingDomainSettings({
   const copyValue = async (value: string, key: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      setCopiedHost(key);
-      window.setTimeout(() => setCopiedHost(null), 1500);
+      setCopiedKey(key);
+      window.setTimeout(() => setCopiedKey(null), 1500);
     } catch {
       toast.error('Could not copy. Select the value and copy it manually.');
     }
@@ -265,7 +284,7 @@ export function SendingDomainSettings({
                 setUseApex(false);
                 setSubdomainInput(event.target.value);
               }}
-              placeholder={useApex ? 'Apex — no subdomain' : 'mail'}
+              placeholder={useApex ? 'Apex — no subdomain' : DEFAULT_SENDING_SUBDOMAIN}
               disabled={!canEdit || pending || useApex}
               spellCheck={false}
               autoCapitalize="none"
@@ -370,7 +389,7 @@ export function SendingDomainSettings({
           domain={initialDomain}
           localPart={localPart}
           pending={pending}
-          copiedHost={copiedHost}
+          copiedKey={copiedKey}
           onLocalPartChange={setLocalPart}
           onCopy={copyValue}
           onRefresh={() =>
@@ -412,7 +431,7 @@ function ConnectedDomain({
   domain,
   localPart,
   pending,
-  copiedHost,
+  copiedKey,
   onLocalPartChange,
   onCopy,
   onRefresh,
@@ -426,7 +445,7 @@ function ConnectedDomain({
   domain: SendingDomainRecord;
   localPart: string;
   pending: boolean;
-  copiedHost: string | null;
+  copiedKey: string | null;
   onLocalPartChange: (value: string) => void;
   onCopy: (value: string, key: string) => void;
   onRefresh: () => void;
@@ -540,46 +559,89 @@ function ConnectedDomain({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[36rem] text-left text-sm">
+          <table className="w-full min-w-[48rem] text-left text-sm">
             <thead>
               <tr className="text-[var(--workspace-shell-text-muted)]">
                 <th className="pr-3 pb-2 font-medium">Type</th>
+                <th className="pr-3 pb-2 font-medium">Purpose</th>
                 <th className="pr-3 pb-2 font-medium">Host</th>
                 <th className="pr-3 pb-2 font-medium">Value</th>
-                <th className="pb-2 font-medium">
-                  <span className="sr-only">Copy</span>
-                </th>
+                <th className="pb-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {domain.dns_records.map((record, index) => {
                 const key = `${record.type}-${record.host}-${index}`;
+                const hostKey = `${key}:host`;
+                const valueKey = `${key}:value`;
+                const recordStatus = recordVerificationStatus(
+                  record.purpose,
+                  domain.dkim_status,
+                  domain.mail_from_status,
+                );
+
                 return (
                   <tr
                     key={key}
                     className="border-t border-[color:var(--workspace-shell-border)] align-top"
                   >
                     <td className="py-3 pr-3 font-medium">{record.type}</td>
-                    <td className="py-3 pr-3 font-mono text-xs">
-                      {record.host}
+                    <td className="py-3 pr-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                      {dnsRecordPurposeLabel(record.purpose)}
                     </td>
-                    <td className="py-3 pr-3 font-mono text-xs break-all">
-                      {record.value}
+                    <td className="py-3 pr-3">
+                      <div className="flex items-start gap-1">
+                        <span className="font-mono text-xs">{record.host}</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0 p-0"
+                          aria-label={`Copy ${record.type} host`}
+                          onClick={() => onCopy(record.host, hostKey)}
+                        >
+                          {copiedKey === hostKey ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </td>
+                    <td className="py-3 pr-3">
+                      <div className="flex items-start gap-1">
+                        <span className="font-mono text-xs break-all">
+                          {record.value}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0 p-0"
+                          aria-label={`Copy ${record.type} value`}
+                          onClick={() => onCopy(record.value, valueKey)}
+                        >
+                          {copiedKey === valueKey ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </td>
                     <td className="py-3">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Copy ${record.type} value`}
-                        onClick={() => onCopy(record.value, key)}
+                      <Badge
+                        variant={
+                          recordStatus === 'connected'
+                            ? 'success'
+                            : recordStatus === 'failed'
+                              ? 'destructive'
+                              : 'warning'
+                        }
+                        className={dnsRecordStatusBadgeClass(recordStatus)}
                       >
-                        {copiedHost === key ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
+                        {dnsRecordStatusLabel(recordStatus)}
+                      </Badge>
                     </td>
                   </tr>
                 );

@@ -78,6 +78,17 @@ export const addSendingDomainAction = enhanceAction(
       revalidateSendingDomain(accountSlug);
       return result;
     } catch (error) {
+      const err = error instanceof Error ? error : null;
+      logger.error(
+        {
+          ...ctx,
+          errorName: err?.name,
+          errorMessage: err?.message ?? String(error),
+          causeName:
+            err?.cause instanceof Error ? err.cause.name : undefined,
+        },
+        'Failed to add sending domain',
+      );
       toActionError(error);
     }
   },

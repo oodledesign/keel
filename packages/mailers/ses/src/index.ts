@@ -14,9 +14,13 @@ export {
 } from './raw-email';
 export {
   DEFAULT_SES_CONFIGURATION_SET,
+  SES_IDENTITY_ADMIN_IAM_ACTIONS,
   buildSesConfigurationSetArn,
   buildSesIdentityArn,
   createSesIdentityAdmin,
+  isSesAccessDeniedError,
+  mapSesIdentityAdminError,
+  sesAccessDeniedUserMessage,
   sesTenantNameForAccount,
   type SesIdentityAdmin,
   type SesIdentitySnapshot,

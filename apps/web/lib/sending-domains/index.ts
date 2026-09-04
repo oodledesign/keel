@@ -10,12 +10,18 @@ export {
   extractEmailAddress,
   formatSendingFromAddress,
   isSendingDomainVerified,
+  isSesStatusFailed,
+  isSesStatusSuccess,
   normalizeSendingDomain,
   normalizeSendingLocalPart,
   normalizeSendingSubdomain,
   overallVerificationStatus,
+  dnsRecordPurposeLabel,
+  recordVerificationStatus,
   resolveMailFromHost,
   resolveSendingHost,
+  type DnsRecordPurpose,
+  type DnsRecordVerificationStatus,
 } from './domain';
 export { buildSendingDnsRecords, type SendingDnsRecord } from './dns-records';
 export {
