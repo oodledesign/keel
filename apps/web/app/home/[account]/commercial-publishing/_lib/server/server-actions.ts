@@ -17,6 +17,7 @@ import {
 } from '~/lib/commercial/linkedin-publishing/linkedin-api';
 import { verifyPendingLinkedInOrgs } from '~/lib/commercial/linkedin-publishing/oauth-state';
 import {
+  ensureListingFeedExternalId,
   publishToEach,
   publishToRightmove,
   setEachListingFeedInclusion,
@@ -39,6 +40,7 @@ import {
   DisconnectLinkedInOrgSchema,
   EnsureEachFeedSchema,
   EnsurePropertyHiveFeedSchema,
+  EnsureWebsiteFeedReadySchema,
   RotateEachFeedSchema,
   RotatePropertyHiveFeedSchema,
   SavePortalCredentialsSchema,
@@ -183,12 +185,20 @@ export const testPublishListingAction = enhanceAction(
           const status = listing.status as string;
           const onMarket = status === 'marketing' || status === 'under_offer';
 
+          const feedExternalId = onMarket
+            ? await ensureListingFeedExternalId({
+                accountId: input.accountId,
+                listingId: input.listingId,
+              })
+            : null;
+
           return {
             ok: true as const,
             message: onMarket
-              ? `"${name}" is on-market and will appear in the XML feed on the next Property Hive import.`
+              ? `"${name}" is on-market (feed id ${feedExternalId}) and will appear in the XML feed on the next Property Hive import.`
               : `"${name}" is ${status} — set status to Marketing or Under offer for it to appear in the feed.`,
             feedUrl,
+            feedExternalId,
           };
         }
 
@@ -511,4 +521,24 @@ export const selectLinkedInOrgAction = enhanceAction(
     return loadCommercialPublishingSettings(input.accountId);
   },
   { schema: SelectLinkedInOrgSchema },
+);
+
+export const ensureWebsiteFeedReadyAction = enhanceAction(
+  async (input) => {
+    const feedExternalId = await ensureListingFeedExternalId({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
+    const publication = await setWebsiteListingFeedInclusion({
+      accountId: input.accountId,
+      listingId: input.listingId,
+      enabled: true,
+    });
+    return {
+      feedExternalId,
+      publication,
+      enabled: publication.status !== 'unpublished',
+    };
+  },
+  { schema: EnsureWebsiteFeedReadySchema },
 );

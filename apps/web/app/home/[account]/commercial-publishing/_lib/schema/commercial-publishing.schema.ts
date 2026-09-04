@@ -70,3 +70,8 @@ export const SaveRightmoveWorkspaceBranchesSchema = z.object({
     .min(1)
     .max(50),
 });
+
+export const EnsureWebsiteFeedReadySchema = z.object({
+  accountId: z.string().uuid(),
+  listingId: z.string().uuid(),
+});

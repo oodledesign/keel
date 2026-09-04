@@ -11,6 +11,10 @@ import type {
 } from '~/lib/commercial/commercial-constants';
 import { recordListingEvent } from '~/lib/commercial/listing-events';
 import {
+  listingNeedsFeedExternalId,
+  resolveListingFeedExternalId,
+} from '~/lib/commercial/listing-feed-external-id';
+import {
   RIGHTMOVE_MEDIA_URL_MAX_LENGTH,
   buildCommercialListingMediaPublicUrl,
   resolveSiteUrlForPublicMedia,
@@ -795,6 +799,43 @@ export async function unpublishFromRightmove(
 }
 
 /**
+ * Persist a stable feed object id for Ozer-native listings so Property Hive /
+ * EACH XML import can match them (Kato imports already have numeric ids).
+ */
+export async function ensureListingFeedExternalId(input: {
+  accountId: string;
+  listingId: string;
+}): Promise<string> {
+  const { data, error } = await db()
+    .from('commercial_listings')
+    .select('id, external_id')
+    .eq('id', input.listingId)
+    .eq('account_id', input.accountId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Listing not found');
+
+  const existing = (data.external_id as string | null) ?? null;
+  const resolved = resolveListingFeedExternalId(existing, data.id as string);
+  if (!listingNeedsFeedExternalId(existing)) {
+    return resolved;
+  }
+
+  const { error: updateError } = await db()
+    .from('commercial_listings')
+    .update({
+      external_id: resolved,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.listingId)
+    .eq('account_id', input.accountId);
+
+  if (updateError) throw new Error(updateError.message);
+  return resolved;
+}
+
+/**
  * Website (Property Hive XML) is opt-out of the dedicated XML feed.
  * Off → unpublished (excluded from feed). On → published (included when on-market).
  * Preserves existing Property Hive external ids so a toggle cannot drop a live post.
@@ -856,16 +897,24 @@ export async function setWebsiteListingFeedInclusion(input: {
     });
   }
 
+  if (!onMarket) {
+    throw new Error(
+      'Set status to Marketing or Under offer before including this disposal on the website',
+    );
+  }
+
+  const feedExternalId = await ensureListingFeedExternalId({
+    accountId,
+    listingId,
+  });
   const { feedUrl } = await ensurePropertyHiveFeedToken(accountId);
 
   return recordPublication({
     accountId,
     listingId,
     portal: 'property_hive',
-    status: onMarket ? 'published' : 'draft',
-    lastError: onMarket
-      ? null
-      : `Listing is ${listing.status} — set Marketing or Under offer for website feed pickup`,
+    status: 'published',
+    lastError: null,
     externalId: existingRow?.external_id ?? null,
     externalUrl: existingRow?.external_url ?? feedUrl,
     branchRef: existingRow?.branch_ref ?? null,
@@ -873,9 +922,8 @@ export async function setWebsiteListingFeedInclusion(input: {
       ...(existingRow?.metadata ?? {}),
       stage: 'xml_feed',
       portalFeed: 'property_hive',
-      note: onMarket
-        ? 'Included on the website XML feed'
-        : 'Website inclusion on; listing not yet on-market for export',
+      feedExternalId,
+      note: 'Included on the website XML feed',
     },
   });
 }
@@ -913,29 +961,33 @@ export async function setEachListingFeedInclusion(input: {
     });
   }
 
-  const { feedUrl } = await ensureEachFeedToken(accountId);
-  const missing = validateEachCommercialFields(listing);
   const onMarket =
     listing.status === 'marketing' || listing.status === 'under_offer';
+  if (!onMarket) {
+    throw new Error(
+      'Set status to Marketing or Under offer before including this disposal on EACH',
+    );
+  }
+
+  const missing = validateEachCommercialFields(listing);
+  if (missing.length) {
+    throw new Error(`Missing EACH commercial fields: ${missing.join(', ')}`);
+  }
+
+  await ensureListingFeedExternalId({ accountId, listingId });
+  const { feedUrl } = await ensureEachFeedToken(accountId);
 
   return recordPublication({
     accountId,
     listingId,
     portal: 'each',
-    status: onMarket ? 'published' : 'draft',
-    lastError: missing.length
-      ? `Missing EACH commercial fields: ${missing.join(', ')}`
-      : onMarket
-        ? null
-        : `Listing is ${listing.status} — set Marketing or Under offer for EACH feed pickup`,
+    status: 'published',
+    lastError: null,
     externalUrl: feedUrl,
     metadata: {
       stage: 'xml_feed',
       portalFeed: 'each',
-      ...(missing.length ? { missingFields: missing } : {}),
-      note: onMarket
-        ? 'Included on the EACH XML feed'
-        : 'EACH inclusion on; listing not yet on-market for export',
+      note: 'Included on the EACH XML feed',
     },
   });
 }

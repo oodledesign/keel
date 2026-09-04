@@ -23,7 +23,9 @@ import {
 } from '~/lib/commercial/listing-events';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
+import { ensureListingFeedExternalId } from '~/lib/commercial/portal-publishers';
 import {
+  getPropertyHiveCredentials,
   persistPropertyHivePublicationError,
   pushListingToPropertyHive,
   unpublishListingFromPropertyHive,
@@ -61,7 +63,42 @@ async function syncPropertyHiveOnStatusChange(input: {
 
   const logger = await getLogger();
 
-  if (input.status === 'marketing') {
+  if (input.status === 'marketing' || input.status === 'under_offer') {
+    // XML feed workspaces need a stable commercial_listings.external_id.
+    // Ozer-native disposals have none until we assign the listing UUID.
+    try {
+      await ensureListingFeedExternalId({
+        accountId: input.accountId,
+        listingId: input.listingId,
+      });
+    } catch (err) {
+      logger.error(
+        {
+          name: 'commercial.listings.ensureFeedExternalId',
+          accountId: input.accountId,
+          listingId: input.listingId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+        'Could not ensure listing feed external_id after on-market status',
+      );
+    }
+
+    // REST push is optional — Bracketts-style sites use the XML feed only.
+    const credentials = await getPropertyHiveCredentials(input.accountId).catch(
+      () => null,
+    );
+    if (!credentials) {
+      logger.info(
+        {
+          name: 'commercial.listings.skipPropertyHiveRest',
+          accountId: input.accountId,
+          listingId: input.listingId,
+        },
+        'No Property Hive REST credentials; relying on XML feed',
+      );
+      return;
+    }
+
     try {
       await pushListingToPropertyHive(input.accountId, input.listingId);
     } catch (err) {
@@ -74,7 +111,7 @@ async function syncPropertyHiveOnStatusChange(input: {
           listingId: input.listingId,
           error: message,
         },
-        'Property Hive push failed after status→marketing',
+        'Property Hive push failed after on-market status',
       );
       try {
         await persistPropertyHivePublicationError({
@@ -682,11 +719,14 @@ async function applyPublicPhotoOrder(
     return [];
   }
 
-  const { error: reorderError } = await client.rpc('reorder_commercial_listing_photos', {
-    p_account_id: input.accountId,
-    p_listing_id: input.listingId,
-    p_ordered_ids: orderedIds,
-  });
+  const { error: reorderError } = await client.rpc(
+    'reorder_commercial_listing_photos',
+    {
+      p_account_id: input.accountId,
+      p_listing_id: input.listingId,
+      p_ordered_ids: orderedIds,
+    },
+  );
 
   if (reorderError) {
     throw new Error(reorderError.message);
