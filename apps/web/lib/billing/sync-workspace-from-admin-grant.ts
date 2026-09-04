@@ -15,6 +15,7 @@ import {
   accountPlanLimitColumnsFromCatalog,
   findPlanByProductAndPlanId,
 } from './ozer-plan-catalog';
+import { ensureAdminCampaignStarterCredits } from './apply-admin-plan-usage-grants';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import {
   syncBusinessLiteModules,
@@ -189,6 +190,10 @@ export async function syncWorkspaceStateAfterAdminGrant(
     default:
       await syncAddonModulesFromEntitlements(admin, accountId);
       break;
+  }
+
+  if (entitlementKey === 'addon_campaigns') {
+    await ensureAdminCampaignStarterCredits(admin, accountId);
   }
 
   await ensureEstablishedWorkspaceMembersOnboarded(admin, accountId);

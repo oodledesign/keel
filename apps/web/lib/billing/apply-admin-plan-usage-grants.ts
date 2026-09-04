@@ -5,7 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { syncAccountCreditLimit } from '~/lib/ai/tiers';
 import { campaignTierForPlanId } from '~/lib/billing/campaign-pricing';
 import { MEDIA_SUBSCRIPTION_TIERS } from '~/lib/billing/media-unit-pricing';
-import type { OzerPlanDefinition } from '~/lib/billing/ozer-plan-catalog';
+import {
+  type OzerPlanDefinition,
+  findPlanByProductAndPlanId,
+} from '~/lib/billing/ozer-plan-catalog';
 import {
   grantCampaignCredits,
   updateCampaignCreditPoolMetadata,
@@ -169,4 +172,55 @@ export async function applyAdminPlanUsageGrants(
   }
 
   return { aiCredits, mediaUnits, campaignSendUnits };
+}
+
+/**
+ * Admin entitlement-only grants (addon_campaigns without a plan apply) used to
+ * unlock the UI with zero send units — production sends then 500 with
+ * "Not enough send units". Backfill Starter once when the pool is still empty.
+ */
+export async function ensureAdminCampaignStarterCredits(
+  admin: SupabaseClient,
+  accountId: string,
+): Promise<number | null> {
+  const starter = findPlanByProductAndPlanId(
+    'ozer-addon-campaigns',
+    'campaigns-starter-monthly',
+  );
+  if (!starter) return null;
+
+  // Tables may be ahead of generated types (same pattern as campaign-credits ledger).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = admin as any;
+
+  await db.rpc('ensure_campaign_credit_pool', {
+    p_account_id: accountId,
+  });
+
+  const { data: pool } = await db
+    .from('campaign_credit_pools')
+    .select('balance, plan_tier')
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  const balance = Number((pool as { balance?: number } | null)?.balance ?? 0);
+  const planTier = String(
+    (pool as { plan_tier?: string } | null)?.plan_tier ?? 'none',
+  );
+
+  if (balance > 0 || (planTier && planTier !== 'none')) {
+    // Already provisioned (Stripe or a prior admin plan apply).
+    await db.from('account_module_settings').upsert(
+      {
+        account_id: accountId,
+        module_key: 'campaigns',
+        enabled: true,
+      },
+      { onConflict: 'account_id,module_key' },
+    );
+    return null;
+  }
+
+  const usage = await applyAdminPlanUsageGrants(admin, accountId, starter);
+  return usage.campaignSendUnits;
 }

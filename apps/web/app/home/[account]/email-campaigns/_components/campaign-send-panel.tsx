@@ -72,6 +72,9 @@ export function CampaignSendPanel({
     ? `${campaign.fromName.trim()} <${campaign.fromEmail || brand.contact_email || 'workspace'}>`
     : campaign.fromEmail || brand.contact_email || 'workspace default';
 
+  const insufficientSendUnits =
+    editable && audienceCount > 0 && usage.balance < audienceCount;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
@@ -140,9 +143,19 @@ export function CampaignSendPanel({
                 // Content/settings should already be saved; no-op keep hook.
               }}
             />
+            {insufficientSendUnits ? (
+              <p
+                className={`text-sm text-destructive`}
+                data-test="campaign-send-insufficient"
+              >
+                Not enough send units. Need {audienceCount.toLocaleString()}, have{' '}
+                {usage.balance.toLocaleString()}. Top up Campaigns in Billing
+                before sending.
+              </p>
+            ) : null}
             <Button
               className={workspaceBtnPrimary}
-              disabled={pending}
+              disabled={pending || insufficientSendUnits || audienceCount === 0}
               data-test="campaign-send"
               onClick={() => {
                 startTransition(async () => {
