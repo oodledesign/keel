@@ -1,14 +1,15 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useSyncExternalStore, useTransition } from 'react';
 
-import { Mail } from 'lucide-react';
+import { Copy, Mail } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
+import { copyTextToClipboard } from '~/lib/clipboard';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
@@ -80,6 +81,23 @@ function formatWhen(iso: string | null) {
   });
 }
 
+function useBrowserOrigin() {
+  return useSyncExternalStore(
+    () => () => undefined,
+    () => window.location.origin,
+    () => '',
+  );
+}
+
+function publicMatchesPath(token: string) {
+  return `/share/matches/${token}`;
+}
+
+function publicMatchesHref(token: string, origin: string) {
+  const path = publicMatchesPath(token);
+  return origin ? `${origin}${path}` : path;
+}
+
 function statusLabel(contact: CirculationWorkspaceContact) {
   if (contact.consentStatus === 'unsubscribed') return 'Unsubscribed';
   if (contact.consentStatus === 'suppressed') return 'Suppressed';
@@ -103,6 +121,7 @@ export function CirculationWorkspaceClient({
   const [autoPending, startAutoTransition] = useTransition();
   const [runPending, startRunTransition] = useTransition();
   const [contactPending, startContactTransition] = useTransition();
+  const origin = useBrowserOrigin();
 
   const subscribedCount = useMemo(
     () => contacts.filter((c) => c.consentStatus === 'subscribed').length,
@@ -280,13 +299,48 @@ export function CirculationWorkspaceClient({
                       {` · ${statusLabel(contact)}`}
                     </p>
                     {contact.publicAccessToken ? (
-                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                        Public page{' '}
-                        <span className="font-mono">
-                          /share/matches/{contact.publicAccessToken.slice(0, 8)}
-                          …
-                        </span>
-                      </p>
+                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                        <span className="shrink-0">Public page</span>
+                        <a
+                          href={publicMatchesHref(
+                            contact.publicAccessToken,
+                            origin,
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={publicMatchesHref(
+                            contact.publicAccessToken,
+                            origin,
+                          )}
+                          className="min-w-0 truncate font-mono text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                        >
+                          /share/matches/
+                          {contact.publicAccessToken.slice(0, 8)}…
+                        </a>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                          aria-label={`Copy public page link for ${contact.email}`}
+                          onClick={() => {
+                            const url = publicMatchesHref(
+                              contact.publicAccessToken!,
+                              origin ||
+                                (typeof window !== 'undefined'
+                                  ? window.location.origin
+                                  : ''),
+                            );
+                            void copyTextToClipboard(url)
+                              .then(() =>
+                                toast.success('Public page link copied'),
+                              )
+                              .catch(() => toast.error('Could not copy link'));
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
                     ) : null}
                   </div>
                   <Switch
