@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  CAMPAIGN_AUDIENCE_TYPES,
+  CampaignAudienceConfigSchema,
+} from '~/lib/campaigns/campaign-audience';
 import { CampaignDocumentSchema } from '~/lib/campaigns/campaign-document';
 
 export const CreateCampaignSchema = z.object({
@@ -15,13 +19,16 @@ export const UpdateCampaignSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),
   campaignId: z.string().uuid(),
-  name: z.string().trim().min(1).max(160),
-  subject: z.string().trim().max(300),
+  name: z.string().trim().min(1).max(160).optional(),
+  subject: z.string().trim().max(300).optional(),
   previewText: z.string().trim().max(200).optional().nullable(),
-  bodyDocument: CampaignDocumentSchema,
+  bodyDocument: CampaignDocumentSchema.optional(),
   fromName: z.string().trim().max(120).optional().nullable(),
   fromEmail: z.string().trim().max(320).optional().nullable(),
   replyTo: z.string().trim().max(320).optional().nullable(),
+  audienceType: z.enum(CAMPAIGN_AUDIENCE_TYPES).optional(),
+  audienceConfig: CampaignAudienceConfigSchema.optional(),
+  scheduledAt: z.string().optional().nullable(),
 });
 
 export const SendCampaignSchema = z.object({

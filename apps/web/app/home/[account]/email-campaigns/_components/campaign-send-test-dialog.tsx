@@ -40,6 +40,7 @@ export function CampaignSendTestDialog({
   accountId,
   accountSlug,
   campaignId,
+  clients = [],
   onBeforeSend,
 }: {
   open: boolean;
@@ -47,12 +48,14 @@ export function CampaignSendTestDialog({
   accountId: string;
   accountSlug: string;
   campaignId: string;
+  clients?: Array<{ id: string; email: string; displayName: string }>;
   /** Save draft (and any other prep) before the test send. */
   onBeforeSend?: () => Promise<void>;
 }) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
   const [manualText, setManualText] = useState('');
   const [pending, startTransition] = useTransition();
 
@@ -97,8 +100,15 @@ export function CampaignSendTestDialog({
     const fromTeam = members
       .filter((member) => member.email && selected.has(member.email.toLowerCase()))
       .map((member) => member.email!.toLowerCase());
-    return normalizeCampaignTestEmails([...fromTeam, ...manualEmails]);
-  }, [members, selected, manualEmails]);
+    const fromClients = clients
+      .filter((client) => selectedClients.has(client.id))
+      .map((client) => client.email.toLowerCase());
+    return normalizeCampaignTestEmails([
+      ...fromTeam,
+      ...fromClients,
+      ...manualEmails,
+    ]);
+  }, [members, selected, selectedClients, clients, manualEmails]);
 
   const toggleMember = (email: string, checked: boolean) => {
     const key = email.trim().toLowerCase();
@@ -106,6 +116,15 @@ export function CampaignSendTestDialog({
       const next = new Set(prev);
       if (checked) next.add(key);
       else next.delete(key);
+      return next;
+    });
+  };
+
+  const toggleClient = (id: string, checked: boolean) => {
+    setSelectedClients((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   };
@@ -145,6 +164,7 @@ export function CampaignSendTestDialog({
         onOpenChange(false);
         setManualText('');
         setSelected(new Set());
+        setSelectedClients(new Set());
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not send test email',
@@ -208,6 +228,37 @@ export function CampaignSendTestDialog({
               </ul>
             )}
           </div>
+
+          {clients.length > 0 ? (
+            <div className="space-y-2">
+              <Label className={workspaceText}>Clients</Label>
+              <ul className="max-h-32 space-y-2 overflow-y-auto rounded-md border border-[color:var(--workspace-shell-border)] p-2">
+                {clients.slice(0, 50).map((client) => {
+                  const id = `campaign-test-client-${client.id}`;
+                  return (
+                    <li key={client.id} className="flex items-start gap-2">
+                      <Checkbox
+                        id={id}
+                        checked={selectedClients.has(client.id)}
+                        disabled={pending}
+                        onCheckedChange={(value) =>
+                          toggleClient(client.id, value === true)
+                        }
+                      />
+                      <label htmlFor={id} className="min-w-0 cursor-pointer text-sm">
+                        <span className={`block truncate font-medium ${workspaceText}`}>
+                          {client.displayName}
+                        </span>
+                        <span className={`block truncate text-xs ${workspaceTextMuted}`}>
+                          {client.email}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="campaign-test-manual" className={workspaceText}>

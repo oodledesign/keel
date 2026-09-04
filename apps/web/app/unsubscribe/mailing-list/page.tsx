@@ -1,6 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { markCampaignRecipientsUnsubscribed } from '~/lib/campaigns/campaigns.service';
+import { unsubscribeCampaignRecipientByToken } from '~/lib/campaigns/resolve-campaign-audience';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
 import { unsubscribeWorkspaceMailingListByToken } from '~/lib/workspace-forms/workspace-mailing-list';
 
@@ -23,7 +24,9 @@ export default async function MailingListUnsubscribePage({
   if (token) {
     try {
       const admin = getSupabaseServerAdminClient();
-      const result = await unsubscribeWorkspaceMailingListByToken(admin, token);
+      const result =
+        (await unsubscribeWorkspaceMailingListByToken(admin, token)) ??
+        (await unsubscribeCampaignRecipientByToken(admin, token));
 
       if (!result) {
         error = 'This unsubscribe link is missing or invalid.';

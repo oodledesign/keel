@@ -2,19 +2,19 @@ import { notFound } from 'next/navigation';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { CampaignSettingsPanel } from '../_components/campaign-settings-panel';
-import { loadCampaignDetail } from '../_lib/server/campaigns.loader';
+import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
+import { CampaignSendPanel } from '../../_components/campaign-send-panel';
+import { loadCampaignDetail } from '../../_lib/server/campaigns.loader';
 
-interface CampaignSettingsPageProps {
+interface CampaignSendPageProps {
   params: Promise<{ account: string; campaignId: string }>;
 }
 
 export const generateMetadata = async () => ({
-  title: 'Campaign settings',
+  title: 'Send campaign',
 });
 
-async function CampaignSettingsPage({ params }: CampaignSettingsPageProps) {
+async function CampaignSendPage({ params }: CampaignSendPageProps) {
   const { account, campaignId } = await params;
   const workspace = await loadTeamWorkspace(account);
 
@@ -26,16 +26,17 @@ async function CampaignSettingsPage({ params }: CampaignSettingsPageProps) {
   }
 
   return (
-    <CampaignSettingsPanel
+    <CampaignSendPanel
       accountId={workspace.account.id}
       accountSlug={account}
       campaign={data.campaign}
+      recipients={data.recipients}
       audienceCount={data.audienceCount}
-      audienceOptions={data.audienceOptions}
+      usage={data.usage}
       brand={data.brand}
-      sendingDomain={data.sendingDomain}
+      clients={data.audienceOptions.clients}
     />
   );
 }
 
-export default withI18n(CampaignSettingsPage);
+export default withI18n(CampaignSendPage);

@@ -37,14 +37,20 @@ import {
 } from '~/lib/sending-domains/server';
 import {
   buildWorkspaceMailingListUnsubscribeUrl,
-  listWorkspaceMailingListSubscribers,
 } from '~/lib/workspace-forms/workspace-mailing-list';
 
+import {
+  type CampaignAudienceConfig,
+  type CampaignAudienceType,
+  parseCampaignAudienceConfig,
+  parseCampaignAudienceType,
+} from './campaign-audience';
 import type {
   EmailCampaign,
   EmailCampaignRecipient,
   EmailCampaignStatus,
 } from './campaign.types';
+import { resolveCampaignAudience } from './resolve-campaign-audience';
 
 export type {
   EmailCampaign,
@@ -75,6 +81,8 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     fromName: (row.from_name as string | null) ?? null,
     fromEmail: (row.from_email as string | null) ?? null,
     replyTo: (row.reply_to as string | null) ?? null,
+    audienceType: parseCampaignAudienceType(row.audience_type),
+    audienceConfig: parseCampaignAudienceConfig(row.audience_config),
     status: row.status as EmailCampaignStatus,
     scheduledAt: (row.scheduled_at as string | null) ?? null,
     sentAt: (row.sent_at as string | null) ?? null,
@@ -181,6 +189,9 @@ class CampaignsService {
     fromName?: string | null;
     fromEmail?: string | null;
     replyTo?: string | null;
+    audienceType?: CampaignAudienceType;
+    audienceConfig?: CampaignAudienceConfig;
+    scheduledAt?: string | null;
   }): Promise<EmailCampaign> {
     const existing = await this.get(input.accountId, input.campaignId);
     if (existing.status !== 'draft' && existing.status !== 'scheduled') {
@@ -258,6 +269,28 @@ class CampaignsService {
           throw new Error('Reply-To must be a valid email address.');
         }
         patch.reply_to = reply;
+      }
+    }
+
+    if (input.audienceType !== undefined) {
+      patch.audience_type = parseCampaignAudienceType(input.audienceType);
+    }
+    if (input.audienceConfig !== undefined) {
+      patch.audience_config = parseCampaignAudienceConfig(input.audienceConfig);
+    }
+    if (input.scheduledAt !== undefined) {
+      if (input.scheduledAt === null || input.scheduledAt === '') {
+        patch.scheduled_at = null;
+        if (existing.status === 'scheduled') {
+          patch.status = 'draft';
+        }
+      } else {
+        const when = new Date(input.scheduledAt);
+        if (Number.isNaN(when.getTime())) {
+          throw new Error('Invalid schedule time');
+        }
+        // Allow clearing via empty; future dates validated on schedule action.
+        patch.scheduled_at = when.toISOString();
       }
     }
 
@@ -382,7 +415,7 @@ class CampaignsService {
   }
 
   /**
-   * Snapshot the subscribed mailing list, debit send units, and send a batch.
+   * Snapshot the campaign audience, debit send units, and send a batch.
    */
   async startSend(input: {
     accountId: string;
@@ -390,6 +423,7 @@ class CampaignsService {
     workspaceName: string;
     batchSize?: number;
   }): Promise<{ campaign: EmailCampaign; remaining: number }> {
+    void input.workspaceName;
     const campaign = await this.get(input.accountId, input.campaignId);
     if (campaign.status !== 'draft' && campaign.status !== 'scheduled') {
       throw new Error('This campaign is not ready to send');
@@ -397,49 +431,39 @@ class CampaignsService {
 
     this.assertReadyToSend(campaign);
 
-    const subscribers = await listWorkspaceMailingListSubscribers(
+    const recipients = await resolveCampaignAudience(
       this.client,
       input.accountId,
+      campaign.audienceType,
+      campaign.audienceConfig,
     );
 
-    if (subscribers.length === 0) {
-      throw new Error('No subscribed contacts on the mailing list');
+    if (recipients.length === 0) {
+      throw new Error('No recipients in the selected audience');
     }
 
     const usage = await getCampaignUsage(input.accountId);
     const maxContacts = usage.pool.max_contacts;
-    if (maxContacts > 0 && subscribers.length > maxContacts) {
+    if (maxContacts > 0 && recipients.length > maxContacts) {
       throw new Error(
-        `This plan allows ${maxContacts} contacts. The mailing list has ${subscribers.length}. Upgrade or unsubscribe extras before sending.`,
+        `This plan allows ${maxContacts} contacts. The audience has ${recipients.length}. Upgrade or reduce the audience before sending.`,
       );
     }
 
-    if (usage.pool.balance < subscribers.length) {
+    if (usage.pool.balance < recipients.length) {
       throw new Error(
-        `Not enough send units. Need ${subscribers.length}, have ${usage.pool.balance}.`,
+        `Not enough send units. Need ${recipients.length}, have ${usage.pool.balance}.`,
       );
     }
 
-    const brand = await loadAccountBrandResolved(input.accountId);
-    const fromEmail = brand.contact_email?.trim();
-    if (!fromEmail) {
-      throw new Error(
-        'Set a contact email in Brand settings. Campaigns send as the workspace, not Ozer.',
-      );
-    }
-
-    const fromName = input.workspaceName.trim() || fromEmail;
-
+    // Claim send without overwriting From / Reply-To (resolved later in processPending).
     const { data: claimed, error: statusError } = await fromTable(
       this.client,
       WORKSPACE_EMAIL_CAMPAIGNS,
     )
       .update({
         status: 'sending',
-        from_name: fromName,
-        from_email: fromEmail,
-        reply_to: fromEmail,
-        audience_count: subscribers.length,
+        audience_count: recipients.length,
         scheduled_at: campaign.scheduledAt,
       })
       .eq('id', campaign.id)
@@ -452,37 +476,16 @@ class CampaignsService {
       throw new Error('This campaign is already being processed');
     }
 
-    const rows = subscribers.map((subscriber) => ({
+    const rows = recipients.map((recipient) => ({
       campaign_id: campaign.id,
       account_id: input.accountId,
-      preference_id: subscriber.preferenceId,
-      client_id: subscriber.clientId,
-      email: subscriber.email,
-      display_name: subscriber.displayName,
-      unsubscribe_token: null as string | null,
+      preference_id: recipient.preferenceId,
+      client_id: recipient.clientId,
+      email: recipient.email,
+      display_name: recipient.displayName,
+      unsubscribe_token: recipient.unsubscribeToken,
       status: 'pending',
     }));
-
-    const { data: prefs } = await fromTable(
-      this.client,
-      'workspace_mailing_preferences',
-    )
-      .select('id, unsubscribe_token')
-      .eq('account_id', input.accountId)
-      .in(
-        'id',
-        subscribers.map((item) => item.preferenceId),
-      );
-
-    const tokenById = new Map(
-      ((prefs ?? []) as Array<{ id: string; unsubscribe_token: string }>).map(
-        (row) => [row.id, row.unsubscribe_token],
-      ),
-    );
-
-    for (const row of rows) {
-      row.unsubscribe_token = tokenById.get(row.preference_id) ?? null;
-    }
 
     const { error: insertError } = await fromTable(
       this.client,
@@ -499,7 +502,7 @@ class CampaignsService {
     try {
       await debitCampaignCredits(
         input.accountId,
-        subscribers.length,
+        recipients.length,
         campaign.id,
       );
     } catch (error) {
@@ -632,9 +635,12 @@ class CampaignsService {
 
       const status = preference?.marketing_status;
       const token =
-        recipient.unsubscribe_token || preference?.unsubscribe_token;
+        recipient.unsubscribe_token || preference?.unsubscribe_token || null;
 
-      if (status && status !== 'subscribed') {
+      // Preference-backed recipients respect mailing-list status.
+      // Audience rows without a preference (clients/custom) may still send
+      // when they carry a recipient unsubscribe token.
+      if (recipient.preference_id && status && status !== 'subscribed') {
         await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
           .update({
             status: 'skipped',

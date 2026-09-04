@@ -1,4 +1,8 @@
 import type { CampaignDocument } from './campaign-document';
+import type {
+  CampaignAudienceConfig,
+  CampaignAudienceType,
+} from './campaign-audience';
 
 export type EmailCampaignStatus =
   | 'draft'
@@ -20,6 +24,8 @@ export type EmailCampaign = {
   fromName: string | null;
   fromEmail: string | null;
   replyTo: string | null;
+  audienceType: CampaignAudienceType;
+  audienceConfig: CampaignAudienceConfig;
   status: EmailCampaignStatus;
   scheduledAt: string | null;
   sentAt: string | null;

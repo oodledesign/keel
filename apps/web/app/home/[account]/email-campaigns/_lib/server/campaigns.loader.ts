@@ -1,11 +1,17 @@
 import 'server-only';
 
+import { cache } from 'react';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
+import {
+  estimateCampaignAudienceCount,
+  listAudiencePickerOptions,
+} from '~/lib/campaigns/resolve-campaign-audience';
 import {
   isSendingDomainVerified,
   loadAccountSendingDomain,
@@ -33,26 +39,35 @@ export async function loadCampaignsPage(accountId: string) {
   };
 }
 
-export async function loadCampaignDetail(accountId: string, campaignId: string) {
+export const loadCampaignDetail = cache(async function loadCampaignDetail(accountId: string, campaignId: string) {
   const client = getSupabaseServerClient();
   const admin = getSupabaseServerAdminClient();
   const service = createCampaignsService(client);
 
-  const [campaign, recipients, subscribers, usage, brand, sendingDomain, publishedForms] =
+  const [campaign, recipients, usage, brand, sendingDomain, publishedForms, audienceOptions] =
     await Promise.all([
       service.get(accountId, campaignId),
       service.listRecipients(accountId, campaignId),
-      listWorkspaceMailingListSubscribers(admin, accountId),
       getCampaignUsage(accountId),
       loadAccountBrandResolved(accountId),
       loadAccountSendingDomain(admin, accountId),
       listPublishedFormsForCampaigns(accountId),
+      listAudiencePickerOptions(admin, accountId),
     ]);
+
+  const audienceCount = await estimateCampaignAudienceCount(
+    admin,
+    accountId,
+    campaign.audienceType,
+    campaign.audienceConfig,
+  );
 
   return {
     campaign,
     recipients,
-    subscriberCount: subscribers.length,
+    subscriberCount: audienceOptions.subscriberCount,
+    audienceCount,
+    audienceOptions,
     usage: usage.pool,
     brand,
     sendingDomain: sendingDomain
@@ -65,7 +80,7 @@ export async function loadCampaignDetail(accountId: string, campaignId: string) 
       : null,
     publishedForms,
   };
-}
+});
 
 async function listPublishedFormsForCampaigns(accountId: string) {
   const admin = getSupabaseServerAdminClient();

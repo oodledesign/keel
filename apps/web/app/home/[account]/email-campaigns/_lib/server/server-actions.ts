@@ -32,6 +32,25 @@ function campaignPath(accountSlug: string, campaignId: string) {
     .replace('[campaignId]', campaignId);
 }
 
+function campaignContentPath(accountSlug: string, campaignId: string) {
+  return pathsConfig.app.accountEmailCampaignContent
+    .replace('[account]', accountSlug)
+    .replace('[campaignId]', campaignId);
+}
+
+function campaignSendPath(accountSlug: string, campaignId: string) {
+  return pathsConfig.app.accountEmailCampaignSend
+    .replace('[account]', accountSlug)
+    .replace('[campaignId]', campaignId);
+}
+
+function revalidateCampaignPaths(accountSlug: string, campaignId: string) {
+  revalidatePath(campaignPath(accountSlug, campaignId));
+  revalidatePath(campaignContentPath(accountSlug, campaignId));
+  revalidatePath(campaignSendPath(accountSlug, campaignId));
+  revalidatePath(campaignsPath(accountSlug));
+}
+
 async function requireCampaignsAddon(userId: string, accountId: string) {
   const client = getSupabaseServerClient();
   const allowed = await canUseAddon(
@@ -86,9 +105,11 @@ export const updateCampaignAction = enhanceAction(
       fromName: data.fromName,
       fromEmail: data.fromEmail,
       replyTo: data.replyTo,
+      audienceType: data.audienceType,
+      audienceConfig: data.audienceConfig,
+      scheduledAt: data.scheduledAt,
     });
-    revalidatePath(campaignPath(data.accountSlug, campaign.id));
-    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, campaign.id);
     return { success: true as const };
   },
   { auth: true, schema: UpdateCampaignSchema },
@@ -121,8 +142,7 @@ export const sendCampaignAction = enhanceAction(
       },
       'Started campaign send',
     );
-    revalidatePath(campaignPath(data.accountSlug, data.campaignId));
-    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, data.campaignId);
     return {
       success: true as const,
       remaining: result.remaining,
@@ -195,8 +215,7 @@ export const scheduleCampaignAction = enhanceAction(
       campaignId: data.campaignId,
       scheduledAt: data.scheduledAt,
     });
-    revalidatePath(campaignPath(data.accountSlug, data.campaignId));
-    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, data.campaignId);
     return { success: true as const };
   },
   { auth: true, schema: ScheduleCampaignSchema },
@@ -207,8 +226,7 @@ export const cancelScheduleCampaignAction = enhanceAction(
     const client = await requireCampaignsAddon(user.id, data.accountId);
     const service = createCampaignsService(client);
     await service.cancelSchedule(data.accountId, data.campaignId);
-    revalidatePath(campaignPath(data.accountSlug, data.campaignId));
-    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, data.campaignId);
     return { success: true as const };
   },
   { auth: true, schema: CancelScheduleCampaignSchema },
