@@ -50,6 +50,7 @@ import {
   CampaignFromPicker,
   type CampaignSendingDomainOption,
 } from './campaign-from-picker';
+import { CampaignAnalyticsSummary } from './campaign-analytics-summary';
 import { CampaignRecipientLog } from './campaign-recipient-log';
 import { CampaignSendTestDialog } from './campaign-send-test-dialog';
 import { CampaignTemplateGallery } from './campaign-template-gallery';
@@ -529,6 +530,15 @@ export function CampaignEditor({
           </div>
         </div>
       )}
+
+      {campaign.status === 'sent' ||
+      campaign.status === 'sending' ||
+      recipients.length > 0 ? (
+        <CampaignAnalyticsSummary
+          campaign={campaign}
+          recipients={recipients}
+        />
+      ) : null}
 
       {recipients.length > 0 ? (
         <CampaignRecipientLog campaign={campaign} recipients={recipients} />

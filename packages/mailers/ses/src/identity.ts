@@ -1,18 +1,28 @@
 import {
   AlreadyExistsException,
   CreateConfigurationSetCommand,
+  CreateConfigurationSetEventDestinationCommand,
   CreateEmailIdentityCommand,
   CreateTenantCommand,
   CreateTenantResourceAssociationCommand,
   DeleteEmailIdentityCommand,
   DeleteTenantCommand,
   DeleteTenantResourceAssociationCommand,
+  GetConfigurationSetEventDestinationsCommand,
   GetEmailIdentityCommand,
   NotFoundException,
+  PutConfigurationSetTrackingOptionsCommand,
   PutEmailIdentityMailFromAttributesCommand,
   SESv2Client,
 } from '@aws-sdk/client-sesv2';
 import { GetCallerIdentityCommand, STSClient } from '@aws-sdk/client-sts';
+
+import {
+  type SesIdentityAdmin,
+  type SesIdentitySnapshot,
+  buildSesConfigurationSetArn,
+  buildSesIdentityArn,
+} from './identity-shared';
 
 /**
  * IAM actions required for custom sending domains are documented in
@@ -27,13 +37,6 @@ export {
   mapSesIdentityAdminError,
   sesAccessDeniedUserMessage,
   sesTenantNameForAccount,
-  type SesIdentityAdmin,
-  type SesIdentitySnapshot,
-} from './identity-shared';
-
-import {
-  buildSesConfigurationSetArn,
-  buildSesIdentityArn,
   type SesIdentityAdmin,
   type SesIdentitySnapshot,
 } from './identity-shared';
@@ -230,6 +233,8 @@ class AwsSesIdentityAdmin implements SesIdentityAdmin {
       }
     }
 
+    await this.ensureConfigurationSetEventWiring(name);
+
     return {
       arn: buildSesConfigurationSetArn({
         region: this.getRegion(),
@@ -237,6 +242,107 @@ class AwsSesIdentityAdmin implements SesIdentityAdmin {
         name,
       }),
     };
+  }
+
+  /**
+   * When SES_EVENTS_SNS_TOPIC_ARN is set, attach (or reuse) an SNS event
+   * destination for delivery/bounce/complaint/open/click. Soft-fails on
+   * AccessDenied so domain creation still succeeds.
+   *
+   * Open/click also need SES tracking on the configuration set; optional
+   * SES_TRACKING_DOMAIN (HTTPS custom redirect domain) is applied when set.
+   */
+  private async ensureConfigurationSetEventWiring(name: string) {
+    const topicArn = process.env.SES_EVENTS_SNS_TOPIC_ARN?.trim();
+    if (topicArn) {
+      try {
+        await this.ensureSnsEventDestination(name, topicArn);
+      } catch (error) {
+        console.warn(
+          '[ses] ensure SNS event destination failed; continuing',
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
+
+    const trackingDomain = process.env.SES_TRACKING_DOMAIN?.trim();
+    if (trackingDomain) {
+      try {
+        await getSesv2Client().send(
+          new PutConfigurationSetTrackingOptionsCommand({
+            ConfigurationSetName: name,
+            TrackingOptions: {
+              CustomRedirectDomain: trackingDomain,
+            },
+          }),
+        );
+      } catch (error) {
+        console.warn(
+          '[ses] PutConfigurationSetTrackingOptions failed; continuing',
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
+  }
+
+  private async ensureSnsEventDestination(name: string, topicArn: string) {
+    const destinationName = 'ozer-sns-events';
+    const matchingEventTypes = [
+      'SEND',
+      'REJECT',
+      'BOUNCE',
+      'COMPLAINT',
+      'DELIVERY',
+      'OPEN',
+      'CLICK',
+      'RENDERING_FAILURE',
+      'DELIVERY_DELAY',
+    ] as const;
+
+    try {
+      const existing = await getSesv2Client().send(
+        new GetConfigurationSetEventDestinationsCommand({
+          ConfigurationSetName: name,
+        }),
+      );
+
+      const already = (existing.EventDestinations ?? []).some(
+        (dest: { Name?: string; SnsDestination?: { TopicArn?: string } }) =>
+          dest.Name === destinationName ||
+          dest.SnsDestination?.TopicArn === topicArn,
+      );
+      if (already) {
+        return;
+      }
+    } catch (error) {
+      if (!isNotFound(error)) {
+        // Fall through to create; Get may be denied while Create works
+        console.warn(
+          '[ses] GetConfigurationSetEventDestinations failed; attempting create',
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
+
+    try {
+      await getSesv2Client().send(
+        new CreateConfigurationSetEventDestinationCommand({
+          ConfigurationSetName: name,
+          EventDestinationName: destinationName,
+          EventDestination: {
+            Enabled: true,
+            MatchingEventTypes: [...matchingEventTypes],
+            SnsDestination: {
+              TopicArn: topicArn,
+            },
+          },
+        }),
+      );
+    } catch (error) {
+      if (!isAlreadyExists(error)) {
+        throw error;
+      }
+    }
   }
 
   async ensureTenant(name: string) {

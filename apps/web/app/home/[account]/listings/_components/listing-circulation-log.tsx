@@ -71,7 +71,10 @@ export function ListingCirculationLog({ accountId, listingId }: Props) {
             </p>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               {formatWhen(send.createdAt)} · {send.sendTrigger} ·{' '}
-              {send.recipientCount} sent
+              {send.recipientCount} sent · {send.deliveredCount} delivered ·{' '}
+              {send.openCount} opens · {send.clickCount} clicks
+              {send.bounceCount ? ` · ${send.bounceCount} bounces` : ''}
+              {send.complaintCount ? ` · ${send.complaintCount} complaints` : ''}
             </p>
           </div>
           {send.fromEmail ? (
@@ -88,9 +91,17 @@ export function ListingCirculationLog({ accountId, listingId }: Props) {
               >
                 {recipient.email} · {recipient.status}
                 {recipient.skipReason ? ` (${recipient.skipReason})` : ''}
-                {recipient.sesMessageId
-                  ? ` · SES ${recipient.sesMessageId}`
+                {recipient.deliveredAt ? ' · delivered' : ''}
+                {recipient.openedAt
+                  ? ` · opened${recipient.openCount > 1 ? ` ×${recipient.openCount}` : ''}`
                   : ''}
+                {recipient.clickedAt
+                  ? ` · clicked${recipient.clickCount > 1 ? ` ×${recipient.clickCount}` : ''}`
+                  : ''}
+                {recipient.bouncedAt
+                  ? ` · bounced${recipient.bounceType ? ` (${recipient.bounceType})` : ''}`
+                  : ''}
+                {recipient.complaintAt ? ' · complaint' : ''}
                 {recipient.errorMessage ? ` · ${recipient.errorMessage}` : ''}
               </li>
             ))}

@@ -28,6 +28,11 @@ export type EmailCampaign = {
   failedCount: number;
   skippedCount: number;
   unsubscribedCount: number;
+  deliveredCount: number;
+  openCount: number;
+  clickCount: number;
+  bounceCount: number;
+  complaintCount: number;
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
@@ -44,6 +49,15 @@ export type EmailCampaignRecipient = {
   sesMessageId: string | null;
   sentAt: string | null;
   unsubscribedAt: string | null;
+  deliveredAt: string | null;
+  openedAt: string | null;
+  openCount: number;
+  clickedAt: string | null;
+  clickCount: number;
+  bouncedAt: string | null;
+  bounceType: string | null;
+  bounceSubtype: string | null;
+  complaintAt: string | null;
 };
 
 export type CampaignCreditPool = {

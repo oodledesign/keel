@@ -34,6 +34,11 @@ export type CirculationWorkspaceSend = {
   sendTrigger: string;
   sendKind: string;
   recipientCount: number;
+  deliveredCount: number;
+  openCount: number;
+  clickCount: number;
+  bounceCount: number;
+  complaintCount: number;
   createdAt: string;
   fromEmail: string | null;
   fromName: string | null;
@@ -44,6 +49,14 @@ export type CirculationWorkspaceSend = {
     skipReason: string | null;
     errorMessage: string | null;
     sesMessageId: string | null;
+    deliveredAt: string | null;
+    openedAt: string | null;
+    openCount: number;
+    clickedAt: string | null;
+    clickCount: number;
+    bouncedAt: string | null;
+    bounceType: string | null;
+    complaintAt: string | null;
   }>;
 };
 
@@ -319,7 +332,10 @@ export function CirculationWorkspaceClient({
                     </p>
                     <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                       {formatWhen(send.createdAt)} · {send.sendKind} ·{' '}
-                      {send.sendTrigger} · {send.recipientCount} sent
+                      {send.sendTrigger} · {send.recipientCount} sent ·{' '}
+                      {send.deliveredCount} delivered · {send.openCount} opens ·{' '}
+                      {send.clickCount} clicks
+                      {send.bounceCount ? ` · ${send.bounceCount} bounces` : ''}
                     </p>
                   </div>
                   <ul className="mt-2 space-y-1">
@@ -332,9 +348,17 @@ export function CirculationWorkspaceClient({
                         {recipient.skipReason
                           ? ` (${recipient.skipReason})`
                           : ''}
-                        {recipient.sesMessageId
-                          ? ` · SES ${recipient.sesMessageId}`
+                        {recipient.deliveredAt ? ' · delivered' : ''}
+                        {recipient.openedAt
+                          ? ` · opened${recipient.openCount > 1 ? ` ×${recipient.openCount}` : ''}`
                           : ''}
+                        {recipient.clickedAt
+                          ? ` · clicked${recipient.clickCount > 1 ? ` ×${recipient.clickCount}` : ''}`
+                          : ''}
+                        {recipient.bouncedAt
+                          ? ` · bounced${recipient.bounceType ? ` (${recipient.bounceType})` : ''}`
+                          : ''}
+                        {recipient.complaintAt ? ' · complaint' : ''}
                         {recipient.errorMessage
                           ? ` · ${recipient.errorMessage}`
                           : ''}

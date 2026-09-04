@@ -16,6 +16,11 @@ AWS_SECRET_ACCESS_KEY=
 # HMAC secret for circulation unsubscribe tokens (required in production)
 CIRCULATION_UNSUBSCRIBE_SECRET=
 
+# Workspace email analytics (campaigns + circulation SES events → SNS → webhook)
+# SES_EVENTS_SNS_TOPIC_ARN=arn:aws:sns:eu-west-2:ACCOUNT_ID:ozer-ses-events
+# Optional HTTPS custom redirect domain for SES click tracking
+# SES_TRACKING_DOMAIN=track.example.com
+
 NEXT_PUBLIC_SITE_URL=https://app.ozer.so
 ```
 
@@ -51,6 +56,13 @@ SES sandbox only delivers to verified emails. For production:
 | Publish trigger | listing status → live → `scheduleCirculationOnListingPublished` |
 | Workspace admin | `/app/[account]/circulation` |
 | Public matches page | `/share/matches/[token]` |
-| Bounce/complaint (future) | Mirror Zepto webhook pattern into `commercial_marketing_preferences.marketing_status = suppressed` |
+| Bounce/complaint/open/click | `apps/web/app/api/webhooks/ses` + `workspace_email_events` (SNS from configuration set) |
 
 Do **not** route circulation through `getMailer()` while `ZEPTOMAIL_TOKEN` is set — that prefers Zepto and violates Zepto’s marketing ToS.
+
+## Analytics wiring (day-one)
+
+1. Create SNS topic + HTTPS subscription to `https://app.ozer.so/api/webhooks/ses`.
+2. Set `SES_EVENTS_SNS_TOPIC_ARN` on Vercel; re-save a sending domain (or call ensureConfigurationSet) so the SNS destination is attached to `ozer-custom-domains`.
+3. In SES console, confirm the configuration set event destination includes Delivery, Bounce, Complaint, Open, Click.
+4. Open/click only fire when SES open/click tracking is enabled on that configuration set (and emails are HTML). Delivery/bounce/complaint work without a custom tracking domain.

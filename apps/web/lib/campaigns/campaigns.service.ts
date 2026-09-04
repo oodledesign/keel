@@ -83,6 +83,11 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     failedCount: Number(row.failed_count ?? 0),
     skippedCount: Number(row.skipped_count ?? 0),
     unsubscribedCount: Number(row.unsubscribed_count ?? 0),
+    deliveredCount: Number(row.delivered_count ?? 0),
+    openCount: Number(row.open_count ?? 0),
+    clickCount: Number(row.click_count ?? 0),
+    bounceCount: Number(row.bounce_count ?? 0),
+    complaintCount: Number(row.complaint_count ?? 0),
     lastError: (row.last_error as string | null) ?? null,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -282,7 +287,7 @@ class CampaignsService {
       WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select(
-        'id, campaign_id, email, display_name, status, skip_reason, error_message, ses_message_id, sent_at, unsubscribed_at',
+        'id, campaign_id, email, display_name, status, skip_reason, error_message, ses_message_id, sent_at, unsubscribed_at, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, bounce_type, bounce_subtype, complaint_at',
       )
       .eq('account_id', accountId)
       .eq('campaign_id', campaignId)
@@ -301,6 +306,15 @@ class CampaignsService {
       sesMessageId: (row.ses_message_id as string | null) ?? null,
       sentAt: (row.sent_at as string | null) ?? null,
       unsubscribedAt: (row.unsubscribed_at as string | null) ?? null,
+      deliveredAt: (row.delivered_at as string | null) ?? null,
+      openedAt: (row.opened_at as string | null) ?? null,
+      openCount: Number(row.open_count ?? 0),
+      clickedAt: (row.clicked_at as string | null) ?? null,
+      clickCount: Number(row.click_count ?? 0),
+      bouncedAt: (row.bounced_at as string | null) ?? null,
+      bounceType: (row.bounce_type as string | null) ?? null,
+      bounceSubtype: (row.bounce_subtype as string | null) ?? null,
+      complaintAt: (row.complaint_at as string | null) ?? null,
     }));
   }
 

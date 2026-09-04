@@ -63,6 +63,11 @@ export type CirculationSendLog = {
   fromEmail: string | null;
   fromName: string | null;
   recipientCount: number;
+  deliveredCount: number;
+  openCount: number;
+  clickCount: number;
+  bounceCount: number;
+  complaintCount: number;
   createdAt: string;
   recipients: Array<{
     id: string;
@@ -71,6 +76,14 @@ export type CirculationSendLog = {
     skipReason: string | null;
     errorMessage: string | null;
     sesMessageId: string | null;
+    deliveredAt: string | null;
+    openedAt: string | null;
+    openCount: number;
+    clickedAt: string | null;
+    clickCount: number;
+    bouncedAt: string | null;
+    bounceType: string | null;
+    complaintAt: string | null;
     createdAt: string;
   }>;
 };
@@ -301,7 +314,7 @@ export async function listCirculationSends(
   const { data: sends, error } = await db
     .from('commercial_circulation_sends')
     .select(
-      'id, subject, send_trigger, from_email, from_name, recipient_count, created_at',
+      'id, subject, send_trigger, from_email, from_name, recipient_count, delivered_count, open_count, click_count, bounce_count, complaint_count, created_at',
     )
     .eq('account_id', input.accountId)
     .eq('listing_id', input.listingId)
@@ -316,7 +329,7 @@ export async function listCirculationSends(
   const { data: recipients, error: recError } = await db
     .from('commercial_circulation_recipients')
     .select(
-      'id, send_id, email, status, skip_reason, error_message, ses_message_id, created_at',
+      'id, send_id, email, status, skip_reason, error_message, ses_message_id, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, bounce_type, complaint_at, created_at',
     )
     .eq('account_id', input.accountId)
     .in('send_id', sendIds)
@@ -335,6 +348,14 @@ export async function listCirculationSends(
       skipReason: (row.skip_reason as string | null) ?? null,
       errorMessage: (row.error_message as string | null) ?? null,
       sesMessageId: (row.ses_message_id as string | null) ?? null,
+      deliveredAt: (row.delivered_at as string | null) ?? null,
+      openedAt: (row.opened_at as string | null) ?? null,
+      openCount: Number(row.open_count ?? 0),
+      clickedAt: (row.clicked_at as string | null) ?? null,
+      clickCount: Number(row.click_count ?? 0),
+      bouncedAt: (row.bounced_at as string | null) ?? null,
+      bounceType: (row.bounce_type as string | null) ?? null,
+      complaintAt: (row.complaint_at as string | null) ?? null,
       createdAt: row.created_at as string,
     });
     bySend.set(sendId, list);
@@ -347,6 +368,11 @@ export async function listCirculationSends(
     fromEmail: (row.from_email as string | null) ?? null,
     fromName: (row.from_name as string | null) ?? null,
     recipientCount: Number(row.recipient_count ?? 0),
+    deliveredCount: Number(row.delivered_count ?? 0),
+    openCount: Number(row.open_count ?? 0),
+    clickCount: Number(row.click_count ?? 0),
+    bounceCount: Number(row.bounce_count ?? 0),
+    complaintCount: Number(row.complaint_count ?? 0),
     createdAt: row.created_at as string,
     recipients: bySend.get(row.id as string) ?? [],
   }));
@@ -367,7 +393,7 @@ export async function listAccountCirculationSends(
   const { data: sends, error } = await db
     .from('commercial_circulation_sends')
     .select(
-      'id, listing_id, listing_ids, send_kind, subject, send_trigger, from_email, from_name, recipient_count, created_at',
+      'id, listing_id, listing_ids, send_kind, subject, send_trigger, from_email, from_name, recipient_count, delivered_count, open_count, click_count, bounce_count, complaint_count, created_at',
     )
     .eq('account_id', input.accountId)
     .order('created_at', { ascending: false })
@@ -381,7 +407,7 @@ export async function listAccountCirculationSends(
   const { data: recipients, error: recError } = await db
     .from('commercial_circulation_recipients')
     .select(
-      'id, send_id, email, status, skip_reason, error_message, ses_message_id, created_at',
+      'id, send_id, email, status, skip_reason, error_message, ses_message_id, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, bounce_type, complaint_at, created_at',
     )
     .eq('account_id', input.accountId)
     .in('send_id', sendIds)
@@ -400,6 +426,14 @@ export async function listAccountCirculationSends(
       skipReason: (row.skip_reason as string | null) ?? null,
       errorMessage: (row.error_message as string | null) ?? null,
       sesMessageId: (row.ses_message_id as string | null) ?? null,
+      deliveredAt: (row.delivered_at as string | null) ?? null,
+      openedAt: (row.opened_at as string | null) ?? null,
+      openCount: Number(row.open_count ?? 0),
+      clickedAt: (row.clicked_at as string | null) ?? null,
+      clickCount: Number(row.click_count ?? 0),
+      bouncedAt: (row.bounced_at as string | null) ?? null,
+      bounceType: (row.bounce_type as string | null) ?? null,
+      complaintAt: (row.complaint_at as string | null) ?? null,
       createdAt: row.created_at as string,
     });
     bySend.set(sendId, list);
@@ -417,6 +451,11 @@ export async function listAccountCirculationSends(
     fromEmail: (row.from_email as string | null) ?? null,
     fromName: (row.from_name as string | null) ?? null,
     recipientCount: Number(row.recipient_count ?? 0),
+    deliveredCount: Number(row.delivered_count ?? 0),
+    openCount: Number(row.open_count ?? 0),
+    clickCount: Number(row.click_count ?? 0),
+    bounceCount: Number(row.bounce_count ?? 0),
+    complaintCount: Number(row.complaint_count ?? 0),
     createdAt: row.created_at as string,
     recipients: bySend.get(row.id as string) ?? [],
   }));
