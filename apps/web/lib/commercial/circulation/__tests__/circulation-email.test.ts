@@ -25,7 +25,10 @@ describe('buildCirculationEmailHtml', () => {
     listingSummary: '2,400 sq ft warehouse to let.',
     address: 'Medway Park, Maidstone',
     unsubscribeUrl: 'https://app.example.com/unsubscribe/circulation?token=abc',
-    viewUrl: 'https://app.example.com/share/brochure/tok',
+    viewUrl: 'https://www.bracketts.co.uk/property/unit-4',
+    viewUrlLabel: 'View on website',
+    coverImageUrl: 'https://cdn.example.com/unit-4.jpg',
+    manageUrl: 'https://app.example.com/share/matches/tok123',
     contactName: 'Sam Applicant',
   });
 
@@ -43,7 +46,11 @@ describe('buildCirculationEmailHtml', () => {
     expect(html).toContain('Unit 4, Medway Park');
     expect(html).toContain('Hi Sam Applicant,');
     expect(html).toContain('2,400 sq ft warehouse to let.');
-    expect(html).toContain('View details');
+    expect(html).toContain('View on website');
+    expect(html).toContain('https://www.bracketts.co.uk/property/unit-4');
+    expect(html).toContain('https://cdn.example.com/unit-4.jpg');
+    expect(html).toContain('View your live matches');
+    expect(html).toContain('https://app.example.com/share/matches/tok123');
     expect(html).toContain(
       'https://app.example.com/unsubscribe/circulation?token=abc',
     );
@@ -75,7 +82,9 @@ describe('buildCirculationDigestEmailHtml', () => {
         name: 'Unit 4, Medway Park',
         summary: '2,400 sq ft warehouse to let.',
         address: 'Medway Park, Maidstone',
-        viewUrl: 'https://app.example.com/share/brochure/tok',
+        viewUrl: 'https://www.bracketts.co.uk/property/unit-4',
+        viewUrlLabel: 'View on website',
+        coverImageUrl: 'https://cdn.example.com/unit-4.jpg',
         sizeLabel: '2,400 sq ft',
         disposalTypeLabel: 'To let',
       },
@@ -102,11 +111,14 @@ describe('buildCirculationDigestEmailHtml', () => {
     expect(html).not.toMatch(/ozer\.so/i);
   });
 
-  it('includes unsubscribe and the public preferences page', () => {
+  it('includes unsubscribe and the personal live matches CTA', () => {
     expect(html).toContain(
       'https://app.example.com/unsubscribe/circulation?token=abc',
     );
     expect(html).toContain('https://app.example.com/share/matches/tok123');
-    expect(html).toContain('Manage preferences');
+    expect(html).toContain('View your live matches');
+    expect(html).toContain('personal matches page');
+    expect(html).toContain('View on website');
+    expect(html).toContain('https://cdn.example.com/unit-4.jpg');
   });
 });

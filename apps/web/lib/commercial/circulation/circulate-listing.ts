@@ -16,6 +16,9 @@ import {
   type CirculationEmailBrand,
   buildCirculationEmailHtml,
 } from '~/lib/commercial/circulation/circulation-email';
+import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
+import { resolveSiteUrlForPublicMedia } from '~/lib/commercial/listing-media-public-url';
+import { isSafeHttpUrl } from '~/lib/commercial/linkedin-publishing/listing-public-url';
 import {
   createCirculationUnsubscribeToken,
   createCommercialCirculationService,
@@ -493,7 +496,7 @@ export async function circulateListing(
   const { data: listing, error: listingError } = await client
     .from('commercial_listings')
     .select(
-      'id, name, summary, description, address_line_1, address_line_2, town, county, postcode, account_id, brochure_share_token, brochure_share_enabled',
+      'id, name, summary, description, address_line_1, address_line_2, town, county, postcode, account_id, brochure_share_token, brochure_share_enabled, website_url',
     )
     .eq('id', input.listingId)
     .eq('account_id', input.accountId)
@@ -602,10 +605,62 @@ export async function circulateListing(
   const brochureEnabled = Boolean(
     (listing as { brochure_share_enabled?: boolean }).brochure_share_enabled,
   );
-  const viewUrl =
+  const brochureUrl =
     brochureEnabled && brochureToken
       ? new URL(`/share/brochure/${brochureToken}`, input.siteUrl).toString()
       : null;
+
+  const listingWebsiteUrl = (
+    listing as { website_url?: string | null }
+  ).website_url?.trim();
+  let propertyHiveUrl: string | null = null;
+  {
+    const { data: phRow } = await db
+      .from('commercial_portal_publications')
+      .select('external_url, status')
+      .eq('account_id', input.accountId)
+      .eq('listing_id', input.listingId)
+      .eq('portal', 'property_hive')
+      .maybeSingle();
+    const status = String(
+      (phRow as { status?: string | null } | null)?.status ?? '',
+    )
+      .trim()
+      .toLowerCase();
+    const url = (
+      phRow as { external_url?: string | null } | null
+    )?.external_url?.trim();
+    if (
+      url &&
+      isSafeHttpUrl(url) &&
+      ['published', 'live', 'synced'].includes(status)
+    ) {
+      propertyHiveUrl = url;
+    }
+  }
+
+  const websiteListingUrl =
+    listingWebsiteUrl && isSafeHttpUrl(listingWebsiteUrl)
+      ? listingWebsiteUrl
+      : propertyHiveUrl;
+  const viewUrl = websiteListingUrl ?? brochureUrl;
+  const viewUrlLabel = websiteListingUrl
+    ? 'View on website'
+    : brochureUrl
+      ? 'View details'
+      : null;
+
+  const mediaOrigin =
+    resolveSiteUrlForPublicMedia() ??
+    input.siteUrl.trim().replace(/\/+$/, '');
+  const coverByListing = mediaOrigin
+    ? await loadListingCoverUrlsForDigest(
+        client,
+        [input.listingId],
+        mediaOrigin,
+      )
+    : new Map<string, string>();
+  const coverImageUrl = coverByListing.get(input.listingId) ?? null;
 
   const fromHeader = resolved.fromHeader ?? fromEmail;
 
@@ -684,6 +739,14 @@ export async function circulateListing(
     ).toString();
 
     try {
+      const publicToken = await circulation.ensurePublicAccessToken(
+        input.accountId,
+        email,
+      );
+      const manageUrl = publicToken
+        ? new URL(`/share/matches/${publicToken}`, input.siteUrl).toString()
+        : null;
+
       const html = buildCirculationEmailHtml({
         brand: emailBrand,
         listingName: (listing as { name: string }).name,
@@ -691,6 +754,9 @@ export async function circulateListing(
         address: listingAddr,
         unsubscribeUrl,
         viewUrl,
+        viewUrlLabel,
+        coverImageUrl,
+        manageUrl,
         contactName: req.contact_name,
       });
 

@@ -152,6 +152,7 @@ export async function loadListingCoverUrlsForDigest(
     .in('listing_id', uniqueIds)
     .eq('is_private', false)
     .or('media_type.eq.image,mime_type.ilike.image/%')
+    .order('is_cover', { ascending: false })
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
     .order('id', { ascending: true });

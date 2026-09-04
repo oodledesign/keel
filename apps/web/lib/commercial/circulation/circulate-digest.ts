@@ -290,6 +290,8 @@ async function sendOneDigest(input: {
       summary: listing.summary,
       address: listing.address,
       viewUrl: listing.viewUrl,
+      viewUrlLabel: listing.viewUrlLabel,
+      coverImageUrl: listing.coverImageUrl,
       sizeLabel: listing.sizeLabel,
       disposalTypeLabel: listing.disposalTypeLabel,
     })),

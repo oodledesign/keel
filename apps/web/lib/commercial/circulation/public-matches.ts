@@ -27,6 +27,9 @@ export type PublicMatchesPage = {
     disposalTypeLabel: string;
     sizeLabel: string | null;
     viewUrl: string | null;
+    viewUrlLabel: string | null;
+    websiteListingUrl: string | null;
+    coverImageUrl: string | null;
   }>;
 };
 
@@ -78,6 +81,9 @@ export async function loadPublicMatchesByToken(
       disposalTypeLabel: listing.disposalTypeLabel,
       sizeLabel: listing.sizeLabel,
       viewUrl: listing.viewUrl,
+      viewUrlLabel: listing.viewUrlLabel,
+      websiteListingUrl: listing.websiteListingUrl,
+      coverImageUrl: listing.coverImageUrl,
     })),
   };
 }

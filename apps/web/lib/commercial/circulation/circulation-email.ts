@@ -79,6 +79,8 @@ export type CirculationDigestListing = {
   summary: string;
   address: string;
   viewUrl?: string | null;
+  viewUrlLabel?: string | null;
+  coverImageUrl?: string | null;
   sizeLabel?: string | null;
   disposalTypeLabel?: string | null;
 };
@@ -90,6 +92,8 @@ export function buildCirculationEmailHtml(input: {
   address: string;
   unsubscribeUrl: string;
   viewUrl?: string | null;
+  viewUrlLabel?: string | null;
+  coverImageUrl?: string | null;
   manageUrl?: string | null;
   contactName?: string | null;
 }): string {
@@ -106,8 +110,19 @@ export function buildCirculationEmailHtml(input: {
     ? `<img src="${escapeCirculationHtml(input.brand.logoUrl)}" alt="${agency}" height="40" style="display:block;max-height:40px;width:auto;border:0;" />`
     : `<span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;color:${headerText};">${agency}</span>`;
 
+  const viewLabel = input.viewUrlLabel?.trim() || 'View details';
   const cta = input.viewUrl
-    ? `<tr><td style="padding:4px 32px 24px;">${renderCta('View details', input.viewUrl, accent)}</td></tr>`
+    ? `<tr><td style="padding:4px 32px 16px;">${renderCta(viewLabel, input.viewUrl, accent)}</td></tr>`
+    : '';
+
+  const manageCta = input.manageUrl
+    ? `<tr><td style="padding:0 32px 24px;">${renderCta('View your live matches', input.manageUrl, accent)}<p style="margin:10px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6B6B6B;">Your personal matches page stays up to date as new opportunities appear.</p></td></tr>`
+    : '';
+
+  const cover = input.coverImageUrl
+    ? `<tr><td style="padding:0;">
+            <img src="${escapeCirculationHtml(input.coverImageUrl)}" alt="${listing}" width="560" style="display:block;width:100%;max-width:560px;height:auto;border:0;line-height:0;" />
+          </td></tr>`
     : '';
 
   const address = input.address
@@ -132,6 +147,7 @@ export function buildCirculationEmailHtml(input: {
             ${logo}
           </td>
         </tr>
+        ${cover}
         <tr>
           <td style="padding:28px 32px 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#09111F;">
             <h1 style="margin:0;font-size:22px;line-height:1.3;font-weight:700;color:#09111F;">${listing}</h1>
@@ -146,6 +162,7 @@ export function buildCirculationEmailHtml(input: {
           </td>
         </tr>
         ${cta}
+        ${manageCta}
         <tr>
           <td style="padding:0 32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6B6B6B;">
             You are receiving this because you registered a commercial property requirement with ${agency}.
@@ -154,7 +171,7 @@ export function buildCirculationEmailHtml(input: {
             from matching opportunity emails.
             ${
               input.manageUrl
-                ? ` <a href="${escapeCirculationHtml(input.manageUrl)}" style="color:${accent};">Manage preferences</a>.`
+                ? ` <a href="${escapeCirculationHtml(input.manageUrl)}" style="color:${accent};">Open your personal matches page</a>.`
                 : ''
             }
           </td>
@@ -208,12 +225,19 @@ export function buildCirculationDigestEmailHtml(input: {
       const address = listing.address
         ? `<p style="margin:0 0 8px;color:#3D3D3D;">${escapeCirculationHtml(listing.address)}</p>`
         : '';
+      const cover = listing.coverImageUrl
+        ? `<tr><td style="padding:0;line-height:0;">
+                  <img src="${escapeCirculationHtml(listing.coverImageUrl)}" alt="${name}" width="496" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px 10px 0 0;" />
+                </td></tr>`
+        : '';
+      const viewLabel = listing.viewUrlLabel?.trim() || 'View details';
       const cta = listing.viewUrl
-        ? `<div style="margin-top:12px;">${renderCta('View details', listing.viewUrl, accent)}</div>`
+        ? `<div style="margin-top:12px;">${renderCta(viewLabel, listing.viewUrl, accent)}</div>`
         : '';
       return `<tr>
           <td style="padding:0 32px 20px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #E4E2DC;border-radius:10px;border-collapse:separate;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #E4E2DC;border-radius:10px;border-collapse:separate;overflow:hidden;">
+              ${cover}
               <tr>
                 <td style="padding:18px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#09111F;">
                   <h2 style="margin:0 0 6px;font-size:18px;line-height:1.3;font-weight:700;">${name}</h2>
@@ -229,8 +253,12 @@ export function buildCirculationDigestEmailHtml(input: {
     })
     .join('');
 
+  const manageCta = input.manageUrl
+    ? `<tr><td style="padding:4px 32px 20px;">${renderCta('View your live matches', input.manageUrl, accent)}<p style="margin:10px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6B6B6B;">See your personal matches page — kept up to date as new opportunities appear.</p></td></tr>`
+    : '';
+
   const manage = input.manageUrl
-    ? ` <a href="${escapeCirculationHtml(input.manageUrl)}" style="color:${accent};">Manage preferences</a>.`
+    ? ` <a href="${escapeCirculationHtml(input.manageUrl)}" style="color:${accent};">Open your personal matches page</a>.`
     : '';
 
   return `<!DOCTYPE html>
@@ -263,6 +291,7 @@ export function buildCirculationDigestEmailHtml(input: {
           </td>
         </tr>
         ${cards}
+        ${manageCta}
         <tr>
           <td style="padding:0 32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6B6B6B;">
             You are receiving this because you registered a commercial property requirement with ${agency}.

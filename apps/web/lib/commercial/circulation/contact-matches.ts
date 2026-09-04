@@ -9,7 +9,10 @@ import {
   normalizeCirculationEmail,
 } from '~/lib/commercial/circulation/circulation-eligibility';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
+import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
 import { DISPOSAL_TYPE_LABELS } from '~/lib/commercial/commercial-constants';
+import { resolveSiteUrlForPublicMedia } from '~/lib/commercial/listing-media-public-url';
+import { isSafeHttpUrl } from '~/lib/commercial/linkedin-publishing/listing-public-url';
 import {
   ACTIVE_LISTING_STATUSES_FOR_MATCH,
   ACTIVE_REQUIREMENT_STAGES_FOR_MATCH,
@@ -30,7 +33,14 @@ export type ContactMatchListing = {
   sizeLabel: string | null;
   score: number;
   reasons: string[];
+  /** Primary CTA URL (website listing preferred, else brochure share). */
   viewUrl: string | null;
+  /** Label for viewUrl — "View on website" or "View details". */
+  viewUrlLabel: string | null;
+  /** Agency website / Property Hive permalink when available (never brochure). */
+  websiteListingUrl: string | null;
+  /** Stable public cover image URL for email + share page. */
+  coverImageUrl: string | null;
   brochureShareToken: string | null;
   autoCirculate: boolean;
 };
@@ -71,6 +81,7 @@ type ListingRow = {
   brochure_share_token: string | null;
   brochure_share_enabled: boolean | null;
   auto_circulate_matches: boolean | null;
+  website_url: string | null;
 };
 
 type RequirementRow = {
@@ -165,17 +176,87 @@ function formatSize(row: ListingRow): string | null {
   return `${fmt(min ?? max!)} sq ft`;
 }
 
-function listingViewUrl(
+function brochureShareUrl(
   row: ListingRow,
   siteUrl: string | null,
 ): string | null {
   if (!row.brochure_share_enabled || !row.brochure_share_token || !siteUrl) {
     return null;
   }
-  return new URL(
-    `/share/brochure/${row.brochure_share_token}`,
-    siteUrl,
-  ).toString();
+  try {
+    return new URL(
+      `/share/brochure/${row.brochure_share_token}`,
+      siteUrl,
+    ).toString();
+  } catch {
+    return null;
+  }
+}
+
+function pickWebsiteListingUrl(
+  websiteUrl: string | null | undefined,
+  portalUrl: string | null | undefined,
+): string | null {
+  const website = websiteUrl?.trim() ?? '';
+  if (website && isSafeHttpUrl(website)) return website;
+  const portal = portalUrl?.trim() ?? '';
+  if (portal && isSafeHttpUrl(portal)) return portal;
+  return null;
+}
+
+function resolveListingCta(input: {
+  websiteListingUrl: string | null;
+  brochureUrl: string | null;
+}): { viewUrl: string | null; viewUrlLabel: string | null } {
+  if (input.websiteListingUrl) {
+    return { viewUrl: input.websiteListingUrl, viewUrlLabel: 'View on website' };
+  }
+  if (input.brochureUrl) {
+    return { viewUrl: input.brochureUrl, viewUrlLabel: 'View details' };
+  }
+  return { viewUrl: null, viewUrlLabel: null };
+}
+
+const LIVE_PORTAL_STATUSES = new Set(['published', 'live', 'synced']);
+
+async function loadPropertyHiveListingUrls(
+  client: SupabaseClient,
+  accountId: string,
+  listingIds: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const uniqueIds = [...new Set(listingIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return map;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = client as any;
+  const { data, error } = await db
+    .from('commercial_portal_publications')
+    .select('listing_id, external_url, status')
+    .eq('account_id', accountId)
+    .eq('portal', 'property_hive')
+    .in('listing_id', uniqueIds);
+
+  if (error) {
+    console.error('[circulation] property hive urls', error.message);
+    return map;
+  }
+
+  for (const row of (data ?? []) as Array<{
+    listing_id?: string | null;
+    external_url?: string | null;
+    status?: string | null;
+  }>) {
+    const listingId = row.listing_id?.trim();
+    const url = row.external_url?.trim() ?? '';
+    const status = (row.status ?? '').trim().toLowerCase();
+    if (!listingId || map.has(listingId)) continue;
+    if (!LIVE_PORTAL_STATUSES.has(status)) continue;
+    if (!url || !isSafeHttpUrl(url)) continue;
+    map.set(listingId, url);
+  }
+
+  return map;
 }
 
 const LISTING_SELECT = [
@@ -201,6 +282,7 @@ const LISTING_SELECT = [
   'brochure_share_token',
   'brochure_share_enabled',
   'auto_circulate_matches',
+  'website_url',
 ].join(', ');
 
 const REQUIREMENT_SELECT = [
@@ -368,7 +450,10 @@ export async function listContactMatches(
         sizeLabel: formatSize(listing),
         score: result.score,
         reasons: result.reasons,
-        viewUrl: listingViewUrl(listing, input.siteUrl ?? null),
+        viewUrl: null,
+        viewUrlLabel: null,
+        websiteListingUrl: null,
+        coverImageUrl: null,
         brochureShareToken: listing.brochure_share_token,
         autoCirculate: Boolean(listing.auto_circulate_matches),
       });
@@ -381,6 +466,42 @@ export async function listContactMatches(
       listings: row.listings.sort((a, b) => b.score - a.score),
     }))
     .filter((row) => row.listings.length > 0);
+
+  const matchedListingIds = [
+    ...new Set(
+      contacts.flatMap((row) => row.listings.map((listing) => listing.listingId)),
+    ),
+  ];
+  const mediaOrigin =
+    resolveSiteUrlForPublicMedia() ??
+    (input.siteUrl?.trim() ? input.siteUrl.trim().replace(/\/+$/, '') : null);
+
+  const [coverByListing, phUrlByListing] = await Promise.all([
+    mediaOrigin
+      ? loadListingCoverUrlsForDigest(client, matchedListingIds, mediaOrigin)
+      : Promise.resolve(new Map<string, string>()),
+    loadPropertyHiveListingUrls(client, input.accountId, matchedListingIds),
+  ]);
+
+  const listingById = new Map(listings.map((row) => [row.id, row]));
+
+  for (const contact of contacts) {
+    for (const item of contact.listings) {
+      const listing = listingById.get(item.listingId);
+      const websiteListingUrl = pickWebsiteListingUrl(
+        listing?.website_url,
+        phUrlByListing.get(item.listingId),
+      );
+      const brochureUrl = listing
+        ? brochureShareUrl(listing, input.siteUrl ?? null)
+        : null;
+      const cta = resolveListingCta({ websiteListingUrl, brochureUrl });
+      item.websiteListingUrl = websiteListingUrl;
+      item.viewUrl = cta.viewUrl;
+      item.viewUrlLabel = cta.viewUrlLabel;
+      item.coverImageUrl = coverByListing.get(item.listingId) ?? null;
+    }
+  }
 
   if (input.requireListingId) {
     return contacts.filter((row) =>

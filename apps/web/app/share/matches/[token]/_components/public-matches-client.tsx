@@ -18,6 +18,9 @@ export type PublicMatchesListing = {
   disposalTypeLabel: string;
   sizeLabel: string | null;
   viewUrl: string | null;
+  viewUrlLabel: string | null;
+  websiteListingUrl: string | null;
+  coverImageUrl: string | null;
 };
 
 type Brand = {
@@ -99,8 +102,8 @@ export function PublicMatchesClient({
             {contactName ? `Properties for ${contactName}` : 'Your matches'}
           </h1>
           <p className="mt-2 text-sm leading-6 text-[#3D3D3D]">
-            Current commercial opportunities from {agencyName} that match your
-            registered requirement. This page is private to {email}.
+            Your personal matches from {agencyName}. This page stays up to date
+            as new opportunities appear, and is private to {email}.
           </p>
 
           {listings.length === 0 ? (
@@ -112,35 +115,47 @@ export function PublicMatchesClient({
               {listings.map((listing) => (
                 <li
                   key={listing.listingId}
-                  className="rounded-xl border border-[#E4E2DC] p-4"
+                  className="overflow-hidden rounded-xl border border-[#E4E2DC]"
                 >
-                  <h2 className="text-lg font-semibold text-[#09111F]">
-                    {listing.name}
-                  </h2>
-                  <p className="mt-1 text-xs text-[#6B6B6B]">
-                    {[listing.disposalTypeLabel, listing.sizeLabel]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
-                  {listing.address ? (
-                    <p className="mt-1 text-sm text-[#3D3D3D]">
-                      {listing.address}
+                  {listing.coverImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={listing.coverImageUrl}
+                      alt={listing.name}
+                      className="aspect-[16/10] w-full object-cover"
+                    />
+                  ) : null}
+                  <div className="p-4">
+                    <h2 className="text-lg font-semibold text-[#09111F]">
+                      {listing.name}
+                    </h2>
+                    <p className="mt-1 text-xs text-[#6B6B6B]">
+                      {[listing.disposalTypeLabel, listing.sizeLabel]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
-                  ) : null}
-                  {listing.summary ? (
-                    <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-[#3D3D3D]">
-                      {listing.summary}
-                    </p>
-                  ) : null}
-                  {listing.viewUrl ? (
-                    <a
-                      href={listing.viewUrl}
-                      className="mt-3 inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-white"
-                      style={{ background: brand.accentColor }}
-                    >
-                      View details
-                    </a>
-                  ) : null}
+                    {listing.address ? (
+                      <p className="mt-1 text-sm text-[#3D3D3D]">
+                        {listing.address}
+                      </p>
+                    ) : null}
+                    {listing.summary ? (
+                      <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-[#3D3D3D]">
+                        {listing.summary}
+                      </p>
+                    ) : null}
+                    {listing.viewUrl ? (
+                      <a
+                        href={listing.viewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-white"
+                        style={{ background: brand.accentColor }}
+                      >
+                        {listing.viewUrlLabel?.trim() || 'View details'}
+                      </a>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
