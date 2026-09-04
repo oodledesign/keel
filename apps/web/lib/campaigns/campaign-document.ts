@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { CampaignFormLink } from './form-link';
+
 export const CAMPAIGN_DOCUMENT_VERSION = 1 as const;
 export const CAMPAIGN_DOCUMENT_MARKER = '<!-- ozer-campaign-document:v1 -->';
 
@@ -70,6 +72,7 @@ export type CampaignBlock =
 export type CampaignDocument = {
   version: typeof CAMPAIGN_DOCUMENT_VERSION;
   blocks: CampaignBlock[];
+  formLink?: CampaignFormLink | null;
 };
 
 const AlignSchema = z.enum(['left', 'center']);
@@ -147,9 +150,17 @@ export const CampaignBlockSchema = z.discriminatedUnion('type', [
   }),
 ]);
 
+const CampaignFormLinkSchema = z.object({
+  formId: z.string().uuid(),
+  shareToken: z.string().min(16).max(128),
+  formName: z.string().min(1).max(160),
+  prefillEmail: z.boolean(),
+});
+
 export const CampaignDocumentSchema = z.object({
   version: z.literal(CAMPAIGN_DOCUMENT_VERSION),
   blocks: z.array(CampaignBlockSchema).max(80),
+  formLink: CampaignFormLinkSchema.nullable().optional(),
 });
 
 export const CAMPAIGN_BLOCK_LIBRARY: Array<{

@@ -45,6 +45,8 @@ async function CampaignDetailPage({ params }: CampaignDetailPageProps) {
           subscriberCount={data.subscriberCount}
           usage={data.usage}
           brand={data.brand}
+          sendingDomain={data.sendingDomain}
+          publishedForms={data.publishedForms}
           workspace={campaignTemplateWorkspaceFromProfile(
             workspace.workspaceProfile,
           )}

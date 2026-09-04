@@ -5,6 +5,7 @@ import {
   WORKSPACE_FORM_FIELD_TYPES,
   WORKSPACE_FORM_STATUSES,
 } from './form-fields';
+import { WORKSPACE_FORM_TEMPLATES } from './form-templates';
 
 export const WorkspaceFormFieldSchema = z.object({
   id: z.string().min(1).max(80),
@@ -25,6 +26,7 @@ export const CreateWorkspaceFormSchema = z.object({
   accountId: z.string().uuid(),
   name: z.string().min(1).max(120),
   destination: z.enum(WORKSPACE_FORM_DESTINATIONS),
+  template: z.enum(WORKSPACE_FORM_TEMPLATES).default('contact'),
 });
 
 export const UpdateWorkspaceFormSchema = z.object({

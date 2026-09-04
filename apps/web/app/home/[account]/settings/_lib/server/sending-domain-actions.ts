@@ -162,6 +162,25 @@ export const removeSendingDomainAction = enhanceAction(
   { auth: true, schema: SendingDomainAccountSchema },
 );
 
+
+export const ensureSendingDomainShareTokenAction = enhanceAction(
+  async function (data, user) {
+    try {
+      const { accountSlug, service } = await getWritableService(
+        data.accountId,
+        user.id,
+      );
+      const token = await service.ensureInstructionsShareToken(data.accountId);
+      const path = pathsConfig.app.sendingDomainShare.replace('[token]', token);
+      revalidateSendingDomain(accountSlug);
+      return { token, path };
+    } catch (error) {
+      toActionError(error);
+    }
+  },
+  { auth: true, schema: SendingDomainAccountSchema },
+);
+
 export const sendSendingDomainTestAction = enhanceAction(
   async function (data, user) {
     try {

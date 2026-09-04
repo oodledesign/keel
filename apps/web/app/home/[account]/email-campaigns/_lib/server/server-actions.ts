@@ -82,6 +82,9 @@ export const updateCampaignAction = enhanceAction(
       subject: data.subject,
       previewText: data.previewText,
       bodyDocument: data.bodyDocument,
+      fromName: data.fromName,
+      fromEmail: data.fromEmail,
+      replyTo: data.replyTo,
     });
     revalidatePath(campaignPath(data.accountSlug, campaign.id));
     revalidatePath(campaignsPath(data.accountSlug));

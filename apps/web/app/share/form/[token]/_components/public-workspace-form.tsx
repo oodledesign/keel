@@ -30,6 +30,8 @@ type Props = {
   listingId?: string | null;
   propertyId?: string | null;
   embed?: boolean;
+  /** Prefills the form email field from ?email= on the public share URL. */
+  prefillEmail?: string | null;
   logoUrl?: string | null;
   accentColor: string;
   primaryColor: string;
@@ -46,12 +48,21 @@ export function PublicWorkspaceForm({
   listingId,
   propertyId,
   embed,
+  prefillEmail,
   logoUrl,
   accentColor,
   primaryColor,
 }: Props) {
   const visibleFields = useMemo(() => publicVisibleFields(fields), [fields]);
-  const [values, setValues] = useState<Record<string, string | boolean>>({});
+  const [values, setValues] = useState<Record<string, string | boolean>>(() => {
+    const email = prefillEmail?.trim();
+    if (!email) return {};
+    const emailField = fields.find(
+      (field) => field.type === 'email' || field.key === 'email',
+    );
+    if (!emailField) return {};
+    return { [emailField.key]: email };
+  });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);

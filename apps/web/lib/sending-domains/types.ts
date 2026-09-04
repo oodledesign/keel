@@ -21,6 +21,8 @@ export type SendingDomainRecord = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  /** Opaque public token for /share/sending-domain/[token]. */
+  instructions_share_token: string | null;
 };
 
 export type ResolvedWorkspaceMailFrom = {
@@ -35,3 +37,11 @@ export type ResolvedWorkspaceMailFrom = {
 };
 
 export const ACCOUNT_SENDING_DOMAINS_TABLE = 'account_sending_domains';
+
+export type PublicSendingDomainInstructions = {
+  accountName: string;
+  domain: string;
+  sendingHost: string;
+  dnsRecords: SendingDnsRecord[];
+  verificationStatus: SendingDomainRecord['verification_status'];
+};

@@ -1,10 +1,16 @@
 'use client';
 
-import { type ChangeEvent, useEffect, useState, useTransition } from 'react';
+import {
+  type ChangeEvent,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Check, Copy, Loader2, Mail } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@kit/ui/alert';
 import { Badge } from '@kit/ui/badge';
@@ -15,6 +21,7 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import pathsConfig from '~/config/paths.config';
 import {
   DEFAULT_SENDING_LOCAL_PART,
   DEFAULT_SENDING_LOCAL_PARTS,
@@ -45,12 +52,12 @@ function statusLabel(status: SendingDomainRecord['verification_status']) {
 
 function statusBadgeClass(status: SendingDomainRecord['verification_status']) {
   if (status === 'verified') {
-    return 'border-[color:var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
+    return 'border-emerald-500/40 bg-emerald-500/15 text-emerald-800 dark:text-emerald-100';
   }
   if (status === 'failed') {
     return 'border-destructive/30 bg-destructive/10 text-destructive';
   }
-  return 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
+  return 'border-amber-500/40 bg-amber-500/15 text-amber-900 dark:text-amber-100';
 }
 
 function dnsRecordStatusLabel(status: DnsRecordVerificationStatus) {
@@ -61,12 +68,12 @@ function dnsRecordStatusLabel(status: DnsRecordVerificationStatus) {
 
 function dnsRecordStatusBadgeClass(status: DnsRecordVerificationStatus) {
   if (status === 'connected') {
-    return 'border-[color:var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
+    return 'border-emerald-500/40 bg-emerald-500/15 text-emerald-800 dark:text-emerald-100';
   }
   if (status === 'failed') {
     return 'border-destructive/30 bg-destructive/10 text-destructive';
   }
-  return 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
+  return 'border-amber-500/40 bg-amber-500/15 text-amber-900 dark:text-amber-100';
 }
 
 function chipClass(active: boolean) {
@@ -156,6 +163,37 @@ function previewFromAddress(input: {
     domain,
     sendingSubdomain,
   });
+}
+
+
+function useBrowserOrigin() {
+  return useSyncExternalStore(
+    () => () => undefined,
+    () => window.location.origin,
+    () => '',
+  );
+}
+
+function buildDeveloperEmail(input: {
+  accountName: string;
+  sendingHost: string;
+  shareUrl: string;
+}) {
+  const subject = `DNS records for ${input.sendingHost} (Ozer)`;
+  const body = [
+    'Hi,',
+    '',
+    `Please add the DNS records so ${input.accountName} can send email from ${input.sendingHost} via Ozer.`,
+    '',
+    'Step-by-step instructions and copyable records (no login required):',
+    input.shareUrl,
+    '',
+    'After the records have propagated, please tell the workspace owner to open Sending domain settings in Ozer and hit Check status.',
+    '',
+    'Thanks',
+  ].join('\n');
+
+  return { subject, body, full: `Subject: ${subject}\n\n${body}` };
 }
 
 export function SendingDomainSettings({
@@ -459,6 +497,19 @@ function ConnectedDomain({
     sendingSubdomain: domain.sending_subdomain,
   });
   const sendingHost = domain.sending_host || domain.domain;
+  const origin = useBrowserOrigin();
+  const shareToken = domain.instructions_share_token ?? '';
+  const sharePath = shareToken
+    ? pathsConfig.app.sendingDomainShare.replace('[token]', shareToken)
+    : null;
+  const shareUrl = sharePath && origin ? `${origin}${sharePath}` : sharePath;
+  const developerEmail = shareUrl
+    ? buildDeveloperEmail({
+        accountName,
+        sendingHost,
+        shareUrl,
+      })
+    : null;
 
   return (
     <div className="grid gap-5">
@@ -650,6 +701,79 @@ function ConnectedDomain({
           </table>
         </div>
       </div>
+
+
+      {canEdit && shareUrl ? (
+        <div className="grid gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
+          <div className="space-y-1">
+            <h2 className="text-base font-medium text-[var(--workspace-shell-text)]">
+              Share with your developer
+            </h2>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Send a read-only instructions page (no login) with the DNS records
+              for {sendingHost}.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+                <code className="min-w-0 flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text)]/70">
+                  {shareUrl}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-test="copy-sending-domain-share-link"
+                  className="shrink-0 gap-1.5"
+                  onClick={() => onCopy(shareUrl, 'share-link')}
+                >
+                  {copiedKey === 'share-link' ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  {copiedKey === 'share-link' ? 'Copied' : 'Copy link'}
+                </Button>
+              </div>
+
+              {developerEmail ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    data-test="copy-sending-domain-share-email"
+                    className="gap-1.5"
+                    onClick={() =>
+                      onCopy(developerEmail.full, 'share-email')
+                    }
+                  >
+                    {copiedKey === 'share-email' ? (
+                      <Check className="h-3.5 w-3.5" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                    {copiedKey === 'share-email' ? 'Copied' : 'Copy email'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    data-test="open-sending-domain-share-mailto"
+                    className="gap-1.5"
+                    asChild
+                  >
+                    <a
+                      href={`mailto:?subject=${encodeURIComponent(developerEmail.subject)}&body=${encodeURIComponent(developerEmail.body)}`}
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      Open email
+                    </a>
+                  </Button>
+                </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
         <div className="space-y-1">

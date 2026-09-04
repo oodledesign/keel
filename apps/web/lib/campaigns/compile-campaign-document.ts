@@ -7,6 +7,7 @@ import {
   type CampaignDocument,
   isSafeHttpUrl,
 } from './campaign-document';
+import { isCampaignFormUrlToken } from './form-link';
 
 const DEFAULT_PRIMARY = '#0D2344';
 const DEFAULT_SECONDARY = '#FFFFFF';
@@ -186,8 +187,11 @@ function renderButtonRow(
   block: Extract<CampaignBlock, { type: 'button' }>,
   accent: string,
 ) {
+  const rawHref = block.href.trim();
   const href =
-    block.href.trim() && isSafeHttpUrl(block.href) ? block.href.trim() : '#';
+    rawHref && (isSafeHttpUrl(rawHref) || isCampaignFormUrlToken(rawHref))
+      ? rawHref
+      : '#';
   const label = escapeTextKeepMerge(block.label.trim() || 'Read more');
   const align = block.align ?? 'center';
 

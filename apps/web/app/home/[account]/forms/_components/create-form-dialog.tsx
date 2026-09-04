@@ -32,7 +32,17 @@ import {
   WORKSPACE_FORM_DESTINATION_LABELS,
   type WorkspaceFormDestination,
 } from '~/lib/workspace-forms/form-fields';
-import { workspaceBtnPrimary } from '~/lib/workspace-ui';
+import {
+  type WorkspaceFormTemplate,
+  listWorkspaceFormTemplates,
+  workspaceFormCreateDefaultsForTemplate,
+} from '~/lib/workspace-forms/form-templates';
+import {
+  workspaceBtnPrimary,
+  workspaceFilterActive,
+  workspaceText,
+  workspaceTextMuted,
+} from '~/lib/workspace-ui';
 
 import { createWorkspaceFormAction } from '../_lib/server/server-actions';
 
@@ -42,6 +52,8 @@ type Props = {
   showListingDestination: boolean;
 };
 
+const TEMPLATES = listWorkspaceFormTemplates();
+
 export function CreateFormDialog({
   accountId,
   accountSlug,
@@ -49,10 +61,38 @@ export function CreateFormDialog({
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('Contact form');
-  const [destination, setDestination] =
-    useState<WorkspaceFormDestination>('pipeline');
+  const contactDefaults = workspaceFormCreateDefaultsForTemplate('contact');
+  const [template, setTemplate] = useState<WorkspaceFormTemplate>('contact');
+  const [name, setName] = useState(contactDefaults.defaultName);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [destination, setDestination] = useState<WorkspaceFormDestination>(
+    contactDefaults.suggestedDestination,
+  );
   const [pending, startTransition] = useTransition();
+
+  function resetFormState() {
+    const defaults = workspaceFormCreateDefaultsForTemplate('contact');
+    setTemplate('contact');
+    setName(defaults.defaultName);
+    setNameTouched(false);
+    setDestination(defaults.suggestedDestination);
+  }
+
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      resetFormState();
+    }
+  }
+
+  function selectTemplate(next: WorkspaceFormTemplate) {
+    const defaults = workspaceFormCreateDefaultsForTemplate(next);
+    setTemplate(next);
+    if (!nameTouched) {
+      setName(defaults.defaultName);
+    }
+    setDestination(defaults.suggestedDestination);
+  }
 
   function onCreate() {
     startTransition(async () => {
@@ -61,9 +101,10 @@ export function CreateFormDialog({
           accountId,
           name: name.trim() || 'Untitled form',
           destination,
+          template,
         });
         toast.success('Form created');
-        setOpen(false);
+        onOpenChange(false);
         router.push(
           pathsConfig.app.accountFormDetail
             .replace('[account]', accountSlug)
@@ -78,7 +119,7 @@ export function CreateFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button
           className={`${workspaceBtnPrimary} rounded-xl`}
@@ -92,17 +133,52 @@ export function CreateFormDialog({
         <DialogHeader>
           <DialogTitle>Create a form</DialogTitle>
           <DialogDescription>
-            Choose where submissions should land. You can add fields and a
-            public link next.
+            Pick a template to start from, then choose where submissions should
+            land. You can add and reorder fields next.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
+          <div className="grid gap-1.5">
+            <Label>Template</Label>
+            <div
+              className="grid gap-2 sm:grid-cols-3"
+              data-test="create-form-templates"
+            >
+              {TEMPLATES.map((meta) => {
+                const selected = template === meta.id;
+                return (
+                  <button
+                    key={meta.id}
+                    type="button"
+                    onClick={() => selectTemplate(meta.id)}
+                    className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      selected
+                        ? `border-[var(--ozer-accent)]/40 ${workspaceFilterActive}`
+                        : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] hover:bg-[var(--workspace-shell-panel-hover)]'
+                    }`}
+                    data-test={`create-form-template-${meta.id}`}
+                    aria-pressed={selected}
+                  >
+                    <div className={`text-sm font-medium ${workspaceText}`}>
+                      {meta.label}
+                    </div>
+                    <p className={`mt-0.5 text-xs ${workspaceTextMuted}`}>
+                      {meta.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="grid gap-1.5">
             <Label htmlFor="form-name">Name</Label>
             <Input
               id="form-name"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setNameTouched(true);
+                setName(event.target.value);
+              }}
               data-test="create-form-name"
             />
           </div>

@@ -39,6 +39,28 @@ describe('resolveWorkspaceMailFrom', () => {
     expect(resolved.verifiedCustomDomain).toBe(true);
   });
 
+  it('honours a proposed From on the verified sending host', () => {
+    const resolved = resolveWorkspaceMailFrom({
+      accountName: 'Example',
+      brandContactEmail: 'office@example.co.uk',
+      proposedFromEmail: 'hello@mail.example.co.uk',
+      proposedFromName: 'Listings desk',
+      sendingDomain: {
+        ...verifiedDomain,
+        sending_subdomain: 'mail',
+        default_local_part: 'mail',
+      },
+      platformFrom: 'Ozer <hello@ozer.so>',
+    });
+
+    expect(resolved.source).toBe('custom_domain');
+    expect(resolved.fromEmail).toBe('hello@mail.example.co.uk');
+    expect(resolved.fromName).toBe('Listings desk');
+    expect(resolved.fromHeader).toBe(
+      'Listings desk <hello@mail.example.co.uk>',
+    );
+  });
+
   it('uses the mail sending host for a verified From', () => {
     const resolved = resolveWorkspaceMailFrom({
       accountName: 'Example',

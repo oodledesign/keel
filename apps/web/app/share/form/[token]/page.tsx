@@ -11,6 +11,7 @@ interface PublicFormPageProps {
     listing?: string;
     property?: string;
     embed?: string;
+    email?: string;
   }>;
 }
 
@@ -63,6 +64,7 @@ async function PublicWorkspaceFormPage({
         listingId={query.listing ?? form.listingId}
         propertyId={query.property ?? null}
         embed={embed}
+        prefillEmail={query.email ?? null}
         logoUrl={form.brand.logo_url}
         accentColor={form.brand.accent_color}
         primaryColor={form.brand.primary_color}

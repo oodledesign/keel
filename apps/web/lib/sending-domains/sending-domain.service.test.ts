@@ -8,7 +8,10 @@ import {
 } from '@kit/ses/identity';
 
 import { SendingDomainError } from './domain';
-import { createSendingDomainService } from './sending-domain.service';
+import {
+  createSendingDomainService,
+  loadPublicSendingDomainInstructions,
+} from './sending-domain.service';
 
 const accountId = '11111111-1111-1111-1111-111111111111';
 const userId = '22222222-2222-2222-2222-222222222222';
@@ -84,9 +87,12 @@ function createMockClient(options?: {
     created_by: userId,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    instructions_share_token:
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   };
 
   let lastInsertPayload: Record<string, unknown> | null = null;
+  let lastUpdatePayload: Record<string, unknown> | null = null;
 
   const from = vi.fn((table: string) => {
     if (table === 'accounts') {
@@ -104,7 +110,10 @@ function createMockClient(options?: {
         lastInsertPayload = payload;
         return chain;
       }),
-      update: vi.fn().mockReturnThis(),
+      update: vi.fn((payload: Record<string, unknown>) => {
+        lastUpdatePayload = payload;
+        return chain;
+      }),
       delete: vi.fn().mockReturnThis(),
       single: vi.fn().mockImplementation(() => {
         if (options?.insertError) {
@@ -112,12 +121,13 @@ function createMockClient(options?: {
         }
 
         const base = options?.inserted ?? defaultInserted;
-        const merged = lastInsertPayload
+        const writePayload = lastInsertPayload ?? lastUpdatePayload;
+        const merged = writePayload
           ? {
               ...base,
-              ...lastInsertPayload,
+              ...writePayload,
               sending_host:
-                (lastInsertPayload.ses_identity_name as string | undefined) ??
+                (writePayload.ses_identity_name as string | undefined) ??
                 (base.sending_host as string),
             }
           : base;
@@ -140,7 +150,11 @@ function createMockClient(options?: {
     return chain;
   });
 
-  return { from, getLastInsertPayload: () => lastInsertPayload };
+  return {
+    from,
+    getLastInsertPayload: () => lastInsertPayload,
+    getLastUpdatePayload: () => lastUpdatePayload,
+  };
 }
 
 describe('SES AccessDenied helpers', () => {
@@ -453,6 +467,77 @@ describe('SendingDomainService', () => {
     ).rejects.toBeInstanceOf(SendingDomainError);
   });
 
+  it('sets verified_at once when refreshStatus first reaches verified', async () => {
+    const existing = {
+      id: 'dom-1',
+      account_id: accountId,
+      domain: 'example.co.uk',
+      sending_subdomain: 'mail',
+      sending_host: 'mail.example.co.uk',
+      mail_from_subdomain: 'bounce',
+      default_local_part: 'mail',
+      ses_identity_name: 'mail.example.co.uk',
+      ses_identity_arn:
+        'arn:aws:ses:eu-west-2:123456789012:identity/mail.example.co.uk',
+      ses_tenant_name: `ozer-account-${accountId}`,
+      ses_configuration_set: 'ozer-custom-domains',
+      dkim_tokens: ['aaa', 'bbb', 'ccc'],
+      dns_records: [],
+      dkim_status: 'pending',
+      mail_from_status: 'pending',
+      verification_status: 'pending',
+      verified_at: null,
+      created_by: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const client = createMockClient({ existing });
+    const ses = createMockSes();
+    const service = createSendingDomainService(client as never, ses);
+
+    const result = await service.refreshStatus(accountId);
+
+    expect(result?.verification_status).toBe('verified');
+    expect(result?.verified_at).toBeTruthy();
+    expect(client.getLastUpdatePayload()?.verified_at).toBeTruthy();
+    expect(client.getLastUpdatePayload()?.verification_status).toBe('verified');
+  });
+
+  it('keeps the original verified_at on later refreshStatus calls', async () => {
+    const verifiedAt = '2026-01-15T12:00:00.000Z';
+    const existing = {
+      id: 'dom-1',
+      account_id: accountId,
+      domain: 'example.co.uk',
+      sending_subdomain: 'mail',
+      sending_host: 'mail.example.co.uk',
+      mail_from_subdomain: 'bounce',
+      default_local_part: 'mail',
+      ses_identity_name: 'mail.example.co.uk',
+      ses_identity_arn:
+        'arn:aws:ses:eu-west-2:123456789012:identity/mail.example.co.uk',
+      ses_tenant_name: `ozer-account-${accountId}`,
+      ses_configuration_set: 'ozer-custom-domains',
+      dkim_tokens: ['aaa', 'bbb', 'ccc'],
+      dns_records: [],
+      dkim_status: 'success',
+      mail_from_status: 'success',
+      verification_status: 'verified',
+      verified_at: verifiedAt,
+      created_by: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const client = createMockClient({ existing, inserted: existing });
+    const ses = createMockSes();
+    const service = createSendingDomainService(client as never, ses);
+
+    const result = await service.refreshStatus(accountId);
+
+    expect(result?.verified_at).toBe(verifiedAt);
+    expect(client.getLastUpdatePayload()?.verified_at).toBe(verifiedAt);
+  });
+
   it('rejects personal and family workspaces', async () => {
     const personal = createMockClient({
       account: {
@@ -572,5 +657,141 @@ describe('SendingDomainService', () => {
 
     expect(deleted.eq).toHaveBeenCalledWith('id', 'dom-1');
     expect(result.sesCleanupFailed).toMatch(/SES throttled/);
+  });
+
+  it('stores an instructions share token on create', async () => {
+    const client = createMockClient();
+    const ses = createMockSes();
+    const service = createSendingDomainService(client as never, ses);
+
+    const result = await service.createDomain({
+      accountId,
+      domain: 'example.co.uk',
+      userId,
+    });
+
+    const payload = client.getLastInsertPayload();
+    expect(payload?.instructions_share_token).toEqual(
+      expect.stringMatching(/^[a-f0-9]{48}$/),
+    );
+    expect(result.instructions_share_token).toEqual(
+      payload?.instructions_share_token,
+    );
+  });
+
+  it('returns an existing instructions share token from ensure', async () => {
+    const existing = {
+      id: 'dom-1',
+      account_id: accountId,
+      domain: 'example.co.uk',
+      sending_subdomain: 'mail',
+      sending_host: 'mail.example.co.uk',
+      mail_from_subdomain: 'bounce',
+      default_local_part: 'mail',
+      ses_identity_name: 'mail.example.co.uk',
+      ses_identity_arn: null,
+      ses_tenant_name: null,
+      ses_configuration_set: null,
+      dkim_tokens: [],
+      dns_records: [],
+      dkim_status: 'pending',
+      mail_from_status: 'pending',
+      verification_status: 'pending',
+      verified_at: null,
+      created_by: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      instructions_share_token:
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    };
+    const client = createMockClient({ existing });
+    const service = createSendingDomainService(client as never, createMockSes());
+
+    await expect(service.ensureInstructionsShareToken(accountId)).resolves.toBe(
+      existing.instructions_share_token,
+    );
+  });
+});
+
+describe('loadPublicSendingDomainInstructions', () => {
+  it('maps a safe public DTO and omits SES secrets', async () => {
+    const token = 'cccccccccccccccccccccccccccccccccccccccccccccccc';
+    const dnsRecords = [
+      {
+        type: 'CNAME' as const,
+        host: 'aaa._domainkey.mail',
+        name: 'aaa._domainkey.mail.example.co.uk',
+        value: 'aaa.dkim.amazonses.com',
+        purpose: 'dkim' as const,
+      },
+    ];
+
+    const from = vi.fn((table: string) => {
+      if (table === 'accounts') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { name: 'Bracketts' },
+            error: null,
+          }),
+        };
+      }
+
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            domain: 'example.co.uk',
+            sending_subdomain: 'mail',
+            sending_host: 'mail.example.co.uk',
+            dns_records: dnsRecords,
+            verification_status: 'pending',
+            dkim_status: 'pending',
+            mail_from_status: 'pending',
+            account_id: accountId,
+            ses_identity_arn: 'arn:aws:ses:secret',
+            ses_tenant_name: 'ozer-account-secret',
+          },
+          error: null,
+        }),
+      };
+    });
+
+    const result = await loadPublicSendingDomainInstructions(
+      { from } as never,
+      token,
+    );
+
+    expect(result).toEqual({
+      accountName: 'Bracketts',
+      domain: 'example.co.uk',
+      sendingHost: 'mail.example.co.uk',
+      dnsRecords,
+      verificationStatus: 'pending',
+    });
+    expect(result).not.toHaveProperty('ses_identity_arn');
+    expect(result).not.toHaveProperty('ses_tenant_name');
+    expect(JSON.stringify(result)).not.toMatch(/arn:aws:ses/);
+  });
+
+  it('returns null for unknown or short tokens', async () => {
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }));
+
+    await expect(
+      loadPublicSendingDomainInstructions({ from } as never, 'short'),
+    ).resolves.toBeNull();
+
+    await expect(
+      loadPublicSendingDomainInstructions(
+        { from } as never,
+        'dddddddddddddddddddddddddddddddddddddddddddddddd',
+      ),
+    ).resolves.toBeNull();
   });
 });

@@ -32,9 +32,11 @@ export {
 export {
   createSendingDomainService,
   loadAccountSendingDomain,
+  loadPublicSendingDomainInstructions,
 } from './sending-domain.service';
 export {
   ACCOUNT_SENDING_DOMAINS_TABLE,
+  type PublicSendingDomainInstructions,
   type ResolvedWorkspaceMailFrom,
   type SendingDomainRecord,
 } from './types';

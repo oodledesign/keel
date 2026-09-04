@@ -31,6 +31,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'user_signup',
   'invite_accepted',
   'meeting_notes',
+  'sending_domain',
 ] as const;
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];

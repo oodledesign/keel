@@ -53,7 +53,7 @@ async function WorkspaceSettingsLayout({
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 lg:flex-row lg:items-start lg:gap-10 lg:px-0">
+        <div className="mr-auto flex w-full max-w-7xl flex-col gap-6 px-4 lg:flex-row lg:items-start lg:gap-10 lg:px-0">
           <WorkspaceSettingsSidebar accountSlug={account} items={navItems} />
           <div className="min-w-0 flex-1">{children}</div>
         </div>

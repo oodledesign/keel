@@ -15,12 +15,18 @@ import {
   resolveCampaignDocument,
 } from '~/lib/campaigns/campaign-document';
 import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
+import { formUrlForMerge } from '~/lib/campaigns/form-link';
 import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
+  SendingDomainError,
+  emailDomainOf,
   getPlatformSesFrom,
+  isSendingDomainVerified,
   loadAccountSendingDomain,
+  normalizeSendingLocalPart,
+  resolveSendingHost,
   resolveWorkspaceMailFrom,
 } from '~/lib/sending-domains';
 import {
@@ -161,6 +167,9 @@ class CampaignsService {
     previewText?: string | null;
     htmlBody?: string;
     bodyDocument?: unknown;
+    fromName?: string | null;
+    fromEmail?: string | null;
+    replyTo?: string | null;
   }): Promise<EmailCampaign> {
     const existing = await this.get(input.accountId, input.campaignId);
     if (existing.status !== 'draft' && existing.status !== 'scheduled') {
@@ -182,6 +191,63 @@ class CampaignsService {
       );
       patch.body_document = document;
       patch.html_body = compileCampaignDocument(document, brand);
+    }
+
+    if (
+      input.fromName !== undefined ||
+      input.fromEmail !== undefined ||
+      input.replyTo !== undefined
+    ) {
+      const sendingDomain = await loadAccountSendingDomain(
+        this.client,
+        input.accountId,
+      );
+      const verified =
+        sendingDomain != null && isSendingDomainVerified(sendingDomain);
+
+      if (input.fromName !== undefined) {
+        patch.from_name = input.fromName?.trim() || null;
+      }
+
+      if (input.fromEmail !== undefined) {
+        const raw = input.fromEmail?.trim().toLowerCase() || null;
+        if (!raw) {
+          patch.from_email = null;
+        } else if (!verified || !sendingDomain) {
+          throw new Error(
+            'Connect and verify a sending domain before choosing a custom From address.',
+          );
+        } else {
+          const host = resolveSendingHost(
+            sendingDomain.domain,
+            sendingDomain.sending_subdomain,
+          );
+          if (emailDomainOf(raw) !== host) {
+            throw new Error(
+              `From address must use the verified sending host @${host}.`,
+            );
+          }
+          const local = raw.slice(0, raw.lastIndexOf('@'));
+          try {
+            normalizeSendingLocalPart(local);
+          } catch (error) {
+            throw new Error(
+              error instanceof SendingDomainError
+                ? error.message
+                : 'Invalid From local-part',
+            );
+          }
+          patch.from_email = `${local}@${host}`;
+        }
+      }
+
+      if (input.replyTo !== undefined) {
+        const reply = input.replyTo?.trim() || null;
+        if (reply && !reply.includes('@')) {
+          throw new Error('Reply-To must be a valid email address.');
+        }
+        patch.reply_to = reply;
+      }
     }
 
     const { data, error } = await fromTable(
@@ -577,6 +643,10 @@ class CampaignsService {
           merge: mergeValuesForRecipient({
             displayName: recipient.display_name,
             email: recipient.email,
+            formUrl: formUrlForMerge({
+              formLink: campaign.bodyDocument?.formLink,
+              recipientEmail: recipient.email,
+            }),
           }),
           unsubscribeToken: token,
         });

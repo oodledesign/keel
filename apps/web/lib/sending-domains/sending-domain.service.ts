@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
@@ -23,10 +25,15 @@ import {
 } from './domain';
 import {
   ACCOUNT_SENDING_DOMAINS_TABLE,
+  type PublicSendingDomainInstructions,
   type SendingDomainRecord,
 } from './types';
 
 const MAIL_FROM_SUBDOMAIN = DEFAULT_MAIL_FROM_SUBDOMAIN;
+
+function generateInstructionsShareToken() {
+  return randomBytes(24).toString('hex');
+}
 
 function isMissingTableError(
   error: { message?: string; code?: string } | null,
@@ -109,6 +116,11 @@ function mapRow(row: Record<string, unknown>): SendingDomainRecord {
     created_by: (row.created_by as string | null) ?? null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+    instructions_share_token:
+      typeof row.instructions_share_token === 'string' &&
+      row.instructions_share_token.trim()
+        ? row.instructions_share_token.trim()
+        : null,
   };
 }
 
@@ -284,6 +296,7 @@ class SendingDomainService {
           mail_from_status: 'pending',
           verification_status: 'pending',
           created_by: input.userId,
+          instructions_share_token: generateInstructionsShareToken(),
         })
         .select('*')
         .single();
@@ -441,7 +454,25 @@ class SendingDomainService {
       );
     }
 
-    return mapRow(data as Record<string, unknown>);
+    const mapped = mapRow(data as Record<string, unknown>);
+    const justVerified =
+      !existing.verified_at && mapped.verification_status === 'verified';
+
+    if (justVerified) {
+      // Dynamic import keeps this module usable in unit tests without server-only.
+      void import('./notify-sending-domain-connected')
+        .then(({ notifySendingDomainConnected }) =>
+          notifySendingDomainConnected({ domain: mapped }),
+        )
+        .catch((error) => {
+          console.warn('[sending-domains] connected notify failed', {
+            accountId: mapped.account_id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    }
+
+    return mapped;
   }
 
   async updateLocalPart(
@@ -534,6 +565,46 @@ class SendingDomainService {
 
     return {};
   }
+
+  async ensureInstructionsShareToken(accountId: string): Promise<string> {
+    const existing = await this.getForAccount(accountId);
+    if (!existing) {
+      throw new SendingDomainError('Add a sending domain first.');
+    }
+
+    if (existing.instructions_share_token) {
+      return existing.instructions_share_token;
+    }
+
+    const token = generateInstructionsShareToken();
+    const { data, error } = await fromTable(this.client)
+      .update({ instructions_share_token: token })
+      .eq('id', existing.id)
+      .select('instructions_share_token')
+      .single();
+
+    if (error || !data) {
+      throw new SendingDomainError(
+        error?.message ?? 'Could not create a share link for DNS instructions.',
+      );
+    }
+
+    const saved = (data as { instructions_share_token?: string | null })
+      .instructions_share_token;
+    if (!saved) {
+      throw new SendingDomainError(
+        'Could not create a share link for DNS instructions.',
+      );
+    }
+
+    return saved;
+  }
+
+  async getPublicInstructionsByToken(
+    token: string,
+  ): Promise<PublicSendingDomainInstructions | null> {
+    return loadPublicSendingDomainInstructions(this.client, token);
+  }
 }
 
 export async function loadAccountSendingDomain(
@@ -553,4 +624,79 @@ export async function loadAccountSendingDomain(
   }
 
   return data ? mapRow(data as Record<string, unknown>) : null;
+}
+
+export async function loadPublicSendingDomainInstructions(
+  client: SupabaseClient,
+  token: string,
+): Promise<PublicSendingDomainInstructions | null> {
+  const normalized = token.trim();
+  if (!normalized || normalized.length < 16) {
+    return null;
+  }
+
+  const { data, error } = await fromTable(client)
+    .select(
+      'domain, sending_subdomain, sending_host, dns_records, verification_status, dkim_status, mail_from_status, account_id',
+    )
+    .eq('instructions_share_token', normalized)
+    .maybeSingle();
+
+  if (error) {
+    if (
+      isMissingTableError(error) ||
+      /instructions_share_token|column/i.test(error.message ?? '')
+    ) {
+      return null;
+    }
+    throw new SendingDomainError(error.message);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const row = data as Record<string, unknown>;
+  const domain = String(row.domain);
+  const sendingHost =
+    typeof row.sending_host === 'string' && row.sending_host.trim()
+      ? row.sending_host.trim().toLowerCase()
+      : resolveSendingHost(
+          domain,
+          typeof row.sending_subdomain === 'string'
+            ? row.sending_subdomain
+            : null,
+        );
+
+  const verification = row.verification_status;
+  const verificationStatus =
+    verification === 'verified' ||
+    verification === 'failed' ||
+    verification === 'pending'
+      ? verification
+      : overallVerificationStatus({
+          dkim_status: String(row.dkim_status ?? 'pending'),
+          mail_from_status: String(row.mail_from_status ?? 'pending'),
+        });
+
+  const { data: account, error: accountError } = await client
+    .from('accounts')
+    .select('name')
+    .eq('id', String(row.account_id))
+    .maybeSingle();
+
+  if (accountError) {
+    throw new SendingDomainError(accountError.message);
+  }
+
+  const accountName =
+    (account as { name?: string | null } | null)?.name?.trim() || domain;
+
+  return {
+    accountName,
+    domain,
+    sendingHost,
+    dnsRecords: asDnsRecords(row.dns_records),
+    verificationStatus,
+  };
 }

@@ -8,7 +8,6 @@ import {
   type WorkspaceFormDestination,
   type WorkspaceFormField,
   type WorkspaceFormStatus,
-  defaultWorkspaceFormFields,
   ensureListingField,
 } from '~/lib/workspace-forms/form-fields';
 import type {
@@ -16,6 +15,7 @@ import type {
   PublishWorkspaceFormInput,
   UpdateWorkspaceFormInput,
 } from '~/lib/workspace-forms/form.schema';
+import { workspaceFormCreateDefaultsForTemplate } from '~/lib/workspace-forms/form-templates';
 import {
   defaultMailingListFormFields,
   ensureMailingListFields,
@@ -238,12 +238,17 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
       input: CreateWorkspaceFormInput,
     ): Promise<WorkspaceFormRecord> {
       const commercial = await isCommercialAccount(client, input.accountId);
-      const fields =
-        input.destination === 'mailing_list'
-          ? defaultMailingListFormFields({ commercial })
-          : input.destination === 'listing_enquiry'
-            ? ensureListingField(defaultWorkspaceFormFields())
-            : defaultWorkspaceFormFields();
+      const templateDefaults = workspaceFormCreateDefaultsForTemplate(
+        input.template ?? 'contact',
+      );
+      let fields = templateDefaults.fields;
+
+      if (input.destination === 'mailing_list') {
+        // Mailing list forms need destination-specific required fields.
+        fields = defaultMailingListFormFields({ commercial });
+      } else if (input.destination === 'listing_enquiry') {
+        fields = ensureListingField(fields);
+      }
 
       const { data, error } = await fromTable(client, 'workspace_forms')
         .insert({
@@ -254,6 +259,8 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
           embed_key: generateShareToken(),
           status: 'draft',
           enabled: false,
+          submit_label: templateDefaults.submitLabel,
+          success_message: templateDefaults.successMessage,
           fields,
         })
         .select('*')

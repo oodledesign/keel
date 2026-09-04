@@ -1,8 +1,13 @@
 import { redirect } from 'next/navigation';
 
+import { createSesIdentityAdmin } from '@kit/ses';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { loadAccountSendingDomain } from '~/lib/sending-domains';
+import {
+  createSendingDomainService,
+  loadAccountSendingDomain,
+} from '~/lib/sending-domains';
 
 import {
   getDefaultAccountPath,
@@ -50,6 +55,7 @@ export default async function SendingDomainPage(props: SendingDomainPageProps) {
   }
 
   const accountId = workspace.account.id as string;
+  const canEdit = access.isOwner || access.isAdmin;
   const client = getSupabaseServerClient();
   const [sendingDomain, accountRow] = await Promise.all([
     loadAccountSendingDomain(client, accountId),
@@ -60,12 +66,27 @@ export default async function SendingDomainPage(props: SendingDomainPageProps) {
     throw accountRow.error;
   }
 
+  let domain = sendingDomain;
+  if (canEdit && domain && !domain.instructions_share_token) {
+    try {
+      const admin = getSupabaseServerAdminClient();
+      const service = createSendingDomainService(
+        admin,
+        createSesIdentityAdmin(),
+      );
+      const token = await service.ensureInstructionsShareToken(accountId);
+      domain = { ...domain, instructions_share_token: token };
+    } catch {
+      // Share panel stays hidden until a token exists.
+    }
+  }
+
   return (
     <SendingDomainSettings
       accountId={accountId}
       accountName={accountRow.data?.name?.trim() || account}
-      canEdit={access.isOwner || access.isAdmin}
-      initialDomain={sendingDomain}
+      canEdit={canEdit}
+      initialDomain={domain}
     />
   );
 }

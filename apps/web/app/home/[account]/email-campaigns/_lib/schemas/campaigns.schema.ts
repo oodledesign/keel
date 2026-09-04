@@ -19,6 +19,9 @@ export const UpdateCampaignSchema = z.object({
   subject: z.string().trim().max(300),
   previewText: z.string().trim().max(200).optional().nullable(),
   bodyDocument: CampaignDocumentSchema,
+  fromName: z.string().trim().max(120).optional().nullable(),
+  fromEmail: z.string().trim().max(320).optional().nullable(),
+  replyTo: z.string().trim().max(320).optional().nullable(),
 });
 
 export const SendCampaignSchema = z.object({

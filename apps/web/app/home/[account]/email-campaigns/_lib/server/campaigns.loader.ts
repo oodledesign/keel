@@ -6,6 +6,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
+import {
+  isSendingDomainVerified,
+  loadAccountSendingDomain,
+} from '~/lib/sending-domains';
 import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
 
 export async function loadCampaignsPage(accountId: string) {
@@ -34,13 +38,16 @@ export async function loadCampaignDetail(accountId: string, campaignId: string) 
   const admin = getSupabaseServerAdminClient();
   const service = createCampaignsService(client);
 
-  const [campaign, recipients, subscribers, usage, brand] = await Promise.all([
-    service.get(accountId, campaignId),
-    service.listRecipients(accountId, campaignId),
-    listWorkspaceMailingListSubscribers(admin, accountId),
-    getCampaignUsage(accountId),
-    loadAccountBrandResolved(accountId),
-  ]);
+  const [campaign, recipients, subscribers, usage, brand, sendingDomain, publishedForms] =
+    await Promise.all([
+      service.get(accountId, campaignId),
+      service.listRecipients(accountId, campaignId),
+      listWorkspaceMailingListSubscribers(admin, accountId),
+      getCampaignUsage(accountId),
+      loadAccountBrandResolved(accountId),
+      loadAccountSendingDomain(admin, accountId),
+      listPublishedFormsForCampaigns(accountId),
+    ]);
 
   return {
     campaign,
@@ -48,5 +55,40 @@ export async function loadCampaignDetail(accountId: string, campaignId: string) 
     subscriberCount: subscribers.length,
     usage: usage.pool,
     brand,
+    sendingDomain: sendingDomain
+      ? {
+          verified: isSendingDomainVerified(sendingDomain),
+          sendingHost: sendingDomain.sending_host,
+          defaultLocalPart: sendingDomain.default_local_part,
+          domain: sendingDomain.domain,
+        }
+      : null,
+    publishedForms,
   };
+}
+
+async function listPublishedFormsForCampaigns(accountId: string) {
+  const admin = getSupabaseServerAdminClient();
+  // Table may be ahead of generated types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (admin as any)
+    .from('workspace_forms')
+    .select('id, name, share_token, status, enabled')
+    .eq('account_id', accountId)
+    .eq('status', 'published')
+    .eq('enabled', true)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.warn('[campaigns] list published forms failed', error.message);
+    return [];
+  }
+
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => ({
+      id: String(row.id),
+      name: String(row.name ?? 'Untitled form'),
+      shareToken: String(row.share_token ?? ''),
+    }))
+    .filter((row) => row.shareToken.length >= 16);
 }

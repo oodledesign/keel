@@ -55,12 +55,21 @@ export function resolveWorkspaceMailFrom(input: {
     input.brandContactEmail?.trim() || input.proposedFromEmail?.trim() || null;
 
   if (input.sendingDomain && isSendingDomainVerified(input.sendingDomain)) {
-    const fromEmail = formatSendingFromAddress({
-      localPart: input.sendingDomain.default_local_part,
-      domain: input.sendingDomain.domain,
-      sendingSubdomain: input.sendingDomain.sending_subdomain,
-    });
-    const fromName = accountName;
+    const sendingHost = resolveSendingHost(
+      input.sendingDomain.domain,
+      input.sendingDomain.sending_subdomain,
+    );
+    const proposed = input.proposedFromEmail?.trim().toLowerCase() || null;
+    const proposedOnHost =
+      proposed && emailDomainOf(proposed) === sendingHost ? proposed : null;
+    const fromEmail =
+      proposedOnHost ??
+      formatSendingFromAddress({
+        localPart: input.sendingDomain.default_local_part,
+        domain: input.sendingDomain.domain,
+        sendingSubdomain: input.sendingDomain.sending_subdomain,
+      });
+    const fromName = input.proposedFromName?.trim() || accountName;
 
     return {
       fromEmail,
