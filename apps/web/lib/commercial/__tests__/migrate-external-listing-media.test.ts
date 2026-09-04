@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { safeMediaFileName } from '../listing-media-filename';
 import {
   buildStoragePath,
   extensionFromMime,
   extensionFromUrlOrName,
   resolveCommercialMediaPublicUrl,
-  safeMediaFileName,
 } from '../migrate-external-listing-media';
 
 describe('resolveCommercialMediaPublicUrl', () => {

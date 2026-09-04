@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { toast } from '@kit/ui/sonner';
 
 import { compressListingImageFile } from '~/lib/commercial/compress-listing-image';
-import { safeMediaFileName } from '~/lib/commercial/migrate-external-listing-media';
+import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialListingMedia } from '../_lib/server/listings.service';

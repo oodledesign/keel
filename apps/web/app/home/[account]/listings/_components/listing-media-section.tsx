@@ -76,7 +76,7 @@ import {
   compareListingMediaOrder,
   sortListingMedia,
 } from '~/lib/commercial/listing-media-order';
-import { safeMediaFileName } from '~/lib/commercial/migrate-external-listing-media';
+import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
