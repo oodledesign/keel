@@ -63,6 +63,7 @@ import {
   LISTING_STATUSES,
   LISTING_STATUS_LABELS,
   type ListingStatus,
+  listingStatusPublishHint,
 } from '~/lib/commercial/commercial-constants';
 import {
   formatListingRentAmount,
@@ -1053,9 +1054,14 @@ export function ListingsList({
                 <SelectItem
                   key={status}
                   value={status}
-                  className={workspaceSelectItemClass}
+                  className={`${workspaceSelectItemClass} pr-10`}
                 >
-                  {LISTING_STATUS_LABELS[status]}
+                  <span className="flex w-full items-center justify-between gap-3">
+                    <span>{LISTING_STATUS_LABELS[status]}</span>
+                    <span className="text-muted-foreground shrink-0 text-xs">
+                      {listingStatusPublishHint(status)}
+                    </span>
+                  </span>
                 </SelectItem>
               ))}
               <SelectItem value="all" className={workspaceSelectItemClass}>

@@ -42,6 +42,7 @@ import {
   type ListingLetType,
   type ListingStatus,
   disposalIncludesToLet,
+  listingStatusPublishHint,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -387,8 +388,13 @@ function ListingFormFields({
               </SelectTrigger>
               <SelectContent>
                 {LISTING_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status} className="py-2">
-                    <ListingStatusBadge status={status} size="md" />
+                  <SelectItem key={status} value={status} className="py-2 pr-10">
+                    <span className="flex w-full items-center justify-between gap-3">
+                      <ListingStatusBadge status={status} size="md" />
+                      <span className="text-muted-foreground shrink-0 text-xs">
+                        {listingStatusPublishHint(status)}
+                      </span>
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

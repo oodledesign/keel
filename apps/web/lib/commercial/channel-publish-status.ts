@@ -1,3 +1,4 @@
+import { listingStatusPublishesToPortals } from '~/lib/commercial/commercial-constants';
 import {
   isEachFeedIncluded,
   isWebsiteFeedIncluded,
@@ -38,12 +39,6 @@ type PublicationInput = {
   externalUrl?: string | null;
 };
 
-const ON_MARKET = new Set(['marketing', 'under_offer']);
-
-function isOnMarket(status: string): boolean {
-  return ON_MARKET.has(status);
-}
-
 function eachFieldBlockers(listing: ListingInput): string[] {
   const blockers: string[] = [];
   if (!listing.name?.trim()) blockers.push('Add a disposal name');
@@ -62,7 +57,7 @@ export function getWebsiteChannelStatus(input: {
   const { listing, publications } = input;
   const pub = publications.find((p) => p.portal === 'property_hive');
   const switchOn = isWebsiteFeedIncluded(publications);
-  const onMarket = isOnMarket(listing.status);
+  const onMarket = listingStatusPublishesToPortals(listing.status);
   const hasFeedId = Boolean(listing.externalId?.trim());
   const lastError = pub?.lastError?.trim() || null;
 
@@ -128,7 +123,7 @@ export function getEachChannelStatus(input: {
   const { listing, publications } = input;
   const pub = publications.find((p) => p.portal === 'each');
   const switchOn = isEachFeedIncluded(publications);
-  const onMarket = isOnMarket(listing.status);
+  const onMarket = listingStatusPublishesToPortals(listing.status);
   const fieldBlockers = eachFieldBlockers(listing);
   const lastError = pub?.lastError?.trim() || null;
 

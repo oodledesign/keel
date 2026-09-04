@@ -32,6 +32,25 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   withdrawn: 'Withdrawn',
 };
 
+/** Statuses that can publish to website / EACH / Rightmove. */
+export const LISTING_PORTAL_PUBLISH_STATUSES = [
+  'marketing',
+  'under_offer',
+] as const satisfies readonly ListingStatus[];
+
+export function listingStatusPublishesToPortals(status: string): boolean {
+  return (LISTING_PORTAL_PUBLISH_STATUSES as readonly string[]).includes(
+    status,
+  );
+}
+
+/** Short hint for status dropdowns — whether portals can go live. */
+export function listingStatusPublishHint(status: string): string {
+  return listingStatusPublishesToPortals(status)
+    ? 'Can publish to website'
+    : 'Won’t publish';
+}
+
 export const DISPOSAL_TYPES = [
   'to_let',
   'for_sale',
