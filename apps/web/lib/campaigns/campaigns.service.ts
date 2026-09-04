@@ -17,6 +17,12 @@ import {
 import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
 import { formUrlForMerge } from '~/lib/campaigns/form-link';
 import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
+import {
+  CAMPAIGN_TEST_MAX_RECIPIENTS,
+  CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
+  campaignTestSubject,
+  normalizeCampaignTestEmails,
+} from '~/lib/campaigns/campaign-test-send';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
@@ -759,6 +765,125 @@ class CampaignsService {
       campaign: mapCampaign(updated as Record<string, unknown>),
       remaining,
     };
+  }
+
+
+  /**
+   * Send a free test of the current campaign HTML to explicit addresses.
+   * Does not enqueue the mailing list, change campaign status, or debit credits.
+   */
+  async sendTest(input: {
+    accountId: string;
+    campaignId: string;
+    emails: string[];
+    displayNames?: Record<string, string | null | undefined>;
+  }): Promise<{ sent: number; failed: number; subject: string }> {
+    const emails = normalizeCampaignTestEmails(input.emails);
+    if (emails.length === 0) {
+      throw new Error('Add at least one valid email address');
+    }
+    if (emails.length > CAMPAIGN_TEST_MAX_RECIPIENTS) {
+      throw new Error(
+        `You can send a test to at most ${CAMPAIGN_TEST_MAX_RECIPIENTS} addresses at once`,
+      );
+    }
+
+    const campaign = await this.get(input.accountId, input.campaignId);
+    this.assertReadyToSend(campaign);
+
+    const brand = await loadAccountBrandResolved(input.accountId);
+    const { data: accountRow } = await this.client
+      .from('accounts')
+      .select('name')
+      .eq('id', input.accountId)
+      .maybeSingle();
+    const sendingDomain = await loadAccountSendingDomain(
+      this.client,
+      input.accountId,
+    );
+    const resolved = resolveWorkspaceMailFrom({
+      accountName:
+        (accountRow as { name?: string | null } | null)?.name?.trim() ||
+        campaign.fromName?.trim() ||
+        'Agency',
+      brandContactEmail: brand.contact_email,
+      proposedFromEmail: campaign.fromEmail,
+      proposedFromName: campaign.fromName,
+      sendingDomain,
+      platformFrom: getPlatformSesFrom(),
+    });
+    const fromEmail = resolved.fromEmail;
+    if (!fromEmail) {
+      throw new Error(
+        'Add a verified sending domain in workspace settings, or set a contact email that can send from Ozer.',
+      );
+    }
+
+    const fromName = resolved.fromName;
+    const fromHeader = resolved.fromHeader ?? `${fromName} <${fromEmail}>`;
+    const replyTo = campaign.replyTo?.trim() || resolved.replyTo || fromEmail;
+    const subject = campaignTestSubject(campaign.subject);
+    const unsubscribeUrl = buildWorkspaceMailingListUnsubscribeUrl(
+      CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
+    );
+
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const email of emails) {
+      const displayName =
+        input.displayNames?.[email]?.trim() ||
+        input.displayNames?.[email.toLowerCase()]?.trim() ||
+        null;
+
+      try {
+        const html = renderCampaignHtml({
+          brand,
+          htmlBody: campaign.htmlBody,
+          merge: mergeValuesForRecipient({
+            displayName,
+            email,
+            formUrl: formUrlForMerge({
+              formLink: campaign.bodyDocument?.formLink,
+              recipientEmail: email,
+            }),
+          }),
+          unsubscribeToken: CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
+        });
+
+        await sendCampaignEmailViaSes({
+          to: email,
+          from: fromHeader,
+          replyTo,
+          subject,
+          html,
+          listUnsubscribeUrl: unsubscribeUrl,
+          accountId: input.accountId,
+          sesTenant: resolved.sesTenantName ?? undefined,
+          sesConfigurationSet: resolved.sesConfigurationSet ?? undefined,
+          emailType: 'campaign_test',
+          metadata: {
+            campaign_id: campaign.id,
+            test_send: true,
+          },
+        });
+        sent += 1;
+      } catch (err) {
+        failed += 1;
+        errors.push(
+          `${email}: ${err instanceof Error ? err.message : 'Send failed'}`,
+        );
+      }
+    }
+
+    if (sent === 0) {
+      throw new Error(
+        errors[0] ?? 'Could not send test email. Check your sending domain.',
+      );
+    }
+
+    return { sent, failed, subject };
   }
 
   private assertReadyToSend(campaign: EmailCampaign) {

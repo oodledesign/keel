@@ -42,3 +42,13 @@ export const CancelScheduleCampaignSchema = z.object({
   accountSlug: z.string().min(1),
   campaignId: z.string().uuid(),
 });
+
+export const SendCampaignTestSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  campaignId: z.string().uuid(),
+  emails: z
+    .array(z.string().trim().email().max(320))
+    .min(1, 'Add at least one email')
+    .max(20),
+});

@@ -51,6 +51,7 @@ import {
   type CampaignSendingDomainOption,
 } from './campaign-from-picker';
 import { CampaignRecipientLog } from './campaign-recipient-log';
+import { CampaignSendTestDialog } from './campaign-send-test-dialog';
 import { CampaignTemplateGallery } from './campaign-template-gallery';
 
 type EditorStep = 'edit' | 'preview';
@@ -109,6 +110,7 @@ export function CampaignEditor({
   );
   const [scheduledAt, setScheduledAt] = useState('');
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [sendTestOpen, setSendTestOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const useTemplateLabel =
     !subject.trim() && name === 'Untitled campaign'
@@ -399,6 +401,28 @@ export function CampaignEditor({
 
             {editable ? (
               <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending}
+                  data-test="campaign-send-test"
+                  onClick={() => setSendTestOpen(true)}
+                >
+                  Send test
+                </Button>
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  Test emails are free and do not use send units.
+                </p>
+                <CampaignSendTestDialog
+                  open={sendTestOpen}
+                  onOpenChange={setSendTestOpen}
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  campaignId={campaign.id}
+                  onBeforeSend={async () => {
+                    await save();
+                  }}
+                />
                 <Button
                   className={workspaceBtnPrimary}
                   disabled={pending}

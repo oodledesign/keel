@@ -19,6 +19,7 @@ import type {
   CampaignBlock,
   CampaignColumnContent,
 } from '~/lib/campaigns/campaign-document';
+import { isCampaignFormUrlToken } from '~/lib/campaigns/form-link';
 import { CAMPAIGN_MERGE_FIELDS } from '~/lib/campaigns/merge-fields';
 import {
   workspaceSelectContentClass,
@@ -141,7 +142,13 @@ export function CampaignBlockInspector({
               onChange={(event) => onChange({ label: event.target.value })}
             />
           </Field>
-          <MergeChips disabled={disabled} onInsert={onInsertMerge} />
+          <MergeChips
+            disabled={disabled}
+            onInsert={onInsertMerge}
+            tokens={CAMPAIGN_MERGE_FIELDS.filter(
+              (field) => !isCampaignFormUrlToken(field.token),
+            )}
+          />
           <Field label="URL">
             <Input
               value={block.href}
@@ -150,6 +157,13 @@ export function CampaignBlockInspector({
               onChange={(event) => onChange({ href: event.target.value })}
             />
           </Field>
+          <MergeChips
+            disabled={disabled}
+            onInsert={onInsertMerge}
+            tokens={CAMPAIGN_MERGE_FIELDS.filter((field) =>
+              isCampaignFormUrlToken(field.token),
+            )}
+          />
           <AlignField
             value={block.align}
             disabled={disabled}
@@ -281,13 +295,17 @@ function AlignField({
 function MergeChips({
   disabled,
   onInsert,
+  tokens = CAMPAIGN_MERGE_FIELDS,
 }: {
   disabled?: boolean;
   onInsert: (token: string) => void;
+  tokens?: readonly { token: string; label: string }[];
 }) {
+  if (tokens.length === 0) return null;
+
   return (
     <div className="flex flex-wrap gap-1">
-      {CAMPAIGN_MERGE_FIELDS.map((field) => (
+      {tokens.map((field) => (
         <Button
           key={field.token}
           type="button"

@@ -41,6 +41,7 @@ import type {
   CampaignColumnContent,
   CampaignDocument,
 } from '~/lib/campaigns/campaign-document';
+import { isCampaignFormUrlToken } from '~/lib/campaigns/form-link';
 import {
   CAMPAIGN_BLOCK_LIBRARY,
   createCampaignBlock,
@@ -266,6 +267,14 @@ export function CampaignBodyEditor({
                 return;
               }
               if (selected.type === 'button') {
+                if (isCampaignFormUrlToken(token)) {
+                  commit(
+                    updateCampaignBlock(document, selected.id, {
+                      href: token,
+                    }),
+                  );
+                  return;
+                }
                 commit(
                   updateCampaignBlock(document, selected.id, {
                     label: `${selected.label}${token}`,

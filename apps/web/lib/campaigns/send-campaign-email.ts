@@ -14,6 +14,8 @@ export async function sendCampaignEmailViaSes(input: {
   sesTenant?: string;
   sesConfigurationSet?: string;
   metadata?: Record<string, unknown>;
+  /** Defaults to "campaign". Use "campaign_test" for free test sends. */
+  emailType?: string;
 }): Promise<{ messageId: string | null }> {
   let status: 'sent' | 'failed' = 'sent';
   let errorMessage: string | null = null;
@@ -44,7 +46,7 @@ export async function sendCampaignEmailViaSes(input: {
     throw error;
   } finally {
     await insertPlatformEmailLog({
-      emailType: 'campaign',
+      emailType: input.emailType ?? 'campaign',
       accountId: input.accountId ?? null,
       recipientEmail: input.to,
       senderEmail: input.from,

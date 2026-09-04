@@ -15,6 +15,7 @@ import {
   CreateCampaignSchema,
   ScheduleCampaignSchema,
   SendCampaignSchema,
+  SendCampaignTestSchema,
   UpdateCampaignSchema,
 } from '../schemas/campaigns.schema';
 
@@ -129,6 +130,60 @@ export const sendCampaignAction = enhanceAction(
     };
   },
   { auth: true, schema: SendCampaignSchema },
+);
+
+
+export const sendCampaignTestAction = enhanceAction(
+  async function (data, user) {
+    const logger = await getLogger();
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const service = createCampaignsService(client);
+
+    // Resolve display names for team members when available.
+    const displayNames: Record<string, string | null> = {};
+    try {
+      const { data: members } = await client.rpc('get_account_members', {
+        account_slug: data.accountSlug,
+      });
+      for (const member of (members ?? []) as Array<{
+        email?: string | null;
+        name?: string | null;
+      }>) {
+        const email = member.email?.trim().toLowerCase();
+        if (email) {
+          displayNames[email] = member.name?.trim() || null;
+        }
+      }
+    } catch {
+      // Merge still works with email-only sample data.
+    }
+
+    const result = await service.sendTest({
+      accountId: data.accountId,
+      campaignId: data.campaignId,
+      emails: data.emails,
+      displayNames,
+    });
+
+    logger.info(
+      {
+        name: 'send-campaign-test',
+        userId: user.id,
+        campaignId: data.campaignId,
+        sent: result.sent,
+        failed: result.failed,
+      },
+      'Sent campaign test email(s)',
+    );
+
+    return {
+      success: true as const,
+      sent: result.sent,
+      failed: result.failed,
+      subject: result.subject,
+    };
+  },
+  { auth: true, schema: SendCampaignTestSchema },
 );
 
 export const scheduleCampaignAction = enhanceAction(
