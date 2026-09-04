@@ -9,6 +9,8 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { toast } from '@kit/ui/sonner';
 
+import { compressListingImageFile } from '~/lib/commercial/compress-listing-image';
+import { safeMediaFileName } from '~/lib/commercial/migrate-external-listing-media';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialListingMedia } from '../_lib/server/listings.service';
@@ -34,7 +36,7 @@ const FILE_TYPES = new Set([
 ]);
 
 function safeFileName(name: string) {
-  return name.replace(/[/\\]/g, '_').replace(/\.\./g, '_').trim().slice(0, 180);
+  return safeMediaFileName(name);
 }
 
 function PrivateUploadCard({
@@ -82,11 +84,21 @@ function PrivateUploadCard({
             throw new Error(`${file.name}: unsupported file type`);
           }
 
+          const prepared =
+            file.type.startsWith('image/') && file.type !== 'image/gif'
+              ? await compressListingImageFile(file)
+              : file;
+          if (prepared.size > MAX_BYTES) {
+            throw new Error(
+              `${file.name} is larger than 100MB after compression`,
+            );
+          }
+
           const path = `${accountId}/${listingId}/private/${crypto.randomUUID()}-${safeFileName(file.name)}`;
           const { error: uploadError } = await client.storage
             .from('commercial-listing-media')
-            .upload(path, file, {
-              contentType: file.type || undefined,
+            .upload(path, prepared, {
+              contentType: prepared.type || undefined,
               upsert: false,
             });
           if (uploadError) throw new Error(uploadError.message);
@@ -95,10 +107,12 @@ function PrivateUploadCard({
           const created = await createListingMedia({
             accountId,
             listingId,
-            mediaType: file.type.startsWith('image/') ? 'image' : 'other',
+            mediaType: (prepared.type || file.type).startsWith('image/')
+              ? 'image'
+              : 'other',
             storagePath: path,
             fileName: file.name,
-            mimeType: file.type || null,
+            mimeType: prepared.type || file.type || null,
             sortOrder: media.length + uploaded.length,
             isPrivate: true,
             isCover: false,

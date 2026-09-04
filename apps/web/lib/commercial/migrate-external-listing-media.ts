@@ -105,12 +105,32 @@ export function buildStoragePath(input: {
 /**
  * Prefer Ozer storage (signed URL) over legacy external hosts (e.g. AS imgix).
  */
+function encodeSignedStorageUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.pathname = parsed.pathname
+      .split('/')
+      .map((segment) => {
+        if (!segment) return segment;
+        try {
+          return encodeURIComponent(decodeURIComponent(segment));
+        } catch {
+          return encodeURIComponent(segment);
+        }
+      })
+      .join('/');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export function resolveCommercialMediaPublicUrl(input: {
   storageSignedUrl: string | null | undefined;
   externalUrl: string | null | undefined;
 }): string | null {
   const stored = input.storageSignedUrl?.trim() || null;
-  if (stored) return stored;
+  if (stored) return encodeSignedStorageUrl(stored);
   const external = input.externalUrl?.trim() || null;
   return external || null;
 }

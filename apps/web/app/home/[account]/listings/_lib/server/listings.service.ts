@@ -22,6 +22,11 @@ import {
   recordListingEvent,
 } from '~/lib/commercial/listing-events';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
+import {
+  LISTING_MEDIA_PREVIEW_TRANSFORM,
+  encodeStorageSignedUrl,
+  listingMediaSupportsPreviewTransform,
+} from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import { ensureListingFeedExternalId } from '~/lib/commercial/portal-publishers';
 import {
@@ -991,20 +996,44 @@ async function signMediaUrl(
 
   let storageSignedUrl: string | null = null;
   if (item.storagePath) {
+    const usePreviewTransform = listingMediaSupportsPreviewTransform(
+      item.mimeType,
+    );
     const { data, error } = await client.storage
       .from('commercial-listing-media')
-      .createSignedUrl(item.storagePath, 3600);
+      .createSignedUrl(
+        item.storagePath,
+        3600,
+        usePreviewTransform
+          ? { transform: LISTING_MEDIA_PREVIEW_TRANSFORM }
+          : undefined,
+      );
     if (error) {
       console.error('[listings] signed media url error:', error.message);
+      // Transform signing can fail on older objects — fall back to full file.
+      if (usePreviewTransform) {
+        const fallback = await client.storage
+          .from('commercial-listing-media')
+          .createSignedUrl(item.storagePath, 3600);
+        if (fallback.error) {
+          console.error(
+            '[listings] signed media url fallback error:',
+            fallback.error.message,
+          );
+        } else {
+          storageSignedUrl = fallback.data.signedUrl ?? null;
+        }
+      }
     } else {
       storageSignedUrl = data.signedUrl ?? null;
     }
   }
 
-  const url = resolveCommercialMediaPublicUrl({
+  const resolved = resolveCommercialMediaPublicUrl({
     storageSignedUrl,
     externalUrl: item.externalUrl,
   });
+  const url = resolved ? encodeStorageSignedUrl(resolved) : null;
   return { ...item, url };
 }
 

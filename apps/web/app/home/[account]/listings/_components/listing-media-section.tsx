@@ -34,6 +34,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Eye,
   FileText,
   GripVertical,
   ImageIcon,
@@ -70,10 +71,12 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
+import { compressListingImageFile } from '~/lib/commercial/compress-listing-image';
 import {
   compareListingMediaOrder,
   sortListingMedia,
 } from '~/lib/commercial/listing-media-order';
+import { safeMediaFileName } from '~/lib/commercial/migrate-external-listing-media';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
@@ -160,10 +163,18 @@ const SECONDARY_FILE_SECTIONS: typeof PRIMARY_FILE_SECTIONS = [
 const FILE_SECTIONS = [...PRIMARY_FILE_SECTIONS, ...SECONDARY_FILE_SECTIONS];
 
 function safeFileName(name: string) {
-  return name.replace(/[/\\]/g, '_').replace(/\.\./g, '_').trim().slice(0, 180);
+  return safeMediaFileName(name);
+}
+
+function isPdfMedia(item: CommercialListingMedia) {
+  const mime = item.mimeType?.toLowerCase() ?? '';
+  if (mime === 'application/pdf' || mime === 'application/x-pdf') return true;
+  const name = item.fileName?.toLowerCase() ?? '';
+  return name.endsWith('.pdf');
 }
 
 function isImageMedia(item: CommercialListingMedia) {
+  if (isPdfMedia(item)) return false;
   return (
     item.mediaType === 'image' ||
     item.mediaType === 'floorplan' ||
@@ -174,6 +185,13 @@ function isImageMedia(item: CommercialListingMedia) {
 
 function mediaHref(item: CommercialListingMedia) {
   return item.url ?? item.externalUrl ?? null;
+}
+
+async function prepareUploadFile(file: File): Promise<File> {
+  if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+    return file;
+  }
+  return compressListingImageFile(file);
 }
 
 function applyPhotoOrder(
@@ -265,6 +283,8 @@ export function ListingMediaSection({
   const [renameTarget, setRenameTarget] =
     useState<CommercialListingMedia | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [pdfViewerTarget, setPdfViewerTarget] =
+    useState<CommercialListingMedia | null>(null);
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState(initialWebsiteUrl ?? '');
@@ -343,15 +363,24 @@ export function ListingMediaSection({
       const uploaded: CommercialListingMedia[] = [];
 
       try {
-        for (const file of Array.from(files)) {
-          if (file.size > MAX_BYTES) {
-            throw new Error(`${file.name} is larger than 20MB`);
+        for (const original of Array.from(files)) {
+          if (original.size > MAX_BYTES) {
+            throw new Error(`${original.name} is larger than 20MB`);
           }
-          if (file.type && !ALLOWED.has(file.type)) {
-            throw new Error(`${file.name}: use JPEG, PNG, WebP, GIF, or PDF`);
+          if (original.type && !ALLOWED.has(original.type)) {
+            throw new Error(
+              `${original.name}: use JPEG, PNG, WebP, GIF, or PDF`,
+            );
           }
 
-          const path = `${accountId}/${listingId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+          const file = await prepareUploadFile(original);
+          if (file.size > MAX_BYTES) {
+            throw new Error(
+              `${original.name} is larger than 20MB after compression`,
+            );
+          }
+
+          const path = `${accountId}/${listingId}/${crypto.randomUUID()}-${safeFileName(original.name)}`;
           const { error: uploadError } = await client.storage
             .from('commercial-listing-media')
             .upload(path, file, {
@@ -368,8 +397,8 @@ export function ListingMediaSection({
             listingId,
             mediaType: uploadType,
             storagePath: path,
-            fileName: file.name,
-            mimeType: file.type || null,
+            fileName: original.name,
+            mimeType: file.type || original.type || null,
             sortOrder: media.length + uploaded.length,
           });
           uploaded.push(created);
@@ -540,11 +569,16 @@ export function ListingMediaSection({
           throw new Error('Use JPEG, PNG, WebP, GIF, or PDF');
         }
 
+        const prepared = await prepareUploadFile(file);
+        if (prepared.size > MAX_BYTES) {
+          throw new Error(`${file.name} is larger than 20MB after compression`);
+        }
+
         const path = `${accountId}/${listingId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
         const { error: uploadError } = await client.storage
           .from('commercial-listing-media')
-          .upload(path, file, {
-            contentType: file.type || undefined,
+          .upload(path, prepared, {
+            contentType: prepared.type || undefined,
             upsert: false,
           });
         if (uploadError) throw new Error(uploadError.message);
@@ -556,7 +590,7 @@ export function ListingMediaSection({
           mediaId,
           storagePath: path,
           fileName: file.name,
-          mimeType: file.type || null,
+          mimeType: prepared.type || file.type || null,
           mediaType: existing?.mediaType ?? uploadType,
         });
 
@@ -625,6 +659,7 @@ export function ListingMediaSection({
   ) => {
     const href = mediaHref(item);
     const isImage = isImageMedia(item) && Boolean(href);
+    const isPdf = isPdfMedia(item);
     const canDrag = Boolean(drag?.listeners);
 
     return (
@@ -659,10 +694,38 @@ export function ListingMediaSection({
             <img
               src={href!}
               alt={item.fileName ?? 'Listing media'}
-              className="aspect-[4/3] w-full object-cover transition-opacity group-hover:opacity-95"
+              className="aspect-[4/3] w-full bg-[var(--workspace-shell-sidebar-accent)] object-cover transition-opacity group-hover:opacity-95"
               draggable={false}
+              loading="lazy"
+              decoding="async"
             />
           </button>
+        ) : isPdf && href ? (
+          <div className="relative aspect-[4/3] bg-[var(--workspace-shell-sidebar-accent)]">
+            <iframe
+              title={`${item.fileName ?? 'PDF'} cover`}
+              src={`${href}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+              className="pointer-events-none absolute inset-0 h-full w-full border-0 bg-white"
+              tabIndex={-1}
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/35 to-transparent px-3 py-2">
+              <span className="text-[10px] font-semibold tracking-wide text-white uppercase">
+                PDF
+              </span>
+            </div>
+            <button
+              type="button"
+              className="absolute top-2 right-2 z-10 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-1.5 text-[var(--workspace-shell-text)] shadow-sm hover:bg-[var(--workspace-shell-panel)]"
+              aria-label={`Preview ${item.fileName ?? 'PDF'}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setPdfViewerTarget(item);
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+          </div>
         ) : (
           <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 text-[var(--workspace-shell-text)]/40">
             {item.mediaType === 'video' ? (
@@ -693,74 +756,89 @@ export function ListingMediaSection({
               {MEDIA_TYPE_LABELS[item.mediaType]}
             </p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex shrink-0 items-center gap-1">
+            {isPdf && href ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                disabled={pending || readOnly}
                 className="h-7 w-7 text-[var(--workspace-shell-text-muted)]"
-                aria-label={`Actions for ${item.fileName ?? 'media'}`}
+                aria-label={`Preview ${item.fileName ?? 'PDF'}`}
+                onClick={() => setPdfViewerTarget(item)}
                 onPointerDown={(event) => event.stopPropagation()}
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <Eye className="h-4 w-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-            >
-              {item.mediaType !== 'video' ? (
-                <DropdownMenuItem
-                  onClick={() => openRename(item)}
-                  className="gap-2"
+            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={pending || readOnly}
+                  className="h-7 w-7 text-[var(--workspace-shell-text-muted)]"
+                  aria-label={`Actions for ${item.fileName ?? 'media'}`}
+                  onPointerDown={(event) => event.stopPropagation()}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Rename
-                </DropdownMenuItem>
-              ) : null}
-              {item.externalUrl || item.url ? (
-                <DropdownMenuItem asChild className="gap-2">
-                  <a
-                    href={item.externalUrl ?? item.url ?? undefined}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Open
-                  </a>
-                </DropdownMenuItem>
-              ) : null}
-              {item.mediaType !== 'video' && item.storagePath ? (
-                <DropdownMenuItem
-                  onClick={() => startReplace(item)}
-                  className="gap-2"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Replace
-                </DropdownMenuItem>
-              ) : null}
-              {isImageMedia(item) ? (
-                <DropdownMenuItem
-                  disabled={item.isCover}
-                  onClick={() => handleSetCover(item.id)}
-                  className="gap-2"
-                >
-                  <Star className="h-3.5 w-3.5" />
-                  {item.isCover ? 'Cover image' : 'Set as cover'}
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => handleDelete(item)}
-                className="gap-2 text-rose-600 focus:text-rose-600 dark:text-rose-400"
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {item.mediaType !== 'video' ? (
+                  <DropdownMenuItem
+                    onClick={() => openRename(item)}
+                    className="gap-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Rename
+                  </DropdownMenuItem>
+                ) : null}
+                {item.externalUrl || item.url ? (
+                  <DropdownMenuItem asChild className="gap-2">
+                    <a
+                      href={item.externalUrl ?? item.url ?? undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open
+                    </a>
+                  </DropdownMenuItem>
+                ) : null}
+                {item.mediaType !== 'video' && item.storagePath ? (
+                  <DropdownMenuItem
+                    onClick={() => startReplace(item)}
+                    className="gap-2"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Replace
+                  </DropdownMenuItem>
+                ) : null}
+                {isImageMedia(item) ? (
+                  <DropdownMenuItem
+                    disabled={item.isCover}
+                    onClick={() => handleSetCover(item.id)}
+                    className="gap-2"
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                    {item.isCover ? 'Cover image' : 'Set as cover'}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleDelete(item)}
+                  className="gap-2 text-rose-600 focus:text-rose-600 dark:text-rose-400"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     );
@@ -1171,6 +1249,57 @@ export function ListingMediaSection({
               onClick={saveRename}
             >
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(pdfViewerTarget)}
+        onOpenChange={(open) => {
+          if (!open) setPdfViewerTarget(null);
+        }}
+      >
+        <DialogContent className="flex max-h-[90vh] w-[min(960px,94vw)] max-w-none flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] sm:max-w-none">
+          <DialogHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+            <DialogTitle className="truncate pr-8 text-base">
+              {pdfViewerTarget?.fileName ?? 'PDF preview'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 bg-[var(--workspace-shell-sidebar-accent)]">
+            {pdfViewerTarget && mediaHref(pdfViewerTarget) ? (
+              <iframe
+                title={pdfViewerTarget.fileName ?? 'PDF preview'}
+                src={`${mediaHref(pdfViewerTarget)}#toolbar=1&navpanes=0&view=FitH`}
+                className="h-[min(75vh,720px)] w-full border-0 bg-white"
+              />
+            ) : (
+              <p className="p-6 text-sm text-[var(--workspace-shell-text-muted)]">
+                Preview unavailable
+              </p>
+            )}
+          </div>
+          <DialogFooter className="border-t border-[color:var(--workspace-shell-border)] px-4 py-3 sm:justify-between">
+            {pdfViewerTarget && mediaHref(pdfViewerTarget) ? (
+              <Button type="button" variant="ghost" asChild>
+                <a
+                  href={mediaHref(pdfViewerTarget) ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in new tab
+                </a>
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setPdfViewerTarget(null)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

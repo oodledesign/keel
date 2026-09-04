@@ -121,3 +121,48 @@ export function resolveSiteUrlForPublicMedia(): string | null {
   }
   return null;
 }
+
+/**
+ * Supabase signed URLs often leave spaces (and other reserved chars) unescaped
+ * in the path when the storage object key contains them. Browsers and some
+ * HTTP clients then fail to load the asset. Re-encode the pathname safely.
+ */
+export function encodeStorageSignedUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.pathname = parsed.pathname
+      .split('/')
+      .map((segment) => {
+        if (!segment) return segment;
+        try {
+          return encodeURIComponent(decodeURIComponent(segment));
+        } catch {
+          return encodeURIComponent(segment);
+        }
+      })
+      .join('/');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+/** Gallery / lightbox preview transform — keeps admin UI snappy for large JPEGs. */
+export const LISTING_MEDIA_PREVIEW_TRANSFORM = {
+  width: 1600,
+  height: 1600,
+  resize: 'contain' as const,
+  quality: 75,
+};
+
+export function listingMediaSupportsPreviewTransform(
+  mimeType: string | null | undefined,
+): boolean {
+  const value = (mimeType ?? '').toLowerCase().split(';')[0]?.trim() ?? '';
+  return (
+    value === 'image/jpeg' ||
+    value === 'image/jpg' ||
+    value === 'image/png' ||
+    value === 'image/webp'
+  );
+}
