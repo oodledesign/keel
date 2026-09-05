@@ -1,8 +1,8 @@
-import type { CampaignDocument } from './campaign-document';
 import type {
   CampaignAudienceConfig,
   CampaignAudienceType,
 } from './campaign-audience';
+import type { CampaignDocument } from './campaign-document';
 
 export type EmailCampaignStatus =
   | 'draft'
@@ -18,6 +18,9 @@ export type EmailCampaign = {
   createdBy: string | null;
   name: string;
   subject: string;
+  subjectB: string | null;
+  abEnabled: boolean;
+  abSplitPercent: number;
   previewText: string | null;
   htmlBody: string;
   bodyDocument: CampaignDocument | null;
@@ -28,6 +31,7 @@ export type EmailCampaign = {
   audienceConfig: CampaignAudienceConfig;
   status: EmailCampaignStatus;
   scheduledAt: string | null;
+  scheduledTimezone: string;
   sentAt: string | null;
   audienceCount: number;
   sentCount: number;
@@ -64,6 +68,7 @@ export type EmailCampaignRecipient = {
   bounceType: string | null;
   bounceSubtype: string | null;
   complaintAt: string | null;
+  abVariant: 'a' | 'b' | null;
 };
 
 export type CampaignCreditPool = {
@@ -71,7 +76,43 @@ export type CampaignCreditPool = {
   balance: number;
   monthly_allowance: number;
   max_contacts: number;
+  contact_bonus: number;
   plan_tier: string;
   cycle_start: string | null;
   cycle_end: string | null;
+};
+
+export type CampaignAudienceList = {
+  id: string;
+  accountId: string;
+  createdBy: string | null;
+  name: string;
+  source: 'subscribers' | 'clients' | 'contacts';
+  matchMode: 'all' | 'any';
+  filters: unknown;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CampaignAutomation = {
+  id: string;
+  accountId: string;
+  createdBy: string | null;
+  name: string;
+  triggerType: 'new_subscriber';
+  campaignId: string | null;
+  status: 'active' | 'paused';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CampaignAutomationRun = {
+  id: string;
+  automationId: string;
+  campaignId: string | null;
+  email: string;
+  status: 'pending' | 'sent' | 'failed' | 'skipped';
+  errorMessage: string | null;
+  sentAt: string | null;
+  createdAt: string;
 };

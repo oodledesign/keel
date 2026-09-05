@@ -463,7 +463,7 @@ const ADDONS: OzerPlanDefinition[] = [
       maxProperties: null,
       maxVideos: null,
       maxContacts: 500,
-      maxEmails: 2000,
+      maxEmails: 5000,
     },
   },
   {
@@ -477,7 +477,7 @@ const ADDONS: OzerPlanDefinition[] = [
       maxProperties: null,
       maxVideos: null,
       maxContacts: 2500,
-      maxEmails: 10000,
+      maxEmails: 20000,
     },
   },
   {
@@ -491,7 +491,7 @@ const ADDONS: OzerPlanDefinition[] = [
       maxProperties: null,
       maxVideos: null,
       maxContacts: 10000,
-      maxEmails: 50000,
+      maxEmails: 60000,
     },
   },
 ];
@@ -682,7 +682,7 @@ export const OZER_ADDON_CATALOG: Array<{
     name: 'Campaigns',
     description:
       'Workspace-branded email campaigns to your mailing list. Priced by contact list size and emails sent.',
-    fromPriceGbp: 19,
+    fromPriceGbp: 9,
   },
 ];
 

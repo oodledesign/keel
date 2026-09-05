@@ -193,6 +193,38 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY',
     'price_ozer_addon_campaigns_pro_monthly',
   ),
+  campaigns_pack_send_2k: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K',
+    'price_ozer_campaigns_pack_send_2k',
+  ),
+  campaigns_pack_send_2k_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K_MONTHLY',
+    'price_ozer_campaigns_pack_send_2k_monthly',
+  ),
+  campaigns_pack_send_10k: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_10K',
+    'price_ozer_campaigns_pack_send_10k',
+  ),
+  campaigns_pack_send_10k_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_10K_MONTHLY',
+    'price_ozer_campaigns_pack_send_10k_monthly',
+  ),
+  campaigns_pack_send_50k: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K',
+    'price_ozer_campaigns_pack_send_50k',
+  ),
+  campaigns_pack_send_50k_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_MONTHLY',
+    'price_ozer_campaigns_pack_send_50k_monthly',
+  ),
+  campaigns_bump_contacts_500_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_500_MONTHLY',
+    'price_ozer_campaigns_bump_contacts_500_monthly',
+  ),
+  campaigns_bump_contacts_2500_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2500_MONTHLY',
+    'price_ozer_campaigns_bump_contacts_2500_monthly',
+  ),
 } as const;
 
 export const OZER_BILLING_CURRENCY =

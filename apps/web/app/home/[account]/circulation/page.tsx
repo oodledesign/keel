@@ -45,6 +45,7 @@ async function CirculationPage({ params }: CirculationPageProps) {
           initialAutoSendEnabled={data.autoSendEnabled}
           initialContacts={data.contacts}
           initialSends={data.sends}
+          usage={data.usage}
         />
       </PageBody>
     </>

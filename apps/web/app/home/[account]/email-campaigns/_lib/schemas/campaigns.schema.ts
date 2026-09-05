@@ -4,6 +4,7 @@ import {
   CAMPAIGN_AUDIENCE_TYPES,
   CampaignAudienceConfigSchema,
 } from '~/lib/campaigns/campaign-audience';
+import { AudienceListFiltersSchema } from '~/lib/campaigns/campaign-audience-filters';
 import { CampaignDocumentSchema } from '~/lib/campaigns/campaign-document';
 
 export const CreateCampaignSchema = z.object({
@@ -29,6 +30,39 @@ export const UpdateCampaignSchema = z.object({
   audienceType: z.enum(CAMPAIGN_AUDIENCE_TYPES).optional(),
   audienceConfig: CampaignAudienceConfigSchema.optional(),
   scheduledAt: z.string().optional().nullable(),
+  scheduledTimezone: z.string().trim().max(80).optional().nullable(),
+  subjectB: z.string().trim().max(300).optional().nullable(),
+  abEnabled: z.boolean().optional(),
+  abSplitPercent: z.number().int().min(10).max(90).optional(),
+});
+
+export const SaveAudienceListSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  listId: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(120),
+  filters: AudienceListFiltersSchema,
+});
+
+export const DeleteAudienceListSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  listId: z.string().uuid(),
+});
+
+export const SaveAutomationSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  automationId: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(120),
+  campaignId: z.string().uuid(),
+  status: z.enum(['active', 'paused']).optional(),
+});
+
+export const DeleteAutomationSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  automationId: z.string().uuid(),
 });
 
 export const SendCampaignSchema = z.object({

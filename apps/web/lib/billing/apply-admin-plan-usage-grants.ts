@@ -146,6 +146,7 @@ export async function applyAdminPlanUsageGrants(
     await updateCampaignCreditPoolMetadata(accountId, {
       monthly_allowance: campaign.sendUnits,
       max_contacts: campaign.maxContacts,
+      contact_bonus: 0,
       plan_tier: campaign.planTier,
       cycle_start: periodStart.toISOString().slice(0, 10),
       cycle_end: cycleEndIso,

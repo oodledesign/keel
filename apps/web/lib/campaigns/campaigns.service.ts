@@ -10,19 +10,27 @@ import {
   refundCampaignCredits,
 } from '~/lib/campaign-credits/ledger';
 import {
+  assignCampaignAbVariant,
+  clampAbSplitPercent,
+  subjectForAbVariant,
+} from '~/lib/campaigns/campaign-ab';
+import {
   campaignDocumentHasContent,
   parseCampaignDocument,
   resolveCampaignDocument,
 } from '~/lib/campaigns/campaign-document';
-import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
-import { formUrlForMerge } from '~/lib/campaigns/form-link';
-import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
+import { CampaignQuotaError } from '~/lib/campaigns/campaign-quota-error';
 import {
   CAMPAIGN_TEST_MAX_RECIPIENTS,
   CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
   campaignTestSubject,
   normalizeCampaignTestEmails,
 } from '~/lib/campaigns/campaign-test-send';
+import { parseCampaignTimezone } from '~/lib/campaigns/campaign-timezone';
+import { describeCampaignQuota } from '~/lib/campaigns/campaign-usage';
+import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
+import { formUrlForMerge } from '~/lib/campaigns/form-link';
+import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
@@ -35,9 +43,7 @@ import {
   resolveSendingHost,
   resolveWorkspaceMailFrom,
 } from '~/lib/sending-domains/server';
-import {
-  buildWorkspaceMailingListUnsubscribeUrl,
-} from '~/lib/workspace-forms/workspace-mailing-list';
+import { buildWorkspaceMailingListUnsubscribeUrl } from '~/lib/workspace-forms/workspace-mailing-list';
 
 import {
   type CampaignAudienceConfig,
@@ -75,6 +81,9 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     createdBy: (row.created_by as string | null) ?? null,
     name: String(row.name),
     subject: String(row.subject ?? ''),
+    subjectB: (row.subject_b as string | null) ?? null,
+    abEnabled: Boolean(row.ab_enabled),
+    abSplitPercent: clampAbSplitPercent(Number(row.ab_split_percent ?? 50)),
     previewText: (row.preview_text as string | null) ?? null,
     htmlBody: String(row.html_body ?? ''),
     bodyDocument: parseCampaignDocument(row.body_document),
@@ -85,6 +94,7 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     audienceConfig: parseCampaignAudienceConfig(row.audience_config),
     status: row.status as EmailCampaignStatus,
     scheduledAt: (row.scheduled_at as string | null) ?? null,
+    scheduledTimezone: parseCampaignTimezone(row.scheduled_timezone),
     sentAt: (row.sent_at as string | null) ?? null,
     audienceCount: Number(row.audience_count ?? 0),
     sentCount: Number(row.sent_count ?? 0),
@@ -192,6 +202,10 @@ class CampaignsService {
     audienceType?: CampaignAudienceType;
     audienceConfig?: CampaignAudienceConfig;
     scheduledAt?: string | null;
+    scheduledTimezone?: string | null;
+    subjectB?: string | null;
+    abEnabled?: boolean;
+    abSplitPercent?: number;
   }): Promise<EmailCampaign> {
     const existing = await this.get(input.accountId, input.campaignId);
     if (existing.status !== 'draft' && existing.status !== 'scheduled') {
@@ -201,6 +215,16 @@ class CampaignsService {
     const patch: Record<string, unknown> = {};
     if (input.name !== undefined) patch.name = input.name.trim();
     if (input.subject !== undefined) patch.subject = input.subject.trim();
+    if (input.subjectB !== undefined) {
+      patch.subject_b = input.subjectB?.trim() || null;
+    }
+    if (input.abEnabled !== undefined) patch.ab_enabled = input.abEnabled;
+    if (input.abSplitPercent !== undefined) {
+      patch.ab_split_percent = clampAbSplitPercent(input.abSplitPercent);
+    }
+    if (input.scheduledTimezone !== undefined) {
+      patch.scheduled_timezone = parseCampaignTimezone(input.scheduledTimezone);
+    }
     if (input.previewText !== undefined) {
       patch.preview_text = input.previewText?.trim() || null;
     }
@@ -320,7 +344,7 @@ class CampaignsService {
       WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select(
-        'id, campaign_id, email, display_name, status, skip_reason, error_message, ses_message_id, sent_at, unsubscribed_at, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, bounce_type, bounce_subtype, complaint_at',
+        'id, campaign_id, email, display_name, status, skip_reason, error_message, ses_message_id, sent_at, unsubscribed_at, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, bounce_type, bounce_subtype, complaint_at, ab_variant',
       )
       .eq('account_id', accountId)
       .eq('campaign_id', campaignId)
@@ -348,6 +372,10 @@ class CampaignsService {
       bounceType: (row.bounce_type as string | null) ?? null,
       bounceSubtype: (row.bounce_subtype as string | null) ?? null,
       complaintAt: (row.complaint_at as string | null) ?? null,
+      abVariant:
+        row.ab_variant === 'a' || row.ab_variant === 'b'
+          ? row.ab_variant
+          : null,
     }));
   }
 
@@ -445,15 +473,29 @@ class CampaignsService {
     const usage = await getCampaignUsage(input.accountId);
     const maxContacts = usage.pool.max_contacts;
     if (maxContacts > 0 && recipients.length > maxContacts) {
-      throw new Error(
-        `This plan allows ${maxContacts} contacts. The audience has ${recipients.length}. Upgrade or reduce the audience before sending.`,
-      );
+      throw new CampaignQuotaError({
+        kind: 'contacts',
+        needed: recipients.length,
+        have: maxContacts,
+        message: describeCampaignQuota({
+          kind: 'contacts',
+          used: recipients.length,
+          cap: maxContacts,
+        }),
+      });
     }
 
     if (usage.pool.balance < recipients.length) {
-      throw new Error(
-        `Not enough send units. Need ${recipients.length}, have ${usage.pool.balance}.`,
-      );
+      throw new CampaignQuotaError({
+        kind: 'sends',
+        needed: recipients.length,
+        have: usage.pool.balance,
+        message: describeCampaignQuota({
+          kind: 'sends',
+          needed: recipients.length,
+          have: usage.pool.balance,
+        }),
+      });
     }
 
     // Claim send without overwriting From / Reply-To (resolved later in processPending).
@@ -485,6 +527,13 @@ class CampaignsService {
       display_name: recipient.displayName,
       unsubscribe_token: recipient.unsubscribeToken,
       status: 'pending',
+      ab_variant: campaign.abEnabled
+        ? assignCampaignAbVariant(
+            campaign.id,
+            recipient.email,
+            campaign.abSplitPercent,
+          )
+        : null,
     }));
 
     const { error: insertError } = await fromTable(
@@ -506,17 +555,28 @@ class CampaignsService {
         campaign.id,
       );
     } catch (error) {
+      const quota = isInsufficientCampaignCreditsError(error)
+        ? new CampaignQuotaError({
+            kind: 'sends',
+            needed: recipients.length,
+            have: error.balance,
+            message: describeCampaignQuota({
+              kind: 'sends',
+              needed: recipients.length,
+              have: error.balance,
+            }),
+          })
+        : error;
       await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
         .update({
-          status: 'failed',
-          last_error: isInsufficientCampaignCreditsError(error)
-            ? error.message
-            : error instanceof Error
-              ? error.message
+          status: 'draft',
+          last_error:
+            quota instanceof Error
+              ? quota.message
               : 'Could not debit send units',
         })
         .eq('id', campaign.id);
-      throw error;
+      throw quota;
     }
 
     return this.processPending({
@@ -574,7 +634,7 @@ class CampaignsService {
       WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select(
-        'id, email, display_name, preference_id, unsubscribe_token, status',
+        'id, email, display_name, preference_id, unsubscribe_token, status, ab_variant',
       )
       .eq('campaign_id', campaign.id)
       .eq('account_id', input.accountId)
@@ -590,6 +650,7 @@ class CampaignsService {
       display_name: string | null;
       preference_id: string | null;
       unsubscribe_token: string | null;
+      ab_variant?: string | null;
     }>;
 
     const preferenceIds = [
@@ -677,11 +738,17 @@ class CampaignsService {
           unsubscribeToken: token,
         });
 
+        const variant =
+          recipient.ab_variant === 'b' ? ('b' as const) : ('a' as const);
         const { messageId } = await sendCampaignEmailViaSes({
           to: recipient.email,
           from: fromHeader,
           replyTo,
-          subject: campaign.subject,
+          subject: subjectForAbVariant({
+            subject: campaign.subject,
+            subjectB: campaign.subjectB,
+            variant,
+          }),
           html,
           listUnsubscribeUrl: buildWorkspaceMailingListUnsubscribeUrl(token),
           accountId: input.accountId,
@@ -786,7 +853,6 @@ class CampaignsService {
       remaining,
     };
   }
-
 
   /**
    * Send a free test of the current campaign HTML to explicit addresses.
@@ -910,6 +976,9 @@ class CampaignsService {
     if (!campaign.subject.trim()) {
       throw new Error('Add a subject before sending');
     }
+    if (campaign.abEnabled && !campaign.subjectB?.trim()) {
+      throw new Error('Add subject B before sending an A/B test');
+    }
     const hasContent = campaign.bodyDocument
       ? campaignDocumentHasContent(campaign.bodyDocument)
       : Boolean(campaign.htmlBody.replace(/<[^>]+>/g, '').trim());
@@ -948,9 +1017,10 @@ export async function processDueCampaignSends(client: SupabaseClient): Promise<{
       });
       started += 1;
     } catch (error) {
+      const quota = error instanceof CampaignQuotaError;
       await fromTable(client, WORKSPACE_EMAIL_CAMPAIGNS)
         .update({
-          status: 'failed',
+          status: quota ? 'scheduled' : 'failed',
           last_error:
             error instanceof Error ? error.message : 'Scheduled send failed',
         })

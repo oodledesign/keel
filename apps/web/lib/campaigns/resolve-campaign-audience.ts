@@ -1,8 +1,10 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { randomBytes } from 'crypto';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { getLogger } from '@kit/shared/logger';
 
 import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
 
@@ -13,6 +15,11 @@ import {
   parseCampaignAudienceConfig,
   parseCampaignAudienceType,
 } from './campaign-audience';
+import {
+  type AudienceFilterSubject,
+  applyAudienceFilters,
+  parseAudienceListFilters,
+} from './campaign-audience-filters';
 
 export type ResolvedCampaignRecipient = {
   email: string;
@@ -32,6 +39,16 @@ function newUnsubscribeToken() {
   return randomBytes(24).toString('hex');
 }
 
+type ListedPerson = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  clientType?: string | null;
+  companyName?: string | null;
+  createdAt?: string | null;
+  consentedAt?: string | null;
+};
+
 type PrefRow = {
   id: string;
   email: string;
@@ -48,7 +65,10 @@ async function loadPreferenceMap(
   const map = new Map<string, PrefRow>();
   if (emails.length === 0) return map;
 
-  const { data, error } = await fromTable(client, 'workspace_mailing_preferences')
+  const { data, error } = await fromTable(
+    client,
+    'workspace_mailing_preferences',
+  )
     .select('id, email, marketing_status, unsubscribe_token, client_id')
     .eq('account_id', accountId)
     .eq('purpose', 'workspace_mailing_list')
@@ -64,7 +84,10 @@ async function loadPreferenceMap(
 
 function mergeRecipient(
   byEmail: Map<string, ResolvedCampaignRecipient>,
-  candidate: Omit<ResolvedCampaignRecipient, 'preferenceId' | 'unsubscribeToken'> & {
+  candidate: Omit<
+    ResolvedCampaignRecipient,
+    'preferenceId' | 'unsubscribeToken'
+  > & {
     preferenceId?: string | null;
     unsubscribeToken?: string | null;
   },
@@ -98,9 +121,11 @@ async function listClientsWithEmail(
   client: SupabaseClient,
   accountId: string,
   clientIds?: string[],
-): Promise<Array<{ id: string; email: string; displayName: string | null }>> {
+): Promise<ListedPerson[]> {
   let query = fromTable(client, 'clients')
-    .select('id, email, display_name, company_name, first_name, last_name')
+    .select(
+      'id, email, display_name, company_name, first_name, last_name, client_type, created_at',
+    )
     .eq('account_id', accountId)
     .not('email', 'is', null)
     .is('archived_at', null);
@@ -112,35 +137,36 @@ async function listClientsWithEmail(
   const { data, error } = await query.limit(5000);
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as Array<Record<string, unknown>>)
-    .map((row) => {
-      const email = String(row.email ?? '')
-        .trim()
-        .toLowerCase();
-      if (!email) return null;
-      const displayName =
-        String(row.display_name ?? '').trim() ||
-        [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
-        String(row.company_name ?? '').trim() ||
-        null;
-      return {
-        id: String(row.id),
-        email,
-        displayName: displayName || null,
-      };
-    })
-    .filter((row): row is { id: string; email: string; displayName: string | null } =>
-      Boolean(row),
-    );
+  const people: ListedPerson[] = [];
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const email = String(row.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!email) continue;
+    const displayName =
+      String(row.display_name ?? '').trim() ||
+      [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+      String(row.company_name ?? '').trim() ||
+      null;
+    people.push({
+      id: String(row.id),
+      email,
+      displayName: displayName || null,
+      clientType: (row.client_type as string | null) ?? null,
+      companyName: (row.company_name as string | null) ?? null,
+      createdAt: (row.created_at as string | null) ?? null,
+    });
+  }
+  return people;
 }
 
 async function listContactsWithEmail(
   client: SupabaseClient,
   accountId: string,
   contactIds?: string[],
-): Promise<Array<{ id: string; email: string; displayName: string | null }>> {
+): Promise<ListedPerson[]> {
   let query = fromTable(client, 'contacts')
-    .select('id, email, full_name, first_name, last_name')
+    .select('id, email, full_name, first_name, last_name, created_at')
     .eq('account_id', accountId)
     .not('email', 'is', null);
 
@@ -151,29 +177,53 @@ async function listContactsWithEmail(
   const { data, error } = await query.limit(5000);
   if (error) {
     // Older workspaces may lack account_id on contacts; fail soft for estimate.
-    console.warn('[campaigns] list contacts failed', error.message);
+    const logger = await getLogger();
+    logger.warn(
+      { name: 'campaigns.audience', error: error.message },
+      'List contacts failed',
+    );
     return [];
   }
 
-  return ((data ?? []) as Array<Record<string, unknown>>)
-    .map((row) => {
-      const email = String(row.email ?? '')
-        .trim()
-        .toLowerCase();
-      if (!email) return null;
-      const displayName =
-        String(row.full_name ?? '').trim() ||
-        [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
-        null;
-      return {
-        id: String(row.id),
-        email,
-        displayName: displayName || null,
-      };
-    })
-    .filter((row): row is { id: string; email: string; displayName: string | null } =>
-      Boolean(row),
-    );
+  const people: ListedPerson[] = [];
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const email = String(row.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!email) continue;
+    const displayName =
+      String(row.full_name ?? '').trim() ||
+      [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+      null;
+    people.push({
+      id: String(row.id),
+      email,
+      displayName: displayName || null,
+      createdAt: (row.created_at as string | null) ?? null,
+    });
+  }
+  return people;
+}
+
+async function loadAudienceList(
+  client: SupabaseClient,
+  accountId: string,
+  listId: string,
+) {
+  const { data, error } = await fromTable(client, 'campaign_audience_lists')
+    .select('id, source, match_mode, filters')
+    .eq('account_id', accountId)
+    .eq('id', listId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Saved audience list not found');
+  return data as {
+    id: string;
+    source: 'subscribers' | 'clients' | 'contacts';
+    match_mode: 'all' | 'any';
+    filters: unknown;
+  };
 }
 
 /**
@@ -229,6 +279,81 @@ export async function resolveCampaignAudience(
         displayName: row.displayName,
         clientId: null,
         contactId: row.id,
+      });
+    }
+  }
+
+  if (type === 'list') {
+    if (!config.listId) {
+      throw new Error('Choose a saved audience list');
+    }
+    const list = await loadAudienceList(client, accountId, config.listId);
+    const filters = parseAudienceListFilters({
+      source: list.source,
+      matchMode: list.match_mode,
+      rules: Array.isArray(list.filters) ? list.filters : [],
+    });
+
+    const subjects: Array<
+      AudienceFilterSubject & {
+        clientId: string | null;
+        contactId: string | null;
+        preferenceId: string | null;
+      }
+    > = [];
+
+    if (list.source === 'subscribers') {
+      const subscribers = await listWorkspaceMailingListSubscribers(
+        client,
+        accountId,
+      );
+      for (const subscriber of subscribers) {
+        subjects.push({
+          email: subscriber.email,
+          displayName: subscriber.displayName,
+          consentedAt: subscriber.consentedAt,
+          clientId: subscriber.clientId,
+          contactId: null,
+          preferenceId: subscriber.preferenceId,
+        });
+      }
+    } else if (list.source === 'clients') {
+      const clients = await listClientsWithEmail(client, accountId);
+      for (const row of clients) {
+        subjects.push({
+          email: row.email,
+          displayName: row.displayName,
+          createdAt: row.createdAt,
+          clientType: row.clientType,
+          companyName: row.companyName,
+          clientId: row.id,
+          contactId: null,
+          preferenceId: null,
+        });
+      }
+    } else {
+      const contacts = await listContactsWithEmail(client, accountId);
+      for (const row of contacts) {
+        subjects.push({
+          email: row.email,
+          displayName: row.displayName,
+          createdAt: row.createdAt,
+          clientId: null,
+          contactId: row.id,
+          preferenceId: null,
+        });
+      }
+    }
+
+    const matched = applyAudienceFilters(subjects, filters);
+    for (const row of matched) {
+      const extra = row as (typeof subjects)[number];
+      mergeRecipient(byEmail, {
+        email: extra.email,
+        displayName: extra.displayName,
+        clientId: extra.clientId,
+        contactId: extra.contactId,
+        preferenceId: extra.preferenceId,
       });
     }
   }

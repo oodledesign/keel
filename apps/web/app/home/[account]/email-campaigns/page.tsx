@@ -8,6 +8,7 @@ import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { CampaignAudienceCard } from './_components/campaign-audience-card';
 import { CampaignUsageCard } from './_components/campaign-usage-card';
+import { CampaignsHubNav } from './_components/campaigns-hub-nav';
 import { CampaignsList } from './_components/campaigns-list';
 import { loadCampaignsPage } from './_lib/server/campaigns.loader';
 
@@ -32,9 +33,10 @@ async function CampaignsPage({ params }: CampaignsPageProps) {
         description={<Trans i18nKey="campaigns:description" />}
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
+        <CampaignsHubNav accountSlug={accountSlug} />
         <CampaignUsageCard
-          subscriberCount={data.subscriberCount}
-          usage={data.usage}
+          snapshot={data.usage}
+          accountSlug={accountSlug}
           fromEmail={data.brand.contact_email}
         />
         <CampaignAudienceCard

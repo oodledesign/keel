@@ -22,7 +22,10 @@ import {
   fulfillAiCreditPackFromSubscription,
   fulfillAiCreditPackOrder,
 } from '~/lib/billing/fulfill-ai-credit-pack';
-import { fulfillCampaignSubscriptionGrant } from '~/lib/billing/fulfill-campaign-credits';
+import {
+  fulfillCampaignSubscriptionGrant,
+  fulfillCampaignTopupOrder,
+} from '~/lib/billing/fulfill-campaign-credits';
 import {
   fulfillMediaSubscriptionGrant,
   fulfillMediaTopupOrder,
@@ -31,8 +34,8 @@ import {
   handleBillingLifecycleStripeEvent,
   isBillingLifecycleStripeEvent,
 } from '~/lib/billing/handle-billing-lifecycle-event';
-import { syncKeelPlanFromSubscription } from '~/lib/billing/sync-subscription-plan';
 import { enqueueSubscriptionWelcomeEmail } from '~/lib/billing/subscription-welcome-email';
+import { syncKeelPlanFromSubscription } from '~/lib/billing/sync-subscription-plan';
 import { convertReferralOnInvoicePaid } from '~/lib/rewards/convert-referral-on-invoice-paid';
 
 /**
@@ -107,6 +110,7 @@ export const POST = enhanceRouteHandler(
             const order = payload as UpsertOrderParams;
             await fulfillAiCreditPackOrder(admin, order);
             await fulfillMediaTopupOrder(admin, order);
+            await fulfillCampaignTopupOrder(admin, order);
             return;
           }
           const subscription = payload as UpsertSubscriptionParams;
@@ -155,6 +159,23 @@ export const POST = enhanceRouteHandler(
           };
 
           await fulfillAiCreditPackOrder(admin, {
+            target_account_id: row.account_id,
+            target_customer_id: row.billing_customer?.customer_id ?? '',
+            target_order_id: row.id,
+            billing_provider: 'stripe',
+            status: 'succeeded',
+            currency: row.currency,
+            total_amount: row.total_amount,
+            line_items: (row.items ?? []).map((item) => ({
+              id: item.id,
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              price_amount: item.price_amount,
+              quantity: item.quantity,
+            })),
+          });
+
+          await fulfillCampaignTopupOrder(admin, {
             target_account_id: row.account_id,
             target_customer_id: row.billing_customer?.customer_id ?? '',
             target_order_id: row.id,

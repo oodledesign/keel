@@ -35,6 +35,7 @@ import { ActiveAddonsBillingCard } from './active-addons-billing-card';
 import { BillingCheckoutFocus } from './billing-checkout-focus';
 import { MediaGenerateAppToggle } from './media-generate-app-toggle';
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
+import { WorkspaceCampaignsBillingCard } from './workspace-campaigns-billing-card';
 import { WorkspaceMediaUnitsBillingCard } from './workspace-media-units-billing-card';
 import { WorkspacePaymentHistoryCard } from './workspace-payment-history-card';
 import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
@@ -164,10 +165,7 @@ export async function WorkspaceBillingPanel({
 
   const [paymentInvoices, subscriptionDiscount] = await Promise.all([
     customerId
-      ? loadPlatformBillingInvoices(
-          customerId,
-          workspaceStripeSubscriptionId,
-        )
+      ? loadPlatformBillingInvoices(customerId, workspaceStripeSubscriptionId)
       : Promise.resolve([]),
     subscriptionIsWorkspacePlan
       ? loadPlatformSubscriptionDiscount(workspaceStripeSubscriptionId)
@@ -352,6 +350,12 @@ export async function WorkspaceBillingPanel({
         ) : null}
 
         <WorkspaceAiCreditsBillingCard
+          accountId={accountId}
+          accountSlug={accountSlug}
+          canManageBilling={canManageBilling}
+        />
+
+        <WorkspaceCampaignsBillingCard
           accountId={accountId}
           accountSlug={accountSlug}
           canManageBilling={canManageBilling}

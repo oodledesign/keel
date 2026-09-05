@@ -8,6 +8,7 @@ import { Label } from '@kit/ui/label';
 import { RadioGroup, RadioGroupItem } from '@kit/ui/radio-group';
 import { Textarea } from '@kit/ui/textarea';
 
+import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import {
   AUDIENCE_TYPE_HINT,
   AUDIENCE_TYPE_LABEL,
@@ -15,6 +16,7 @@ import {
   type CampaignAudienceType,
   parseAudienceEmailInput,
 } from '~/lib/campaigns/campaign-audience';
+import type { CampaignAudienceList } from '~/lib/campaigns/campaign.types';
 import {
   workspacePanelCard,
   workspaceText,
@@ -34,6 +36,8 @@ export function CampaignAudiencePicker({
   counts,
   clients,
   contacts,
+  lists = [],
+  planTier,
   disabled,
   onChange,
 }: {
@@ -47,12 +51,15 @@ export function CampaignAudiencePicker({
   };
   clients: AudiencePickerOption[];
   contacts: AudiencePickerOption[];
+  lists?: CampaignAudienceList[];
+  planTier?: string;
   disabled?: boolean;
   onChange: (next: {
     audienceType: CampaignAudienceType;
     audienceConfig: CampaignAudienceConfig;
   }) => void;
 }) {
+  const growth = hasCampaignsGrowthFeatures(planTier);
   const [manualText, setManualText] = useState(
     (audienceConfig.emails ?? []).join(', '),
   );
@@ -77,7 +84,10 @@ export function CampaignAudiencePicker({
   };
 
   return (
-    <div className={`${workspacePanelCard} space-y-4 p-4`} data-test="campaign-audience-picker">
+    <div
+      className={`${workspacePanelCard} space-y-4 p-4`}
+      data-test="campaign-audience-picker"
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className={`font-semibold ${workspaceText}`}>Audience</h2>
@@ -86,7 +96,10 @@ export function CampaignAudiencePicker({
             addresses are never sent.
           </p>
         </div>
-        <p className={`text-sm font-medium ${workspaceText}`} data-test="campaign-audience-estimate">
+        <p
+          className={`text-sm font-medium ${workspaceText}`}
+          data-test="campaign-audience-estimate"
+        >
           ~{estimatedCount.toLocaleString()} recipients
         </p>
       </div>
@@ -103,7 +116,12 @@ export function CampaignAudiencePicker({
             ['clients', counts.clientCount],
             ['contacts', counts.contactCount],
             ['custom', null],
-          ] as const
+            ...(growth
+              ? ([['list', lists.length]] as Array<
+                  [CampaignAudienceType, number | null]
+                >)
+              : []),
+          ] as Array<[CampaignAudienceType, number | null]>
         ).map(([type, count]) => (
           <label
             key={type}
@@ -114,7 +132,9 @@ export function CampaignAudiencePicker({
               <span className={`block font-medium ${workspaceText}`}>
                 {AUDIENCE_TYPE_LABEL[type]}
                 {count != null ? (
-                  <span className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}>
+                  <span
+                    className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}
+                  >
                     ({count.toLocaleString()})
                   </span>
                 ) : null}
@@ -126,6 +146,39 @@ export function CampaignAudiencePicker({
           </label>
         ))}
       </RadioGroup>
+
+      {audienceType === 'list' && growth ? (
+        <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
+          <Label className={workspaceText}>Saved list</Label>
+          {lists.length === 0 ? (
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              No saved lists yet. Create one from the Audiences tab.
+            </p>
+          ) : (
+            <select
+              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+              value={audienceConfig.listId ?? ''}
+              disabled={disabled}
+              onChange={(event) =>
+                onChange({
+                  audienceType: 'list',
+                  audienceConfig: {
+                    ...audienceConfig,
+                    listId: event.target.value || null,
+                  },
+                })
+              }
+            >
+              <option value="">Choose a list…</option>
+              {lists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      ) : null}
 
       {audienceType === 'custom' ? (
         <div className="space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-4">
@@ -201,8 +254,9 @@ export function CampaignAudiencePicker({
       ) : null}
 
       <p className={`text-xs ${workspaceTextMuted}`}>
-        Saved named lists and filter builders are coming later. For now, pick a
-        source or assemble a custom list on this campaign.
+        {growth
+          ? 'Growth lists apply filters at send time. Unsubscribed and suppressed addresses are never sent.'
+          : 'Upgrade to Growth for saved lists and logic filters.'}
       </p>
     </div>
   );
@@ -259,10 +313,14 @@ function PickerList({
                   onCheckedChange={(value) => onToggle(row.id, value === true)}
                 />
                 <label htmlFor={id} className="min-w-0 cursor-pointer text-sm">
-                  <span className={`block truncate font-medium ${workspaceText}`}>
+                  <span
+                    className={`block truncate font-medium ${workspaceText}`}
+                  >
                     {row.displayName}
                   </span>
-                  <span className={`block truncate text-xs ${workspaceTextMuted}`}>
+                  <span
+                    className={`block truncate text-xs ${workspaceTextMuted}`}
+                  >
                     {row.email}
                   </span>
                 </label>
