@@ -123,8 +123,9 @@ export const CAMPAIGN_CONTACT_BUMP_PACKS = [
   },
 ] as const;
 
-export type CampaignFeatureFlags =
-  (typeof CAMPAIGN_SUBSCRIPTION_TIERS)[number]['features'];
+export type CampaignFeatureFlags = {
+  [K in keyof (typeof CAMPAIGN_SUBSCRIPTION_TIERS)[number]['features']]: boolean;
+};
 
 const NO_CAMPAIGN_FEATURES: CampaignFeatureFlags = {
   coreCampaigns: false,
