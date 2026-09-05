@@ -7,6 +7,11 @@
  * units do not roll. One-off send packs last 12 months. Recurring send packs
  * grant extra units each cycle and expire with that cycle.
  *
+ * Feature ladder:
+ * - All plans (Starter+): core builder + welcome / new-subscriber automations
+ * - Growth+: saved lists, logic filters, A/B subjects, richer analytics
+ * - Pro: higher caps + comparative reports
+ *
  * Stripe price IDs are env placeholders until live products exist.
  */
 import { OZER_STRIPE_PRICES } from './stripe-price-ids';
@@ -178,6 +183,16 @@ export function hasCampaignsGrowthFeatures(
   tier: string | null | undefined,
 ): boolean {
   return campaignTierRank(tier) >= 2;
+}
+
+/**
+ * Welcome / new-subscriber automations are on every Campaigns plan,
+ * including Starter. Gated by `addon_campaigns`, not Growth.
+ */
+export function hasCampaignsAutomations(
+  tier: string | null | undefined,
+): boolean {
+  return campaignTierRank(tier) >= 1;
 }
 
 export function hasCampaignsProFeatures(

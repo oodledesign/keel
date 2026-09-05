@@ -261,7 +261,7 @@ async function requireGrowthCampaigns(accountId: string) {
   const usage = await getCampaignUsage(accountId);
   if (!hasCampaignsGrowthFeatures(usage.pool.plan_tier)) {
     throw new Error(
-      'Saved lists, A/B tests, and automations are on Growth and Pro. Upgrade Campaigns in Billing.',
+      'Saved lists and A/B tests are on Growth and Pro. Upgrade Campaigns in Billing.',
     );
   }
 }
@@ -318,7 +318,6 @@ export const deleteAudienceListAction = enhanceAction(
 export const saveAutomationAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
     const service = createCampaignAutomationsService(client);
     const automation = data.automationId
       ? await service.update({
@@ -348,7 +347,6 @@ export const saveAutomationAction = enhanceAction(
 export const deleteAutomationAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
     await createCampaignAutomationsService(client).delete(
       data.accountId,
       data.automationId,

@@ -146,7 +146,8 @@ class CampaignAutomationsService {
 
 /**
  * Fire welcome automations for a newly subscribed address.
- * Never throws to the form path — failures are logged as skipped/failed runs.
+ * Available on every Campaigns plan (Starter+). Never throws to the form
+ * path — failures are logged as skipped/failed runs.
  */
 export async function fireNewSubscriberAutomations(input: {
   client: SupabaseClient;

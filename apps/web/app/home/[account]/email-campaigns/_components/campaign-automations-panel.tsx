@@ -49,8 +49,9 @@ export function CampaignAutomationsPanel({
         </h2>
         <p className={`text-sm ${workspaceTextMuted}`}>
           When someone joins the mailing list for the first time, send the
-          selected campaign as a one-off email. Uses one send unit. Does not
-          change the campaign’s blast status.
+          selected campaign as a one-off email. Included on every Campaigns
+          plan, including Starter. Uses one send unit. Does not change the
+          campaign’s blast status.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">

@@ -266,7 +266,8 @@ CREATE POLICY campaign_audience_lists_service_role ON public.campaign_audience_l
   WITH CHECK (true);
 
 -- ---------------------------------------------------------------------------
--- Simple automations (Growth+): welcome / new subscriber → campaign email
+-- Simple automations (all Campaigns plans, including Starter):
+-- welcome / new subscriber → campaign email
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.campaign_automations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -288,7 +289,7 @@ CREATE TABLE IF NOT EXISTS public.campaign_automations (
 );
 
 COMMENT ON TABLE public.campaign_automations IS
-  'Growth+ v1 automations. new_subscriber sends the linked campaign as a one-off welcome.';
+  'All Campaigns plans (Starter+). new_subscriber sends the linked campaign as a one-off welcome.';
 
 CREATE INDEX IF NOT EXISTS ix_campaign_automations_account
   ON public.campaign_automations (account_id, status);

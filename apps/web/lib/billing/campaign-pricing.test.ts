@@ -9,6 +9,7 @@ import {
   campaignTierRank,
   findCampaignContactBumpByPriceId,
   findCampaignSendPackByPriceId,
+  hasCampaignsAutomations,
   hasCampaignsGrowthFeatures,
   hasCampaignsProFeatures,
   nextCampaignUpgradeTier,
@@ -89,5 +90,12 @@ describe('campaign pricing', () => {
     expect(campaignTierRank('none')).toBe(0);
     expect(nextCampaignUpgradeTier('starter')?.id).toBe('growth');
     expect(nextCampaignUpgradeTier('pro')).toBeNull();
+  });
+
+  it('keeps welcome automations on every paid Campaigns plan', () => {
+    expect(hasCampaignsAutomations('starter')).toBe(true);
+    expect(hasCampaignsAutomations('growth')).toBe(true);
+    expect(hasCampaignsAutomations('pro')).toBe(true);
+    expect(hasCampaignsAutomations('none')).toBe(false);
   });
 });
