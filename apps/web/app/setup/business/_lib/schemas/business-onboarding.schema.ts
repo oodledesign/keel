@@ -58,7 +58,9 @@ export const StartBusinessPaidPlanSchema = z.object({
   seats: z.coerce.number().int().min(1).max(200),
 });
 
-export type SaveBusinessCompanyInput = z.infer<typeof SaveBusinessCompanySchema>;
+export type SaveBusinessCompanyInput = z.infer<
+  typeof SaveBusinessCompanySchema
+>;
 export type SaveBusinessClientInput = z.infer<typeof SaveBusinessClientSchema>;
 export type SaveBusinessTaskInput = z.infer<typeof SaveBusinessTaskSchema>;
 export type StartBusinessPaidPlanInput = z.infer<

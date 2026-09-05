@@ -17,6 +17,7 @@ import {
   isSendingDomainVerified,
   resolveWorkspaceMailFrom,
 } from '~/lib/sending-domains/server';
+import { fromAccountsUntyped } from '~/lib/supabase/accounts-table';
 
 import {
   AddSendingDomainSchema,
@@ -92,8 +93,7 @@ export const addSendingDomainAction = enhanceAction(
           ...ctx,
           errorName: err?.name,
           errorMessage: err?.message ?? String(error),
-          causeName:
-            err?.cause instanceof Error ? err.cause.name : undefined,
+          causeName: err?.cause instanceof Error ? err.cause.name : undefined,
         },
         'Failed to add sending domain',
       );
@@ -169,7 +169,6 @@ export const removeSendingDomainAction = enhanceAction(
   },
   { auth: true, schema: SendingDomainAccountSchema },
 );
-
 
 export const ensureSendingDomainShareTokenAction = enhanceAction(
   async function (data, user) {
@@ -280,8 +279,7 @@ export const updateOutboundEmailSettingsAction = enhanceAction(
         data.accountId,
         user.id,
       );
-      const { error } = await admin
-        .from('accounts')
+      const { error } = await fromAccountsUntyped(admin)
         .update({
           outbound_email_settings: {
             invoices: data.invoices,

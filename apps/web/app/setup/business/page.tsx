@@ -37,10 +37,10 @@ export default async function BusinessOnboardingPage({
   const metadata = user.user_metadata as
     | { full_name?: string; name?: string }
     | undefined;
-  const userNeedsName = !Boolean(
+  const userNeedsName = !(
     (settings as { first_name?: string | null } | null)?.first_name?.trim() ||
-      metadata?.full_name ||
-      metadata?.name,
+    metadata?.full_name ||
+    metadata?.name
   );
 
   if (

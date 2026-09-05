@@ -13,6 +13,7 @@ import {
 } from '~/home/[account]/_lib/server/workspace-profile';
 import { requiredEntitlementForProfile } from '~/lib/billing/ozer-plan-catalog';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { fromAccountsUntyped } from '~/lib/supabase/accounts-table';
 
 export type WorkspaceSetupSelection = {
   profile: WorkspaceProfile;
@@ -231,8 +232,7 @@ export async function completeWorkspaceSetup(
     ) {
       firstBusinessSlug = createdSlug;
       firstBusinessAccountId = createdId;
-      await admin
-        .from('accounts')
+      await fromAccountsUntyped(admin)
         .update({
           business_onboarding_step: 'client',
           business_onboarding_completed_at: null,
@@ -290,10 +290,7 @@ export async function completeWorkspaceSetup(
             options?.billingIntent?.seats != null &&
             options.billingIntent.seats >= 1
           ) {
-            query.set(
-              'seats',
-              String(Math.floor(options.billingIntent.seats)),
-            );
+            query.set('seats', String(Math.floor(options.billingIntent.seats)));
           }
           return `${billingPath}?${query.toString()}`;
         })()
@@ -306,6 +303,7 @@ export async function completeWorkspaceSetup(
     redirectTo,
     billingRequired: Boolean(firstPaidSlug) && !firstBusinessSlug,
     accountId: firstBusinessAccountId ?? undefined,
-    accountSlug: firstBusinessSlug ?? firstPaidSlug ?? firstTeamSlug ?? undefined,
+    accountSlug:
+      firstBusinessSlug ?? firstPaidSlug ?? firstTeamSlug ?? undefined,
   };
 }

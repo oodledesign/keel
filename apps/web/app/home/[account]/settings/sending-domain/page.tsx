@@ -5,13 +5,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { canUseCustomSendingDomain } from '~/lib/billing/can-use-custom-sending-domain';
-import {
-  parseOutboundEmailSettings,
-} from '~/lib/billing/outbound-email-settings';
+import { parseOutboundEmailSettings } from '~/lib/billing/outbound-email-settings';
 import {
   createSendingDomainService,
   loadAccountSendingDomain,
 } from '~/lib/sending-domains/server';
+import { fromAccountsUntyped } from '~/lib/supabase/accounts-table';
 
 import {
   getDefaultAccountPath,
@@ -63,8 +62,7 @@ export default async function SendingDomainPage(props: SendingDomainPageProps) {
   const client = getSupabaseServerClient();
   const [sendingDomain, accountRow, canConfigure] = await Promise.all([
     loadAccountSendingDomain(client, accountId),
-    client
-      .from('accounts')
+    fromAccountsUntyped(client)
       .select('name, outbound_email_settings')
       .eq('id', accountId)
       .maybeSingle(),

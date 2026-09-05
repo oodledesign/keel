@@ -20,11 +20,11 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import pathsConfig from '~/config/paths.config';
+import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
-  OUTBOUND_EMAIL_FEATURE_LABELS,
   OUTBOUND_EMAIL_FEATURES,
+  OUTBOUND_EMAIL_FEATURE_LABELS,
   type OutboundEmailSettings,
 } from '~/lib/billing/outbound-email-settings';
 import {
@@ -171,7 +171,6 @@ function previewFromAddress(input: {
     sendingSubdomain,
   });
 }
-
 
 function useBrowserOrigin() {
   return useSyncExternalStore(
@@ -341,15 +340,12 @@ export function SendingDomainSettings({
                       };
                       setFeatureToggles(next);
                       if (!canEdit) return;
-                      run(
-                        async () => {
-                          await updateOutboundEmailSettingsAction({
-                            accountId,
-                            ...next,
-                          });
-                        },
-                        'Client email settings saved',
-                      );
+                      run(async () => {
+                        await updateOutboundEmailSettingsAction({
+                          accountId,
+                          ...next,
+                        });
+                      }, 'Client email settings saved');
                     }}
                   />
                   <span>
@@ -411,7 +407,9 @@ export function SendingDomainSettings({
                 setUseApex(false);
                 setSubdomainInput(event.target.value);
               }}
-              placeholder={useApex ? 'Apex — no subdomain' : DEFAULT_SENDING_SUBDOMAIN}
+              placeholder={
+                useApex ? 'Apex — no subdomain' : DEFAULT_SENDING_SUBDOMAIN
+              }
               disabled={!canEdit || pending || useApex}
               spellCheck={false}
               autoCapitalize="none"
@@ -791,7 +789,6 @@ function ConnectedDomain({
         </div>
       </div>
 
-
       {canEdit && shareUrl ? (
         <div className="grid gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
           <div className="space-y-1">
@@ -805,61 +802,59 @@ function ConnectedDomain({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text)]/70">
-                  {shareUrl}
-                </code>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-test="copy-sending-domain-share-link"
-                  className="shrink-0 gap-1.5"
-                  onClick={() => onCopy(shareUrl, 'share-link')}
-                >
-                  {copiedKey === 'share-link' ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                  {copiedKey === 'share-link' ? 'Copied' : 'Copy link'}
-                </Button>
-              </div>
+            <code className="min-w-0 flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text)]/70">
+              {shareUrl}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              data-test="copy-sending-domain-share-link"
+              className="shrink-0 gap-1.5"
+              onClick={() => onCopy(shareUrl, 'share-link')}
+            >
+              {copiedKey === 'share-link' ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              {copiedKey === 'share-link' ? 'Copied' : 'Copy link'}
+            </Button>
+          </div>
 
-              {developerEmail ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    data-test="copy-sending-domain-share-email"
-                    className="gap-1.5"
-                    onClick={() =>
-                      onCopy(developerEmail.full, 'share-email')
-                    }
-                  >
-                    {copiedKey === 'share-email' ? (
-                      <Check className="h-3.5 w-3.5" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                    {copiedKey === 'share-email' ? 'Copied' : 'Copy email'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    data-test="open-sending-domain-share-mailto"
-                    className="gap-1.5"
-                    asChild
-                  >
-                    <a
-                      href={`mailto:?subject=${encodeURIComponent(developerEmail.subject)}&body=${encodeURIComponent(developerEmail.body)}`}
-                    >
-                      <Mail className="h-3.5 w-3.5" />
-                      Open email
-                    </a>
-                  </Button>
-                </div>
+          {developerEmail ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-test="copy-sending-domain-share-email"
+                className="gap-1.5"
+                onClick={() => onCopy(developerEmail.full, 'share-email')}
+              >
+                {copiedKey === 'share-email' ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+                {copiedKey === 'share-email' ? 'Copied' : 'Copy email'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-test="open-sending-domain-share-mailto"
+                className="gap-1.5"
+                asChild
+              >
+                <a
+                  href={`mailto:?subject=${encodeURIComponent(developerEmail.subject)}&body=${encodeURIComponent(developerEmail.body)}`}
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  Open email
+                </a>
+              </Button>
+            </div>
           ) : null}
         </div>
       ) : null}

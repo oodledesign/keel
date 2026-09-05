@@ -24,9 +24,9 @@ import { OZER_ASSISTANT_DOWNLOAD } from '~/lib/marketing/assistant-download';
 import { workspaceBtnPrimary } from '~/lib/workspace-ui';
 
 import {
-  type BusinessOnboardingStep,
-  BUSINESS_ONBOARDING_STEP_LABELS,
   BUSINESS_ONBOARDING_STEPS,
+  BUSINESS_ONBOARDING_STEP_LABELS,
+  type BusinessOnboardingStep,
 } from '../_lib/business-onboarding-steps';
 import {
   completeBusinessLiteAction,
@@ -170,7 +170,10 @@ export function BusinessOnboardingWizard(props: {
 
       <main className="mx-auto w-full max-w-xl flex-1 px-4 py-10">
         {step === 'company' ? (
-          <section className="space-y-6" data-test="business-onboarding-company">
+          <section
+            className="space-y-6"
+            data-test="business-onboarding-company"
+          >
             <header className="space-y-2">
               <h1 className="font-heading text-2xl font-semibold">
                 Your company
@@ -528,7 +531,9 @@ export function BusinessOnboardingWizard(props: {
                   max={200}
                   value={billable}
                   onChange={(event) =>
-                    setSeats(clampBillableSeats(Number(event.target.value) || 1))
+                    setSeats(
+                      clampBillableSeats(Number(event.target.value) || 1),
+                    )
                   }
                 />
                 <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -562,9 +567,7 @@ export function BusinessOnboardingWizard(props: {
                 })
               }
             >
-              {paidPlan === 'lite'
-                ? 'Start on Free'
-                : 'Continue to checkout'}
+              {paidPlan === 'lite' ? 'Start on Free' : 'Continue to checkout'}
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Button>
           </section>

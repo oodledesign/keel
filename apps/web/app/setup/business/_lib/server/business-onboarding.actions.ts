@@ -13,7 +13,9 @@ import { maybeFetchWorkspaceLogo } from '~/lib/brand/fetch-workspace-logo';
 import { createClientPortalInvite } from '~/lib/clients/client-portal-invites.service';
 import { createRecorderTask } from '~/lib/recorder/create-task';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { fromAccountsUntyped } from '~/lib/supabase/accounts-table';
 
+import { completeWorkspaceSetup } from '../../../_lib/server/workspace-setup.actions';
 import { type BusinessOnboardingStep } from '../business-onboarding-steps';
 import {
   CompleteBusinessLiteSchema,
@@ -24,7 +26,6 @@ import {
   SkipBusinessTaskSchema,
   StartBusinessPaidPlanSchema,
 } from '../schemas/business-onboarding.schema';
-import { completeWorkspaceSetup } from '../../../_lib/server/workspace-setup.actions';
 
 function slugPath(template: string, slug: string) {
   return template.replace('[account]', slug);
@@ -32,8 +33,7 @@ function slugPath(template: string, slug: string) {
 
 async function assertOwnerAccount(accountId: string, userId: string) {
   const admin = getSupabaseServerAdminClient();
-  const { data, error } = await admin
-    .from('accounts')
+  const { data, error } = await fromAccountsUntyped(admin)
     .select(
       'id, slug, name, primary_owner_user_id, business_onboarding_step, business_onboarding_completed_at',
     )
@@ -60,6 +60,7 @@ async function assertOwnerAccount(accountId: string, userId: string) {
 
 async function setOnboardingStep(
   accountId: string,
+  userId: string,
   step: BusinessOnboardingStep | 'done',
 ) {
   const admin = getSupabaseServerAdminClient();
@@ -71,10 +72,10 @@ async function setOnboardingStep(
         }
       : { business_onboarding_step: step };
 
-  const { error } = await admin
-    .from('accounts')
+  const { error } = await fromAccountsUntyped(admin)
     .update(payload)
-    .eq('id', accountId);
+    .eq('id', accountId)
+    .eq('primary_owner_user_id', userId);
 
   if (error) {
     throw new Error(error.message);
@@ -197,11 +198,15 @@ export const saveBusinessClientAction = enhanceAction(
           email: data.contactEmail.trim(),
         });
       } catch (error) {
-        console.info('[onboarding] portal invite skipped', error);
+        const logger = await getLogger();
+        logger.info(
+          { name: 'business-onboarding-portal-invite', error },
+          'Portal invite skipped',
+        );
       }
     }
 
-    await setOnboardingStep(data.accountId, 'task');
+    await setOnboardingStep(data.accountId, user.id, 'task');
     revalidatePath(pathsConfig.app.businessOnboarding);
 
     return { clientId, nextStep: 'task' as const };
@@ -219,7 +224,7 @@ export const saveBusinessTaskAction = enhanceAction(
       notes: data.notes,
       clientId: data.clientId,
     });
-    await setOnboardingStep(data.accountId, 'assistant');
+    await setOnboardingStep(data.accountId, user.id, 'assistant');
     revalidatePath(pathsConfig.app.businessOnboarding);
     return { nextStep: 'assistant' as const };
   },
@@ -229,7 +234,7 @@ export const saveBusinessTaskAction = enhanceAction(
 export const skipBusinessTaskAction = enhanceAction(
   async function (data, user) {
     await assertOwnerAccount(data.accountId, user.id);
-    await setOnboardingStep(data.accountId, 'assistant');
+    await setOnboardingStep(data.accountId, user.id, 'assistant');
     revalidatePath(pathsConfig.app.businessOnboarding);
     return { nextStep: 'assistant' as const };
   },
@@ -239,7 +244,7 @@ export const skipBusinessTaskAction = enhanceAction(
 export const continueBusinessAssistantAction = enhanceAction(
   async function (data, user) {
     await assertOwnerAccount(data.accountId, user.id);
-    await setOnboardingStep(data.accountId, 'plan');
+    await setOnboardingStep(data.accountId, user.id, 'plan');
     revalidatePath(pathsConfig.app.businessOnboarding);
     return { nextStep: 'plan' as const };
   },
@@ -249,7 +254,7 @@ export const continueBusinessAssistantAction = enhanceAction(
 export const completeBusinessLiteAction = enhanceAction(
   async function (data, user) {
     const account = await assertOwnerAccount(data.accountId, user.id);
-    await setOnboardingStep(data.accountId, 'done');
+    await setOnboardingStep(data.accountId, user.id, 'done');
     revalidatePath(pathsConfig.app.businessOnboarding);
     revalidatePath(slugPath(pathsConfig.app.accountHome, account.slug));
     return {
@@ -263,7 +268,7 @@ export const completeBusinessLiteAction = enhanceAction(
 export const startBusinessPaidPlanAction = enhanceAction(
   async function (data, user) {
     const account = await assertOwnerAccount(data.accountId, user.id);
-    await setOnboardingStep(data.accountId, 'done');
+    await setOnboardingStep(data.accountId, user.id, 'done');
     revalidatePath(pathsConfig.app.businessOnboarding);
     return {
       nextStep: 'done' as const,
@@ -277,8 +282,7 @@ export async function loadBusinessOnboardingState(accountSlug?: string) {
   const user = await requireUserInServerComponent();
   const admin = getSupabaseServerAdminClient();
 
-  let query = admin
-    .from('accounts')
+  let query = fromAccountsUntyped(admin)
     .select(
       'id, slug, name, picture_url, primary_owner_user_id, business_onboarding_step, business_onboarding_completed_at, space_type',
     )
@@ -328,4 +332,3 @@ export async function loadBusinessOnboardingState(accountSlug?: string) {
     clientId: (client as { id?: string } | null)?.id ?? null,
   };
 }
-

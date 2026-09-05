@@ -6,8 +6,7 @@ export const BUSINESS_ONBOARDING_STEPS = [
   'plan',
 ] as const;
 
-export type BusinessOnboardingStep =
-  (typeof BUSINESS_ONBOARDING_STEPS)[number];
+export type BusinessOnboardingStep = (typeof BUSINESS_ONBOARDING_STEPS)[number];
 
 export const BUSINESS_ONBOARDING_STEP_LABELS: Record<
   BusinessOnboardingStep,

@@ -2,8 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { isBusinessLiteWorkspace } from './is-business-lite-workspace';
 import { hasEntitlement } from './entitlements';
+import { isBusinessLiteWorkspace } from './is-business-lite-workspace';
 
 /**
  * Custom sending domain (and per-feature From toggles) are Starter/Pro only.

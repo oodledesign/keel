@@ -8,12 +8,10 @@ import {
   parseOutboundEmailSettings,
   shouldUseCustomSendingDomain,
 } from '~/lib/billing/outbound-email-settings';
+import { fromAccountsUntyped } from '~/lib/supabase/accounts-table';
 
 import { isSendingDomainVerified } from './domain';
-import {
-  getPlatformSesFrom,
-  resolveWorkspaceMailFrom,
-} from './resolve-from';
+import { getPlatformSesFrom, resolveWorkspaceMailFrom } from './resolve-from';
 import { loadAccountSendingDomain } from './sending-domain.service';
 import type { ResolvedWorkspaceMailFrom } from './types';
 
@@ -39,8 +37,7 @@ export async function resolveClientOutboundFrom(input: {
       input.businessType,
     ),
     loadAccountSendingDomain(input.client, input.accountId),
-    input.client
-      .from('accounts')
+    fromAccountsUntyped(input.client)
       .select('outbound_email_settings')
       .eq('id', input.accountId)
       .maybeSingle(),
