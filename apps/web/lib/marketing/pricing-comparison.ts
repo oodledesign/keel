@@ -96,7 +96,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: '14-day free trial',
-            hint: 'On your first paid workspace — no card required.',
+            hint: 'On your first paid workspace — card on file, billed after 14 days.',
             values: v(false, true, true),
           },
           {

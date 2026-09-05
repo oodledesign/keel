@@ -23,6 +23,11 @@ import { cn } from '@kit/ui/utils';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import pathsConfig from '~/config/paths.config';
 import {
+  OUTBOUND_EMAIL_FEATURE_LABELS,
+  OUTBOUND_EMAIL_FEATURES,
+  type OutboundEmailSettings,
+} from '~/lib/billing/outbound-email-settings';
+import {
   DEFAULT_SENDING_LOCAL_PART,
   DEFAULT_SENDING_LOCAL_PARTS,
   DEFAULT_SENDING_SUBDOMAIN,
@@ -31,6 +36,7 @@ import {
   type SendingDomainRecord,
   dnsRecordPurposeLabel,
   formatSendingFromAddress,
+  isSendingDomainVerified,
   normalizeSendingDomain,
   recordVerificationStatus,
 } from '~/lib/sending-domains';
@@ -41,6 +47,7 @@ import {
   refreshSendingDomainAction,
   removeSendingDomainAction,
   sendSendingDomainTestAction,
+  updateOutboundEmailSettingsAction,
   updateSendingLocalPartAction,
 } from '../../_lib/server/sending-domain-actions';
 
@@ -200,12 +207,16 @@ export function SendingDomainSettings({
   accountId,
   accountName,
   canEdit,
+  canConfigure,
   initialDomain,
+  outboundSettings,
 }: {
   accountId: string;
   accountName: string;
   canEdit: boolean;
+  canConfigure: boolean;
   initialDomain: SendingDomainRecord | null;
+  outboundSettings: OutboundEmailSettings;
 }) {
   const router = useRouter();
   const [domainInput, setDomainInput] = useState('');
@@ -218,6 +229,8 @@ export function SendingDomainSettings({
   );
   const [pending, startTransition] = useTransition();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [featureToggles, setFeatureToggles] =
+    useState<OutboundEmailSettings>(outboundSettings);
 
   useEffect(() => {
     if (!initialDomain || initialDomain.verification_status !== 'pending') {
@@ -269,13 +282,30 @@ export function SendingDomainSettings({
           Sending domain
         </h1>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Send circulation and campaign email from your own domain, for example{' '}
+          Send circulation, campaigns, and selected client email from your own
+          domain, for example{' '}
           <span className="font-medium text-[var(--workspace-shell-text)]">
             mail@mail.your-domain.co.uk
           </span>
-          . Invites and sign-in emails still come from Ozer.
+          . Team invites and sign-in emails still come from Ozer.
         </p>
       </div>
+
+      {!canConfigure ? (
+        <div
+          className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6"
+          data-test="sending-domain-lite-gate"
+        >
+          <h2 className="text-base font-medium text-[var(--workspace-shell-text)]">
+            Starter and Pro only
+          </h2>
+          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+            Free workspaces send client email from Ozer. Upgrade to Starter or
+            Pro to connect a custom sending domain and choose which client
+            emails use it.
+          </p>
+        </div>
+      ) : null}
 
       {!canEdit ? (
         <p className="text-muted-foreground rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm">
@@ -283,7 +313,66 @@ export function SendingDomainSettings({
         </p>
       ) : null}
 
-      {!initialDomain ? (
+      {canConfigure ? (
+        <div className="grid gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
+          <div className="space-y-1">
+            <h2 className="text-base font-medium text-[var(--workspace-shell-text)]">
+              Use your domain for client email
+            </h2>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              When a toggle is off, or the domain is not verified, that email
+              still sends from Ozer. Campaigns always use the verified domain.
+            </p>
+          </div>
+          <ul className="space-y-3">
+            {OUTBOUND_EMAIL_FEATURES.map((feature) => (
+              <li key={feature}>
+                <label className="flex cursor-pointer items-start gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1 rounded border-[color:var(--workspace-shell-border)]"
+                    data-test={`outbound-email-${feature}`}
+                    checked={featureToggles[feature]}
+                    disabled={!canEdit || pending}
+                    onChange={(event) => {
+                      const next = {
+                        ...featureToggles,
+                        [feature]: event.target.checked,
+                      };
+                      setFeatureToggles(next);
+                      if (!canEdit) return;
+                      run(
+                        async () => {
+                          await updateOutboundEmailSettingsAction({
+                            accountId,
+                            ...next,
+                          });
+                        },
+                        'Client email settings saved',
+                      );
+                    }}
+                  />
+                  <span>
+                    <span className="font-medium text-[var(--workspace-shell-text)]">
+                      {OUTBOUND_EMAIL_FEATURE_LABELS[feature].label}
+                    </span>
+                    <span className="mt-0.5 block text-[var(--workspace-shell-text-muted)]">
+                      {OUTBOUND_EMAIL_FEATURE_LABELS[feature].description}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          {initialDomain && !isSendingDomainVerified(initialDomain) ? (
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Verify DNS before these toggles take effect.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {canConfigure && !initialDomain ? (
         <div className="grid gap-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
           <div className="space-y-2">
             <Label htmlFor="sending-domain">Domain</Label>
@@ -419,7 +508,7 @@ export function SendingDomainSettings({
             </Button>
           ) : null}
         </div>
-      ) : (
+      ) : canConfigure && initialDomain ? (
         <ConnectedDomain
           accountId={accountId}
           accountName={accountName}
@@ -457,7 +546,7 @@ export function SendingDomainSettings({
             }, 'Sending domain removed')
           }
         />
-      )}
+      ) : null}
     </div>
   );
 }

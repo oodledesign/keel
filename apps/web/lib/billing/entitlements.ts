@@ -480,6 +480,84 @@ export async function assertPropertyCreateAllowed(
   return { allowed: true };
 }
 
+export async function assertActiveClientCreateAllowed(
+  client: SupabaseClient,
+  accountId: string,
+  currentActiveClientCount: number,
+): Promise<{ allowed: boolean; reason?: string }> {
+  if (await isAccountBillingExempt(client, accountId)) {
+    return { allowed: true };
+  }
+
+  const limits = await loadAccountPlanLimits(client, accountId);
+  const maxActiveClients = limits?.max_active_clients;
+
+  if (maxActiveClients == null) {
+    return { allowed: true };
+  }
+
+  if (currentActiveClientCount >= maxActiveClients) {
+    return {
+      allowed: false,
+      reason: `Free includes up to ${maxActiveClients} active clients. Upgrade to Starter or Pro to add more.`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+export async function assertOpenTaskCreateAllowed(
+  client: SupabaseClient,
+  accountId: string,
+  currentOpenTaskCount: number,
+): Promise<{ allowed: boolean; reason?: string }> {
+  if (await isAccountBillingExempt(client, accountId)) {
+    return { allowed: true };
+  }
+
+  const limits = await loadAccountPlanLimits(client, accountId);
+  const maxOpenTasks = limits?.max_open_tasks;
+
+  if (maxOpenTasks == null) {
+    return { allowed: true };
+  }
+
+  if (currentOpenTaskCount >= maxOpenTasks) {
+    return {
+      allowed: false,
+      reason: `Free includes up to ${maxOpenTasks} open tasks. Upgrade to Starter or Pro to add more.`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+export async function assertInvoiceCreateAllowed(
+  client: SupabaseClient,
+  accountId: string,
+  invoicesCreatedThisMonth: number,
+): Promise<{ allowed: boolean; reason?: string }> {
+  if (await isAccountBillingExempt(client, accountId)) {
+    return { allowed: true };
+  }
+
+  const limits = await loadAccountPlanLimits(client, accountId);
+  const maxInvoices = limits?.max_invoices_per_month;
+
+  if (maxInvoices == null) {
+    return { allowed: true };
+  }
+
+  if (invoicesCreatedThisMonth >= maxInvoices) {
+    return {
+      allowed: false,
+      reason: `Free includes up to ${maxInvoices} invoices per month. Upgrade to Starter or Pro for unlimited invoicing.`,
+    };
+  }
+
+  return { allowed: true };
+}
+
 export async function assertVideoCreateAllowed(
   client: SupabaseClient,
   accountId: string,

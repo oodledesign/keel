@@ -152,7 +152,7 @@ export function pricingFaqs() {
     },
     {
       question: 'Is there a free trial?',
-      answer: `Personal and family are free forever. Free is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Paid workspaces include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace — no credit card required.`,
+      answer: `Personal and family are free forever. Free is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month with no card. Starter and Pro include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace — card on file, billed after the trial.`,
     },
     {
       question: 'How do I cancel?',

@@ -3,6 +3,7 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { getTransactionalEmailSender } from '~/lib/email/zeptomail-client';
+import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
@@ -137,12 +138,32 @@ async function sendMail(input: {
   bookingId: string;
   attachments?: Array<{ name: string; content: string; mimeType: string }>;
 }) {
-  await sendPlatformEmail({
+  const isHostMail = input.kind.endsWith('_host');
+
+  if (isHostMail) {
+    await sendPlatformEmail({
+      type: 'event',
+      accountId: input.accountId,
+      mail: {
+        to: input.to,
+        from: input.from,
+        subject: input.subject,
+        html: input.html,
+        replyTo: input.replyTo ?? undefined,
+        attachments: input.attachments,
+      },
+      metadata: { bookingId: input.bookingId, kind: input.kind },
+    });
+    return;
+  }
+
+  await sendClientFacingEmail({
     type: 'event',
     accountId: input.accountId,
+    feature: 'other',
+    displayName: input.from,
     mail: {
       to: input.to,
-      from: input.from,
       subject: input.subject,
       html: input.html,
       replyTo: input.replyTo ?? undefined,

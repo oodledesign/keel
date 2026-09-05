@@ -506,6 +506,24 @@ class ClientsService {
       };
     }
 
+    const { count: activeClientCount } = await this.adminDb
+      .from('clients')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', input.accountId)
+      .is('archived_at', null);
+
+    const { assertActiveClientCreateAllowed } = await import(
+      '~/lib/billing/entitlements'
+    );
+    const clientCap = await assertActiveClientCreateAllowed(
+      this.adminDb,
+      input.accountId,
+      activeClientCount ?? 0,
+    );
+    if (!clientCap.allowed) {
+      throw new Error(clientCap.reason ?? 'Client limit reached.');
+    }
+
     const primaryContactEmail =
       existingContact?.email?.trim() ||
       input.contact?.email?.trim() ||

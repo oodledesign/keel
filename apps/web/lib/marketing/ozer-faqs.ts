@@ -13,7 +13,7 @@ export const OZER_FAQS: OzerFaqItem[] = [
   {
     question: 'Is there a free plan?',
     answer:
-      'Yes. Personal home and one family workspace are free with no card and no time limit. Business Free is £0 with 2 seats and capped clients and invoices. Paid workspaces include a 14-day trial on your first paid plan — no credit card required to start.',
+      'Yes. Personal home and one family workspace are free with no card and no time limit. Business Free is £0 with 2 seats and capped clients and invoices. Starter and Pro start with a 14-day trial and require a card on file.',
   },
   {
     question: 'Do I pay per seat?',

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getMailer, sanitizeEmailSender } from '@kit/mailers';
+import { createSesMailer } from '@kit/ses';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
 import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
@@ -58,6 +59,11 @@ export async function sendPlatformEmail(params: {
   accountId?: string | null;
   mail: MailPayload;
   metadata?: Record<string, unknown>;
+  /** When set, send via workspace SES identity instead of the Ozer Zepto/Resend rail. */
+  ses?: {
+    tenant?: string | null;
+    configurationSet?: string | null;
+  };
 }): Promise<void> {
   const recipient = params.mail.to.trim();
 
@@ -67,11 +73,29 @@ export async function sendPlatformEmail(params: {
   };
   let status: 'sent' | 'failed' = 'sent';
   let errorMessage: string | null = null;
+  let sesMessageId: string | null = null;
 
   try {
-    // Prefer Zepto whenever ZEPTOMAIL_TOKEN is set (matches getMailer).
-    // Legacy Resend only when token is absent and MAILER_PROVIDER=resend.
-    if (
+    if (params.ses) {
+      const htmlBody = 'html' in mail ? mail.html : `<pre>${mail.text}</pre>`;
+      const mailer = createSesMailer();
+      const result = await mailer.sendEmail({
+        to: mail.to,
+        from: mail.from,
+        subject: mail.subject,
+        html: htmlBody,
+        replyTo: mail.replyTo,
+        sesTenant: params.ses.tenant ?? undefined,
+        sesConfigurationSet: params.ses.configurationSet ?? undefined,
+      });
+      sesMessageId =
+        result &&
+        typeof result === 'object' &&
+        'messageId' in result &&
+        typeof result.messageId === 'string'
+          ? result.messageId
+          : null;
+    } else if (
       process.env.MAILER_PROVIDER === 'resend' &&
       !process.env.ZEPTOMAIL_TOKEN?.trim()
     ) {
@@ -111,7 +135,16 @@ export async function sendPlatformEmail(params: {
       subject: mail.subject,
       status,
       errorMessage,
-      metadata: params.metadata ?? {},
+      metadata: {
+        ...(params.metadata ?? {}),
+        ...(params.ses
+          ? {
+              provider: 'ses',
+              ses_message_id: sesMessageId,
+              ses_tenant: params.ses.tenant ?? null,
+            }
+          : {}),
+      },
       htmlBody: htmlBody ?? null,
     });
   }

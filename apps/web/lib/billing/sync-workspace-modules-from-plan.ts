@@ -30,6 +30,11 @@ const BUSINESS_LITE_MODULE_KEYS = [
   'apps',
   'settings',
   'team',
+  'clients',
+  'tasks',
+  'invoices',
+  'client_portal',
+  'notes',
 ] as const;
 
 const ADDON_MODULE_KEYS = [
@@ -81,9 +86,7 @@ export async function syncBusinessLiteModules(
 ): Promise<void> {
   for (const moduleKey of BUSINESS_CORE_MODULE_KEYS) {
     if (
-      moduleKey === 'dashboard' ||
-      moduleKey === 'team' ||
-      moduleKey === 'settings'
+      (BUSINESS_LITE_MODULE_KEYS as readonly string[]).includes(moduleKey)
     ) {
       continue;
     }

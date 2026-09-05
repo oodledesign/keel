@@ -4,6 +4,10 @@ import { createSesIdentityAdmin } from '@kit/ses';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { canUseCustomSendingDomain } from '~/lib/billing/can-use-custom-sending-domain';
+import {
+  parseOutboundEmailSettings,
+} from '~/lib/billing/outbound-email-settings';
 import {
   createSendingDomainService,
   loadAccountSendingDomain,
@@ -57,9 +61,18 @@ export default async function SendingDomainPage(props: SendingDomainPageProps) {
   const accountId = workspace.account.id as string;
   const canEdit = access.isOwner || access.isAdmin;
   const client = getSupabaseServerClient();
-  const [sendingDomain, accountRow] = await Promise.all([
+  const [sendingDomain, accountRow, canConfigure] = await Promise.all([
     loadAccountSendingDomain(client, accountId),
-    client.from('accounts').select('name').eq('id', accountId).maybeSingle(),
+    client
+      .from('accounts')
+      .select('name, outbound_email_settings')
+      .eq('id', accountId)
+      .maybeSingle(),
+    canUseCustomSendingDomain(
+      client,
+      accountId,
+      (workspace.account as { business_type?: string | null }).business_type,
+    ),
   ]);
 
   if (accountRow.error) {
@@ -86,7 +99,15 @@ export default async function SendingDomainPage(props: SendingDomainPageProps) {
       accountId={accountId}
       accountName={accountRow.data?.name?.trim() || account}
       canEdit={canEdit}
+      canConfigure={canConfigure}
       initialDomain={domain}
+      outboundSettings={parseOutboundEmailSettings(
+        (
+          accountRow.data as {
+            outbound_email_settings?: unknown;
+          } | null
+        )?.outbound_email_settings,
+      )}
     />
   );
 }

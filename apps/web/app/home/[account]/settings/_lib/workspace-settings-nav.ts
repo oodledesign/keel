@@ -43,30 +43,33 @@ function appendBillingNavItem(
 function appendBrandNavItems(
   items: WorkspaceSettingsNavItem[],
   accountSlug: string,
+  canConfigureSendingDomain = true,
 ) {
-  items.push(
-    {
-      id: 'brand',
-      label: 'Brand',
-      href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
-    },
-    {
+  items.push({
+    id: 'brand',
+    label: 'Brand',
+    href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
+  });
+
+  if (canConfigureSendingDomain) {
+    items.push({
       id: 'sending-domain',
       label: 'Sending domain',
       href: settingsPath(
         pathsConfig.app.accountSendingDomainSettings,
         accountSlug,
       ),
-    },
-    {
-      id: 'brand-voice',
-      label: 'Brand voice',
-      href: settingsPath(
-        pathsConfig.app.accountBrandVoiceSettings,
-        accountSlug,
-      ),
-    },
-  );
+    });
+  }
+
+  items.push({
+    id: 'brand-voice',
+    label: 'Brand voice',
+    href: settingsPath(
+      pathsConfig.app.accountBrandVoiceSettings,
+      accountSlug,
+    ),
+  });
 }
 
 export function buildWorkspaceSettingsNav(input: {
@@ -74,8 +77,16 @@ export function buildWorkspaceSettingsNav(input: {
   workspaceProfile: WorkspaceProfile;
   moduleSettings?: Record<string, boolean>;
   access: TeamAccountAccess;
+  /** Starter/Pro only. Lite omits the sending-domain settings item. */
+  canConfigureSendingDomain?: boolean;
 }): WorkspaceSettingsNavItem[] {
-  const { accountSlug, workspaceProfile, moduleSettings, access } = input;
+  const {
+    accountSlug,
+    workspaceProfile,
+    moduleSettings,
+    access,
+    canConfigureSendingDomain = true,
+  } = input;
   const items: WorkspaceSettingsNavItem[] = [
     {
       id: 'general',
@@ -108,13 +119,13 @@ export function buildWorkspaceSettingsNav(input: {
   ];
 
   if (workspaceProfile === 'commercial_property') {
-    appendBrandNavItems(items, accountSlug);
+    appendBrandNavItems(items, accountSlug, canConfigureSendingDomain);
     appendBillingNavItem(items, accountSlug, access);
     return items;
   }
 
   if (workspaceProfile === 'work_property') {
-    appendBrandNavItems(items, accountSlug);
+    appendBrandNavItems(items, accountSlug, canConfigureSendingDomain);
 
     if (isPropertyNavModuleEnabled(moduleSettings, 'finances')) {
       items.push({
@@ -159,7 +170,7 @@ export function buildWorkspaceSettingsNav(input: {
       });
     }
 
-    appendBrandNavItems(items, accountSlug);
+    appendBrandNavItems(items, accountSlug, canConfigureSendingDomain);
 
     items.push({
       id: 'templates',
@@ -192,14 +203,16 @@ export function buildWorkspaceSettingsNav(input: {
   }
 
   if (workspaceProfile === 'building_surveyor') {
-    items.push({
-      id: 'sending-domain',
-      label: 'Sending domain',
-      href: settingsPath(
-        pathsConfig.app.accountSendingDomainSettings,
-        accountSlug,
-      ),
-    });
+    if (canConfigureSendingDomain) {
+      items.push({
+        id: 'sending-domain',
+        label: 'Sending domain',
+        href: settingsPath(
+          pathsConfig.app.accountSendingDomainSettings,
+          accountSlug,
+        ),
+      });
+    }
     appendBillingNavItem(items, accountSlug, access);
     return items;
   }

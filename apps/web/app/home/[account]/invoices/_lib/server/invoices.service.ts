@@ -426,6 +426,27 @@ class InvoicesService {
     input: CreateInvoiceInput,
     createdBy: string | null,
   ) {
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const { count: invoicesThisMonth } = await this.db
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', input.accountId)
+      .gte('created_at', monthStart.toISOString());
+
+    const { assertInvoiceCreateAllowed } = await import(
+      '~/lib/billing/entitlements'
+    );
+    const invoiceCap = await assertInvoiceCreateAllowed(
+      this.db,
+      input.accountId,
+      invoicesThisMonth ?? 0,
+    );
+    if (!invoiceCap.allowed) {
+      throw new Error(invoiceCap.reason ?? 'Invoice limit reached.');
+    }
+
     const invoice_number = await this.allocateInvoiceNumber(input.accountId);
 
     let currency = normalizeInvoiceCurrency(input.currency);

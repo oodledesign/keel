@@ -10,6 +10,7 @@ import { escapeEmailHtml } from '~/lib/email/ozer-transactional-shell';
 import { wrapNotificationEmail } from '~/lib/email/wrap-notification-email';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { notifyInvoicePaidInApp } from '~/lib/invoices/invoice-in-app-notifications';
+import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import { formatInvoiceMoney } from '../invoice-currency';
@@ -248,11 +249,14 @@ export async function sendInvoicePaidNotifications(params: {
 
   if (clientEmail) {
     emailJobs.push(
-      sendPlatformEmail({
+      sendClientFacingEmail({
         type: 'invoice',
         accountId: params.accountId,
+        feature: 'invoices',
+        accountName: account.name,
+        displayName: formatWorkspaceSenderName(account.name, productName),
+        brandContactEmail: brand.contact_email,
         mail: {
-          from,
           to: clientEmail,
           subject: customerSubject,
           html: customerHtml,
@@ -437,11 +441,14 @@ export async function sendInvoiceIssuedEmail(params: {
       <p style="margin:0;">${escapeEmailHtml(signature).replace(/\r?\n/g, '<br />')}</p>
   `;
 
-  await sendPlatformEmail({
+  await sendClientFacingEmail({
     type: 'invoice',
     accountId: params.accountId,
+    feature: 'invoices',
+    accountName: account?.name,
+    displayName: formatWorkspaceSenderName(account?.name, productName),
+    brandContactEmail: brand.contact_email,
     mail: {
-      from,
       to: params.recipientEmail,
       subject: params.testOnly ? `[Test] ${subject}` : subject,
       html: wrapNotificationEmail(bodyHtml, {

@@ -101,6 +101,8 @@ export async function completeWorkspaceSetup(
   success?: boolean;
   redirectTo?: string;
   billingRequired?: boolean;
+  accountId?: string;
+  accountSlug?: string;
 }> {
   const skipTeamWorkspaces = Boolean(options?.skipTeamWorkspaces);
 
@@ -177,6 +179,8 @@ export async function completeWorkspaceSetup(
 
   let firstTeamSlug: string | null = null;
   let firstPaidSlug: string | null = null;
+  let firstBusinessSlug: string | null = null;
+  let firstBusinessAccountId: string | null = null;
 
   for (const sel of selections) {
     const name = sel.name.trim();
@@ -212,9 +216,28 @@ export async function completeWorkspaceSetup(
     if (
       !firstPaidSlug &&
       createdSlug &&
+      sel.profile !== 'work_design' &&
       requiresBillingAfterSetup(sel, options?.billingIntent)
     ) {
       firstPaidSlug = createdSlug;
+    }
+
+    const createdId = (account as { id?: string } | null)?.id ?? null;
+    if (
+      !firstBusinessSlug &&
+      createdSlug &&
+      createdId &&
+      sel.profile === 'work_design'
+    ) {
+      firstBusinessSlug = createdSlug;
+      firstBusinessAccountId = createdId;
+      await admin
+        .from('accounts')
+        .update({
+          business_onboarding_step: 'client',
+          business_onboarding_completed_at: null,
+        })
+        .eq('id', createdId);
     }
   }
 
@@ -245,37 +268,44 @@ export async function completeWorkspaceSetup(
     );
   }
 
-  const redirectTo = firstPaidSlug
-    ? (() => {
-        const billingPath = pathsConfig.app.accountBilling.replace(
-          '[account]',
-          firstPaidSlug!,
-        );
-        const query = new URLSearchParams({ setup: '1' });
-        if (options?.billingIntent?.productId) {
-          query.set('product', options.billingIntent.productId);
-        }
-        if (options?.billingIntent?.planId) {
-          query.set('plan', options.billingIntent.planId);
-        }
-        if (options?.billingIntent?.interval) {
-          query.set('interval', options.billingIntent.interval);
-        }
-        if (
-          options?.billingIntent?.seats != null &&
-          options.billingIntent.seats >= 1
-        ) {
-          query.set('seats', String(Math.floor(options.billingIntent.seats)));
-        }
-        return `${billingPath}?${query.toString()}`;
-      })()
-    : firstTeamSlug
-      ? pathsConfig.app.accountHome.replace('[account]', firstTeamSlug)
-      : pathsConfig.app.home;
+  const redirectTo = firstBusinessSlug
+    ? `${pathsConfig.app.businessOnboarding}?account=${encodeURIComponent(firstBusinessSlug)}`
+    : firstPaidSlug
+      ? (() => {
+          const billingPath = pathsConfig.app.accountBilling.replace(
+            '[account]',
+            firstPaidSlug!,
+          );
+          const query = new URLSearchParams({ setup: '1' });
+          if (options?.billingIntent?.productId) {
+            query.set('product', options.billingIntent.productId);
+          }
+          if (options?.billingIntent?.planId) {
+            query.set('plan', options.billingIntent.planId);
+          }
+          if (options?.billingIntent?.interval) {
+            query.set('interval', options.billingIntent.interval);
+          }
+          if (
+            options?.billingIntent?.seats != null &&
+            options.billingIntent.seats >= 1
+          ) {
+            query.set(
+              'seats',
+              String(Math.floor(options.billingIntent.seats)),
+            );
+          }
+          return `${billingPath}?${query.toString()}`;
+        })()
+      : firstTeamSlug
+        ? pathsConfig.app.accountHome.replace('[account]', firstTeamSlug)
+        : pathsConfig.app.home;
 
   return {
     success: true,
     redirectTo,
-    billingRequired: Boolean(firstPaidSlug),
+    billingRequired: Boolean(firstPaidSlug) && !firstBusinessSlug,
+    accountId: firstBusinessAccountId ?? undefined,
+    accountSlug: firstBusinessSlug ?? firstPaidSlug ?? firstTeamSlug ?? undefined,
   };
 }

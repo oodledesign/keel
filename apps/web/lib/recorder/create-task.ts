@@ -70,6 +70,24 @@ export async function createRecorderTask(input: CreateRecorderTaskInput) {
   await assertWorkspaceMember(admin, input.accountId, input.userId);
   await assertTasksModuleEnabled(admin, input.accountId);
 
+  const { count: openTaskCount } = await admin
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', input.accountId)
+    .neq('status', 'done');
+
+  const { assertOpenTaskCreateAllowed } = await import(
+    '~/lib/billing/entitlements'
+  );
+  const taskCap = await assertOpenTaskCreateAllowed(
+    admin,
+    input.accountId,
+    openTaskCount ?? 0,
+  );
+  if (!taskCap.allowed) {
+    throw new Error(taskCap.reason ?? 'Open task limit reached.');
+  }
+
   const projectId = input.projectId?.trim() || null;
   const clientId = input.clientId?.trim() || null;
 

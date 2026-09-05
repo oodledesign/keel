@@ -9,6 +9,7 @@ import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
+import { canUseCustomSendingDomain } from '~/lib/billing/can-use-custom-sending-domain';
 import {
   SendingDomainError,
   createSendingDomainService,
@@ -20,6 +21,7 @@ import {
 import {
   AddSendingDomainSchema,
   SendingDomainAccountSchema,
+  UpdateOutboundEmailSettingsSchema,
   UpdateSendingLocalPartSchema,
 } from '../schema/sending-domain.schema';
 import { assertCanEditBrandSettings } from './brand-settings-access';
@@ -38,6 +40,12 @@ function revalidateSendingDomain(accountSlug: string) {
 async function getWritableService(accountId: string, userId: string) {
   const { accountSlug } = await assertCanEditBrandSettings(accountId, userId);
   const admin = getSupabaseServerAdminClient();
+  const allowed = await canUseCustomSendingDomain(admin, accountId);
+  if (!allowed) {
+    throw new SendingDomainError(
+      'Custom sending domain is available on Starter and Pro. Upgrade to connect your domain.',
+    );
+  }
   const service = createSendingDomainService(admin, createSesIdentityAdmin());
   return { accountSlug, service, admin };
 }
@@ -263,4 +271,37 @@ export const sendSendingDomainTestAction = enhanceAction(
     }
   },
   { auth: true, schema: SendingDomainAccountSchema },
+);
+
+export const updateOutboundEmailSettingsAction = enhanceAction(
+  async function (data, user) {
+    try {
+      const { accountSlug, admin } = await getWritableService(
+        data.accountId,
+        user.id,
+      );
+      const { error } = await admin
+        .from('accounts')
+        .update({
+          outbound_email_settings: {
+            invoices: data.invoices,
+            proposals: data.proposals,
+            contracts: data.contracts,
+            portal_invites: data.portal_invites,
+            other: data.other,
+          },
+        })
+        .eq('id', data.accountId);
+
+      if (error) {
+        throw new SendingDomainError(error.message);
+      }
+
+      revalidateSendingDomain(accountSlug);
+      return { ok: true as const };
+    } catch (error) {
+      toActionError(error);
+    }
+  },
+  { auth: true, schema: UpdateOutboundEmailSettingsSchema },
 );

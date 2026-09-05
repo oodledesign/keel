@@ -10,8 +10,7 @@ import {
   escapeNotificationHtml,
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
-import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 import { createSupportPublicToken } from '~/lib/support/support-tokens';
 
 import type {
@@ -419,52 +418,46 @@ export async function createClientPortalInvite(input: {
     clientRow.display_name?.trim() ||
     'your client portal';
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
-  const from = resolveTransactionalEmailFrom(productName);
 
   let emailSent = false;
   let emailError: string | undefined;
 
-  if (from) {
-    const html = wrapNotificationEmail(
-      `<p style="margin:0 0 12px;">You have been invited to access the client portal for <strong>${escapeNotificationHtml(clientLabel)}</strong> on ${escapeNotificationHtml(productName)}.</p>
+  const html = wrapNotificationEmail(
+    `<p style="margin:0 0 12px;">You have been invited to access the client portal for <strong>${escapeNotificationHtml(clientLabel)}</strong> on ${escapeNotificationHtml(productName)}.</p>
       <p style="margin:0 0 12px;font-size:13px;color:#5A4450;">Open the link to create your login (or sign in if you already have one), then you can view your portal and update your profile.</p>
       <p style="margin:0;font-size:13px;color:#5A4450;">Or open this link:<br /><a href="${escapeNotificationHtml(acceptUrl)}" style="color:#FF5C34;word-break:break-all;">${escapeNotificationHtml(acceptUrl)}</a></p>`,
-      {
-        productName,
-        title: 'Client portal invite',
-        heading: "You've been invited to a client portal",
-        preview: `Access ${clientLabel}`,
-        cta: { label: 'Open portal invite', href: acceptUrl },
-        footerNote: `You're receiving this because someone invited you to a client portal on ${escapeNotificationHtml(productName)}.`,
-      },
-    );
+    {
+      productName,
+      title: 'Client portal invite',
+      heading: "You've been invited to a client portal",
+      preview: `Access ${clientLabel}`,
+      cta: { label: 'Open portal invite', href: acceptUrl },
+      footerNote: `You're receiving this because someone invited you to a client portal on ${escapeNotificationHtml(productName)}.`,
+    },
+  );
 
-    try {
-      await sendPlatformEmail({
-        type: 'invitation',
-        accountId: input.accountId,
-        mail: {
-          to: email,
-          from,
-          subject: `Invite to ${clientLabel} portal`,
-          html,
-        },
-        metadata: {
-          kind: 'client_portal_invite',
-          clientId: input.clientId,
-          inviteId: invite.id,
-          accountSlug: input.accountSlug,
-        },
-      });
-      emailSent = true;
-    } catch (error) {
-      emailError = formatEmailDeliveryError(error);
-      console.error('[client-portal-invites] email failed', emailError, error);
-    }
-  } else {
-    emailError =
-      'No email sender configured (set ZEPTOMAIL_FROM_ADDRESS or EMAIL_SENDER).';
-    console.warn('[client-portal-invites]', emailError);
+  try {
+    await sendClientFacingEmail({
+      type: 'invitation',
+      accountId: input.accountId,
+      feature: 'portal_invites',
+      displayName: productName,
+      mail: {
+        to: email,
+        subject: `Invite to ${clientLabel} portal`,
+        html,
+      },
+      metadata: {
+        kind: 'client_portal_invite',
+        clientId: input.clientId,
+        inviteId: invite.id,
+        accountSlug: input.accountSlug,
+      },
+    });
+    emailSent = true;
+  } catch (error) {
+    emailError = formatEmailDeliveryError(error);
+    console.error('[client-portal-invites] email failed', emailError, error);
   }
 
   return { invite, acceptUrl, emailSent, emailError };
