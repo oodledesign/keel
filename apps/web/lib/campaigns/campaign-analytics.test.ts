@@ -86,6 +86,7 @@ describe('campaign analytics view', () => {
     });
     expect(view.bounceBreakdown[0]?.type).toBe('Permanent / General');
     expect(formatCampaignRate(view.rates.delivery)).toBe('80%');
+    expect(view.eventsTruncated).toBe(false);
   });
 
   it('does not invent rates when nothing has been sent', () => {
@@ -105,5 +106,6 @@ describe('campaign analytics view', () => {
     expect(formatCampaignRate(view.rates.uniqueOpen)).toBe('—');
     expect(view.timeSeries).toEqual([]);
     expect(view.linkClicks).toEqual([]);
+    expect(view.eventsTruncated).toBe(false);
   });
 });

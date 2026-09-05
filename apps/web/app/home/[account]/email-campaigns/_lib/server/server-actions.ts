@@ -122,18 +122,10 @@ export const sendCampaignAction = enhanceAction(
   async function (data, user) {
     const logger = await getLogger();
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    const { data: account } = await client
-      .from('accounts')
-      .select('name')
-      .eq('id', data.accountId)
-      .maybeSingle();
-
     const service = createCampaignsService(client);
     const result = await service.startSend({
       accountId: data.accountId,
       campaignId: data.campaignId,
-      workspaceName:
-        (account as { name?: string } | null)?.name?.trim() || 'Workspace',
     });
 
     logger.info(

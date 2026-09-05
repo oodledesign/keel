@@ -22,6 +22,9 @@ export type CampaignLinkClick = {
   clicks: number;
 };
 
+/** First N SES events only; paginate later if campaigns exceed this. */
+export const CAMPAIGN_ANALYTICS_EVENT_LIMIT = 2000;
+
 export type CampaignAnalyticsView = {
   rates: {
     delivery: number | null;
@@ -35,6 +38,7 @@ export type CampaignAnalyticsView = {
   timeSeries: CampaignTimeSeriesPoint[];
   linkClicks: CampaignLinkClick[];
   bounceBreakdown: Array<{ type: string; count: number }>;
+  eventsTruncated: boolean;
 };
 
 function rate(numerator: number, denominator: number): number | null {
@@ -64,6 +68,7 @@ export function buildCampaignAnalyticsView(input: {
     >
   >;
   events: CampaignAnalyticsEvent[];
+  eventsTruncated?: boolean;
 }): CampaignAnalyticsView {
   const uniqueOpens = input.recipients.filter((row) => row.openedAt).length;
   const uniqueClicks = input.recipients.filter((row) => row.clickedAt).length;
@@ -132,5 +137,6 @@ export function buildCampaignAnalyticsView(input: {
     bounceBreakdown: [...bounceCounts.entries()]
       .map(([type, count]) => ({ type, count }))
       .sort((a, b) => b.count - a.count),
+    eventsTruncated: Boolean(input.eventsTruncated),
   };
 }

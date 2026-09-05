@@ -126,6 +126,17 @@ export const CAMPAIGN_CONTACT_BUMP_PACKS = [
 export type CampaignFeatureFlags =
   (typeof CAMPAIGN_SUBSCRIPTION_TIERS)[number]['features'];
 
+const NO_CAMPAIGN_FEATURES: CampaignFeatureFlags = {
+  coreCampaigns: false,
+  audiences: false,
+  sendTest: false,
+  basicAnalytics: false,
+  customFrom: false,
+  savedLists: false,
+  abSubjects: false,
+  richAnalytics: false,
+};
+
 export function findCampaignSubscriptionTier(id: string) {
   return CAMPAIGN_SUBSCRIPTION_TIERS.find((tier) => tier.id === id) ?? null;
 }
@@ -161,12 +172,9 @@ export function campaignFeaturesForTier(
 ): CampaignFeatureFlags {
   const id = normalizeCampaignPlanTier(tier);
   if (id === 'none') {
-    return CAMPAIGN_SUBSCRIPTION_TIERS[0].features;
+    return NO_CAMPAIGN_FEATURES;
   }
-  return (
-    findCampaignSubscriptionTier(id)?.features ??
-    CAMPAIGN_SUBSCRIPTION_TIERS[0].features
-  );
+  return findCampaignSubscriptionTier(id)?.features ?? NO_CAMPAIGN_FEATURES;
 }
 
 export function nextCampaignUpgradeTier(

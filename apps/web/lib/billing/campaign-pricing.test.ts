@@ -59,7 +59,16 @@ describe('campaign pricing', () => {
     expect(campaignFeaturesForTier('growth').abSubjects).toBe(true);
     expect(campaignFeaturesForTier('growth').richAnalytics).toBe(true);
     expect(campaignFeaturesForTier('pro').abSubjects).toBe(true);
-    expect(campaignFeaturesForTier('none').abSubjects).toBe(false);
+    expect(campaignFeaturesForTier('none')).toEqual({
+      coreCampaigns: false,
+      audiences: false,
+      sendTest: false,
+      basicAnalytics: false,
+      customFrom: false,
+      savedLists: false,
+      abSubjects: false,
+      richAnalytics: false,
+    });
   });
 
   it('offers an upgrade path Starter → Growth → Pro', () => {

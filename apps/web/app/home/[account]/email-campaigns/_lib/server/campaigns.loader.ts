@@ -2,13 +2,17 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { campaignFeaturesForTier } from '~/lib/billing/campaign-pricing';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
-import type { CampaignAnalyticsEvent } from '~/lib/campaigns/campaign-analytics';
+import {
+  CAMPAIGN_ANALYTICS_EVENT_LIMIT,
+  type CampaignAnalyticsEvent,
+} from '~/lib/campaigns/campaign-analytics';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
 import {
   estimateCampaignAudienceCount,
@@ -112,10 +116,14 @@ async function listCampaignAnalyticsEvents(
     .eq('account_id', accountId)
     .eq('campaign_id', campaignId)
     .order('event_at', { ascending: true })
-    .limit(2000);
+    .limit(CAMPAIGN_ANALYTICS_EVENT_LIMIT);
 
   if (error) {
-    console.warn('[campaigns] list analytics events failed', error.message);
+    const logger = await getLogger();
+    logger.warn(
+      { error: error.message, accountId, campaignId },
+      '[campaigns] list analytics events failed',
+    );
     return [];
   }
 
@@ -141,7 +149,11 @@ async function listPublishedFormsForCampaigns(accountId: string) {
     .order('name', { ascending: true });
 
   if (error) {
-    console.warn('[campaigns] list published forms failed', error.message);
+    const logger = await getLogger();
+    logger.warn(
+      { error: error.message, accountId },
+      '[campaigns] list published forms failed',
+    );
     return [];
   }
 

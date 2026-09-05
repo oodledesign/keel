@@ -1,6 +1,7 @@
 import { pickAbWinner, summarizeAbVariants } from '~/lib/campaigns/campaign-ab';
 import type { CampaignAnalyticsEvent } from '~/lib/campaigns/campaign-analytics';
 import {
+  CAMPAIGN_ANALYTICS_EVENT_LIMIT,
   buildCampaignAnalyticsView,
   formatCampaignRate,
 } from '~/lib/campaigns/campaign-analytics';
@@ -53,7 +54,12 @@ export function CampaignAnalyticsSummary({
   events: CampaignAnalyticsEvent[];
   richAnalytics: boolean;
 }) {
-  const view = buildCampaignAnalyticsView({ campaign, recipients, events });
+  const view = buildCampaignAnalyticsView({
+    campaign,
+    recipients,
+    events,
+    eventsTruncated: events.length >= CAMPAIGN_ANALYTICS_EVENT_LIMIT,
+  });
   const variants = campaign.abEnabled
     ? summarizeAbVariants({
         subjectA: campaign.subject,
@@ -79,6 +85,13 @@ export function CampaignAnalyticsSummary({
           SES events for this campaign. Rates use delivered when available,
           otherwise sent. Opens/clicks need configuration-set tracking.
         </p>
+        {view.eventsTruncated ? (
+          <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+            Charts use the first{' '}
+            {CAMPAIGN_ANALYTICS_EVENT_LIMIT.toLocaleString()} events. Totals
+            above still come from campaign counters.
+          </p>
+        ) : null}
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         <Card label="Sent" value={campaign.sentCount} />

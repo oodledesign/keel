@@ -171,7 +171,10 @@ export async function grantCampaignCredits(
   });
 
   if (error) {
-    if (stripeEventId && /unique|duplicate/i.test(error.message)) {
+    if (
+      stripeEventId &&
+      (error.code === '23505' || /unique|duplicate/i.test(error.message))
+    ) {
       const { data: existing, error: selectError } = await fromTable(
         'campaign_credit_batches',
       )

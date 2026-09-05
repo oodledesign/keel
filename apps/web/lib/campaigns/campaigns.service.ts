@@ -470,10 +470,8 @@ class CampaignsService {
   async startSend(input: {
     accountId: string;
     campaignId: string;
-    workspaceName: string;
     batchSize?: number;
   }): Promise<{ campaign: EmailCampaign; remaining: number }> {
-    void input.workspaceName;
     const campaign = await this.get(input.accountId, input.campaignId);
     if (campaign.status !== 'draft' && campaign.status !== 'scheduled') {
       throw new Error('This campaign is not ready to send');
@@ -497,6 +495,11 @@ class CampaignsService {
     if (campaign.audienceType === 'custom' && !features.savedLists) {
       throw new Error(
         'Custom lists are available on Growth and Pro. Upgrade Campaigns or pick subscribers, clients, or contacts.',
+      );
+    }
+    if (campaign.abEnabled && !features.abSubjects) {
+      throw new Error(
+        'A/B subject testing requires a Growth or Pro Campaigns plan.',
       );
     }
     const maxContacts = effectiveCampaignContactCap({
@@ -1011,17 +1014,10 @@ export async function processDueCampaignSends(client: SupabaseClient): Promise<{
     .limit(10);
 
   for (const row of (due ?? []) as Array<{ id: string; account_id: string }>) {
-    const { data: account } = await fromTable(client, 'accounts')
-      .select('name')
-      .eq('id', row.account_id)
-      .maybeSingle();
-
     try {
       await service.startSend({
         accountId: row.account_id,
         campaignId: row.id,
-        workspaceName:
-          (account as { name?: string } | null)?.name?.trim() || 'Workspace',
       });
       started += 1;
     } catch (error) {
