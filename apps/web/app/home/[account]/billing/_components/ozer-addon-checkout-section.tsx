@@ -219,7 +219,7 @@ export function OzerAddonCheckoutSection({
           </div>
         ) : null}
 
-        {selectedActive ? (
+        {selectedActive && selectedKey !== 'addon_campaigns' ? (
           <p className="text-muted-foreground text-sm">
             {selectedAddon?.name} is already active on this workspace. Use the
             billing portal below to change plan interval or cancel.
@@ -227,7 +227,9 @@ export function OzerAddonCheckoutSection({
         ) : selectedAddon ? (
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
             <p className="mb-4 text-sm font-medium">
-              Choose a {selectedAddon.name} plan
+              {selectedActive && selectedKey === 'addon_campaigns'
+                ? 'Upgrade Campaigns (Starter → Growth → Pro)'
+                : `Choose a ${selectedAddon.name} plan`}
             </p>
             <PlanPicker
               pending={pending}

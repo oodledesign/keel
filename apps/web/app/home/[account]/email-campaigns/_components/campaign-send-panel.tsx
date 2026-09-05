@@ -12,6 +12,12 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  campaignUsageMeter,
+  effectiveCampaignContactCap,
+} from '~/lib/billing/campaign-pricing';
+import type { CampaignFeatureFlags } from '~/lib/billing/campaign-pricing';
+import type { CampaignAnalyticsEvent } from '~/lib/campaigns/campaign-analytics';
 import { AUDIENCE_TYPE_LABEL } from '~/lib/campaigns/campaign-audience';
 import type {
   CampaignCreditPool,
@@ -31,9 +37,9 @@ import {
   sendCampaignAction,
 } from '../_lib/server/server-actions';
 import { CampaignAnalyticsSummary } from './campaign-analytics-summary';
+import type { AudiencePickerOption } from './campaign-audience-picker';
 import { CampaignRecipientLog } from './campaign-recipient-log';
 import { CampaignSendTestDialog } from './campaign-send-test-dialog';
-import type { AudiencePickerOption } from './campaign-audience-picker';
 
 export function CampaignSendPanel({
   accountId,
@@ -42,6 +48,8 @@ export function CampaignSendPanel({
   recipients,
   audienceCount,
   usage,
+  events,
+  features,
   brand,
   clients,
 }: {
@@ -51,6 +59,8 @@ export function CampaignSendPanel({
   recipients: EmailCampaignRecipient[];
   audienceCount: number;
   usage: CampaignCreditPool;
+  events: CampaignAnalyticsEvent[];
+  features: CampaignFeatureFlags;
   brand: { contact_email: string | null };
   clients: AudiencePickerOption[];
 }) {
@@ -72,8 +82,17 @@ export function CampaignSendPanel({
     ? `${campaign.fromName.trim()} <${campaign.fromEmail || brand.contact_email || 'workspace'}>`
     : campaign.fromEmail || brand.contact_email || 'workspace default';
 
+  const contactCap = effectiveCampaignContactCap({
+    maxContacts: usage.max_contacts,
+    bonusContacts: usage.bonus_contacts,
+  });
+  const contactsBlocked =
+    editable &&
+    audienceCount > 0 &&
+    campaignUsageMeter({ used: audienceCount, cap: contactCap }).hardBlocked;
   const insufficientSendUnits =
     editable && audienceCount > 0 && usage.balance < audienceCount;
+  const hardBlocked = insufficientSendUnits || contactsBlocked;
 
   return (
     <div className="space-y-6">
@@ -97,6 +116,9 @@ export function CampaignSendPanel({
             {audienceCount.toLocaleString()}
           </span>{' '}
           recipients · {usage.balance.toLocaleString()} send units left
+          {campaign.abEnabled
+            ? ` · A/B subjects (${campaign.abSplitPercent}/${100 - campaign.abSplitPercent})`
+            : ''}
         </p>
         <p className={`text-sm ${workspaceTextMuted}`}>From {fromLabel}</p>
         {campaign.replyTo ? (
@@ -143,19 +165,19 @@ export function CampaignSendPanel({
                 // Content/settings should already be saved; no-op keep hook.
               }}
             />
-            {insufficientSendUnits ? (
+            {hardBlocked ? (
               <p
-                className={`text-sm text-destructive`}
+                className={`text-destructive text-sm`}
                 data-test="campaign-send-insufficient"
               >
-                Not enough send units. Need {audienceCount.toLocaleString()}, have{' '}
-                {usage.balance.toLocaleString()}. Top up Campaigns in Billing
-                before sending.
+                {contactsBlocked
+                  ? `Audience is over the contact cap (${contactCap.toLocaleString()}). Upgrade or buy a contact pack.`
+                  : `Not enough send units. Need ${audienceCount.toLocaleString()}, have ${usage.balance.toLocaleString()}. Upgrade or buy a send pack.`}
               </p>
             ) : null}
             <Button
               className={workspaceBtnPrimary}
-              disabled={pending || insufficientSendUnits || audienceCount === 0}
+              disabled={pending || hardBlocked || audienceCount === 0}
               data-test="campaign-send"
               onClick={() => {
                 startTransition(async () => {
@@ -173,9 +195,7 @@ export function CampaignSendPanel({
                     router.refresh();
                   } catch (error) {
                     toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : 'Could not send',
+                      error instanceof Error ? error.message : 'Could not send',
                     );
                   }
                 });
@@ -262,6 +282,8 @@ export function CampaignSendPanel({
         <CampaignAnalyticsSummary
           campaign={campaign}
           recipients={recipients}
+          events={events}
+          richAnalytics={features.richAnalytics}
         />
       ) : null}
 

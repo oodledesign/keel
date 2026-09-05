@@ -29,6 +29,9 @@ export const UpdateCampaignSchema = z.object({
   audienceType: z.enum(CAMPAIGN_AUDIENCE_TYPES).optional(),
   audienceConfig: CampaignAudienceConfigSchema.optional(),
   scheduledAt: z.string().optional().nullable(),
+  abEnabled: z.boolean().optional(),
+  subjectB: z.string().trim().max(300).optional().nullable(),
+  abSplitPercent: z.number().int().min(10).max(90).optional(),
 });
 
 export const SendCampaignSchema = z.object({

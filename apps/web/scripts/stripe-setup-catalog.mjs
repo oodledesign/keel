@@ -398,6 +398,85 @@ const CATALOG = [
       },
     ],
   },
+  {
+    catalogId: 'ozer-addon-campaigns',
+    productName: 'Ozer Campaigns',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_ADDON_CAMPAIGNS_STARTER_MONTHLY',
+        lookupKey: 'ozer.addon.campaigns.starter.monthly',
+        amount: 900,
+        interval: 'month',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_CAMPAIGNS_GROWTH_MONTHLY',
+        lookupKey: 'ozer.addon.campaigns.growth.monthly',
+        amount: 1900,
+        interval: 'month',
+      },
+      {
+        envKey: 'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY',
+        lookupKey: 'ozer.addon.campaigns.pro.monthly',
+        amount: 4900,
+        interval: 'month',
+      },
+    ],
+  },
+  {
+    catalogId: 'ozer-campaigns-topup-sends-2k',
+    productName: 'Ozer Campaigns send pack — +2,000',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_CAMPAIGNS_TOPUP_SENDS_2K',
+        lookupKey: 'ozer.campaigns.topup.sends.2k',
+        amount: 600,
+      },
+    ],
+  },
+  {
+    catalogId: 'ozer-campaigns-topup-sends-10k',
+    productName: 'Ozer Campaigns send pack — +10,000',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_CAMPAIGNS_TOPUP_SENDS_10K',
+        lookupKey: 'ozer.campaigns.topup.sends.10k',
+        amount: 2400,
+      },
+    ],
+  },
+  {
+    catalogId: 'ozer-campaigns-topup-sends-50k',
+    productName: 'Ozer Campaigns send pack — +50,000',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_CAMPAIGNS_TOPUP_SENDS_50K',
+        lookupKey: 'ozer.campaigns.topup.sends.50k',
+        amount: 9900,
+      },
+    ],
+  },
+  {
+    catalogId: 'ozer-campaigns-topup-contacts-500',
+    productName: 'Ozer Campaigns contact bump — +500',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_CAMPAIGNS_TOPUP_CONTACTS_500',
+        lookupKey: 'ozer.campaigns.topup.contacts.500',
+        amount: 800,
+      },
+    ],
+  },
+  {
+    catalogId: 'ozer-campaigns-topup-contacts-2500',
+    productName: 'Ozer Campaigns contact bump — +2,500',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_CAMPAIGNS_TOPUP_CONTACTS_2500',
+        lookupKey: 'ozer.campaigns.topup.contacts.2500',
+        amount: 2900,
+      },
+    ],
+  },
 ];
 
 function toLegacyCatalogId(catalogId) {

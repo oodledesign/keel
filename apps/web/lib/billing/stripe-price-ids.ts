@@ -193,6 +193,26 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY',
     'price_ozer_addon_campaigns_pro_monthly',
   ),
+  campaigns_topup_sends_2k: price(
+    'STRIPE_PRICE_CAMPAIGNS_TOPUP_SENDS_2K',
+    'price_ozer_campaigns_topup_sends_2k',
+  ),
+  campaigns_topup_sends_10k: price(
+    'STRIPE_PRICE_CAMPAIGNS_TOPUP_SENDS_10K',
+    'price_ozer_campaigns_topup_sends_10k',
+  ),
+  campaigns_topup_sends_50k: price(
+    'STRIPE_PRICE_CAMPAIGNS_TOPUP_SENDS_50K',
+    'price_ozer_campaigns_topup_sends_50k',
+  ),
+  campaigns_topup_contacts_500: price(
+    'STRIPE_PRICE_CAMPAIGNS_TOPUP_CONTACTS_500',
+    'price_ozer_campaigns_topup_contacts_500',
+  ),
+  campaigns_topup_contacts_2500: price(
+    'STRIPE_PRICE_CAMPAIGNS_TOPUP_CONTACTS_2500',
+    'price_ozer_campaigns_topup_contacts_2500',
+  ),
 } as const;
 
 export const OZER_BILLING_CURRENCY =

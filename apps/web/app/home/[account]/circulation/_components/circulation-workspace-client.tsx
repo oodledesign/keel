@@ -10,6 +10,7 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
 import { copyTextToClipboard } from '~/lib/clipboard';
+import { CIRCULATION_COMMERCIAL_STUB } from '~/lib/commercial/circulation/circulation-allowance';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
@@ -127,6 +128,12 @@ export function CirculationWorkspaceClient({
     () => contacts.filter((c) => c.consentStatus === 'subscribed').length,
     [contacts],
   );
+  const sendsThisMonth = useMemo(() => {
+    const month = new Date().toISOString().slice(0, 7);
+    return sends
+      .filter((row) => row.createdAt.startsWith(month))
+      .reduce((sum, row) => sum + row.recipientCount, 0);
+  }, [sends]);
 
   function toggleGlobal(enabled: boolean) {
     const previous = autoSend;
@@ -200,6 +207,27 @@ export function CirculationWorkspaceClient({
 
   return (
     <div className="space-y-6">
+      <Card className={workspacePanelCard}>
+        <CardHeader>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Circulation allowance (stub)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-[var(--workspace-shell-text-muted)]">
+          <p>
+            {subscribedCount.toLocaleString()} /{' '}
+            {CIRCULATION_COMMERCIAL_STUB.maxContacts.toLocaleString()} contacts
+            · {sendsThisMonth.toLocaleString()} /{' '}
+            {CIRCULATION_COMMERCIAL_STUB.sendUnitsPerMonth.toLocaleString()}{' '}
+            emails this month
+          </p>
+          <p>
+            Commercial circulation is not billed from Campaigns send units.
+            Metering here is informational until a dedicated product ships.
+          </p>
+        </CardContent>
+      </Card>
+
       <Card className={workspacePanelCard}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
@@ -283,78 +311,80 @@ export function CirculationWorkspaceClient({
                   contact.consentStatus === 'suppressed';
 
                 return (
-                <li
-                  key={contact.email}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                      {contact.contactName || contact.email}
-                    </p>
-                    <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                      {contact.email}
-                      {contact.companyName ? ` · ${contact.companyName}` : ''}
-                      {` · ${contact.matchCount} match${contact.matchCount === 1 ? '' : 'es'}`}
-                      {` · Last sent ${formatWhen(contact.lastDigestSentAt)}`}
-                      {` · ${statusLabel(contact)}`}
-                    </p>
-                    {contact.publicAccessToken ? (
-                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
-                        <span className="shrink-0">Public page</span>
-                        <a
-                          href={publicMatchesHref(
-                            contact.publicAccessToken,
-                            origin,
-                          )}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={publicMatchesHref(
-                            contact.publicAccessToken,
-                            origin,
-                          )}
-                          className="min-w-0 truncate font-mono text-[var(--ozer-accent)] underline-offset-2 hover:underline"
-                        >
-                          /share/matches/
-                          {contact.publicAccessToken.slice(0, 8)}…
-                        </a>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-                          aria-label={`Copy public page link for ${contact.email}`}
-                          onClick={() => {
-                            const url = publicMatchesHref(
-                              contact.publicAccessToken!,
-                              origin ||
-                                (typeof window !== 'undefined'
-                                  ? window.location.origin
-                                  : ''),
-                            );
-                            void copyTextToClipboard(url)
-                              .then(() =>
-                                toast.success('Public page link copied'),
-                              )
-                              .catch(() => toast.error('Could not copy link'));
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                  <Switch
-                    checked={
-                      contact.consentStatus === 'subscribed' &&
-                      contact.autoSendEnabled
-                    }
-                    disabled={contactPending || blocked}
-                    onCheckedChange={(enabled) =>
-                      toggleContact(contact.email, enabled)
-                    }
-                    aria-label={`Auto-send for ${contact.email}`}
-                  />
-                </li>
+                  <li
+                    key={contact.email}
+                    className="flex flex-wrap items-center justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {contact.contactName || contact.email}
+                      </p>
+                      <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                        {contact.email}
+                        {contact.companyName ? ` · ${contact.companyName}` : ''}
+                        {` · ${contact.matchCount} match${contact.matchCount === 1 ? '' : 'es'}`}
+                        {` · Last sent ${formatWhen(contact.lastDigestSentAt)}`}
+                        {` · ${statusLabel(contact)}`}
+                      </p>
+                      {contact.publicAccessToken ? (
+                        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                          <span className="shrink-0">Public page</span>
+                          <a
+                            href={publicMatchesHref(
+                              contact.publicAccessToken,
+                              origin,
+                            )}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={publicMatchesHref(
+                              contact.publicAccessToken,
+                              origin,
+                            )}
+                            className="min-w-0 truncate font-mono text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                          >
+                            /share/matches/
+                            {contact.publicAccessToken.slice(0, 8)}…
+                          </a>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                            aria-label={`Copy public page link for ${contact.email}`}
+                            onClick={() => {
+                              const url = publicMatchesHref(
+                                contact.publicAccessToken!,
+                                origin ||
+                                  (typeof window !== 'undefined'
+                                    ? window.location.origin
+                                    : ''),
+                              );
+                              void copyTextToClipboard(url)
+                                .then(() =>
+                                  toast.success('Public page link copied'),
+                                )
+                                .catch(() =>
+                                  toast.error('Could not copy link'),
+                                );
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                    <Switch
+                      checked={
+                        contact.consentStatus === 'subscribed' &&
+                        contact.autoSendEnabled
+                      }
+                      disabled={contactPending || blocked}
+                      onCheckedChange={(enabled) =>
+                        toggleContact(contact.email, enabled)
+                      }
+                      aria-label={`Auto-send for ${contact.email}`}
+                    />
+                  </li>
                 );
               })}
             </ul>

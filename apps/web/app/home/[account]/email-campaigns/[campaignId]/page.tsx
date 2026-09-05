@@ -34,6 +34,7 @@ async function CampaignSettingsPage({ params }: CampaignSettingsPageProps) {
       audienceOptions={data.audienceOptions}
       brand={data.brand}
       sendingDomain={data.sendingDomain}
+      features={data.features}
     />
   );
 }

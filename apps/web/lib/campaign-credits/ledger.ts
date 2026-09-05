@@ -6,7 +6,10 @@ import type { CampaignCreditPool } from '~/lib/campaigns/campaign.types';
 
 export type { CampaignCreditPool } from '~/lib/campaigns/campaign.types';
 
-export type CampaignCreditSourceType = 'monthly_grant' | 'admin_grant';
+export type CampaignCreditSourceType =
+  | 'monthly_grant'
+  | 'admin_grant'
+  | 'topup_purchase';
 
 export type CampaignCreditBatch = {
   id: string;
@@ -81,7 +84,7 @@ export async function getCampaignUsage(accountId: string): Promise<{
 
   const { data, error } = await fromTable('campaign_credit_pools')
     .select(
-      'account_id, balance, monthly_allowance, max_contacts, plan_tier, cycle_start, cycle_end',
+      'account_id, balance, monthly_allowance, max_contacts, bonus_contacts, plan_tier, cycle_start, cycle_end',
     )
     .eq('account_id', accountId)
     .maybeSingle();
@@ -97,6 +100,7 @@ export async function getCampaignUsage(accountId: string): Promise<{
       balance: 0,
       monthly_allowance: 0,
       max_contacts: 0,
+      bonus_contacts: 0,
       plan_tier: 'none',
       cycle_start: null,
       cycle_end: null,
@@ -192,24 +196,48 @@ export async function updateCampaignCreditPoolMetadata(
     plan_tier: string;
     cycle_start: string;
     cycle_end: string;
+    bonus_contacts?: number;
   },
 ): Promise<void> {
   await rpc('ensure_campaign_credit_pool', {
     p_account_id: accountId,
   });
 
+  const patch: Record<string, unknown> = {
+    monthly_allowance: values.monthly_allowance,
+    max_contacts: values.max_contacts,
+    plan_tier: values.plan_tier,
+    cycle_start: values.cycle_start,
+    cycle_end: values.cycle_end,
+    updated_at: new Date().toISOString(),
+  };
+  if (values.bonus_contacts !== undefined) {
+    patch.bonus_contacts = values.bonus_contacts;
+  }
+
   const { error } = await fromTable('campaign_credit_pools')
-    .update({
-      monthly_allowance: values.monthly_allowance,
-      max_contacts: values.max_contacts,
-      plan_tier: values.plan_tier,
-      cycle_start: values.cycle_start,
-      cycle_end: values.cycle_end,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq('account_id', accountId);
 
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function applyCampaignContactBump(
+  accountId: string,
+  contacts: number,
+  stripeEventId?: string | null,
+): Promise<CampaignCreditPool> {
+  const { data, error } = await rpc('apply_campaign_contact_bump', {
+    p_account_id: accountId,
+    p_contacts: contacts,
+    p_stripe_event_id: stripeEventId ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as CampaignCreditPool;
 }

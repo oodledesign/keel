@@ -108,6 +108,9 @@ export const updateCampaignAction = enhanceAction(
       audienceType: data.audienceType,
       audienceConfig: data.audienceConfig,
       scheduledAt: data.scheduledAt,
+      abEnabled: data.abEnabled,
+      subjectB: data.subjectB,
+      abSplitPercent: data.abSplitPercent,
     });
     revalidateCampaignPaths(data.accountSlug, campaign.id);
     return { success: true as const };
@@ -151,7 +154,6 @@ export const sendCampaignAction = enhanceAction(
   },
   { auth: true, schema: SendCampaignSchema },
 );
-
 
 export const sendCampaignTestAction = enhanceAction(
   async function (data, user) {

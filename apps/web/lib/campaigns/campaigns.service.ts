@@ -2,6 +2,10 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  campaignFeaturesForTier,
+  effectiveCampaignContactCap,
+} from '~/lib/billing/campaign-pricing';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import {
   debitCampaignCredits,
@@ -10,19 +14,23 @@ import {
   refundCampaignCredits,
 } from '~/lib/campaign-credits/ledger';
 import {
+  assignSubjectVariant,
+  subjectForVariant,
+} from '~/lib/campaigns/campaign-ab';
+import {
   campaignDocumentHasContent,
   parseCampaignDocument,
   resolveCampaignDocument,
 } from '~/lib/campaigns/campaign-document';
-import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
-import { formUrlForMerge } from '~/lib/campaigns/form-link';
-import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import {
   CAMPAIGN_TEST_MAX_RECIPIENTS,
   CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
   campaignTestSubject,
   normalizeCampaignTestEmails,
 } from '~/lib/campaigns/campaign-test-send';
+import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
+import { formUrlForMerge } from '~/lib/campaigns/form-link';
+import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
@@ -35,9 +43,7 @@ import {
   resolveSendingHost,
   resolveWorkspaceMailFrom,
 } from '~/lib/sending-domains/server';
-import {
-  buildWorkspaceMailingListUnsubscribeUrl,
-} from '~/lib/workspace-forms/workspace-mailing-list';
+import { buildWorkspaceMailingListUnsubscribeUrl } from '~/lib/workspace-forms/workspace-mailing-list';
 
 import {
   type CampaignAudienceConfig,
@@ -97,6 +103,9 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     bounceCount: Number(row.bounce_count ?? 0),
     complaintCount: Number(row.complaint_count ?? 0),
     lastError: (row.last_error as string | null) ?? null,
+    abEnabled: Boolean(row.ab_enabled),
+    subjectB: (row.subject_b as string | null) ?? null,
+    abSplitPercent: Number(row.ab_split_percent ?? 50),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -192,6 +201,9 @@ class CampaignsService {
     audienceType?: CampaignAudienceType;
     audienceConfig?: CampaignAudienceConfig;
     scheduledAt?: string | null;
+    abEnabled?: boolean;
+    subjectB?: string | null;
+    abSplitPercent?: number;
   }): Promise<EmailCampaign> {
     const existing = await this.get(input.accountId, input.campaignId);
     if (existing.status !== 'draft' && existing.status !== 'scheduled') {
@@ -272,8 +284,42 @@ class CampaignsService {
       }
     }
 
+    if (input.abEnabled !== undefined || input.subjectB !== undefined) {
+      const usage = await getCampaignUsage(input.accountId);
+      const features = campaignFeaturesForTier(usage.pool.plan_tier);
+      if ((input.abEnabled || existing.abEnabled) && !features.abSubjects) {
+        throw new Error(
+          'A/B subject testing is available on Growth and Pro. Upgrade Campaigns to use it.',
+        );
+      }
+    }
+
+    if (input.abEnabled !== undefined) {
+      patch.ab_enabled = Boolean(input.abEnabled);
+    }
+    if (input.subjectB !== undefined) {
+      patch.subject_b = input.subjectB?.trim() || null;
+    }
+    if (input.abSplitPercent !== undefined) {
+      const split = Math.round(input.abSplitPercent);
+      if (split < 10 || split > 90) {
+        throw new Error('A/B split must be between 10% and 90%');
+      }
+      patch.ab_split_percent = split;
+    }
+
     if (input.audienceType !== undefined) {
-      patch.audience_type = parseCampaignAudienceType(input.audienceType);
+      const nextType = parseCampaignAudienceType(input.audienceType);
+      if (nextType === 'custom') {
+        const usage = await getCampaignUsage(input.accountId);
+        const features = campaignFeaturesForTier(usage.pool.plan_tier);
+        if (!features.savedLists) {
+          throw new Error(
+            'Custom lists are available on Growth and Pro. Upgrade Campaigns to assemble a mixed audience.',
+          );
+        }
+      }
+      patch.audience_type = nextType;
     }
     if (input.audienceConfig !== undefined) {
       patch.audience_config = parseCampaignAudienceConfig(input.audienceConfig);
@@ -320,7 +366,7 @@ class CampaignsService {
       WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select(
-        'id, campaign_id, email, display_name, status, skip_reason, error_message, ses_message_id, sent_at, unsubscribed_at, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, bounce_type, bounce_subtype, complaint_at',
+        'id, campaign_id, email, display_name, status, skip_reason, error_message, ses_message_id, sent_at, unsubscribed_at, delivered_at, opened_at, open_count, clicked_at, click_count, bounced_at, bounce_type, bounce_subtype, complaint_at, subject_variant',
       )
       .eq('account_id', accountId)
       .eq('campaign_id', campaignId)
@@ -348,6 +394,10 @@ class CampaignsService {
       bounceType: (row.bounce_type as string | null) ?? null,
       bounceSubtype: (row.bounce_subtype as string | null) ?? null,
       complaintAt: (row.complaint_at as string | null) ?? null,
+      subjectVariant:
+        row.subject_variant === 'a' || row.subject_variant === 'b'
+          ? row.subject_variant
+          : null,
     }));
   }
 
@@ -443,16 +493,25 @@ class CampaignsService {
     }
 
     const usage = await getCampaignUsage(input.accountId);
-    const maxContacts = usage.pool.max_contacts;
+    const features = campaignFeaturesForTier(usage.pool.plan_tier);
+    if (campaign.audienceType === 'custom' && !features.savedLists) {
+      throw new Error(
+        'Custom lists are available on Growth and Pro. Upgrade Campaigns or pick subscribers, clients, or contacts.',
+      );
+    }
+    const maxContacts = effectiveCampaignContactCap({
+      maxContacts: usage.pool.max_contacts,
+      bonusContacts: usage.pool.bonus_contacts,
+    });
     if (maxContacts > 0 && recipients.length > maxContacts) {
       throw new Error(
-        `This plan allows ${maxContacts} contacts. The audience has ${recipients.length}. Upgrade or reduce the audience before sending.`,
+        `This plan allows ${maxContacts} contacts. The audience has ${recipients.length}. Upgrade or buy a contact pack before sending.`,
       );
     }
 
     if (usage.pool.balance < recipients.length) {
       throw new Error(
-        `Not enough send units. Need ${recipients.length}, have ${usage.pool.balance}.`,
+        `Not enough send units. Need ${recipients.length}, have ${usage.pool.balance}. Upgrade or buy a send pack before sending.`,
       );
     }
 
@@ -485,6 +544,9 @@ class CampaignsService {
       display_name: recipient.displayName,
       unsubscribe_token: recipient.unsubscribeToken,
       status: 'pending',
+      subject_variant: campaign.abEnabled
+        ? assignSubjectVariant(recipient.email, campaign.abSplitPercent)
+        : null,
     }));
 
     const { error: insertError } = await fromTable(
@@ -574,7 +636,7 @@ class CampaignsService {
       WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
     )
       .select(
-        'id, email, display_name, preference_id, unsubscribe_token, status',
+        'id, email, display_name, preference_id, unsubscribe_token, status, subject_variant',
       )
       .eq('campaign_id', campaign.id)
       .eq('account_id', input.accountId)
@@ -590,6 +652,7 @@ class CampaignsService {
       display_name: string | null;
       preference_id: string | null;
       unsubscribe_token: string | null;
+      subject_variant: string | null;
     }>;
 
     const preferenceIds = [
@@ -677,11 +740,22 @@ class CampaignsService {
           unsubscribeToken: token,
         });
 
+        const variant =
+          recipient.subject_variant === 'a' || recipient.subject_variant === 'b'
+            ? recipient.subject_variant
+            : null;
+        const subject = subjectForVariant({
+          subjectA: campaign.subject,
+          subjectB: campaign.subjectB,
+          variant,
+          abEnabled: campaign.abEnabled,
+        });
+
         const { messageId } = await sendCampaignEmailViaSes({
           to: recipient.email,
           from: fromHeader,
           replyTo,
-          subject: campaign.subject,
+          subject,
           html,
           listUnsubscribeUrl: buildWorkspaceMailingListUnsubscribeUrl(token),
           accountId: input.accountId,
@@ -690,6 +764,7 @@ class CampaignsService {
           metadata: {
             campaign_id: campaign.id,
             recipient_id: recipient.id,
+            subject_variant: variant,
           },
         });
 
@@ -786,7 +861,6 @@ class CampaignsService {
       remaining,
     };
   }
-
 
   /**
    * Send a free test of the current campaign HTML to explicit addresses.
@@ -909,6 +983,9 @@ class CampaignsService {
   private assertReadyToSend(campaign: EmailCampaign) {
     if (!campaign.subject.trim()) {
       throw new Error('Add a subject before sending');
+    }
+    if (campaign.abEnabled && !campaign.subjectB?.trim()) {
+      throw new Error('Add subject B before sending an A/B test');
     }
     const hasContent = campaign.bodyDocument
       ? campaignDocumentHasContent(campaign.bodyDocument)

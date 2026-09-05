@@ -36,3 +36,9 @@ SES_EVENTS_SNS_TOPIC_ARN=arn:aws:sns:REGION:ACCOUNT:ozer-ses-events
 | reject / rendering_failure / delivery_delay | Logged only |
 
 Local: `SES_SNS_SKIP_VERIFY=1` skips SNS signature checks (never in production).
+
+## Campaign A/B subjects
+
+Growth/Pro campaigns store `ab_enabled`, `subject_b`, and `subject_variant`
+on recipients. Analytics compare unique opens/clicks per variant from the
+same SES event log — no extra tracking pixels.

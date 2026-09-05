@@ -1,3 +1,4 @@
+export { CIRCULATION_COMMERCIAL_STUB } from './circulation-allowance';
 export {
   CIRCULATION_PURPOSE,
   CONSENT_COPY_VERSION,

@@ -1,8 +1,8 @@
-import type { CampaignDocument } from './campaign-document';
 import type {
   CampaignAudienceConfig,
   CampaignAudienceType,
 } from './campaign-audience';
+import type { CampaignDocument } from './campaign-document';
 
 export type EmailCampaignStatus =
   | 'draft'
@@ -40,6 +40,9 @@ export type EmailCampaign = {
   bounceCount: number;
   complaintCount: number;
   lastError: string | null;
+  abEnabled: boolean;
+  subjectB: string | null;
+  abSplitPercent: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,6 +67,7 @@ export type EmailCampaignRecipient = {
   bounceType: string | null;
   bounceSubtype: string | null;
   complaintAt: string | null;
+  subjectVariant: 'a' | 'b' | null;
 };
 
 export type CampaignCreditPool = {
@@ -71,6 +75,7 @@ export type CampaignCreditPool = {
   balance: number;
   monthly_allowance: number;
   max_contacts: number;
+  bonus_contacts: number;
   plan_tier: string;
   cycle_start: string | null;
   cycle_end: string | null;

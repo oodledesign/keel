@@ -35,6 +35,8 @@ export function CampaignAudiencePicker({
   clients,
   contacts,
   disabled,
+  savedListsEnabled = true,
+  upgradeHref,
   onChange,
 }: {
   audienceType: CampaignAudienceType;
@@ -48,6 +50,8 @@ export function CampaignAudiencePicker({
   clients: AudiencePickerOption[];
   contacts: AudiencePickerOption[];
   disabled?: boolean;
+  savedListsEnabled?: boolean;
+  upgradeHref?: string;
   onChange: (next: {
     audienceType: CampaignAudienceType;
     audienceConfig: CampaignAudienceConfig;
@@ -67,6 +71,7 @@ export function CampaignAudiencePicker({
   );
 
   const setType = (next: CampaignAudienceType) => {
+    if (next === 'custom' && !savedListsEnabled) return;
     onChange({
       audienceType: next,
       audienceConfig:
@@ -77,7 +82,10 @@ export function CampaignAudiencePicker({
   };
 
   return (
-    <div className={`${workspacePanelCard} space-y-4 p-4`} data-test="campaign-audience-picker">
+    <div
+      className={`${workspacePanelCard} space-y-4 p-4`}
+      data-test="campaign-audience-picker"
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className={`font-semibold ${workspaceText}`}>Audience</h2>
@@ -86,7 +94,10 @@ export function CampaignAudiencePicker({
             addresses are never sent.
           </p>
         </div>
-        <p className={`text-sm font-medium ${workspaceText}`} data-test="campaign-audience-estimate">
+        <p
+          className={`text-sm font-medium ${workspaceText}`}
+          data-test="campaign-audience-estimate"
+        >
           ~{estimatedCount.toLocaleString()} recipients
         </p>
       </div>
@@ -109,18 +120,26 @@ export function CampaignAudiencePicker({
             key={type}
             className="flex cursor-pointer items-start gap-3 rounded-md border border-[color:var(--workspace-shell-border)] p-3"
           >
-            <RadioGroupItem value={type} id={`audience-${type}`} />
+            <RadioGroupItem
+              value={type}
+              id={`audience-${type}`}
+              disabled={type === 'custom' && !savedListsEnabled}
+            />
             <span className="min-w-0">
               <span className={`block font-medium ${workspaceText}`}>
                 {AUDIENCE_TYPE_LABEL[type]}
                 {count != null ? (
-                  <span className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}>
+                  <span
+                    className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}
+                  >
                     ({count.toLocaleString()})
                   </span>
                 ) : null}
               </span>
               <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
-                {AUDIENCE_TYPE_HINT[type]}
+                {type === 'custom' && !savedListsEnabled
+                  ? 'Custom lists are on Growth and Pro.'
+                  : AUDIENCE_TYPE_HINT[type]}
               </span>
             </span>
           </label>
@@ -201,8 +220,17 @@ export function CampaignAudiencePicker({
       ) : null}
 
       <p className={`text-xs ${workspaceTextMuted}`}>
-        Saved named lists and filter builders are coming later. For now, pick a
-        source or assemble a custom list on this campaign.
+        {savedListsEnabled
+          ? 'Saved named lists and filter builders are coming later. Assemble a custom list on this campaign.'
+          : 'Starter can send to subscribers, clients, or contacts. Custom lists unlock on Growth.'}
+        {!savedListsEnabled && upgradeHref ? (
+          <>
+            {' '}
+            <a href={upgradeHref} className="underline underline-offset-2">
+              Upgrade
+            </a>
+          </>
+        ) : null}
       </p>
     </div>
   );
@@ -259,10 +287,14 @@ function PickerList({
                   onCheckedChange={(value) => onToggle(row.id, value === true)}
                 />
                 <label htmlFor={id} className="min-w-0 cursor-pointer text-sm">
-                  <span className={`block truncate font-medium ${workspaceText}`}>
+                  <span
+                    className={`block truncate font-medium ${workspaceText}`}
+                  >
                     {row.displayName}
                   </span>
-                  <span className={`block truncate text-xs ${workspaceTextMuted}`}>
+                  <span
+                    className={`block truncate text-xs ${workspaceTextMuted}`}
+                  >
                     {row.email}
                   </span>
                 </label>

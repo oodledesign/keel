@@ -2,12 +2,20 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { UpsertSubscriptionParams } from '@kit/billing/types';
+import type {
+  UpsertOrderParams,
+  UpsertSubscriptionParams,
+} from '@kit/billing/types';
 import { getLogger } from '@kit/shared/logger';
 
-import { CAMPAIGN_SUBSCRIPTION_TIERS } from '~/lib/billing/campaign-pricing';
+import {
+  CAMPAIGN_CONTACT_BUMP_PACKS,
+  CAMPAIGN_SEND_TOPUP_PACKS,
+  CAMPAIGN_SUBSCRIPTION_TIERS,
+} from '~/lib/billing/campaign-pricing';
 import { OZER_STRIPE_PRICES } from '~/lib/billing/stripe-price-ids';
 import {
+  applyCampaignContactBump,
   grantCampaignCredits,
   updateCampaignCreditPoolMetadata,
 } from '~/lib/campaign-credits/ledger';
@@ -31,6 +39,22 @@ const CAMPAIGN_MONTHLY_BY_PRICE: Record<
     maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[2].maxContacts,
     planTier: 'pro',
   },
+};
+
+const CAMPAIGN_SEND_TOPUP_BY_PRICE: Record<string, number> = {
+  [OZER_STRIPE_PRICES.campaigns_topup_sends_2k]:
+    CAMPAIGN_SEND_TOPUP_PACKS[0].sendUnits,
+  [OZER_STRIPE_PRICES.campaigns_topup_sends_10k]:
+    CAMPAIGN_SEND_TOPUP_PACKS[1].sendUnits,
+  [OZER_STRIPE_PRICES.campaigns_topup_sends_50k]:
+    CAMPAIGN_SEND_TOPUP_PACKS[2].sendUnits,
+};
+
+const CAMPAIGN_CONTACT_BUMP_BY_PRICE: Record<string, number> = {
+  [OZER_STRIPE_PRICES.campaigns_topup_contacts_500]:
+    CAMPAIGN_CONTACT_BUMP_PACKS[0].contacts,
+  [OZER_STRIPE_PRICES.campaigns_topup_contacts_2500]:
+    CAMPAIGN_CONTACT_BUMP_PACKS[1].contacts,
 };
 
 function addMonths(date: Date, months: number): Date {
@@ -90,6 +114,7 @@ export async function fulfillCampaignSubscriptionGrant(
     idempotencyKey,
   );
 
+  // Replenish the monthly allotment; do not wipe bonus_contacts from packs.
   await updateCampaignCreditPoolMetadata(accountId, {
     monthly_allowance: sendUnits,
     max_contacts: maxContacts,
@@ -128,6 +153,65 @@ export async function fulfillCampaignSubscriptionGrant(
   );
 
   return { granted: true, sendUnits };
+}
+
+export async function fulfillCampaignPackOrder(
+  _admin: SupabaseClient,
+  order: UpsertOrderParams,
+): Promise<{ granted: boolean; sendUnits: number; contacts: number }> {
+  const logger = await getLogger();
+  const accountId = order.target_account_id;
+  const sessionId = order.target_order_id;
+
+  if (!accountId || !sessionId || order.status !== 'succeeded') {
+    return { granted: false, sendUnits: 0, contacts: 0 };
+  }
+
+  let sendUnits = 0;
+  let contacts = 0;
+
+  for (const item of order.line_items ?? []) {
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    const sends = CAMPAIGN_SEND_TOPUP_BY_PRICE[item.variant_id];
+    if (sends) sendUnits += sends * qty;
+    const bump = CAMPAIGN_CONTACT_BUMP_BY_PRICE[item.variant_id];
+    if (bump) contacts += bump * qty;
+  }
+
+  if (sendUnits <= 0 && contacts <= 0) {
+    return { granted: false, sendUnits: 0, contacts: 0 };
+  }
+
+  if (sendUnits > 0) {
+    await grantCampaignCredits(
+      accountId,
+      sendUnits,
+      'topup_purchase',
+      addMonths(new Date(), 6),
+      `campaign_topup:${sessionId}`,
+    );
+  }
+
+  if (contacts > 0) {
+    await applyCampaignContactBump(
+      accountId,
+      contacts,
+      `campaign_contacts:${sessionId}`,
+    );
+  }
+
+  logger.info(
+    {
+      name: 'campaigns.credits.pack',
+      accountId,
+      sessionId,
+      sendUnits,
+      contacts,
+    },
+    'Granted campaign pack',
+  );
+
+  return { granted: true, sendUnits, contacts };
 }
 
 export function findCampaignMonthlyByPriceId(priceId: string): {

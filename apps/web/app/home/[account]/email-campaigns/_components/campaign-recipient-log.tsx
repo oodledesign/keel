@@ -64,6 +64,9 @@ export function CampaignRecipientLog({
           <thead>
             <tr className={workspaceTextMuted}>
               <th className="pb-2 font-medium">Recipient</th>
+              {campaign.abEnabled ? (
+                <th className="pb-2 font-medium">Variant</th>
+              ) : null}
               <th className="pb-2 font-medium">Status</th>
               <th className="pb-2 font-medium">Engagement</th>
               <th className="pb-2 font-medium">Detail</th>
@@ -85,6 +88,13 @@ export function CampaignRecipientLog({
                       </div>
                     ) : null}
                   </td>
+                  {campaign.abEnabled ? (
+                    <td className={`py-2 ${workspaceTextMuted}`}>
+                      {row.subjectVariant
+                        ? row.subjectVariant.toUpperCase()
+                        : '—'}
+                    </td>
+                  ) : null}
                   <td className="py-2">
                     <Badge variant="outline">{row.status}</Badge>
                     {row.unsubscribedAt ? (

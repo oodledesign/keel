@@ -79,7 +79,9 @@ export function CampaignsList({
                       {campaign.name}
                     </h3>
                     <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-                      {campaign.subject || 'No subject yet'}
+                      {campaign.abEnabled
+                        ? `${campaign.subject || 'Subject A'} / ${campaign.subjectB || 'Subject B'}`
+                        : campaign.subject || 'No subject yet'}
                     </p>
                   </div>
                   <Badge variant="outline">

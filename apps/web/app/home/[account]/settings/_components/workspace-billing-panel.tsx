@@ -7,6 +7,7 @@ import {
   BillingPortalCard,
   CurrentLifetimeOrderCard,
 } from '@kit/billing-gateway/components';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { If } from '@kit/ui/if';
@@ -26,8 +27,10 @@ import { loadPlatformBillingInvoices } from '~/lib/billing/platform-billing-invo
 import { loadPlatformSubscriptionDiscount } from '~/lib/billing/platform-subscription-discount';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
 import { estimateWorkspacePlanCharge } from '~/lib/billing/workspace-plan-estimate';
+import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
 import { getCommercialSeatBreakdown } from '~/lib/commercial/commercial-seat-access';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
 
 import { PaymentRecoveryCard } from '../../_components/payment-recovery-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
@@ -35,6 +38,7 @@ import { ActiveAddonsBillingCard } from './active-addons-billing-card';
 import { BillingCheckoutFocus } from './billing-checkout-focus';
 import { MediaGenerateAppToggle } from './media-generate-app-toggle';
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
+import { WorkspaceCampaignsBillingCard } from './workspace-campaigns-billing-card';
 import { WorkspaceMediaUnitsBillingCard } from './workspace-media-units-billing-card';
 import { WorkspacePaymentHistoryCard } from './workspace-payment-history-card';
 import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
@@ -132,6 +136,16 @@ export async function WorkspaceBillingPanel({
   const hasAnyActiveAddon = Object.values(addonState.addons).some(Boolean);
   const showMediaGenerate =
     canManageBilling && Boolean(addonState.addons.addon_media_generate);
+  const showCampaigns = Boolean(addonState.addons.addon_campaigns);
+  const campaignUsage = showCampaigns
+    ? await getCampaignUsage(accountId)
+    : null;
+  const campaignSubscribers = showCampaigns
+    ? await listWorkspaceMailingListSubscribers(
+        getSupabaseServerAdminClient(),
+        accountId,
+      )
+    : [];
 
   const commercialBreakdown = isCommercial
     ? await getCommercialSeatBreakdown(billingClient, accountId)
@@ -164,10 +178,7 @@ export async function WorkspaceBillingPanel({
 
   const [paymentInvoices, subscriptionDiscount] = await Promise.all([
     customerId
-      ? loadPlatformBillingInvoices(
-          customerId,
-          workspaceStripeSubscriptionId,
-        )
+      ? loadPlatformBillingInvoices(customerId, workspaceStripeSubscriptionId)
       : Promise.resolve([]),
     subscriptionIsWorkspacePlan
       ? loadPlatformSubscriptionDiscount(workspaceStripeSubscriptionId)
@@ -337,6 +348,7 @@ export async function WorkspaceBillingPanel({
         <ActiveAddonsBillingCard
           accountSlug={accountSlug}
           activeAddons={addonState.addons}
+          excludeKeys={['addon_media_generate', 'addon_campaigns']}
         />
 
         {!hasAnyActiveAddon && canManageBilling ? (
@@ -356,6 +368,16 @@ export async function WorkspaceBillingPanel({
           accountSlug={accountSlug}
           canManageBilling={canManageBilling}
         />
+
+        {showCampaigns && campaignUsage ? (
+          <WorkspaceCampaignsBillingCard
+            accountId={accountId}
+            accountSlug={accountSlug}
+            canManageBilling={canManageBilling}
+            subscriberCount={campaignSubscribers.length}
+            usage={campaignUsage.pool}
+          />
+        ) : null}
 
         {showMediaGenerate ? (
           <>

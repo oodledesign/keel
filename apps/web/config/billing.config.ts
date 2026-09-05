@@ -997,8 +997,8 @@ export default createBillingSchema({
           lineItems: [
             {
               id: OZER_STRIPE_PRICES.addon_campaigns_starter_monthly,
-              name: '500 contacts · 2,000 emails / month',
-              cost: 19,
+              name: '500 contacts · 5,000 emails / month',
+              cost: 9,
               type: 'flat',
             },
           ],
@@ -1011,8 +1011,8 @@ export default createBillingSchema({
           lineItems: [
             {
               id: OZER_STRIPE_PRICES.addon_campaigns_growth_monthly,
-              name: '2,500 contacts · 10,000 emails / month',
-              cost: 49,
+              name: '2,500 contacts · 20,000 emails / month',
+              cost: 19,
               type: 'flat',
             },
           ],
@@ -1025,8 +1025,8 @@ export default createBillingSchema({
           lineItems: [
             {
               id: OZER_STRIPE_PRICES.addon_campaigns_pro_monthly,
-              name: '10,000 contacts · 50,000 emails / month',
-              cost: 99,
+              name: '10,000 contacts · 60,000 emails / month',
+              cost: 49,
               type: 'flat',
             },
           ],
@@ -1036,8 +1036,139 @@ export default createBillingSchema({
         'Mailing-list audience (respects unsubscribe)',
         'In-app email builder with workspace branding',
         'Send via Amazon SES as the workspace, not Ozer',
+        'A/B subject tests on Growth and Pro',
         'Send log: sent, failed, unsubscribes',
       ],
+    },
+    {
+      id: 'ozer-campaigns-topup-sends-2k',
+      name: 'Campaigns send pack — +2,000',
+      description:
+        '2,000 extra campaign send units (expire 6 months from purchase)',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'campaigns-topup-sends-2k',
+          name: '+2,000 send units',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.campaigns_topup_sends_2k,
+              name: '2,000 campaign send units',
+              cost: 6,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '2,000 send units',
+        'Expires 6 months from purchase',
+        'Does not raise the contact cap',
+      ],
+    },
+    {
+      id: 'ozer-campaigns-topup-sends-10k',
+      name: 'Campaigns send pack — +10,000',
+      description:
+        '10,000 extra campaign send units (expire 6 months from purchase)',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'campaigns-topup-sends-10k',
+          name: '+10,000 send units',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.campaigns_topup_sends_10k,
+              name: '10,000 campaign send units',
+              cost: 24,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '10,000 send units',
+        'Expires 6 months from purchase',
+        'Does not raise the contact cap',
+      ],
+    },
+    {
+      id: 'ozer-campaigns-topup-sends-50k',
+      name: 'Campaigns send pack — +50,000',
+      description:
+        '50,000 extra campaign send units (expire 6 months from purchase)',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'campaigns-topup-sends-50k',
+          name: '+50,000 send units',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.campaigns_topup_sends_50k,
+              name: '50,000 campaign send units',
+              cost: 99,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '50,000 send units',
+        'Expires 6 months from purchase',
+        'Does not raise the contact cap',
+      ],
+    },
+    {
+      id: 'ozer-campaigns-topup-contacts-500',
+      name: 'Campaigns contact bump — +500',
+      description: 'Adds 500 contacts to this workspace’s Campaigns cap',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'campaigns-topup-contacts-500',
+          name: '+500 contacts',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.campaigns_topup_contacts_500,
+              name: '500 extra campaign contacts',
+              cost: 8,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: ['+500 contact cap', 'Persists across billing cycles'],
+    },
+    {
+      id: 'ozer-campaigns-topup-contacts-2500',
+      name: 'Campaigns contact bump — +2,500',
+      description: 'Adds 2,500 contacts to this workspace’s Campaigns cap',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'campaigns-topup-contacts-2500',
+          name: '+2,500 contacts',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.campaigns_topup_contacts_2500,
+              name: '2,500 extra campaign contacts',
+              cost: 29,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: ['+2,500 contact cap', 'Persists across billing cycles'],
     },
   ],
 });

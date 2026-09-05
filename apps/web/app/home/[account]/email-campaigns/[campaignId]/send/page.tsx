@@ -4,6 +4,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { CampaignSendPanel } from '../../_components/campaign-send-panel';
+import { CampaignUsageCard } from '../../_components/campaign-usage-card';
 import { loadCampaignDetail } from '../../_lib/server/campaigns.loader';
 
 interface CampaignSendPageProps {
@@ -26,16 +27,26 @@ async function CampaignSendPage({ params }: CampaignSendPageProps) {
   }
 
   return (
-    <CampaignSendPanel
-      accountId={workspace.account.id}
-      accountSlug={account}
-      campaign={data.campaign}
-      recipients={data.recipients}
-      audienceCount={data.audienceCount}
-      usage={data.usage}
-      brand={data.brand}
-      clients={data.audienceOptions.clients}
-    />
+    <div className="space-y-6">
+      <CampaignUsageCard
+        subscriberCount={data.subscriberCount}
+        usage={data.usage}
+        fromEmail={data.campaign.fromEmail ?? data.brand.contact_email}
+        accountSlug={account}
+      />
+      <CampaignSendPanel
+        accountId={workspace.account.id}
+        accountSlug={account}
+        campaign={data.campaign}
+        recipients={data.recipients}
+        audienceCount={data.audienceCount}
+        usage={data.usage}
+        events={data.events}
+        features={data.features}
+        brand={data.brand}
+        clients={data.audienceOptions.clients}
+      />
+    </div>
   );
 }
 

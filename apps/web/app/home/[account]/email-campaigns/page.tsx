@@ -36,6 +36,7 @@ async function CampaignsPage({ params }: CampaignsPageProps) {
           subscriberCount={data.subscriberCount}
           usage={data.usage}
           fromEmail={data.brand.contact_email}
+          accountSlug={accountSlug}
         />
         <CampaignAudienceCard
           subscriberCount={data.subscriberCount}

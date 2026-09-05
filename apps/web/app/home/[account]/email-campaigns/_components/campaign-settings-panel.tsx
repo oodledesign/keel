@@ -8,11 +8,13 @@ import { useRouter } from 'next/navigation';
 import { Eye, Mail, Send } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import type { CampaignFeatureFlags } from '~/lib/billing/campaign-pricing';
 import {
   type CampaignAudienceConfig,
   type CampaignAudienceType,
@@ -32,8 +34,8 @@ import {
   updateCampaignAction,
 } from '../_lib/server/server-actions';
 import {
-  CampaignAudiencePicker,
   type AudiencePickerOption,
+  CampaignAudiencePicker,
 } from './campaign-audience-picker';
 import {
   CampaignFromPicker,
@@ -56,6 +58,7 @@ export function CampaignSettingsPanel({
   audienceOptions,
   brand,
   sendingDomain,
+  features,
 }: {
   accountId: string;
   accountSlug: string;
@@ -70,12 +73,15 @@ export function CampaignSettingsPanel({
   };
   brand: { contact_email: string | null };
   sendingDomain: CampaignSendingDomainOption | null;
+  features: CampaignFeatureFlags;
 }) {
   const router = useRouter();
   const editable =
     campaign.status === 'draft' || campaign.status === 'scheduled';
   const [name, setName] = useState(campaign.name);
   const [subject, setSubject] = useState(campaign.subject);
+  const [abEnabled, setAbEnabled] = useState(campaign.abEnabled);
+  const [subjectB, setSubjectB] = useState(campaign.subjectB ?? '');
   const [previewText, setPreviewText] = useState(campaign.previewText ?? '');
   const [fromName, setFromName] = useState(campaign.fromName ?? '');
   const [fromEmail, setFromEmail] = useState(() => {
@@ -139,6 +145,8 @@ export function CampaignSettingsPanel({
       name,
       subject,
       previewText,
+      abEnabled: features.abSubjects ? abEnabled : false,
+      subjectB: features.abSubjects ? subjectB : null,
       fromName: fromName.trim() || null,
       fromEmail: fromEmail.trim() || null,
       replyTo: replyTo.trim() || null,
@@ -159,7 +167,9 @@ export function CampaignSettingsPanel({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="campaign-subject">Subject</Label>
+          <Label htmlFor="campaign-subject">
+            {abEnabled && features.abSubjects ? 'Subject A' : 'Subject'}
+          </Label>
           <Input
             id="campaign-subject"
             value={subject}
@@ -167,6 +177,54 @@ export function CampaignSettingsPanel({
             onChange={(event) => setSubject(event.target.value)}
           />
         </div>
+      </div>
+
+      <div className={`${workspacePanelCard} space-y-3 p-4`}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className={`font-semibold ${workspaceText}`}>
+              A/B subject test
+            </h2>
+            <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+              Growth and Pro split the audience 50/50 between two subjects.
+              Content stays the same.
+            </p>
+          </div>
+          {features.abSubjects ? (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={abEnabled}
+                disabled={!editable || pending}
+                onCheckedChange={(value) => setAbEnabled(value === true)}
+                data-test="campaign-ab-enabled"
+              />
+              Enable
+            </label>
+          ) : (
+            <Button asChild size="sm" variant="outline">
+              <Link
+                href={`${pathsConfig.app.accountAddonsSettings.replace(
+                  '[account]',
+                  accountSlug,
+                )}?addon=campaigns#addons`}
+              >
+                Upgrade to Growth
+              </Link>
+            </Button>
+          )}
+        </div>
+        {features.abSubjects && abEnabled ? (
+          <div className="space-y-2">
+            <Label htmlFor="campaign-subject-b">Subject B</Label>
+            <Input
+              id="campaign-subject-b"
+              value={subjectB}
+              disabled={!editable || pending}
+              onChange={(event) => setSubjectB(event.target.value)}
+              data-test="campaign-subject-b"
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -201,6 +259,11 @@ export function CampaignSettingsPanel({
         clients={audienceOptions.clients}
         contacts={audienceOptions.contacts}
         disabled={!editable || pending}
+        savedListsEnabled={features.savedLists}
+        upgradeHref={`${pathsConfig.app.accountAddonsSettings.replace(
+          '[account]',
+          accountSlug,
+        )}?addon=campaigns#addons`}
         onChange={({ audienceType: nextType, audienceConfig: nextConfig }) => {
           setAudienceType(nextType);
           setAudienceConfig(nextConfig);
@@ -320,7 +383,11 @@ export function CampaignSettingsPanel({
             Edit content
           </Link>
         </Button>
-        <Button asChild className={workspaceBtnPrimary} data-test="campaign-goto-send">
+        <Button
+          asChild
+          className={workspaceBtnPrimary}
+          data-test="campaign-goto-send"
+        >
           <Link href={sendHref}>
             <Send className="mr-2 h-4 w-4" />
             Send
