@@ -962,6 +962,7 @@ function ListingFormFields({
             value={form.notes}
             onChange={(e) => field('notes', e.target.value)}
             rows={2}
+            placeholder="Internal notes (team only)"
             className={inputClass}
           />
         </div>

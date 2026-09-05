@@ -65,6 +65,7 @@ import { useDisposalAccess } from './disposal-access-context';
 import { ListingCirculateDialog } from './listing-circulate-dialog';
 import { ListingCirculationLog } from './listing-circulation-log';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingInternalNotesCard } from './listing-internal-notes-card';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
 import { ListingPeopleStrip } from './listing-people-strip';
@@ -451,6 +452,8 @@ export function ListingOverviewSection({
 
         <ListingMapCard listing={listing} />
       </div>
+
+      <ListingInternalNotesCard accountId={accountId} listing={listing} />
 
       {listing.keyPoints.length > 0 ? (
         <Card className={workspacePanelCard}>
