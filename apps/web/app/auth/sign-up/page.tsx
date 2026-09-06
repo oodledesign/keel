@@ -11,6 +11,7 @@ import {
   isBusinessSignupIntent,
   resolveSignupContext,
 } from '~/lib/auth/signup-context';
+import { resolveSignupNext } from '~/lib/auth/signup-next';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { AuthSplitShell } from '../_components/auth-split-shell';
@@ -21,12 +22,13 @@ import { SignupContextPanel } from './_components/signup-context-panel';
 interface SignUpPageProps {
   searchParams: Promise<{
     next?: string;
+    intent?: string;
   }>;
 }
 
 export const generateMetadata = async ({ searchParams }: SignUpPageProps) => {
-  const { next } = await searchParams;
-  const context = resolveSignupContext(next);
+  const { next, intent } = await searchParams;
+  const context = resolveSignupContext(resolveSignupNext(next, intent));
 
   return {
     title: context.heading,
@@ -34,7 +36,8 @@ export const generateMetadata = async ({ searchParams }: SignUpPageProps) => {
 };
 
 async function SignUpPage({ searchParams }: SignUpPageProps) {
-  const { next } = await searchParams;
+  const { next: rawNext, intent } = await searchParams;
+  const next = resolveSignupNext(rawNext, intent);
   const context = resolveSignupContext(next);
 
   if (context.showPlanConfirm) {

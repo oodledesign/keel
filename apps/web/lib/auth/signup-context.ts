@@ -1,15 +1,8 @@
 import 'server-only';
 
-import { getSafeRedirectPath } from '@kit/shared/utils';
-
-import pathsConfig from '~/config/paths.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import { getBillingProductPrice } from '~/lib/billing/billing-config-prices';
-import {
-  MARKETING_FREE_TIER,
-  type SetupIntent,
-  parseSetupIntent,
-} from '~/lib/billing/pricing-marketing';
+import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
 
 import {
   buildBusinessSignupContext,
@@ -20,6 +13,7 @@ import {
   buildCommercialSignupContext,
   isCommercialSignupIntent,
 } from './signup-context-commercial';
+import { parseIntentFromNext } from './signup-next';
 
 export type { SignupContext } from './signup-context-commercial';
 export {
@@ -46,23 +40,6 @@ const PROFILE_LABEL: Record<WorkspaceProfile, string> = {
   family: 'family',
   community: 'community',
 };
-
-function isSetupPath(path: string) {
-  return (
-    path === pathsConfig.app.workspaceSetup ||
-    path.startsWith(`${pathsConfig.app.workspaceSetup}?`)
-  );
-}
-
-function parseIntentFromNext(next: string | undefined): SetupIntent | null {
-  if (!next?.trim()) return null;
-
-  const path = getSafeRedirectPath(next, pathsConfig.app.home);
-  if (!isSetupPath(path)) return null;
-
-  const url = new URL(path, 'http://ozer.local');
-  return parseSetupIntent(url.searchParams);
-}
 
 function productHighlights(productId: string | undefined, fallback: string[]) {
   if (!productId) return fallback;
@@ -128,7 +105,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
     return buildCommercialSignupContext(intent);
   }
 
-  // Empty setup path = personal-only intent from /start
+  // Empty /setup path = personal-only (no profile / product / plan)
   if (!intent.profile && !intent.productId && !intent.planId) {
     return withPersonalDefaults({
       heading: 'Create your free personal account',

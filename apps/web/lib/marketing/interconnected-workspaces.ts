@@ -14,6 +14,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
+
 export type PersonalAssistantBilling = 'addon' | 'included';
 
 export type PersonalAssistantMarketing = {
@@ -147,7 +149,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       variant: 'accent',
       visual: 'none',
       ctaLabel: 'Start free',
-      href: '/start',
+      href: MARKETING_FREE_SIGNUP_URL,
     },
     {
       id: 'meeting',

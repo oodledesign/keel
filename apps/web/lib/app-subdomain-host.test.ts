@@ -29,6 +29,14 @@ describe('resolveAppSubdomainRedirect', () => {
     expect(
       resolveAppSubdomainRedirect(new URL('https://ozer.so/app/potters')),
     ).toBe('https://app.ozer.so/app/potters');
+
+    expect(
+      resolveAppSubdomainRedirect(new URL('https://www.ozer.so/start')),
+    ).toBe('https://app.ozer.so/start');
+
+    expect(
+      resolveAppSubdomainRedirect(new URL('https://app.ozer.so/start')),
+    ).toBeNull();
   });
 
   it('redirects app host root to dashboard and marketing pages to www', () => {

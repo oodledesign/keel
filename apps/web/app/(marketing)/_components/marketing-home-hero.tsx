@@ -116,7 +116,7 @@ export function MarketingHomeHero({ viewer }: MarketingHomeHeroProps) {
         >
           {isAuthenticated
             ? 'Personal and family workspaces stay free forever'
-            : 'Free forever · optional workspaces after signup'}
+            : 'No card required · pick a plan after you set up your studio'}
         </motion.p>
       </div>
 

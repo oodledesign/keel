@@ -4,6 +4,7 @@ import { ArrowRight, Download } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 import { isAssistantDownloadFilePath } from '~/lib/marketing/assistant-download';
 import type { FeatureSlug } from '~/lib/marketing/feature-landing-pages';
 import {
@@ -77,7 +78,7 @@ export function FeatureLandingPage({
   heroBadge,
   secondaryCta,
   ctaText = 'Start free',
-  ctaHref = '/auth/sign-up',
+  ctaHref = MARKETING_FREE_SIGNUP_URL,
 }: FeatureLandingPageProps) {
   return (
     <main

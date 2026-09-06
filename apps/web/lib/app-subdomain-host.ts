@@ -14,6 +14,7 @@ const APP_ROUTE_PREFIXES = [
   '/admin',
   '/onboarding',
   '/setup',
+  '/start',
   '/identities',
   '/update-password',
   '/join',
