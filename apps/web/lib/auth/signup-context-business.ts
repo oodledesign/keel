@@ -87,6 +87,38 @@ export function buildBusinessSignupContext(
   seatsOverride?: number,
   paidPlanOverride?: BusinessPaidPlan,
 ): SignupContext {
+  const hasExplicitPlan =
+    Boolean(paidPlanOverride) ||
+    Boolean(intent.productId) ||
+    Boolean(intent.planId) ||
+    intent.seats != null ||
+    seatsOverride != null;
+
+  if (!hasExplicitPlan) {
+    return {
+      heading: 'Create your business account',
+      subheading:
+        'Create your account first. Then company, one client, and a plan — card only if you pick Starter or Pro.',
+      brandEyebrow: 'You can easily',
+      brandHeadline:
+        'Get access to your studio workspace for clients, projects, and invoices.',
+      formTitle: 'Create an account',
+      formSubtitle:
+        'Google or email — then company, one client, and a plan. Card only if you pick Starter or Pro.',
+      badge: 'Auth first · plan at the end'.toUpperCase(),
+      highlights: [
+        'Company, one client, then a plan',
+        'Graduated pricing from £14 Starter or £29 Pro',
+        'No card required to start',
+      ],
+      intent: {
+        ...intent,
+        profile: 'work_design',
+      },
+      showPlanConfirm: false,
+    };
+  }
+
   const seats = clampBillableSeats(seatsOverride ?? intent.seats ?? 4);
   const paidPlan = paidPlanOverride ?? resolveBusinessPaidPlan(intent);
   const isStarter = paidPlan === 'starter';

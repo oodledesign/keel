@@ -182,10 +182,19 @@ export function buildPricingSignupUrl(params: {
 }
 
 /**
- * Default marketing "Start free": chooser that makes personal-first obvious,
- * then optional workspace (Free / Starter / Pro / family / community).
+ * Auth first, then `/setup/business` (company → client → task → Assistant → plan).
+ * `intent=business` is a marketing hint; `next` is what post-auth routing uses.
  */
-export const MARKETING_FREE_SIGNUP_URL = '/start';
+export function buildBusinessOnboardingSignupUrl() {
+  const next = encodeURIComponent(pathsConfig.app.businessOnboarding);
+  return `${pathsConfig.auth.signUp}?intent=business&next=${next}`;
+}
+
+/**
+ * Default marketing "Start free" / Sign Up: one hop to create-account.
+ * Plan picking stays on `/setup/business` after auth — not on the marketing site.
+ */
+export const MARKETING_FREE_SIGNUP_URL = buildBusinessOnboardingSignupUrl();
 
 /** Apps / Signatures surfaces that specifically push free Business Lite. */
 export const MARKETING_BUSINESS_LITE_SIGNUP_URL = buildPricingSignupUrl({

@@ -10,6 +10,7 @@ import remarkGfm from 'remark-gfm';
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 import { getBlogPost } from '~/lib/blog';
 import { JsonLd } from '~/lib/seo/json-ld';
 import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
@@ -239,7 +240,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             graduated seats from £14 on Starter or £29 on Pro.
           </p>
           <Button asChild className="mt-4">
-            <Link href="/auth/sign-up">Start free</Link>
+            <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
           </Button>
         </div>
       </footer>

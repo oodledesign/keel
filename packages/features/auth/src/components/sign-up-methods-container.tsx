@@ -31,11 +31,41 @@ export function SignUpMethodsContainer(props: {
 }) {
   const redirectUrl = getCallbackUrl(props);
   const defaultValues = getDefaultValues();
+  const hasEmailMethod =
+    props.providers.password ||
+    props.providers.magicLink ||
+    props.providers.otp;
+  const hasOAuth = props.providers.oAuth.length > 0;
 
   return (
     <>
       {/* Show hint if user might already have an account */}
       <ExistingAccountHint />
+
+      <If condition={hasOAuth}>
+        <OauthProviders
+          enabledProviders={props.providers.oAuth}
+          shouldCreateUser={true}
+          paths={{
+            callback: props.paths.callback,
+            returnPath: props.paths.appHome,
+          }}
+        />
+      </If>
+
+      <If condition={hasOAuth && hasEmailMethod}>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <Separator />
+          </div>
+
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background text-muted-foreground px-2">
+              <Trans i18nKey="auth:orContinueWith" />
+            </span>
+          </div>
+        </div>
+      </If>
 
       <If condition={props.providers.password}>
         <EmailPasswordSignUpContainer
@@ -60,37 +90,6 @@ export function SignUpMethodsContainer(props: {
           defaultValues={defaultValues}
           displayTermsCheckbox={props.displayTermsCheckbox}
           captchaSiteKey={props.captchaSiteKey}
-        />
-      </If>
-
-      <If condition={props.providers.oAuth.length}>
-        <If
-          condition={
-            props.providers.magicLink ||
-            props.providers.password ||
-            props.providers.otp
-          }
-        >
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator />
-            </div>
-
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background text-muted-foreground px-2">
-                <Trans i18nKey="auth:orContinueWith" />
-              </span>
-            </div>
-          </div>
-        </If>
-
-        <OauthProviders
-          enabledProviders={props.providers.oAuth}
-          shouldCreateUser={true}
-          paths={{
-            callback: props.paths.callback,
-            returnPath: props.paths.appHome,
-          }}
         />
       </If>
     </>
