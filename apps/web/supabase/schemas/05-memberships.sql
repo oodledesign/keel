@@ -88,21 +88,23 @@ or replace trigger prevent_account_owner_membership_delete_check before delete o
 execute function kit.prevent_account_owner_membership_delete ();
 
 -- Function "kit.prevent_memberships_update"
--- Trigger to prevent updates to account memberships except onboarding/role fields
+-- Trigger to prevent updates to membership identity / created_* columns.
+-- Role, onboarding, seat_kind, and timestamp/user-tracking fields may change.
+-- No-op updates (e.g. onboarding_completed already true) must succeed because
+-- workspace setup re-applies that flag after create_team_account.
 create
 or replace function kit.prevent_memberships_update () returns trigger
 set
   search_path = '' as $$
 begin
-    if new.account_role is distinct from old.account_role
-       or new.company_role is distinct from old.company_role
-       or new.trade_role is distinct from old.trade_role
-       or new.onboarding_step is distinct from old.onboarding_step
-       or new.onboarding_completed is distinct from old.onboarding_completed then
-        return new;
+    if new.user_id is distinct from old.user_id
+       or new.account_id is distinct from old.account_id
+       or new.created_at is distinct from old.created_at
+       or new.created_by is distinct from old.created_by then
+        raise exception 'Only account_role, company_role, trade_role, onboarding_step, onboarding_completed, and seat_kind can be updated';
     end if;
 
-    raise exception 'Only account_role, company_role, trade_role, onboarding_step, and onboarding_completed can be updated';
+    return new;
 
 end; $$ language plpgsql;
 
