@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import dynamic from 'next/dynamic';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -108,6 +108,8 @@ export function OzerWorkspaceCheckoutForm(params: {
   const setupMode = searchParams.get('setup') === '1';
   const planParam = searchParams.get('plan');
   const intervalParam = searchParams.get('interval');
+  const autoStartKeyRef = useRef<string | null>(null);
+  const accountSlug = routeParams.account as string;
 
   const defaultPickerValue =
     productParam && planParam
@@ -117,6 +119,60 @@ export function OzerWorkspaceCheckoutForm(params: {
           interval: intervalParam === 'year' ? 'year' : 'month',
         }
       : undefined;
+
+  const startCheckout = (planId: string, productId: string) => {
+    startTransition(async () => {
+      appEvents.emit({
+        type: 'checkout.started',
+        payload: {
+          planId,
+          account: accountSlug,
+        },
+      });
+
+      try {
+        const { checkoutToken: token } = await createTeamAccountCheckoutSession(
+          {
+            planId,
+            productId,
+            slug: accountSlug,
+            accountId: params.accountId,
+            seats: usesGraduatedSeats ? billableSeats : undefined,
+          },
+        );
+
+        setCheckoutToken(token);
+      } catch (error) {
+        autoStartKeyRef.current = null;
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not start checkout. Please try again.',
+        );
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (
+      !productParam ||
+      !planParam ||
+      checkoutToken ||
+      !(setupMode || searchParams.get('upgrade') === '1')
+    ) {
+      return;
+    }
+
+    const key = `${params.accountId}:${productParam}:${planParam}:${billableSeats}`;
+    if (autoStartKeyRef.current === key) {
+      return;
+    }
+
+    autoStartKeyRef.current = key;
+    startCheckout(planParam, productParam);
+    // Auto-start once when onboarding (or upgrade) already chose a plan.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- start only when query plan is present
+  }, [productParam, planParam, params.accountId, checkoutToken]);
 
   if (checkoutToken) {
     return (
@@ -238,36 +294,7 @@ export function OzerWorkspaceCheckoutForm(params: {
                 : undefined
           }
           onSubmit={({ planId, productId }) => {
-            startTransition(async () => {
-              const slug = routeParams.account as string;
-
-              appEvents.emit({
-                type: 'checkout.started',
-                payload: {
-                  planId,
-                  account: slug,
-                },
-              });
-
-              try {
-                const { checkoutToken: token } =
-                  await createTeamAccountCheckoutSession({
-                    planId,
-                    productId,
-                    slug,
-                    accountId: params.accountId,
-                    seats: usesGraduatedSeats ? billableSeats : undefined,
-                  });
-
-                setCheckoutToken(token);
-              } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : 'Could not start checkout. Please try again.',
-                );
-              }
-            });
+            startCheckout(planId, productId);
           }}
         />
       </CardContent>

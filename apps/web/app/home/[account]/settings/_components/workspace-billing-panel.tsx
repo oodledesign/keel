@@ -25,6 +25,7 @@ import { loadAccountPlanLimits } from '~/lib/billing/entitlements';
 import { loadPlatformBillingInvoices } from '~/lib/billing/platform-billing-invoices';
 import { loadPlatformSubscriptionDiscount } from '~/lib/billing/platform-subscription-discount';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
+import { shouldShowWorkspacePlanCheckout } from '~/lib/billing/workspace-plan-checkout-visibility';
 import { estimateWorkspacePlanCharge } from '~/lib/billing/workspace-plan-estimate';
 import { getCommercialSeatBreakdown } from '~/lib/commercial/commercial-seat-access';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -112,14 +113,18 @@ export async function WorkspaceBillingPanel({
 
   const isUpgradeIntent = searchParams.upgrade === '1';
   const isBillingIntent = searchParams.billing === '1';
-  const needsWorkspacePlan = !subscriptionIsWorkspacePlan;
-  const showPlanCheckout =
-    canManageBilling &&
-    needsWorkspacePlan &&
-    !isBusinessLite &&
-    (!hasBillingData || isBillingIntent);
-  const showLiteUpgrade =
-    isBusinessLite && canManageBilling && isUpgradeIntent && !hasBillingData;
+  const isSetupIntent = searchParams.setup === '1';
+  const { showPlanCheckout, showLiteUpgrade } = shouldShowWorkspacePlanCheckout(
+    {
+      canManageBilling,
+      isBusinessLite,
+      hasWorkspaceSubscription: subscriptionIsWorkspacePlan,
+      hasBillingData,
+      isSetupIntent,
+      isUpgradeIntent,
+      isBillingIntent,
+    },
+  );
 
   const accessState = await checkAccountAccess(billingClient, accountId);
   const paymentUpdated = searchParams.payment_updated === '1';
