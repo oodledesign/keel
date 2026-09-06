@@ -24,7 +24,7 @@ export function shouldShowWorkspacePlanCheckout(input: {
   if (input.isBusinessLite) {
     return {
       showPlanCheckout: false,
-      showLiteUpgrade: wantsPaidPlan || input.isUpgradeIntent,
+      showLiteUpgrade: wantsPaidPlan,
     };
   }
 

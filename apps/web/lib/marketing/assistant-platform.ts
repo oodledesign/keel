@@ -23,6 +23,6 @@ export function assistantDownloadMailto(email: string, downloadUrl: string) {
   );
   const to = email.trim();
   return to
-    ? `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`
+    ? `mailto:${to}?subject=${subject}&body=${body}`
     : `mailto:?subject=${subject}&body=${body}`;
 }

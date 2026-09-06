@@ -38,7 +38,7 @@ describe('assistantDownloadMailto', () => {
       'dan@oodle.design',
       'https://www.ozer.so/downloads/OzerAssistant-latest.zip',
     );
-    expect(href.startsWith('mailto:dan%40oodle.design?')).toBe(true);
+    expect(href.startsWith('mailto:dan@oodle.design?')).toBe(true);
     expect(href).toContain('OzerAssistant-latest.zip');
   });
 });

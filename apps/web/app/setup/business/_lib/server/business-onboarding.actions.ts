@@ -92,7 +92,7 @@ async function setOnboardingStep(
 
 async function pinDefaultWorkspace(userId: string, slug: string) {
   const client = getSupabaseServerClient();
-  await client.from('user_settings').upsert(
+  const { error } = await client.from('user_settings').upsert(
     {
       user_id: userId,
       default_landing_type: 'workspace',
@@ -100,6 +100,14 @@ async function pinDefaultWorkspace(userId: string, slug: string) {
     },
     { onConflict: 'user_id' },
   );
+
+  if (error) {
+    const logger = await getLogger();
+    logger.warn(
+      { name: 'business-onboarding-pin-workspace', error: error.message, slug },
+      'Could not pin default workspace',
+    );
+  }
 }
 
 export const saveBusinessCompanyAction = enhanceAction(
@@ -172,10 +180,17 @@ export const saveBusinessCompanyAction = enhanceAction(
       }
 
       const admin = getSupabaseServerAdminClient();
-      await admin
+      const { error: businessNameError } = await admin
         .from('businesses')
         .update({ name: data.name })
         .eq('account_id', accountId);
+
+      if (businessNameError) {
+        logger.warn(
+          { ...ctx, error: businessNameError.message },
+          'Businesses name sync skipped',
+        );
+      }
 
       if (!slug) {
         return { error: 'Could not create your workspace.' };

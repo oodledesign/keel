@@ -115,15 +115,6 @@ export function BusinessOnboardingWizard(props: {
   const [paidPlan, setPaidPlan] = useState<'lite' | 'starter' | 'pro'>('lite');
   const [seats, setSeats] = useState(2);
 
-  useEffect(() => {
-    setIsMacDesktop(
-      isMacDesktopClient(
-        window.navigator.userAgent,
-        window.navigator.maxTouchPoints ?? 0,
-      ),
-    );
-  }, []);
-
   const stepIndex = BUSINESS_ONBOARDING_STEPS.indexOf(step);
   const billable = clampBillableSeats(seats);
   const paidEstimate =
@@ -425,15 +416,11 @@ export function BusinessOnboardingWizard(props: {
                     setError(result.error ?? 'Could not add the client.');
                     return;
                   }
-                  setClient(
-                    result.client ?? {
-                      id: result.clientId,
-                      name: clientName.trim(),
-                      website: clientWebsite || null,
-                      pictureUrl: null,
-                      email: contactEmail || null,
-                    },
-                  );
+                  if (!result.client) {
+                    setError('Could not add the client.');
+                    return;
+                  }
+                  setClient(result.client);
                   setStep(result.nextStep);
                 })
               }
