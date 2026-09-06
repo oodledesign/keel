@@ -7,7 +7,10 @@
 --
 -- Keep identity / created_* immutable. Allow role, onboarding, seat_kind, and
 -- the updated_at / updated_by columns set by the timestamp/user-tracking
--- triggers. Apply on production even if deploys do not auto-run SQL.
+-- triggers. Authenticated users may UPDATE their own row
+-- (accounts_memberships_update_own); if a new membership column is added and
+-- must stay immutable, add it to this denylist. Apply on production even if
+-- deploys do not auto-run SQL.
 
 CREATE OR REPLACE FUNCTION kit.prevent_memberships_update()
 RETURNS trigger

@@ -92,6 +92,8 @@ execute function kit.prevent_account_owner_membership_delete ();
 -- Role, onboarding, seat_kind, and timestamp/user-tracking fields may change.
 -- No-op updates (e.g. onboarding_completed already true) must succeed because
 -- workspace setup re-applies that flag after create_team_account.
+-- Authenticated users can UPDATE their own row (accounts_memberships_update_own);
+-- add future immutable columns to this denylist.
 create
 or replace function kit.prevent_memberships_update () returns trigger
 set

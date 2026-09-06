@@ -45,6 +45,16 @@ select throws_ok(
   'Membership user_id cannot be reassigned'
 );
 
+select throws_ok(
+  $$
+    update public.accounts_memberships
+    set created_by = tests.get_supabase_uid('guard_other')
+    where user_id = tests.get_supabase_uid('guard_owner')
+  $$,
+  'Only account_role, company_role, trade_role, onboarding_step, onboarding_completed, and seat_kind can be updated',
+  'Membership created_by cannot be changed'
+);
+
 select * from finish();
 
 rollback;
