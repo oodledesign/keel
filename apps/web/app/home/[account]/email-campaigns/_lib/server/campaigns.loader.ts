@@ -5,9 +5,16 @@ import { cache } from 'react';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { hasCampaignsProFeatures } from '~/lib/billing/campaign-pricing';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
-import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
+import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
+import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
+import {
+  loadCampaignAnalyticsBundle,
+  loadComparativeCampaignReports,
+} from '~/lib/campaigns/load-campaign-analytics';
+import { loadCampaignUsageSnapshot } from '~/lib/campaigns/load-campaign-usage-snapshot';
 import {
   estimateCampaignAudienceCount,
   listAudiencePickerOptions,
@@ -23,44 +30,77 @@ export async function loadCampaignsPage(accountId: string) {
   const admin = getSupabaseServerAdminClient();
   const service = createCampaignsService(client);
 
-  const [campaigns, subscribers, usage, brand] = await Promise.all([
+  const [campaigns, subscribers, brand] = await Promise.all([
     service.list(accountId),
     listWorkspaceMailingListSubscribers(admin, accountId),
-    getCampaignUsage(accountId),
     loadAccountBrandResolved(accountId),
   ]);
+
+  const snapshot = await loadCampaignUsageSnapshot({
+    accountId,
+    contactsUsed: subscribers.length,
+  });
 
   return {
     campaigns,
     subscriberCount: subscribers.length,
     subscribers: subscribers.slice(0, 25),
-    usage: usage.pool,
+    usage: snapshot,
     brand,
   };
 }
 
-export const loadCampaignDetail = cache(async function loadCampaignDetail(accountId: string, campaignId: string) {
+export const loadCampaignDetail = cache(async function loadCampaignDetail(
+  accountId: string,
+  campaignId: string,
+) {
   const client = getSupabaseServerClient();
   const admin = getSupabaseServerAdminClient();
   const service = createCampaignsService(client);
 
-  const [campaign, recipients, usage, brand, sendingDomain, publishedForms, audienceOptions] =
-    await Promise.all([
-      service.get(accountId, campaignId),
-      service.listRecipients(accountId, campaignId),
-      getCampaignUsage(accountId),
-      loadAccountBrandResolved(accountId),
-      loadAccountSendingDomain(admin, accountId),
-      listPublishedFormsForCampaigns(accountId),
-      listAudiencePickerOptions(admin, accountId),
-    ]);
+  const [
+    campaign,
+    recipients,
+    brand,
+    sendingDomain,
+    publishedForms,
+    audienceOptions,
+    lists,
+  ] = await Promise.all([
+    service.get(accountId, campaignId),
+    service.listRecipients(accountId, campaignId),
+    loadAccountBrandResolved(accountId),
+    loadAccountSendingDomain(admin, accountId),
+    listPublishedFormsForCampaigns(accountId),
+    listAudiencePickerOptions(admin, accountId),
+    createAudienceListsService(client)
+      .list(accountId)
+      .catch(() => []),
+  ]);
 
-  const audienceCount = await estimateCampaignAudienceCount(
-    admin,
-    accountId,
-    campaign.audienceType,
-    campaign.audienceConfig,
-  );
+  const [audienceCount, snapshot, analytics] = await Promise.all([
+    estimateCampaignAudienceCount(
+      admin,
+      accountId,
+      campaign.audienceType,
+      campaign.audienceConfig,
+    ),
+    loadCampaignUsageSnapshot({
+      accountId,
+      contactsUsed: audienceOptions.subscriberCount,
+    }),
+    loadCampaignAnalyticsBundle(admin, campaign, recipients),
+  ]);
+
+  if (hasCampaignsProFeatures(snapshot.planTier)) {
+    const peers = (await service.list(accountId)).filter(
+      (row) => row.id !== campaign.id,
+    );
+    analytics.comparative = await loadComparativeCampaignReports(
+      peers,
+      new Map(),
+    );
+  }
 
   return {
     campaign,
@@ -68,7 +108,9 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(accoun
     subscriberCount: audienceOptions.subscriberCount,
     audienceCount,
     audienceOptions,
-    usage: usage.pool,
+    lists,
+    usage: snapshot,
+    analytics,
     brand,
     sendingDomain: sendingDomain
       ? {
@@ -106,4 +148,24 @@ async function listPublishedFormsForCampaigns(accountId: string) {
       shareToken: String(row.share_token ?? ''),
     }))
     .filter((row) => row.shareToken.length >= 16);
+}
+
+export async function loadCampaignsGrowthHub(accountId: string) {
+  const client = getSupabaseServerClient();
+  const admin = getSupabaseServerAdminClient();
+  const [lists, automations, campaigns, subscribers] = await Promise.all([
+    createAudienceListsService(client)
+      .list(accountId)
+      .catch(() => []),
+    createCampaignAutomationsService(client)
+      .list(accountId)
+      .catch(() => []),
+    createCampaignsService(client).list(accountId),
+    listWorkspaceMailingListSubscribers(admin, accountId),
+  ]);
+  const snapshot = await loadCampaignUsageSnapshot({
+    accountId,
+    contactsUsed: subscribers.length,
+  });
+  return { lists, automations, campaigns, snapshot };
 }

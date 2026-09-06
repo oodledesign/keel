@@ -12,9 +12,17 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import type { CampaignAnalyticsBundle } from '~/lib/campaigns/campaign-analytics';
 import { AUDIENCE_TYPE_LABEL } from '~/lib/campaigns/campaign-audience';
+import {
+  CAMPAIGN_TIMEZONES,
+  formatZonedInstant,
+  parseCampaignTimezone,
+  timezoneShortLabel,
+  zonedLocalToUtcIso,
+} from '~/lib/campaigns/campaign-timezone';
+import type { CampaignUsageSnapshot } from '~/lib/campaigns/campaign-usage';
 import type {
-  CampaignCreditPool,
   EmailCampaign,
   EmailCampaignRecipient,
 } from '~/lib/campaigns/campaign.types';
@@ -29,11 +37,14 @@ import {
   cancelScheduleCampaignAction,
   scheduleCampaignAction,
   sendCampaignAction,
+  updateCampaignAction,
 } from '../_lib/server/server-actions';
 import { CampaignAnalyticsSummary } from './campaign-analytics-summary';
+import type { AudiencePickerOption } from './campaign-audience-picker';
 import { CampaignRecipientLog } from './campaign-recipient-log';
 import { CampaignSendTestDialog } from './campaign-send-test-dialog';
-import type { AudiencePickerOption } from './campaign-audience-picker';
+import { CampaignUpgradeCta } from './campaign-upgrade-cta';
+import { CampaignUsageCard } from './campaign-usage-card';
 
 export function CampaignSendPanel({
   accountId,
@@ -42,6 +53,7 @@ export function CampaignSendPanel({
   recipients,
   audienceCount,
   usage,
+  analytics,
   brand,
   clients,
 }: {
@@ -50,13 +62,17 @@ export function CampaignSendPanel({
   campaign: EmailCampaign;
   recipients: EmailCampaignRecipient[];
   audienceCount: number;
-  usage: CampaignCreditPool;
+  usage: CampaignUsageSnapshot;
+  analytics: CampaignAnalyticsBundle;
   brand: { contact_email: string | null };
   clients: AudiencePickerOption[];
 }) {
   const router = useRouter();
   const editable =
     campaign.status === 'draft' || campaign.status === 'scheduled';
+  const [scheduledTimezone, setScheduledTimezone] = useState(
+    parseCampaignTimezone(campaign.scheduledTimezone),
+  );
   const [scheduledAt, setScheduledAt] = useState('');
   const [sendTestOpen, setSendTestOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -74,9 +90,16 @@ export function CampaignSendPanel({
 
   const insufficientSendUnits =
     editable && audienceCount > 0 && usage.balance < audienceCount;
+  const contactsBlocked =
+    editable && usage.maxContacts > 0 && audienceCount > usage.maxContacts;
 
   return (
     <div className="space-y-6">
+      <CampaignUsageCard
+        snapshot={usage}
+        accountSlug={accountSlug}
+        fromEmail={campaign.fromEmail || brand.contact_email}
+      />
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm">
           <Link href={settingsHref}>
@@ -114,7 +137,11 @@ export function CampaignSendPanel({
         ) : null}
         {campaign.scheduledAt ? (
           <p className={`text-sm ${workspaceTextMuted}`}>
-            Scheduled for {new Date(campaign.scheduledAt).toLocaleString()}
+            Scheduled for{' '}
+            {formatZonedInstant(
+              campaign.scheduledAt,
+              campaign.scheduledTimezone,
+            )}
           </p>
         ) : null}
 
@@ -143,19 +170,25 @@ export function CampaignSendPanel({
                 // Content/settings should already be saved; no-op keep hook.
               }}
             />
-            {insufficientSendUnits ? (
-              <p
-                className={`text-sm text-destructive`}
-                data-test="campaign-send-insufficient"
-              >
-                Not enough send units. Need {audienceCount.toLocaleString()}, have{' '}
-                {usage.balance.toLocaleString()}. Top up Campaigns in Billing
-                before sending.
-              </p>
+            {insufficientSendUnits || contactsBlocked ? (
+              <CampaignUpgradeCta
+                accountSlug={accountSlug}
+                nextTierName={usage.nextTierName}
+                message={
+                  contactsBlocked
+                    ? `This audience is ${audienceCount.toLocaleString()} contacts; the cap is ${usage.maxContacts.toLocaleString()}.`
+                    : `Need ${audienceCount.toLocaleString()} send units, have ${usage.balance.toLocaleString()}.`
+                }
+              />
             ) : null}
             <Button
               className={workspaceBtnPrimary}
-              disabled={pending || insufficientSendUnits || audienceCount === 0}
+              disabled={
+                pending ||
+                insufficientSendUnits ||
+                contactsBlocked ||
+                audienceCount === 0
+              }
               data-test="campaign-send"
               onClick={() => {
                 startTransition(async () => {
@@ -165,6 +198,10 @@ export function CampaignSendPanel({
                       accountSlug,
                       campaignId: campaign.id,
                     });
+                    if ('success' in result && result.success === false) {
+                      toast.error(result.message);
+                      return;
+                    }
                     toast.success(
                       result.remaining > 0
                         ? `Sending… ${result.remaining} left in the queue`
@@ -173,9 +210,7 @@ export function CampaignSendPanel({
                     router.refresh();
                   } catch (error) {
                     toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : 'Could not send',
+                      error instanceof Error ? error.message : 'Could not send',
                     );
                   }
                 });
@@ -183,7 +218,19 @@ export function CampaignSendPanel({
             >
               {pending ? 'Working…' : 'Send now'}
             </Button>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                value={scheduledTimezone}
+                disabled={pending}
+                onChange={(event) => setScheduledTimezone(event.target.value)}
+              >
+                {CAMPAIGN_TIMEZONES.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {timezoneShortLabel(zone)}
+                  </option>
+                ))}
+              </select>
               <Input
                 type="datetime-local"
                 value={scheduledAt}
@@ -197,11 +244,20 @@ export function CampaignSendPanel({
                 onClick={() => {
                   startTransition(async () => {
                     try {
+                      await updateCampaignAction({
+                        accountId,
+                        accountSlug,
+                        campaignId: campaign.id,
+                        scheduledTimezone,
+                      });
                       await scheduleCampaignAction({
                         accountId,
                         accountSlug,
                         campaignId: campaign.id,
-                        scheduledAt: new Date(scheduledAt).toISOString(),
+                        scheduledAt: zonedLocalToUtcIso(
+                          scheduledAt,
+                          scheduledTimezone,
+                        ),
                       });
                       toast.success('Campaign scheduled');
                       router.refresh();
@@ -250,7 +306,7 @@ export function CampaignSendPanel({
           <p className={`text-sm ${workspaceTextMuted}`}>
             This campaign is {campaign.status}.
             {campaign.scheduledAt
-              ? ` Scheduled for ${new Date(campaign.scheduledAt).toLocaleString()}.`
+              ? ` Scheduled for ${formatZonedInstant(campaign.scheduledAt, campaign.scheduledTimezone)}.`
               : ''}
           </p>
         )}
@@ -261,7 +317,9 @@ export function CampaignSendPanel({
       recipients.length > 0 ? (
         <CampaignAnalyticsSummary
           campaign={campaign}
-          recipients={recipients}
+          analytics={analytics}
+          planTier={usage.planTier}
+          comparative={analytics.comparative}
         />
       ) : null}
 

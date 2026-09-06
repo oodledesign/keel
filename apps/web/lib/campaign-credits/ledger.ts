@@ -6,7 +6,11 @@ import type { CampaignCreditPool } from '~/lib/campaigns/campaign.types';
 
 export type { CampaignCreditPool } from '~/lib/campaigns/campaign.types';
 
-export type CampaignCreditSourceType = 'monthly_grant' | 'admin_grant';
+export type CampaignCreditSourceType =
+  | 'monthly_grant'
+  | 'admin_grant'
+  | 'topup_purchase'
+  | 'pack_recurring';
 
 export type CampaignCreditBatch = {
   id: string;
@@ -81,7 +85,7 @@ export async function getCampaignUsage(accountId: string): Promise<{
 
   const { data, error } = await fromTable('campaign_credit_pools')
     .select(
-      'account_id, balance, monthly_allowance, max_contacts, plan_tier, cycle_start, cycle_end',
+      'account_id, balance, monthly_allowance, max_contacts, contact_bonus, plan_tier, cycle_start, cycle_end',
     )
     .eq('account_id', accountId)
     .maybeSingle();
@@ -91,17 +95,61 @@ export async function getCampaignUsage(accountId: string): Promise<{
   }
 
   const row = data as CampaignCreditPool | null;
-  return {
-    pool: row ?? {
-      account_id: accountId,
-      balance: 0,
-      monthly_allowance: 0,
-      max_contacts: 0,
-      plan_tier: 'none',
-      cycle_start: null,
-      cycle_end: null,
-    },
+  const pool: CampaignCreditPool = row ?? {
+    account_id: accountId,
+    balance: 0,
+    monthly_allowance: 0,
+    max_contacts: 0,
+    contact_bonus: 0,
+    plan_tier: 'none',
+    cycle_start: null,
+    cycle_end: null,
   };
+
+  if (pool.contact_bonus == null) {
+    pool.contact_bonus = 0;
+  }
+
+  return { pool };
+}
+
+export async function listCampaignCreditBatches(accountId: string): Promise<
+  Array<{
+    source_type: CampaignCreditSourceType;
+    units_remaining: number;
+    expires_at: string;
+  }>
+> {
+  const { data, error } = await fromTable('campaign_credit_batches')
+    .select('source_type, units_remaining, expires_at')
+    .eq('account_id', accountId)
+    .gt('units_remaining', 0)
+    .is('swept_at', null)
+    .gt('expires_at', new Date().toISOString());
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{
+    source_type: CampaignCreditSourceType;
+    units_remaining: number;
+    expires_at: string;
+  }>;
+}
+
+export async function listCampaignCreditTransactions(accountId: string) {
+  const { data, error } = await fromTable('campaign_credit_transactions')
+    .select('id, type, amount, reason, created_at')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{
+    id: string;
+    type: string;
+    amount: number;
+    reason: string | null;
+    created_at: string;
+  }>;
 }
 
 export async function debitCampaignCredits(
@@ -187,11 +235,12 @@ export async function grantCampaignCredits(
 export async function updateCampaignCreditPoolMetadata(
   accountId: string,
   values: {
-    monthly_allowance: number;
-    max_contacts: number;
-    plan_tier: string;
-    cycle_start: string;
-    cycle_end: string;
+    monthly_allowance?: number;
+    max_contacts?: number;
+    contact_bonus?: number;
+    plan_tier?: string;
+    cycle_start?: string;
+    cycle_end?: string;
   },
 ): Promise<void> {
   await rpc('ensure_campaign_credit_pool', {
@@ -200,11 +249,7 @@ export async function updateCampaignCreditPoolMetadata(
 
   const { error } = await fromTable('campaign_credit_pools')
     .update({
-      monthly_allowance: values.monthly_allowance,
-      max_contacts: values.max_contacts,
-      plan_tier: values.plan_tier,
-      cycle_start: values.cycle_start,
-      cycle_end: values.cycle_end,
+      ...values,
       updated_at: new Date().toISOString(),
     })
     .eq('account_id', accountId);

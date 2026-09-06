@@ -7,12 +7,21 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import { canUseAddon } from '~/lib/billing/entitlements';
+import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
+import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
+import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
+import { isCampaignQuotaError } from '~/lib/campaigns/campaign-quota-error';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
 
 import {
   CancelScheduleCampaignSchema,
   CreateCampaignSchema,
+  DeleteAudienceListSchema,
+  DeleteAutomationSchema,
+  SaveAudienceListSchema,
+  SaveAutomationSchema,
   ScheduleCampaignSchema,
   SendCampaignSchema,
   SendCampaignTestSchema,
@@ -108,6 +117,10 @@ export const updateCampaignAction = enhanceAction(
       audienceType: data.audienceType,
       audienceConfig: data.audienceConfig,
       scheduledAt: data.scheduledAt,
+      scheduledTimezone: data.scheduledTimezone,
+      subjectB: data.subjectB,
+      abEnabled: data.abEnabled,
+      abSplitPercent: data.abSplitPercent,
     });
     revalidateCampaignPaths(data.accountSlug, campaign.id);
     return { success: true as const };
@@ -126,32 +139,44 @@ export const sendCampaignAction = enhanceAction(
       .maybeSingle();
 
     const service = createCampaignsService(client);
-    const result = await service.startSend({
-      accountId: data.accountId,
-      campaignId: data.campaignId,
-      workspaceName:
-        (account as { name?: string } | null)?.name?.trim() || 'Workspace',
-    });
-
-    logger.info(
-      {
-        name: 'send-campaign',
-        userId: user.id,
+    try {
+      const result = await service.startSend({
+        accountId: data.accountId,
         campaignId: data.campaignId,
+        workspaceName:
+          (account as { name?: string } | null)?.name?.trim() || 'Workspace',
+      });
+
+      logger.info(
+        {
+          name: 'send-campaign',
+          userId: user.id,
+          campaignId: data.campaignId,
+          remaining: result.remaining,
+        },
+        'Started campaign send',
+      );
+      revalidateCampaignPaths(data.accountSlug, data.campaignId);
+      return {
+        success: true as const,
         remaining: result.remaining,
-      },
-      'Started campaign send',
-    );
-    revalidateCampaignPaths(data.accountSlug, data.campaignId);
-    return {
-      success: true as const,
-      remaining: result.remaining,
-      status: result.campaign.status,
-    };
+        status: result.campaign.status,
+      };
+    } catch (error) {
+      if (isCampaignQuotaError(error)) {
+        return {
+          success: false as const,
+          code: error.kind === 'sends' ? 'INSUFFICIENT_SENDS' : 'CONTACT_CAP',
+          message: error.message,
+          needed: error.needed,
+          have: error.have,
+        };
+      }
+      throw error;
+    }
   },
   { auth: true, schema: SendCampaignSchema },
 );
-
 
 export const sendCampaignTestAction = enhanceAction(
   async function (data, user) {
@@ -230,4 +255,109 @@ export const cancelScheduleCampaignAction = enhanceAction(
     return { success: true as const };
   },
   { auth: true, schema: CancelScheduleCampaignSchema },
+);
+
+async function requireGrowthCampaigns(accountId: string) {
+  const usage = await getCampaignUsage(accountId);
+  if (!hasCampaignsGrowthFeatures(usage.pool.plan_tier)) {
+    throw new Error(
+      'Saved lists and A/B tests are on Growth and Pro. Upgrade Campaigns in Billing.',
+    );
+  }
+}
+
+export const saveAudienceListAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    const service = createAudienceListsService(client);
+    const list = data.listId
+      ? await service.update({
+          accountId: data.accountId,
+          listId: data.listId,
+          name: data.name,
+          filters: data.filters,
+        })
+      : await service.create({
+          accountId: data.accountId,
+          userId: user.id,
+          name: data.name,
+          filters: data.filters,
+        });
+    revalidatePath(campaignsPath(data.accountSlug));
+    revalidatePath(
+      pathsConfig.app.accountEmailCampaignAudiences.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return { success: true as const, listId: list.id };
+  },
+  { auth: true, schema: SaveAudienceListSchema },
+);
+
+export const deleteAudienceListAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    await createAudienceListsService(client).delete(
+      data.accountId,
+      data.listId,
+    );
+    revalidatePath(
+      pathsConfig.app.accountEmailCampaignAudiences.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return { success: true as const };
+  },
+  { auth: true, schema: DeleteAudienceListSchema },
+);
+
+export const saveAutomationAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const service = createCampaignAutomationsService(client);
+    const automation = data.automationId
+      ? await service.update({
+          accountId: data.accountId,
+          automationId: data.automationId,
+          name: data.name,
+          campaignId: data.campaignId,
+          status: data.status,
+        })
+      : await service.create({
+          accountId: data.accountId,
+          userId: user.id,
+          name: data.name,
+          campaignId: data.campaignId,
+        });
+    revalidatePath(
+      pathsConfig.app.accountEmailCampaignAutomations.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return { success: true as const, automationId: automation.id };
+  },
+  { auth: true, schema: SaveAutomationSchema },
+);
+
+export const deleteAutomationAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await createCampaignAutomationsService(client).delete(
+      data.accountId,
+      data.automationId,
+    );
+    revalidatePath(
+      pathsConfig.app.accountEmailCampaignAutomations.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return { success: true as const };
+  },
+  { auth: true, schema: DeleteAutomationSchema },
 );

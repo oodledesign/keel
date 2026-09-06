@@ -1,7 +1,6 @@
 /**
  * Client-safe campaign audience types and helpers (no server-only imports).
  */
-
 import { z } from 'zod';
 
 export const CAMPAIGN_AUDIENCE_TYPES = [
@@ -9,6 +8,7 @@ export const CAMPAIGN_AUDIENCE_TYPES = [
   'clients',
   'contacts',
   'custom',
+  'list',
 ] as const;
 
 export type CampaignAudienceType = (typeof CAMPAIGN_AUDIENCE_TYPES)[number];
@@ -17,15 +17,19 @@ export const CampaignAudienceConfigSchema = z.object({
   emails: z.array(z.string().email().max(320)).max(500).optional(),
   clientIds: z.array(z.string().uuid()).max(500).optional(),
   contactIds: z.array(z.string().uuid()).max(500).optional(),
+  listId: z.string().uuid().optional().nullable(),
 });
 
-export type CampaignAudienceConfig = z.infer<typeof CampaignAudienceConfigSchema>;
+export type CampaignAudienceConfig = z.infer<
+  typeof CampaignAudienceConfigSchema
+>;
 
 export const AUDIENCE_TYPE_LABEL: Record<CampaignAudienceType, string> = {
   subscribers: 'Subscribers',
   clients: 'Clients',
   contacts: 'Contacts',
   custom: 'Custom',
+  list: 'Saved list',
 };
 
 export const AUDIENCE_TYPE_HINT: Record<CampaignAudienceType, string> = {
@@ -33,6 +37,7 @@ export const AUDIENCE_TYPE_HINT: Record<CampaignAudienceType, string> = {
   clients: 'Workspace clients with an email address on file.',
   contacts: 'First-class CRM contacts with an email address.',
   custom: 'Manual emails plus selected clients and contacts.',
+  list: 'A named Growth list with logic filters, resolved at send time.',
 };
 
 export function parseCampaignAudienceType(
@@ -52,12 +57,13 @@ export function parseCampaignAudienceConfig(
 ): CampaignAudienceConfig {
   const parsed = CampaignAudienceConfigSchema.safeParse(value ?? {});
   if (!parsed.success) {
-    return { emails: [], clientIds: [], contactIds: [] };
+    return { emails: [], clientIds: [], contactIds: [], listId: null };
   }
   return {
     emails: parsed.data.emails ?? [],
     clientIds: parsed.data.clientIds ?? [],
     contactIds: parsed.data.contactIds ?? [],
+    listId: parsed.data.listId ?? null,
   };
 }
 

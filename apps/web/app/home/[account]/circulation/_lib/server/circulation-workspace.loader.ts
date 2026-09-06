@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { listAccountCirculationSends } from '~/lib/commercial/circulation/circulate-listing';
 import { resolveCirculationIdentity } from '~/lib/commercial/circulation/circulate-listing';
+import { loadCirculationUsageSnapshot } from '~/lib/commercial/circulation/circulation-usage';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
 import { listContactMatches } from '~/lib/commercial/circulation/contact-matches';
 
@@ -44,6 +45,12 @@ export async function loadCirculationWorkspaceData(
     fromEmail: identity.fromEmail,
     fromName: identity.fromName,
     agencyName: identity.agencyName,
+    usage: await loadCirculationUsageSnapshot(
+      client,
+      accountId,
+      contacts.filter((contact) => contact.consentStatus === 'subscribed')
+        .length,
+    ),
     contacts: contacts.map((contact) => ({
       email: contact.email,
       contactName: contact.contactName,
@@ -60,6 +67,11 @@ export async function loadCirculationWorkspaceData(
       sendTrigger: send.sendTrigger,
       sendKind: send.sendKind,
       recipientCount: send.recipientCount,
+      deliveredCount: send.deliveredCount,
+      openCount: send.openCount,
+      clickCount: send.clickCount,
+      bounceCount: send.bounceCount,
+      complaintCount: send.complaintCount,
       createdAt: send.createdAt,
       fromEmail: send.fromEmail,
       fromName: send.fromName,
@@ -70,6 +82,14 @@ export async function loadCirculationWorkspaceData(
         skipReason: recipient.skipReason,
         errorMessage: recipient.errorMessage,
         sesMessageId: recipient.sesMessageId,
+        deliveredAt: recipient.deliveredAt,
+        openedAt: recipient.openedAt,
+        openCount: recipient.openCount,
+        clickedAt: recipient.clickedAt,
+        clickCount: recipient.clickCount,
+        bouncedAt: recipient.bouncedAt,
+        bounceType: recipient.bounceType,
+        complaintAt: recipient.complaintAt,
       })),
     })),
   };

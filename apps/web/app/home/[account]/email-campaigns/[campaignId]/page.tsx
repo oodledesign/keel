@@ -32,6 +32,8 @@ async function CampaignSettingsPage({ params }: CampaignSettingsPageProps) {
       campaign={data.campaign}
       audienceCount={data.audienceCount}
       audienceOptions={data.audienceOptions}
+      lists={data.lists}
+      usage={data.usage}
       brand={data.brand}
       sendingDomain={data.sendingDomain}
     />

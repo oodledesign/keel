@@ -1,66 +1,164 @@
-import type { CampaignCreditPool } from '~/lib/campaigns/campaign.types';
+import Link from 'next/link';
+
+import type { CampaignUsageSnapshot } from '~/lib/campaigns/campaign-usage';
+import { campaignBillingHref } from '~/lib/campaigns/campaign-usage';
 import {
   workspacePanelCard,
   workspaceText,
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { CampaignUpgradeCta } from './campaign-upgrade-cta';
+
+function Meter({
+  label,
+  value,
+  cap,
+  ratio,
+  warn,
+  blocked,
+  hint,
+}: {
+  label: string;
+  value: string;
+  cap?: string;
+  ratio: number | null;
+  warn: boolean;
+  blocked: boolean;
+  hint: string;
+}) {
+  const width = ratio == null ? 0 : Math.round(ratio * 100);
+  return (
+    <div>
+      <p className={`text-xs tracking-wide uppercase ${workspaceTextMuted}`}>
+        {label}
+      </p>
+      <p className={`mt-1 text-lg font-semibold tabular-nums ${workspaceText}`}>
+        {value}
+        {cap ? ` / ${cap}` : ''}
+      </p>
+      {ratio != null ? (
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--workspace-control-surface)]">
+          <div
+            className={`h-full ${
+              blocked
+                ? 'bg-[var(--ozer-accent)]'
+                : warn
+                  ? 'bg-[var(--ozer-coral-400)]'
+                  : 'bg-[var(--ozer-accent)]'
+            }`}
+            style={{ width: `${width}%` }}
+          />
+        </div>
+      ) : null}
+      <p className={`mt-1 text-xs ${workspaceTextMuted}`}>{hint}</p>
+    </div>
+  );
+}
+
 export function CampaignUsageCard({
-  subscriberCount,
-  usage,
+  snapshot,
+  accountSlug,
   fromEmail,
 }: {
-  subscriberCount: number;
-  usage: CampaignCreditPool;
+  snapshot: CampaignUsageSnapshot;
+  accountSlug: string;
   fromEmail: string | null;
 }) {
-  const contactCap = usage.max_contacts;
-  const contactsUnlimited = contactCap === 0;
-  const contactsOver = !contactsUnlimited && subscriberCount > contactCap;
+  const sendHint = snapshot.sendsBlocked
+    ? 'No send units left — upgrade or buy a pack before sending.'
+    : snapshot.sendsSoftWarn
+      ? 'About 80% of this cycle’s allotment is used.'
+      : snapshot.planTier === 'none'
+        ? 'Apply a Campaigns plan to grant monthly send units.'
+        : `${snapshot.planTier} plan · unused monthly units expire at cycle end.`;
 
   return (
-    <div className={`grid gap-3 sm:grid-cols-3 ${workspacePanelCard} p-4`}>
-      <div>
-        <p className={`text-xs tracking-wide uppercase ${workspaceTextMuted}`}>
-          Mailing list
-        </p>
-        <p className={`mt-1 text-lg font-semibold ${workspaceText}`}>
-          {subscriberCount.toLocaleString()}
-          {contactsUnlimited ? '' : ` / ${contactCap.toLocaleString()}`}
-        </p>
-        <p className={`text-xs ${workspaceTextMuted}`}>
-          {contactsOver
-            ? 'Over this plan’s contact cap — upgrade before sending.'
-            : 'Subscribed contacts (unsubscribes excluded).'}
-        </p>
+    <div className="space-y-3">
+      <div className={`grid gap-3 sm:grid-cols-3 ${workspacePanelCard} p-4`}>
+        <Meter
+          label="Contacts used"
+          value={snapshot.contactsUsed.toLocaleString()}
+          cap={
+            snapshot.maxContacts > 0
+              ? snapshot.maxContacts.toLocaleString()
+              : undefined
+          }
+          ratio={snapshot.contactsRatio}
+          warn={snapshot.contactsSoftWarn}
+          blocked={snapshot.contactsBlocked}
+          hint={
+            snapshot.contactsBlocked
+              ? 'Over the contact cap — upgrade or add a contact bump.'
+              : snapshot.contactsSoftWarn
+                ? 'Approaching this plan’s contact cap.'
+                : snapshot.contactBonus > 0
+                  ? `Includes +${snapshot.contactBonus.toLocaleString()} from contact bumps.`
+                  : 'Subscribed mailing-list contacts (unsubscribes excluded).'
+          }
+        />
+        <Meter
+          label="Sends remaining"
+          value={snapshot.balance.toLocaleString()}
+          cap={
+            snapshot.monthlyAllowance > 0
+              ? snapshot.monthlyAllowance.toLocaleString()
+              : undefined
+          }
+          ratio={snapshot.sendsRatio}
+          warn={snapshot.sendsSoftWarn}
+          blocked={snapshot.sendsBlocked}
+          hint={
+            snapshot.packBalance > 0
+              ? `${snapshot.monthlyRemaining.toLocaleString()} monthly · ${snapshot.packBalance.toLocaleString()} from packs`
+              : sendHint
+          }
+        />
+        <div>
+          <p
+            className={`text-xs tracking-wide uppercase ${workspaceTextMuted}`}
+          >
+            From identity
+          </p>
+          <p className={`mt-1 text-sm font-medium ${workspaceText}`}>
+            {fromEmail ?? 'Not set'}
+          </p>
+          <p className={`text-xs ${workspaceTextMuted}`}>
+            {snapshot.cycleEnd ? `Cycle ends ${snapshot.cycleEnd}. ` : ''}
+            Campaigns never send as Ozer.{' '}
+            <Link
+              href={campaignBillingHref(accountSlug)}
+              className="underline underline-offset-2"
+            >
+              Billing
+            </Link>
+          </p>
+        </div>
       </div>
-      <div>
-        <p className={`text-xs tracking-wide uppercase ${workspaceTextMuted}`}>
-          Send units left
+      {snapshot.contactsBlocked || snapshot.sendsBlocked ? (
+        <CampaignUpgradeCta
+          accountSlug={accountSlug}
+          nextTierName={snapshot.nextTierName}
+          message={
+            snapshot.contactsBlocked
+              ? 'You are over the contact cap. Upgrade Campaigns or add a contact bump to keep sending.'
+              : 'You are out of send units. Upgrade or buy a send pack to keep sending.'
+          }
+        />
+      ) : snapshot.contactsSoftWarn || snapshot.sendsSoftWarn ? (
+        <p className={`text-sm ${workspaceTextMuted}`}>
+          Usage is above 80%.{' '}
+          <Link
+            href={campaignBillingHref(accountSlug)}
+            className="underline underline-offset-2"
+          >
+            Review upgrade or packs
+          </Link>
+          {snapshot.nextTierName
+            ? ` — next tier is ${snapshot.nextTierName}.`
+            : '.'}
         </p>
-        <p className={`mt-1 text-lg font-semibold ${workspaceText}`}>
-          {usage.balance.toLocaleString()}
-          {usage.monthly_allowance
-            ? ` / ${usage.monthly_allowance.toLocaleString()}`
-            : ''}
-        </p>
-        <p className={`text-xs ${workspaceTextMuted}`}>
-          {usage.plan_tier === 'none'
-            ? 'Apply a Campaigns plan to grant monthly send units.'
-            : `${usage.plan_tier} plan · 1 unit per email sent.`}
-        </p>
-      </div>
-      <div>
-        <p className={`text-xs tracking-wide uppercase ${workspaceTextMuted}`}>
-          From identity
-        </p>
-        <p className={`mt-1 text-sm font-medium ${workspaceText}`}>
-          {fromEmail ?? 'Not set'}
-        </p>
-        <p className={`text-xs ${workspaceTextMuted}`}>
-          Brand contact email. Campaigns never send as Ozer.
-        </p>
-      </div>
+      ) : null}
     </div>
   );
 }

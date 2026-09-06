@@ -13,12 +13,25 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import {
   type CampaignAudienceConfig,
   type CampaignAudienceType,
   parseCampaignAudienceConfig,
 } from '~/lib/campaigns/campaign-audience';
-import type { EmailCampaign } from '~/lib/campaigns/campaign.types';
+import {
+  CAMPAIGN_TIMEZONES,
+  formatZonedInstant,
+  parseCampaignTimezone,
+  timezoneShortLabel,
+  utcIsoToZonedLocal,
+  zonedLocalToUtcIso,
+} from '~/lib/campaigns/campaign-timezone';
+import type { CampaignUsageSnapshot } from '~/lib/campaigns/campaign-usage';
+import type {
+  CampaignAudienceList,
+  EmailCampaign,
+} from '~/lib/campaigns/campaign.types';
 import {
   workspaceBtnPrimary,
   workspacePanelCard,
@@ -32,20 +45,16 @@ import {
   updateCampaignAction,
 } from '../_lib/server/server-actions';
 import {
-  CampaignAudiencePicker,
   type AudiencePickerOption,
+  CampaignAudiencePicker,
 } from './campaign-audience-picker';
 import {
   CampaignFromPicker,
   type CampaignSendingDomainOption,
 } from './campaign-from-picker';
 
-function toLocalInputValue(iso: string | null | undefined) {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+function toLocalInputValue(iso: string | null | undefined, timeZone: string) {
+  return utcIsoToZonedLocal(iso, timeZone);
 }
 
 export function CampaignSettingsPanel({
@@ -54,6 +63,8 @@ export function CampaignSettingsPanel({
   campaign,
   audienceCount,
   audienceOptions,
+  lists,
+  usage,
   brand,
   sendingDomain,
 }: {
@@ -68,6 +79,8 @@ export function CampaignSettingsPanel({
     clientCount: number;
     contactCount: number;
   };
+  lists: CampaignAudienceList[];
+  usage: CampaignUsageSnapshot;
   brand: { contact_email: string | null };
   sendingDomain: CampaignSendingDomainOption | null;
 }) {
@@ -76,6 +89,11 @@ export function CampaignSettingsPanel({
     campaign.status === 'draft' || campaign.status === 'scheduled';
   const [name, setName] = useState(campaign.name);
   const [subject, setSubject] = useState(campaign.subject);
+  const [subjectB, setSubjectB] = useState(campaign.subjectB ?? '');
+  const [abEnabled, setAbEnabled] = useState(campaign.abEnabled);
+  const [abSplitPercent, setAbSplitPercent] = useState(
+    campaign.abSplitPercent || 50,
+  );
   const [previewText, setPreviewText] = useState(campaign.previewText ?? '');
   const [fromName, setFromName] = useState(campaign.fromName ?? '');
   const [fromEmail, setFromEmail] = useState(() => {
@@ -92,9 +110,13 @@ export function CampaignSettingsPanel({
   const [audienceConfig, setAudienceConfig] = useState<CampaignAudienceConfig>(
     () => parseCampaignAudienceConfig(campaign.audienceConfig),
   );
-  const [scheduledAt, setScheduledAt] = useState(
-    toLocalInputValue(campaign.scheduledAt),
+  const [scheduledTimezone, setScheduledTimezone] = useState(
+    parseCampaignTimezone(campaign.scheduledTimezone),
   );
+  const [scheduledAt, setScheduledAt] = useState(
+    toLocalInputValue(campaign.scheduledAt, campaign.scheduledTimezone),
+  );
+  const growth = hasCampaignsGrowthFeatures(usage.planTier);
   const [pending, startTransition] = useTransition();
 
   const contentHref = pathsConfig.app.accountEmailCampaignContent
@@ -144,6 +166,10 @@ export function CampaignSettingsPanel({
       replyTo: replyTo.trim() || null,
       audienceType,
       audienceConfig,
+      scheduledTimezone,
+      subjectB: growth ? subjectB : null,
+      abEnabled: growth ? abEnabled : false,
+      abSplitPercent: growth ? abSplitPercent : 50,
     });
 
   return (
@@ -168,6 +194,59 @@ export function CampaignSettingsPanel({
           />
         </div>
       </div>
+
+      {growth ? (
+        <div className={`${workspacePanelCard} space-y-3 p-4`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className={`font-semibold ${workspaceText}`}>
+                A/B subject test
+              </h2>
+              <p className={`text-sm ${workspaceTextMuted}`}>
+                Split the send and compare unique opens and clicks.
+              </p>
+            </div>
+            <label
+              className={`flex items-center gap-2 text-sm ${workspaceText}`}
+            >
+              <input
+                type="checkbox"
+                checked={abEnabled}
+                disabled={!editable || pending}
+                onChange={(event) => setAbEnabled(event.target.checked)}
+              />
+              Enable
+            </label>
+          </div>
+          {abEnabled ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="campaign-subject-b">Subject B</Label>
+                <Input
+                  id="campaign-subject-b"
+                  value={subjectB}
+                  disabled={!editable || pending}
+                  onChange={(event) => setSubjectB(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="campaign-ab-split">Split (% on A)</Label>
+                <Input
+                  id="campaign-ab-split"
+                  type="number"
+                  min={10}
+                  max={90}
+                  value={abSplitPercent}
+                  disabled={!editable || pending}
+                  onChange={(event) =>
+                    setAbSplitPercent(Number(event.target.value) || 50)
+                  }
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="campaign-preview">Preview text</Label>
@@ -200,6 +279,8 @@ export function CampaignSettingsPanel({
         counts={audienceOptions}
         clients={audienceOptions.clients}
         contacts={audienceOptions.contacts}
+        lists={lists}
+        planTier={usage.planTier}
         disabled={!editable || pending}
         onChange={({ audienceType: nextType, audienceConfig: nextConfig }) => {
           setAudienceType(nextType);
@@ -210,9 +291,21 @@ export function CampaignSettingsPanel({
       <div className={`${workspacePanelCard} space-y-3 p-4`}>
         <h2 className={`font-semibold ${workspaceText}`}>Schedule</h2>
         <p className={`text-sm ${workspaceTextMuted}`}>
-          Optional send time. You can also confirm from the Send page.
+          Times are interpreted in {timezoneShortLabel(scheduledTimezone)}.
         </p>
         <div className="flex flex-wrap gap-2">
+          <select
+            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            value={scheduledTimezone}
+            disabled={!editable || pending}
+            onChange={(event) => setScheduledTimezone(event.target.value)}
+          >
+            {CAMPAIGN_TIMEZONES.map((zone) => (
+              <option key={zone} value={zone}>
+                {timezoneShortLabel(zone)}
+              </option>
+            ))}
+          </select>
           <Input
             type="datetime-local"
             value={scheduledAt}
@@ -235,7 +328,10 @@ export function CampaignSettingsPanel({
                         accountId,
                         accountSlug,
                         campaignId: campaign.id,
-                        scheduledAt: new Date(scheduledAt).toISOString(),
+                        scheduledAt: zonedLocalToUtcIso(
+                          scheduledAt,
+                          scheduledTimezone,
+                        ),
                       });
                       toast.success('Campaign scheduled');
                       router.refresh();
@@ -286,7 +382,11 @@ export function CampaignSettingsPanel({
         {campaign.status === 'scheduled' && campaign.scheduledAt ? (
           <p className={`text-sm ${workspaceTextMuted}`}>
             Currently scheduled for{' '}
-            {new Date(campaign.scheduledAt).toLocaleString()}.
+            {formatZonedInstant(
+              campaign.scheduledAt,
+              campaign.scheduledTimezone,
+            )}
+            .
           </p>
         ) : null}
       </div>
@@ -320,7 +420,11 @@ export function CampaignSettingsPanel({
             Edit content
           </Link>
         </Button>
-        <Button asChild className={workspaceBtnPrimary} data-test="campaign-goto-send">
+        <Button
+          asChild
+          className={workspaceBtnPrimary}
+          data-test="campaign-goto-send"
+        >
           <Link href={sendHref}>
             <Send className="mr-2 h-4 w-4" />
             Send

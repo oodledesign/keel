@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { randomBytes } from 'crypto';
 
+import { fireNewSubscriberAutomations } from '~/lib/campaigns/campaign-automations.service';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { normalizeCirculationEmail } from '~/lib/commercial/circulation/circulation-eligibility';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
@@ -214,7 +215,15 @@ export async function ensureWorkspaceMailingPreference(input: {
     throw new Error(error?.message ?? 'Could not subscribe to mailing list');
   }
 
-  return mapPreference(data as Record<string, unknown>);
+  const preference = mapPreference(data as Record<string, unknown>);
+  void fireNewSubscriberAutomations({
+    client: input.admin,
+    accountId: input.accountId,
+    email: preference.email,
+    unsubscribeToken: preference.unsubscribeToken,
+  }).catch(() => undefined);
+
+  return preference;
 }
 
 export async function unsubscribeWorkspaceMailingListByToken(

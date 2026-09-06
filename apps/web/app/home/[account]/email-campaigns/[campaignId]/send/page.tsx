@@ -33,6 +33,7 @@ async function CampaignSendPage({ params }: CampaignSendPageProps) {
       recipients={data.recipients}
       audienceCount={data.audienceCount}
       usage={data.usage}
+      analytics={data.analytics}
       brand={data.brand}
       clients={data.audienceOptions.clients}
     />
