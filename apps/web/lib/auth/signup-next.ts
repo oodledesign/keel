@@ -6,7 +6,7 @@ import {
   parseSetupIntent,
 } from '~/lib/billing/pricing-marketing';
 
-export function isWorkspaceSetupPath(path: string) {
+function isWorkspaceSetupPath(path: string) {
   return (
     path === pathsConfig.app.workspaceSetup ||
     path.startsWith(`${pathsConfig.app.workspaceSetup}?`)
@@ -20,11 +20,15 @@ export function isBusinessOnboardingPath(path: string) {
   );
 }
 
-export function isSetupPath(path: string) {
+function isSetupPath(path: string) {
   return isWorkspaceSetupPath(path) || isBusinessOnboardingPath(path);
 }
 
-/** Map marketing `intent=` hints to a post-auth path when `next` is omitted. */
+/**
+ * Map marketing `intent=` hints to a post-auth path when `next` is omitted.
+ * Callers must pass the result through `getSafeRedirectPath` (or
+ * `parseIntentFromNext`) before using it as a redirect target.
+ */
 export function resolveSignupNext(next?: string, intent?: string) {
   if (next?.trim()) return next;
   if (intent === 'business') return pathsConfig.app.businessOnboarding;
