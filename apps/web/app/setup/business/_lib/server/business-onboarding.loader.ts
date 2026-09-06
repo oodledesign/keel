@@ -39,22 +39,55 @@ export async function loadBusinessOnboardingState(accountSlug?: string) {
     | undefined;
 
   if (!account) {
-    return { user, account: null, clientId: null as string | null };
+    return {
+      user,
+      account: null,
+      clientId: null as string | null,
+      client: null,
+      taskTitle: null as string | null,
+    };
   }
 
-  const { data: client } = await admin
-    .from('clients')
-    .select('id')
-    .eq('account_id', account.id)
-    .is('archived_at', null)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const [{ data: client }, { data: task }] = await Promise.all([
+    admin
+      .from('clients')
+      .select('id, company_name, website, picture_url, email')
+      .eq('account_id', account.id)
+      .is('archived_at', null)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from('tasks')
+      .select('title')
+      .eq('account_id', account.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const clientRow = client as {
+    id?: string;
+    company_name?: string | null;
+    website?: string | null;
+    picture_url?: string | null;
+    email?: string | null;
+  } | null;
 
   return {
     user,
     account,
-    clientId: (client as { id?: string } | null)?.id ?? null,
+    clientId: clientRow?.id ?? null,
+    client: clientRow?.id
+      ? {
+          id: clientRow.id,
+          name: clientRow.company_name ?? '',
+          website: clientRow.website ?? null,
+          pictureUrl: clientRow.picture_url ?? null,
+          email: clientRow.email ?? null,
+        }
+      : null,
+    taskTitle: (task as { title?: string } | null)?.title ?? null,
   };
 }
 

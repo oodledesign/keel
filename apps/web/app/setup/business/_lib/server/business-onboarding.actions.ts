@@ -16,6 +16,7 @@ import { fromAccountsUntyped } from '~/lib/supabase/accounts-table';
 import { toPublicOnboardingError } from '~/lib/workspace/onboarding-public-error';
 
 import { completeWorkspaceSetupForUser } from '../../../_lib/server/workspace-setup.service';
+import { businessPaidPlanBillingPath } from '../business-billing-redirect';
 import { type BusinessOnboardingStep } from '../business-onboarding-steps';
 import {
   CompleteBusinessLiteSchema,
@@ -89,20 +90,16 @@ async function setOnboardingStep(
   return {};
 }
 
-function billingRedirect(slug: string, productId: string, seats: number) {
-  const billingPath = slugPath(pathsConfig.app.accountBilling, slug);
-  const planId =
-    productId === 'ozer-business-starter'
-      ? 'business-starter-monthly'
-      : 'business-monthly';
-  const query = new URLSearchParams({
-    setup: '1',
-    product: productId,
-    plan: planId,
-    interval: 'month',
-    seats: String(seats),
-  });
-  return `${billingPath}?${query.toString()}`;
+async function pinDefaultWorkspace(userId: string, slug: string) {
+  const client = getSupabaseServerClient();
+  await client.from('user_settings').upsert(
+    {
+      user_id: userId,
+      default_landing_type: 'workspace',
+      default_workspace_slug: slug,
+    },
+    { onConflict: 'user_id' },
+  );
 }
 
 export const saveBusinessCompanyAction = enhanceAction(
@@ -161,6 +158,7 @@ export const saveBusinessCompanyAction = enhanceAction(
       }
 
       const website = data.website?.trim() || null;
+      let pictureUrl: string | null = null;
       if (website) {
         const admin = getSupabaseServerAdminClient();
         await admin.from('account_brand_settings').upsert(
@@ -170,20 +168,34 @@ export const saveBusinessCompanyAction = enhanceAction(
           },
           { onConflict: 'account_id' },
         );
-        await maybeFetchWorkspaceLogo({ accountId, website });
+        pictureUrl = await maybeFetchWorkspaceLogo({ accountId, website });
       }
 
-      if (data.firstName?.trim() || data.lastName?.trim()) {
-        const client = getSupabaseServerClient();
-        await client.from('user_settings').upsert(
-          {
-            user_id: user.id,
-            first_name: data.firstName?.trim() || null,
-            last_name: data.lastName?.trim() || null,
-          },
-          { onConflict: 'user_id' },
-        );
+      const admin = getSupabaseServerAdminClient();
+      await admin
+        .from('businesses')
+        .update({ name: data.name })
+        .eq('account_id', accountId);
+
+      if (!slug) {
+        return { error: 'Could not create your workspace.' };
       }
+
+      const client = getSupabaseServerClient();
+      await client.from('user_settings').upsert(
+        {
+          user_id: user.id,
+          default_landing_type: 'workspace',
+          default_workspace_slug: slug,
+          ...(data.firstName?.trim() || data.lastName?.trim()
+            ? {
+                first_name: data.firstName?.trim() || null,
+                last_name: data.lastName?.trim() || null,
+              }
+            : {}),
+        },
+        { onConflict: 'user_id' },
+      );
 
       revalidatePath(pathsConfig.app.workspaceSetup);
       revalidatePath(pathsConfig.app.home);
@@ -193,6 +205,7 @@ export const saveBusinessCompanyAction = enhanceAction(
       return {
         accountId,
         accountSlug: slug,
+        pictureUrl,
         nextStep: 'client' as const,
       };
     } catch (error) {
@@ -217,7 +230,7 @@ export const saveBusinessClientAction = enhanceAction(
       const [firstName, ...rest] = contactName.split(/\s+/);
       const lastName = rest.join(' ') || undefined;
 
-      const created = await clients.createClient({
+      const created = (await clients.createClient({
         accountId: data.accountId,
         client_type: 'business',
         company_name: data.companyName,
@@ -232,9 +245,15 @@ export const saveBusinessClientAction = enhanceAction(
                 isPrimary: true,
               }
             : undefined,
-      });
+      })) as {
+        id?: string;
+        company_name?: string | null;
+        website?: string | null;
+        picture_url?: string | null;
+        email?: string | null;
+      } | null;
 
-      const clientId = (created as { id?: string } | null)?.id;
+      const clientId = created?.id;
       if (!clientId) {
         return { error: 'Could not create the client.' };
       }
@@ -261,7 +280,17 @@ export const saveBusinessClientAction = enhanceAction(
         return { error: step.error };
       }
 
-      return { clientId, nextStep: 'task' as const };
+      return {
+        clientId,
+        client: {
+          id: clientId,
+          name: created.company_name ?? data.companyName,
+          website: created.website ?? data.website ?? null,
+          pictureUrl: created.picture_url ?? null,
+          email: created.email ?? data.contactEmail ?? null,
+        },
+        nextStep: 'task' as const,
+      };
     } catch (error) {
       return {
         error: toPublicOnboardingError(error, 'Could not add the client.'),
@@ -294,7 +323,7 @@ export const saveBusinessTaskAction = enhanceAction(
       if (step.error) {
         return { error: step.error };
       }
-      return { nextStep: 'assistant' as const };
+      return { nextStep: 'assistant' as const, taskTitle: data.title };
     } catch (error) {
       return {
         error: toPublicOnboardingError(error, 'Could not add the task.'),
@@ -361,6 +390,7 @@ export const completeBusinessLiteAction = enhanceAction(
       if (step.error) {
         return { error: step.error };
       }
+      await pinDefaultWorkspace(user.id, owner.account.slug);
       revalidatePath(slugPath(pathsConfig.app.accountHome, owner.account.slug));
       return {
         nextStep: 'done' as const,
@@ -386,9 +416,10 @@ export const startBusinessPaidPlanAction = enhanceAction(
       if (step.error) {
         return { error: step.error };
       }
+      await pinDefaultWorkspace(user.id, owner.account.slug);
       return {
         nextStep: 'done' as const,
-        redirectTo: billingRedirect(
+        redirectTo: businessPaidPlanBillingPath(
           owner.account.slug,
           data.productId,
           data.seats,

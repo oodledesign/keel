@@ -13,7 +13,8 @@ export function BillingCheckoutFocus() {
   useEffect(() => {
     const shouldFocus =
       searchParams.get('billing') === '1' ||
-      searchParams.get('upgrade') === '1';
+      searchParams.get('upgrade') === '1' ||
+      searchParams.get('setup') === '1';
 
     if (!shouldFocus) {
       return;

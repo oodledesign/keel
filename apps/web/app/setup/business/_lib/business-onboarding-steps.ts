@@ -14,7 +14,7 @@ export const BUSINESS_ONBOARDING_STEP_LABELS: Record<
 > = {
   company: 'Company',
   client: 'Client',
-  task: 'Task',
+  task: 'Workspace',
   assistant: 'Assistant',
   plan: 'Plan',
 };

@@ -20,8 +20,9 @@ import {
   hasActiveWorkspaceSubscription,
   isAccountBillingExempt,
 } from './entitlements';
+import { resolveMissingLifecycleAccess } from './missing-lifecycle-access';
 
-type AnyClient = SupabaseClient<any>;
+type AnyClient = SupabaseClient;
 
 export type AccountAccessResult = {
   level: AccountAccessLevel;
@@ -42,7 +43,7 @@ export { accessLevelFromBillingStatus };
 export async function checkAccountAccess(
   client: AnyClient,
   accountId: string,
-  options?: { userId?: string },
+  _options?: { userId?: string },
 ): Promise<AccountAccessResult> {
   const [superAdmin, exempt, billing] = await Promise.all([
     isSuperAdmin(client),
@@ -84,25 +85,46 @@ export async function checkAccountAccess(
     };
   }
 
-  // No lifecycle row yet — fall back to MakerKit active/trialing subscription.
-  const activeSub = await hasActiveWorkspaceSubscription(client, accountId);
-  if (activeSub) {
-    return {
-      level: 'full_access',
-      status: null,
-      billing,
-      exempt: false,
-      reason: 'legacy_active_subscription',
-    };
-  }
+  // No lifecycle row yet — Stripe sub OR a workspace plan entitlement (Free).
+  const [activeSub, hasPlanEntitlement] = await Promise.all([
+    hasActiveWorkspaceSubscription(client, accountId),
+    hasWorkspacePlanEntitlement(client, accountId),
+  ]);
+
+  const fallback = resolveMissingLifecycleAccess({
+    hasActiveSubscription: activeSub,
+    hasWorkspacePlanEntitlement: hasPlanEntitlement,
+  });
 
   return {
-    level: 'no_access',
+    level: fallback.level,
     status: null,
     billing,
     exempt: false,
-    reason: 'no_active_billing',
+    reason: fallback.reason,
   };
+}
+
+async function hasWorkspacePlanEntitlement(
+  client: AnyClient,
+  accountId: string,
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  const { data, error } = await client
+    .from('account_entitlements')
+    .select('id')
+    .eq('account_id', accountId)
+    .like('entitlement_key', 'workspace_%')
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[billing] hasWorkspacePlanEntitlement:', error.message);
+    return false;
+  }
+
+  return Boolean(data);
 }
 
 export function accountAccessAllows(
