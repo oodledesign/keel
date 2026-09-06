@@ -10,12 +10,11 @@ import {
   escapeNotificationHtml,
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
-import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import type {
   ProjectGuest,
   ProjectGuestPermissions,
 } from '~/lib/projects/project-guests.types';
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 import { createSupportPublicToken } from '~/lib/support/support-tokens';
 
 export type { ProjectGuest, ProjectGuestPermissions };
@@ -353,51 +352,45 @@ export async function createProjectGuestInvite(input: {
   const projectLabel =
     project.title?.trim() || project.name.trim() || 'a project';
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
-  const from = resolveTransactionalEmailFrom(productName);
 
   let emailSent = false;
   let emailError: string | undefined;
 
-  if (from) {
-    const html = wrapNotificationEmail(
-      `<p style="margin:0 0 12px;">You have been invited to collaborate on <strong>${escapeNotificationHtml(projectLabel)}</strong> in ${escapeNotificationHtml(productName)}.</p>
+  const html = wrapNotificationEmail(
+    `<p style="margin:0 0 12px;">You have been invited to collaborate on <strong>${escapeNotificationHtml(projectLabel)}</strong> in ${escapeNotificationHtml(productName)}.</p>
       <p style="margin:0 0 12px;font-size:13px;color:#5A4450;">You will only see that project's task board — not clients, invoices, or other workspace settings.</p>
       <p style="margin:0;font-size:13px;color:#5A4450;">Or open this link:<br /><a href="${escapeNotificationHtml(acceptUrl)}" style="color:#FF5C34;word-break:break-all;">${escapeNotificationHtml(acceptUrl)}</a></p>`,
-      {
-        productName,
-        title: 'Project guest invite',
-        heading: "You've been invited as a project guest",
-        preview: `Collaborate on ${projectLabel}`,
-        cta: { label: 'Accept invite', href: acceptUrl },
-        footerNote: `You're receiving this because someone invited you to a project on ${escapeNotificationHtml(productName)}.`,
-      },
-    );
+    {
+      productName,
+      title: 'Project guest invite',
+      heading: "You've been invited as a project guest",
+      preview: `Collaborate on ${projectLabel}`,
+      cta: { label: 'Accept invite', href: acceptUrl },
+      footerNote: `You're receiving this because someone invited you to a project on ${escapeNotificationHtml(productName)}.`,
+    },
+  );
 
-    try {
-      await sendPlatformEmail({
-        type: 'invitation',
-        accountId: input.accountId,
-        mail: {
-          to: email,
-          from,
-          subject: `Invite to collaborate on ${projectLabel}`,
-          html,
-        },
-        metadata: {
-          kind: 'project_guest',
-          projectId: input.projectId,
-          guestId: guest.id,
-        },
-      });
-      emailSent = true;
-    } catch (error) {
-      emailError = formatEmailDeliveryError(error);
-      console.error('[project-guests] email failed', emailError, error);
-    }
-  } else {
-    emailError =
-      'No email sender configured (set ZEPTOMAIL_FROM_ADDRESS or EMAIL_SENDER).';
-    console.warn('[project-guests]', emailError);
+  try {
+    await sendClientFacingEmail({
+      type: 'invitation',
+      accountId: input.accountId,
+      feature: 'other',
+      displayName: productName,
+      mail: {
+        to: email,
+        subject: `Invite to collaborate on ${projectLabel}`,
+        html,
+      },
+      metadata: {
+        kind: 'project_guest',
+        projectId: input.projectId,
+        guestId: guest.id,
+      },
+    });
+    emailSent = true;
+  } catch (error) {
+    emailError = formatEmailDeliveryError(error);
+    console.error('[project-guests] email failed', emailError, error);
   }
 
   void input.accountSlug;

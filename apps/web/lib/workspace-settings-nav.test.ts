@@ -53,6 +53,19 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).not.toContain('finances');
   });
 
+  it('omits sending domain when the workspace cannot configure one', () => {
+    const items = buildWorkspaceSettingsNav({
+      accountSlug: 'lite-studio',
+      workspaceProfile: 'work_design',
+      moduleSettings: { finances: true, tasks: true },
+      access: ownerAccess,
+      canConfigureSendingDomain: false,
+    });
+
+    expect(items.map((item) => item.id)).not.toContain('sending-domain');
+    expect(items.map((item) => item.id)).toContain('brand');
+  });
+
   it('omits sending domain for family workspaces', () => {
     const items = buildWorkspaceSettingsNav({
       accountSlug: 'family',

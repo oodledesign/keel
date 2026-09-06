@@ -49,6 +49,15 @@ export const UpdateSendingLocalPartSchema = z.object({
   localPart: sendingLocalPartSchema,
 });
 
+export const UpdateOutboundEmailSettingsSchema = z.object({
+  accountId: z.string().uuid(),
+  invoices: z.boolean(),
+  proposals: z.boolean(),
+  contracts: z.boolean(),
+  portal_invites: z.boolean(),
+  other: z.boolean(),
+});
+
 export type AddSendingDomainInput = z.infer<typeof AddSendingDomainSchema>;
 export type UpdateSendingLocalPartInput = z.infer<
   typeof UpdateSendingLocalPartSchema

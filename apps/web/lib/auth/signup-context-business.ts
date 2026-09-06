@@ -41,7 +41,7 @@ export function isBusinessSignupIntent(intent: SetupIntent | null): boolean {
     intent.productId === 'ozer-business-lite' ||
     intent.planId === 'business-lite-free'
   ) {
-    return false;
+    return true;
   }
 
   // Profile alone (e.g. /work Start free without a plan) still shows seat confirm,
@@ -126,12 +126,11 @@ export function buildBusinessSignupContext(
       'Get access to your studio workspace for clients, projects, and invoices.',
     formTitle: 'Create an account',
     formSubtitle:
-      'Set up your business workspace — clients, projects, and AI in one place.',
-    badge:
-      `${planLabel} · ${seats} seat${seats === 1 ? '' : 's'} · 14-day trial, no card`.toUpperCase(),
+      'Google or email — then company, one client, and a plan. Card only if you pick Starter or Pro.',
+    badge: 'Auth first · plan at the end'.toUpperCase(),
     highlights,
     intent: resolvedIntent,
-    showPlanConfirm: true,
+    showPlanConfirm: false,
   };
 }
 

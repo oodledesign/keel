@@ -8,6 +8,7 @@ import {
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
 import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
+import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
@@ -36,14 +37,11 @@ export async function sendContractIssuedEmail(params: {
     email?: string | null;
   } | null;
 }) {
-  const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
 
-  if (!sender || !siteUrl) {
-    throw new Error(
-      'Email is not configured (missing EMAIL_SENDER or NEXT_PUBLIC_SITE_URL)',
-    );
+  if (!siteUrl) {
+    throw new Error('Email is not configured (missing NEXT_PUBLIC_SITE_URL)');
   }
 
   const admin = getSupabaseServerAdminClient();
@@ -114,11 +112,13 @@ export async function sendContractIssuedEmail(params: {
       <p>${signature.replace(/\n/g, '<br />')}</p>
   `;
 
-  await sendPlatformEmail({
+  await sendClientFacingEmail({
     type: 'contract',
     accountId: params.accountId,
+    feature: 'contracts',
+    accountName: account?.name,
+    brandContactEmail: brand.contact_email,
     mail: {
-      from: sender,
       to: params.recipientEmail,
       subject: params.testOnly ? `[Test] ${subject}` : subject,
       html: wrapEmailHtmlWithBrand({

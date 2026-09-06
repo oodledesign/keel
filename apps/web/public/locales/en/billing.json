@@ -34,7 +34,7 @@
   "perMonth": "month",
   "custom": "Custom Plan",
   "lifetime": "Lifetime",
-  "trialPeriod": "{{period}}-day free trial · no card required",
+  "trialPeriod": "{{period}}-day free trial · card required",
   "perPeriod": "per {{period}}",
   "redirectingToPayment": "Redirecting to checkout. Please wait...",
   "proceedToPayment": "Proceed to Payment",

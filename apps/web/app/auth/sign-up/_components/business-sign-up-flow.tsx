@@ -105,7 +105,7 @@ export function BusinessSignUpFlow({
       formTitle={step === 'plan' ? 'Confirm your plan' : context.formTitle}
       formSubtitle={
         step === 'plan'
-          ? 'Choose Starter or Pro, set your seats, then create your account. 14-day trial — no card.'
+          ? 'Choose Starter or Pro, set your seats, then create your account. 14-day trial — card required.'
           : context.formSubtitle
       }
     >
@@ -235,7 +235,7 @@ export function BusinessSignUpFlow({
                 {guests} project guest{guests === 1 ? '' : 's'} ·{' '}
                 {isStarter ? '10 GB' : '25 GB'} portal storage
               </li>
-              <li>14-day trial · no card required</li>
+              <li>14-day trial · card required</li>
             </ul>
           </div>
 

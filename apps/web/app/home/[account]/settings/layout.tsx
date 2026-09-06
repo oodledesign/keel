@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
+import { canUseCustomSendingDomain } from '~/lib/billing/can-use-custom-sending-domain';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -37,11 +39,21 @@ async function WorkspaceSettingsLayout({
     redirect(getDefaultAccountPath(account, workspace.account));
   }
 
+  const supabase = getSupabaseServerClient();
+  const canConfigureSendingDomain = await canUseCustomSendingDomain(
+    supabase,
+    workspace.account.id as string,
+    (
+      workspace.account as { business_type?: string | null }
+    ).business_type,
+  );
+
   const navItems = buildWorkspaceSettingsNav({
     accountSlug: account,
     workspaceProfile: workspace.workspaceProfile,
     moduleSettings: workspace.moduleSettings,
     access,
+    canConfigureSendingDomain,
   });
 
   return (

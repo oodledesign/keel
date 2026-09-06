@@ -37,15 +37,14 @@ STRIPE_SECRET_KEY=sk_test_... pnpm stripe:setup-catalog -- --write-env
 
 Paste the printed `STRIPE_PRICE_*` values into Vercel (Production + Preview) and local `.env.local`.
 
-### No-card free trials
+### Card-on-file trials (default)
 
-Set on Vercel (Production + Preview) and in local `.env.local`:
+Starter and Pro Checkout sessions set `payment_method_collection: always` so a card is collected up front for the 14-day trial. Do **not** set `STRIPE_ENABLE_TRIAL_WITHOUT_CC` in production unless you intentionally want a no-card trial that **cancels** at trial end if no payment method exists.
 
 ```bash
+# Optional / not recommended for Ozer Business Starter & Pro
 STRIPE_ENABLE_TRIAL_WITHOUT_CC=true
 ```
-
-This makes Stripe Checkout use `payment_method_collection: if_required` for plans with a trial. Users can start the 14-day trial without a card; if they still have no payment method at trial end, Stripe **cancels** the subscription (no surprise charge).
 
 ### Commercial Property (graduated seats)
 

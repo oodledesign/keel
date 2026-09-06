@@ -152,7 +152,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
       heading: 'Create your free personal account',
       subheading:
         'Your personal hub comes first. Next you’ll add a free Business Lite workspace to install apps like Signatures.',
-      badge: 'Free personal + Lite · no card',
+      badge: 'Free personal + Lite · no card ever',
       highlights: [
         'Free personal tasks, people, notes & planner',
         'Business Lite workspace for apps like Signatures',

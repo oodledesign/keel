@@ -57,6 +57,20 @@ export default async function WorkspaceSetupPage({
   }
 
   const intent = parseSetupIntent(params);
+  const isBusinessIntent =
+    intent.profile === 'work_design' ||
+    intent.productId === 'ozer-business-lite' ||
+    intent.productId === 'ozer-business-starter' ||
+    intent.productId === 'ozer-business';
+
+  if (isBusinessIntent && !forceShow) {
+    const next = new URLSearchParams(params);
+    redirect(
+      next.size
+        ? `${pathsConfig.app.businessOnboarding}?${next.toString()}`
+        : pathsConfig.app.businessOnboarding,
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--workspace-shell-canvas)]">

@@ -221,7 +221,7 @@ export function trialLabel(plan: BillingPlanPrice): string {
   if (plan.trialDays == null) {
     return 'No free trial — billed from day one at checkout.';
   }
-  return `${plan.trialDays}-day free trial — no credit card required.`;
+  return `${plan.trialDays}-day free trial — card on file, billed after the trial.`;
 }
 
 export const PRICING_LAST_VERIFIED = '4 July 2026';

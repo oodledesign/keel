@@ -85,7 +85,7 @@ export function OzerPricingPage() {
           </Button>
         </div>
         <p className={cn('mt-4 text-sm', marketingMutedText)}>
-          Free personal forever · 14-day trial, no card needed · Annual plans
+          Free personal forever · 14-day trial with card on Starter/Pro · Annual plans
           save 16.7%
         </p>
       </section>

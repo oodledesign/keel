@@ -111,7 +111,11 @@ export async function createStripeCheckout(
       ? {
           payment_method_collection: 'if_required' as const,
         }
-      : {};
+      : trialDays
+        ? {
+            payment_method_collection: 'always' as const,
+          }
+        : {};
 
   const referralCouponId = params.referralDiscountCouponId;
   const discountParams = referralCouponId
