@@ -137,7 +137,8 @@ export async function completeWorkspaceSetupForUser(
     const { error: memErr } = await admin
       .from('accounts_memberships')
       .update({ onboarding_completed: true })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('onboarding_completed', false);
 
     if (memErr) {
       console.error('[workspace-setup] onboarding_completed:', memErr.message);
@@ -275,11 +276,13 @@ export async function completeWorkspaceSetupForUser(
     workspace_setup_skipped_at: null,
   });
 
-  // Mark every membership complete (cleans up duplicate workspaces from earlier retries).
+  // Mark incomplete memberships complete (cleans up retries). Skip rows
+  // already true so we do not write a no-op UPDATE.
   const { error: memErr } = await admin
     .from('accounts_memberships')
     .update({ onboarding_completed: true })
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('onboarding_completed', false);
 
   if (memErr) {
     console.error('[workspace-setup] onboarding_completed:', memErr.message);
