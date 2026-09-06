@@ -22,6 +22,7 @@ import { estimateStarterMonthlyGbp } from '~/lib/billing/business-starter-pricin
 import { formatGbp } from '~/lib/billing/pricing-marketing';
 import { OZER_ASSISTANT_DOWNLOAD } from '~/lib/marketing/assistant-download';
 import { workspaceBtnPrimary } from '~/lib/workspace-ui';
+import { isNextProductionDigestMessage } from '~/lib/workspace/onboarding-public-error';
 
 import {
   BUSINESS_ONBOARDING_STEPS,
@@ -90,8 +91,12 @@ export function BusinessOnboardingWizard(props: {
         await task();
       } catch (caught) {
         if (isRedirectError(caught)) throw caught;
+        const message =
+          caught instanceof Error ? caught.message : 'Something went wrong.';
         setError(
-          caught instanceof Error ? caught.message : 'Something went wrong.',
+          isNextProductionDigestMessage(message)
+            ? 'Could not create your workspace. Please try again.'
+            : message,
         );
       }
     });
@@ -237,6 +242,17 @@ export function BusinessOnboardingWizard(props: {
                     firstName,
                     lastName,
                   });
+                  if (
+                    result.error ||
+                    !result.accountId ||
+                    !result.accountSlug
+                  ) {
+                    setError(
+                      result.error ??
+                        'Could not create your workspace. Please try again.',
+                    );
+                    return;
+                  }
                   setAccount({
                     id: result.accountId,
                     slug: result.accountSlug,
@@ -337,6 +353,10 @@ export function BusinessOnboardingWizard(props: {
                     website: clientWebsite,
                     enablePortal,
                   });
+                  if (result.error || !result.clientId) {
+                    setError(result.error ?? 'Could not add the client.');
+                    return;
+                  }
                   setClientId(result.clientId);
                   setStep(result.nextStep);
                 })
@@ -405,6 +425,10 @@ export function BusinessOnboardingWizard(props: {
                       title: taskTitle.trim(),
                       notes: taskNotes,
                     });
+                    if (result.error || !result.nextStep) {
+                      setError(result.error ?? 'Could not add the task.');
+                      return;
+                    }
                     setStep(result.nextStep);
                   })
                 }
@@ -422,6 +446,10 @@ export function BusinessOnboardingWizard(props: {
                     const result = await skipBusinessTaskAction({
                       accountId: account.id,
                     });
+                    if (result.error || !result.nextStep) {
+                      setError(result.error ?? 'Could not skip this step.');
+                      return;
+                    }
                     setStep(result.nextStep);
                   })
                 }
@@ -477,6 +505,10 @@ export function BusinessOnboardingWizard(props: {
                   const result = await continueBusinessAssistantAction({
                     accountId: account.id,
                   });
+                  if (result.error || !result.nextStep) {
+                    setError(result.error ?? 'Could not continue setup.');
+                    return;
+                  }
                   setStep(result.nextStep);
                 })
               }
@@ -552,6 +584,10 @@ export function BusinessOnboardingWizard(props: {
                     const result = await completeBusinessLiteAction({
                       accountId: account.id,
                     });
+                    if (result.error || !result.redirectTo) {
+                      setError(result.error ?? 'Could not finish setup.');
+                      return;
+                    }
                     window.location.assign(result.redirectTo);
                     return;
                   }
@@ -563,6 +599,10 @@ export function BusinessOnboardingWizard(props: {
                         : 'ozer-business',
                     seats: billable,
                   });
+                  if (result.error || !result.redirectTo) {
+                    setError(result.error ?? 'Could not start checkout.');
+                    return;
+                  }
                   window.location.assign(result.redirectTo);
                 })
               }

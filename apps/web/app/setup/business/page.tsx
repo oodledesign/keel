@@ -3,14 +3,13 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { BusinessOnboardingWizard } from './_components/business-onboarding-wizard';
 import {
   type BusinessOnboardingStep,
   isBusinessOnboardingStep,
 } from './_lib/business-onboarding-steps';
-import { loadBusinessOnboardingState } from './_lib/server/business-onboarding.actions';
+import { loadBusinessOnboardingState } from './_lib/server/business-onboarding.loader';
 
 export const metadata = {
   title: 'Set up your business — Ozer',
@@ -21,7 +20,6 @@ export default async function BusinessOnboardingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireUserInServerComponent();
   const sp = await searchParams;
   const accountSlug = typeof sp.account === 'string' ? sp.account : undefined;
   const { account, clientId, user } =
@@ -34,13 +32,13 @@ export default async function BusinessOnboardingPage({
     .eq('user_id', user.id)
     .maybeSingle();
 
-  const metadata = user.user_metadata as
+  const userMeta = user.user_metadata as
     | { full_name?: string; name?: string }
     | undefined;
   const userNeedsName = !(
     (settings as { first_name?: string | null } | null)?.first_name?.trim() ||
-    metadata?.full_name ||
-    metadata?.name
+    userMeta?.full_name ||
+    userMeta?.name
   );
 
   if (
