@@ -76,6 +76,7 @@ export const UpdateJobSchema = z.object({
   value_pence: optionalNullableInt,
   cost_pence: optionalNullableInt,
   portal_visible: z.boolean().optional(),
+  portal_restrict_contacts: z.boolean().optional(),
 });
 
 // --- Delete job (Owner/Admin only) ---

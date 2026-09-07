@@ -44,6 +44,7 @@ import {
   updateJob,
 } from '../_lib/server/server-actions';
 import { ClientCombobox } from './client-combobox';
+import { ProjectPortalAccessPanel } from './project-portal-access-panel';
 
 type Job = {
   id: string;
@@ -602,6 +603,17 @@ export function JobEditContent({
           </div>
         </div>
       </form>
+
+      <div className="mt-6">
+        <ProjectPortalAccessPanel
+          accountId={accountId}
+          accountSlug={accountSlug}
+          jobId={jobId}
+          hasClient={Boolean(job.client_id)}
+          canManage={canEditJobs}
+          initialPortalVisible={Boolean(job.portal_visible)}
+        />
+      </div>
     </div>
   );
 }
