@@ -77,7 +77,7 @@ export function buildWorkspaceSettingsNav(input: {
   workspaceProfile: WorkspaceProfile;
   moduleSettings?: Record<string, boolean>;
   access: TeamAccountAccess;
-  /** Starter/Pro only. Lite omits the sending-domain settings item. */
+  /** Paid non-lite plans (Starter/Pro, commercial, property) and grants. Lite omits. */
   canConfigureSendingDomain?: boolean;
 }): WorkspaceSettingsNavItem[] {
   const {

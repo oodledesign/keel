@@ -39,6 +39,10 @@ const ADDON_ENTITLEMENTS = [
   { key: 'addon_videos', label: 'Videos' },
   { key: 'addon_media_generate', label: 'Media Generate' },
   { key: 'addon_campaigns', label: 'Campaigns' },
+  {
+    key: 'custom_sending_domain',
+    label: 'Custom sending domain (per-workspace grant)',
+  },
 ];
 
 const QUICK_PLANS = [

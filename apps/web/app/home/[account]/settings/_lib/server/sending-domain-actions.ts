@@ -44,7 +44,7 @@ async function getWritableService(accountId: string, userId: string) {
   const allowed = await canUseCustomSendingDomain(admin, accountId);
   if (!allowed) {
     throw new SendingDomainError(
-      'Custom sending domain is available on Starter and Pro. Upgrade to connect your domain.',
+      'Custom sending domain is available on Starter, Pro, and Commercial Property. Upgrade to connect your domain.',
     );
   }
   const service = createSendingDomainService(admin, createSesIdentityAdmin());
