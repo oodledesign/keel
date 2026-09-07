@@ -47,10 +47,8 @@ async function FormDetailPage({ params }: FormDetailPageProps) {
     redirect(getDefaultAccountPath(accountSlug));
   }
 
-  const { form, submissions, listings } = await loadWorkspaceFormDetail(
-    workspace.account.id,
-    formId,
-  );
+  const { form, submissions, listings, members } =
+    await loadWorkspaceFormDetail(workspace.account.id, formId, accountSlug);
 
   if (!form) {
     notFound();
@@ -61,7 +59,7 @@ async function FormDetailPage({ params }: FormDetailPageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title={form.name}
-        description="Edit fields, choose a destination, and share or embed this form."
+        description="Edit questions, event details, and email rules. Share or embed when you are ready."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
         <FormBuilder
@@ -69,6 +67,7 @@ async function FormDetailPage({ params }: FormDetailPageProps) {
           form={form}
           listings={listings}
           submissions={submissions}
+          members={members}
           showListingDestination={isCommercialPropertyProfile(
             workspace.workspaceProfile,
           )}

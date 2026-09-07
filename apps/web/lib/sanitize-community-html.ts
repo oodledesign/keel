@@ -47,11 +47,37 @@ export function sanitizeCommunityHtml(html: string): string {
     return [...doc.body.childNodes].map(walk).join('');
   }
 
+  return sanitizeHtmlWithoutDom(html);
+}
+
+/** Node / SSR fallback: drop non-allowlisted tags and unsafe attributes. */
+function sanitizeHtmlWithoutDom(html: string): string {
   return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/\son\w+="[^"]*"/gi, '')
-    .replace(/\son\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '');
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(
+      /<\/?(iframe|object|embed|form|svg|math|link|meta|base|applet)[^>]*>/gi,
+      '',
+    )
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(
+      /<\/?([a-z0-9]+)([^>]*)>/gi,
+      (match, tag: string, attrs: string) => {
+        const name = tag.toLowerCase();
+        if (!ALLOWED_TAGS.has(name)) return '';
+        if (name === 'br') return '<br />';
+        if (name === 'a') {
+          if (match.startsWith('</')) return '</a>';
+          const href = /href\s*=\s*["']([^"']+)["']/i.exec(attrs)?.[1] ?? '';
+          if (!/^https?:\/\//i.test(href) && !/^mailto:/i.test(href)) {
+            return '';
+          }
+          return `<a href="${href.replace(/"/g, '&quot;')}" rel="noopener noreferrer" target="_blank">`;
+        }
+        return match.startsWith('</') ? `</${name}>` : `<${name}>`;
+      },
+    );
 }
 
 export function isHtmlContent(text: string): boolean {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   WORKSPACE_FORM_DESTINATIONS,
+  applyWorkspaceFormFieldType,
   createWorkspaceFormField,
   defaultWorkspaceFormFields,
   ensureListingField,
@@ -76,6 +77,49 @@ describe('workspace form fields', () => {
         formListingId: null,
       }),
     ).toBe('22222222-2222-4222-8222-222222222222');
+  });
+
+  it('extracts Yes/No attendance into extras', () => {
+    const fields = [
+      ...defaultWorkspaceFormFields(),
+      {
+        id: 'attendance',
+        type: 'yes_no' as const,
+        key: 'attendance',
+        label: 'Will you attend?',
+        required: true,
+        options: ['Yes', 'No'],
+      },
+    ];
+
+    const contact = extractContactFromValues(fields, {
+      name: 'Ada',
+      email: 'ada@example.com',
+      attendance: 'Yes',
+    });
+
+    expect(contact.extras.attendance).toBe('Yes');
+  });
+
+  it('creates Yes/No fields with Yes and No options', () => {
+    const field = createWorkspaceFormField(
+      'yes_no',
+      defaultWorkspaceFormFields(),
+    );
+    expect(field.type).toBe('yes_no');
+    expect(field.options).toEqual(['Yes', 'No']);
+    expect(field.required).toBe(true);
+  });
+
+  it('switches a select field to Yes/No without dropping custom options', () => {
+    const select = createWorkspaceFormField(
+      'select',
+      defaultWorkspaceFormFields(),
+    );
+    select.options = ['Yes', 'No', 'Maybe'];
+    const next = applyWorkspaceFormFieldType(select, 'yes_no');
+    expect(next.type).toBe('yes_no');
+    expect(next.options).toEqual(['Yes', 'No', 'Maybe']);
   });
 
   it('formats pipeline notes with contact details and extras', () => {

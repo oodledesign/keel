@@ -6,7 +6,10 @@ import {
   WORKSPACE_FORM_STATUSES,
 } from './form-fields';
 import { WORKSPACE_FORM_TEMPLATES } from './form-templates';
-import { WORKSPACE_FORM_PAGE_BACKGROUNDS } from './form-theme';
+import {
+  WORKSPACE_FORM_LAYOUTS,
+  WORKSPACE_FORM_PAGE_BACKGROUNDS,
+} from './form-theme';
 
 export const WorkspaceFormFieldSchema = z.object({
   id: z.string().min(1).max(80),
@@ -32,13 +35,39 @@ export const CreateWorkspaceFormSchema = z.object({
 
 export const WorkspaceFormThemeSchema = z.object({
   pageBackground: z.enum(WORKSPACE_FORM_PAGE_BACKGROUNDS),
+  layout: z.enum(WORKSPACE_FORM_LAYOUTS).optional(),
+});
+
+export const WorkspaceFormEmailTemplateSchema = z.object({
+  id: z.string().min(1).max(80),
+  name: z.string().min(1).max(80),
+  subject: z.string().min(1).max(180),
+  bodyHtml: z.string().max(8000),
+});
+
+export const WorkspaceFormEmailRuleSchema = z.object({
+  id: z.string().min(1).max(80),
+  kind: z.enum(['autoresponder', 'notification']),
+  enabled: z.boolean(),
+  fieldKey: z.string().max(60).nullable(),
+  equals: z.string().max(80).nullable(),
+  templateId: z.string().min(1).max(80),
+  sortOrder: z.number().int().min(0).max(40),
+});
+
+export const WorkspaceFormEmailSettingsSchema = z.object({
+  templates: z.array(WorkspaceFormEmailTemplateSchema).max(20),
+  rules: z.array(WorkspaceFormEmailRuleSchema).max(40),
+  notifyMemberIds: z.array(z.string().uuid()).max(40),
+  notifyEmails: z.array(z.string().max(160)).max(10),
 });
 
 export const UpdateWorkspaceFormSchema = z.object({
   accountId: z.string().uuid(),
   formId: z.string().uuid(),
   name: z.string().min(1).max(120),
-  description: z.string().max(500).optional().nullable(),
+  description: z.string().max(8000).optional().nullable(),
+  eventAddress: z.string().max(240).optional().nullable(),
   destination: z.enum(WORKSPACE_FORM_DESTINATIONS),
   listingId: z.string().uuid().optional().nullable(),
   status: z.enum(WORKSPACE_FORM_STATUSES).optional(),
@@ -47,6 +76,7 @@ export const UpdateWorkspaceFormSchema = z.object({
   successMessage: z.string().max(400).optional().nullable(),
   fields: z.array(WorkspaceFormFieldSchema).min(1).max(40),
   theme: WorkspaceFormThemeSchema.optional(),
+  emailSettings: WorkspaceFormEmailSettingsSchema.optional(),
 });
 
 export const DeleteWorkspaceFormSchema = z.object({

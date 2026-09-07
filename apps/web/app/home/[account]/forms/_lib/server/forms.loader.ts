@@ -14,14 +14,16 @@ export async function loadWorkspaceFormsPage(accountId: string) {
 export async function loadWorkspaceFormDetail(
   accountId: string,
   formId: string,
+  accountSlug: string,
 ) {
   const client = getSupabaseServerClient();
   const service = createWorkspaceFormsService(client);
-  const [form, submissions, listings] = await Promise.all([
+  const [form, submissions, listings, members] = await Promise.all([
     service.getForm(accountId, formId),
     service.listSubmissions(accountId, formId),
     service.listListingOptions(accountId),
+    service.listNotifyMembers(accountSlug),
   ]);
 
-  return { form, submissions, listings };
+  return { form, submissions, listings, members };
 }
