@@ -43,7 +43,10 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
   const rightmoveUrls = publications
     .filter((publication) => publication.portal === 'rightmove')
     .flatMap((publication) =>
-      collectRightmoveUrls({ externalUrl: publication.externalUrl }),
+      collectRightmoveUrls({
+        externalUrl: publication.externalUrl,
+        metadata: publication.metadata,
+      }),
     );
 
   return (

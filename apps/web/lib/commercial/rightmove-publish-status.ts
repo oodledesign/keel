@@ -42,7 +42,9 @@ export function collectRightmoveUrls(input: {
   return urls;
 }
 
-export function formatRightmoveUpdatedAt(iso: string | null | undefined): string {
+export function formatRightmoveUpdatedAt(
+  iso: string | null | undefined,
+): string {
   if (!iso) return '—';
   const date = new Date(iso);
   if (!Number.isFinite(date.getTime())) return '—';
@@ -55,7 +57,9 @@ export function formatRightmoveUpdatedAt(iso: string | null | undefined): string
   });
 }
 
-export function formatRightmovePublicationStatus(status: string | null | undefined) {
+export function formatRightmovePublicationStatus(
+  status: string | null | undefined,
+) {
   switch (status) {
     case 'published':
       return 'Published';
@@ -68,4 +72,28 @@ export function formatRightmovePublicationStatus(status: string | null | undefin
     default:
       return 'Not pushed';
   }
+}
+
+export function isRightmoveDisposalFailed(
+  row: Pick<RightmoveDisposalStatusRow, 'rightmoveStatus' | 'lastError'>,
+): boolean {
+  return row.rightmoveStatus === 'error' || Boolean(row.lastError?.trim());
+}
+
+function rightmoveStatusRank(row: RightmoveDisposalStatusRow): number {
+  if (row.rightmoveStatus === 'error') return 0;
+  if (row.lastError?.trim()) return 1;
+  if (row.rightmoveStatus === 'none' || !row.rightmoveStatus) return 3;
+  if (row.rightmoveStatus === 'published') return 4;
+  return 2;
+}
+
+export function sortRightmoveDisposalRows(
+  rows: RightmoveDisposalStatusRow[],
+): RightmoveDisposalStatusRow[] {
+  return [...rows].sort((a, b) => {
+    const rank = rightmoveStatusRank(a) - rightmoveStatusRank(b);
+    if (rank !== 0) return rank;
+    return a.name.localeCompare(b.name, 'en');
+  });
 }

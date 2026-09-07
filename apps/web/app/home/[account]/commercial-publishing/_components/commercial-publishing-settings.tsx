@@ -271,7 +271,7 @@ export function CommercialPublishingSettings({
     <div className="mx-auto max-w-3xl space-y-6">
       {false && linkedinBanner?.error ? (
         <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-          {linkedinBanner.error}
+          {linkedinBanner?.error}
         </p>
       ) : null}
       {false && linkedinBanner?.connected ? (
