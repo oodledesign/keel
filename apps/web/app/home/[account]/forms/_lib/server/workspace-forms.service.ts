@@ -12,6 +12,12 @@ import {
 } from '~/lib/workspace-forms/form-fields';
 import { workspaceFormCreateDefaultsForTemplate } from '~/lib/workspace-forms/form-templates';
 import {
+  type FormNotifyMemberOption,
+  type WorkspaceFormEmailSettings,
+  parseWorkspaceFormEmailSettings,
+  serializeWorkspaceFormEmailSettings,
+} from '~/lib/workspace-forms/form-email';
+import {
   type WorkspaceFormTheme,
   parseWorkspaceFormTheme,
   serializeWorkspaceFormTheme,
@@ -49,8 +55,10 @@ export type WorkspaceFormRecord = {
   enabled: boolean;
   submitLabel: string;
   successMessage: string | null;
+  eventAddress: string | null;
   fields: WorkspaceFormField[];
   theme: WorkspaceFormTheme;
+  emailSettings: WorkspaceFormEmailSettings;
   createdAt: string;
   updatedAt: string;
   submissionCount: number;
@@ -76,6 +84,8 @@ export type ListingOption = {
   name: string;
 };
 
+export type { FormNotifyMemberOption };
+
 type FormRow = {
   id: string;
   account_id: string;
@@ -89,8 +99,10 @@ type FormRow = {
   enabled: boolean;
   submit_label: string | null;
   success_message: string | null;
+  event_address: string | null;
   fields: unknown;
   theme: unknown;
+  email_settings: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -109,8 +121,10 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     enabled: row.enabled,
     submitLabel: row.submit_label?.trim() || 'Submit',
     successMessage: row.success_message,
+    eventAddress: row.event_address?.trim() || null,
     fields: parseFormFields(row.fields),
     theme: parseWorkspaceFormTheme(row.theme),
+    emailSettings: parseWorkspaceFormEmailSettings(row.email_settings),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     submissionCount,
@@ -225,6 +239,30 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
       }));
     },
 
+    async listNotifyMembers(
+      accountSlug: string,
+    ): Promise<FormNotifyMemberOption[]> {
+      const { data, error } = await client.rpc('get_account_members', {
+        account_slug: accountSlug,
+      });
+
+      if (error || !data) return [];
+
+      return (
+        data as Array<{
+          user_id: string;
+          name: string | null;
+          email: string | null;
+        }>
+      )
+        .map((row) => ({
+          userId: row.user_id,
+          name: row.name?.trim() || row.email?.trim() || 'Member',
+          email: row.email?.trim() || '',
+        }))
+        .filter((row) => row.email);
+    },
+
     async listListingOptions(accountId: string): Promise<ListingOption[]> {
       const { data, error } = await fromTable(client, 'commercial_listings')
         .select('id, name')
@@ -269,7 +307,12 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
           enabled: false,
           submit_label: templateDefaults.submitLabel,
           success_message: templateDefaults.successMessage,
+          event_address: templateDefaults.eventAddress,
           fields,
+          theme: serializeWorkspaceFormTheme(templateDefaults.theme),
+          email_settings: serializeWorkspaceFormEmailSettings(
+            templateDefaults.emailSettings,
+          ),
         })
         .select('*')
         .single();
@@ -299,11 +342,18 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         listing_id: input.listingId || null,
         submit_label: input.submitLabel?.trim() || 'Submit',
         success_message: input.successMessage?.trim() || null,
+        event_address: input.eventAddress?.trim() || null,
         fields,
       };
 
       if (input.theme) {
         updates.theme = serializeWorkspaceFormTheme(input.theme);
+      }
+
+      if (input.emailSettings) {
+        updates.email_settings = serializeWorkspaceFormEmailSettings(
+          input.emailSettings,
+        );
       }
 
       if (input.status) updates.status = input.status;

@@ -29,15 +29,19 @@ describe('brandPageGradientCss', () => {
 });
 
 describe('parseWorkspaceFormTheme', () => {
-  it('defaults to light', () => {
+  it('defaults to light standard', () => {
     expect(parseWorkspaceFormTheme(null)).toEqual({
       pageBackground: 'light',
+      layout: 'standard',
     });
   });
 
-  it('reads brand_gradient', () => {
+  it('reads brand_gradient and event layout', () => {
     expect(
-      parseWorkspaceFormTheme({ pageBackground: 'brand_gradient' }),
-    ).toEqual({ pageBackground: 'brand_gradient' });
+      parseWorkspaceFormTheme({
+        pageBackground: 'brand_gradient',
+        layout: 'event',
+      }),
+    ).toEqual({ pageBackground: 'brand_gradient', layout: 'event' });
   });
 });

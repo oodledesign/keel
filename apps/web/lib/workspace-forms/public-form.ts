@@ -10,6 +10,11 @@ import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 
+import { dispatchWorkspaceFormEmails } from './form-email-dispatch';
+import {
+  type WorkspaceFormEmailSettings,
+  parseWorkspaceFormEmailSettings,
+} from './form-email';
 import {
   type FormContactValues,
   type WorkspaceFormDestination,
@@ -39,6 +44,7 @@ export type PublicWorkspaceForm = {
   accountSlug: string | null;
   name: string;
   description: string | null;
+  eventAddress: string | null;
   destination: WorkspaceFormDestination;
   listingId: string | null;
   shareToken: string;
@@ -47,6 +53,7 @@ export type PublicWorkspaceForm = {
   successMessage: string;
   fields: WorkspaceFormField[];
   theme: WorkspaceFormTheme;
+  emailSettings: WorkspaceFormEmailSettings;
   brand: AccountBrandResolved;
   commercialProperty: boolean;
 };
@@ -64,8 +71,10 @@ type FormRow = {
   status: string;
   submit_label: string | null;
   success_message: string | null;
+  event_address: string | null;
   fields: unknown;
   theme: unknown;
+  email_settings: unknown;
 };
 
 export function parseFormFields(raw: unknown): WorkspaceFormField[] {
@@ -84,7 +93,7 @@ export async function loadPublicWorkspaceFormByToken(
   if (!token || token.length < 16) return null;
 
   const selectColumns =
-    'id, account_id, name, description, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme';
+    'id, account_id, name, description, event_address, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
 
   const byShare = await fromTable(admin, 'workspace_forms')
     .select(selectColumns)
@@ -128,6 +137,7 @@ export async function loadPublicWorkspaceFormByToken(
       'commercial-property',
     name: row.name,
     description: row.description,
+    eventAddress: row.event_address?.trim() || null,
     destination: row.destination,
     listingId: row.listing_id,
     shareToken: row.share_token,
@@ -142,6 +152,7 @@ export async function loadPublicWorkspaceFormByToken(
           : 'Thank you — we have received your enquiry.'),
     fields: parseFormFields(row.fields),
     theme: parseWorkspaceFormTheme(row.theme),
+    emailSettings: parseWorkspaceFormEmailSettings(row.email_settings),
     brand,
   };
 }
@@ -366,8 +377,20 @@ export async function submitPublicWorkspaceForm(
     throw new FormSubmitError('Could not store submission', 500);
   }
 
+  const submissionId = String((data as { id: string }).id);
+
+  void dispatchWorkspaceFormEmails({
+    admin,
+    form,
+    contact,
+    values: input.values,
+    submissionId,
+  }).catch(() => {
+    // Logged inside dispatch — never fail the public submit.
+  });
+
   return {
-    submissionId: String((data as { id: string }).id),
+    submissionId,
     pipelineDealId,
     commercialEnquiryId,
     requirementId,

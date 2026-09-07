@@ -64,6 +64,8 @@ async function PublicWorkspaceFormPage({
         accountName={form.accountName}
         formName={form.name}
         description={form.description}
+        eventAddress={form.eventAddress}
+        layout={form.theme.layout}
         submitLabel={form.submitLabel}
         successMessage={form.successMessage}
         fields={form.fields}

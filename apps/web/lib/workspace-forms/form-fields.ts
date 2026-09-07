@@ -5,8 +5,12 @@ export const WORKSPACE_FORM_FIELD_TYPES = [
   'message',
   'text',
   'textarea',
+  'radio',
   'select',
   'checkbox',
+  'yes_no',
+  'date',
+  'file',
   'hidden',
 ] as const;
 
@@ -60,12 +64,50 @@ export const WORKSPACE_FORM_FIELD_TYPE_LABELS: Record<
   email: 'Email',
   phone: 'Phone',
   message: 'Message',
-  text: 'Short text',
-  textarea: 'Long text',
+  text: 'Short answer',
+  textarea: 'Paragraph',
+  radio: 'Multiple choice',
   select: 'Dropdown',
   checkbox: 'Checkbox',
+  yes_no: 'Yes / No',
+  date: 'Date',
+  file: 'File upload',
   hidden: 'Hidden / pre-filled',
 };
+
+/** Picker groups (Google Forms–style), Ozer types only. */
+export const WORKSPACE_FORM_FIELD_TYPE_GROUPS: Array<{
+  id: string;
+  types: WorkspaceFormFieldType[];
+}> = [
+  {
+    id: 'answers',
+    types: [
+      'text',
+      'textarea',
+      'radio',
+      'checkbox',
+      'select',
+      'file',
+      'date',
+      'yes_no',
+    ],
+  },
+  {
+    id: 'contact',
+    types: ['name', 'email', 'phone', 'message', 'hidden'],
+  },
+];
+
+export const WORKSPACE_FORM_OPTION_TYPES: WorkspaceFormFieldType[] = [
+  'select',
+  'radio',
+  'yes_no',
+];
+
+export function fieldTypeUsesOptions(type: WorkspaceFormFieldType): boolean {
+  return WORKSPACE_FORM_OPTION_TYPES.includes(type);
+}
 
 const SEMANTIC_KEYS = new Set([
   'name',
@@ -162,6 +204,11 @@ export function fieldKeyForType(
     return 'listing_id';
   }
 
+  if (type === 'yes_no' && /attend|rsvp|coming/.test(label.toLowerCase())) {
+    const attendance = 'attendance';
+    if (!existingKeys.includes(attendance)) return attendance;
+  }
+
   const base = slugifyKey(label) || type;
   if (!existingKeys.includes(base) && !SEMANTIC_KEYS.has(base)) {
     return base;
@@ -184,13 +231,64 @@ export function createWorkspaceFormField(
   const label = WORKSPACE_FORM_FIELD_TYPE_LABELS[type];
   const key = fieldKeyForType(type, label, existingKeys);
 
-  return {
+  const field: WorkspaceFormField = {
     id: `${type}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     type,
     key,
     label,
-    required: type === 'name' || type === 'email',
-    options: type === 'select' ? ['Option 1', 'Option 2'] : undefined,
+    required: type === 'name' || type === 'email' || type === 'yes_no',
+    options: defaultOptionsForType(type),
+  };
+
+  return field;
+}
+
+export function defaultOptionsForType(
+  type: WorkspaceFormFieldType,
+): string[] | undefined {
+  if (type === 'yes_no') return ['Yes', 'No'];
+  if (type === 'select' || type === 'radio') return ['Option 1', 'Option 2'];
+  return undefined;
+}
+
+export function applyWorkspaceFormFieldType(
+  field: WorkspaceFormField,
+  type: WorkspaceFormFieldType,
+): WorkspaceFormField {
+  const next: WorkspaceFormField = { ...field, type };
+
+  if (fieldTypeUsesOptions(type)) {
+    next.options =
+      field.options && field.options.length > 0
+        ? type === 'yes_no'
+          ? field.options.slice(0, 4)
+          : field.options
+        : defaultOptionsForType(type);
+  }
+
+  if (type === 'yes_no' && (!next.options || next.options.length < 2)) {
+    next.options = ['Yes', 'No'];
+  }
+
+  return next;
+}
+
+export function duplicateWorkspaceFormField(
+  field: WorkspaceFormField,
+  existing: WorkspaceFormField[],
+): WorkspaceFormField {
+  const existingKeys = existing.map((item) => item.key);
+  const key = fieldKeyForType(
+    field.type,
+    `${field.label} copy`,
+    existingKeys,
+  );
+
+  return {
+    ...field,
+    id: `${field.type}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    key,
+    label: `${field.label} (copy)`,
   };
 }
 

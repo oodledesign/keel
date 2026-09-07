@@ -1,8 +1,13 @@
 import {
+  type WorkspaceFormEmailSettings,
+  defaultRsvpEmailSettings,
+} from './form-email';
+import {
   type WorkspaceFormDestination,
   type WorkspaceFormField,
   defaultWorkspaceFormFields,
 } from './form-fields';
+import type { WorkspaceFormTheme } from './form-theme';
 
 export const WORKSPACE_FORM_TEMPLATES = ['contact', 'blank', 'rsvp'] as const;
 
@@ -96,11 +101,11 @@ function rsvpWorkspaceFormFields(): WorkspaceFormField[] {
     },
     {
       id: 'attendance',
-      type: 'select',
+      type: 'yes_no',
       key: 'attendance',
       label: 'Will you attend?',
       required: true,
-      options: ['Yes', 'No', 'Maybe'],
+      options: ['Yes', 'No'],
     },
     {
       id: 'guests',
@@ -151,13 +156,25 @@ export function workspaceFormCreateDefaultsForTemplate(
   successMessage: string;
   defaultName: string;
   suggestedDestination: WorkspaceFormDestination;
+  theme: WorkspaceFormTheme;
+  eventAddress: string | null;
+  emailSettings: WorkspaceFormEmailSettings;
 } {
   const meta = WORKSPACE_FORM_TEMPLATE_META[template];
+  const isRsvp = template === 'rsvp';
   return {
     fields: workspaceFormFieldsForTemplate(template),
     submitLabel: meta.submitLabel,
     successMessage: meta.successMessage,
     defaultName: meta.defaultName,
     suggestedDestination: meta.suggestedDestination,
+    theme: {
+      pageBackground: 'light',
+      layout: isRsvp ? 'event' : 'standard',
+    },
+    eventAddress: null,
+    emailSettings: isRsvp
+      ? defaultRsvpEmailSettings()
+      : { templates: [], rules: [], notifyMemberIds: [], notifyEmails: [] },
   };
 }

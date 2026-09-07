@@ -11,12 +11,33 @@ export const WORKSPACE_FORM_PAGE_BACKGROUNDS = [
 export type WorkspaceFormPageBackground =
   (typeof WORKSPACE_FORM_PAGE_BACKGROUNDS)[number];
 
+export const WORKSPACE_FORM_LAYOUTS = ['standard', 'event'] as const;
+
+export type WorkspaceFormLayout = (typeof WORKSPACE_FORM_LAYOUTS)[number];
+
 export type WorkspaceFormTheme = {
   pageBackground: WorkspaceFormPageBackground;
+  layout: WorkspaceFormLayout;
 };
 
 export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
   pageBackground: 'light',
+  layout: 'standard',
+};
+
+export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
+  WorkspaceFormLayout,
+  { label: string; description: string }
+> = {
+  standard: {
+    label: 'Standard',
+    description: 'Logo and intro stacked above the form.',
+  },
+  event: {
+    label: 'Event / RSVP',
+    description:
+      'Two columns on desktop: event details on the left, form on the right.',
+  },
 };
 
 export const WORKSPACE_FORM_PAGE_BACKGROUND_LABELS: Record<
@@ -72,11 +93,11 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ...DEFAULT_WORKSPACE_FORM_THEME };
   }
-  const pageBackground = (raw as { pageBackground?: unknown }).pageBackground;
-  if (pageBackground === 'light' || pageBackground === 'brand_gradient') {
-    return { pageBackground };
-  }
-  return { ...DEFAULT_WORKSPACE_FORM_THEME };
+  const row = raw as { pageBackground?: unknown; layout?: unknown };
+  const pageBackground =
+    row.pageBackground === 'brand_gradient' ? 'brand_gradient' : 'light';
+  const layout = row.layout === 'event' ? 'event' : 'standard';
+  return { pageBackground, layout };
 }
 
 export function serializeWorkspaceFormTheme(
@@ -85,5 +106,6 @@ export function serializeWorkspaceFormTheme(
   return {
     pageBackground:
       theme.pageBackground === 'brand_gradient' ? 'brand_gradient' : 'light',
+    layout: theme.layout === 'event' ? 'event' : 'standard',
   };
 }

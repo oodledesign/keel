@@ -44,7 +44,7 @@ describe('workspace form templates', () => {
       { key: 'email', type: 'email', required: true, label: 'Email' },
       {
         key: 'attendance',
-        type: 'select',
+        type: 'yes_no',
         required: true,
         label: 'Will you attend?',
       },
@@ -64,7 +64,7 @@ describe('workspace form templates', () => {
     ]);
 
     const attendance = fields.find((field) => field.key === 'attendance');
-    expect(attendance?.options).toEqual(['Yes', 'No', 'Maybe']);
+    expect(attendance?.options).toEqual(['Yes', 'No']);
   });
 
   it('provides create defaults for RSVP', () => {
@@ -74,5 +74,10 @@ describe('workspace form templates', () => {
     expect(defaults.submitLabel).toBe('Send RSVP');
     expect(defaults.successMessage).toMatch(/RSVP/i);
     expect(defaults.fields.map((field) => field.key)).toContain('attendance');
+    expect(defaults.theme.layout).toBe('event');
+    expect(defaults.emailSettings.rules.some((rule) => rule.equals === 'Yes'))
+      .toBe(true);
+    expect(defaults.emailSettings.rules.some((rule) => rule.equals === 'No'))
+      .toBe(true);
   });
 });
