@@ -278,11 +278,7 @@ export function duplicateWorkspaceFormField(
   existing: WorkspaceFormField[],
 ): WorkspaceFormField {
   const existingKeys = existing.map((item) => item.key);
-  const key = fieldKeyForType(
-    field.type,
-    `${field.label} copy`,
-    existingKeys,
-  );
+  const key = fieldKeyForType(field.type, `${field.label} copy`, existingKeys);
 
   return {
     ...field,

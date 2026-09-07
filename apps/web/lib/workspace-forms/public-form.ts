@@ -10,11 +10,11 @@ import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 
-import { dispatchWorkspaceFormEmails } from './form-email-dispatch';
 import {
   type WorkspaceFormEmailSettings,
   parseWorkspaceFormEmailSettings,
 } from './form-email';
+import { dispatchWorkspaceFormEmails } from './form-email-dispatch';
 import {
   type FormContactValues,
   type WorkspaceFormDestination,

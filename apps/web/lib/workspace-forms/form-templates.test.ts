@@ -75,9 +75,11 @@ describe('workspace form templates', () => {
     expect(defaults.successMessage).toMatch(/RSVP/i);
     expect(defaults.fields.map((field) => field.key)).toContain('attendance');
     expect(defaults.theme.layout).toBe('event');
-    expect(defaults.emailSettings.rules.some((rule) => rule.equals === 'Yes'))
-      .toBe(true);
-    expect(defaults.emailSettings.rules.some((rule) => rule.equals === 'No'))
-      .toBe(true);
+    expect(
+      defaults.emailSettings.rules.some((rule) => rule.equals === 'Yes'),
+    ).toBe(true);
+    expect(
+      defaults.emailSettings.rules.some((rule) => rule.equals === 'No'),
+    ).toBe(true);
   });
 });

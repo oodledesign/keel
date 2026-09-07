@@ -5,17 +5,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getLogger } from '@kit/shared/logger';
 
 import {
-  wrapEmailHtmlWithBrand,
   type AccountBrandResolved,
+  wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
 import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 
 import {
+  type WorkspaceFormEmailSettings,
+  type WorkspaceFormEmailTemplate,
   buildFormEmailVars,
   interpolateFormEmailText,
   matchFormEmailTemplate,
-  type WorkspaceFormEmailSettings,
-  type WorkspaceFormEmailTemplate,
 } from './form-email';
 import type { FormContactValues, WorkspaceFormField } from './form-fields';
 
@@ -140,10 +140,7 @@ export async function dispatchWorkspaceFormEmails(input: {
         },
       });
     } catch (error) {
-      logger.error(
-        { ...ctx, error },
-        'Form autoresponder email failed',
-      );
+      logger.error({ ...ctx, error }, 'Form autoresponder email failed');
     }
   }
 
@@ -180,10 +177,7 @@ export async function dispatchWorkspaceFormEmails(input: {
           },
         });
       } catch (error) {
-        logger.error(
-          { ...ctx, to, error },
-          'Form notification email failed',
-        );
+        logger.error({ ...ctx, to, error }, 'Form notification email failed');
       }
     }),
   );

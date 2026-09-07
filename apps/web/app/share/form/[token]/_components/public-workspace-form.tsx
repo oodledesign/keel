@@ -243,7 +243,12 @@ function PublicFormIntro({
   const body = chromeOnDark ? 'text-white/80' : 'text-neutral-600';
 
   return (
-    <div className={cn(align === 'center' && 'text-center', !eventLayout && 'mb-6')}>
+    <div
+      className={cn(
+        align === 'center' && 'text-center',
+        !eventLayout && 'mb-6',
+      )}
+    >
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -255,12 +260,7 @@ function PublicFormIntro({
           )}
         />
       ) : null}
-      <p
-        className={cn(
-          'text-xs font-medium tracking-wide uppercase',
-          muted,
-        )}
-      >
+      <p className={cn('text-xs font-medium tracking-wide uppercase', muted)}>
         {accountName}
       </p>
       <h1
@@ -270,7 +270,12 @@ function PublicFormIntro({
         {formName}
       </h1>
       {eventAddress ? (
-        <p className={cn('mt-3 text-sm leading-relaxed whitespace-pre-line', body)}>
+        <p
+          className={cn(
+            'mt-3 text-sm leading-relaxed whitespace-pre-line',
+            body,
+          )}
+        >
           {eventAddress}
         </p>
       ) : null}

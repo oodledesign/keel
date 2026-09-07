@@ -16,13 +16,13 @@ import { Switch } from '@kit/ui/switch';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
 import {
-  MAX_FORM_NOTIFY_EMAILS,
-  createEmptyFormEmailRule,
-  createEmptyFormEmailTemplate,
   type FormNotifyMemberOption,
+  MAX_FORM_NOTIFY_EMAILS,
   type WorkspaceFormEmailRule,
   type WorkspaceFormEmailSettings,
   type WorkspaceFormEmailTemplate,
+  createEmptyFormEmailRule,
+  createEmptyFormEmailTemplate,
 } from '~/lib/workspace-forms/form-email';
 import type { WorkspaceFormField } from '~/lib/workspace-forms/form-fields';
 import {
@@ -117,7 +117,12 @@ export function FormEmailSettingsPanel({
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h3 className={`text-sm font-medium ${workspaceText}`}>Templates</h3>
-          <Button type="button" size="sm" variant="outline" onClick={addTemplate}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addTemplate}
+          >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Add template
           </Button>
@@ -228,7 +233,9 @@ export function FormEmailSettingsPanel({
               </p>
             ) : (
               members.map((member) => {
-                const checked = settings.notifyMemberIds.includes(member.userId);
+                const checked = settings.notifyMemberIds.includes(
+                  member.userId,
+                );
                 return (
                   <label
                     key={member.userId}
@@ -260,7 +267,9 @@ export function FormEmailSettingsPanel({
           </div>
         </div>
         <div className="grid gap-1.5">
-          <Label>Extra notification addresses (max {MAX_FORM_NOTIFY_EMAILS})</Label>
+          <Label>
+            Extra notification addresses (max {MAX_FORM_NOTIFY_EMAILS})
+          </Label>
           <textarea
             rows={6}
             className="border-input min-h-[120px] rounded-md border bg-transparent px-3 py-2 text-sm"
@@ -330,7 +339,9 @@ function RuleList({
             key={rule.id}
             className="grid gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3 md:grid-cols-[auto_1fr_1fr_1fr_auto]"
           >
-            <label className={`flex items-center gap-2 text-sm ${workspaceText}`}>
+            <label
+              className={`flex items-center gap-2 text-sm ${workspaceText}`}
+            >
               <Switch
                 checked={rule.enabled}
                 onCheckedChange={(checked) =>
@@ -385,7 +396,9 @@ function RuleList({
             </Select>
             <Select
               value={rule.templateId}
-              onValueChange={(value) => onChange(rule.id, { templateId: value })}
+              onValueChange={(value) =>
+                onChange(rule.id, { templateId: value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Template" />

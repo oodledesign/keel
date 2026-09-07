@@ -5,18 +5,18 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 
 import {
+  type FormNotifyMemberOption,
+  type WorkspaceFormEmailSettings,
+  parseWorkspaceFormEmailSettings,
+  serializeWorkspaceFormEmailSettings,
+} from '~/lib/workspace-forms/form-email';
+import {
   type WorkspaceFormDestination,
   type WorkspaceFormField,
   type WorkspaceFormStatus,
   ensureListingField,
 } from '~/lib/workspace-forms/form-fields';
 import { workspaceFormCreateDefaultsForTemplate } from '~/lib/workspace-forms/form-templates';
-import {
-  type FormNotifyMemberOption,
-  type WorkspaceFormEmailSettings,
-  parseWorkspaceFormEmailSettings,
-  serializeWorkspaceFormEmailSettings,
-} from '~/lib/workspace-forms/form-email';
 import {
   type WorkspaceFormTheme,
   parseWorkspaceFormTheme,

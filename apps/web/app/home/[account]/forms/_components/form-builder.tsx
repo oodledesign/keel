@@ -24,6 +24,10 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
+import type {
+  FormNotifyMemberOption,
+  WorkspaceFormEmailSettings,
+} from '~/lib/workspace-forms/form-email';
 import {
   WORKSPACE_FORM_DESTINATION_LABELS,
   type WorkspaceFormDestination,
@@ -33,10 +37,6 @@ import {
   duplicateWorkspaceFormField,
   ensureListingField,
 } from '~/lib/workspace-forms/form-fields';
-import type {
-  FormNotifyMemberOption,
-  WorkspaceFormEmailSettings,
-} from '~/lib/workspace-forms/form-email';
 import {
   WORKSPACE_FORM_LAYOUTS,
   WORKSPACE_FORM_LAYOUT_LABELS,
@@ -102,9 +102,8 @@ export function FormBuilder({
   const [pageBackground, setPageBackground] =
     useState<WorkspaceFormPageBackground>(form.theme.pageBackground);
   const [layout, setLayout] = useState<WorkspaceFormLayout>(form.theme.layout);
-  const [emailSettings, setEmailSettings] = useState<WorkspaceFormEmailSettings>(
-    form.emailSettings,
-  );
+  const [emailSettings, setEmailSettings] =
+    useState<WorkspaceFormEmailSettings>(form.emailSettings);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(
     form.fields[0]?.id ?? null,
   );

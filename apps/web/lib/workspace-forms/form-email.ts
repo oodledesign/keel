@@ -2,7 +2,6 @@
  * Per-form email automation stored on workspace_forms.email_settings jsonb.
  * Client-safe — no Node / server imports.
  */
-
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
 
 import type { WorkspaceFormField } from './form-fields';

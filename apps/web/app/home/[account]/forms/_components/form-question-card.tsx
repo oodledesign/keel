@@ -1,6 +1,12 @@
 'use client';
 
-import { ChevronDown, ChevronUp, Copy, GripHorizontal, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  GripHorizontal,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -10,9 +16,9 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
-  fieldTypeUsesOptions,
   type WorkspaceFormField,
   type WorkspaceFormFieldType,
+  fieldTypeUsesOptions,
 } from '~/lib/workspace-forms/form-fields';
 import {
   workspacePanelCard,

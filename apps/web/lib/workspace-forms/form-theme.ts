@@ -101,11 +101,7 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
 }
 
 export function serializeWorkspaceFormTheme(
-  theme: WorkspaceFormTheme,
+  theme: Partial<WorkspaceFormTheme> | WorkspaceFormTheme,
 ): WorkspaceFormTheme {
-  return {
-    pageBackground:
-      theme.pageBackground === 'brand_gradient' ? 'brand_gradient' : 'light',
-    layout: theme.layout === 'event' ? 'event' : 'standard',
-  };
+  return parseWorkspaceFormTheme(theme);
 }
