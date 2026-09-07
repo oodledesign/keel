@@ -17,6 +17,7 @@ import {
 } from '~/lib/commercial/linkedin-publishing/linkedin-api';
 import { verifyPendingLinkedInOrgs } from '~/lib/commercial/linkedin-publishing/oauth-state';
 import {
+  bulkPublishToRightmove,
   ensureListingFeedExternalId,
   publishToEach,
   publishToRightmove,
@@ -37,6 +38,7 @@ import {
 } from '~/lib/commercial/property-hive-sync';
 
 import {
+  BulkPublishRightmoveSchema,
   DisconnectLinkedInOrgSchema,
   EnsureEachFeedSchema,
   EnsurePropertyHiveFeedSchema,
@@ -398,6 +400,29 @@ export const testPublishListingAction = enhanceAction(
     }
   },
   { schema: TestPublishListingSchema },
+);
+
+/**
+ * Push one batch of Marketing / Under offer disposals to Rightmove.
+ * The UI loops with `nextOffset` until `done`.
+ */
+export const bulkPublishRightmoveAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const { assertCommercialPortalPublishingAllowed } =
+      await import('~/lib/commercial/commercial-seat-access');
+    await assertCommercialPortalPublishingAllowed({
+      client,
+      accountId: input.accountId,
+    });
+
+    return bulkPublishToRightmove({
+      accountId: input.accountId,
+      offset: input.offset,
+      limit: input.limit,
+    });
+  },
+  { schema: BulkPublishRightmoveSchema },
 );
 
 export const ensurePropertyHiveFeedAction = enhanceAction(

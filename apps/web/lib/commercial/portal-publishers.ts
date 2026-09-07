@@ -4,10 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { createRequire } from 'node:module';
 
-import type {
-  DisposalType,
-  ListingLetType,
-  ListingStatus,
+import {
+  type DisposalType,
+  LISTING_PORTAL_PUBLISH_STATUSES,
+  type ListingLetType,
+  type ListingStatus,
 } from '~/lib/commercial/commercial-constants';
 import { recordListingEvent } from '~/lib/commercial/listing-events';
 import {
@@ -708,6 +709,133 @@ export async function publishToRightmove(
       },
     });
   }
+}
+
+export type BulkRightmovePublishItemResult = {
+  listingId: string;
+  name: string;
+  ok: boolean;
+  status: string;
+  externalUrl: string | null;
+  error: string | null;
+};
+
+export type BulkRightmovePublishBatchResult = {
+  environment: 'test' | 'production';
+  totalEligible: number;
+  offset: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  nextOffset: number | null;
+  done: boolean;
+  results: BulkRightmovePublishItemResult[];
+};
+
+const DEFAULT_BULK_RIGHTMOVE_BATCH_SIZE = 15;
+const DEFAULT_BULK_RIGHTMOVE_DELAY_MS = 300;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Push a batch of Marketing / Under offer disposals to Rightmove.
+ * Call repeatedly with `nextOffset` until `done` to cover the full stock.
+ */
+export async function bulkPublishToRightmove(input: {
+  accountId: string;
+  offset?: number;
+  limit?: number;
+  delayMs?: number;
+}): Promise<BulkRightmovePublishBatchResult> {
+  const offset = Math.max(0, input.offset ?? 0);
+  const limit = Math.min(
+    40,
+    Math.max(1, input.limit ?? DEFAULT_BULK_RIGHTMOVE_BATCH_SIZE),
+  );
+  const delayMs = Math.max(0, input.delayMs ?? DEFAULT_BULK_RIGHTMOVE_DELAY_MS);
+
+  if (!isRightmoveOAuthConfigured()) {
+    throw new Error(
+      'Rightmove ADF credentials not configured (RIGHTMOVE_CLIENT_ID / RIGHTMOVE_CLIENT_KEY missing on this server)',
+    );
+  }
+
+  const env = getRightmoveEnv();
+
+  const { count, error: countError } = await db()
+    .from('commercial_listings')
+    .select('*', { count: 'exact', head: true })
+    .eq('account_id', input.accountId)
+    .in('status', [...LISTING_PORTAL_PUBLISH_STATUSES]);
+
+  if (countError) {
+    throw new Error(countError.message);
+  }
+
+  const totalEligible = count ?? 0;
+  const { data: batchRows, error } = await db()
+    .from('commercial_listings')
+    .select('id, name, status')
+    .eq('account_id', input.accountId)
+    .in('status', [...LISTING_PORTAL_PUBLISH_STATUSES])
+    .order('name', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const batch = batchRows ?? [];
+  const results: BulkRightmovePublishItemResult[] = [];
+
+  for (let i = 0; i < batch.length; i++) {
+    const row = batch[i]!;
+    const listingId = row.id as string;
+    const name = (row.name as string) || 'Untitled';
+
+    let publication = await publishToRightmove(input.accountId, listingId);
+    if (
+      publication.status === 'error' &&
+      (publication.last_error ?? '').toLowerCase().includes('rate limit')
+    ) {
+      await sleep(5_000);
+      publication = await publishToRightmove(input.accountId, listingId);
+    }
+
+    const ok = publication.status !== 'error';
+    results.push({
+      listingId,
+      name,
+      ok,
+      status: publication.status,
+      externalUrl: publication.external_url ?? null,
+      error: ok ? null : (publication.last_error ?? 'Rightmove publish failed'),
+    });
+
+    if (i < batch.length - 1 && delayMs > 0) {
+      await sleep(delayMs);
+    }
+  }
+
+  const processed = results.length;
+  const succeeded = results.filter((r) => r.ok).length;
+  const failed = processed - succeeded;
+  const nextOffset = offset + processed;
+  const done = nextOffset >= totalEligible || processed === 0;
+
+  return {
+    environment: env.environment,
+    totalEligible,
+    offset,
+    processed,
+    succeeded,
+    failed,
+    nextOffset: done ? null : nextOffset,
+    done,
+    results,
+  };
 }
 
 /**
