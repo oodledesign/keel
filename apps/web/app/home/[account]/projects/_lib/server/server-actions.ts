@@ -62,10 +62,15 @@ import {
   UpdatePhaseNoteSchema,
   UpdatePhaseSchema,
 } from '../schema/project-phases.schema';
+import {
+  GetProjectPortalAccessSchema,
+  SetProjectPortalAccessSchema,
+} from '../schema/project-portal-access.schema';
 import { createCalendarService } from './calendar.service';
 import { createJobEventsService } from './job-events.service';
 import { createJobsService } from './jobs.service';
 import { createProjectPhasesService } from './project-phases.service';
+import { createProjectPortalAccessService } from './project-portal-access.service';
 
 function getService() {
   return createJobsService(getSupabaseServerClient());
@@ -526,4 +531,26 @@ export const saveProjectAsPhaseTemplate = enhanceAction(
     return service.saveProjectAsPhaseTemplate(input);
   },
   { schema: SaveProjectAsPhaseTemplateSchema },
+);
+
+function getProjectPortalAccessService() {
+  return createProjectPortalAccessService(getSupabaseServerClient());
+}
+
+export const getProjectPortalAccess = enhanceAction(
+  async (input) => {
+    return getProjectPortalAccessService().getAccess(input);
+  },
+  { schema: GetProjectPortalAccessSchema },
+);
+
+export const setProjectPortalAccess = enhanceAction(
+  async (input) => {
+    const result = await getProjectPortalAccessService().setAccess(input);
+    revalidatePath(jobDetailPath(input.accountSlug, input.jobId));
+    // Client org slug is not in this payload — invalidate every portal layout.
+    revalidatePath('/portal', 'layout');
+    return result;
+  },
+  { schema: SetProjectPortalAccessSchema },
 );

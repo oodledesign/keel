@@ -659,6 +659,8 @@ class ClientPortalService {
    * (projects.portal_visible = true). Relies on the additive
    * `projects_select_client_portal` RLS policy as the real authorization
    * boundary — ensureMember() only confirms portal membership.
+   * When portal_restrict_contacts is true, RLS further limits rows to
+   * contacts on the project allowlist (project_portal_contacts).
    */
   async listPortalProjects(
     clientOrgId: string,
