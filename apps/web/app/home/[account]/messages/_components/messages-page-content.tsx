@@ -46,7 +46,6 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
-import { Label } from '@kit/ui/label';
 import {
   Select,
   SelectContent,
@@ -60,6 +59,10 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { MessageBodyText } from '~/lib/messages/message-body-text';
+import {
+  workspaceBtnPrimary,
+  workspaceSelectContentClass,
+} from '~/lib/workspace-ui';
 
 import { mergeChatMessagesById } from '../_lib/merge-chat-messages';
 import type {
@@ -68,7 +71,6 @@ import type {
 } from '../_lib/server/messages.service';
 import {
   archiveMessageThread,
-  createMessageThread,
   deleteThreadMessage,
   listAttachableMessageItems,
   listMessageThreads,
@@ -78,7 +80,7 @@ import {
   sendThreadMessage,
   setMessageThreadJob,
 } from '../_lib/server/server-actions';
-import { SearchableMultiSelect } from './searchable-multi-select';
+import { NewChatDialog } from './new-chat-dialog';
 
 const FAV_STORAGE_KEY = 'ozer:favourite-chat-ids';
 const LEGACY_FAV_STORAGE_KEY = 'keel:favourite-chat-ids';
@@ -294,7 +296,12 @@ type Props = {
   userId: string;
   canMessageClients: boolean;
   initialThreads: MessageThreadListItem[];
-  memberOptions: Array<{ userId: string; email: string; role: string | null }>;
+  memberOptions: Array<{
+    userId: string;
+    email: string;
+    name: string;
+    role: string | null;
+  }>;
   clientOptions: Array<{
     clientId: string;
     name: string;
@@ -308,7 +315,12 @@ type Props = {
     email: string | null;
     portalEnabled: boolean;
   }>;
-  jobOptions: Array<{ id: string; title: string }>;
+  jobOptions: Array<{
+    id: string;
+    title: string;
+    clientId: string | null;
+    assigneeUserIds: string[];
+  }>;
 };
 
 export function MessagesPageContent(props: Props) {
@@ -351,8 +363,9 @@ export function MessagesPageContent(props: Props) {
       return;
     }
 
-    setThreadType('job');
-    setJobId(jobId);
+    setComposeProjectId(jobId);
+    setComposeClientId('');
+    setComposeContactIds([]);
     setNewChatOpen(true);
   }, [searchParams, threads]);
 
@@ -364,11 +377,11 @@ export function MessagesPageContent(props: Props) {
     const compose = searchParams.get('compose');
     const clientId = searchParams.get('client');
     if (compose === 'client' && clientId) {
-      setThreadType('client');
-      setWholeClientId(clientId);
+      setComposeClientId(clientId);
+      setComposeProjectId('');
+      setComposeContactIds([]);
       setNewChatOpen(true);
     } else if (compose === 'direct' && clientId) {
-      setThreadType('direct');
       const preferred =
         (props.contactOptions ?? []).find(
           (contact) => contact.clientId === clientId && contact.portalEnabled,
@@ -376,9 +389,9 @@ export function MessagesPageContent(props: Props) {
         (props.contactOptions ?? []).find(
           (contact) => contact.clientId === clientId,
         );
-      if (preferred) {
-        setSelectedContacts([preferred.contactId]);
-      }
+      setComposeClientId('');
+      setComposeProjectId('');
+      setComposeContactIds(preferred ? [preferred.contactId] : []);
       setNewChatOpen(true);
     }
   }, [searchParams, props.contactOptions]);
@@ -438,38 +451,13 @@ export function MessagesPageContent(props: Props) {
     });
   }
 
-  const [threadType, setThreadType] = useState<
-    'direct' | 'group' | 'job' | 'client'
-  >('direct');
-  const [threadTitle, setThreadTitle] = useState('');
-  const [jobId, setJobId] = useState('');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
-  const [wholeClientId, setWholeClientId] = useState('');
+  const [composeProjectId, setComposeProjectId] = useState('');
+  const [composeClientId, setComposeClientId] = useState('');
+  const [composeContactIds, setComposeContactIds] = useState<string[]>([]);
 
   const jobTitleById = useMemo(
     () => new Map(props.jobOptions.map((j) => [j.id, j.title])),
     [props.jobOptions],
-  );
-
-  const memberMultiOptions = useMemo(
-    () =>
-      props.memberOptions.map((m) => ({
-        value: m.userId,
-        label: `${m.email} (${m.role ?? 'member'})`,
-        searchText: `${m.email} ${m.role ?? ''}`,
-      })),
-    [props.memberOptions],
-  );
-
-  const contactMultiOptions = useMemo(
-    () =>
-      (props.contactOptions ?? []).map((c) => ({
-        value: c.contactId,
-        label: `${c.name} · ${c.clientName}${c.portalEnabled ? '' : ' (no portal)'}`,
-        searchText: `${c.name} ${c.email ?? ''} ${c.clientName}`,
-      })),
-    [props.contactOptions],
   );
 
   const selectedThread = useMemo(
@@ -713,42 +701,15 @@ export function MessagesPageContent(props: Props) {
   }, [props.accountId, props.userId, supabase, refreshThreads]);
 
   function openNewChatDialog() {
-    setThreadType('direct');
-    setThreadTitle('');
-    setJobId('');
-    setSelectedMembers([]);
-    setSelectedContacts([]);
-    setWholeClientId(searchParams.get('client') ?? '');
+    setComposeProjectId('');
+    setComposeClientId('');
+    setComposeContactIds([]);
     setNewChatOpen(true);
   }
 
-  async function onCreateThread() {
-    try {
-      const result = await createMessageThread({
-        accountId: props.accountId,
-        userId: props.userId,
-        type: threadType,
-        title: threadTitle || undefined,
-        jobId: threadType === 'job' ? jobId || null : null,
-        clientId:
-          threadType === 'client' ? wholeClientId || undefined : undefined,
-        memberUserIds: selectedMembers,
-        contactIds: selectedContacts,
-      });
-
-      setThreadTitle('');
-      setJobId('');
-      setSelectedMembers([]);
-      setSelectedContacts([]);
-      setWholeClientId('');
-      setNewChatOpen(false);
-      const latest = await refreshThreads();
-      setSelectedThreadId(result?.threadId ?? latest[0]?.id ?? null);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to create chat',
-      );
-    }
+  async function onChatCreated(threadId: string) {
+    const latest = await refreshThreads();
+    setSelectedThreadId(threadId || latest[0]?.id || null);
   }
 
   function clearPendingImage() {
@@ -1591,174 +1552,36 @@ export function MessagesPageContent(props: Props) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New chat</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-1">
-            <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text-muted)]">
-                Type
-              </Label>
-              <Select
-                value={threadType}
-                onValueChange={(v) =>
-                  setThreadType(v as 'direct' | 'group' | 'job' | 'client')
-                }
-              >
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="direct">Direct — one person</SelectItem>
-                  <SelectItem value="group">Group — chosen people</SelectItem>
-                  {props.canMessageClients ? (
-                    <SelectItem value="client">
-                      Whole client — all portal contacts
-                    </SelectItem>
-                  ) : null}
-                  <SelectItem value="job">Job thread</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                {threadType === 'direct'
-                  ? 'Only you and one teammate or contact can see this.'
-                  : threadType === 'group'
-                    ? 'Only the people you add can see this. New contacts are never added later.'
-                    : threadType === 'client'
-                      ? 'Adds every portal-enabled contact for that client, plus the teammates you pick. New portal contacts join automatically.'
-                      : 'Link the chat to a job. Still participant-only.'}
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="new-chat-title"
-                className="text-[var(--workspace-shell-text-muted)]"
-              >
-                Title (optional)
-              </Label>
-              <Input
-                id="new-chat-title"
-                value={threadTitle}
-                onChange={(e) => setThreadTitle(e.target.value)}
-                placeholder="Chat name"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
-              />
-            </div>
-            {threadType === 'job' ? (
-              <div className="space-y-1.5">
-                <Label className="text-[var(--workspace-shell-text-muted)]">
-                  Job
-                </Label>
-                {props.jobOptions.length > 0 ? (
-                  <Select value={jobId || undefined} onValueChange={setJobId}>
-                    <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
-                      <SelectValue placeholder="Select a job" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {props.jobOptions.map((j) => (
-                        <SelectItem key={j.id} value={j.id}>
-                          {j.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={jobId}
-                    onChange={(e) => setJobId(e.target.value)}
-                    placeholder="Job ID"
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
-                  />
-                )}
-              </div>
-            ) : null}
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="new-chat-members"
-                className="text-[var(--workspace-shell-text-muted)]"
-              >
-                Team members
-              </Label>
-              <SearchableMultiSelect
-                id="new-chat-members"
-                options={memberMultiOptions}
-                values={selectedMembers}
-                onValuesChange={setSelectedMembers}
-                placeholder="Select team members…"
-                searchPlaceholder="Search by email or role…"
-                emptyMessage="No team members match."
-              />
-            </div>
-            {props.canMessageClients && threadType === 'client' ? (
-              <div className="space-y-1.5">
-                <Label className="text-[var(--workspace-shell-text-muted)]">
-                  Client
-                </Label>
-                <Select
-                  value={wholeClientId || undefined}
-                  onValueChange={setWholeClientId}
-                >
-                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {props.clientOptions.map((client) => (
-                      <SelectItem key={client.clientId} value={client.clientId}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-            {props.canMessageClients &&
-            (threadType === 'direct' || threadType === 'group') ? (
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="new-chat-contacts"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Contacts
-                </Label>
-                <SearchableMultiSelect
-                  id="new-chat-contacts"
-                  options={contactMultiOptions}
-                  values={selectedContacts}
-                  onValuesChange={setSelectedContacts}
-                  placeholder="Select contacts…"
-                  searchPlaceholder="Search by name or client…"
-                  emptyMessage="No contacts match."
-                />
-              </div>
-            ) : null}
-            <Button
-              type="button"
-              className="w-full border-0 bg-[#57C87F] font-medium text-[#060C18] hover:bg-[#97D9AA] hover:text-[#060C18] disabled:opacity-50"
-              onClick={() => void onCreateThread()}
-              disabled={isPending}
-            >
-              Create chat
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <NewChatDialog
+        open={newChatOpen}
+        onOpenChange={setNewChatOpen}
+        accountId={props.accountId}
+        userId={props.userId}
+        canMessageClients={props.canMessageClients}
+        memberOptions={props.memberOptions}
+        contactOptions={props.contactOptions}
+        clientOptions={props.clientOptions}
+        projectOptions={props.jobOptions}
+        initialProjectId={composeProjectId || undefined}
+        initialClientId={composeClientId || undefined}
+        initialContactIds={composeContactIds}
+        onCreated={onChatCreated}
+      />
       <Dialog open={linkJobOpen} onOpenChange={setLinkJobOpen}>
         <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Link chat to job</DialogTitle>
+            <DialogTitle>Link chat to project</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Linking makes this chat appear in that job&apos;s Messages tab for
-              participants.
+              Linking makes this chat appear in that project&apos;s Messages tab
+              for participants.
             </p>
             <Select value={linkJobId || undefined} onValueChange={setLinkJobId}>
-              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
-                <SelectValue placeholder="Select a job" />
+              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+                <SelectValue placeholder="Select a project" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className={workspaceSelectContentClass}>
                 {props.jobOptions.map((j) => (
                   <SelectItem key={j.id} value={j.id}>
                     {j.title}
@@ -1777,7 +1600,7 @@ export function MessagesPageContent(props: Props) {
               </Button>
               <Button
                 type="button"
-                className="bg-[var(--brand-green-500)] text-black hover:bg-[var(--brand-green-300)]"
+                className={cn('border-0', workspaceBtnPrimary)}
                 disabled={!linkJobId}
                 onClick={() => void onSetThreadJob(linkJobId || null)}
               >

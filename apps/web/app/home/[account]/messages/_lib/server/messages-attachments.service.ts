@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- admin query builder is untyped */
 import 'server-only';
 
 import pathsConfig from '~/config/paths.config';
+
+import { loadLinkedWorkItem } from './messages-work-item';
 
 export type MessageAttachmentInput = {
   type: 'note' | 'doc';
@@ -28,7 +31,7 @@ async function loadThreadContext(
     .select('participant_kind, participant_client_id')
     .eq('thread_id', threadId);
 
-  const clientIds = Array.from(
+  const clientIds: string[] = Array.from(
     new Set(
       (participants ?? [])
         .filter(
@@ -46,20 +49,19 @@ async function loadThreadContext(
 
   const { data: thread } = await admin
     .from('chat_threads')
-    .select('job_id')
+    .select('job_id, account_id')
     .eq('id', threadId)
     .maybeSingle();
 
   const jobId = (thread?.job_id as string | null) ?? null;
   let jobClientId: string | null = null;
 
-  if (jobId) {
-    const { data: job } = await admin
-      .from('jobs')
-      .select('client_id')
-      .eq('id', jobId)
-      .maybeSingle();
-    jobClientId = (job?.client_id as string | null) ?? null;
+  if (jobId && thread?.account_id) {
+    const workItem = await loadLinkedWorkItem(admin, {
+      accountId: thread.account_id as string,
+      workItemId: jobId,
+    });
+    jobClientId = workItem?.clientId ?? null;
   }
 
   return { clientIds, jobId, jobClientId };

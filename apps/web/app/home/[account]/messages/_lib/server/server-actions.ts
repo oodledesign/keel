@@ -44,7 +44,15 @@ export const listAttachableMessageItems = enhanceAction(
 
 export const createMessageThread = enhanceAction(
   async (input) => {
-    return getService().createThread(input);
+    try {
+      const result = await getService().createThread(input);
+      return { ok: true as const, threadId: result.threadId };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : 'Failed to create chat',
+      };
+    }
   },
   { schema: CreateThreadSchema },
 );

@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { loadContactIdsForUser } from './messages-participants';
+import { loadLinkedWorkItem } from './messages-work-item';
 
 type ThreadComposeType = 'direct' | 'group' | 'job' | 'client';
 
@@ -98,7 +99,7 @@ class MessagesAccessService {
     }
 
     if (params.type === 'job' && !params.jobId) {
-      throw new Error('Job chats require a linked job');
+      throw new Error('Project chats need a linked project');
     }
 
     if (otherMemberIds.length > 0) {
@@ -167,15 +168,13 @@ class MessagesAccessService {
     }
 
     if (params.jobId) {
-      const { data: job, error } = await this.client
-        .from('jobs')
-        .select('id')
-        .eq('id', params.jobId)
-        .eq('account_id', params.accountId)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!job) throw new Error('Job not found in this business');
+      const workItem = await loadLinkedWorkItem(this.client, {
+        accountId: params.accountId,
+        workItemId: params.jobId,
+      });
+      if (!workItem || workItem.source !== 'project') {
+        throw new Error('Project not found in this business');
+      }
     }
   }
 
