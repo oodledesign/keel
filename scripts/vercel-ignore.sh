@@ -43,6 +43,18 @@ cd "$REPO_ROOT" || proceed "could not cd to repo root ${REPO_ROOT}"
 
 echo "[vercel-ignore] app=${APP} env=${VERCEL_ENV:-unknown} ref=${VERCEL_GIT_COMMIT_REF:-unknown} root=${REPO_ROOT}"
 
+# Dan: ignore all preview / non-main builds. Only main (and production
+# deploy-hook / dashboard redeploys) should consume build minutes.
+# Exit 0 = skip, exit 1 = proceed (Vercel Ignored Build Step).
+if [[ "${VERCEL_ENV:-}" == "production" ]]; then
+  echo "[vercel-ignore] production env — continue to path filter"
+elif [[ "${VERCEL_GIT_COMMIT_REF:-}" == "main" ]]; then
+  echo "[vercel-ignore] main branch — continue to path filter"
+else
+  skip "non-main preview (ref=${VERCEL_GIT_COMMIT_REF:-unknown}); only main/production builds"
+fi
+
+
 # True if $1 is under one of the remaining args (exact file or directory prefix).
 path_matches() {
   local file="$1"

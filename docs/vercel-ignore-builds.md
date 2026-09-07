@@ -14,6 +14,16 @@ Without an ignore command, every push (PR commit **and** `main`) queues a build 
 
 This does **not** cancel builds that are already queued. Only new deployments after this lands will be filtered.
 
+## Main / production only
+
+Preview and non-`main` branches are skipped for **ozer**, **ozer-docs**, and **ozer-sites**. Dashboard equivalent (Ignored Build Step one-liner):
+
+```bash
+if [ "$VERCEL_GIT_COMMIT_REF" = "main" ]; then exit 1; else exit 0; fi
+```
+
+`scripts/vercel-ignore.sh` applies that check first (also allows `VERCEL_ENV=production` for deploy hooks), then the path filter below on `main`.
+
 ## What triggers a build
 
 | Project | Build when the diff includes | Skip when |
