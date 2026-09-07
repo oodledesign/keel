@@ -164,7 +164,7 @@ export function FormBuilder({
           successMessage: successMessage.trim() || null,
           fields,
           enabled,
-          theme: { pageBackground, layout },
+          theme: { pageBackground, layout, layoutExplicit: true },
           emailSettings,
         });
         toast.success('Form saved');
@@ -499,6 +499,11 @@ export function FormBuilder({
 
             <div className="grid gap-2">
               <Label>Public layout</Label>
+              <p className={`text-xs ${workspaceTextMuted}`}>
+                Event / two-column is the RSVP public layout. New and existing
+                RSVPs use it by default. Choose Standard and save if you want a
+                single-column page instead.
+              </p>
               <RadioGroup
                 value={layout}
                 onValueChange={(value) =>

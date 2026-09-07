@@ -18,11 +18,14 @@ export type WorkspaceFormLayout = (typeof WORKSPACE_FORM_LAYOUTS)[number];
 export type WorkspaceFormTheme = {
   pageBackground: WorkspaceFormPageBackground;
   layout: WorkspaceFormLayout;
+  /** True after the editor saved a public-layout choice. */
+  layoutExplicit: boolean;
 };
 
 export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
   pageBackground: 'light',
   layout: 'standard',
+  layoutExplicit: false,
 };
 
 export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
@@ -30,13 +33,13 @@ export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
   { label: string; description: string }
 > = {
   standard: {
-    label: 'Standard',
-    description: 'Logo and intro stacked above the form.',
+    label: 'Standard (single column)',
+    description: 'Logo and intro stacked above the form on every screen size.',
   },
   event: {
-    label: 'Event / RSVP',
+    label: 'Event / two-column',
     description:
-      'Two columns on desktop: event details on the left, form on the right.',
+      'RSVP public layout: desktop shows event details on the left and the form on the right. Mobile stays stacked. New RSVPs use this by default.',
   },
 };
 
@@ -112,10 +115,10 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
   return {
     pageBackground,
     layout: readStoredLayout(raw) ?? 'standard',
+    layoutExplicit:
+      (raw as { layoutExplicit?: unknown }).layoutExplicit === true,
   };
 }
-
-const RSVP_FIELD_RE = /attend|rsvp|coming/;
 
 export type WorkspaceFormLayoutHints = {
   eventAddress?: string | null;
@@ -125,39 +128,45 @@ export type WorkspaceFormLayoutHints = {
   fields?: Array<{ type: string; key: string; label: string }>;
 };
 
-function isAttendanceLikeField(field: {
-  type: string;
-  key: string;
-  label: string;
-}): boolean {
-  return RSVP_FIELD_RE.test(`${field.key} ${field.label}`.toLowerCase());
+const RSVP_FIELD_RE = /attend|rsvp|coming/;
+
+export function isRsvpLikeWorkspaceForm(
+  hints: WorkspaceFormLayoutHints,
+): boolean {
+  if (hints.eventAddress?.trim()) return true;
+  if (/rsvp/i.test(`${hints.submitLabel ?? ''} ${hints.name ?? ''}`)) {
+    return true;
+  }
+
+  const fields = hints.fields ?? [];
+  const hasAttendanceChoice = fields.some(
+    (field) =>
+      (field.type === 'yes_no' ||
+        field.type === 'select' ||
+        field.type === 'radio') &&
+      RSVP_FIELD_RE.test(`${field.key} ${field.label}`.toLowerCase()),
+  );
+  if (hasAttendanceChoice) return true;
+
+  return (
+    hints.destination === 'submission_list' &&
+    fields.some((field) => field.type === 'yes_no')
+  );
 }
 
 /**
- * Public / builder layout. Existing RSVPs created before the event layout
- * flag still have theme.layout = standard (or omitted). Force two-column
- * for RSVP / event forms so they do not need to be recreated.
+ * Existing RSVPs often still store theme.layout = standard because that was
+ * the parse default, not a user choice. Default those to event / two-column.
+ * Honor an explicit Standard (or Event) choice after the editor saves
+ * `layoutExplicit: true`.
  */
 export function resolveWorkspaceFormLayout(
-  stored: WorkspaceFormLayout | null | undefined,
+  theme: Pick<WorkspaceFormTheme, 'layout' | 'layoutExplicit'>,
   hints: WorkspaceFormLayoutHints = {},
 ): WorkspaceFormLayout {
-  if (stored === 'event') return 'event';
-  if (hints.eventAddress?.trim()) return 'event';
-
-  const fields = hints.fields ?? [];
-  const hasYesNo = fields.some((field) => field.type === 'yes_no');
-  const hasAttendanceField = fields.some(isAttendanceLikeField);
-  const rsvpCopy = /rsvp/i.test(
-    `${hints.submitLabel ?? ''} ${hints.name ?? ''}`,
-  );
-
-  if (hasAttendanceField) return 'event';
-  if (hasYesNo && hints.destination === 'submission_list') return 'event';
-  if (rsvpCopy && (hasYesNo || hints.destination === 'submission_list')) {
-    return 'event';
-  }
-
+  if (theme.layout === 'event') return 'event';
+  if (theme.layoutExplicit) return 'standard';
+  if (isRsvpLikeWorkspaceForm(hints)) return 'event';
   return 'standard';
 }
 
@@ -167,12 +176,17 @@ export function withResolvedFormLayout(
 ): WorkspaceFormTheme {
   return {
     ...theme,
-    layout: resolveWorkspaceFormLayout(theme.layout, hints),
+    layout: resolveWorkspaceFormLayout(theme, hints),
   };
 }
 
 export function serializeWorkspaceFormTheme(
   theme: Partial<WorkspaceFormTheme> | WorkspaceFormTheme,
 ): WorkspaceFormTheme {
-  return parseWorkspaceFormTheme(theme);
+  const parsed = parseWorkspaceFormTheme(theme);
+  return {
+    pageBackground: parsed.pageBackground,
+    layout: parsed.layout,
+    layoutExplicit: parsed.layoutExplicit,
+  };
 }

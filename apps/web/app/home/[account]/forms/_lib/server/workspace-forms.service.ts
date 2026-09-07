@@ -356,7 +356,10 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
       };
 
       if (input.theme) {
-        updates.theme = serializeWorkspaceFormTheme(input.theme);
+        updates.theme = serializeWorkspaceFormTheme({
+          ...input.theme,
+          layoutExplicit: true,
+        });
       }
 
       if (input.emailSettings) {
