@@ -4,6 +4,7 @@ import {
   brandPageGradientCss,
   darkenHex,
   parseWorkspaceFormTheme,
+  resolveWorkspaceFormLayout,
 } from './form-theme';
 
 describe('darkenHex', () => {
@@ -43,5 +44,90 @@ describe('parseWorkspaceFormTheme', () => {
         layout: 'event',
       }),
     ).toEqual({ pageBackground: 'brand_gradient', layout: 'event' });
+  });
+
+  it('accepts pageLayout / formLayout / rsvp aliases', () => {
+    expect(parseWorkspaceFormTheme({ pageLayout: 'event' }).layout).toBe(
+      'event',
+    );
+    expect(parseWorkspaceFormTheme({ formLayout: 'rsvp' }).layout).toBe(
+      'event',
+    );
+  });
+});
+
+describe('resolveWorkspaceFormLayout', () => {
+  const attendanceField = {
+    type: 'yes_no',
+    key: 'attendance',
+    label: 'Will you attend?',
+  };
+
+  it('keeps stored event layout', () => {
+    expect(resolveWorkspaceFormLayout('event')).toBe('event');
+  });
+
+  it('forces event layout when event_address is set', () => {
+    expect(
+      resolveWorkspaceFormLayout('standard', {
+        eventAddress: 'The Clubhouse, London',
+      }),
+    ).toBe('event');
+  });
+
+  it('forces event layout for Breakfast Meeting–style RSVPs', () => {
+    expect(
+      resolveWorkspaceFormLayout('standard', {
+        name: 'Breakfast Meeting',
+        destination: 'submission_list',
+        submitLabel: 'Submit',
+        fields: [
+          { type: 'name', key: 'name', label: 'Name' },
+          { type: 'email', key: 'email', label: 'Email' },
+          attendanceField,
+        ],
+      }),
+    ).toBe('event');
+  });
+
+  it('forces event layout for older select attendance fields', () => {
+    expect(
+      resolveWorkspaceFormLayout('standard', {
+        destination: 'pipeline',
+        fields: [
+          {
+            type: 'select',
+            key: 'attendance',
+            label: 'Are you coming?',
+          },
+        ],
+      }),
+    ).toBe('event');
+  });
+
+  it('leaves contact / mailing-list forms on a single column', () => {
+    expect(
+      resolveWorkspaceFormLayout('standard', {
+        destination: 'pipeline',
+        name: 'Contact form',
+        submitLabel: 'Submit',
+        fields: [
+          { type: 'name', key: 'name', label: 'Name' },
+          { type: 'email', key: 'email', label: 'Email' },
+          { type: 'yes_no', key: 'existing_client', label: 'Existing client?' },
+        ],
+      }),
+    ).toBe('standard');
+
+    expect(
+      resolveWorkspaceFormLayout('standard', {
+        destination: 'mailing_list',
+        name: 'Mailing list',
+        fields: [
+          { type: 'email', key: 'email', label: 'Email' },
+          { type: 'checkbox', key: 'consent', label: 'Subscribe' },
+        ],
+      }),
+    ).toBe('standard');
   });
 });

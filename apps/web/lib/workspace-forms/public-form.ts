@@ -23,7 +23,11 @@ import {
   formatPipelineNotes,
   resolveBoundListingId,
 } from './form-fields';
-import { type WorkspaceFormTheme, parseWorkspaceFormTheme } from './form-theme';
+import {
+  type WorkspaceFormTheme,
+  parseWorkspaceFormTheme,
+  withResolvedFormLayout,
+} from './form-theme';
 import type { PublicWorkspaceFormSubmitInput } from './form.schema';
 import {
   extractMailingListSpec,
@@ -116,6 +120,8 @@ export async function loadPublicWorkspaceFormByToken(
   if (!data) return null;
 
   const row = data;
+  const fields = parseFormFields(row.fields);
+  const parsedTheme = parseWorkspaceFormTheme(row.theme);
   const [{ data: account }, brand] = await Promise.all([
     admin
       .from('accounts')
@@ -150,8 +156,14 @@ export async function loadPublicWorkspaceFormByToken(
         : row.destination === 'submission_list'
           ? 'Thank you — your response has been received.'
           : 'Thank you — we have received your enquiry.'),
-    fields: parseFormFields(row.fields),
-    theme: parseWorkspaceFormTheme(row.theme),
+    fields,
+    theme: withResolvedFormLayout(parsedTheme, {
+      eventAddress: row.event_address,
+      destination: row.destination,
+      submitLabel: row.submit_label,
+      name: row.name,
+      fields,
+    }),
     emailSettings: parseWorkspaceFormEmailSettings(row.email_settings),
     brand,
   };

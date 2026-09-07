@@ -59,7 +59,7 @@ async function FormDetailPage({ params }: FormDetailPageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title={form.name}
-        description="Edit questions, event details, and email rules. Share or embed when you are ready."
+        description="Submissions, questions, settings, notifications, and share links."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
         <FormBuilder

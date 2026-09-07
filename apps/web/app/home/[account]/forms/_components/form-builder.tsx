@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Plus } from 'lucide-react';
+import { Inbox, ListChecks, Mail, Plus, Settings2, Share2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
+import { cn } from '@kit/ui/utils';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
 import type {
@@ -69,6 +71,23 @@ import { FormQuestionCard } from './form-question-card';
 import { FormSharePanel } from './form-share-panel';
 import { FormSubmissionsList } from './form-submissions-list';
 
+const FORM_EDITOR_TABS = [
+  { id: 'submissions', label: 'Submissions', icon: Inbox },
+  { id: 'builder', label: 'Form builder', icon: ListChecks },
+  { id: 'settings', label: 'Settings', icon: Settings2 },
+  { id: 'notifications', label: 'Notifications', icon: Mail },
+  { id: 'share', label: 'Share and Embed', icon: Share2 },
+] as const;
+
+type FormEditorTab = (typeof FORM_EDITOR_TABS)[number]['id'];
+
+const formEditorTabTriggerClass = cn(
+  'gap-1.5 rounded-lg px-3 py-2 text-sm',
+  'data-[state=active]:bg-[var(--workspace-shell-panel)]',
+  'data-[state=active]:text-[var(--workspace-shell-text)]',
+  'data-[state=active]:shadow-sm',
+);
+
 type Props = {
   accountSlug: string;
   form: WorkspaceFormRecord;
@@ -107,6 +126,7 @@ export function FormBuilder({
   const [activeFieldId, setActiveFieldId] = useState<string | null>(
     form.fields[0]?.id ?? null,
   );
+  const [tab, setTab] = useState<FormEditorTab>('builder');
 
   function updateField(id: string, patch: Partial<WorkspaceFormField>) {
     setFields((current) =>
@@ -197,299 +217,343 @@ export function FormBuilder({
 
   return (
     <div className="space-y-6 px-4 py-6 lg:px-8">
-      <section className={`${workspacePanelCard} space-y-4 p-5`}>
-        <div className="grid gap-1.5">
-          <Label htmlFor="form-name">Form / event name</Label>
-          <Input
-            id="form-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            data-test="form-name-input"
-            className="font-heading h-11 text-lg font-semibold"
-          />
-        </div>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as FormEditorTab)}
+        className="gap-0"
+      >
+        <TabsList
+          className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-[var(--workspace-control-surface)] p-1 text-[var(--workspace-shell-text-muted)]"
+          data-test="form-editor-tabs"
+        >
+          {FORM_EDITOR_TABS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <TabsTrigger
+                key={item.id}
+                value={item.id}
+                className={formEditorTabTriggerClass}
+                data-test={`form-editor-tab-${item.id}`}
+              >
+                <Icon className="h-3.5 w-3.5 text-[var(--ozer-accent)]" />
+                {item.label}
+                {item.id === 'submissions' && submissions.length > 0 ? (
+                  <span className="rounded-md bg-[var(--workspace-shell-panel)] px-1.5 py-0.5 text-[10px] font-semibold">
+                    {submissions.length}
+                  </span>
+                ) : null}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
 
-        <div className="grid gap-1.5">
-          <Label>Intro</Label>
-          <WorkspaceRichTextEditor
-            value={description}
-            onChange={setDescription}
-            placeholder="Describe the event or form. Paragraphs, lists, and links are supported."
-            minHeight={110}
+        <TabsContent value="submissions" className="mt-0">
+          <FormSubmissionsList
+            accountSlug={accountSlug}
+            submissions={submissions}
+            destination={destination}
           />
-        </div>
+        </TabsContent>
 
-        <div className="grid gap-1.5">
-          <Label htmlFor="event-address">Event address</Label>
-          <Input
-            id="event-address"
-            value={eventAddress}
-            onChange={(event) => setEventAddress(event.target.value)}
-            placeholder="Shown on the public RSVP page — not a submitter question"
-            data-test="form-event-address"
-          />
-          <p className={`text-xs ${workspaceTextMuted}`}>
-            Optional venue line for event / RSVP pages. Submitters do not fill
-            this in.
-          </p>
-        </div>
-      </section>
+        <TabsContent value="builder" className="mt-0 space-y-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h2 className={`text-base font-semibold ${workspaceText}`}>
+              Questions
+            </h2>
+            <FormFieldTypePicker
+              placeholder="Add question"
+              testId="add-form-field"
+              onSelect={(type) =>
+                setFields((current) => {
+                  const next = createWorkspaceFormField(type, current);
+                  setActiveFieldId(next.id);
+                  return [...current, next];
+                })
+              }
+            />
+          </div>
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3 px-1">
-          <h2 className={`text-base font-semibold ${workspaceText}`}>
-            Questions
-          </h2>
-          <FormFieldTypePicker
-            placeholder="Add question"
-            testId="add-form-field"
-            onSelect={(type) =>
+          {fields.map((field, index) => (
+            <FormQuestionCard
+              key={field.id}
+              field={field}
+              index={index}
+              total={fields.length}
+              active={activeFieldId === field.id}
+              onActivate={() => setActiveFieldId(field.id)}
+              onChange={(patch) => updateField(field.id, patch)}
+              onChangeType={(type) =>
+                updateField(field.id, applyWorkspaceFormFieldType(field, type))
+              }
+              onMove={(direction) => moveField(field.id, direction)}
+              onDuplicate={() =>
+                setFields((current) => {
+                  const copy = duplicateWorkspaceFormField(field, current);
+                  setActiveFieldId(copy.id);
+                  const at = current.findIndex((item) => item.id === field.id);
+                  const next = [...current];
+                  next.splice(at + 1, 0, copy);
+                  return next;
+                })
+              }
+              onRemove={() =>
+                setFields((current) =>
+                  current.filter((item) => item.id !== field.id),
+                )
+              }
+            />
+          ))}
+
+          <button
+            type="button"
+            className={`${workspacePanelCard} flex w-full items-center justify-center gap-2 px-4 py-3 text-sm ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
+            onClick={() =>
               setFields((current) => {
-                const next = createWorkspaceFormField(type, current);
+                const next = createWorkspaceFormField('text', current);
                 setActiveFieldId(next.id);
                 return [...current, next];
               })
             }
-          />
-        </div>
+          >
+            <Plus className="h-4 w-4" />
+            Add question
+          </button>
+        </TabsContent>
 
-        {fields.map((field, index) => (
-          <FormQuestionCard
-            key={field.id}
-            field={field}
-            index={index}
-            total={fields.length}
-            active={activeFieldId === field.id}
-            onActivate={() => setActiveFieldId(field.id)}
-            onChange={(patch) => updateField(field.id, patch)}
-            onChangeType={(type) =>
-              updateField(field.id, applyWorkspaceFormFieldType(field, type))
-            }
-            onMove={(direction) => moveField(field.id, direction)}
-            onDuplicate={() =>
-              setFields((current) => {
-                const copy = duplicateWorkspaceFormField(field, current);
-                setActiveFieldId(copy.id);
-                const at = current.findIndex((item) => item.id === field.id);
-                const next = [...current];
-                next.splice(at + 1, 0, copy);
-                return next;
-              })
-            }
-            onRemove={() =>
-              setFields((current) =>
-                current.filter((item) => item.id !== field.id),
-              )
-            }
-          />
-        ))}
+        <TabsContent value="settings" className="mt-0 space-y-4">
+          <section className={`${workspacePanelCard} space-y-4 p-5`}>
+            <div className="grid gap-1.5">
+              <Label htmlFor="form-name">Form / event name</Label>
+              <Input
+                id="form-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                data-test="form-name-input"
+                className="font-heading h-11 text-lg font-semibold"
+              />
+            </div>
 
-        <button
-          type="button"
-          className={`${workspacePanelCard} flex w-full items-center justify-center gap-2 px-4 py-3 text-sm ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
-          onClick={() =>
-            setFields((current) => {
-              const next = createWorkspaceFormField('text', current);
-              setActiveFieldId(next.id);
-              return [...current, next];
-            })
-          }
-        >
-          <Plus className="h-4 w-4" />
-          Add question
-        </button>
-      </section>
+            <div className="grid gap-1.5">
+              <Label>Intro</Label>
+              <WorkspaceRichTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Describe the event or form. Paragraphs, lists, and links are supported."
+                minHeight={110}
+              />
+            </div>
 
-      <section className={`${workspacePanelCard} space-y-4 p-5`}>
-        <h2 className={`text-base font-semibold ${workspaceText}`}>Settings</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label>Destination</Label>
-            <Select
-              value={destination}
-              onValueChange={(value) => {
-                const next = value as WorkspaceFormDestination;
-                setDestination(next);
-                if (next === 'mailing_list') {
-                  setFields((current) =>
-                    ensureMailingListFields(current, {
-                      commercial: showListingDestination,
-                    }),
+            <div className="grid gap-1.5">
+              <Label htmlFor="event-address">Event address</Label>
+              <Input
+                id="event-address"
+                value={eventAddress}
+                onChange={(event) => setEventAddress(event.target.value)}
+                placeholder="Shown on the public RSVP page — not a submitter question"
+                data-test="form-event-address"
+              />
+              <p className={`text-xs ${workspaceTextMuted}`}>
+                Optional venue line for event / RSVP pages. Submitters do not
+                fill this in.
+              </p>
+            </div>
+          </section>
+
+          <section className={`${workspacePanelCard} space-y-4 p-5`}>
+            <h2 className={`text-base font-semibold ${workspaceText}`}>
+              Collection and appearance
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label>Destination</Label>
+                <Select
+                  value={destination}
+                  onValueChange={(value) => {
+                    const next = value as WorkspaceFormDestination;
+                    setDestination(next);
+                    if (next === 'mailing_list') {
+                      setFields((current) =>
+                        ensureMailingListFields(current, {
+                          commercial: showListingDestination,
+                        }),
+                      );
+                    }
+                    if (next === 'listing_enquiry') {
+                      setFields((current) => ensureListingField(current));
+                    }
+                  }}
+                >
+                  <SelectTrigger data-test="form-destination">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pipeline">
+                      {WORKSPACE_FORM_DESTINATION_LABELS.pipeline}
+                    </SelectItem>
+                    <SelectItem value="mailing_list">
+                      {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
+                    </SelectItem>
+                    <SelectItem value="submission_list">
+                      {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
+                    </SelectItem>
+                    {showListingDestination ||
+                    destination === 'listing_enquiry' ? (
+                      <SelectItem value="listing_enquiry">
+                        {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}
+                      </SelectItem>
+                    ) : null}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="submit-label">Submit button</Label>
+                <Input
+                  id="submit-label"
+                  value={submitLabel}
+                  onChange={(event) => setSubmitLabel(event.target.value)}
+                />
+              </div>
+            </div>
+
+            {destination === 'listing_enquiry' ||
+            (destination === 'mailing_list' && showListingDestination) ? (
+              <div className="grid gap-1.5">
+                <Label>
+                  {destination === 'mailing_list'
+                    ? 'Default listing (optional)'
+                    : 'Default listing'}
+                </Label>
+                <Select
+                  value={listingId || 'none'}
+                  onValueChange={(value) =>
+                    setListingId(value === 'none' ? '' : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Bind from embed URL" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      Bind from URL or hidden field
+                    </SelectItem>
+                    {listings.map((listing) => (
+                      <SelectItem key={listing.id} value={listing.id}>
+                        {listing.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  {destination === 'mailing_list'
+                    ? 'Optional. Property Hive templates can bind this form to a disposal with'
+                    : 'Property-page embeds can still override this with'}
+                  <code className="mx-1">?listing=</code>
+                  or <code>data-listing</code>.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="success-message">Success message</Label>
+              <Input
+                id="success-message"
+                value={successMessage}
+                onChange={(event) => setSuccessMessage(event.target.value)}
+                placeholder="Thank you — we have received your enquiry."
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Page background</Label>
+              <RadioGroup
+                value={pageBackground}
+                onValueChange={(value) =>
+                  setPageBackground(value as WorkspaceFormPageBackground)
+                }
+                className="grid gap-2 sm:grid-cols-2"
+                data-test="form-page-background"
+              >
+                {WORKSPACE_FORM_PAGE_BACKGROUNDS.map((value) => {
+                  const meta = WORKSPACE_FORM_PAGE_BACKGROUND_LABELS[value];
+                  const selected = pageBackground === value;
+                  return (
+                    <RadioGroupItemLabel
+                      key={value}
+                      selected={selected}
+                      className="h-full items-start gap-3 space-x-0"
+                    >
+                      <RadioGroupItem value={value} className="mt-0.5" />
+                      <span className="grid gap-0.5">
+                        <span className={`font-medium ${workspaceText}`}>
+                          {meta.label}
+                        </span>
+                        <span className={`text-xs ${workspaceTextMuted}`}>
+                          {meta.description}
+                        </span>
+                      </span>
+                    </RadioGroupItemLabel>
                   );
-                }
-                if (next === 'listing_enquiry') {
-                  setFields((current) => ensureListingField(current));
-                }
-              }}
-            >
-              <SelectTrigger data-test="form-destination">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pipeline">
-                  {WORKSPACE_FORM_DESTINATION_LABELS.pipeline}
-                </SelectItem>
-                <SelectItem value="mailing_list">
-                  {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
-                </SelectItem>
-                <SelectItem value="submission_list">
-                  {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
-                </SelectItem>
-                {showListingDestination || destination === 'listing_enquiry' ? (
-                  <SelectItem value="listing_enquiry">
-                    {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}
-                  </SelectItem>
-                ) : null}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="submit-label">Submit button</Label>
-            <Input
-              id="submit-label"
-              value={submitLabel}
-              onChange={(event) => setSubmitLabel(event.target.value)}
-            />
-          </div>
-        </div>
+                })}
+              </RadioGroup>
+            </div>
 
-        {destination === 'listing_enquiry' ||
-        (destination === 'mailing_list' && showListingDestination) ? (
-          <div className="grid gap-1.5">
-            <Label>
-              {destination === 'mailing_list'
-                ? 'Default listing (optional)'
-                : 'Default listing'}
-            </Label>
-            <Select
-              value={listingId || 'none'}
-              onValueChange={(value) =>
-                setListingId(value === 'none' ? '' : value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Bind from embed URL" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">
-                  Bind from URL or hidden field
-                </SelectItem>
-                {listings.map((listing) => (
-                  <SelectItem key={listing.id} value={listing.id}>
-                    {listing.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className={`text-xs ${workspaceTextMuted}`}>
-              {destination === 'mailing_list'
-                ? 'Optional. Property Hive templates can bind this form to a disposal with'
-                : 'Property-page embeds can still override this with'}
-              <code className="mx-1">?listing=</code>
-              or <code>data-listing</code>.
-            </p>
-          </div>
-        ) : null}
+            <div className="grid gap-2">
+              <Label>Public layout</Label>
+              <RadioGroup
+                value={layout}
+                onValueChange={(value) =>
+                  setLayout(value as WorkspaceFormLayout)
+                }
+                className="grid gap-2 sm:grid-cols-2"
+                data-test="form-page-layout"
+              >
+                {WORKSPACE_FORM_LAYOUTS.map((value) => {
+                  const meta = WORKSPACE_FORM_LAYOUT_LABELS[value];
+                  const selected = layout === value;
+                  return (
+                    <RadioGroupItemLabel
+                      key={value}
+                      selected={selected}
+                      className="h-full items-start gap-3 space-x-0"
+                    >
+                      <RadioGroupItem value={value} className="mt-0.5" />
+                      <span className="grid gap-0.5">
+                        <span className={`font-medium ${workspaceText}`}>
+                          {meta.label}
+                        </span>
+                        <span className={`text-xs ${workspaceTextMuted}`}>
+                          {meta.description}
+                        </span>
+                      </span>
+                    </RadioGroupItemLabel>
+                  );
+                })}
+              </RadioGroup>
+            </div>
+          </section>
+        </TabsContent>
 
-        <div className="grid gap-1.5">
-          <Label htmlFor="success-message">Success message</Label>
-          <Input
-            id="success-message"
-            value={successMessage}
-            onChange={(event) => setSuccessMessage(event.target.value)}
-            placeholder="Thank you — we have received your enquiry."
+        <TabsContent value="notifications" className="mt-0">
+          <FormEmailSettingsPanel
+            settings={emailSettings}
+            fields={fields}
+            members={members}
+            onChange={setEmailSettings}
           />
-        </div>
+        </TabsContent>
 
-        <div className="grid gap-2">
-          <Label>Page background</Label>
-          <RadioGroup
-            value={pageBackground}
-            onValueChange={(value) =>
-              setPageBackground(value as WorkspaceFormPageBackground)
-            }
-            className="grid gap-2 sm:grid-cols-2"
-            data-test="form-page-background"
-          >
-            {WORKSPACE_FORM_PAGE_BACKGROUNDS.map((value) => {
-              const meta = WORKSPACE_FORM_PAGE_BACKGROUND_LABELS[value];
-              const selected = pageBackground === value;
-              return (
-                <RadioGroupItemLabel
-                  key={value}
-                  selected={selected}
-                  className="h-full items-start gap-3 space-x-0"
-                >
-                  <RadioGroupItem value={value} className="mt-0.5" />
-                  <span className="grid gap-0.5">
-                    <span className={`font-medium ${workspaceText}`}>
-                      {meta.label}
-                    </span>
-                    <span className={`text-xs ${workspaceTextMuted}`}>
-                      {meta.description}
-                    </span>
-                  </span>
-                </RadioGroupItemLabel>
-              );
-            })}
-          </RadioGroup>
-        </div>
-
-        <div className="grid gap-2">
-          <Label>Public layout</Label>
-          <RadioGroup
-            value={layout}
-            onValueChange={(value) => setLayout(value as WorkspaceFormLayout)}
-            className="grid gap-2 sm:grid-cols-2"
-            data-test="form-page-layout"
-          >
-            {WORKSPACE_FORM_LAYOUTS.map((value) => {
-              const meta = WORKSPACE_FORM_LAYOUT_LABELS[value];
-              const selected = layout === value;
-              return (
-                <RadioGroupItemLabel
-                  key={value}
-                  selected={selected}
-                  className="h-full items-start gap-3 space-x-0"
-                >
-                  <RadioGroupItem value={value} className="mt-0.5" />
-                  <span className="grid gap-0.5">
-                    <span className={`font-medium ${workspaceText}`}>
-                      {meta.label}
-                    </span>
-                    <span className={`text-xs ${workspaceTextMuted}`}>
-                      {meta.description}
-                    </span>
-                  </span>
-                </RadioGroupItemLabel>
-              );
-            })}
-          </RadioGroup>
-        </div>
-      </section>
-
-      <FormEmailSettingsPanel
-        settings={emailSettings}
-        fields={fields}
-        members={members}
-        onChange={setEmailSettings}
-      />
-
-      <FormSharePanel
-        shareToken={form.shareToken}
-        enabled={enabled}
-        destination={destination}
-        listingId={listingId || null}
-        pending={pending}
-        onToggle={togglePublished}
-        showPropertyHiveSnippet={showListingDestination}
-      />
-
-      <FormSubmissionsList
-        accountSlug={accountSlug}
-        submissions={submissions}
-        destination={destination}
-      />
+        <TabsContent value="share" className="mt-0">
+          <FormSharePanel
+            shareToken={form.shareToken}
+            enabled={enabled}
+            destination={destination}
+            listingId={listingId || null}
+            pending={pending}
+            onToggle={togglePublished}
+            showPropertyHiveSnippet={showListingDestination}
+          />
+        </TabsContent>
+      </Tabs>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button

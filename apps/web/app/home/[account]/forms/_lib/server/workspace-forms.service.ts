@@ -21,6 +21,7 @@ import {
   type WorkspaceFormTheme,
   parseWorkspaceFormTheme,
   serializeWorkspaceFormTheme,
+  withResolvedFormLayout,
 } from '~/lib/workspace-forms/form-theme';
 import type {
   CreateWorkspaceFormInput,
@@ -108,6 +109,8 @@ type FormRow = {
 };
 
 function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
+  const fields = parseFormFields(row.fields);
+  const parsedTheme = parseWorkspaceFormTheme(row.theme);
   return {
     id: row.id,
     accountId: row.account_id,
@@ -122,8 +125,14 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     submitLabel: row.submit_label?.trim() || 'Submit',
     successMessage: row.success_message,
     eventAddress: row.event_address?.trim() || null,
-    fields: parseFormFields(row.fields),
-    theme: parseWorkspaceFormTheme(row.theme),
+    fields,
+    theme: withResolvedFormLayout(parsedTheme, {
+      eventAddress: row.event_address,
+      destination: row.destination,
+      submitLabel: row.submit_label,
+      name: row.name,
+      fields,
+    }),
     emailSettings: parseWorkspaceFormEmailSettings(row.email_settings),
     createdAt: row.created_at,
     updatedAt: row.updated_at,

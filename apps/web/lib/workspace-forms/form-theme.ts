@@ -89,15 +89,86 @@ export function brandPageGradientCss(primaryColor: string): string {
   return `linear-gradient(135deg, ${primaryColor}, ${darker})`;
 }
 
+function readStoredLayout(raw: object): WorkspaceFormLayout | null {
+  const row = raw as {
+    layout?: unknown;
+    pageLayout?: unknown;
+    formLayout?: unknown;
+  };
+  const value = row.layout ?? row.pageLayout ?? row.formLayout;
+  if (value === 'event' || value === 'rsvp') return 'event';
+  if (value === 'standard') return 'standard';
+  return null;
+}
+
 export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ...DEFAULT_WORKSPACE_FORM_THEME };
   }
-  const row = raw as { pageBackground?: unknown; layout?: unknown };
   const pageBackground =
-    row.pageBackground === 'brand_gradient' ? 'brand_gradient' : 'light';
-  const layout = row.layout === 'event' ? 'event' : 'standard';
-  return { pageBackground, layout };
+    (raw as { pageBackground?: unknown }).pageBackground === 'brand_gradient'
+      ? 'brand_gradient'
+      : 'light';
+  return {
+    pageBackground,
+    layout: readStoredLayout(raw) ?? 'standard',
+  };
+}
+
+const RSVP_FIELD_RE = /attend|rsvp|coming/;
+
+export type WorkspaceFormLayoutHints = {
+  eventAddress?: string | null;
+  destination?: string | null;
+  submitLabel?: string | null;
+  name?: string | null;
+  fields?: Array<{ type: string; key: string; label: string }>;
+};
+
+function isAttendanceLikeField(field: {
+  type: string;
+  key: string;
+  label: string;
+}): boolean {
+  return RSVP_FIELD_RE.test(`${field.key} ${field.label}`.toLowerCase());
+}
+
+/**
+ * Public / builder layout. Existing RSVPs created before the event layout
+ * flag still have theme.layout = standard (or omitted). Force two-column
+ * for RSVP / event forms so they do not need to be recreated.
+ */
+export function resolveWorkspaceFormLayout(
+  stored: WorkspaceFormLayout | null | undefined,
+  hints: WorkspaceFormLayoutHints = {},
+): WorkspaceFormLayout {
+  if (stored === 'event') return 'event';
+  if (hints.eventAddress?.trim()) return 'event';
+
+  const fields = hints.fields ?? [];
+  const hasYesNo = fields.some((field) => field.type === 'yes_no');
+  const hasAttendanceField = fields.some(isAttendanceLikeField);
+  const rsvpCopy = /rsvp/i.test(
+    `${hints.submitLabel ?? ''} ${hints.name ?? ''}`,
+  );
+
+  if (hasAttendanceField) return 'event';
+  if (hasYesNo && hints.destination === 'submission_list') return 'event';
+  if (rsvpCopy && (hasYesNo || hints.destination === 'submission_list')) {
+    return 'event';
+  }
+
+  return 'standard';
+}
+
+export function withResolvedFormLayout(
+  theme: WorkspaceFormTheme,
+  hints: WorkspaceFormLayoutHints,
+): WorkspaceFormTheme {
+  return {
+    ...theme,
+    layout: resolveWorkspaceFormLayout(theme.layout, hints),
+  };
 }
 
 export function serializeWorkspaceFormTheme(
