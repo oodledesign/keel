@@ -85,6 +85,7 @@ export const sendPortalMessage = enhanceAction(
       input.clientOrgId,
       input.threadId,
       input.body,
+      input.imageUrl,
     ),
   { schema: SendPortalMessageSchema },
 );

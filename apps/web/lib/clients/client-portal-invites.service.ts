@@ -81,6 +81,36 @@ async function assertCanManageClient(accountId: string, clientId: string) {
   };
 }
 
+async function addContactToClientWideThreads(params: {
+  clientId: string | null;
+  contactId: string | null;
+  userId: string;
+}) {
+  if (!params.clientId || !params.contactId) return;
+
+  const admin = getSupabaseServerAdminClient();
+  // RPC is added in 20261116120100; generated Database types lag migrations.
+  const { error } = await (
+    admin as unknown as {
+      rpc: (
+        fn: string,
+        args: Record<string, string>,
+      ) => Promise<{ error: { message: string } | null }>;
+    }
+  ).rpc('add_contact_to_client_wide_threads', {
+    p_client_id: params.clientId,
+    p_contact_id: params.contactId,
+    p_user_id: params.userId,
+  });
+
+  if (error) {
+    console.warn(
+      '[client-portal-invites] add to client-wide threads failed',
+      error.message,
+    );
+  }
+}
+
 function buildAcceptUrl(token: string) {
   const path = pathsConfig.app.joinPortalInviteAccept.replace('[token]', token);
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
@@ -553,6 +583,11 @@ export async function acceptClientPortalInvite(
   });
 
   if (invite.status === 'accepted' && invite.userId === user.id) {
+    await addContactToClientWideThreads({
+      clientId: invite.clientId,
+      contactId: invite.contactId,
+      userId: user.id,
+    });
     return invite;
   }
 
@@ -580,6 +615,13 @@ export async function acceptClientPortalInvite(
 
   const [updated] = await hydrateInvites([data as Record<string, unknown>]);
   if (!updated) throw new Error('Could not accept invite');
+
+  await addContactToClientWideThreads({
+    clientId: updated.clientId,
+    contactId: updated.contactId,
+    userId: user.id,
+  });
+
   return updated;
 }
 
@@ -621,7 +663,14 @@ export async function linkPendingClientPortalInvitesForUser(): Promise<number> {
         .eq('id', String(row.id))
         .eq('status', 'pending');
 
-      if (!updateError) linked += 1;
+      if (!updateError) {
+        linked += 1;
+        await addContactToClientWideThreads({
+          clientId: String(row.client_id),
+          contactId: (row.contact_id as string | null) ?? null,
+          userId: user.id,
+        });
+      }
     } catch (linkError) {
       console.warn('[client-portal-invites] link failed', linkError);
     }

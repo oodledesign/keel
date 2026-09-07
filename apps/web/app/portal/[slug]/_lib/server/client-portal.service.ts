@@ -153,7 +153,16 @@ export type PortalChatMessage = {
   senderUserId: string;
   senderName: string | null;
   body: string;
+  imageUrl: string | null;
   createdAt: string;
+};
+
+export type PortalChatThread = {
+  id: string;
+  title: string;
+  lastMessagePreview: string | null;
+  lastMessageAt: string;
+  isClientWide: boolean;
 };
 
 export type PortalInvoice = {
@@ -1805,7 +1814,7 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('chat_messages')
-      .select('id, thread_id, sender_user_id, body, created_at')
+      .select('id, thread_id, sender_user_id, body, image_url, created_at')
       .eq('thread_id', threadId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
@@ -1821,6 +1830,7 @@ class ClientPortalService {
       thread_id: string;
       sender_user_id: string;
       body: string;
+      image_url: string | null;
       created_at: string;
     }>;
 
@@ -1834,7 +1844,36 @@ class ClientPortalService {
       senderUserId: row.sender_user_id,
       senderName: senders.get(row.sender_user_id) ?? null,
       body: row.body,
+      imageUrl: row.image_url ?? null,
       createdAt: row.created_at,
+    }));
+  }
+
+  async listParticipatingThreads(
+    clientOrgId: string,
+  ): Promise<PortalChatThread[]> {
+    const user = await this.ensureMember(clientOrgId);
+    const { createMessagesService } =
+      await import('../../../../home/[account]/messages/_lib/server/messages.service');
+    const threads = await createMessagesService().listPortalThreads({
+      userId: user.id,
+      clientOrgId,
+    });
+
+    return threads.map((thread) => ({
+      id: thread.id,
+      title:
+        thread.title?.trim() ||
+        (thread.is_client_wide
+          ? 'Everyone on this client'
+          : thread.participants
+              .map((p) => p.display_name)
+              .filter(Boolean)
+              .slice(0, 3)
+              .join(', ') || 'Conversation'),
+      lastMessagePreview: thread.last_message_preview,
+      lastMessageAt: thread.last_message_at,
+      isClientWide: thread.is_client_wide,
     }));
   }
 
@@ -1842,30 +1881,68 @@ class ClientPortalService {
     clientOrgId: string,
     threadId: string,
     body: string,
+    imageUrl?: string,
   ): Promise<PortalChatMessage> {
     const user = await this.ensureMember(clientOrgId);
+    await this.ensureThreadForOrg(clientOrgId, threadId);
 
-    const { data, error } = await this.db
-      .from('chat_messages')
-      .insert({
-        thread_id: threadId,
-        sender_user_id: user.id,
-        body,
-      })
-      .select('id, thread_id, sender_user_id, body, created_at')
-      .single();
+    const { data: account } = await this.db
+      .from('chat_threads')
+      .select('account_id, accounts:account_id ( slug )')
+      .eq('id', threadId)
+      .maybeSingle();
 
-    if (error || !data) {
-      this.throwErr(error, 'Failed to send message');
-    }
+    const admin = getSupabaseServerAdminClient();
+    const { data: accountRow } = await admin
+      .from('accounts')
+      .select('slug')
+      .eq('id', (account as { account_id?: string } | null)?.account_id ?? '')
+      .maybeSingle();
+
+    const { createMessagesService } =
+      await import('../../../../home/[account]/messages/_lib/server/messages.service');
+    const message = await createMessagesService().sendPortalMessage({
+      userId: user.id,
+      threadId,
+      body,
+      imageUrl,
+      accountSlug:
+        (accountRow as { slug?: string | null } | null)?.slug ?? 'workspace',
+    });
 
     return {
-      id: data.id,
-      threadId: data.thread_id,
-      senderUserId: data.sender_user_id,
-      senderName: null,
-      body: data.body,
-      createdAt: data.created_at,
+      id: message.id,
+      threadId: message.thread_id,
+      senderUserId: message.sender_user_id,
+      senderName: message.sender_label,
+      body: message.body,
+      imageUrl: message.image_url,
+      createdAt: message.created_at,
     };
+  }
+
+  private async ensureThreadForOrg(clientOrgId: string, threadId: string) {
+    const admin = getSupabaseServerAdminClient();
+    const { data: thread } = await admin
+      .from('chat_threads')
+      .select('id, client_org_id, client_id')
+      .eq('id', threadId)
+      .maybeSingle();
+
+    if (!thread) {
+      throw new Error('You are not a participant in this thread');
+    }
+    if (thread.client_org_id === clientOrgId) return;
+
+    if (thread.client_id) {
+      const { data: client } = await admin
+        .from('clients')
+        .select('client_org_id')
+        .eq('id', thread.client_id)
+        .maybeSingle();
+      if (client?.client_org_id === clientOrgId) return;
+    }
+
+    throw new Error('You are not a participant in this thread');
   }
 }

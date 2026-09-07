@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- admin query builder is untyped */
 import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -5,8 +6,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createNotificationsApi } from '@kit/notifications/api';
 
 import pathsConfig from '~/config/paths.config';
+import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { formatUkDateTime } from '~/lib/format/uk-datetime';
+import { collectMessageNotifyRecipients } from '~/lib/messages/messages-notify-recipients';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+
+import { loadContactDisplayByIds } from './messages-participants';
 
 function escapeHtml(value: string) {
   return value
@@ -188,7 +193,9 @@ class MessagesNotificationsService {
   }) {
     const { data: participants } = await this.client
       .from('chat_thread_participants')
-      .select('participant_kind, participant_user_id, participant_client_id')
+      .select(
+        'participant_kind, participant_user_id, participant_client_id, participant_contact_id',
+      )
       .eq('thread_id', params.threadId)
       .is('archived_at', null);
 
@@ -197,88 +204,53 @@ class MessagesNotificationsService {
       .map((p: any) => p.participant_user_id)
       .filter(Boolean) as string[];
 
+    const contactIds = (participants ?? [])
+      .filter((p: any) => p.participant_kind === 'contact')
+      .map((p: any) => p.participant_contact_id)
+      .filter(Boolean) as string[];
+
     const clientIds = (participants ?? [])
       .filter((p: any) => p.participant_kind === 'client')
       .map((p: any) => p.participant_client_id)
       .filter(Boolean) as string[];
 
-    const clientRows = clientIds.length
-      ? ((
-          await this.client
+    const [contactDisplay, clientRows] = await Promise.all([
+      loadContactDisplayByIds(this.client, contactIds),
+      clientIds.length
+        ? this.client
             .from('clients')
             .select('id, display_name, company_name, first_name, last_name')
             .in('id', clientIds)
-        ).data ?? [])
-      : [];
+            .then((res: { data: any }) => res.data ?? [])
+        : Promise.resolve([]),
+    ]);
 
-    const { data: clientContactRows } =
-      clientIds.length > 0
-        ? await this.client
-            .from('client_contacts')
-            .select('client_id, is_primary, created_at, contacts ( email )')
-            .in('client_id', clientIds)
-            .order('is_primary', { ascending: false })
-            .order('created_at', { ascending: true })
-        : {
-            data: [] as Array<{
-              client_id: string;
-              is_primary: boolean | null;
-              contacts: { email: string | null } | null;
-            }>,
-          };
-
-    const contactEmailByClientId = new Map<string, string>();
-    for (const row of clientContactRows ?? []) {
-      const email = row.contacts?.email?.trim();
-      if (!email || contactEmailByClientId.has(row.client_id)) continue;
-      contactEmailByClientId.set(row.client_id, email);
-    }
-
-    const clientEmails = clientRows
-      .map((row: any) => contactEmailByClientId.get(row.id as string) ?? null)
-      .filter(Boolean) as string[];
-
-    const clientMemberUserIdsRaw =
-      clientEmails.length > 0
-        ? ((
-            await this.client
-              .from('accounts_memberships')
-              .select('user_id, account_role')
-              .eq('account_id', params.accountId)
-              .eq('account_role', 'client')
-          ).data ?? [])
-        : [];
-
-    const clientEmailSet = new Set(
-      clientEmails.map((email) => email.toLowerCase()),
-    );
-
-    // Load all users once — we need them for member->email mapping, sender
-    // labels, and recipient resolution. The 1000 page cap is an acceptable
-    // limit for current scale; revisit if we outgrow it.
     const allUsers = (
       await this.client.auth.admin.listUsers({ page: 1, perPage: 1000 })
     ).data.users;
     const userById = new Map<string, any>(allUsers.map((u: any) => [u.id, u]));
 
-    let clientMemberUserIds: string[] = [];
-    if (clientMemberUserIdsRaw.length > 0 && clientEmailSet.size > 0) {
-      clientMemberUserIds = clientMemberUserIdsRaw
-        .map((row: any) => row.user_id as string)
-        .filter((userId: string) => {
-          const user = userById.get(userId);
-          return user?.email
-            ? clientEmailSet.has(user.email.toLowerCase())
-            : false;
-        });
-    }
+    const memberRecipients = explicitMemberUserIds.map((userId) => ({
+      userId,
+      email: (userById.get(userId)?.email as string | null) ?? null,
+    }));
 
-    const allMemberUserIds = Array.from(
-      new Set([...explicitMemberUserIds, ...clientMemberUserIds]),
-    );
-    const recipientUserIds = allMemberUserIds.filter(
-      (id) => id !== params.senderUserId,
-    );
+    const contactRecipients = (participants ?? [])
+      .filter((p: any) => p.participant_kind === 'contact')
+      .map((p: any) => ({
+        userId: (p.participant_user_id as string | null) ?? null,
+        email: contactDisplay.get(p.participant_contact_id)?.email ?? null,
+      }));
+
+    const collected = collectMessageNotifyRecipients({
+      senderUserId: params.senderUserId,
+      senderEmail: userById.get(params.senderUserId)?.email ?? null,
+      members: memberRecipients,
+      contacts: contactRecipients,
+    });
+
+    const recipientUserIds = collected.inAppUserIds;
+    const recipientEmails = collected.emails;
 
     const link =
       pathsConfig.app.accountMessages.replace('[account]', params.accountSlug) +
@@ -305,28 +277,17 @@ class MessagesNotificationsService {
       }
     }
 
-    const recipientMemberEmails = recipientUserIds
-      .map((id) => userById.get(id)?.email)
-      .filter(Boolean) as string[];
-
-    const recipientEmails = Array.from(
-      new Set([...recipientMemberEmails, ...clientEmails]),
-    ) as string[];
-
-    const sender =
-      process.env.EMAIL_SENDER?.trim() ||
-      process.env.SES_FROM_ADDRESS?.trim() ||
-      null;
+    const sender = resolveTransactionalEmailFrom('Ozer');
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || null;
 
     const auditEmail =
       userById.get(params.senderUserId)?.email?.trim() ||
       recipientEmails[0] ||
-      'notification-audit@keel.internal';
+      'notification-audit@ozer.internal';
 
     if (!sender || !siteUrl || recipientEmails.length === 0) {
       const skipReason = !sender
-        ? 'missing_env_email_sender_and_ses_from'
+        ? 'missing_zepto_or_email_sender'
         : !siteUrl
           ? 'missing_env_site_url'
           : 'no_recipients';
@@ -336,11 +297,8 @@ class MessagesNotificationsService {
         threadId: params.threadId,
         reason: skipReason,
         recipientCount: recipientEmails.length,
-        hasEmailSender: Boolean(process.env.EMAIL_SENDER?.trim()),
-        hasSesFrom: Boolean(process.env.SES_FROM_ADDRESS?.trim()),
         hasSiteUrl: Boolean(siteUrl),
         memberRecipients: recipientUserIds.length,
-        clientEmails: clientEmails.length,
       });
 
       await this.logEmailAttempt({
@@ -354,7 +312,6 @@ class MessagesNotificationsService {
         body: JSON.stringify({
           recipientEmails,
           recipientUserIds,
-          clientEmails,
         }),
       });
 
@@ -506,6 +463,14 @@ class MessagesNotificationsService {
               return labelBySenderId.get(row.participant_user_id) ?? null;
             }
             if (
+              row.participant_kind === 'contact' &&
+              row.participant_contact_id
+            ) {
+              return (
+                contactDisplay.get(row.participant_contact_id)?.name ?? null
+              );
+            }
+            if (
               row.participant_kind === 'client' &&
               row.participant_client_id
             ) {
@@ -534,10 +499,7 @@ class MessagesNotificationsService {
       newestMessage?.created_at ?? new Date().toISOString();
     const newMessageTimeLabel = formatDateTime(newMessageCreatedAt);
 
-    const subject = truncate(
-      `New message from ${senderFirstName} in Tradeways`,
-      70,
-    );
+    const subject = truncate(`New message from ${senderFirstName} in Ozer`, 70);
     const conversationUrl = `${siteUrl}${link}`;
 
     const html = buildChatNotificationEmailHtml({
@@ -631,6 +593,7 @@ class MessagesNotificationsService {
 
 function threadTypeLabel(type: string | null, hasJob: boolean): string {
   if (type === 'job' || hasJob) return 'Job thread';
+  if (type === 'client_portal' || type === 'client') return 'Client chat';
   if (type === 'group') return 'Group chat';
   if (type === 'direct') return 'Direct message';
   return 'Conversation';
@@ -746,8 +709,8 @@ function buildChatNotificationEmailHtml(params: {
               <td style="padding:20px 24px 16px 24px;border-bottom:1px solid #E3E8F0;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="font-family:Poppins,Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#57C87F;">
-                      Tradeways · ${safeType}
+                    <td style="font-family:Poppins,Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#FF5C34;">
+                      Ozer · ${safeType}
                     </td>
                   </tr>
                   <tr>
@@ -760,12 +723,12 @@ function buildChatNotificationEmailHtml(params: {
             </tr>
             <tr>
               <td style="padding:20px 24px 8px 24px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8FAFC;border:1px solid #E3E8F0;border-left:3px solid #57C87F;border-radius:10px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FBF6EC;border:1px solid #E3E8F0;border-left:3px solid #FF5C34;border-radius:10px;">
                   <tr>
                     <td style="padding:14px 16px;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                         <tr>
-                          <td style="font-family:Poppins,Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;color:#1F7F7F;line-height:1.3;">
+                          <td style="font-family:Poppins,Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;color:#351E28;line-height:1.3;">
                             ${safeSender}
                           </td>
                           <td align="right" style="font-family:Poppins,Arial,Helvetica,sans-serif;font-size:11px;color:#7E889D;line-height:1.3;white-space:nowrap;">
@@ -787,8 +750,8 @@ function buildChatNotificationEmailHtml(params: {
               <td style="padding:16px 24px 4px 24px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td style="border-radius:10px;background:#57C87F;">
-                      <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 20px;font-family:Poppins,Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#060C18;text-decoration:none;border-radius:10px;">
+                    <td style="border-radius:10px;background:#FF5C34;">
+                      <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:11px 20px;font-family:Poppins,Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#FBF6EC;text-decoration:none;border-radius:10px;">
                         Open conversation
                       </a>
                     </td>

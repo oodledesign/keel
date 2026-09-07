@@ -102,6 +102,7 @@ import { ClientImageUploader } from './client-image-uploader';
 import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
 import { ClientMediaRollup } from './client-media-rollup';
+import { ClientMessagesBlock } from './client-messages-block';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientRanklyBlock } from './client-rankly-block';
 import { ClientSupportBlock } from './client-support-block';
@@ -135,6 +136,7 @@ type Client = {
 type DetailTab =
   | 'overview'
   | 'contacts'
+  | 'messages'
   | 'projects'
   | 'websites'
   | 'invoices'
@@ -565,6 +567,7 @@ export function ClientDetailSidebar({
         ...(client.client_type === 'business'
           ? [['contacts', 'Contacts']]
           : []),
+        ['messages', 'Messages'],
         ['projects', 'Projects'],
         ['websites', 'Websites'],
         ['invoices', 'Invoices'],
@@ -1171,6 +1174,16 @@ export function ClientDetailSidebar({
           accountSlug={accountSlug}
           clientId={client.id}
           canEdit={canEditClients}
+        />
+      );
+    }
+
+    if (activeTab === 'messages') {
+      return (
+        <ClientMessagesBlock
+          accountId={accountId}
+          accountSlug={accountSlug}
+          clientId={client.id}
         />
       );
     }
