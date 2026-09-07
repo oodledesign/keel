@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
+import { collectRightmoveUrls } from '~/lib/commercial/rightmove-publish-status';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
@@ -31,13 +32,19 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
 
   const accountId = workspace.account.id as string;
   const canEditDisposals = workspace.canMutateCommercial;
-  const listing = await createListingsService(
-    getSupabaseServerClient(),
-  ).getListing(listingId, accountId);
+  const service = createListingsService(getSupabaseServerClient());
+  const listing = await service.getListing(listingId, accountId);
 
   if (!listing) {
     notFound();
   }
+
+  const publications = await service.listPublicationsForListing(listingId);
+  const rightmoveUrls = publications
+    .filter((publication) => publication.portal === 'rightmove')
+    .flatMap((publication) =>
+      collectRightmoveUrls({ externalUrl: publication.externalUrl }),
+    );
 
   return (
     <>
@@ -55,6 +62,7 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
           accountSlug={slug}
           accountId={accountId}
           canEditDisposals={canEditDisposals}
+          rightmoveUrls={rightmoveUrls}
         >
           {children}
         </ListingDetailShell>

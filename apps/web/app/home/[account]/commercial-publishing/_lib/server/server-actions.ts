@@ -17,13 +17,22 @@ import {
 } from '~/lib/commercial/linkedin-publishing/linkedin-api';
 import { verifyPendingLinkedInOrgs } from '~/lib/commercial/linkedin-publishing/oauth-state';
 import {
-  bulkPublishToRightmove,
   ensureListingFeedExternalId,
   publishToEach,
   publishToRightmove,
   setEachListingFeedInclusion,
   setWebsiteListingFeedInclusion,
 } from '~/lib/commercial/portal-publishers';
+import {
+  isRightmoveBulkJobStale,
+  kickRightmoveBulkWorker,
+  loadLatestRightmoveBulkJob,
+  processRightmoveBulkJobBatch,
+  scheduleRightmoveBulkContinuation,
+  startRightmoveBulkJob,
+  toPublicRightmoveBulkJob,
+} from '~/lib/commercial/rightmove-bulk-job';
+import { listRightmoveDisposalStatuses } from '~/lib/commercial/rightmove-disposal-status';
 import {
   ensureEachFeedToken,
   ensurePropertyHiveFeedToken,
@@ -40,6 +49,8 @@ import {
 import {
   BulkPublishRightmoveSchema,
   DisconnectLinkedInOrgSchema,
+  ListRightmoveDisposalStatusesSchema,
+  RightmoveBulkJobStatusSchema,
   EnsureEachFeedSchema,
   EnsurePropertyHiveFeedSchema,
   EnsureWebsiteFeedReadySchema,
@@ -403,11 +414,11 @@ export const testPublishListingAction = enhanceAction(
 );
 
 /**
- * Push one batch of Marketing / Under offer disposals to Rightmove.
- * The UI loops with `nextOffset` until `done`.
+ * Start a durable Rightmove bulk job and return immediately.
+ * Work continues in a detached worker / after() even if the browser leaves.
  */
 export const bulkPublishRightmoveAction = enhanceAction(
-  async (input) => {
+  async (input, user) => {
     const client = getSupabaseServerClient();
     const { assertCommercialPortalPublishingAllowed } =
       await import('~/lib/commercial/commercial-seat-access');
@@ -416,13 +427,78 @@ export const bulkPublishRightmoveAction = enhanceAction(
       accountId: input.accountId,
     });
 
-    return bulkPublishToRightmove({
+    const { job, created } = await startRightmoveBulkJob({
+      client: client as never,
       accountId: input.accountId,
-      offset: input.offset,
-      limit: input.limit,
+      userId: user.id,
     });
+
+    if (job.status === 'queued' || job.status === 'running') {
+      scheduleRightmoveBulkContinuation({
+        jobId: job.id,
+        processLocally: async () => {
+          const result = await processRightmoveBulkJobBatch({
+            client: client as never,
+            jobId: job.id,
+          });
+          if (!result.completed) {
+            await kickRightmoveBulkWorker(job.id);
+          }
+        },
+      });
+    }
+
+    return {
+      created,
+      job: toPublicRightmoveBulkJob(job),
+    };
   },
   { schema: BulkPublishRightmoveSchema },
+);
+
+export const getRightmoveBulkJobStatusAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const job = await loadLatestRightmoveBulkJob(
+      client as never,
+      input.accountId,
+    );
+
+    if (
+      job &&
+      input.resumeIfStale !== false &&
+      isRightmoveBulkJobStale(job)
+    ) {
+      const kicked = await kickRightmoveBulkWorker(job.id);
+      if (!kicked) {
+        await processRightmoveBulkJobBatch({
+          client: client as never,
+          jobId: job.id,
+        });
+      }
+    }
+
+    const refreshed = job
+      ? await loadLatestRightmoveBulkJob(client as never, input.accountId)
+      : null;
+
+    return {
+      job: refreshed ? toPublicRightmoveBulkJob(refreshed) : null,
+    };
+  },
+  { schema: RightmoveBulkJobStatusSchema },
+);
+
+export const listRightmoveDisposalStatusesAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const rows = await listRightmoveDisposalStatuses(
+      client as never,
+      input.accountId,
+    );
+    return { rows };
+  },
+  { schema: ListRightmoveDisposalStatusesSchema },
 );
 
 export const ensurePropertyHiveFeedAction = enhanceAction(

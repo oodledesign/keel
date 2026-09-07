@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getEachChannelStatus,
+  getRightmoveChannelStatus,
   getWebsiteChannelStatus,
 } from '../channel-publish-status';
 
@@ -96,5 +97,46 @@ describe('getEachChannelStatus', () => {
       ],
     });
     expect(status.state).toBe('blocked');
+  });
+});
+
+describe('getRightmoveChannelStatus', () => {
+  it('is Not pushed when there is no publication', () => {
+    const status = getRightmoveChannelStatus({
+      listing: { status: 'marketing' },
+      publications: [],
+    });
+    expect(status.state).toBe('off');
+    expect(status.label).toBe('Not pushed');
+  });
+
+  it('is Live when published with a URL', () => {
+    const status = getRightmoveChannelStatus({
+      listing: { status: 'marketing' },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          externalUrl: 'https://www.rightmove.co.uk/properties/123',
+        },
+      ],
+    });
+    expect(status.state).toBe('live');
+    expect(status.switchOn).toBe(true);
+  });
+
+  it('is Failed when the last push errored', () => {
+    const status = getRightmoveChannelStatus({
+      listing: { status: 'marketing' },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'error',
+          lastError: 'Missing office',
+        },
+      ],
+    });
+    expect(status.state).toBe('blocked');
+    expect(status.blockers).toContain('Missing office');
   });
 });
