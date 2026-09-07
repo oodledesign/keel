@@ -11,6 +11,9 @@ import {
   submitPublicWorkspaceForm,
 } from '~/lib/workspace-forms/public-form';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',

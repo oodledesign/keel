@@ -50,9 +50,15 @@ export async function sendClientFacingEmail(params: {
     brandContactEmail: params.brandContactEmail,
   });
 
-  const from =
-    resolved.fromHeader ||
-    resolveTransactionalEmailFrom(params.displayName || accountName);
+  // Custom SES domains may From as the workspace address. The Ozer Zepto
+  // rail only authorizes ZEPTOMAIL_FROM_ADDRESS (e.g. hi@ozer.so) — using a
+  // brand contact like websiteadmin@client.co.uk yields Zepto "Access Denied"
+  // with no processed message. Keep brand as Reply-To via resolved.replyTo.
+  const from = resolved.usedCustomDomain
+    ? resolved.fromHeader ||
+      resolveTransactionalEmailFrom(params.displayName || accountName)
+    : resolveTransactionalEmailFrom(params.displayName || accountName) ||
+      resolved.fromHeader;
 
   if (!from) {
     throw new Error(

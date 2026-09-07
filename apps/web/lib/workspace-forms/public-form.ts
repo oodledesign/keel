@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { after } from 'next/server';
 import { cache } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -391,15 +392,20 @@ export async function submitPublicWorkspaceForm(
 
   const submissionId = String((data as { id: string }).id);
 
-  void dispatchWorkspaceFormEmails({
-    admin,
-    form,
-    contact,
-    values: input.values,
-    submissionId,
-  }).catch(() => {
-    // Logged inside dispatch — never fail the public submit.
-  });
+  // Keep the isolate alive after the JSON response so Zepto can finish.
+  // Plain `void` is frozen/killed on Vercel and shows up as delayed
+  // Access Denied / TLS disconnect in platform_email_log.
+  after(() =>
+    dispatchWorkspaceFormEmails({
+      admin,
+      form,
+      contact,
+      values: input.values,
+      submissionId,
+    }).catch(() => {
+      // Logged inside dispatch — never fail the public submit.
+    }),
+  );
 
   return {
     submissionId,
