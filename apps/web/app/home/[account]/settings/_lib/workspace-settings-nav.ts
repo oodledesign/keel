@@ -65,10 +65,7 @@ function appendBrandNavItems(
   items.push({
     id: 'brand-voice',
     label: 'Brand voice',
-    href: settingsPath(
-      pathsConfig.app.accountBrandVoiceSettings,
-      accountSlug,
-    ),
+    href: settingsPath(pathsConfig.app.accountBrandVoiceSettings, accountSlug),
   });
 }
 
