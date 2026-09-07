@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.commercial_rightmove_bulk_jobs (
   last_listing_id uuid,
   last_listing_name text,
   failure_names text[] NOT NULL DEFAULT '{}',
+  failure_details jsonb NOT NULL DEFAULT '[]'::jsonb,
   started_by uuid REFERENCES auth.users (id) ON DELETE SET NULL,
   started_at timestamptz NOT NULL DEFAULT now(),
   heartbeat_at timestamptz NOT NULL DEFAULT now(),
@@ -39,6 +40,9 @@ COMMENT ON COLUMN public.commercial_rightmove_bulk_jobs.cursor IS
 
 COMMENT ON COLUMN public.commercial_rightmove_bulk_jobs.locked_until IS
   'Worker lease. Another worker may claim the job after this timestamp.';
+
+COMMENT ON COLUMN public.commercial_rightmove_bulk_jobs.failure_details IS
+  'Per-listing failures from this run: [{ listingId, name, error }].';
 
 CREATE INDEX IF NOT EXISTS commercial_rightmove_bulk_jobs_account_id_idx
   ON public.commercial_rightmove_bulk_jobs (account_id, started_at DESC);
@@ -87,7 +91,15 @@ CREATE POLICY commercial_rightmove_bulk_jobs_update
       OR public.has_role_on_account(account_id, 'staff')
     )
   )
-  WITH CHECK (public.has_role_on_account(account_id));
+  WITH CHECK (
+    public.has_role_on_account(account_id)
+    AND (
+      public.has_permission(auth.uid(), account_id, 'listings.edit'::public.app_permissions)
+      OR public.has_role_on_account(account_id, 'owner')
+      OR public.has_role_on_account(account_id, 'admin')
+      OR public.has_role_on_account(account_id, 'staff')
+    )
+  );
 
 CREATE POLICY commercial_rightmove_bulk_jobs_delete
   ON public.commercial_rightmove_bulk_jobs

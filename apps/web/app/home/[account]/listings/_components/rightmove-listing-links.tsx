@@ -2,7 +2,6 @@ import { ExternalLink } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
-import { isSafeHttpUrl } from '~/lib/commercial/channel-publish-status';
 import { collectRightmoveUrls } from '~/lib/commercial/rightmove-publish-status';
 
 import type { CommercialPortalPublication } from '../_lib/server/listings.service';
@@ -14,10 +13,14 @@ export function getRightmovePublication(
 }
 
 export function getRightmoveListingUrls(
-  publication: Pick<CommercialPortalPublication, 'externalUrl'> | null | undefined,
+  publication:
+    | Pick<CommercialPortalPublication, 'externalUrl' | 'metadata'>
+    | null
+    | undefined,
 ) {
   return collectRightmoveUrls({
     externalUrl: publication?.externalUrl ?? null,
+    metadata: publication?.metadata ?? null,
   });
 }
 
@@ -29,7 +32,7 @@ export function RightmoveListingLinks({
   size?: 'sm' | 'default';
 }) {
   const publication = getRightmovePublication(publications);
-  const urls = getRightmoveListingUrls(publication).filter(isSafeHttpUrl);
+  const urls = getRightmoveListingUrls(publication);
 
   if (urls.length === 0) return null;
 

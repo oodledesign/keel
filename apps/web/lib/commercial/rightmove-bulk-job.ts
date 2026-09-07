@@ -8,10 +8,11 @@ import {
   setPortalPublishersClient,
 } from '~/lib/commercial/portal-publishers';
 import {
-  STALE_HEARTBEAT_MS,
+  type RightmoveBulkFailureDetail,
   type RightmoveBulkJob,
   type RightmoveBulkJobPublic,
   type RightmoveBulkJobStatus,
+  STALE_HEARTBEAT_MS,
 } from '~/lib/commercial/rightmove-bulk-job-types';
 import { isRightmoveOAuthConfigured } from '~/lib/commercial/rightmove-env';
 
@@ -47,6 +48,25 @@ function asStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === 'string');
 }
 
+function asFailureDetails(value: unknown): RightmoveBulkFailureDetail[] {
+  if (!Array.isArray(value)) return [];
+  const details: RightmoveBulkFailureDetail[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const listingId = typeof row.listingId === 'string' ? row.listingId : '';
+    const name = typeof row.name === 'string' ? row.name : '';
+    const error = typeof row.error === 'string' ? row.error : '';
+    if (!listingId && !name && !error) continue;
+    details.push({
+      listingId,
+      name: name || 'Untitled',
+      error: error || 'Rightmove publish failed',
+    });
+  }
+  return details.slice(0, 40);
+}
+
 function mapJob(row: Record<string, unknown>): RightmoveBulkJob {
   return {
     id: String(row.id),
@@ -61,6 +81,7 @@ function mapJob(row: Record<string, unknown>): RightmoveBulkJob {
     lastListingId: (row.last_listing_id as string | null) ?? null,
     lastListingName: (row.last_listing_name as string | null) ?? null,
     failureNames: asStringArray(row.failure_names),
+    failureDetails: asFailureDetails(row.failure_details),
     startedAt: String(row.started_at),
     heartbeatAt: String(row.heartbeat_at),
     lockedUntil: (row.locked_until as string | null) ?? null,
@@ -83,6 +104,7 @@ export function toPublicRightmoveBulkJob(
     lastListingId: job.lastListingId,
     lastListingName: job.lastListingName,
     failureNames: job.failureNames,
+    failureDetails: job.failureDetails,
     startedAt: job.startedAt,
     heartbeatAt: job.heartbeatAt,
     lockedUntil: job.lockedUntil,
@@ -194,6 +216,7 @@ export async function startRightmoveBulkJob(input: {
       succeeded: 0,
       failed: 0,
       failure_names: [],
+      failure_details: [],
       started_by: input.userId ?? null,
       started_at: now,
       heartbeat_at: now,
@@ -255,6 +278,7 @@ async function persistJobProgress(
     lastListingId: string | null;
     lastListingName: string | null;
     failureNames: string[];
+    failureDetails: RightmoveBulkFailureDetail[];
     completed: boolean;
     fatal?: boolean;
   },
@@ -277,6 +301,7 @@ async function persistJobProgress(
       last_listing_id: patch.lastListingId,
       last_listing_name: patch.lastListingName,
       failure_names: patch.failureNames.slice(0, 40),
+      failure_details: patch.failureDetails.slice(0, 40),
       heartbeat_at: now,
       locked_until: null,
       completed_at: patch.completed || patch.fatal ? now : null,
@@ -327,6 +352,7 @@ export async function processRightmoveBulkJobBatch(input: {
       lastListingId: claimed.lastListingId,
       lastListingName: claimed.lastListingName,
       failureNames: claimed.failureNames,
+      failureDetails: claimed.failureDetails,
       completed: true,
     });
     return { ...empty, claimed: true, completed: true };
@@ -339,6 +365,7 @@ export async function processRightmoveBulkJobBatch(input: {
   let succeeded = claimed.succeeded;
   let failed = claimed.failed;
   const failureNames = [...claimed.failureNames];
+  const failureDetails = [...claimed.failureDetails];
   let lastError = claimed.lastError;
   let lastListingId = claimed.lastListingId;
   let lastListingName = claimed.lastListingName;
@@ -357,8 +384,7 @@ export async function processRightmoveBulkJobBatch(input: {
           .eq('id', listingId)
           .eq('account_id', claimed.accountId)
           .maybeSingle();
-        name =
-          ((listingRow?.name as string | null) ?? '').trim() || 'Untitled';
+        name = ((listingRow?.name as string | null) ?? '').trim() || 'Untitled';
 
         let publication = await publishToRightmove(
           claimed.accountId,
@@ -377,15 +403,28 @@ export async function processRightmoveBulkJobBatch(input: {
           succeeded += 1;
         } else {
           failed += 1;
-          lastError =
-            publication.last_error ?? 'Rightmove publish failed';
+          lastError = publication.last_error ?? 'Rightmove publish failed';
           if (failureNames.length < 40) failureNames.push(name);
+          if (failureDetails.length < 40) {
+            failureDetails.push({
+              listingId,
+              name,
+              error: lastError,
+            });
+          }
         }
       } catch (error) {
         failed += 1;
         lastError =
           error instanceof Error ? error.message : 'Rightmove publish failed';
         if (failureNames.length < 40) failureNames.push(name);
+        if (failureDetails.length < 40) {
+          failureDetails.push({
+            listingId,
+            name,
+            error: lastError,
+          });
+        }
       }
 
       lastListingId = listingId;
@@ -402,10 +441,13 @@ export async function processRightmoveBulkJobBatch(input: {
       succeeded,
       failed,
       lastError:
-        error instanceof Error ? error.message : 'Bulk Rightmove publish failed',
+        error instanceof Error
+          ? error.message
+          : 'Bulk Rightmove publish failed',
       lastListingId,
       lastListingName,
       failureNames,
+      failureDetails,
       completed: false,
       fatal: true,
     });
@@ -425,6 +467,7 @@ export async function processRightmoveBulkJobBatch(input: {
     lastListingId,
     lastListingName,
     failureNames,
+    failureDetails,
     completed,
   });
 

@@ -22,6 +22,7 @@ import {
   resolveStoredOrTemplatedWebsiteUrl,
 } from '~/lib/commercial/listing-website-url';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
+import { collectRightmoveUrls } from '~/lib/commercial/rightmove-publish-status';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import { ensureWebsiteFeedReadyAction } from '../../commercial-publishing/_lib/server/server-actions';
@@ -80,7 +81,11 @@ export function ListingPublishingChannels({
   });
   const hasRightmoveLink = publications.some(
     (publication) =>
-      publication.portal === 'rightmove' && Boolean(publication.externalUrl),
+      publication.portal === 'rightmove' &&
+      collectRightmoveUrls({
+        externalUrl: publication.externalUrl,
+        metadata: publication.metadata,
+      }).length > 0,
   );
 
   const confirmReady = () =>

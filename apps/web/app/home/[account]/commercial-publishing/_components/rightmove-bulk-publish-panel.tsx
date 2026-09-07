@@ -40,9 +40,10 @@ import pathsConfig from '~/config/paths.config';
 import { LISTING_STATUS_LABELS } from '~/lib/commercial/commercial-constants';
 import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
+  type RightmoveDisposalStatusRow,
   formatRightmovePublicationStatus,
   formatRightmoveUpdatedAt,
-  type RightmoveDisposalStatusRow,
+  isRightmoveDisposalFailed,
 } from '~/lib/commercial/rightmove-publish-status';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -58,9 +59,7 @@ function jobProgressLabel(job: RightmoveBulkJobPublic | null): string | null {
     return 'No Marketing / Under offer disposals to push';
   }
   if (job.isActive) {
-    const current = job.lastListingName
-      ? ` — ${job.lastListingName}`
-      : '';
+    const current = job.lastListingName ? ` — ${job.lastListingName}` : '';
     return `Pushing ${job.processed} of ${job.total}${current}`;
   }
   if (job.status === 'completed') {
@@ -95,6 +94,7 @@ export function RightmoveBulkPublishPanel({
   const [job, setJob] = useState<RightmoveBulkJobPublic | null>(initialJob);
   const [startPending, startTransition] = useTransition();
   const [statusOpen, setStatusOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'failed'>('all');
   const [rows, setRows] = useState<RightmoveDisposalStatusRow[]>([]);
   const [rowsPending, startRowsTransition] = useTransition();
 
@@ -102,6 +102,7 @@ export function RightmoveBulkPublishPanel({
     setJob(initialJob);
   }, [initialJob]);
 
+  // Poll persisted job progress — the worker continues after this tab closes.
   useEffect(() => {
     if (!job?.isActive) return;
 
@@ -129,11 +130,13 @@ export function RightmoveBulkPublishPanel({
     };
   }, [accountId, job?.id, job?.isActive]);
 
-  const loadRows = () => {
+  const loadRows = (preferFailed = false) => {
     startRowsTransition(async () => {
       try {
         const result = await listRightmoveDisposalStatusesAction({ accountId });
         setRows(result.rows);
+        const hasFailures = result.rows.some(isRightmoveDisposalFailed);
+        setStatusFilter(preferFailed || hasFailures ? 'failed' : 'all');
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -142,6 +145,11 @@ export function RightmoveBulkPublishPanel({
         );
       }
     });
+  };
+
+  const openStatus = (preferFailed = false) => {
+    setStatusOpen(true);
+    loadRows(preferFailed);
   };
 
   const runBulk = () => {
@@ -172,21 +180,32 @@ export function RightmoveBulkPublishPanel({
 
   const progress = jobProgressLabel(job);
   const percent =
-    job && job.total > 0
-      ? Math.round((job.processed / job.total) * 100)
-      : 0;
+    job && job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
 
   const listingHref = (listingId: string) =>
     `${pathsConfig.app.accountListingDetail
       .replace('[account]', accountSlug)
       .replace('[id]', listingId)}/publishing`;
 
-  const statusCounts = useMemo(() => {
-    const published = rows.filter((row) => row.rightmoveStatus === 'published')
-      .length;
-    const failed = rows.filter((row) => row.rightmoveStatus === 'error').length;
-    return { published, failed, total: rows.length };
-  }, [rows]);
+  const failedRows = useMemo(
+    () => rows.filter(isRightmoveDisposalFailed),
+    [rows],
+  );
+  const visibleRows = useMemo(
+    () => (statusFilter === 'failed' ? failedRows : rows),
+    [failedRows, rows, statusFilter],
+  );
+  const statusCounts = useMemo(
+    () => ({
+      published: rows.filter((row) => row.rightmoveStatus === 'published')
+        .length,
+      failed: failedRows.length,
+      total: rows.length,
+    }),
+    [failedRows.length, rows],
+  );
+
+  const jobFailures = job?.failureDetails ?? [];
 
   return (
     <div className="space-y-3">
@@ -196,6 +215,7 @@ export function RightmoveBulkPublishPanel({
             <Button
               type="button"
               className={workspaceBtnPrimaryMd}
+              data-test="rightmove-bulk-push"
               disabled={
                 startPending ||
                 job?.isActive ||
@@ -207,7 +227,9 @@ export function RightmoveBulkPublishPanel({
               {startPending || job?.isActive ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : null}
-              {job?.isActive ? 'Pushing to Rightmove…' : 'Push all to Rightmove'}
+              {job?.isActive
+                ? 'Pushing to Rightmove…'
+                : 'Push all to Rightmove'}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -237,26 +259,72 @@ export function RightmoveBulkPublishPanel({
           open={statusOpen}
           onOpenChange={(open) => {
             setStatusOpen(open);
-            if (open) loadRows();
+            if (open) loadRows(false);
           }}
         >
           <DialogTrigger asChild>
-            <Button type="button" variant="outline">
+            <Button
+              type="button"
+              variant="outline"
+              data-test="rightmove-status-open"
+            >
               Rightmove status
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-4xl">
+          <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-5xl">
             <DialogHeader>
               <DialogTitle>Rightmove disposals</DialogTitle>
               <DialogDescription>
-                Status, listing URL, and last sync for every disposal in this
-                workspace.
+                Status, listing URL, last sync, and the last error for every
+                disposal. Failed rows are listed first.
                 {rows.length > 0
                   ? ` ${statusCounts.published} published, ${statusCounts.failed} failed, ${statusCounts.total} total.`
                   : null}
               </DialogDescription>
             </DialogHeader>
-            <div className="max-h-[60vh] overflow-auto">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setStatusFilter('all')}
+              >
+                All ({statusCounts.total})
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={statusFilter === 'failed' ? 'default' : 'outline'}
+                data-test="rightmove-status-filter-failed"
+                onClick={() => setStatusFilter('failed')}
+              >
+                Failed ({statusCounts.failed})
+              </Button>
+            </div>
+            {failedRows.length > 0 ? (
+              <div className="max-h-48 space-y-2 overflow-auto rounded-lg border border-rose-500/30 bg-rose-500/10 p-3">
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  {failedRows.length} failed
+                </p>
+                <ul className="space-y-2">
+                  {failedRows.map((row) => (
+                    <li key={row.listingId} className="space-y-0.5">
+                      <Link
+                        href={listingHref(row.listingId)}
+                        className="text-sm font-medium text-[var(--workspace-shell-text)] underline-offset-2 hover:underline"
+                      >
+                        {row.name}
+                      </Link>
+                      <p className="text-xs whitespace-pre-wrap text-rose-600 dark:text-rose-300">
+                        {row.lastError?.trim() ||
+                          'Rightmove publish failed — no error detail stored'}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="max-h-[50vh] overflow-auto">
               {rowsPending && rows.length === 0 ? (
                 <p className="flex items-center gap-2 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -266,24 +334,33 @@ export function RightmoveBulkPublishPanel({
                 <p className="py-8 text-sm text-[var(--workspace-shell-text-muted)]">
                   No disposals in this workspace yet.
                 </p>
+              ) : visibleRows.length === 0 ? (
+                <p className="py-8 text-sm text-[var(--workspace-shell-text-muted)]">
+                  No failed Rightmove pushes.
+                </p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Disposal</TableHead>
                       <TableHead>Rightmove</TableHead>
+                      <TableHead>Error</TableHead>
                       <TableHead>URL</TableHead>
                       <TableHead>Last updated</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((row) => {
+                    {visibleRows.map((row) => {
                       const listingStatus =
                         LISTING_STATUS_LABELS[
                           row.listingStatus as keyof typeof LISTING_STATUS_LABELS
                         ] ?? row.listingStatus;
+                      const failed = isRightmoveDisposalFailed(row);
                       return (
-                        <TableRow key={row.listingId}>
+                        <TableRow
+                          key={row.listingId}
+                          className={failed ? 'bg-rose-500/5' : undefined}
+                        >
                           <TableCell>
                             <Link
                               href={listingHref(row.listingId)}
@@ -295,19 +372,23 @@ export function RightmoveBulkPublishPanel({
                               {listingStatus}
                             </p>
                           </TableCell>
-                          <TableCell>
-                            <p className="text-sm text-[var(--workspace-shell-text)]">
-                              {formatRightmovePublicationStatus(
-                                row.rightmoveStatus === 'none'
-                                  ? null
-                                  : row.rightmoveStatus,
-                              )}
-                            </p>
-                            {row.lastError ? (
-                              <p className="max-w-xs truncate text-xs text-rose-500">
+                          <TableCell className="text-sm text-[var(--workspace-shell-text)]">
+                            {formatRightmovePublicationStatus(
+                              row.rightmoveStatus === 'none'
+                                ? null
+                                : row.rightmoveStatus,
+                            )}
+                          </TableCell>
+                          <TableCell className="max-w-md min-w-[16rem]">
+                            {row.lastError?.trim() ? (
+                              <p className="text-xs whitespace-pre-wrap text-rose-600 dark:text-rose-300">
                                 {row.lastError}
                               </p>
-                            ) : null}
+                            ) : (
+                              <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                —
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {row.urls.length > 0 ? (
@@ -331,7 +412,7 @@ export function RightmoveBulkPublishPanel({
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="whitespace-nowrap text-xs text-[var(--workspace-shell-text-muted)]">
+                          <TableCell className="text-xs whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                             {formatRightmoveUpdatedAt(row.lastUpdatedAt)}
                           </TableCell>
                         </TableRow>
@@ -368,6 +449,67 @@ export function RightmoveBulkPublishPanel({
           push.
         </p>
       )}
+
+      {!job?.isActive && jobFailures.length > 0 ? (
+        <div className="space-y-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3">
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            {jobFailures.length} disposal
+            {jobFailures.length === 1 ? '' : 's'} failed this push
+          </p>
+          <ul className="space-y-2">
+            {jobFailures.map((failure) => (
+              <li
+                key={`${failure.listingId}-${failure.name}`}
+                className="space-y-0.5"
+              >
+                {failure.listingId ? (
+                  <Link
+                    href={listingHref(failure.listingId)}
+                    className="text-sm font-medium text-[var(--workspace-shell-text)] underline-offset-2 hover:underline"
+                  >
+                    {failure.name}
+                  </Link>
+                ) : (
+                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                    {failure.name}
+                  </p>
+                )}
+                <p className="text-xs whitespace-pre-wrap text-rose-600 dark:text-rose-300">
+                  {failure.error}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => openStatus(true)}
+          >
+            View in Rightmove status
+          </Button>
+        </div>
+      ) : !job?.isActive && (job?.failed ?? 0) > 0 ? (
+        <div className="space-y-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3">
+          <p className="text-sm text-[var(--workspace-shell-text)]">
+            Last push: {job?.succeeded ?? 0} ok, {job?.failed ?? 0} failed
+            {job?.failureNames?.length
+              ? ` (${job.failureNames.slice(0, 3).join(', ')}${
+                  job.failureNames.length > 3 ? '…' : ''
+                })`
+              : ''}
+            . Open Rightmove status for the per-listing error.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => openStatus(true)}
+          >
+            View failed disposals
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

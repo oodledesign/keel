@@ -432,6 +432,7 @@ export type CommercialPortalPublication = {
   status: string;
   lastSyncAt: string | null;
   lastError: string | null;
+  metadata: Record<string, unknown>;
 };
 
 type ListingRow = Record<string, unknown> & {
@@ -786,6 +787,10 @@ function mapPublication(row: PublicationRow): CommercialPortalPublication {
     status: (row.status as string) ?? 'draft',
     lastSyncAt: (row.last_sync_at as string | null) ?? null,
     lastError: (row.last_error as string | null) ?? null,
+    metadata:
+      row.metadata && typeof row.metadata === 'object'
+        ? (row.metadata as Record<string, unknown>)
+        : {},
   };
 }
 
