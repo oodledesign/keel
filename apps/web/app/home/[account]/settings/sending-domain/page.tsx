@@ -66,11 +66,7 @@ export default async function SendingDomainPage(props: SendingDomainPageProps) {
       .select('name, outbound_email_settings')
       .eq('id', accountId)
       .maybeSingle(),
-    canUseCustomSendingDomain(
-      client,
-      accountId,
-      (workspace.account as { business_type?: string | null }).business_type,
-    ),
+    canUseCustomSendingDomain(client, accountId, workspace.businessType),
   ]);
 
   if (accountRow.error) {

@@ -43,9 +43,7 @@ async function WorkspaceSettingsLayout({
   const canConfigureSendingDomain = await canUseCustomSendingDomain(
     supabase,
     workspace.account.id as string,
-    (
-      workspace.account as { business_type?: string | null }
-    ).business_type,
+    workspace.businessType,
   );
 
   const navItems = buildWorkspaceSettingsNav({

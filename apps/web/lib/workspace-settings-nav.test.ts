@@ -53,6 +53,18 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).not.toContain('finances');
   });
 
+  it('includes sending domain for commercial property when access is granted', () => {
+    const items = buildWorkspaceSettingsNav({
+      accountSlug: 'bracketts',
+      workspaceProfile: 'commercial_property',
+      moduleSettings: {},
+      access: ownerAccess,
+      canConfigureSendingDomain: true,
+    });
+
+    expect(items.map((item) => item.id)).toContain('sending-domain');
+  });
+
   it('omits sending domain when the workspace cannot configure one', () => {
     const items = buildWorkspaceSettingsNav({
       accountSlug: 'lite-studio',

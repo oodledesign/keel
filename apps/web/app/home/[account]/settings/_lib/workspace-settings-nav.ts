@@ -65,10 +65,7 @@ function appendBrandNavItems(
   items.push({
     id: 'brand-voice',
     label: 'Brand voice',
-    href: settingsPath(
-      pathsConfig.app.accountBrandVoiceSettings,
-      accountSlug,
-    ),
+    href: settingsPath(pathsConfig.app.accountBrandVoiceSettings, accountSlug),
   });
 }
 
@@ -77,7 +74,7 @@ export function buildWorkspaceSettingsNav(input: {
   workspaceProfile: WorkspaceProfile;
   moduleSettings?: Record<string, boolean>;
   access: TeamAccountAccess;
-  /** Starter/Pro only. Lite omits the sending-domain settings item. */
+  /** Paid non-lite plans (Starter/Pro, commercial, property) and grants. Lite omits. */
   canConfigureSendingDomain?: boolean;
 }): WorkspaceSettingsNavItem[] {
   const {
