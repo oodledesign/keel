@@ -21,4 +21,13 @@ describe('formDescriptionToHtml', () => {
       ),
     ).toContain('href="https://example.com"');
   });
+
+  it('strips unsafe tags from rich descriptions', () => {
+    const html = formDescriptionToHtml(
+      '<p>Hello</p><iframe src="https://evil.example"></iframe><script>alert(1)</script>',
+    );
+    expect(html).toContain('Hello');
+    expect(html).not.toContain('iframe');
+    expect(html).not.toContain('script');
+  });
 });

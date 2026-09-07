@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -13,6 +14,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { Switch } from '@kit/ui/switch';
+import { Textarea } from '@kit/ui/textarea';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
 import {
@@ -241,16 +243,16 @@ export function FormEmailSettingsPanel({
                     key={member.userId}
                     className={`flex items-start gap-2 text-sm ${workspaceText}`}
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       className="mt-1"
                       checked={checked}
-                      onChange={(event) => {
-                        const next = event.target.checked
-                          ? [...settings.notifyMemberIds, member.userId]
-                          : settings.notifyMemberIds.filter(
-                              (id) => id !== member.userId,
-                            );
+                      onCheckedChange={(nextChecked) => {
+                        const next =
+                          nextChecked === true
+                            ? [...settings.notifyMemberIds, member.userId]
+                            : settings.notifyMemberIds.filter(
+                                (id) => id !== member.userId,
+                              );
                         onChange({ ...settings, notifyMemberIds: next });
                       }}
                     />
@@ -270,9 +272,8 @@ export function FormEmailSettingsPanel({
           <Label>
             Extra notification addresses (max {MAX_FORM_NOTIFY_EMAILS})
           </Label>
-          <textarea
+          <Textarea
             rows={6}
-            className="border-input min-h-[120px] rounded-md border bg-transparent px-3 py-2 text-sm"
             value={extraEmailsText}
             placeholder={'one@example.com\ntwo@example.com'}
             onChange={(event) => {

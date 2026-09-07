@@ -482,17 +482,10 @@ function PublicField({
           onChange={(event) => onChange(event.target.value)}
         />
       ) : field.type === 'file' ? (
-        <Input
-          id={inputId}
-          type="file"
-          required={field.required}
-          disabled={disabled}
-          className={EMPTY_PLACEHOLDER}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            onChange(file?.name ?? '');
-          }}
-        />
+        <p className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-500">
+          File upload is not collected on this form yet. The workspace can
+          follow up by email if they need an attachment.
+        </p>
       ) : (
         <Input
           id={inputId}

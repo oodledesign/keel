@@ -271,10 +271,10 @@ export function defaultRsvpEmailSettings(): WorkspaceFormEmailSettings {
   const no: WorkspaceFormEmailTemplate = {
     id: 'rsvp_no',
     name: 'RSVP — No',
-    subject: 'Sorry you can’t make it',
+    subject: "Sorry you can't make it",
     bodyHtml: [
       '<p>Hi {{name}},</p>',
-      '<p>Sorry you can’t make it to <strong>{{event_name}}</strong> — you can update your RSVP if plans change.</p>',
+      "<p>Sorry you can't make it to <strong>{{event_name}}</strong> — you can update your RSVP if plans change.</p>",
       '<p>{{event_address}}</p>',
     ].join(''),
   };

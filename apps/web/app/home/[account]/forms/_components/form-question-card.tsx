@@ -115,6 +115,13 @@ export function FormQuestionCard({
         </div>
       ) : null}
 
+      {field.type === 'file' ? (
+        <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
+          Public visitors see a note that files are not collected yet. Storage
+          upload is a follow-up.
+        </p>
+      ) : null}
+
       {field.type === 'text' ||
       field.type === 'textarea' ||
       field.type === 'name' ||
