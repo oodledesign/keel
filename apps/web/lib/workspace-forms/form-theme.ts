@@ -18,11 +18,14 @@ export type WorkspaceFormLayout = (typeof WORKSPACE_FORM_LAYOUTS)[number];
 export type WorkspaceFormTheme = {
   pageBackground: WorkspaceFormPageBackground;
   layout: WorkspaceFormLayout;
+  /** True after the editor saved a public-layout choice. */
+  layoutExplicit: boolean;
 };
 
 export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
   pageBackground: 'light',
   layout: 'standard',
+  layoutExplicit: false,
 };
 
 export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
@@ -30,13 +33,13 @@ export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
   { label: string; description: string }
 > = {
   standard: {
-    label: 'Standard',
-    description: 'Logo and intro stacked above the form.',
+    label: 'Standard (single column)',
+    description: 'Logo and intro stacked above the form on every screen size.',
   },
   event: {
-    label: 'Event / RSVP',
+    label: 'Event / two-column',
     description:
-      'Two columns on desktop: event details on the left, form on the right.',
+      'RSVP public layout: desktop shows event details on the left and the form on the right. Mobile stays stacked. New RSVPs use this by default.',
   },
 };
 
@@ -89,19 +92,101 @@ export function brandPageGradientCss(primaryColor: string): string {
   return `linear-gradient(135deg, ${primaryColor}, ${darker})`;
 }
 
+function readStoredLayout(raw: object): WorkspaceFormLayout | null {
+  const row = raw as {
+    layout?: unknown;
+    pageLayout?: unknown;
+    formLayout?: unknown;
+  };
+  const value = row.layout ?? row.pageLayout ?? row.formLayout;
+  if (value === 'event' || value === 'rsvp') return 'event';
+  if (value === 'standard') return 'standard';
+  return null;
+}
+
 export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ...DEFAULT_WORKSPACE_FORM_THEME };
   }
-  const row = raw as { pageBackground?: unknown; layout?: unknown };
   const pageBackground =
-    row.pageBackground === 'brand_gradient' ? 'brand_gradient' : 'light';
-  const layout = row.layout === 'event' ? 'event' : 'standard';
-  return { pageBackground, layout };
+    (raw as { pageBackground?: unknown }).pageBackground === 'brand_gradient'
+      ? 'brand_gradient'
+      : 'light';
+  return {
+    pageBackground,
+    layout: readStoredLayout(raw) ?? 'standard',
+    layoutExplicit:
+      (raw as { layoutExplicit?: unknown }).layoutExplicit === true,
+  };
+}
+
+export type WorkspaceFormLayoutHints = {
+  eventAddress?: string | null;
+  destination?: string | null;
+  submitLabel?: string | null;
+  name?: string | null;
+  fields?: Array<{ type: string; key: string; label: string }>;
+};
+
+const RSVP_FIELD_RE = /attend|rsvp|coming/;
+
+export function isRsvpLikeWorkspaceForm(
+  hints: WorkspaceFormLayoutHints,
+): boolean {
+  if (hints.eventAddress?.trim()) return true;
+  if (/rsvp/i.test(`${hints.submitLabel ?? ''} ${hints.name ?? ''}`)) {
+    return true;
+  }
+
+  const fields = hints.fields ?? [];
+  const hasAttendanceChoice = fields.some(
+    (field) =>
+      (field.type === 'yes_no' ||
+        field.type === 'select' ||
+        field.type === 'radio') &&
+      RSVP_FIELD_RE.test(`${field.key} ${field.label}`.toLowerCase()),
+  );
+  if (hasAttendanceChoice) return true;
+
+  return (
+    hints.destination === 'submission_list' &&
+    fields.some((field) => field.type === 'yes_no')
+  );
+}
+
+/**
+ * Existing RSVPs often still store theme.layout = standard because that was
+ * the parse default, not a user choice. Default those to event / two-column.
+ * Honor an explicit Standard (or Event) choice after the editor saves
+ * `layoutExplicit: true`.
+ */
+export function resolveWorkspaceFormLayout(
+  theme: Pick<WorkspaceFormTheme, 'layout' | 'layoutExplicit'>,
+  hints: WorkspaceFormLayoutHints = {},
+): WorkspaceFormLayout {
+  if (theme.layout === 'event') return 'event';
+  if (theme.layoutExplicit) return 'standard';
+  if (isRsvpLikeWorkspaceForm(hints)) return 'event';
+  return 'standard';
+}
+
+export function withResolvedFormLayout(
+  theme: WorkspaceFormTheme,
+  hints: WorkspaceFormLayoutHints,
+): WorkspaceFormTheme {
+  return {
+    ...theme,
+    layout: resolveWorkspaceFormLayout(theme, hints),
+  };
 }
 
 export function serializeWorkspaceFormTheme(
   theme: Partial<WorkspaceFormTheme> | WorkspaceFormTheme,
 ): WorkspaceFormTheme {
-  return parseWorkspaceFormTheme(theme);
+  const parsed = parseWorkspaceFormTheme(theme);
+  return {
+    pageBackground: parsed.pageBackground,
+    layout: parsed.layout,
+    layoutExplicit: parsed.layoutExplicit,
+  };
 }

@@ -36,6 +36,7 @@ export const CreateWorkspaceFormSchema = z.object({
 export const WorkspaceFormThemeSchema = z.object({
   pageBackground: z.enum(WORKSPACE_FORM_PAGE_BACKGROUNDS),
   layout: z.enum(WORKSPACE_FORM_LAYOUTS).optional(),
+  layoutExplicit: z.boolean().optional(),
 });
 
 export const WorkspaceFormEmailTemplateSchema = z.object({

@@ -96,7 +96,7 @@ export function FormQuestionCard({
         <div className="mt-3 grid gap-1.5">
           <Label>
             {field.type === 'yes_no'
-              ? 'Choices (two large buttons on the public page)'
+              ? 'Choices (compact buttons on the public page)'
               : 'Options (one per line)'}
           </Label>
           <Textarea
@@ -112,6 +112,29 @@ export function FormQuestionCard({
               })
             }
           />
+          {field.type === 'yes_no' ? (
+            <div
+              className={cn(
+                'grid gap-2',
+                (field.options?.length ?? 2) <= 2
+                  ? 'grid-cols-2'
+                  : 'max-w-md grid-cols-2 sm:grid-cols-3',
+              )}
+              aria-hidden
+            >
+              {(field.options && field.options.length >= 2
+                ? field.options.slice(0, 4)
+                : ['Yes', 'No']
+              ).map((option) => (
+                <span
+                  key={option}
+                  className="flex min-h-11 items-center justify-center rounded-xl border-2 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50,#FBF6EC)] px-3 py-2 text-sm font-semibold text-[var(--workspace-shell-text)]"
+                >
+                  {option}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

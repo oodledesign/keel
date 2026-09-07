@@ -166,12 +166,17 @@ export function PublicWorkspaceForm({
       <div
         className={
           eventLayout
-            ? 'grid items-start gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'
+            ? 'grid items-start gap-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'
             : undefined
+        }
+        data-test={
+          eventLayout
+            ? 'public-form-event-layout'
+            : 'public-form-standard-layout'
         }
       >
         {eventLayout ? (
-          <aside className="lg:sticky lg:top-8">{intro}</aside>
+          <aside className="md:sticky md:top-8">{intro}</aside>
         ) : (
           intro
         )}
@@ -264,7 +269,7 @@ function PublicFormIntro({
         {accountName}
       </p>
       <h1
-        className="font-heading mt-2 text-2xl font-bold lg:text-3xl"
+        className="font-heading mt-2 text-2xl font-bold md:text-3xl"
         style={{ color: chromeOnDark ? '#FFFFFF' : primaryColor }}
       >
         {formName}
@@ -352,7 +357,10 @@ function PublicField({
           role="radiogroup"
           aria-required={field.required}
           aria-label={field.label}
-          className="grid grid-cols-2 gap-3"
+          className={cn(
+            'grid gap-2',
+            options.length <= 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3',
+          )}
         >
           {options.map((option) => {
             const selected = textValue === option;
@@ -362,7 +370,7 @@ function PublicField({
                 key={option}
                 htmlFor={optionId}
                 className={cn(
-                  'flex min-h-14 cursor-pointer items-center justify-center rounded-2xl border-2 px-4 py-3 text-base font-semibold transition-colors',
+                  'flex min-h-11 cursor-pointer items-center justify-center rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors',
                   selected
                     ? 'text-white'
                     : 'border-neutral-200 bg-[var(--ozer-cream-50,#FBF6EC)] text-neutral-800 hover:border-neutral-300',
