@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildNativeInvoicePushPayload,
+  buildNativeMessagePushPayload,
   nativeInvoicePushUrl,
+  nativeMessagePushUrl,
   readApnsConfig,
 } from './apns-shared';
 
@@ -26,6 +28,32 @@ describe('buildNativeInvoicePushPayload', () => {
       body: 'Invoice INV-0042 paid (£125.00) by Hope via Stripe',
       invoiceId: 'inv-1',
       url: 'so.ozer.app://invoice/inv-1',
+    });
+  });
+});
+
+describe('nativeMessagePushUrl', () => {
+  it('opens the thread in the app', () => {
+    expect(nativeMessagePushUrl('thread-1', 'oodle')).toBe(
+      'so.ozer.app://message/thread-1?workspace=oodle',
+    );
+  });
+});
+
+describe('buildNativeMessagePushPayload', () => {
+  it('sets a message title and deep link', () => {
+    expect(
+      buildNativeMessagePushPayload({
+        threadId: 'thread-1',
+        workspace: 'oodle',
+        title: 'Alex',
+        body: 'On my way',
+      }),
+    ).toEqual({
+      title: 'Alex',
+      body: 'On my way',
+      threadId: 'thread-1',
+      url: 'so.ozer.app://message/thread-1?workspace=oodle',
     });
   });
 });

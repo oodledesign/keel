@@ -59,7 +59,7 @@ struct MenuView: View {
     }
 
     private var menuScreens: [AppScreen] {
-        session.selectedWorkspace?.menuScreens ?? [.home, .tasks, .notes, .shopping]
+        session.selectedWorkspace?.menuScreens ?? [.home, .tasks, .notes, .messages, .shopping]
     }
 
     @ViewBuilder

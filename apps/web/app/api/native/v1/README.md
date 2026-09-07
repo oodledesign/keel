@@ -77,6 +77,25 @@ curl -sS -X POST "$ORIGIN/api/native/v1/devices" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"token":"DEVICE_TOKEN_HEX","platform":"ios","workspace":"YOUR_SLUG"}'
+
+curl -sS "$ORIGIN/api/native/v1/messages/threads?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS "$ORIGIN/api/native/v1/messages/compose?workspace=YOUR_SLUG&q=alex" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS -X POST "$ORIGIN/api/native/v1/messages/threads" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"workspace":"YOUR_SLUG","type":"direct","member_user_ids":["TEAMMATE_UUID"]}'
+
+curl -sS "$ORIGIN/api/native/v1/messages/threads/THREAD_ID/messages?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS -X POST "$ORIGIN/api/native/v1/messages/threads/THREAD_ID/messages" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"workspace":"YOUR_SLUG","body":"On my way"}'
 ```
 
 `workspace` accepts an account slug, UUID, or the chip aliases `personal`, `family`, and `business` (`business` maps to the first `work_design` workspace). Exact slug or UUID wins when they collide with an alias. Personal is always included in `/workspaces` (empty slug falls back to the account id). `/clients` includes `image` / `logo` HTTPS URLs; `GET /clients/:id` adds `contacts`.
@@ -117,7 +136,27 @@ POST /api/native/v1/devices
 { "token": "<64-char hex>", "platform": "ios", "workspace": "<optional slug>" }
 ```
 
-Rows live in `native_device_tokens` (RLS: a user can upsert their own tokens). The server sends an APNs alert when it already creates an in-app invoice notification (paid, overdue, viewed). Failures are logged and never break email or in-app. Deep link: `so.ozer.app://invoice/{id}` plus `invoice_id` in the payload.
+Rows live in `native_device_tokens` (RLS: a user can upsert their own tokens). The server sends an APNs alert when it already creates an in-app invoice notification (paid, overdue, viewed), and when a new chat message is inserted for other thread participants (never the sender). Failures are logged and never break email or in-app. Invoice deep link: `so.ozer.app://invoice/{id}` plus `invoice_id`. Message deep link: `so.ozer.app://message/{threadId}` plus `thread_id`.
+
+## Messages
+
+Participant-only inbox — same `MessagesService` / `chat_threads` as the web app. A user only sees threads they belong to.
+
+```
+GET /messages/threads?workspace=<slug-or-uuid>
+GET /messages/threads/{id}?workspace=<slug-or-uuid>
+GET /messages/threads/{id}/messages?workspace=<slug-or-uuid>&before=&limit=
+POST /messages/threads
+{ "workspace", "type?": "direct|group|job|client", "title?", "job_id?", "client_id?", "member_user_ids?", "contact_ids?" }
+POST /messages/threads/{id}/messages
+{ "workspace", "body?", "image_url?" }
+POST /messages/threads/{id}/read
+{ "workspace" }
+GET /messages/compose?workspace=<slug-or-uuid>&q=
+POST /messages/images  (multipart: workspace, threadId, file)
+```
+
+`GET /compose` returns teammates, contacts, clients, and projects for New chat search. Image uploads must already be a thread participant.
 
 Env (do **not** commit a `.p8`):
 

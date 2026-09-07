@@ -15,6 +15,8 @@ struct MainTabView: View {
                 TasksListView()
             case .notes:
                 NotesListView()
+            case .messages:
+                MessagesInboxView()
             case .people:
                 PeopleListView()
             case .clients:
@@ -62,6 +64,14 @@ struct MainTabView: View {
                 Task { await session.handleOpenURL(url) }
             } else {
                 session.openInvoice(id: value)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .ozerDidReceiveMessagePush)) { note in
+            guard let value = note.object as? String else { return }
+            if let url = URL(string: value), url.scheme == AppConfiguration.authCallbackScheme {
+                Task { await session.handleOpenURL(url) }
+            } else {
+                session.openThread(id: value)
             }
         }
     }

@@ -448,6 +448,189 @@ actor NativeAPIClient {
         )
     }
 
+    func messageThreads(workspace: String, accessToken: String) async throws -> MessageThreadsPayload {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/messages/threads",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(MessageThreadsPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func messageThread(id: String, workspace: String, accessToken: String) async throws -> MessageThreadItem {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/messages/threads/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(MessageThreadItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func threadMessages(
+        threadId: String,
+        workspace: String,
+        before: String? = nil,
+        accessToken: String
+    ) async throws -> ChatMessagesPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let before, !before.isEmpty {
+            query.append(URLQueryItem(name: "before", value: before))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/messages/threads/\(threadId)/messages",
+            queryItems: query,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(ChatMessagesPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func createMessageThread(
+        workspace: String,
+        type: String,
+        title: String?,
+        jobId: String?,
+        clientId: String?,
+        memberUserIds: [String],
+        contactIds: [String],
+        accessToken: String
+    ) async throws -> CreatedMessageThread {
+        var body: [String: Any] = [
+            "workspace": workspace,
+            "type": type,
+            "member_user_ids": memberUserIds,
+            "contact_ids": contactIds,
+        ]
+        if let title, !title.isEmpty {
+            body["title"] = title
+        }
+        if let jobId, !jobId.isEmpty {
+            body["job_id"] = jobId
+        }
+        if let clientId, !clientId.isEmpty {
+            body["client_id"] = clientId
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/messages/threads",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(CreatedMessageThread.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func sendThreadMessage(
+        threadId: String,
+        workspace: String,
+        body: String,
+        imageUrl: String?,
+        accessToken: String
+    ) async throws -> ChatMessageItem {
+        var payload: [String: Any] = [
+            "workspace": workspace,
+            "body": body,
+        ]
+        if let imageUrl, !imageUrl.isEmpty {
+            payload["image_url"] = imageUrl
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/messages/threads/\(threadId)/messages",
+            queryItems: [],
+            body: payload,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(ChatMessageItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func markThreadRead(threadId: String, workspace: String, accessToken: String) async throws {
+        _ = try await send(
+            method: "POST",
+            path: "api/native/v1/messages/threads/\(threadId)/read",
+            queryItems: [],
+            body: ["workspace": workspace],
+            accessToken: accessToken
+        )
+    }
+
+    func messageCompose(workspace: String, query: String, accessToken: String) async throws -> MessageComposePayload {
+        var items = [URLQueryItem(name: "workspace", value: workspace)]
+        if !query.isEmpty {
+            items.append(URLQueryItem(name: "q", value: query))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/messages/compose",
+            queryItems: items,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(MessageComposePayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func uploadMessageImage(
+        threadId: String,
+        workspace: String,
+        imageData: Data,
+        filename: String,
+        mimeType: String,
+        accessToken: String
+    ) async throws -> String {
+        let data = try await sendMultipart(
+            path: "api/native/v1/messages/images",
+            workspace: workspace,
+            threadId: threadId,
+            fileData: imageData,
+            filename: filename,
+            mimeType: mimeType,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(UploadedMessageImage.self, from: data).imageUrl
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func people(workspace: String, accessToken: String) async throws -> PeoplePayload {
         let data = try await send(
             method: "GET",
@@ -521,6 +704,79 @@ actor NativeAPIClient {
             throw NativeAPIError.badRequest(message ?? "Invalid request.")
         case 401:
             throw NativeAPIError.unauthorized
+        case 403:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "You don’t have access.")
+        case 404:
+            throw NativeAPIError.notFound
+        default:
+            throw NativeAPIError.http(http.statusCode)
+        }
+    }
+
+    private func sendMultipart(
+        path: String,
+        workspace: String,
+        threadId: String,
+        fileData: Data,
+        filename: String,
+        mimeType: String,
+        accessToken: String
+    ) async throws -> Data {
+        let url = AppConfiguration.apiBaseURL.appending(path: path)
+        let boundary = "ozer-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpShouldHandleCookies = false
+
+        var body = Data()
+        func appendField(name: String, value: String) {
+            body.append(Data("--\(boundary)\r\n".utf8))
+            body.append(Data("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".utf8))
+            body.append(Data("\(value)\r\n".utf8))
+        }
+        appendField(name: "workspace", value: workspace)
+        appendField(name: "threadId", value: threadId)
+        body.append(Data("--\(boundary)\r\n".utf8))
+        body.append(
+            Data(
+                "Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".utf8
+            )
+        )
+        body.append(Data("Content-Type: \(mimeType)\r\n\r\n".utf8))
+        body.append(fileData)
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        request.httpBody = body
+
+        let data: Data
+        let http: HTTPURLResponse
+        do {
+            let result = try await session.data(for: request)
+            data = result.0
+            guard let response = result.1 as? HTTPURLResponse else {
+                throw NativeAPIError.transport("No HTTP response.")
+            }
+            http = response
+        } catch let error as NativeAPIError {
+            throw error
+        } catch {
+            throw NativeAPIError.transport(error.localizedDescription)
+        }
+
+        switch http.statusCode {
+        case 200, 201:
+            return data
+        case 400:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "Invalid request.")
+        case 401:
+            throw NativeAPIError.unauthorized
+        case 403:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "You don’t have access.")
         case 404:
             throw NativeAPIError.notFound
         default:

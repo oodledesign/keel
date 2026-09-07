@@ -6,14 +6,16 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import {
   type NativeInvoicePushKind,
-  type NativeInvoicePushPayload,
   buildNativeInvoicePushPayload,
+  buildNativeMessagePushPayload,
   readApnsConfig,
 } from './apns-shared';
 
 export {
   buildNativeInvoicePushPayload,
+  buildNativeMessagePushPayload,
   nativeInvoicePushUrl,
+  nativeMessagePushUrl,
   readApnsConfig,
 } from './apns-shared';
 export type {
@@ -74,12 +76,18 @@ async function apnsJwt(config: NonNullable<ReturnType<typeof readApnsConfig>>) {
   return token;
 }
 
+type ApnsAlertPayload = {
+  title: string;
+  body: string;
+  extras?: Record<string, string>;
+};
+
 async function postApnsNotification(input: {
   token: string;
   jwt: string;
   host: string;
   bundleId: string;
-  payload: NativeInvoicePushPayload;
+  payload: ApnsAlertPayload;
 }) {
   const { connect } = await import('node:http2');
 
@@ -130,8 +138,7 @@ async function postApnsNotification(input: {
           },
           sound: 'default',
         },
-        invoice_id: input.payload.invoiceId,
-        url: input.payload.url,
+        ...(input.payload.extras ?? {}),
       }),
     );
   });
@@ -175,6 +182,85 @@ async function loadAccountDeviceTokens(accountId: string) {
     .filter((token): token is string => Boolean(token));
 }
 
+async function loadDeviceTokensForUsers(userIds: string[]) {
+  const uniqueIds = [...new Set(userIds.filter((id) => Boolean(id?.trim())))];
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const admin = getSupabaseServerAdminClient();
+  const { data: devices, error } = await admin
+    .from('native_device_tokens' as never)
+    .select('token, platform, user_id')
+    .in('user_id', uniqueIds)
+    .eq('platform', 'ios');
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((devices ?? []) as Array<{ token?: string | null }>)
+    .map((row) => row.token)
+    .filter((token): token is string => Boolean(token));
+}
+
+/**
+ * Best-effort APNs send for a new chat message. Only registered devices
+ * for other participants are targeted — never the sender.
+ */
+export async function sendNativeMessagePush(input: {
+  recipientUserIds: string[];
+  threadId: string;
+  workspace?: string | null;
+  title: string;
+  body: string;
+}) {
+  const config = readApnsConfig();
+  if (!config) {
+    console.info('[native/apns] APNs env not set; skipping message send');
+    return;
+  }
+
+  try {
+    const tokens = await loadDeviceTokensForUsers(input.recipientUserIds);
+    if (tokens.length === 0) {
+      return;
+    }
+
+    const jwt = await apnsJwt(config);
+    const payload = buildNativeMessagePushPayload(input);
+
+    await Promise.allSettled(
+      tokens.map((token) =>
+        postApnsNotification({
+          token,
+          jwt,
+          host: config.host,
+          bundleId: config.bundleId,
+          payload: {
+            title: payload.title,
+            body: payload.body,
+            extras: {
+              thread_id: payload.threadId,
+              url: payload.url,
+            },
+          },
+        }).catch((error) => {
+          console.warn('[native/apns] message send failed', {
+            threadId: input.threadId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }),
+      ),
+    );
+  } catch (error) {
+    console.warn('[native/apns] message skipped', {
+      threadId: input.threadId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 /**
  * Best-effort APNs send for invoice events. Missing credentials or send
  * failures are logged and never thrown to the caller.
@@ -208,7 +294,14 @@ export async function sendNativeInvoicePush(input: {
           jwt,
           host: config.host,
           bundleId: config.bundleId,
-          payload,
+          payload: {
+            title: payload.title,
+            body: payload.body,
+            extras: {
+              invoice_id: payload.invoiceId,
+              url: payload.url,
+            },
+          },
         }).catch((error) => {
           console.warn('[native/apns] send failed', {
             invoiceId: input.invoiceId,

@@ -21,6 +21,7 @@ final class AppSession {
     private(set) var selectedWorkspace: NativeWorkspace?
     private(set) var pendingScreen: AppScreen?
     private(set) var pendingInvoiceId: String?
+    private(set) var pendingThreadId: String?
 
     var lastError: String?
 
@@ -136,6 +137,10 @@ final class AppSession {
             openInvoice(id: invoiceId)
             return
         }
+        if let threadId = MessageDeepLink.threadId(from: url) {
+            openThread(id: threadId, workspace: MessageDeepLink.workspace(from: url))
+            return
+        }
         lastError = nil
         do {
             let next = try await auth.handleRedirect(url)
@@ -154,6 +159,24 @@ final class AppSession {
 
     func clearPendingInvoice() {
         pendingInvoiceId = nil
+    }
+
+    func openThread(id: String, workspace: String? = nil) {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if let workspace, !workspace.isEmpty {
+            if let match = workspaces.first(where: {
+                $0.id == workspace || $0.slug == workspace || $0.queryValue == workspace
+            }) {
+                selectWorkspace(match)
+            }
+        }
+        pendingThreadId = trimmed
+        pendingScreen = .messages
+    }
+
+    func clearPendingThread() {
+        pendingThreadId = nil
     }
 
     func clearPendingScreen() {

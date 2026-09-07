@@ -5,6 +5,7 @@ import UserNotifications
 extension Notification.Name {
     static let ozerDidReceiveDeviceToken = Notification.Name("so.ozer.app.didReceiveDeviceToken")
     static let ozerDidReceiveInvoicePush = Notification.Name("so.ozer.app.didReceiveInvoicePush")
+    static let ozerDidReceiveMessagePush = Notification.Name("so.ozer.app.didReceiveMessagePush")
 }
 
 enum PushRegistration {
@@ -89,8 +90,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             NotificationCenter.default.post(name: .ozerDidReceiveInvoicePush, object: invoiceId)
             return
         }
+        if let threadId = userInfo["thread_id"] as? String, !threadId.isEmpty {
+            NotificationCenter.default.post(name: .ozerDidReceiveMessagePush, object: threadId)
+            return
+        }
         if let raw = userInfo["url"] as? String {
-            NotificationCenter.default.post(name: .ozerDidReceiveInvoicePush, object: raw)
+            if let url = URL(string: raw), MessageDeepLink.threadId(from: url) != nil {
+                NotificationCenter.default.post(name: .ozerDidReceiveMessagePush, object: raw)
+            } else {
+                NotificationCenter.default.post(name: .ozerDidReceiveInvoicePush, object: raw)
+            }
         }
     }
 }
