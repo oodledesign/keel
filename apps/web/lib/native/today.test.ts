@@ -126,6 +126,30 @@ describe('filterRecorderTodayByWorkspace', () => {
     ]);
   });
 
+  it('keeps finance only for the matching team workspace', () => {
+    const withFinance = {
+      ...payload,
+      finance: { account_id: studio.id },
+    };
+
+    expect(filterRecorderTodayByWorkspace(withFinance, studio).finance).toEqual(
+      {
+        account_id: studio.id,
+      },
+    );
+    expect(
+      filterRecorderTodayByWorkspace(withFinance, {
+        ...studio,
+        id: '33333333-3333-4333-8333-333333333333',
+        slug: 'other',
+        name: 'Other',
+      }).finance,
+    ).toBeNull();
+    expect(
+      filterRecorderTodayByWorkspace(withFinance, personal).finance,
+    ).toEqual({ account_id: studio.id });
+  });
+
   it('keeps personal tasks when the personal workspace is selected', () => {
     const filtered = filterRecorderTodayByWorkspace(payload, personal);
 
