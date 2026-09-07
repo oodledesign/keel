@@ -77,6 +77,14 @@ curl -sS -X POST "$ORIGIN/api/native/v1/devices" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"token":"DEVICE_TOKEN_HEX","platform":"ios","workspace":"YOUR_SLUG"}'
+
+curl -sS "$ORIGIN/api/native/v1/messages?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS -X POST "$ORIGIN/api/native/v1/messages" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"workspace":"YOUR_SLUG","type":"direct","contact_ids":["CONTACT_UUID"]}'
 ```
 
 `workspace` accepts an account slug, UUID, or the chip aliases `personal`, `family`, and `business` (`business` maps to the first `work_design` workspace). Exact slug or UUID wins when they collide with an alias. Personal is always included in `/workspaces` (empty slug falls back to the account id). `/clients` includes `image` / `logo` HTTPS URLs; `GET /clients/:id` adds `contacts`.
@@ -107,6 +115,43 @@ List fields: `id`, `number`, `client_name`, `status`, `due`, `total`, `total_pen
 `GET /finances` is the pocket overview: outstanding balance, overdue count + amount, paid this month when any paid invoices fall in the current UTC month, and the 5 most recent invoices.
 
 There is no create / edit / PDF / Stripe checkout on this API.
+
+## Messages
+
+Same bearer auth and `workspace` query/body as Tasks. Participant-only: the caller must be on the thread. `job_id` is an Ozer **project** UUID (`public.projects.id`), not a legacy `jobs` row.
+
+```
+GET /api/native/v1/messages?workspace=<slug-or-uuid>&limit=40&client=<optional-client-uuid>
+→ { "items": [thread…] }
+
+POST /api/native/v1/messages
+{ "workspace", "type": "direct"|"group"|"job"|"client", "title?", "job_id?", "client_id?", "member_user_ids?", "contact_ids?" }
+→ { "ok": true, "thread_id": "<uuid>" }
+```
+
+`type=direct` needs exactly one other person (`member_user_ids` or `contact_ids`). `type=job` needs `job_id` (project). `type=client` needs `client_id` (whole-client / portal contacts).
+
+Thread list items are snake_case (`id`, `account_id`, `type`, `title`, `job_id`, `client_id`, `unread_count`, `last_message_preview`, `participants`, …). Messages use `id`, `thread_id`, `sender_user_id`, `body`, `image_url`, `created_at`, `sender_label`, `attachments`.
+
+```
+GET /api/native/v1/messages/{threadId}?workspace=<slug-or-uuid>&limit=50&before=<iso>
+→ { "items": [message…] }
+
+POST /api/native/v1/messages/{threadId}
+{ "workspace", "body?", "image_url?", "attachments?": [{ "type": "note"|"doc", "id", "title" }] }
+→ message object
+
+GET /api/native/v1/messages/{threadId}/attachable?workspace=<slug-or-uuid>
+→ { "items": [{ "type", "id", "title", "isPublic" }] }
+
+POST /api/native/v1/messages/upload-image
+Authorization: Bearer
+Content-Type: multipart/form-data
+workspace, thread_id, file
+→ { "image_url": "<https url>" }
+```
+
+Errors are `{ "error": string }` with 400 / 401 / 403 / 404. The web inbox still uses cookie server actions; native clients should call these routes only. This PR does not add an iOS/Mac inbox — only the bearer JSON contract.
 
 ## APNs (iPhone push)
 

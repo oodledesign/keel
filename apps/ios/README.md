@@ -115,6 +115,21 @@ GET {OZER_API_BASE}/api/native/v1/invoices/{id}?workspace=<slug-or-uuid>
 GET {OZER_API_BASE}/api/native/v1/finances?workspace=<slug-or-uuid>
 ```
 
+## Messages API
+
+Bearer JSON for a future WhatsApp-like inbox (separate iOS/Mac work). Same workspace + error mapping as Tasks:
+
+```
+GET {OZER_API_BASE}/api/native/v1/messages?workspace=<slug-or-uuid>
+POST {OZER_API_BASE}/api/native/v1/messages
+GET {OZER_API_BASE}/api/native/v1/messages/{threadId}?workspace=<slug-or-uuid>
+POST {OZER_API_BASE}/api/native/v1/messages/{threadId}
+GET {OZER_API_BASE}/api/native/v1/messages/{threadId}/attachable?workspace=<slug-or-uuid>
+POST {OZER_API_BASE}/api/native/v1/messages/upload-image
+```
+
+`POST /messages` body: `{ workspace, type, title?, job_id?, client_id?, member_user_ids?, contact_ids? }` → `{ ok, thread_id }`. `job_id` is a project UUID. Upload image returns `{ image_url }`. See `apps/web/app/api/native/v1/README.md`.
+
 ## Push (APNs)
 
 After sign-in the app asks for notification permission, then POSTs the device token to `/api/native/v1/devices`. Opening a paid / overdue invoice push lands on that invoice (`so.ozer.app://invoice/{id}` or `invoice_id` in the payload). There is no in-app notification settings screen — iOS system permission only.
