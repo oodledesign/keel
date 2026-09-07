@@ -69,6 +69,9 @@ async function sendOne(input: {
   accountId: string;
   accountName: string;
   brand: AccountBrandResolved;
+  displayName?: string;
+  platformDisplayName?: string;
+  forcePlatformFrom?: boolean;
   to: string;
   subject: string;
   html: string;
@@ -79,6 +82,9 @@ async function sendOne(input: {
     accountId: input.accountId,
     feature: 'other',
     accountName: input.accountName,
+    displayName: input.displayName,
+    platformDisplayName: input.platformDisplayName,
+    forcePlatformFrom: input.forcePlatformFrom,
     brandContactEmail: input.brand.contact_email,
     mail: {
       to: input.to,
@@ -131,6 +137,8 @@ export async function dispatchWorkspaceFormEmails(input: {
         accountId: input.form.accountId,
         accountName: input.form.accountName,
         brand: input.form.brand,
+        displayName: input.form.accountName,
+        platformDisplayName: `${input.form.accountName} via Ozer`,
         to: input.contact.contactEmail,
         ...rendered,
         metadata: {
@@ -168,6 +176,8 @@ export async function dispatchWorkspaceFormEmails(input: {
           accountId: input.form.accountId,
           accountName: input.form.accountName,
           brand: input.form.brand,
+          forcePlatformFrom: true,
+          platformDisplayName: 'Ozer',
           to,
           ...rendered,
           metadata: {

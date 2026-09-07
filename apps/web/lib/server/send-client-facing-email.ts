@@ -34,6 +34,10 @@ export async function sendClientFacingEmail(params: {
   feature: OutboundEmailFeature;
   accountName?: string | null;
   displayName?: string | null;
+  /** Display name for the platform rail (Zepto/Resend) fallback sender. */
+  platformDisplayName?: string | null;
+  /** Force platform rail From even when a custom domain exists. */
+  forcePlatformFrom?: boolean;
   brandContactEmail?: string | null;
   mail: ClientFacingMail;
   metadata?: Record<string, unknown>;
@@ -50,15 +54,19 @@ export async function sendClientFacingEmail(params: {
     brandContactEmail: params.brandContactEmail,
   });
 
-  // Custom SES domains may From as the workspace address. The Ozer Zepto
-  // rail only authorizes ZEPTOMAIL_FROM_ADDRESS (e.g. hi@ozer.so) — using a
-  // brand contact like websiteadmin@client.co.uk yields Zepto "Access Denied"
-  // with no processed message. Keep brand as Reply-To via resolved.replyTo.
-  const from = resolved.usedCustomDomain
-    ? resolved.fromHeader ||
-      resolveTransactionalEmailFrom(params.displayName || accountName)
-    : resolveTransactionalEmailFrom(params.displayName || accountName) ||
-      resolved.fromHeader;
+  const platformDisplayName =
+    params.platformDisplayName?.trim() ||
+    params.displayName?.trim() ||
+    accountName;
+  const platformFrom = resolveTransactionalEmailFrom(platformDisplayName);
+  const useCustomDomainFrom =
+    resolved.usedCustomDomain && params.forcePlatformFrom !== true;
+
+  // Custom SES domains may From as the workspace address. The platform
+  // Zepto/Resend rail must use its configured sender address.
+  const from = useCustomDomainFrom
+    ? resolved.fromHeader || platformFrom
+    : platformFrom;
 
   if (!from) {
     throw new Error(
@@ -76,12 +84,12 @@ export async function sendClientFacingEmail(params: {
     },
     metadata: {
       outbound_feature: params.feature,
-      outbound_source: resolved.source,
-      used_custom_domain: resolved.usedCustomDomain,
+      outbound_source: useCustomDomainFrom ? resolved.source : 'platform',
+      used_custom_domain: useCustomDomainFrom,
       ...(params.metadata ?? {}),
     },
     ses:
-      resolved.mailer === 'ses'
+      useCustomDomainFrom && resolved.mailer === 'ses'
         ? {
             tenant: resolved.sesTenantName,
             configurationSet: resolved.sesConfigurationSet,
