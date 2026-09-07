@@ -171,6 +171,7 @@ export function workspaceFormCreateDefaultsForTemplate(
     theme: {
       pageBackground: 'light',
       layout: isRsvp ? 'event' : 'standard',
+      layoutExplicit: false,
     },
     eventAddress: null,
     emailSettings: isRsvp

@@ -15,6 +15,11 @@ import {
   buildEachFeedUrl,
   buildPropertyHiveFeedUrl,
 } from '~/lib/commercial/property-hive-feed';
+import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
+import {
+  loadLatestRightmoveBulkJob,
+  toPublicRightmoveBulkJob,
+} from '~/lib/commercial/rightmove-bulk-job';
 import {
   getRightmoveEnvironmentLabel,
   isRightmoveOAuthConfigured,
@@ -46,6 +51,7 @@ export type CommercialPublishingSettings = {
     /** Legacy combined flag — true when OAuth env is ready. */
     configured: boolean;
     workspaceBranches: RightmoveWorkspaceBranch[];
+    bulkJob: RightmoveBulkJobPublic | null;
   };
   each: {
     /** Dedicated EACH XML feed enabled (separate token from Property Hive). */
@@ -181,6 +187,9 @@ export async function loadCommercialPublishingSettings(
       branchConfigured,
       configured: oauthConfigured,
       workspaceBranches,
+      bulkJob: await loadLatestRightmoveBulkJob(client as never, accountId).then(
+        (job) => (job ? toPublicRightmoveBulkJob(job) : null),
+      ),
     },
     each: {
       configured: eachFeedEnabled,

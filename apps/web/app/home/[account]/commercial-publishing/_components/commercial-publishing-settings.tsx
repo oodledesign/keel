@@ -4,17 +4,6 @@ import { useState, useTransition } from 'react';
 
 import { CheckCircle2, Copy, Linkedin, Loader2, RefreshCw } from 'lucide-react';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Input } from '@kit/ui/input';
@@ -38,7 +27,6 @@ import {
 import type { CommercialListing } from '../../listings/_lib/server/listings.service';
 import type { CommercialPublishingSettings } from '../_lib/server/commercial-publishing.loader';
 import {
-  bulkPublishRightmoveAction,
   ensureEachFeedAction,
   ensurePropertyHiveFeedAction,
   rotateEachFeedAction,
@@ -47,6 +35,7 @@ import {
   saveWebsiteListingUrlTemplateAction,
   testPublishListingAction,
 } from '../_lib/server/server-actions';
+import { RightmoveBulkPublishPanel } from './rightmove-bulk-publish-panel';
 
 interface CommercialPublishingSettingsProps {
   accountId: string;
@@ -87,7 +76,6 @@ export function CommercialPublishingSettings({
   portalPublishingUnlocked = true,
   linkedinBanner,
 }: CommercialPublishingSettingsProps) {
-  void accountSlug;
   void linkedinBanner;
   const [settings, setSettings] = useState(initialSettings);
   const [listingUrlTemplate, setListingUrlTemplate] = useState(
@@ -95,8 +83,6 @@ export function CommercialPublishingSettings({
   );
   const [templatePending, startTemplateTransition] = useTransition();
   const [rmPending, startRmTransition] = useTransition();
-  const [rmBulkPending, startRmBulkTransition] = useTransition();
-  const [rmBulkProgress, setRmBulkProgress] = useState<string | null>(null);
   const [testPending, startTestTransition] = useTransition();
   const [feedPending, startFeedTransition] = useTransition();
   const [eachFeedPending, startEachFeedTransition] = useTransition();
@@ -144,75 +130,6 @@ export function CommercialPublishingSettings({
         toast.success('Rightmove branch IDs saved');
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Save failed');
-      }
-    });
-  };
-
-  const runBulkRightmovePublish = () => {
-    startRmBulkTransition(async () => {
-      let offset = 0;
-      let totalSucceeded = 0;
-      let totalFailed = 0;
-      let totalEligible = 0;
-      const failureNames: string[] = [];
-
-      try {
-        setRmBulkProgress('Starting…');
-        // Process in server batches to stay under request time limits.
-        for (;;) {
-          const batch = await bulkPublishRightmoveAction({
-            accountId,
-            offset,
-            limit: 15,
-          });
-          totalEligible = batch.totalEligible;
-          totalSucceeded += batch.succeeded;
-          totalFailed += batch.failed;
-          for (const row of batch.results) {
-            if (!row.ok) {
-              failureNames.push(row.name);
-            }
-          }
-
-          const doneCount = Math.min(
-            totalEligible,
-            batch.nextOffset ?? totalEligible,
-          );
-          setRmBulkProgress(
-            totalEligible === 0
-              ? 'No Marketing / Under offer disposals to push'
-              : `Pushed ${doneCount} of ${totalEligible}…`,
-          );
-
-          if (batch.done || batch.nextOffset == null) {
-            break;
-          }
-          offset = batch.nextOffset;
-        }
-
-        if (totalEligible === 0) {
-          toast.message('No Marketing or Under offer disposals to push');
-          return;
-        }
-
-        if (totalFailed === 0) {
-          toast.success(
-            `Pushed ${totalSucceeded} disposal${totalSucceeded === 1 ? '' : 's'} to Rightmove`,
-          );
-        } else {
-          const sample = failureNames.slice(0, 3).join(', ');
-          toast.error(
-            `Rightmove: ${totalSucceeded} ok, ${totalFailed} failed${sample ? ` (${sample}${failureNames.length > 3 ? '…' : ''})` : ''}. Check publication issues below.`,
-          );
-        }
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Bulk Rightmove publish failed',
-        );
-      } finally {
-        setRmBulkProgress(null);
       }
     });
   };
@@ -597,7 +514,7 @@ export function CommercialPublishingSettings({
                     </div>
                   </div>
                 ))}
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-3">
                   <Button
                     type="button"
                     variant="outline"
@@ -609,63 +526,16 @@ export function CommercialPublishingSettings({
                     ) : null}
                     Save Rightmove branch IDs
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        className={workspaceBtnPrimaryMd}
-                        disabled={
-                          rmBulkPending ||
-                          !portalPublishingUnlocked ||
-                          !settings.rightmove.oauthConfigured ||
-                          !settings.rightmove.branchConfigured
-                        }
-                      >
-                        {rmBulkPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : null}
-                        Push all to Rightmove
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Push all disposals to Rightmove?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This sends every Marketing and Under offer disposal
-                          that has an office assigned to Rightmove (
-                          {settings.rightmove.environment === 'production'
-                            ? 'live'
-                            : 'test'}{' '}
-                          API). Rightmove may take a short time to show them
-                          publicly. You can leave this page open while it runs.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          disabled={rmBulkPending}
-                          onClick={() => {
-                            runBulkRightmovePublish();
-                          }}
-                        >
-                          Push all
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <RightmoveBulkPublishPanel
+                    accountId={accountId}
+                    accountSlug={accountSlug}
+                    environment={settings.rightmove.environment}
+                    portalPublishingUnlocked={portalPublishingUnlocked}
+                    oauthConfigured={settings.rightmove.oauthConfigured}
+                    branchConfigured={settings.rightmove.branchConfigured}
+                    initialJob={settings.rightmove.bulkJob}
+                  />
                 </div>
-                {rmBulkProgress ? (
-                  <p className="text-xs text-[var(--workspace-shell-text)]/55">
-                    {rmBulkProgress}
-                  </p>
-                ) : (
-                  <p className="text-xs text-[var(--workspace-shell-text)]/45">
-                    Bulk push covers Marketing / Under offer only. Each disposal
-                    needs an Office set on Management.
-                  </p>
-                )}
               </div>
             )}
             {!settings.rightmove.branchConfigured ? (

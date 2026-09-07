@@ -1,11 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
-
 import { Bold, Italic, Link2, List, ListOrdered } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
+import { useControlledSanitizedHtmlEditor } from '~/lib/controlled-content-editable';
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
 
 type WorkspaceRichTextEditorProps = {
@@ -23,21 +22,7 @@ export function WorkspaceRichTextEditor({
   minHeight = 120,
   className,
 }: WorkspaceRichTextEditorProps) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const next = value || '';
-    if (el.innerHTML !== next) {
-      el.innerHTML = next;
-    }
-  }, [value]);
-
-  const sync = useCallback(() => {
-    const html = ref.current?.innerHTML ?? '';
-    onChange(sanitizeCommunityHtml(html));
-  }, [onChange]);
+  const { ref, sync } = useControlledSanitizedHtmlEditor(value, onChange);
 
   const exec = (command: string, value?: string) => {
     ref.current?.focus();
