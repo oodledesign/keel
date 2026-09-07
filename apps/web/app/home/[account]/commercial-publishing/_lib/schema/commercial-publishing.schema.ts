@@ -71,11 +71,14 @@ export const SaveRightmoveWorkspaceBranchesSchema = z.object({
     .max(50),
 });
 
-/** One batch of Marketing / Under offer disposals → Rightmove. */
-export const BulkPublishRightmoveSchema = AccountIdSchema.extend({
-  offset: z.number().int().min(0).max(10_000).optional(),
-  limit: z.number().int().min(1).max(40).optional(),
+/** Start or resume a durable Marketing / Under offer → Rightmove job. */
+export const BulkPublishRightmoveSchema = AccountIdSchema;
+
+export const RightmoveBulkJobStatusSchema = AccountIdSchema.extend({
+  resumeIfStale: z.boolean().optional(),
 });
+
+export const ListRightmoveDisposalStatusesSchema = AccountIdSchema;
 
 export const EnsureWebsiteFeedReadySchema = z.object({
   accountId: z.string().uuid(),

@@ -34,6 +34,7 @@ import { useDisposalAccess } from './disposal-access-context';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import { ListingWebsiteFeedToggle } from './listing-website-feed-toggle';
 import { confirmPublishIfNotReady } from './marketing-readiness-card';
+import { RightmoveListingLinks } from './rightmove-listing-links';
 
 export function ListingPublishingChannels({
   listing,
@@ -73,7 +74,14 @@ export function ListingPublishingChannels({
     },
     publications,
   });
-  const rightmoveStatus = getRightmoveChannelStatus();
+  const rightmoveStatus = getRightmoveChannelStatus({
+    listing: { status: listing.status },
+    publications,
+  });
+  const hasRightmoveLink = publications.some(
+    (publication) =>
+      publication.portal === 'rightmove' && Boolean(publication.externalUrl),
+  );
 
   const confirmReady = () =>
     confirmPublishIfNotReady(
@@ -114,16 +122,19 @@ export function ListingPublishingChannels({
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
           Choose where this disposal appears. Website and EACH are live XML
-          feeds. Rightmove is not live yet.
+          feeds. Rightmove is pushed from Website & portals.
         </p>
-        {showWebsiteLink ? (
-          <div className="pt-1">
-            <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <a href={websiteUrl} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" />
-                Open website listing
-              </a>
-            </Button>
+        {showWebsiteLink || hasRightmoveLink ? (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {showWebsiteLink ? (
+              <Button asChild variant="outline" size="sm" className="gap-1.5">
+                <a href={websiteUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open website listing
+                </a>
+              </Button>
+            ) : null}
+            <RightmoveListingLinks publications={publications} />
           </div>
         ) : null}
       </CardHeader>
@@ -186,7 +197,7 @@ export function ListingPublishingChannels({
           <ChannelStatusBanner status={eachStatus} />
         </ChannelRow>
 
-        <ChannelRow disabled>
+        <ChannelRow>
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
@@ -197,9 +208,9 @@ export function ListingPublishingChannels({
               </p>
             </div>
             <Switch
-              checked={false}
+              checked={rightmoveStatus.switchOn}
               disabled
-              aria-label="Rightmove is not live yet"
+              aria-label="Rightmove is managed from Website & portals"
             />
           </div>
           <ChannelStatusBanner status={rightmoveStatus} />

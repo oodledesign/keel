@@ -182,15 +182,79 @@ export function getEachChannelStatus(input: {
   };
 }
 
-export function getRightmoveChannelStatus(): ChannelPublishStatus {
+export function getRightmoveChannelStatus(input?: {
+  listing?: Pick<ListingInput, 'status'>;
+  publications?: PublicationInput[];
+}): ChannelPublishStatus {
+  const listing = input?.listing;
+  const publications = input?.publications ?? [];
+  const pub = publications.find((p) => p.portal === 'rightmove');
+  const lastError = pub?.lastError?.trim() || null;
+  const onMarket = listing
+    ? listingStatusPublishesToPortals(listing.status)
+    : true;
+  const hasUrl = Boolean(pub?.externalUrl && isSafeHttpUrl(pub.externalUrl));
+
+  if (!pub) {
+    return {
+      state: 'off',
+      switchOn: false,
+      canEnable: false,
+      label: 'Not pushed',
+      detail: onMarket
+        ? 'Not on Rightmove yet — push from Website & portals'
+        : 'Set status to Marketing or Under offer, then push from Website & portals',
+      blockers: onMarket ? [] : ['Set status to Marketing or Under offer'],
+      lastError: null,
+    };
+  }
+
+  if (pub.status === 'error') {
+    return {
+      state: 'blocked',
+      switchOn: false,
+      canEnable: false,
+      label: 'Failed',
+      detail: 'Last Rightmove push failed',
+      blockers: lastError ? [lastError] : [],
+      lastError,
+    };
+  }
+
+  if (pub.status === 'unpublished') {
+    return {
+      state: 'off',
+      switchOn: false,
+      canEnable: false,
+      label: 'Removed',
+      detail: 'Unpublished from Rightmove',
+      blockers: [],
+      lastError: null,
+    };
+  }
+
+  if (pub.status === 'published') {
+    return {
+      state: 'live',
+      switchOn: true,
+      canEnable: false,
+      label: 'Live',
+      detail: hasUrl
+        ? 'Pushed to Rightmove (public page can take a few minutes)'
+        : 'Pushed to Rightmove',
+      blockers: [],
+      lastError: null,
+    };
+  }
+
   return {
-    state: 'unavailable',
+    state: 'off',
     switchOn: false,
     canEnable: false,
-    label: 'Coming soon',
-    detail: 'Rightmove is not live yet',
-    blockers: [],
-    lastError: null,
+    label: 'Draft',
+    detail: 'Uploaded to Rightmove but not published',
+    blockers: onMarket ? [] : ['Set status to Marketing or Under offer'],
+    lastError,
   };
 }
 

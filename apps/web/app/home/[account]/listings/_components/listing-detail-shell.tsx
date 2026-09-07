@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Copy,
   Edit2,
+  ExternalLink,
   Eye,
   FileText,
   LayoutDashboard,
@@ -49,6 +50,7 @@ import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
 } from '~/lib/commercial/commercial-constants';
+import { isSafeHttpUrl } from '~/lib/commercial/channel-publish-status';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
@@ -164,14 +166,17 @@ export function ListingDetailShell({
   accountSlug,
   accountId,
   canEditDisposals,
+  rightmoveUrls = [],
   children,
 }: {
   listing: CommercialListing;
   accountSlug: string;
   accountId: string;
   canEditDisposals: boolean;
+  rightmoveUrls?: string[];
   children: React.ReactNode;
 }) {
+  const safeRightmoveUrls = rightmoveUrls.filter(isSafeHttpUrl);
   const pathname = usePathname();
   const router = useRouter();
   const [listing, setListing] = useState(initialListing);
@@ -306,6 +311,16 @@ export function ListingDetailShell({
               Publishing
             </Link>
           </DropdownMenuItem>
+          {safeRightmoveUrls.map((url, index) => (
+            <DropdownMenuItem key={url} asChild className="gap-2">
+              <a href={url} target="_blank" rel="noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+                {safeRightmoveUrls.length === 1
+                  ? 'Open on Rightmove'
+                  : `Rightmove ${index + 1}`}
+              </a>
+            </DropdownMenuItem>
+          ))}
           <DropdownMenuSeparator />
           {canEditDisposals ? (
             <>
@@ -365,6 +380,7 @@ export function ListingDetailShell({
               listing={listing}
               address={address}
               headerActions={headerActions}
+              rightmoveUrls={safeRightmoveUrls}
             />
             <ListingPageSearch listingBasePath={base} className="max-w-lg" />
           </>
@@ -536,10 +552,12 @@ function OverviewHeader({
   listing,
   address,
   headerActions,
+  rightmoveUrls,
 }: {
   listing: CommercialListing;
   address: string;
   headerActions: React.ReactNode;
+  rightmoveUrls: string[];
 }) {
   const updatedLabel = formatUpdatedAt(listing.updatedAt);
 
@@ -614,6 +632,26 @@ function OverviewHeader({
             <p className="text-xs text-[var(--workspace-shell-text)]/45">
               Updated {updatedLabel}
             </p>
+          ) : null}
+          {rightmoveUrls.length > 0 ? (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {rightmoveUrls.map((url, index) => (
+                <Button
+                  key={url}
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                >
+                  <a href={url} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {rightmoveUrls.length === 1
+                      ? 'Open on Rightmove'
+                      : `Rightmove ${index + 1}`}
+                  </a>
+                </Button>
+              ))}
+            </div>
           ) : null}
         </div>
       </div>
