@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- admin query builder is untyped */
 import 'server-only';
+
+import { after } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -12,8 +15,15 @@ import {
 } from './messages-attachments.service';
 import { loadClientDisplayByIds } from './messages-client-directory';
 import { createMessagesNotificationsService } from './messages-notifications.service';
+import {
+  loadContactDisplayByIds,
+  loadContactIdsForUser,
+  loadPortalEnabledContactsForClient,
+  resolveClientOrgForClient,
+} from './messages-participants';
 
-type ThreadType = 'direct' | 'group' | 'job';
+type ThreadType = 'direct' | 'group' | 'job' | 'client_portal';
+type ComposeType = 'direct' | 'group' | 'job' | 'client';
 
 export type MessageThreadListItem = {
   id: string;
@@ -21,15 +31,19 @@ export type MessageThreadListItem = {
   type: ThreadType;
   title: string | null;
   job_id: string | null;
+  client_id: string | null;
+  client_org_id: string | null;
+  is_client_wide: boolean;
   created_at: string;
   updated_at: string;
   last_message_at: string;
   unread_count: number;
   last_message_preview: string | null;
   participants: Array<{
-    kind: 'member' | 'client';
+    kind: 'member' | 'client' | 'contact';
     user_id: string | null;
     client_id: string | null;
+    contact_id: string | null;
     display_name: string;
     email: string | null;
   }>;
@@ -66,7 +80,7 @@ class MessagesService {
     const { data: rows } = await this.admin
       .from('chat_thread_participants')
       .select(
-        'thread_id, participant_kind, participant_user_id, participant_client_id',
+        'thread_id, participant_kind, participant_user_id, participant_client_id, participant_contact_id',
       )
       .in('thread_id', threadIds);
 
@@ -80,12 +94,18 @@ class MessagesService {
         (rows ?? []).map((r: any) => r.participant_client_id).filter(Boolean),
       ),
     ) as string[];
+    const contactIds = Array.from(
+      new Set(
+        (rows ?? []).map((r: any) => r.participant_contact_id).filter(Boolean),
+      ),
+    ) as string[];
 
-    const [usersRes, clientMap] = await Promise.all([
+    const [usersRes, clientMap, contactMap] = await Promise.all([
       userIds.length
         ? this.admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
         : Promise.resolve({ data: { users: [] } } as any),
       loadClientDisplayByIds(this.admin, clientIds),
+      loadContactDisplayByIds(this.admin, contactIds),
     ]);
 
     const userMap = new Map<string, { email: string | null }>();
@@ -101,9 +121,20 @@ class MessagesService {
           kind: 'member',
           user_id: row.participant_user_id,
           client_id: null,
+          contact_id: null,
           display_name:
             userMap.get(row.participant_user_id)?.email ?? 'Team member',
           email: userMap.get(row.participant_user_id)?.email ?? null,
+        });
+      } else if (row.participant_kind === 'contact') {
+        const contact = contactMap.get(row.participant_contact_id);
+        list.push({
+          kind: 'contact',
+          user_id: row.participant_user_id ?? null,
+          client_id: null,
+          contact_id: row.participant_contact_id,
+          display_name: contact?.name ?? 'Contact',
+          email: contact?.email ?? null,
         });
       } else {
         const client = clientMap.get(row.participant_client_id);
@@ -111,6 +142,7 @@ class MessagesService {
           kind: 'client',
           user_id: null,
           client_id: row.participant_client_id,
+          contact_id: null,
           display_name: client?.name ?? 'Client',
           email: client?.email ?? null,
         });
@@ -124,32 +156,59 @@ class MessagesService {
   async listThreads(params: {
     accountId: string;
     userId: string;
+    clientId?: string;
     limit?: number;
   }) {
     await this.access.assertAccountMember(params.accountId, params.userId);
 
-    const limit = params.limit ?? 20;
-    const { data: participantRows } = await this.admin
-      .from('chat_thread_participants')
-      .select('thread_id, last_read_at')
-      .eq('participant_user_id', params.userId)
-      .is('archived_at', null)
-      .limit(500);
+    const limit = params.limit ?? 40;
+    const contactIds = await loadContactIdsForUser(this.admin, params.userId);
 
-    const threadIds = (participantRows ?? []).map((p: any) => p.thread_id);
+    const [byUser, byContact] = await Promise.all([
+      this.admin
+        .from('chat_thread_participants')
+        .select('thread_id, last_read_at')
+        .eq('participant_user_id', params.userId)
+        .is('archived_at', null)
+        .limit(500),
+      contactIds.length
+        ? this.admin
+            .from('chat_thread_participants')
+            .select('thread_id, last_read_at')
+            .in('participant_contact_id', contactIds)
+            .is('archived_at', null)
+            .limit(500)
+        : Promise.resolve({
+            data: [] as Array<{
+              thread_id: string;
+              last_read_at: string | null;
+            }>,
+          }),
+    ]);
+
+    const participantRows = [...(byUser.data ?? []), ...(byContact.data ?? [])];
+    const threadIds = Array.from(
+      new Set(participantRows.map((p: any) => p.thread_id)),
+    );
     if (threadIds.length === 0) {
       return [] as MessageThreadListItem[];
     }
 
-    const { data: threads } = await this.admin
+    let query = this.admin
       .from('chat_threads')
       .select(
-        'id, account_id, type, title, job_id, created_at, updated_at, last_message_at',
+        'id, account_id, type, title, job_id, client_id, client_org_id, is_client_wide, created_at, updated_at, last_message_at',
       )
       .eq('account_id', params.accountId)
       .in('id', threadIds)
       .order('last_message_at', { ascending: false })
       .limit(limit);
+
+    if (params.clientId) {
+      query = query.eq('client_id', params.clientId);
+    }
+
+    const { data: threads } = await query;
 
     const participantsMap = await this.loadThreadParticipants(
       (threads ?? []).map((t: any) => t.id),
@@ -237,7 +296,7 @@ class MessagesService {
     const participants = participantsMap.get(threadId) ?? [];
     const participantLabelByUserId = new Map<string, string>();
     for (const p of participants) {
-      if (p.kind === 'member' && p.user_id) {
+      if (p.user_id) {
         participantLabelByUserId.set(p.user_id, p.display_name);
       }
     }
@@ -335,77 +394,75 @@ class MessagesService {
   async createThread(params: {
     accountId: string;
     userId: string;
-    type: ThreadType;
+    type: ComposeType;
     title?: string;
     jobId?: string | null;
+    clientId?: string | null;
     memberUserIds?: string[];
     clientIds?: string[];
+    contactIds?: string[];
   }) {
     await this.access.validateThreadCreation({
       accountId: params.accountId,
       creatorUserId: params.userId,
       type: params.type,
       jobId: params.jobId ?? null,
+      clientId: params.clientId ?? null,
       memberUserIds: params.memberUserIds ?? [],
       clientIds: params.clientIds ?? [],
+      contactIds: params.contactIds ?? [],
     });
+
+    if (params.type === 'client') {
+      return this.createOrOpenWholeClientThread(params);
+    }
 
     const memberUserIds = Array.from(
       new Set([params.userId, ...(params.memberUserIds ?? [])]),
     );
+    const contactIds = Array.from(new Set(params.contactIds ?? []));
     const clientIds = Array.from(new Set(params.clientIds ?? []));
 
-    // If selected clients have portal logins, include their user memberships
-    // as member participants so they can access/read in-app chats.
-    const clientDisplayById = await loadClientDisplayByIds(
-      this.admin,
-      clientIds,
-    );
-
-    const loginClientUserIds =
-      clientIds.length > 0
-        ? ((
-            await this.admin
-              .from('accounts_memberships')
-              .select('user_id')
-              .eq('account_id', params.accountId)
-              .eq('account_role', 'client')
-          ).data ?? [])
-        : [];
-
-    const selectedClientEmailSet = new Set(
-      Array.from(clientDisplayById.values())
-        .map((row) => row.email?.toLowerCase())
-        .filter(Boolean),
-    );
-
-    let mappedClientUserIds: string[] = [];
-    if (selectedClientEmailSet.size > 0 && loginClientUserIds.length > 0) {
-      const allUsers = (
-        await this.admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      ).data.users;
-
-      mappedClientUserIds = loginClientUserIds
-        .map((row: any) => row.user_id as string)
-        .filter((userId: string) => {
-          const user = allUsers.find((u: any) => u.id === userId);
-          return user?.email
-            ? selectedClientEmailSet.has(user.email.toLowerCase())
-            : false;
-        });
+    const portalUserByContact = new Map<string, string | null>();
+    if (contactIds.length > 0) {
+      const { data: inviteRows } = await this.admin
+        .from('client_portal_invites')
+        .select('contact_id, user_id')
+        .in('contact_id', contactIds)
+        .eq('status', 'accepted');
+      for (const row of inviteRows ?? []) {
+        if (row.contact_id) {
+          portalUserByContact.set(
+            row.contact_id as string,
+            (row.user_id as string | null) ?? null,
+          );
+        }
+      }
     }
+    const linkedClientId =
+      params.clientId ??
+      (await this.inferClientIdFromContacts(params.accountId, contactIds));
+    const linkedOrg = linkedClientId
+      ? await resolveClientOrgForClient(this.admin, linkedClientId)
+      : null;
 
-    const finalMemberIds = Array.from(
-      new Set([...memberUserIds, ...mappedClientUserIds]),
-    );
+    const storedType: ThreadType =
+      params.type === 'job'
+        ? 'job'
+        : params.type === 'direct'
+          ? 'direct'
+          : 'group';
 
     const { data: thread, error } = await this.admin
       .from('chat_threads')
       .insert({
         account_id: params.accountId,
-        type: params.type,
+        type: storedType,
         title: params.title?.trim() || null,
         job_id: params.jobId ?? null,
+        client_id: linkedClientId,
+        client_org_id: linkedOrg?.client_org_id ?? null,
+        is_client_wide: false,
         created_by: params.userId,
       })
       .select('id')
@@ -416,17 +473,32 @@ class MessagesService {
     }
 
     const participantRows = [
-      ...finalMemberIds.map((id) => ({
+      ...memberUserIds.map((id) => ({
         thread_id: thread.id,
         participant_kind: 'member' as const,
         participant_user_id: id,
         participant_client_id: null,
+        participant_contact_id: null,
       })),
+      ...contactIds.map((id) => {
+        const linkedUserId = portalUserByContact.get(id) ?? null;
+        return {
+          thread_id: thread.id,
+          participant_kind: 'contact' as const,
+          participant_user_id:
+            linkedUserId && memberUserIds.includes(linkedUserId)
+              ? null
+              : linkedUserId,
+          participant_client_id: null,
+          participant_contact_id: id,
+        };
+      }),
       ...clientIds.map((id) => ({
         thread_id: thread.id,
         participant_kind: 'client' as const,
         participant_user_id: null,
         participant_client_id: id,
+        participant_contact_id: null,
       })),
     ];
 
@@ -443,15 +515,173 @@ class MessagesService {
     return { threadId: thread.id };
   }
 
+  private async inferClientIdFromContacts(
+    accountId: string,
+    contactIds: string[],
+  ): Promise<string | null> {
+    if (contactIds.length === 0) return null;
+    const { data } = await this.admin
+      .from('client_contacts')
+      .select('client_id, clients!inner ( account_id )')
+      .in('contact_id', contactIds);
+
+    const clientIds = Array.from(
+      new Set(
+        ((data ?? []) as Array<Record<string, unknown>>)
+          .filter((row) => {
+            const related = row.clients as
+              | { account_id?: string }
+              | Array<{ account_id?: string }>
+              | null;
+            const relatedAccountId = Array.isArray(related)
+              ? related[0]?.account_id
+              : related?.account_id;
+            return relatedAccountId === accountId;
+          })
+          .map((row) => String(row.client_id)),
+      ),
+    );
+    return clientIds.length === 1 ? (clientIds[0] ?? null) : null;
+  }
+
+  private async createOrOpenWholeClientThread(params: {
+    accountId: string;
+    userId: string;
+    title?: string;
+    clientId?: string | null;
+    memberUserIds?: string[];
+  }) {
+    const clientId = params.clientId;
+    if (!clientId) throw new Error('Choose a client for a whole-client chat');
+
+    const client = await resolveClientOrgForClient(this.admin, clientId);
+    if (!client || client.account_id !== params.accountId) {
+      throw new Error('Client not found in this business');
+    }
+
+    const { data: existingPortal } = client.client_org_id
+      ? await this.admin
+          .from('chat_threads')
+          .select('id')
+          .eq('account_id', params.accountId)
+          .eq('client_org_id', client.client_org_id)
+          .eq('type', 'client_portal')
+          .maybeSingle()
+      : { data: null };
+
+    if (existingPortal?.id) {
+      const threadId = existingPortal.id as string;
+      await this.admin.rpc('seed_client_wide_thread_participants', {
+        p_thread_id: threadId,
+      });
+      const extraMembers = Array.from(
+        new Set([params.userId, ...(params.memberUserIds ?? [])]),
+      );
+      await this.admin.from('chat_thread_participants').upsert(
+        extraMembers.map((id) => ({
+          thread_id: threadId,
+          participant_kind: 'member',
+          participant_user_id: id,
+          participant_client_id: null,
+          participant_contact_id: null,
+        })),
+        { onConflict: 'thread_id,participant_user_id' },
+      );
+      return { threadId };
+    }
+
+    const portalContacts = await loadPortalEnabledContactsForClient(
+      this.admin,
+      clientId,
+    );
+    const memberUserIds = Array.from(
+      new Set([params.userId, ...(params.memberUserIds ?? [])]),
+    );
+
+    const { data: existing } = await this.admin
+      .from('chat_threads')
+      .select('id')
+      .eq('account_id', params.accountId)
+      .eq('client_id', clientId)
+      .eq('is_client_wide', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing?.id) {
+      const threadId = existing.id as string;
+      await this.admin.rpc('seed_client_wide_thread_participants', {
+        p_thread_id: threadId,
+      });
+      await this.admin.from('chat_thread_participants').upsert(
+        memberUserIds.map((id) => ({
+          thread_id: threadId,
+          participant_kind: 'member',
+          participant_user_id: id,
+          participant_client_id: null,
+          participant_contact_id: null,
+        })),
+        { onConflict: 'thread_id,participant_user_id' },
+      );
+      return { threadId };
+    }
+
+    const { data: thread, error } = await this.admin
+      .from('chat_threads')
+      .insert({
+        account_id: params.accountId,
+        type: client.client_org_id ? 'client_portal' : 'group',
+        title: params.title?.trim() || null,
+        client_id: clientId,
+        client_org_id: client.client_org_id,
+        is_client_wide: true,
+        created_by: params.userId,
+      })
+      .select('id')
+      .single();
+
+    if (error || !thread) {
+      throw new Error(error?.message ?? 'Failed to create client chat');
+    }
+
+    const { error: participantsError } = await this.admin
+      .from('chat_thread_participants')
+      .insert([
+        ...memberUserIds.map((id) => ({
+          thread_id: thread.id,
+          participant_kind: 'member' as const,
+          participant_user_id: id,
+          participant_client_id: null,
+          participant_contact_id: null,
+        })),
+        ...portalContacts.map((contact) => ({
+          thread_id: thread.id,
+          participant_kind: 'contact' as const,
+          participant_user_id:
+            contact.userId && memberUserIds.includes(contact.userId)
+              ? null
+              : contact.userId,
+          participant_client_id: null,
+          participant_contact_id: contact.contactId,
+        })),
+      ]);
+
+    if (participantsError) {
+      throw new Error(participantsError.message);
+    }
+
+    return { threadId: thread.id };
+  }
+
   async markThreadRead(params: {
     accountId: string;
     userId: string;
     threadId: string;
   }) {
-    await this.access.assertAccountMember(params.accountId, params.userId);
     await this.access.assertThreadParticipant(params.threadId, params.userId);
 
     const readAt = new Date().toISOString();
+    const contactIds = await loadContactIdsForUser(this.admin, params.userId);
     const { error } = await this.admin
       .from('chat_thread_participants')
       .update({ last_read_at: readAt })
@@ -459,6 +689,14 @@ class MessagesService {
       .eq('participant_user_id', params.userId);
 
     if (error) throw error;
+
+    if (contactIds.length > 0) {
+      await this.admin
+        .from('chat_thread_participants')
+        .update({ last_read_at: readAt })
+        .eq('thread_id', params.threadId)
+        .in('participant_contact_id', contactIds);
+    }
 
     const { data: messageRows } = await this.admin
       .from('chat_messages')
@@ -491,7 +729,6 @@ class MessagesService {
     imageUrl?: string;
     attachments?: MessageAttachmentInput[];
   }) {
-    await this.access.assertAccountMember(params.accountId, params.userId);
     await this.access.assertThreadParticipant(params.threadId, params.userId);
     await this.access.assertThreadClientsNotArchived(params.threadId);
 
@@ -563,13 +800,22 @@ class MessagesService {
             ? `Shared ${attachments.length} files`
             : 'New message');
 
-    await this.notifications.notifyOnMessage({
-      accountId: params.accountId,
-      accountSlug: params.accountSlug,
-      threadId: params.threadId,
-      senderUserId: params.userId,
-      messageBody: previewBody,
-    });
+    after(() =>
+      this.notifications
+        .notifyOnMessage({
+          accountId: params.accountId,
+          accountSlug: params.accountSlug,
+          threadId: params.threadId,
+          senderUserId: params.userId,
+          messageBody: previewBody,
+        })
+        .catch((error) => {
+          console.warn('[messages] notify after send failed', {
+            threadId: params.threadId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }),
+    );
 
     const enrichedList = await this.enrichChatMessages(
       [message],
@@ -699,5 +945,130 @@ class MessagesService {
 
     if (error) throw error;
     return { ok: true };
+  }
+
+  scheduleNotify(params: {
+    accountId: string;
+    accountSlug: string;
+    threadId: string;
+    senderUserId: string;
+    messageBody: string;
+  }) {
+    return this.notifications.notifyOnMessage(params);
+  }
+
+  async listPortalThreads(params: {
+    userId: string;
+    clientOrgId: string;
+    limit?: number;
+  }) {
+    const contactIds = await loadContactIdsForUser(this.admin, params.userId);
+    const [byUser, byContact] = await Promise.all([
+      this.admin
+        .from('chat_thread_participants')
+        .select('thread_id, last_read_at')
+        .eq('participant_user_id', params.userId)
+        .is('archived_at', null)
+        .limit(500),
+      contactIds.length
+        ? this.admin
+            .from('chat_thread_participants')
+            .select('thread_id, last_read_at')
+            .in('participant_contact_id', contactIds)
+            .is('archived_at', null)
+            .limit(500)
+        : Promise.resolve({ data: [] as Array<{ thread_id: string }> }),
+    ]);
+
+    const threadIds = Array.from(
+      new Set(
+        [...(byUser.data ?? []), ...(byContact.data ?? [])].map(
+          (row: { thread_id: string }) => row.thread_id,
+        ),
+      ),
+    );
+    if (threadIds.length === 0) return [] as MessageThreadListItem[];
+
+    const { data: clients } = await this.admin
+      .from('clients')
+      .select('id')
+      .eq('client_org_id', params.clientOrgId);
+
+    const clientIds = (clients ?? []).map((row: { id: string }) => row.id);
+
+    const threadQuery = this.admin
+      .from('chat_threads')
+      .select(
+        'id, account_id, type, title, job_id, client_id, client_org_id, is_client_wide, created_at, updated_at, last_message_at',
+      )
+      .in('id', threadIds)
+      .order('last_message_at', { ascending: false })
+      .limit(params.limit ?? 40);
+
+    const { data: allMatched } = await threadQuery;
+    const threads = (allMatched ?? []).filter((thread: any) => {
+      return (
+        thread.client_org_id === params.clientOrgId ||
+        (thread.client_id && clientIds.includes(thread.client_id))
+      );
+    });
+
+    const participantsMap = await this.loadThreadParticipants(
+      (threads ?? []).map((t: { id: string }) => t.id),
+    );
+
+    const out: MessageThreadListItem[] = [];
+    for (const thread of threads ?? []) {
+      const { data: latestMessage } = await this.admin
+        .from('chat_messages')
+        .select('id, body, image_url, created_at')
+        .eq('thread_id', thread.id)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      out.push({
+        ...thread,
+        unread_count: 0,
+        last_message_preview:
+          latestMessage?.body?.trim() ||
+          (latestMessage?.image_url ? 'Image' : null),
+        participants: participantsMap.get(thread.id) ?? [],
+      });
+    }
+
+    return out;
+  }
+
+  async assertCanUploadImage(params: { userId: string; threadId: string }) {
+    await this.access.assertThreadParticipant(params.threadId, params.userId);
+  }
+
+  async sendPortalMessage(params: {
+    userId: string;
+    threadId: string;
+    body: string;
+    imageUrl?: string;
+    accountSlug: string;
+  }) {
+    await this.access.assertThreadParticipant(params.threadId, params.userId);
+
+    const { data: thread } = await this.admin
+      .from('chat_threads')
+      .select('id, account_id')
+      .eq('id', params.threadId)
+      .maybeSingle();
+
+    if (!thread) throw new Error('Thread not found');
+
+    return this.sendMessage({
+      accountId: thread.account_id,
+      userId: params.userId,
+      threadId: params.threadId,
+      body: params.body,
+      accountSlug: params.accountSlug,
+      imageUrl: params.imageUrl,
+    });
   }
 }

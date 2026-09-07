@@ -93,7 +93,8 @@ export const CompletePortalMyTaskSchema = z.object({
 export const SendPortalMessageSchema = z.object({
   clientOrgId: z.string().uuid(),
   threadId: z.string().uuid(),
-  body: z.string().min(1, 'Message is required'),
+  body: z.string().max(5000).default(''),
+  imageUrl: z.string().url().max(2048).optional(),
 });
 
 export type PortalTicketStatus = z.infer<typeof PortalTicketStatusSchema>;

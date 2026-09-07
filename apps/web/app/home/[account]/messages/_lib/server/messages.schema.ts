@@ -1,9 +1,22 @@
 import { z } from 'zod';
 
+export const ThreadComposeTypeSchema = z.enum([
+  'direct',
+  'group',
+  'job',
+  'client',
+]);
+
 export const ListThreadsSchema = z.object({
   accountId: z.string().uuid(),
   userId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
   limit: z.number().int().min(1).max(50).optional(),
+});
+
+export const ListPortalThreadsSchema = z.object({
+  clientOrgId: z.string().uuid(),
+  threadId: z.string().uuid().optional(),
 });
 
 export const ListMessagesSchema = z.object({
@@ -24,11 +37,13 @@ export const ListAttachableSchema = z.object({
 export const CreateThreadSchema = z.object({
   accountId: z.string().uuid(),
   userId: z.string().uuid(),
-  type: z.enum(['direct', 'group', 'job']),
+  type: ThreadComposeTypeSchema,
   title: z.string().max(180).optional(),
   jobId: z.string().uuid().nullable().optional(),
+  clientId: z.string().uuid().optional(),
   memberUserIds: z.array(z.string().uuid()).optional(),
   clientIds: z.array(z.string().uuid()).optional(),
+  contactIds: z.array(z.string().uuid()).optional(),
 });
 
 export const SendMessageSchema = z.object({
