@@ -25,6 +25,8 @@ type SmartFieldContext = {
     email?: string | null;
   } | null;
   accountName?: string | null;
+  /** Linked delivery project name; empty when the invoice has no project. */
+  projectName?: string | null;
 };
 
 function formatMoney(pence: number, currency = 'gbp') {
@@ -88,6 +90,8 @@ export function renderSmartFields(
     '{{your.lastName}}': yourLast,
     '{{your.fullName}}': `${yourFirst} ${yourLast}`.trim(),
     '{{account.name}}': ctx.accountName?.trim() || '',
+    '{{project.name}}': ctx.projectName?.trim() || '',
+    '{{project_name}}': ctx.projectName?.trim() || '',
   };
 
   let output = template;
@@ -105,6 +109,7 @@ export const INVOICE_SMART_FIELD_PILLS = [
   { token: '{{invoice.number}}', label: 'Invoice #' },
   { token: '{{invoice.total}}', label: 'Total' },
   { token: '{{invoice.dueDate}}', label: 'Due date' },
+  { token: '{{project.name}}', label: 'Project name' },
   { token: '{{account.name}}', label: 'Workspace name' },
   { token: '{{your.firstName}}', label: 'Your first name' },
   { token: '{{your.lastName}}', label: 'Your last name' },
