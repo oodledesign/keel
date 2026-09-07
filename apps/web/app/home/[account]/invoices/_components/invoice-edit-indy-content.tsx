@@ -1256,6 +1256,11 @@ export function InvoiceEditIndyContent({
             client={invoice.client}
             sender={sender}
             accountName={brandName}
+            projectName={
+              jobs.find((job) => job.id === projectId)?.title ??
+              invoice.project?.title ??
+              null
+            }
             initialSubject={emailSubject}
             initialBody={emailBody}
             initialSignature={emailSignature}

@@ -19,23 +19,13 @@ import {
   DEFAULT_PROPOSAL_EMAIL_BODY,
   DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
   DEFAULT_PROPOSAL_EMAIL_SUBJECT,
+  PROPOSAL_SMART_FIELD_PILLS,
 } from '../_lib/doc-smart-fields';
 import { getErrorMessage } from '../_lib/error-message';
 import {
   getProposalPortalLink,
   sendProposal,
 } from '../_lib/server/server-actions';
-
-const SMART_FIELDS = [
-  '{{client.firstName}}',
-  '{{client.fullName}}',
-  '{{client.company}}',
-  '{{proposal.title}}',
-  '{{proposal.total}}',
-  '{{proposal.expiresAt}}',
-  '{{your.firstName}}',
-  '{{account.name}}',
-];
 
 export function ProposalSendPanel({
   accountId,
@@ -198,15 +188,15 @@ export function ProposalSendPanel({
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            {SMART_FIELDS.map((field) => (
+            {PROPOSAL_SMART_FIELD_PILLS.map((field) => (
               <Button
-                key={field}
+                key={field.token}
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => insertField(field, 'body')}
+                onClick={() => insertField(field.token, 'body')}
               >
-                {field}
+                {field.label}
               </Button>
             ))}
           </div>

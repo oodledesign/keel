@@ -22,6 +22,8 @@ type SmartFieldContext = {
     email?: string | null;
   } | null;
   accountName?: string | null;
+  /** Linked project name when available; empty when the proposal has no project. */
+  projectName?: string | null;
 };
 
 function formatMoney(pence: number, currency = 'gbp') {
@@ -70,6 +72,8 @@ export function renderSmartFields(
     '{{your.lastName}}': yourLast,
     '{{your.fullName}}': `${yourFirst} ${yourLast}`.trim(),
     '{{account.name}}': ctx.accountName?.trim() || '',
+    '{{project.name}}': ctx.projectName?.trim() || '',
+    '{{project_name}}': ctx.projectName?.trim() || '',
   };
 
   let output = template;
@@ -78,6 +82,18 @@ export function renderSmartFields(
   }
   return output;
 }
+
+export const PROPOSAL_SMART_FIELD_PILLS = [
+  { token: '{{client.firstName}}', label: 'Client first name' },
+  { token: '{{client.fullName}}', label: 'Client name' },
+  { token: '{{client.company}}', label: 'Company' },
+  { token: '{{proposal.title}}', label: 'Proposal title' },
+  { token: '{{proposal.total}}', label: 'Total' },
+  { token: '{{proposal.expiresAt}}', label: 'Expires' },
+  { token: '{{project.name}}', label: 'Project name' },
+  { token: '{{your.firstName}}', label: 'Your first name' },
+  { token: '{{account.name}}', label: 'Workspace name' },
+] as const;
 
 export const DEFAULT_PROPOSAL_EMAIL_SUBJECT =
   'Your proposal from {{account.name}}';
