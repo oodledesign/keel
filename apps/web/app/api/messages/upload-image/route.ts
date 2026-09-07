@@ -33,14 +33,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
-  const accountId = String(formData.get('accountId') ?? '').trim();
-  const accountSlug = String(formData.get('accountSlug') ?? '').trim();
   const threadId = String(formData.get('threadId') ?? '').trim();
   const file = formData.get('file');
 
-  if (!accountId || !threadId || !(file instanceof File)) {
+  if (!threadId || !(file instanceof File)) {
     return NextResponse.json(
-      { error: 'accountId, threadId, and file are required.' },
+      { error: 'threadId and file are required.' },
       { status: 400 },
     );
   }
@@ -61,12 +59,9 @@ export async function POST(request: Request) {
 
   const service = createMessagesService();
   try {
-    await service.listMessages({
-      accountId,
+    await service.assertCanUploadImage({
       userId: user.id,
       threadId,
-      accountSlug: accountSlug || accountId,
-      limit: 1,
     });
   } catch {
     return NextResponse.json(
@@ -75,10 +70,22 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: thread } = await admin
+    .from('chat_threads')
+    .select('account_id')
+    .eq('id', threadId)
+    .maybeSingle();
+
+  const storageAccountId = (thread as { account_id?: string } | null)
+    ?.account_id;
+  if (!storageAccountId) {
+    return NextResponse.json({ error: 'Thread not found.' }, { status: 404 });
+  }
+
   const bytes = Buffer.from(await file.arrayBuffer());
   const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
   const fileName = `${crypto.randomUUID()}-${safeSegment(file.name) || 'image'}.${ext}`;
-  const path = `${accountId}/chat-${threadId}/${fileName}`;
+  const path = `${storageAccountId}/chat-${threadId}/${fileName}`;
 
   const { error: uploadError } = await admin.storage
     .from(CHAT_IMAGE_BUCKET)

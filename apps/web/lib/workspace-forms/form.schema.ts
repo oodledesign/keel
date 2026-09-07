@@ -61,6 +61,7 @@ export const WorkspaceFormEmailSettingsSchema = z.object({
   rules: z.array(WorkspaceFormEmailRuleSchema).max(40),
   notifyMemberIds: z.array(z.string().uuid()).max(40),
   notifyEmails: z.array(z.string().max(160)).max(10),
+  includeSubmittedAnswers: z.boolean().optional().default(true),
 });
 
 export const UpdateWorkspaceFormSchema = z.object({

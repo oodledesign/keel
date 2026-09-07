@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { PortalMessagesThread } from '../_components/portal-messages-thread';
+import { PortalMessagesInbox } from '../_components/portal-messages-inbox';
 import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../_lib/server/client-portal.service';
 
@@ -17,8 +17,27 @@ export default async function PortalMessagesPage({
   const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
 
-  const threadId = await service.getOrCreateMessageThread(ctx.clientOrgId);
-  const messages = await service.listPortalMessages(ctx.clientOrgId, threadId);
+  let threads = await service.listParticipatingThreads(ctx.clientOrgId);
+  if (threads.length === 0) {
+    const threadId = await service.getOrCreateMessageThread(ctx.clientOrgId);
+    threads = await service.listParticipatingThreads(ctx.clientOrgId);
+    if (threads.length === 0) {
+      threads = [
+        {
+          id: threadId,
+          title: 'Everyone on this client',
+          lastMessagePreview: null,
+          lastMessageAt: new Date().toISOString(),
+          isClientWide: true,
+        },
+      ];
+    }
+  }
+
+  const activeId = threads[0]?.id ?? null;
+  const messages = activeId
+    ? await service.listPortalMessages(ctx.clientOrgId, activeId)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -27,14 +46,15 @@ export default async function PortalMessagesPage({
           Messages
         </h2>
         <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
-          Message the {ctx.accountName} team directly.
+          Conversations with the {ctx.accountName} team that include you.
         </p>
       </div>
 
-      <PortalMessagesThread
+      <PortalMessagesInbox
         clientOrgId={ctx.clientOrgId}
-        threadId={threadId}
         currentUserId={ctx.userId}
+        threads={threads}
+        initialThreadId={activeId}
         initialMessages={messages}
       />
     </div>

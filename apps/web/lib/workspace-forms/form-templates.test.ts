@@ -81,5 +81,12 @@ describe('workspace form templates', () => {
     expect(
       defaults.emailSettings.rules.some((rule) => rule.equals === 'No'),
     ).toBe(true);
+    expect(defaults.emailSettings.includeSubmittedAnswers).toBe(true);
+  });
+
+  it('defaults contact forms to include submitted answers', () => {
+    const defaults = workspaceFormCreateDefaultsForTemplate('contact');
+    expect(defaults.emailSettings.includeSubmittedAnswers).toBe(true);
+    expect(defaults.emailSettings.templates).toEqual([]);
   });
 });

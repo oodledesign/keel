@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -168,6 +169,10 @@ export function PortalShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isProjectRoute = /\/projects(\/|$)/.test(pathname);
+  // Project board/list/timeline need more than max-w-6xl (1152px). 110rem
+  // (~1760px) is near-full on typical desktops without hugging the edges.
+  const contentWidth = isProjectRoute ? 'max-w-[110rem]' : 'max-w-6xl';
 
   const visibility: Record<string, boolean> = {
     showWebsiteNav,
@@ -190,7 +195,13 @@ export function PortalShell({
   return (
     <div className="min-h-screen bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]">
       <header className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div
+          className={cn(
+            'mx-auto flex w-full flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8',
+            contentWidth,
+            isProjectRoute && 'xl:px-10',
+          )}
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative shrink-0">
@@ -256,7 +267,13 @@ export function PortalShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main
+        className={cn(
+          'mx-auto w-full px-4 py-8 sm:px-6 lg:px-8',
+          contentWidth,
+          isProjectRoute && 'xl:px-10',
+        )}
+      >
         {children}
       </main>
 

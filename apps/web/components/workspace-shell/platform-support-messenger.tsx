@@ -37,6 +37,7 @@ import {
 import { loadPlatformSupportAccountOptions } from '~/lib/support/load-platform-support-account-options';
 import type { PlatformSupportTicketDetail } from '~/lib/support/load-platform-support-ticket';
 import {
+  type PlatformSupportMessengerInboxItem,
   type PlatformSupportMessengerTicketSummary,
   loadPlatformSupportMessengerBootstrap,
   loadPlatformSupportMessengerTicketAction,
@@ -124,6 +125,8 @@ export function PlatformSupportMessenger({
   const [tickets, setTickets] = useState<
     PlatformSupportMessengerTicketSummary[]
   >([]);
+  const [inbox, setInbox] = useState<PlatformSupportMessengerInboxItem[]>([]);
+  const [inboxHref, setInboxHref] = useState<string | null>(null);
   const [accountOptions, setAccountOptions] = useState<
     Array<{ id: string; label: string }>
   >([]);
@@ -136,10 +139,14 @@ export function PlatformSupportMessenger({
   const [pending, startTransition] = useTransition();
 
   const refreshTickets = useCallback(async () => {
-    const boot = await loadPlatformSupportMessengerBootstrap({});
+    const boot = await loadPlatformSupportMessengerBootstrap({
+      accountId: defaultAccountId,
+    });
     setFirstName(boot.profile.firstName);
     setTickets(boot.tickets);
-  }, []);
+    setInbox(boot.inbox ?? []);
+    setInboxHref(boot.inboxHref ?? null);
+  }, [defaultAccountId]);
 
   const openTicket = useCallback(async (ticketId: string) => {
     setActiveTicketId(ticketId);
@@ -165,18 +172,24 @@ export function PlatformSupportMessenger({
     setLoadingBootstrap(true);
 
     void Promise.all([
-      loadPlatformSupportMessengerBootstrap({}),
+      loadPlatformSupportMessengerBootstrap({
+        accountId: defaultAccountId,
+      }),
       loadPlatformSupportAccountOptions(),
     ])
       .then(([boot, accounts]) => {
         if (cancelled) return;
         setFirstName(boot.profile.firstName);
         setTickets(boot.tickets);
+        setInbox(boot.inbox ?? []);
+        setInboxHref(boot.inboxHref ?? null);
         setAccountOptions(accounts);
       })
       .catch(() => {
         if (!cancelled) {
           setTickets([]);
+          setInbox([]);
+          setInboxHref(null);
           setAccountOptions([]);
         }
       })
@@ -308,6 +321,8 @@ export function PlatformSupportMessenger({
         {view === 'messages' ? (
           <MessagesView
             loading={loadingBootstrap}
+            inbox={inbox}
+            inboxHref={inboxHref}
             tickets={tickets}
             onOpenTicket={(id) => void openTicket(id)}
             onStart={() => setView('new')}
@@ -603,6 +618,8 @@ function useRevealMarkdown(full: string, enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) {
+      // Sync to the full message when reveal animation is disabled.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal reset
       setShown(full);
       setDone(true);
       return;
@@ -887,6 +904,8 @@ function AskDocsView(props: { onContactSupport: () => void }) {
 
 function MessagesView(props: {
   loading: boolean;
+  inbox: PlatformSupportMessengerInboxItem[];
+  inboxHref: string | null;
   tickets: PlatformSupportMessengerTicketSummary[];
   onOpenTicket: (id: string) => void;
   onStart: () => void;
@@ -898,20 +917,72 @@ function MessagesView(props: {
           <div className="flex justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--workspace-shell-text-muted)]" />
           </div>
-        ) : props.tickets.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-6 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-            No messages yet.
-          </p>
         ) : (
-          <ul className="space-y-2">
-            {props.tickets.map((ticket) => (
-              <TicketRow
-                key={ticket.id}
-                ticket={ticket}
-                onClick={() => props.onOpenTicket(ticket.id)}
-              />
-            ))}
-          </ul>
+          <div className="space-y-6">
+            <section className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                  Workspace chats
+                </p>
+                {props.inboxHref ? (
+                  <a
+                    href={props.inboxHref}
+                    className="text-xs font-medium text-[var(--ozer-accent)]"
+                  >
+                    Open inbox
+                  </a>
+                ) : null}
+              </div>
+              {props.inbox.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-4 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+                  No workspace chats yet.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {props.inbox.map((item) => (
+                    <li key={item.threadId}>
+                      <a
+                        href={item.href}
+                        className="flex w-full items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-3 text-left transition-colors hover:border-[var(--ozer-accent)]/30"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                            {item.title}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                            {item.preview ?? 'No messages yet'}
+                          </p>
+                        </div>
+                        <time className="shrink-0 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                          {formatShortTime(item.updatedAt)}
+                        </time>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section className="space-y-2">
+              <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                Ozer support
+              </p>
+              {props.tickets.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-4 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+                  No support conversations yet.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {props.tickets.map((ticket) => (
+                    <TicketRow
+                      key={ticket.id}
+                      ticket={ticket}
+                      onClick={() => props.onOpenTicket(ticket.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
         )}
       </div>
       <div className="shrink-0 border-t border-[color:var(--workspace-shell-border)] p-3">
@@ -977,6 +1048,7 @@ function NewConversationView(props: {
   const [showAttach, setShowAttach] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- follow workspace account
     setAccountId(props.defaultAccountId ?? '');
   }, [props.defaultAccountId]);
 

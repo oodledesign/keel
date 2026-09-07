@@ -376,6 +376,14 @@ class JobsService {
         }
         payload.portal_visible = input.portal_visible;
       }
+      if (input.portal_restrict_contacts !== undefined) {
+        if (!(existing as Record<string, unknown>).client_id) {
+          throw new Error(
+            'Link a client to this project before restricting portal contacts',
+          );
+        }
+        payload.portal_restrict_contacts = input.portal_restrict_contacts;
+      }
 
       const { data, error } = await this.db
         .from(PROJECTS_TABLE)

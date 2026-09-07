@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getLogger } from '@kit/shared/logger';
 
+import pathsConfig from '~/config/paths.config';
 import {
   type AccountBrandResolved,
   wrapEmailHtmlWithBrand,
@@ -14,8 +15,14 @@ import {
   type WorkspaceFormEmailSettings,
   type WorkspaceFormEmailTemplate,
   buildFormEmailVars,
+  composeFormNotificationBody,
+  interpolateFormEmailHtml,
   interpolateFormEmailText,
+  listFormSubmittedAnswers,
   matchFormEmailTemplate,
+  renderFormAnswersHtml,
+  renderFormAnswersText,
+  withFormEmailHtmlVars,
 } from './form-email';
 import type { FormContactValues, WorkspaceFormField } from './form-fields';
 
@@ -31,18 +38,73 @@ type DispatchForm = {
   brand: AccountBrandResolved;
 };
 
-function renderTemplate(
+function formSubmissionsUrl(
+  accountSlug: string | null,
+  formId: string,
+): string {
+  if (!accountSlug || !formId) return '';
+  const base = (
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://ozer.so'
+  ).replace(/\/$/, '');
+  const path = pathsConfig.app.accountFormDetail
+    .replace('[account]', accountSlug)
+    .replace('[formId]', formId);
+  return `${base}${path}`;
+}
+
+function wrapRendered(
+  subject: string,
+  inner: string,
+  brand: AccountBrandResolved,
+) {
+  return {
+    subject,
+    html: wrapEmailHtmlWithBrand({
+      brand,
+      innerHtml: inner || '<p></p>',
+    }),
+  };
+}
+
+function renderAutoresponder(
   template: WorkspaceFormEmailTemplate,
   vars: Record<string, string>,
   brand: AccountBrandResolved,
+  answersHtml: string,
 ) {
-  const subject = interpolateFormEmailText(template.subject, vars);
-  const inner = interpolateFormEmailText(template.bodyHtml || '', vars);
-  const html = wrapEmailHtmlWithBrand({
+  return wrapRendered(
+    interpolateFormEmailText(template.subject, vars),
+    interpolateFormEmailHtml(
+      template.bodyHtml || '',
+      withFormEmailHtmlVars(vars, answersHtml),
+    ),
     brand,
-    innerHtml: inner || '<p></p>',
-  });
-  return { subject, html };
+  );
+}
+
+function renderNotification(
+  template: WorkspaceFormEmailTemplate,
+  vars: Record<string, string>,
+  brand: AccountBrandResolved,
+  includeSubmittedAnswers: boolean,
+  answersHtml: string,
+  answersText: string,
+) {
+  const subjectVars = {
+    ...vars,
+    answers: answersText,
+    submitted_answers: answersText,
+  };
+  return wrapRendered(
+    interpolateFormEmailText(template.subject, subjectVars),
+    composeFormNotificationBody({
+      bodyHtml: template.bodyHtml || '',
+      vars,
+      includeSubmittedAnswers,
+      answersHtml,
+    }),
+    brand,
+  );
 }
 
 async function resolveMemberEmails(
@@ -112,6 +174,10 @@ export async function dispatchWorkspaceFormEmails(input: {
   }
 
   const logger = await getLogger();
+  const submissionUrl = formSubmissionsUrl(
+    input.form.accountSlug,
+    input.form.id,
+  );
   const vars = buildFormEmailVars({
     formName: input.form.name,
     accountName: input.form.accountName,
@@ -120,7 +186,14 @@ export async function dispatchWorkspaceFormEmails(input: {
     contactEmail: input.contact.contactEmail,
     fields: input.form.fields,
     values: input.values,
+    submissionUrl,
   });
+  const answers = listFormSubmittedAnswers({
+    fields: input.form.fields,
+    values: input.values,
+  });
+  const answersHtml = renderFormAnswersHtml(answers, submissionUrl);
+  const answersText = renderFormAnswersText(answers);
 
   const ctx = {
     name: 'workspace-form-email',
@@ -131,7 +204,12 @@ export async function dispatchWorkspaceFormEmails(input: {
   const auto = matchFormEmailTemplate(settings, input.values, 'autoresponder');
   if (auto && input.contact.contactEmail) {
     try {
-      const rendered = renderTemplate(auto, vars, input.form.brand);
+      const rendered = renderAutoresponder(
+        auto,
+        vars,
+        input.form.brand,
+        answersHtml,
+      );
       await sendOne({
         type: 'form_autoresponder',
         accountId: input.form.accountId,
@@ -166,7 +244,14 @@ export async function dispatchWorkspaceFormEmails(input: {
 
   if (recipients.length === 0) return;
 
-  const rendered = renderTemplate(notify, vars, input.form.brand);
+  const rendered = renderNotification(
+    notify,
+    vars,
+    input.form.brand,
+    settings.includeSubmittedAnswers,
+    answersHtml,
+    answersText,
+  );
 
   await Promise.all(
     recipients.map(async (to) => {

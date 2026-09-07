@@ -8,11 +8,12 @@ import {
   DeleteMessageSchema,
   ListAttachableSchema,
   ListMessagesSchema,
+  ListPortalThreadsSchema,
   ListThreadsSchema,
   MarkThreadReadSchema,
   RenameThreadSchema,
-  SetThreadJobSchema,
   SendMessageSchema,
+  SetThreadJobSchema,
 } from './messages.schema';
 import { createMessagesService } from './messages.service';
 
@@ -88,4 +89,14 @@ export const setMessageThreadJob = enhanceAction(
     return getService().setThreadJob(input);
   },
   { schema: SetThreadJobSchema },
+);
+
+export const listPortalMessageThreads = enhanceAction(
+  async (input, user) => {
+    return getService().listPortalThreads({
+      userId: user.id,
+      clientOrgId: input.clientOrgId,
+    });
+  },
+  { auth: true, schema: ListPortalThreadsSchema },
 );

@@ -68,7 +68,7 @@ async function MessagesPage({ params }: MessagesPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         title={<Trans i18nKey="common:routes.messages" defaults="Messages" />}
-        description="Direct, group, and job-linked conversations with your team and clients"
+        description="Direct, group, whole-client, and job chats — only people on the thread can see it"
         account={accountSlug}
       />
 
@@ -81,6 +81,7 @@ async function MessagesPage({ params }: MessagesPageProps) {
           initialThreads={data.threads}
           memberOptions={data.memberOptions}
           clientOptions={data.clientOptions}
+          contactOptions={data.contactOptions}
           jobOptions={data.jobOptions}
         />
       </div>

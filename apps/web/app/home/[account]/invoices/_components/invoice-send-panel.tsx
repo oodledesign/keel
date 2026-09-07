@@ -170,6 +170,7 @@ export function InvoiceSendPanel({
   client,
   sender = null,
   accountName = null,
+  projectName = null,
   initialSubject,
   initialBody,
   initialSignature,
@@ -203,6 +204,8 @@ export function InvoiceSendPanel({
   } | null;
   /** Workspace / brand name for {{account.name}} preview. */
   accountName?: string | null;
+  /** Linked project name for {{project.name}} preview. */
+  projectName?: string | null;
   initialSubject?: string | null;
   initialBody?: string | null;
   initialSignature?: string | null;
@@ -571,6 +574,7 @@ export function InvoiceSendPanel({
     contact: previewContact,
     sender,
     accountName,
+    projectName,
     invoice: {
       invoice_number: invoiceNumber,
       total_pence: totalPence,

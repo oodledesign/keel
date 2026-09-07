@@ -6,15 +6,16 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import pathsConfig from '~/config/paths.config';
 
-import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { isWorkNavModuleEnabled } from '../../../_lib/server/account-modules';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
   isInternalTeamMessageRole,
 } from '../../../_lib/role-access';
+import { isWorkNavModuleEnabled } from '../../../_lib/server/account-modules';
+import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { loadMessageClientOptions } from './messages-client-directory';
+import { loadMessageContactOptions } from './messages-participants';
 import { createMessagesService } from './messages.service';
 
 export async function loadMessagesPageData(accountSlug: string) {
@@ -49,7 +50,7 @@ export async function loadMessagesPageData(accountSlug: string) {
     service.listThreads({
       accountId: account.id,
       userId: workspace.user.id,
-      limit: 20,
+      limit: 40,
     }),
     admin
       .from('accounts_memberships')
@@ -63,13 +64,20 @@ export async function loadMessagesPageData(accountSlug: string) {
       .limit(300),
   ]);
 
-  const clientOptions = access.canMessageClients
-    ? await loadMessageClientOptions(admin, account.id)
-    : [];
+  const [clientOptions, contactOptions] = access.canMessageClients
+    ? await Promise.all([
+        loadMessageClientOptions(admin, account.id),
+        loadMessageContactOptions(admin, account.id),
+      ])
+    : [[], []];
 
+  const memberships = (membersRes.data ?? []) as Array<{
+    user_id: string;
+    account_role: string | null;
+  }>;
   const userIds = Array.from(
-    new Set((membersRes.data ?? []).map((m: any) => m.user_id).filter(Boolean)),
-  ) as string[];
+    new Set(memberships.map((m) => m.user_id).filter(Boolean)),
+  );
   const users = userIds.length
     ? (
         await getSupabaseServerAdminClient().auth.admin.listUsers({
@@ -80,21 +88,23 @@ export async function loadMessagesPageData(accountSlug: string) {
     : [];
   const userEmailMap = new Map(users.map((u) => [u.id, u.email ?? '']));
 
-  const memberOptions = (membersRes.data ?? [])
-    .filter((m: { account_role: string | null }) =>
+  const memberOptions = memberships
+    .filter((m) =>
       access.canMessageClients
         ? true
         : isInternalTeamMessageRole(m.account_role),
     )
-    .map((m: any) => ({
-      userId: m.user_id as string,
-      role: m.account_role as string | null,
-      email: userEmailMap.get(m.user_id as string) ?? 'Unknown',
+    .map((m) => ({
+      userId: m.user_id,
+      role: m.account_role,
+      email: userEmailMap.get(m.user_id) ?? 'Unknown',
     }));
 
-  const jobOptions = (jobsRes.data ?? []).map((j: any) => ({
-    id: j.id as string,
-    title: (j.title as string)?.trim() || 'Untitled job',
+  const jobOptions = (
+    (jobsRes.data ?? []) as Array<{ id: string; title: string | null }>
+  ).map((j) => ({
+    id: j.id,
+    title: j.title?.trim() || 'Untitled job',
   }));
 
   return {
@@ -105,6 +115,7 @@ export async function loadMessagesPageData(accountSlug: string) {
     threads,
     memberOptions,
     clientOptions,
+    contactOptions,
     jobOptions,
   };
 }

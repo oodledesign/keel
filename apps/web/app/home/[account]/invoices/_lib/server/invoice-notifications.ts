@@ -329,7 +329,10 @@ export async function sendInvoiceIssuedEmail(params: {
     return;
   }
 
-  const [{ data: account }, clientResult] = await Promise.all([
+  const invoiceProjectId =
+    typeof invoice.project_id === 'string' ? invoice.project_id : null;
+
+  const [{ data: account }, clientResult, projectResult] = await Promise.all([
     admin
       .from('accounts')
       .select('name, slug, email')
@@ -342,8 +345,18 @@ export async function sendInvoiceIssuedEmail(params: {
           .eq('id', invoice.client_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    invoiceProjectId
+      ? admin
+          .from('projects')
+          .select('name')
+          .eq('id', invoiceProjectId)
+          .eq('account_id', params.accountId)
+          .eq('project_type', 'delivery')
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
   const client = clientResult.data;
+  const projectName = projectResult.data?.name?.trim() || null;
 
   const from = buildInvoiceEmailFrom(account?.name);
   if (!from) {
@@ -407,6 +420,7 @@ export async function sendInvoiceIssuedEmail(params: {
     invoice,
     sender: params.sender ?? null,
     accountName: account?.name ?? productName,
+    projectName,
   };
 
   const subjectTemplate =

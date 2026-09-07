@@ -1,6 +1,7 @@
 /**
  * Per-form email automation stored on workspace_forms.email_settings jsonb.
- * Client-safe — no Node / server imports.
+ * Safe to import from client and server (no Node APIs). Server parse uses the
+ * regex sanitizer fallback for admin-authored template HTML.
  */
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
 
@@ -37,6 +38,11 @@ export type WorkspaceFormEmailSettings = {
   rules: WorkspaceFormEmailRule[];
   notifyMemberIds: string[];
   notifyEmails: string[];
+  /**
+   * Team-notification emails append a label/value block of every submitted
+   * answer unless the template already uses {{answers}}.
+   */
+  includeSubmittedAnswers: boolean;
 };
 
 export const DEFAULT_WORKSPACE_FORM_EMAIL_SETTINGS: WorkspaceFormEmailSettings =
@@ -45,14 +51,32 @@ export const DEFAULT_WORKSPACE_FORM_EMAIL_SETTINGS: WorkspaceFormEmailSettings =
     rules: [],
     notifyMemberIds: [],
     notifyEmails: [],
+    includeSubmittedAnswers: true,
   };
 
 export const MAX_FORM_NOTIFY_EMAILS = 10;
+
+export const FORM_EMAIL_ANSWERS_TOKEN_KEYS = [
+  'answers',
+  'submitted_answers',
+] as const;
 
 export type FormNotifyMemberOption = {
   userId: string;
   name: string;
   email: string;
+};
+
+export type FormEmailMergeToken = {
+  token: string;
+  label: string;
+  group: 'builtin' | 'field';
+};
+
+export type FormSubmittedAnswer = {
+  key: string;
+  label: string;
+  value: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -67,6 +91,14 @@ function readString(value: unknown, max: number): string {
 
 function newId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function escapeFormEmailHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 }
 
 export function parseWorkspaceFormEmailSettings(
@@ -138,7 +170,13 @@ export function parseWorkspaceFormEmailSettings(
       ].slice(0, MAX_FORM_NOTIFY_EMAILS)
     : [];
 
-  return { templates, rules, notifyMemberIds, notifyEmails };
+  return {
+    templates,
+    rules,
+    notifyMemberIds,
+    notifyEmails,
+    includeSubmittedAnswers: row.includeSubmittedAnswers !== false,
+  };
 }
 
 export function serializeWorkspaceFormEmailSettings(
@@ -190,6 +228,91 @@ export function interpolateFormEmailText(
   });
 }
 
+const FORM_EMAIL_RAW_HTML_KEYS = new Set<string>(FORM_EMAIL_ANSWERS_TOKEN_KEYS);
+
+export function interpolateFormEmailHtml(
+  template: string,
+  vars: Record<string, string>,
+): string {
+  return template.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/gi, (_, key: string) => {
+    const normalized = key.toLowerCase();
+    const value = vars[normalized] ?? '';
+    if (FORM_EMAIL_RAW_HTML_KEYS.has(normalized)) return value;
+    return escapeFormEmailHtml(value).replace(/\n/g, '<br />');
+  });
+}
+
+export function formEmailHasAnswersToken(template: string): boolean {
+  return /\{\{\s*(answers|submitted_answers)\s*\}\}/i.test(template);
+}
+
+export function formatFormFieldValue(raw: unknown): string {
+  if (typeof raw === 'boolean') return raw ? 'Yes' : 'No';
+  if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw);
+  if (typeof raw === 'string') return raw.trim();
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => formatFormFieldValue(item))
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (raw == null) return '';
+  return String(raw);
+}
+
+export function listFormSubmittedAnswers(input: {
+  fields: WorkspaceFormField[];
+  values: Record<string, unknown>;
+}): FormSubmittedAnswer[] {
+  return input.fields
+    .filter((field) => field.type !== 'hidden')
+    .map((field) => ({
+      key: field.key,
+      label: field.label,
+      value: formatFormFieldValue(
+        input.values[field.key] ?? input.values[field.id],
+      ),
+    }));
+}
+
+export function renderFormAnswersText(answers: FormSubmittedAnswer[]): string {
+  return answers
+    .map((answer) => `${answer.label}: ${answer.value || '—'}`)
+    .join('\n');
+}
+
+export function renderFormAnswersHtml(
+  answers: FormSubmittedAnswer[],
+  submissionUrl?: string | null,
+): string {
+  const rows = answers
+    .map((answer) => {
+      const value = escapeFormEmailHtml(answer.value).replace(/\n/g, '<br />');
+      return `<tr><td style="padding:6px 16px 6px 0;vertical-align:top;font-weight:600;color:#09111F;">${escapeFormEmailHtml(answer.label)}</td><td style="padding:6px 0;vertical-align:top;color:#09111F;">${value || '—'}</td></tr>`;
+    })
+    .join('');
+
+  const link =
+    submissionUrl?.trim() && /^https?:\/\//i.test(submissionUrl.trim())
+      ? `<p style="margin:16px 0 0;"><a href="${escapeFormEmailHtml(submissionUrl.trim())}">Open submissions in Ozer</a></p>`
+      : '';
+
+  return `<div style="margin-top:20px;padding-top:16px;border-top:1px solid #e5e7eb;"><p style="margin:0 0 10px;font-weight:600;color:#09111F;">Submitted answers</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">${rows}</table>${link}</div>`;
+}
+
+function assignFieldVar(
+  vars: Record<string, string>,
+  key: string,
+  text: string,
+) {
+  const normalized = key.toLowerCase();
+  vars[normalized] = text;
+  const prefixed = `field_${normalized}`;
+  if (!(prefixed in vars)) {
+    vars[prefixed] = text;
+  }
+}
+
 export function buildFormEmailVars(input: {
   formName: string;
   accountName: string;
@@ -198,38 +321,126 @@ export function buildFormEmailVars(input: {
   contactEmail: string;
   fields: WorkspaceFormField[];
   values: Record<string, unknown>;
+  submissionUrl?: string | null;
 }): Record<string, string> {
+  const answers = listFormSubmittedAnswers(input);
+  const answersText = renderFormAnswersText(answers);
+  const submissionUrl = input.submissionUrl?.trim() || '';
+
   const vars: Record<string, string> = {
     form_name: input.formName,
+    form_title: input.formName,
     event_name: input.formName,
     account_name: input.accountName,
     event_address: input.eventAddress?.trim() || '',
     name: input.contactName,
     email: input.contactEmail,
+    submitter_name: input.contactName,
+    submitter_email: input.contactEmail,
+    submission_url: submissionUrl,
+    submission_link: submissionUrl,
+    answers: answersText,
+    submitted_answers: answersText,
   };
 
   for (const field of input.fields) {
-    const raw = input.values[field.key] ?? input.values[field.id];
-    const text =
-      typeof raw === 'boolean'
-        ? raw
-          ? 'Yes'
-          : 'No'
-        : typeof raw === 'string'
-          ? raw.trim()
-          : raw == null
-            ? ''
-            : String(raw);
-    vars[field.key.toLowerCase()] = text;
+    const text = formatFormFieldValue(
+      input.values[field.key] ?? input.values[field.id],
+    );
+    assignFieldVar(vars, field.key, text);
   }
 
   return vars;
 }
 
+export function withFormEmailHtmlVars(
+  vars: Record<string, string>,
+  answersHtml: string,
+): Record<string, string> {
+  return {
+    ...vars,
+    answers: answersHtml,
+    submitted_answers: answersHtml,
+  };
+}
+
+export function composeFormNotificationBody(input: {
+  bodyHtml: string;
+  vars: Record<string, string>;
+  includeSubmittedAnswers: boolean;
+  answersHtml: string;
+}): string {
+  const htmlVars = withFormEmailHtmlVars(input.vars, input.answersHtml);
+  const inner = interpolateFormEmailHtml(input.bodyHtml || '', htmlVars);
+  if (
+    !input.includeSubmittedAnswers ||
+    !input.answersHtml ||
+    formEmailHasAnswersToken(input.bodyHtml)
+  ) {
+    return inner;
+  }
+  return `${inner}${input.answersHtml}`;
+}
+
+export function listFormEmailMergeTokens(
+  fields: WorkspaceFormField[],
+): FormEmailMergeToken[] {
+  const builtins: FormEmailMergeToken[] = [
+    { token: '{{name}}', label: 'Submitter name', group: 'builtin' },
+    { token: '{{email}}', label: 'Submitter email', group: 'builtin' },
+    { token: '{{form_name}}', label: 'Form title', group: 'builtin' },
+    { token: '{{account_name}}', label: 'Workspace', group: 'builtin' },
+    { token: '{{event_name}}', label: 'Event name', group: 'builtin' },
+    { token: '{{event_address}}', label: 'Event address', group: 'builtin' },
+    {
+      token: '{{submission_url}}',
+      label: 'Submissions link',
+      group: 'builtin',
+    },
+    { token: '{{answers}}', label: 'All answers', group: 'builtin' },
+  ];
+
+  const seen = new Set(builtins.map((item) => item.token));
+  const fieldTokens: FormEmailMergeToken[] = [];
+
+  for (const field of fields) {
+    if (field.type === 'hidden') continue;
+    const token = `{{${field.key}}}`;
+    if (seen.has(token)) continue;
+    seen.add(token);
+    fieldTokens.push({
+      token,
+      label: field.label,
+      group: 'field',
+    });
+  }
+
+  return [...builtins, ...fieldTokens];
+}
+
+export function insertFormEmailMergeToken(html: string, token: string): string {
+  const trimmed = html.trim();
+  if (!trimmed) return `<p>${token}</p>`;
+  if (/<\/p>\s*$/i.test(trimmed)) {
+    return trimmed.replace(/<\/p>\s*$/i, ` ${token}</p>`);
+  }
+  return `${trimmed}<p>${token}</p>`;
+}
+
 export function createEmptyFormEmailTemplate(
   existing: WorkspaceFormEmailTemplate[],
+  kind: WorkspaceFormEmailKind = 'autoresponder',
 ): WorkspaceFormEmailTemplate {
   const index = existing.length + 1;
+  if (kind === 'notification') {
+    return {
+      id: newId('tpl'),
+      name: `Team notification ${index}`,
+      subject: 'New {{form_name}} response from {{name}}',
+      bodyHtml:
+        '<p><strong>{{name}}</strong> ({{email}}) submitted <strong>{{form_name}}</strong>.</p>',
+    };
+  }
   return {
     id: newId('tpl'),
     name: `Template ${index}`,
@@ -283,10 +494,8 @@ export function defaultRsvpEmailSettings(): WorkspaceFormEmailSettings {
     id: 'rsvp_notify',
     name: 'RSVP — Host notification',
     subject: 'New RSVP from {{name}}: {{attendance}}',
-    bodyHtml: [
+    bodyHtml:
       '<p><strong>{{name}}</strong> ({{email}}) responded to {{event_name}}.</p>',
-      '<p>Attendance: <strong>{{attendance}}</strong></p>',
-    ].join(''),
   };
 
   return {
@@ -322,5 +531,6 @@ export function defaultRsvpEmailSettings(): WorkspaceFormEmailSettings {
     ],
     notifyMemberIds: [],
     notifyEmails: [],
+    includeSubmittedAnswers: true,
   };
 }
