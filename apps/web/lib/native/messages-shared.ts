@@ -21,10 +21,19 @@ export const NativeCreateThreadBodySchema = z.object({
   contact_ids: z.array(z.string().uuid()).optional(),
 });
 
+export const NativeIsoDateTimeSchema = z.string().datetime({ offset: true });
+
 export const NativeSendMessageBodySchema = z.object({
   workspace: z.string().min(1),
   body: z.string().max(5000).optional().default(''),
-  image_url: z.string().url().max(2048).optional(),
+  image_url: z
+    .string()
+    .url()
+    .max(2048)
+    .refine((value) => value.startsWith('https://'), {
+      message: 'Image URL must use HTTPS',
+    })
+    .optional(),
   attachments: z
     .array(
       z.object({

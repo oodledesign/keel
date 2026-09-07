@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { uploadChatImage } from '~/lib/messages/upload-chat-image';
 import { authenticateNativeRequest } from '~/lib/native/auth';
-import {
-  NativeHttpError,
-  handleNativeError,
-  nativeBadRequest,
-} from '~/lib/native/http';
+import { handleNativeError, nativeBadRequest } from '~/lib/native/http';
+import { uploadNativeChatImage } from '~/lib/native/messages';
 import { requireNativeWorkspace } from '~/lib/native/workspace';
 import { isUuid } from '~/lib/native/workspace-shared';
 
@@ -41,34 +37,15 @@ export async function POST(request: Request) {
       return nativeBadRequest('thread_id and file are required.');
     }
 
-    const uploaded = await uploadChatImage({
-      userId: auth.context.userId,
-      threadId,
-      file,
-      accountId: workspace.id,
-    });
-
-    return NextResponse.json({ image_url: uploaded.imageUrl });
+    return NextResponse.json(
+      await uploadNativeChatImage({
+        userId: auth.context.userId,
+        workspace,
+        threadId,
+        file,
+      }),
+    );
   } catch (error) {
-    if (error instanceof Error && !(error instanceof NativeHttpError)) {
-      const lower = error.message.toLowerCase();
-      if (lower.includes('not a participant') || lower.includes('access')) {
-        return handleNativeError(
-          new NativeHttpError(403, error.message),
-          'messages',
-        );
-      }
-      if (lower.includes('not found')) {
-        return handleNativeError(
-          new NativeHttpError(404, error.message),
-          'messages',
-        );
-      }
-      return handleNativeError(
-        new NativeHttpError(400, error.message),
-        'messages',
-      );
-    }
     return handleNativeError(error, 'messages');
   }
 }

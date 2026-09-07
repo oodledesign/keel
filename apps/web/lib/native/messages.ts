@@ -3,11 +3,13 @@ import 'server-only';
 import { z } from 'zod';
 
 import { createMessagesService } from '~/home/[account]/messages/_lib/server/messages.service';
+import { uploadChatImage } from '~/lib/messages/upload-chat-image';
 
 import { NativeHttpError } from './http';
 import {
   NativeComposeTypeSchema,
   NativeCreateThreadBodySchema,
+  NativeIsoDateTimeSchema,
   NativeSendMessageBodySchema,
 } from './messages-shared';
 import type { NativeWorkspace } from './workspace-shared';
@@ -15,6 +17,7 @@ import type { NativeWorkspace } from './workspace-shared';
 export {
   NativeComposeTypeSchema,
   NativeCreateThreadBodySchema,
+  NativeIsoDateTimeSchema,
   NativeSendMessageBodySchema,
 };
 
@@ -126,6 +129,25 @@ export async function sendNativeThreadMessage(params: {
       imageUrl: params.imageUrl,
       attachments: params.attachments,
     });
+  } catch (error) {
+    mapMessageError(error);
+  }
+}
+
+export async function uploadNativeChatImage(params: {
+  userId: string;
+  workspace: NativeWorkspace;
+  threadId: string;
+  file: File;
+}) {
+  try {
+    const uploaded = await uploadChatImage({
+      userId: params.userId,
+      threadId: params.threadId,
+      file: params.file,
+      accountId: params.workspace.id,
+    });
+    return { image_url: uploaded.imageUrl };
   } catch (error) {
     mapMessageError(error);
   }

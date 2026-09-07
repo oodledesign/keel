@@ -8,6 +8,7 @@ import {
   readJsonBody,
 } from '~/lib/native/http';
 import {
+  NativeIsoDateTimeSchema,
   NativeSendMessageBodySchema,
   listNativeThreadMessages,
   sendNativeThreadMessage,
@@ -46,7 +47,12 @@ export async function GET(
     );
     const limitRaw = url.searchParams.get('limit');
     const limit = limitRaw ? Number.parseInt(limitRaw, 10) : undefined;
-    const before = url.searchParams.get('before') ?? undefined;
+    const beforeRaw = url.searchParams.get('before');
+    const beforeParsed = beforeRaw
+      ? NativeIsoDateTimeSchema.safeParse(beforeRaw)
+      : null;
+    const before =
+      beforeParsed?.success === true ? beforeParsed.data : undefined;
 
     return NextResponse.json(
       await listNativeThreadMessages({
@@ -57,7 +63,7 @@ export async function GET(
           limit && Number.isFinite(limit) && limit >= 1 && limit <= 100
             ? limit
             : undefined,
-        before: before || undefined,
+        before,
       }),
     );
   } catch (error) {

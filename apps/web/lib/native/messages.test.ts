@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   NativeComposeTypeSchema,
   NativeCreateThreadBodySchema,
+  NativeIsoDateTimeSchema,
   NativeSendMessageBodySchema,
 } from './messages-shared';
 
@@ -37,5 +38,30 @@ describe('native message contracts', () => {
       workspace: 'oodle',
     });
     expect(parsed.body).toBe('');
+  });
+
+  it('accepts https image_url and rejects http', () => {
+    expect(
+      NativeSendMessageBodySchema.parse({
+        workspace: 'oodle',
+        image_url: 'https://cdn.example.com/chat.jpg',
+      }).image_url,
+    ).toBe('https://cdn.example.com/chat.jpg');
+    expect(() =>
+      NativeSendMessageBodySchema.parse({
+        workspace: 'oodle',
+        image_url: 'http://cdn.example.com/chat.jpg',
+      }),
+    ).toThrow();
+  });
+
+  it('accepts ISO before cursors with offset or Z', () => {
+    expect(NativeIsoDateTimeSchema.parse('2026-09-07T12:00:00.000Z')).toBe(
+      '2026-09-07T12:00:00.000Z',
+    );
+    expect(NativeIsoDateTimeSchema.parse('2026-09-07T12:00:00.000+00:00')).toBe(
+      '2026-09-07T12:00:00.000+00:00',
+    );
+    expect(() => NativeIsoDateTimeSchema.parse('yesterday')).toThrow();
   });
 });
