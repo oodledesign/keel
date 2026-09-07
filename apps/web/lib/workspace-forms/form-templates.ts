@@ -176,6 +176,12 @@ export function workspaceFormCreateDefaultsForTemplate(
     eventAddress: null,
     emailSettings: isRsvp
       ? defaultRsvpEmailSettings()
-      : { templates: [], rules: [], notifyMemberIds: [], notifyEmails: [] },
+      : {
+          templates: [],
+          rules: [],
+          notifyMemberIds: [],
+          notifyEmails: [],
+          includeSubmittedAnswers: true,
+        },
   };
 }

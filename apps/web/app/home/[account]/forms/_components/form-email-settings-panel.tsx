@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -18,6 +20,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
 import {
+  type FormEmailMergeToken,
   type FormNotifyMemberOption,
   MAX_FORM_NOTIFY_EMAILS,
   type WorkspaceFormEmailRule,
@@ -25,6 +28,8 @@ import {
   type WorkspaceFormEmailTemplate,
   createEmptyFormEmailRule,
   createEmptyFormEmailTemplate,
+  insertFormEmailMergeToken,
+  listFormEmailMergeTokens,
 } from '~/lib/workspace-forms/form-email';
 import type { WorkspaceFormField } from '~/lib/workspace-forms/form-fields';
 import {
@@ -84,7 +89,7 @@ export function FormEmailSettingsPanel({
   function addRule(kind: WorkspaceFormEmailRule['kind']) {
     const templateId = settings.templates[0]?.id;
     if (!templateId) {
-      const template = createEmptyFormEmailTemplate(settings.templates);
+      const template = createEmptyFormEmailTemplate(settings.templates, kind);
       onChange({
         ...settings,
         templates: [template],
@@ -105,6 +110,7 @@ export function FormEmailSettingsPanel({
   }
 
   const extraEmailsText = settings.notifyEmails.join('\n');
+  const mergeTokens = listFormEmailMergeTokens(fields);
 
   return (
     <section className={`${workspacePanelCard} space-y-5 p-5`}>
@@ -141,8 +147,11 @@ export function FormEmailSettingsPanel({
           >
             <div className="grid gap-3 md:grid-cols-2">
               <div className="grid gap-1.5">
-                <Label>Name</Label>
+                <Label htmlFor={`form-email-tpl-name-${template.id}`}>
+                  Name
+                </Label>
                 <Input
+                  id={`form-email-tpl-name-${template.id}`}
                   value={template.name}
                   onChange={(event) =>
                     updateTemplate(template.id, { name: event.target.value })
@@ -150,8 +159,11 @@ export function FormEmailSettingsPanel({
                 />
               </div>
               <div className="grid gap-1.5">
-                <Label>Subject</Label>
+                <Label htmlFor={`form-email-tpl-subject-${template.id}`}>
+                  Subject
+                </Label>
                 <Input
+                  id={`form-email-tpl-subject-${template.id}`}
                   value={template.subject}
                   onChange={(event) =>
                     updateTemplate(template.id, { subject: event.target.value })
@@ -159,6 +171,19 @@ export function FormEmailSettingsPanel({
                 />
               </div>
             </div>
+            <FormMergeTokenChips
+              tokens={mergeTokens}
+              onInsertSubject={(token) =>
+                updateTemplate(template.id, {
+                  subject: appendPlainToken(template.subject, token),
+                })
+              }
+              onInsertBody={(token) =>
+                updateTemplate(template.id, {
+                  bodyHtml: insertFormEmailMergeToken(template.bodyHtml, token),
+                })
+              }
+            />
             <div className="grid gap-1.5">
               <Label>Body</Label>
               <WorkspaceRichTextEditor
@@ -166,7 +191,7 @@ export function FormEmailSettingsPanel({
                 onChange={(html) =>
                   updateTemplate(template.id, { bodyHtml: html })
                 }
-                placeholder="Use {{name}}, {{email}}, {{event_name}}, {{event_address}}, or any field key."
+                placeholder="Use merge tokens such as {{name}}, {{form_name}}, or {{field_key}}."
                 minHeight={100}
               />
             </div>
@@ -225,6 +250,25 @@ export function FormEmailSettingsPanel({
         }
       />
 
+      <label
+        className={`flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3 text-sm ${workspaceText}`}
+      >
+        <Switch
+          checked={settings.includeSubmittedAnswers !== false}
+          onCheckedChange={(checked) =>
+            onChange({ ...settings, includeSubmittedAnswers: checked })
+          }
+        />
+        <span>
+          <span className="font-medium">Include submitted answers</span>
+          <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
+            Team notification emails append every question and answer. Turn this
+            off if you only want the custom template — you can still insert{' '}
+            {'{{answers}}'} yourself.
+          </span>
+        </span>
+      </label>
+
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2">
           <Label>Notify workspace members</Label>
@@ -269,10 +313,11 @@ export function FormEmailSettingsPanel({
           </div>
         </div>
         <div className="grid gap-1.5">
-          <Label>
+          <Label htmlFor="form-email-notify-extra">
             Extra notification addresses (max {MAX_FORM_NOTIFY_EMAILS})
           </Label>
           <Textarea
+            id="form-email-notify-extra"
             rows={6}
             value={extraEmailsText}
             placeholder={'one@example.com\ntwo@example.com'}
@@ -424,6 +469,110 @@ function RuleList({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function appendPlainToken(value: string, token: string): string {
+  const trimmed = value.trimEnd();
+  if (!trimmed) return token;
+  if (trimmed.includes(token)) return trimmed;
+  return `${trimmed} ${token}`;
+}
+
+function FormMergeTokenChips({
+  tokens,
+  onInsertSubject,
+  onInsertBody,
+}: {
+  tokens: FormEmailMergeToken[];
+  onInsertSubject: (token: string) => void;
+  onInsertBody: (token: string) => void;
+}) {
+  const [target, setTarget] = useState<'subject' | 'body'>('body');
+  const builtins = tokens.filter((token) => token.group === 'builtin');
+  const fields = tokens.filter((token) => token.group === 'field');
+
+  function insert(token: string) {
+    if (target === 'subject') {
+      onInsertSubject(token);
+      return;
+    }
+    onInsertBody(token);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className={`text-xs ${workspaceTextMuted}`}>
+          Merge tokens — same {'{{field_key}}'} convention as auto-replies.
+          Field keys also accept {'{{field_attendance}}'} style aliases.
+        </p>
+        <div className="flex gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={target === 'subject' ? 'secondary' : 'ghost'}
+            className="h-7 px-2 text-xs"
+            onClick={() => setTarget('subject')}
+          >
+            Subject
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={target === 'body' ? 'secondary' : 'ghost'}
+            className="h-7 px-2 text-xs"
+            onClick={() => setTarget('body')}
+          >
+            Body
+          </Button>
+        </div>
+      </div>
+      <MergeChipRow label="Built-in" tokens={builtins} onInsert={insert} />
+      {fields.length > 0 ? (
+        <MergeChipRow label="Form fields" tokens={fields} onInsert={insert} />
+      ) : null}
+    </div>
+  );
+}
+
+function MergeChipRow({
+  label,
+  tokens,
+  onInsert,
+}: {
+  label: string;
+  tokens: FormEmailMergeToken[];
+  onInsert: (token: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p
+        className={`text-[11px] font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+      >
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {tokens.map((item) => (
+          <Button
+            key={item.token}
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            title={`Insert ${item.token} into the selected field`}
+            onClick={() => onInsert(item.token)}
+          >
+            {item.label}
+            <span
+              className={`ml-1 font-mono text-[10px] ${workspaceTextMuted}`}
+            >
+              {item.token}
+            </span>
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }
