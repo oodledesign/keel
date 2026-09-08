@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { channelEnableCanContinue } from '../channel-enable-gate';
 import { collectChannelPublishBlockers } from '../channel-publish-blockers';
 import {
   getEachChannelStatus,
@@ -116,6 +117,32 @@ describe('collectChannelPublishBlockers', () => {
     expect(blockers.some((item) => item.id === 'address')).toBe(true);
     expect(blockers.find((item) => item.id === 'address')?.actionLabel).toBe(
       'Open Edit',
+    );
+  });
+
+  it('allows Continue when Rightmove can enable and only checklist items remain', () => {
+    const channel = getRightmoveChannelStatus({
+      listing: {
+        status: 'marketing',
+        name: 'Venue',
+        postcode: 'TN9 1AB',
+        addressLine1: '1 High Street',
+      },
+      publications: [],
+    });
+    const blockers = collectChannelPublishBlockers({
+      channel,
+      readiness: getMarketingReadiness({ listing: emptyListing }),
+      accountSlug: 'bracketts',
+      listingId: 'listing-1',
+      listingStatus: 'marketing',
+    });
+
+    expect(channel.canEnable).toBe(true);
+    expect(blockers.every((item) => item.severity === 'checklist')).toBe(true);
+    expect(blockers.length).toBeGreaterThan(0);
+    expect(channelEnableCanContinue({ canEnable: channel.canEnable })).toBe(
+      true,
     );
   });
 

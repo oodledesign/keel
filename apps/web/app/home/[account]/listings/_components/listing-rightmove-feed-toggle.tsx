@@ -47,6 +47,16 @@ export function ListingRightmoveFeedToggle({
           listingId,
           enabled: next,
         });
+        if (result.enabled !== next) {
+          setEnabled(previous);
+          toast.error(
+            next
+              ? 'Rightmove did not turn on for this disposal'
+              : 'Rightmove did not turn off for this disposal',
+          );
+          router.refresh();
+          return;
+        }
         setEnabled(result.enabled);
         toast.success(
           result.enabled

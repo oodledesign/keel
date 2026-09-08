@@ -43,8 +43,8 @@ export function ListingChannelEnableDialog({
           <DialogTitle>Finish these to publish to {channelLabel}</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {canContinue
-              ? 'This disposal is not fully marketing-ready. Fix the items below, or continue anyway.'
-              : 'This channel cannot go live yet. Complete the steps below, then try the switch again.'}
+              ? 'This disposal is not fully marketing-ready. Fix the items below, or turn the channel on anyway.'
+              : 'This channel cannot go live yet. Complete the required steps below, then try the switch again.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -81,14 +81,25 @@ export function ListingChannelEnableDialog({
             <Button
               type="button"
               className={workspaceBtnPrimaryMd}
+              data-test="channel-enable-continue"
               onClick={() => {
-                onOpenChange(false);
+                // Continue must settle allow=true. Do not call onOpenChange(false)
+                // first — the parent treats dismiss as cancel and skips publish.
                 onContinue?.();
               }}
             >
-              Continue anyway
+              Turn on anyway
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              type="button"
+              className={workspaceBtnPrimaryMd}
+              disabled
+              data-test="channel-enable-continue-disabled"
+            >
+              Turn on
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
