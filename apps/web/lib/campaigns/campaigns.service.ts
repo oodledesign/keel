@@ -30,7 +30,10 @@ import { parseCampaignTimezone } from '~/lib/campaigns/campaign-timezone';
 import { describeCampaignQuota } from '~/lib/campaigns/campaign-usage';
 import { compileCampaignDocument } from '~/lib/campaigns/compile-campaign-document';
 import { formUrlForMerge } from '~/lib/campaigns/form-link';
-import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
+import {
+  applyCampaignMergeText,
+  mergeValuesForRecipient,
+} from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
@@ -724,17 +727,18 @@ class CampaignsService {
       }
 
       try {
+        const merge = mergeValuesForRecipient({
+          displayName: recipient.display_name,
+          email: recipient.email,
+          formUrl: formUrlForMerge({
+            formLink: campaign.bodyDocument?.formLink,
+            recipientEmail: recipient.email,
+          }),
+        });
         const html = renderCampaignHtml({
           brand,
           htmlBody: campaign.htmlBody,
-          merge: mergeValuesForRecipient({
-            displayName: recipient.display_name,
-            email: recipient.email,
-            formUrl: formUrlForMerge({
-              formLink: campaign.bodyDocument?.formLink,
-              recipientEmail: recipient.email,
-            }),
-          }),
+          merge,
           unsubscribeToken: token,
         });
 
@@ -744,11 +748,14 @@ class CampaignsService {
           to: recipient.email,
           from: fromHeader,
           replyTo,
-          subject: subjectForAbVariant({
-            subject: campaign.subject,
-            subjectB: campaign.subjectB,
-            variant,
-          }),
+          subject: applyCampaignMergeText(
+            subjectForAbVariant({
+              subject: campaign.subject,
+              subjectB: campaign.subjectB,
+              variant,
+            }),
+            merge,
+          ),
           html,
           listUnsubscribeUrl: buildWorkspaceMailingListUnsubscribeUrl(token),
           accountId: input.accountId,
@@ -908,13 +915,14 @@ class CampaignsService {
     const fromName = resolved.fromName;
     const fromHeader = resolved.fromHeader ?? `${fromName} <${fromEmail}>`;
     const replyTo = campaign.replyTo?.trim() || resolved.replyTo || fromEmail;
-    const subject = campaignTestSubject(campaign.subject);
+    const subjectTemplate = campaignTestSubject(campaign.subject);
     const unsubscribeUrl = buildWorkspaceMailingListUnsubscribeUrl(
       CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
     );
 
     let sent = 0;
     let failed = 0;
+    let lastSubject = subjectTemplate;
     const errors: string[] = [];
 
     for (const email of emails) {
@@ -924,19 +932,22 @@ class CampaignsService {
         null;
 
       try {
+        const merge = mergeValuesForRecipient({
+          displayName,
+          email,
+          formUrl: formUrlForMerge({
+            formLink: campaign.bodyDocument?.formLink,
+            recipientEmail: email,
+          }),
+        });
         const html = renderCampaignHtml({
           brand,
           htmlBody: campaign.htmlBody,
-          merge: mergeValuesForRecipient({
-            displayName,
-            email,
-            formUrl: formUrlForMerge({
-              formLink: campaign.bodyDocument?.formLink,
-              recipientEmail: email,
-            }),
-          }),
+          merge,
           unsubscribeToken: CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
         });
+        const subject = applyCampaignMergeText(subjectTemplate, merge);
+        lastSubject = subject;
 
         await sendCampaignEmailViaSes({
           to: email,
@@ -969,7 +980,7 @@ class CampaignsService {
       );
     }
 
-    return { sent, failed, subject };
+    return { sent, failed, subject: lastSubject };
   }
 
   private assertReadyToSend(campaign: EmailCampaign) {
