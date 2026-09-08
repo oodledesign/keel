@@ -137,6 +137,10 @@ export function EmailPageClient({ initialData }: Props) {
     initialData.threads.at(-1)?.last_message_at ?? null,
   );
   const [hasMore, setHasMore] = useState(initialData.hasMoreThreads);
+  const [appliedCategory, setAppliedCategory] = useState<{
+    threadId: string;
+    category: EmailThreadCategory;
+  } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showEmailOnboarding, setShowEmailOnboarding] = useState(
@@ -153,7 +157,9 @@ export function EmailPageClient({ initialData }: Props) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const searchRequestId = useRef(0);
-  const skipInitialSearchFetch = useRef(true);
+  const skipInitialSearchFetch = useRef(
+    parseInboxFilter(searchParams.get('filter')) === 'all',
+  );
   const handledOAuthParams = useRef(false);
   const autoSyncStarted = useRef(false);
 
@@ -165,28 +171,44 @@ export function EmailPageClient({ initialData }: Props) {
         )
       : pathsConfig.app.personalEmailAssistant;
 
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
-    () => searchParams.get('thread'),
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() =>
+    searchParams.get('thread'),
   );
   const [focusDraft, setFocusDraft] = useState(
     () => searchParams.get('focus') === 'draft',
   );
 
-  const syncThreadUrl = useCallback(
-    (threadId: string | null, focus: boolean) => {
+  const replaceEmailUrl = useCallback(
+    (updates: {
+      threadId?: string | null;
+      focus?: boolean;
+      filter?: EmailInboxFilter;
+    }) => {
       const params = new URLSearchParams(window.location.search);
 
-      if (threadId) {
-        params.set('thread', threadId);
-      } else {
-        params.delete('thread');
-        params.delete('focus');
+      if ('threadId' in updates) {
+        if (updates.threadId) {
+          params.set('thread', updates.threadId);
+        } else {
+          params.delete('thread');
+          params.delete('focus');
+        }
       }
 
-      if (focus && threadId) {
-        params.set('focus', 'draft');
-      } else {
-        params.delete('focus');
+      if ('focus' in updates) {
+        if (updates.focus && (updates.threadId ?? params.get('thread'))) {
+          params.set('focus', 'draft');
+        } else {
+          params.delete('focus');
+        }
+      }
+
+      if ('filter' in updates) {
+        if (updates.filter && updates.filter !== 'all') {
+          params.set('filter', updates.filter);
+        } else {
+          params.delete('filter');
+        }
       }
 
       const qs = params.toString();
@@ -196,11 +218,19 @@ export function EmailPageClient({ initialData }: Props) {
     [emailHomePath],
   );
 
+  const syncThreadUrl = useCallback(
+    (threadId: string | null, focus: boolean) => {
+      replaceEmailUrl({ threadId, focus });
+    },
+    [replaceEmailUrl],
+  );
+
   useEffect(() => {
     function onPopState() {
       const params = new URLSearchParams(window.location.search);
       setSelectedThreadId(params.get('thread'));
       setFocusDraft(params.get('focus') === 'draft');
+      setInboxFilter(parseInboxFilter(params.get('filter')));
     }
 
     window.addEventListener('popstate', onPopState);
@@ -218,12 +248,6 @@ export function EmailPageClient({ initialData }: Props) {
       }),
     [inboxFilter, debouncedSearch, mailboxKind, labelFilter],
   );
-
-  useEffect(() => {
-    setThreads(initialData.threads);
-    setNextCursor(initialData.threads.at(-1)?.last_message_at ?? null);
-    setHasMore(initialData.hasMoreThreads);
-  }, [initialData.threads]);
 
   const reloadThreads = useCallback(async () => {
     const data = await emailApiFetch<{
@@ -472,12 +496,17 @@ export function EmailPageClient({ initialData }: Props) {
     syncThreadUrl(null, false);
   }, [syncThreadUrl]);
 
-  const changeInboxFilter = useCallback((filter: EmailInboxFilter) => {
-    setInboxFilter(filter);
-  }, []);
+  const changeInboxFilter = useCallback(
+    (filter: EmailInboxFilter) => {
+      setInboxFilter(filter);
+      replaceEmailUrl({ filter });
+    },
+    [replaceEmailUrl],
+  );
 
   const handleThreadCategoryChange = useCallback(
     (threadId: string, category: EmailThreadCategory) => {
+      setAppliedCategory({ threadId, category });
       setThreads((prev) =>
         prev
           .map((thread) =>
@@ -777,7 +806,6 @@ export function EmailPageClient({ initialData }: Props) {
         }}
       />
 
-
       <div
         className={cn(
           'flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden md:gap-4',
@@ -833,6 +861,11 @@ export function EmailPageClient({ initialData }: Props) {
             onBack={clearThread}
             showBackButton
             onCategoryChange={handleThreadCategoryChange}
+            appliedCategory={
+              appliedCategory?.threadId === selectedThreadId
+                ? appliedCategory.category
+                : null
+            }
           />
         </div>
       </div>

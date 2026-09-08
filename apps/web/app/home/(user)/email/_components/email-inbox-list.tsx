@@ -18,11 +18,12 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
-import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import {
   addEmailTriageRuleFromThreadAction,
+  setEmailThreadCategoryAction,
 } from '~/lib/email-assistant/email-assistant.actions';
 import {
+  EMAIL_THREAD_CATEGORY_LABELS,
   type EmailThreadCategory,
   categoryFromTriageRuleAction,
   isActionableEmailCategory,
@@ -33,18 +34,20 @@ import type {
 } from '~/lib/email-assistant/email-triage-rules.shared';
 import { triageRuleSuccessMessage } from '~/lib/email-assistant/email-triage-rules.shared';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
+import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 
+import { EMAIL_INBOX_FILTER_STYLES } from '../_lib/email-category-styles';
 import type {
   EmailInboxFilter,
   EmailThreadSummary,
   EmailWorkspaceOption,
 } from '../_lib/types';
 import type { EmailGmailLabel } from '../_lib/types';
-import { EMAIL_INBOX_FILTER_STYLES } from '../_lib/email-category-styles';
-import { EmailLabelChips } from './email-label-chips';
 import { EmailCategoryBadge } from './email-category-badge';
-import { HighlightSearchText } from './highlight-search-text';
+import { EmailCategoryMenuItems } from './email-category-menu-items';
+import { EmailLabelChips } from './email-label-chips';
 import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
+import { HighlightSearchText } from './highlight-search-text';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -196,6 +199,27 @@ export function EmailInboxList({
     Boolean(thread.follow_up_at),
   ).length;
 
+  function setThreadCategory(threadId: string, category: EmailThreadCategory) {
+    startTransition(async () => {
+      try {
+        const result = await setEmailThreadCategoryAction({
+          threadId,
+          category,
+          accountSlug: accountSlug ?? undefined,
+        });
+        onThreadCategoryChange?.(threadId, category);
+        toast.success(`Marked as ${EMAIL_THREAD_CATEGORY_LABELS[category]}`);
+        if (result.gmailWarning) {
+          toast.message(result.gmailWarning);
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not update category',
+        );
+      }
+    });
+  }
+
   function addTriageRule(
     threadId: string,
     action: EmailTriageAction,
@@ -253,8 +277,8 @@ export function EmailInboxList({
                     className={cn(
                       'flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors',
                       isActive
-                        ? tabStyles?.tabActive ??
-                            'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                        ? (tabStyles?.tabActive ??
+                            'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]')
                         : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                     )}
                   >
@@ -483,6 +507,14 @@ export function EmailInboxList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <EmailCategoryMenuItems
+                          currentCategory={thread.assistant_category}
+                          disabled={pending}
+                          onSelectCategory={(category) =>
+                            setThreadCategory(thread.id, category)
+                          }
+                          asSubmenu
+                        />
                         <EmailTriageRulesMenuItems
                           subject={thread.subject}
                           disabled={pending}

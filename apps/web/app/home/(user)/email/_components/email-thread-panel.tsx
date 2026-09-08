@@ -150,6 +150,7 @@ type Props = {
   onBack?: () => void;
   showBackButton?: boolean;
   onCategoryChange?: (threadId: string, category: EmailThreadCategory) => void;
+  appliedCategory?: EmailThreadCategory | null;
 };
 
 export function EmailThreadPanel({
@@ -166,6 +167,7 @@ export function EmailThreadPanel({
   onBack,
   showBackButton = false,
   onCategoryChange,
+  appliedCategory,
 }: Props) {
   const { reportExhausted, accountId, billingHref } = useAiCreditsExhausted();
   const [detail, setDetail] = useState<EmailThreadDetail | null>(null);
@@ -446,6 +448,7 @@ export function EmailThreadPanel({
         const result = await setEmailThreadCategoryAction({
           threadId,
           category,
+          accountSlug: accountSlug ?? undefined,
         });
         setDetail((current) =>
           current
@@ -668,6 +671,8 @@ export function EmailThreadPanel({
     );
   }
 
+  const displayCategory = appliedCategory ?? detail.thread.assistant_category;
+
   return (
     <>
       <section
@@ -700,7 +705,7 @@ export function EmailThreadPanel({
                     {detail.messages.length === 1 ? '' : 's'}
                   </p>
                   <EmailCategoryBadge
-                    category={detail.thread.assistant_category}
+                    category={displayCategory}
                     reason={detail.thread.assistant_category_reason}
                     confidence={detail.thread.assistant_category_confidence}
                     showWhy
@@ -777,20 +782,17 @@ export function EmailThreadPanel({
                   className="h-8 shrink-0 border-[color:var(--workspace-shell-border)] bg-transparent px-2.5 text-xs text-[var(--workspace-shell-text)]"
                   disabled={pending}
                 >
-                  {detail.thread.assistant_category ? (
+                  {displayCategory ? (
                     <span
                       className={cn(
                         'mr-1.5 h-2 w-2 shrink-0 rounded-full',
-                        EMAIL_CATEGORY_STYLES[detail.thread.assistant_category]
-                          .dot,
+                        EMAIL_CATEGORY_STYLES[displayCategory].dot,
                       )}
                       aria-hidden
                     />
                   ) : null}
-                  {detail.thread.assistant_category
-                    ? EMAIL_THREAD_CATEGORY_LABELS[
-                        detail.thread.assistant_category
-                      ]
+                  {displayCategory
+                    ? EMAIL_THREAD_CATEGORY_LABELS[displayCategory]
                     : 'Category'}
                   <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
                 </Button>
@@ -803,7 +805,7 @@ export function EmailThreadPanel({
                     <DropdownMenuItem
                       key={category}
                       disabled={
-                        pending || detail.thread.assistant_category === category
+                        pending || displayCategory === category
                       }
                       onSelect={() => setCategory(category)}
                       className="flex flex-col items-start gap-0.5 py-2"
