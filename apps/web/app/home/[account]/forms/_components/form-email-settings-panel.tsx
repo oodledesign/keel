@@ -87,7 +87,19 @@ export function FormEmailSettingsPanel({
   }
 
   function addRule(kind: WorkspaceFormEmailRule['kind']) {
-    const templateId = settings.templates[0]?.id;
+    // Prefer a template that already looks like this kind (e.g. "Team
+    // Notification") so new notification rules do not silently bind to the
+    // first autoresponder template.
+    const preferred =
+      kind === 'notification'
+        ? settings.templates.find((template) =>
+            /notif/i.test(template.name),
+          )
+        : settings.templates.find(
+            (template) => !/notif/i.test(template.name),
+          );
+    const templateId = preferred?.id ?? settings.templates[0]?.id;
+
     if (!templateId) {
       const template = createEmptyFormEmailTemplate(settings.templates, kind);
       onChange({
@@ -100,6 +112,22 @@ export function FormEmailSettingsPanel({
       });
       return;
     }
+
+    // Adding a team-notification rule with only autoresponder templates still
+    // creates a dedicated notification template so content stays distinct.
+    if (kind === 'notification' && !preferred) {
+      const template = createEmptyFormEmailTemplate(settings.templates, kind);
+      onChange({
+        ...settings,
+        templates: [...settings.templates, template],
+        rules: [
+          ...settings.rules,
+          createEmptyFormEmailRule(kind, settings.rules, template.id),
+        ],
+      });
+      return;
+    }
+
     onChange({
       ...settings,
       rules: [
@@ -335,6 +363,11 @@ export function FormEmailSettingsPanel({
           </p>
         </div>
       </div>
+
+      <p className={`text-xs ${workspaceTextMuted}`}>
+        Team emails skip the submitter&apos;s own address, so testing with the
+        same email as a notified member will only send the auto-reply.
+      </p>
     </section>
   );
 }

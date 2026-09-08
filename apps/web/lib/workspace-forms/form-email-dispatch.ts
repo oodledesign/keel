@@ -238,11 +238,27 @@ export async function dispatchWorkspaceFormEmails(input: {
     input.form.accountSlug,
     settings.notifyMemberIds,
   );
-  const recipients = [
+  const submitterEmail = input.contact.contactEmail.trim().toLowerCase();
+  const candidates = [
     ...new Set([...memberEmails, ...settings.notifyEmails]),
-  ].filter((email) => email !== input.contact.contactEmail.toLowerCase());
+  ];
+  const recipients = candidates.filter((email) => email !== submitterEmail);
 
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) {
+    logger.warn(
+      {
+        ...ctx,
+        notifyMemberIds: settings.notifyMemberIds,
+        notifyEmails: settings.notifyEmails,
+        candidateCount: candidates.length,
+        submitterEmail: submitterEmail || null,
+      },
+      candidates.length > 0
+        ? 'Form team notification skipped: every recipient matched the submitter email'
+        : 'Form team notification skipped: no notify members or emails configured',
+    );
+    return;
+  }
 
   const rendered = renderNotification(
     notify,
