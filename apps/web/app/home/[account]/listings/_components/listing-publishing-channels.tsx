@@ -11,6 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { toast } from '@kit/ui/sonner';
 
 import {
+  channelEnableCanContinue,
+  createChannelEnableGate,
+} from '~/lib/commercial/channel-enable-gate';
+import {
   type ChannelPublishBlocker,
   collectChannelPublishBlockers,
 } from '~/lib/commercial/channel-publish-blockers';
@@ -64,7 +68,7 @@ export function ListingPublishingChannels({
     blockers: ChannelPublishBlocker[];
     canContinue: boolean;
   } | null>(null);
-  const enableResolverRef = useRef<((allowed: boolean) => void) | null>(null);
+  const enableGateRef = useRef(createChannelEnableGate());
 
   const websiteStatus = getWebsiteChannelStatus({
     listing: {
@@ -114,24 +118,21 @@ export function ListingPublishingChannels({
       listingStatus: listing.status,
       extraRequired,
     });
-    const canContinue =
-      channel.canEnable &&
-      extraRequired.every((item) => item.severity !== 'required');
+    const canContinue = channelEnableCanContinue({
+      canEnable: channel.canEnable,
+      extraRequired,
+    });
 
     if (blockers.length === 0) {
       return Promise.resolve(true);
     }
 
-    return new Promise<boolean>((resolve) => {
-      enableResolverRef.current?.(false);
-      enableResolverRef.current = resolve;
-      setEnableDialog({ channelLabel, blockers, canContinue });
-    });
+    setEnableDialog({ channelLabel, blockers, canContinue });
+    return enableGateRef.current.request();
   };
 
   const closeEnableDialog = (allowed: boolean) => {
-    enableResolverRef.current?.(allowed);
-    enableResolverRef.current = null;
+    enableGateRef.current.settle(allowed);
     setEnableDialog(null);
   };
 
