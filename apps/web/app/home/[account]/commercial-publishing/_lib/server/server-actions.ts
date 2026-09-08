@@ -21,18 +21,9 @@ import {
   publishToEach,
   publishToRightmove,
   setEachListingFeedInclusion,
+  setRightmoveListingInclusion,
   setWebsiteListingFeedInclusion,
 } from '~/lib/commercial/portal-publishers';
-import {
-  isRightmoveBulkJobStale,
-  kickRightmoveBulkWorker,
-  loadLatestRightmoveBulkJob,
-  processRightmoveBulkJobBatch,
-  scheduleRightmoveBulkContinuation,
-  startRightmoveBulkJob,
-  toPublicRightmoveBulkJob,
-} from '~/lib/commercial/rightmove-bulk-job';
-import { listRightmoveDisposalStatuses } from '~/lib/commercial/rightmove-disposal-status';
 import {
   ensureEachFeedToken,
   ensurePropertyHiveFeedToken,
@@ -45,15 +36,25 @@ import {
   pushListingToPropertyHive,
   savePropertyHiveCredentials,
 } from '~/lib/commercial/property-hive-sync';
+import {
+  isRightmoveBulkJobStale,
+  kickRightmoveBulkWorker,
+  loadLatestRightmoveBulkJob,
+  processRightmoveBulkJobBatch,
+  scheduleRightmoveBulkContinuation,
+  startRightmoveBulkJob,
+  toPublicRightmoveBulkJob,
+} from '~/lib/commercial/rightmove-bulk-job';
+import { listRightmoveDisposalStatuses } from '~/lib/commercial/rightmove-disposal-status';
 
 import {
   BulkPublishRightmoveSchema,
   DisconnectLinkedInOrgSchema,
-  ListRightmoveDisposalStatusesSchema,
-  RightmoveBulkJobStatusSchema,
   EnsureEachFeedSchema,
   EnsurePropertyHiveFeedSchema,
   EnsureWebsiteFeedReadySchema,
+  ListRightmoveDisposalStatusesSchema,
+  RightmoveBulkJobStatusSchema,
   RotateEachFeedSchema,
   RotatePropertyHiveFeedSchema,
   SavePortalCredentialsSchema,
@@ -62,6 +63,7 @@ import {
   SaveWebsiteListingUrlTemplateSchema,
   SelectLinkedInOrgSchema,
   SetEachListingFeedInclusionSchema,
+  SetRightmoveListingInclusionSchema,
   SetWebsiteListingFeedInclusionSchema,
   TestPublishListingSchema,
 } from '../schema/commercial-publishing.schema';
@@ -464,11 +466,7 @@ export const getRightmoveBulkJobStatusAction = enhanceAction(
       input.accountId,
     );
 
-    if (
-      job &&
-      input.resumeIfStale !== false &&
-      isRightmoveBulkJobStale(job)
-    ) {
+    if (job && input.resumeIfStale !== false && isRightmoveBulkJobStale(job)) {
       const kicked = await kickRightmoveBulkWorker(job.id);
       if (!kicked) {
         await processRightmoveBulkJobBatch({
@@ -575,6 +573,29 @@ export const setWebsiteListingFeedInclusionAction = enhanceAction(
     };
   },
   { schema: SetWebsiteListingFeedInclusionSchema },
+);
+
+export const setRightmoveListingInclusionAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const { assertCommercialPortalPublishingAllowed } =
+      await import('~/lib/commercial/commercial-seat-access');
+    await assertCommercialPortalPublishingAllowed({
+      client,
+      accountId: input.accountId,
+    });
+
+    const publication = await setRightmoveListingInclusion({
+      accountId: input.accountId,
+      listingId: input.listingId,
+      enabled: input.enabled,
+    });
+    return {
+      publication,
+      enabled: publication.status === 'published',
+    };
+  },
+  { schema: SetRightmoveListingInclusionSchema },
 );
 
 export const disconnectLinkedInOrgAction = enhanceAction(

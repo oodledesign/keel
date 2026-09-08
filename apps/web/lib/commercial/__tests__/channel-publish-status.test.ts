@@ -103,11 +103,31 @@ describe('getEachChannelStatus', () => {
 describe('getRightmoveChannelStatus', () => {
   it('is Not pushed when there is no publication', () => {
     const status = getRightmoveChannelStatus({
-      listing: { status: 'marketing' },
+      listing: {
+        status: 'marketing',
+        name: 'Venue',
+        postcode: 'TN9 1AB',
+        addressLine1: '1 High Street',
+      },
       publications: [],
     });
     expect(status.state).toBe('off');
     expect(status.label).toBe('Not pushed');
+    expect(status.canEnable).toBe(true);
+  });
+
+  it('cannot enable Rightmove while draft', () => {
+    const status = getRightmoveChannelStatus({
+      listing: {
+        status: 'draft',
+        name: 'Venue Draft',
+        postcode: 'TN9 1AB',
+        addressLine1: '1 High Street',
+      },
+      publications: [],
+    });
+    expect(status.canEnable).toBe(false);
+    expect(status.blockers[0]).toMatch(/Marketing or Under offer/);
   });
 
   it('is Live when published with a URL', () => {

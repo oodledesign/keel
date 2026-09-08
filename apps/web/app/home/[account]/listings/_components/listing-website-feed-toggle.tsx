@@ -31,18 +31,14 @@ export function ListingWebsiteFeedToggle({
   listingId: string;
   initialEnabled: boolean;
   disabled?: boolean;
-  /** Return false to cancel enabling (e.g. marketing readiness confirm). */
-  onBeforeEnable?: () => boolean;
+  /** Return false to cancel enabling (e.g. remaining publish steps). */
+  onBeforeEnable?: () => boolean | Promise<boolean>;
 }) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(initialEnabled);
   const [pending, startTransition] = useTransition();
 
-  const onCheckedChange = (next: boolean) => {
-    if (disabled) return;
-    if (next && onBeforeEnable && !onBeforeEnable()) {
-      return;
-    }
+  const persistEnabled = (next: boolean) => {
     const previous = enabled;
     setEnabled(next);
     startTransition(async () => {
@@ -68,6 +64,17 @@ export function ListingWebsiteFeedToggle({
         );
       }
     });
+  };
+
+  const onCheckedChange = (next: boolean) => {
+    if (disabled) return;
+    if (next && onBeforeEnable) {
+      void Promise.resolve(onBeforeEnable()).then((allowed) => {
+        if (allowed) persistEnabled(true);
+      });
+      return;
+    }
+    persistEnabled(next);
   };
 
   return (

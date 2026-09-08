@@ -28,6 +28,7 @@ type ListingInput = {
   sizeMinSqft?: number | null;
   name?: string | null;
   postcode?: string | null;
+  addressLine1?: string | null;
   disposalType?: string | null;
 };
 
@@ -47,6 +48,14 @@ function eachFieldBlockers(listing: ListingInput): string[] {
     blockers.push('Set size from (sq ft)');
   }
   if (!listing.disposalType) blockers.push('Set disposal type');
+  return blockers;
+}
+
+function rightmoveFieldBlockers(listing: ListingInput): string[] {
+  const blockers: string[] = [];
+  if (!listing.name?.trim()) blockers.push('Add a disposal name');
+  if (!listing.postcode?.trim()) blockers.push('Add a postcode');
+  if (!listing.addressLine1?.trim()) blockers.push('Add address line 1');
   return blockers;
 }
 
@@ -150,7 +159,10 @@ export function getEachChannelStatus(input: {
     blockers.push('Set status to Marketing or Under offer');
   }
   blockers.push(...fieldBlockers);
-  if (lastError && !fieldBlockers.some((b) => lastError.includes('size_min'))) {
+  if (
+    lastError &&
+    !(lastError.includes('size_min') && fieldBlockers.length > 0)
+  ) {
     // Surface stored feed warnings that are not already covered
     if (/Missing EACH/i.test(lastError) && listing.sizeMinSqft == null) {
       // already covered by fieldBlockers
@@ -183,7 +195,7 @@ export function getEachChannelStatus(input: {
 }
 
 export function getRightmoveChannelStatus(input?: {
-  listing?: Pick<ListingInput, 'status'>;
+  listing?: Pick<ListingInput, 'status' | 'name' | 'postcode' | 'addressLine1'>;
   publications?: PublicationInput[];
 }): ChannelPublishStatus {
   const listing = input?.listing;
@@ -193,18 +205,33 @@ export function getRightmoveChannelStatus(input?: {
   const onMarket = listing
     ? listingStatusPublishesToPortals(listing.status)
     : true;
+  const fieldBlockers = listing
+    ? rightmoveFieldBlockers({
+        status: listing.status,
+        externalId: null,
+        name: listing.name,
+        postcode: listing.postcode,
+        addressLine1: listing.addressLine1,
+      })
+    : [];
+  const enableBlockers: string[] = [];
+  if (!onMarket) {
+    enableBlockers.push('Set status to Marketing or Under offer');
+  }
+  enableBlockers.push(...fieldBlockers);
+  const canEnable = enableBlockers.length === 0;
   const hasUrl = Boolean(pub?.externalUrl && isSafeHttpUrl(pub.externalUrl));
 
   if (!pub) {
     return {
       state: 'off',
       switchOn: false,
-      canEnable: false,
+      canEnable,
       label: 'Not pushed',
       detail: onMarket
-        ? 'Not on Rightmove yet — push from Website & portals'
-        : 'Set status to Marketing or Under offer, then push from Website & portals',
-      blockers: onMarket ? [] : ['Set status to Marketing or Under offer'],
+        ? 'Not on Rightmove yet — turn on to publish this disposal'
+        : 'Set status to Marketing or Under offer, then turn on to publish',
+      blockers: enableBlockers,
       lastError: null,
     };
   }
@@ -213,10 +240,15 @@ export function getRightmoveChannelStatus(input?: {
     return {
       state: 'blocked',
       switchOn: false,
-      canEnable: false,
+      canEnable,
       label: 'Failed',
-      detail: 'Last Rightmove push failed',
-      blockers: lastError ? [lastError] : [],
+      detail: 'Last Rightmove push failed — turn on to retry',
+      blockers: [
+        ...enableBlockers,
+        ...(lastError && !enableBlockers.includes(lastError)
+          ? [lastError]
+          : []),
+      ],
       lastError,
     };
   }
@@ -225,10 +257,10 @@ export function getRightmoveChannelStatus(input?: {
     return {
       state: 'off',
       switchOn: false,
-      canEnable: false,
+      canEnable,
       label: 'Removed',
       detail: 'Unpublished from Rightmove',
-      blockers: [],
+      blockers: enableBlockers,
       lastError: null,
     };
   }
@@ -237,11 +269,11 @@ export function getRightmoveChannelStatus(input?: {
     return {
       state: 'live',
       switchOn: true,
-      canEnable: false,
+      canEnable: true,
       label: 'Live',
       detail: hasUrl
-        ? 'Pushed to Rightmove (public page can take a few minutes)'
-        : 'Pushed to Rightmove',
+        ? 'On Rightmove (public page can take a few minutes)'
+        : 'On Rightmove',
       blockers: [],
       lastError: null,
     };
@@ -250,10 +282,10 @@ export function getRightmoveChannelStatus(input?: {
   return {
     state: 'off',
     switchOn: false,
-    canEnable: false,
+    canEnable,
     label: 'Draft',
-    detail: 'Uploaded to Rightmove but not published',
-    blockers: onMarket ? [] : ['Set status to Marketing or Under offer'],
+    detail: 'Uploaded to Rightmove but not published — turn on to go live',
+    blockers: enableBlockers,
     lastError,
   };
 }

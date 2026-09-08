@@ -46,6 +46,11 @@ export const SetWebsiteListingFeedInclusionSchema = AccountIdSchema.extend({
   enabled: z.boolean(),
 });
 
+export const SetRightmoveListingInclusionSchema = AccountIdSchema.extend({
+  listingId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+
 export const DisconnectLinkedInOrgSchema = AccountIdSchema;
 
 export const SelectLinkedInOrgSchema = AccountIdSchema.extend({

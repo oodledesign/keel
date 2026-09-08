@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -9,8 +9,11 @@ import { ExternalLink } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { toast } from '@kit/ui/sonner';
-import { Switch } from '@kit/ui/switch';
 
+import {
+  type ChannelPublishBlocker,
+  collectChannelPublishBlockers,
+} from '~/lib/commercial/channel-publish-blockers';
 import {
   type ChannelPublishStatus,
   getEachChannelStatus,
@@ -31,21 +34,24 @@ import type {
   CommercialPortalPublication,
 } from '../_lib/server/listings.service';
 import { useDisposalAccess } from './disposal-access-context';
+import { ListingChannelEnableDialog } from './listing-channel-enable-dialog';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
+import { ListingRightmoveFeedToggle } from './listing-rightmove-feed-toggle';
 import { ListingWebsiteFeedToggle } from './listing-website-feed-toggle';
-import { confirmPublishIfNotReady } from './marketing-readiness-card';
 import { RightmoveListingLinks } from './rightmove-listing-links';
 
 export function ListingPublishingChannels({
   listing,
   publications,
   accountId,
+  accountSlug,
   media = [],
   listingUrlTemplate = null,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
+  accountSlug: string;
   media?: CommercialListingMedia[];
   /** Workspace Property Hive listing URL template (XML-only sites). */
   listingUrlTemplate?: string | null;
@@ -53,6 +59,12 @@ export function ListingPublishingChannels({
   const router = useRouter();
   const { canEditDisposals } = useDisposalAccess();
   const [fixPending, startFix] = useTransition();
+  const [enableDialog, setEnableDialog] = useState<{
+    channelLabel: string;
+    blockers: ChannelPublishBlocker[];
+    canContinue: boolean;
+  } | null>(null);
+  const enableResolverRef = useRef<((allowed: boolean) => void) | null>(null);
 
   const websiteStatus = getWebsiteChannelStatus({
     listing: {
@@ -75,18 +87,53 @@ export function ListingPublishingChannels({
     publications,
   });
   const rightmoveStatus = getRightmoveChannelStatus({
-    listing: { status: listing.status },
+    listing: {
+      status: listing.status,
+      name: listing.name,
+      postcode: listing.postcode,
+      addressLine1: listing.addressLine1,
+    },
     publications,
   });
   const hasRightmoveLink = publications.some(
     (publication) =>
       publication.portal === 'rightmove' && Boolean(publication.externalUrl),
   );
+  const readiness = getMarketingReadiness({ listing, media, publications });
 
-  const confirmReady = () =>
-    confirmPublishIfNotReady(
-      getMarketingReadiness({ listing, media, publications }),
-    );
+  const requestEnable = (
+    channelLabel: string,
+    channel: ChannelPublishStatus,
+    extraRequired: ChannelPublishBlocker[] = [],
+  ) => {
+    const blockers = collectChannelPublishBlockers({
+      channel,
+      readiness,
+      accountSlug,
+      listingId: listing.id,
+      listingStatus: listing.status,
+      extraRequired,
+    });
+    const canContinue =
+      channel.canEnable &&
+      extraRequired.every((item) => item.severity !== 'required');
+
+    if (blockers.length === 0) {
+      return Promise.resolve(true);
+    }
+
+    return new Promise<boolean>((resolve) => {
+      enableResolverRef.current?.(false);
+      enableResolverRef.current = resolve;
+      setEnableDialog({ channelLabel, blockers, canContinue });
+    });
+  };
+
+  const closeEnableDialog = (allowed: boolean) => {
+    enableResolverRef.current?.(allowed);
+    enableResolverRef.current = null;
+    setEnableDialog(null);
+  };
 
   const phPublication = publications.find((p) => p.portal === 'property_hive');
   const resolvedWebsiteUrl =
@@ -122,7 +169,7 @@ export function ListingPublishingChannels({
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
           Choose where this disposal appears. Website and EACH are live XML
-          feeds. Rightmove is pushed from Website & portals.
+          feeds. Rightmove publishes this disposal when you turn it on.
         </p>
         {showWebsiteLink || hasRightmoveLink ? (
           <div className="flex flex-wrap gap-2 pt-1">
@@ -144,11 +191,8 @@ export function ListingPublishingChannels({
             accountId={accountId}
             listingId={listing.id}
             initialEnabled={websiteStatus.switchOn}
-            disabled={
-              !canEditDisposals ||
-              (!websiteStatus.switchOn && !websiteStatus.canEnable)
-            }
-            onBeforeEnable={confirmReady}
+            disabled={!canEditDisposals}
+            onBeforeEnable={() => requestEnable('Website', websiteStatus)}
           />
           <ChannelStatusBanner status={websiteStatus} />
           {needsFeedIdFix && canEditDisposals ? (
@@ -188,51 +232,41 @@ export function ListingPublishingChannels({
             accountId={accountId}
             listingId={listing.id}
             initialEnabled={eachStatus.switchOn}
-            disabled={
-              !canEditDisposals ||
-              (!eachStatus.switchOn && !eachStatus.canEnable)
-            }
-            onBeforeEnable={confirmReady}
+            disabled={!canEditDisposals}
+            onBeforeEnable={() => requestEnable('EACH', eachStatus)}
           />
           <ChannelStatusBanner status={eachStatus} />
         </ChannelRow>
 
         <ChannelRow>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                Rightmove
-              </p>
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                {rightmoveStatus.detail}
-              </p>
-            </div>
-            <Switch
-              checked={rightmoveStatus.switchOn}
-              disabled
-              aria-label="Rightmove is managed from Website & portals"
-            />
-          </div>
+          <ListingRightmoveFeedToggle
+            accountId={accountId}
+            listingId={listing.id}
+            initialEnabled={rightmoveStatus.switchOn}
+            disabled={!canEditDisposals}
+            onBeforeEnable={() => requestEnable('Rightmove', rightmoveStatus)}
+          />
           <ChannelStatusBanner status={rightmoveStatus} />
         </ChannelRow>
       </CardContent>
+
+      <ListingChannelEnableDialog
+        open={Boolean(enableDialog)}
+        onOpenChange={(open) => {
+          if (!open) closeEnableDialog(false);
+        }}
+        channelLabel={enableDialog?.channelLabel ?? ''}
+        blockers={enableDialog?.blockers ?? []}
+        canContinue={enableDialog?.canContinue ?? false}
+        onContinue={() => closeEnableDialog(true)}
+      />
     </Card>
   );
 }
 
-function ChannelRow({
-  children,
-  disabled = false,
-}: {
-  children: React.ReactNode;
-  disabled?: boolean;
-}) {
+function ChannelRow({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={`space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-3 ${
-        disabled ? 'opacity-60' : ''
-      }`}
-    >
+    <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-3">
       {children}
     </div>
   );
