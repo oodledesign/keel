@@ -132,7 +132,7 @@ POST {OZER_API_BASE}/api/native/v1/messages/upload-image
 
 ## Push (APNs)
 
-After sign-in the app asks for notification permission, then POSTs the device token to `/api/native/v1/devices`. Opening a paid / overdue invoice push lands on that invoice (`so.ozer.app://invoice/{id}` or `invoice_id` in the payload). There is no in-app notification settings screen — iOS system permission only.
+After sign-in the app asks for notification permission, then POSTs the device token to `/api/native/v1/devices`. Opening a paid / overdue invoice push lands on that invoice (`so.ozer.app://invoice/{id}` or `invoice_id` in the payload). A new-message push lands on that thread (`so.ozer.app://message/{threadId}` or `thread_id`). There is no in-app notification settings screen — iOS system permission only.
 
 The Xcode project has the Push Notifications capability (`aps-environment` = development in Debug entitlements). Server send needs `APNS_KEY_ID` and `APNS_P8` (or `APNS_P8_PATH`) on the web app; see `apps/web/app/api/native/v1/README.md`. Do not commit a `.p8`.
 
@@ -237,13 +237,33 @@ GET {OZER_API_BASE}/api/native/v1/clients/{id}?workspace=<slug-or-uuid>
 
 Detail adds `contacts: [{ id, name, role, email, phone, is_primary }]`, scoped to that client and workspace. Email and phone are tappable (`mailto:` / `tel:`). Personal and family still return an empty list (not 403); a missing client is 404.
 
+## Messages
+
+WhatsApp-style inbox of threads the signed-in user participates in. Same participant-only `chat_threads` as the web Messages page.
+
+```
+GET {OZER_API_BASE}/api/native/v1/messages/threads?workspace=<slug-or-uuid>
+GET {OZER_API_BASE}/api/native/v1/messages/threads/{id}?workspace=<slug-or-uuid>
+GET {OZER_API_BASE}/api/native/v1/messages/threads/{id}/messages?workspace=<slug-or-uuid>
+POST {OZER_API_BASE}/api/native/v1/messages/threads
+{ "workspace", "type?", "title?", "job_id?", "client_id?", "member_user_ids?", "contact_ids?" }
+POST {OZER_API_BASE}/api/native/v1/messages/threads/{id}/messages
+{ "workspace", "body?", "image_url?" }
+POST {OZER_API_BASE}/api/native/v1/messages/threads/{id}/read
+{ "workspace" }
+GET {OZER_API_BASE}/api/native/v1/messages/compose?workspace=<slug-or-uuid>&q=
+POST {OZER_API_BASE}/api/native/v1/messages/images
+```
+
+New chat searches teammates, contacts, clients, and projects. A new-message APNs alert (not sent to the sender) opens `so.ozer.app://message/{threadId}`.
+
 ## Menu
 
 Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; Meetings on surveyor / studio / commercial spaces; People on personal / family; Clients and Invoices on business profiles; Shopping stays a stub. Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
 
 ## Tab bar
 
-Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, People. Shopping is in the Menu and is still a navigation stub.
+Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, Messages. People stays in the Menu on personal / family spaces. Shopping is in the Menu and is still a navigation stub.
 
 Out of scope: PowerSync, camera, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
 

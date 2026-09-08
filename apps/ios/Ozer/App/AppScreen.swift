@@ -4,6 +4,7 @@ enum AppScreen: Hashable {
     case home
     case tasks
     case notes
+    case messages
     case people
     case clients
     /// Menu only — not one of the three tab-bar pin slots.
@@ -17,6 +18,7 @@ enum AppScreen: Hashable {
         switch feature {
         case .tasks: self = .tasks
         case .notes: self = .notes
+        case .messages: self = .messages
         case .people: self = .people
         case .shopping: self = .shopping
         }
@@ -27,6 +29,7 @@ enum AppScreen: Hashable {
         case .home: nil
         case .tasks: .tasks
         case .notes: .notes
+        case .messages: .messages
         case .people: .people
         case .clients: nil
         case .invoices: nil
@@ -40,6 +43,7 @@ enum AppScreen: Hashable {
         case .home: "Home"
         case .tasks: "Tasks"
         case .notes: "Notes"
+        case .messages: "Messages"
         case .people: "People"
         case .clients: "Clients"
         case .invoices: "Invoices"
@@ -53,6 +57,7 @@ enum AppScreen: Hashable {
         case .home: "house"
         case .tasks: "checkmark.square"
         case .notes: "note.text"
+        case .messages: "bubble.left.and.bubble.right"
         case .people: "person.2"
         case .clients: "building.2"
         case .invoices: "doc.text"
@@ -65,7 +70,7 @@ enum AppScreen: Hashable {
 enum PinSlot: Int, CaseIterable, Identifiable {
     case tasks
     case notes
-    case people
+    case messages
 
     var id: Int { rawValue }
 
@@ -73,7 +78,7 @@ enum PinSlot: Int, CaseIterable, Identifiable {
         switch self {
         case .tasks: .tasks
         case .notes: .notes
-        case .people: .people
+        case .messages: .messages
         }
     }
 

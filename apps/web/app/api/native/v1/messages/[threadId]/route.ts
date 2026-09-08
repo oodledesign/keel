@@ -54,18 +54,17 @@ export async function GET(
     const before =
       beforeParsed?.success === true ? beforeParsed.data : undefined;
 
-    return NextResponse.json(
-      await listNativeThreadMessages({
-        userId: auth.context.userId,
-        workspace,
-        threadId,
-        limit:
-          limit && Number.isFinite(limit) && limit >= 1 && limit <= 100
-            ? limit
-            : undefined,
-        before,
-      }),
-    );
+    const items = await listNativeThreadMessages({
+      userId: auth.context.userId,
+      workspace,
+      threadId,
+      limit:
+        limit && Number.isFinite(limit) && limit >= 1 && limit <= 100
+          ? limit
+          : undefined,
+      before,
+    });
+    return NextResponse.json({ items });
   } catch (error) {
     return handleNativeError(error, 'messages');
   }

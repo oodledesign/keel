@@ -220,17 +220,101 @@ class MessagesService {
 
     const { data: threads } = await query;
 
-    const participantsMap = await this.loadThreadParticipants(
-      (threads ?? []).map((t: any) => t.id),
-    );
-
     const readMap = new Map<string, string | null>();
     for (const row of participantRows ?? []) {
       readMap.set(row.thread_id, row.last_read_at ?? null);
     }
 
+    return this.hydrateThreads({
+      threads: threads ?? [],
+      userId: params.userId,
+      lastReadByThreadId: readMap,
+    });
+  }
+
+  async getThread(params: {
+    accountId: string;
+    userId: string;
+    threadId: string;
+  }) {
+    await this.access.assertAccountMember(params.accountId, params.userId);
+    await this.access.assertThreadParticipant(params.threadId, params.userId);
+
+    const { data: thread } = await this.admin
+      .from('chat_threads')
+      .select(
+        'id, account_id, type, title, job_id, client_id, client_org_id, is_client_wide, created_at, updated_at, last_message_at',
+      )
+      .eq('id', params.threadId)
+      .eq('account_id', params.accountId)
+      .maybeSingle();
+
+    if (!thread) {
+      throw new Error('Thread not found');
+    }
+
+    const contactIds = await loadContactIdsForUser(this.admin, params.userId);
+    const [byUser, byContact] = await Promise.all([
+      this.admin
+        .from('chat_thread_participants')
+        .select('thread_id, last_read_at')
+        .eq('thread_id', params.threadId)
+        .eq('participant_user_id', params.userId)
+        .is('archived_at', null)
+        .maybeSingle(),
+      contactIds.length
+        ? this.admin
+            .from('chat_thread_participants')
+            .select('thread_id, last_read_at')
+            .eq('thread_id', params.threadId)
+            .in('participant_contact_id', contactIds)
+            .is('archived_at', null)
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const lastReadAt =
+      (byUser.data?.last_read_at as string | null | undefined) ??
+      (byContact.data?.last_read_at as string | null | undefined) ??
+      null;
+
+    const [item] = await this.hydrateThreads({
+      threads: [thread],
+      userId: params.userId,
+      lastReadByThreadId: new Map([[params.threadId, lastReadAt]]),
+    });
+
+    if (!item) {
+      throw new Error('Thread not found');
+    }
+
+    return item;
+  }
+
+  private async hydrateThreads(params: {
+    threads: Array<{
+      id: string;
+      account_id: string;
+      type: ThreadType;
+      title: string | null;
+      job_id: string | null;
+      client_id: string | null;
+      client_org_id: string | null;
+      is_client_wide: boolean;
+      created_at: string;
+      updated_at: string;
+      last_message_at: string;
+    }>;
+    userId: string;
+    lastReadByThreadId: Map<string, string | null>;
+  }) {
+    const participantsMap = await this.loadThreadParticipants(
+      params.threads.map((thread) => thread.id),
+    );
+
     const out: MessageThreadListItem[] = [];
-    for (const thread of threads ?? []) {
+    for (const thread of params.threads) {
       const { data: latestMessage } = await this.admin
         .from('chat_messages')
         .select('id, body, image_url, created_at')
@@ -256,7 +340,7 @@ class MessagesService {
         }
       }
 
-      const lastReadAt = readMap.get(thread.id);
+      const lastReadAt = params.lastReadByThreadId.get(thread.id);
       const unreadQuery = this.admin
         .from('chat_messages')
         .select('id', { count: 'exact', head: true })

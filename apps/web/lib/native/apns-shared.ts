@@ -1,3 +1,8 @@
+export {
+  buildNativeMessagePushPayload,
+  nativeMessagePushUrl,
+} from './messages-shared';
+
 export type NativeInvoicePushKind = 'paid' | 'overdue';
 
 export type NativeInvoicePushPayload = {

@@ -9,6 +9,7 @@ import pathsConfig from '~/config/paths.config';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { formatUkDateTime } from '~/lib/format/uk-datetime';
 import { collectMessageNotifyRecipients } from '~/lib/messages/messages-notify-recipients';
+import { sendNativeMessagePush } from '~/lib/native/apns';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import { loadContactDisplayByIds } from './messages-participants';
@@ -252,6 +253,38 @@ class MessagesNotificationsService {
 
     const recipientUserIds = collected.inAppUserIds;
     const recipientEmails = collected.emails;
+
+    const senderUser = userById.get(params.senderUserId);
+    const senderMeta = (senderUser?.user_metadata ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const senderPushName =
+      [senderMeta.first_name, senderMeta.last_name]
+        .map((part) => String(part ?? '').trim())
+        .filter(Boolean)
+        .join(' ') ||
+      (typeof senderMeta.full_name === 'string' &&
+        senderMeta.full_name.trim()) ||
+      (typeof senderMeta.name === 'string' && senderMeta.name.trim()) ||
+      (senderUser?.email as string | undefined)?.split('@')[0] ||
+      'Someone';
+
+    try {
+      await sendNativeMessagePush({
+        recipientUserIds,
+        threadId: params.threadId,
+        workspace: params.accountSlug,
+        title: senderPushName,
+        body: truncate(params.messageBody?.trim() || 'Sent an image', 140),
+      });
+    } catch (pushError) {
+      console.warn('[messages] native push failed', {
+        threadId: params.threadId,
+        error:
+          pushError instanceof Error ? pushError.message : String(pushError),
+      });
+    }
 
     const link =
       pathsConfig.app.accountMessages.replace('[account]', params.accountSlug) +

@@ -34,17 +34,16 @@ export async function GET(request: Request) {
     const limit = limitRaw ? Number.parseInt(limitRaw, 10) : undefined;
     const clientId = url.searchParams.get('client') ?? undefined;
 
-    return NextResponse.json(
-      await listNativeMessageThreads({
-        userId: auth.context.userId,
-        workspace,
-        limit:
-          limit && Number.isFinite(limit) && limit >= 1 && limit <= 50
-            ? limit
-            : undefined,
-        clientId: clientId && isUuid(clientId) ? clientId : undefined,
-      }),
-    );
+    const items = await listNativeMessageThreads({
+      userId: auth.context.userId,
+      workspace,
+      limit:
+        limit && Number.isFinite(limit) && limit >= 1 && limit <= 50
+          ? limit
+          : undefined,
+      clientId: clientId && isUuid(clientId) ? clientId : undefined,
+    });
+    return NextResponse.json({ items });
   } catch (error) {
     return handleNativeError(error, 'messages');
   }
