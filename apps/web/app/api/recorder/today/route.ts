@@ -1,3 +1,8 @@
+/**
+ * Mac Assistant Today. Response includes task lists plus optional `finance`
+ * (dashboard income/outgoings months) and `triage` (email/task counts).
+ * See ./README.md. Null finance/triage means the Mac UI should deep-link.
+ */
 import { NextResponse } from 'next/server';
 
 import {
@@ -19,7 +24,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const payload = await loadRecorderToday(auth.user_id);
+    const url = new URL(request.url);
+    const accountId = url.searchParams.get('account_id')?.trim() || null;
+    const payload = await loadRecorderToday(auth.user_id, {
+      preferredAccountId: accountId ?? auth.account_id,
+    });
     return NextResponse.json(payload);
   } catch (error) {
     console.error('[recorder/today]', error);

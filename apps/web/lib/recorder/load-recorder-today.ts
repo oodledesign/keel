@@ -13,6 +13,15 @@ import {
 } from '~/home/_lib/due-date-ymd';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
 
+import {
+  type RecorderTodayFinance,
+  loadRecorderTodayFinance,
+} from './recorder-today-finance';
+import {
+  type RecorderTodayTriage,
+  loadRecorderTodayTriage,
+} from './recorder-today-triage';
+
 const TASK_LIST_LIMIT = 300;
 
 const TASK_SELECT =
@@ -84,7 +93,19 @@ export type RecorderTodayPayload = {
   tasks_due_today: RecorderTodayTask[];
   overdue_tasks: RecorderTodayTask[];
   all_open_tasks: RecorderTodayTask[];
+  /**
+   * Last ~6 months income vs outgoings for a team workspace with real
+   * finance_transactions. Null when the user has no business finance data.
+   */
+  finance: RecorderTodayFinance | null;
+  /**
+   * Email / task triage counts when a mailbox is connected or review items
+   * exist. Null when those features are unavailable — Mac should deep-link.
+   */
+  triage: RecorderTodayTriage | null;
 };
+
+export type { RecorderTodayFinance, RecorderTodayTriage };
 
 function mapTaskStatus(
   status: string | null | undefined,
@@ -181,7 +202,6 @@ function rowToRecorderTask(
     projects: Map<string, ProjectRow>;
     areas: Map<string, AreaRow>;
   },
-  todayYmd: string,
 ): RecorderTodayTask {
   const dueDate = row.due_date?.trim() || null;
   const overdue = isCalendarOverdueYmd(dueDate);
@@ -337,9 +357,11 @@ async function loadMaps(
 
 export async function loadRecorderToday(
   userId: string,
+  options?: { preferredAccountId?: string | null },
 ): Promise<RecorderTodayPayload> {
   const admin = getSupabaseServerAdminClient();
   const todayYmd = todayLocalYmd();
+  const preferredAccountId = options?.preferredAccountId ?? null;
   const includeWorkspaceTasks = await loadPersonalIncludeWorkspaceTasks(
     admin,
     userId,
@@ -361,7 +383,7 @@ export async function loadRecorderToday(
   const maps = await loadMaps(admin, rows);
 
   const openTasks = rows
-    .map((row) => rowToRecorderTask(row, maps, todayYmd))
+    .map((row) => rowToRecorderTask(row, maps))
     .filter((task) => task.status !== 'completed')
     .filter((task) => {
       if (includeWorkspaceTasks) return true;
@@ -386,6 +408,21 @@ export async function loadRecorderToday(
 
   const allOpenTasks = [...overdueTasks, ...tasksDueToday, ...inProgressTasks];
 
+  const [finance, triage] = await Promise.all([
+    loadRecorderTodayFinance(admin, userId, preferredAccountId).catch(
+      (error) => {
+        console.error('[recorder/today] finance', error);
+        return null;
+      },
+    ),
+    loadRecorderTodayTriage(admin, userId, preferredAccountId).catch(
+      (error) => {
+        console.error('[recorder/today] triage', error);
+        return null;
+      },
+    ),
+  ]);
+
   return {
     date: todayYmd,
     planner_day_path: pathsConfig.app.personalPlannerDay,
@@ -393,5 +430,7 @@ export async function loadRecorderToday(
     tasks_due_today: tasksDueToday,
     overdue_tasks: overdueTasks,
     all_open_tasks: allOpenTasks,
+    finance,
+    triage,
   };
 }
