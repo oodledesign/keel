@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
+import { Check } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -129,14 +131,29 @@ export function PublicWorkspaceForm({
 
   if (sent) {
     return (
-      <div className="mx-auto w-full max-w-lg rounded-2xl border border-black/5 bg-white p-8 text-center shadow-sm">
-        <p
-          className="font-heading text-xl font-bold"
-          style={{ color: primaryColor }}
-        >
-          Thank you
-        </p>
-        <p className="mt-2 text-sm text-neutral-600">{successMessage}</p>
+      <div
+        className={cn(
+          'my-auto flex w-full flex-col items-center justify-center',
+          !embed && 'min-h-[60dvh]',
+        )}
+        data-test="public-form-thank-you"
+        role="status"
+      >
+        <div className="mx-auto w-full max-w-lg rounded-2xl border border-black/5 bg-white p-8 text-center shadow-sm">
+          <div
+            className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-green-500 text-white"
+            aria-hidden
+          >
+            <Check className="size-8" strokeWidth={2.5} />
+          </div>
+          <p
+            className="font-heading text-xl font-bold"
+            style={{ color: primaryColor }}
+          >
+            Thank you
+          </p>
+          <p className="mt-2 text-sm text-neutral-600">{successMessage}</p>
+        </div>
       </div>
     );
   }
