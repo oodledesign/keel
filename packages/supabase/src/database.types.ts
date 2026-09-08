@@ -3103,7 +3103,7 @@ export type Database = {
           created_by: string
           id: string
           last_message_at: string
-          project_id: string | null
+          job_id: string | null
           title: string | null
           type: Database["public"]["Enums"]["chat_thread_type"]
           updated_at: string
@@ -3115,7 +3115,7 @@ export type Database = {
           created_by: string
           id?: string
           last_message_at?: string
-          project_id?: string | null
+          job_id?: string | null
           title?: string | null
           type: Database["public"]["Enums"]["chat_thread_type"]
           updated_at?: string
@@ -3127,7 +3127,7 @@ export type Database = {
           created_by?: string
           id?: string
           last_message_at?: string
-          project_id?: string | null
+          job_id?: string | null
           title?: string | null
           type?: Database["public"]["Enums"]["chat_thread_type"]
           updated_at?: string
@@ -3162,8 +3162,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "chat_threads_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "chat_threads_job_id_fkey"
+            columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
