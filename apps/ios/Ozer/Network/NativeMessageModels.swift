@@ -203,6 +203,11 @@ struct MessageComposePayload: Decodable, Equatable {
         case canMessageClients = "can_message_clients"
     }
 
+    init(canMessageClients: Bool, items: [MessageComposeOption]) {
+        self.canMessageClients = canMessageClients
+        self.items = items
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         canMessageClients = try container.decodeIfPresent(Bool.self, forKey: .canMessageClients) ?? false
