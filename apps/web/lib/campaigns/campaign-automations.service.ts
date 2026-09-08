@@ -7,7 +7,10 @@ import { getLogger } from '@kit/shared/logger';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { debitCampaignCredits } from '~/lib/campaign-credits/ledger';
 import { formUrlForMerge } from '~/lib/campaigns/form-link';
-import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
+import {
+  applyCampaignMergeText,
+  mergeValuesForRecipient,
+} from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
@@ -293,17 +296,18 @@ async function sendWelcomeAutomationEmail(input: {
     return;
   }
 
+  const merge = mergeValuesForRecipient({
+    displayName: input.displayName,
+    email,
+    formUrl: formUrlForMerge({
+      formLink: campaign.bodyDocument?.formLink,
+      recipientEmail: email,
+    }),
+  });
   const html = renderCampaignHtml({
     brand,
     htmlBody: campaign.htmlBody,
-    merge: mergeValuesForRecipient({
-      displayName: input.displayName,
-      email,
-      formUrl: formUrlForMerge({
-        formLink: campaign.bodyDocument?.formLink,
-        recipientEmail: email,
-      }),
-    }),
+    merge,
     unsubscribeToken: input.unsubscribeToken,
   });
 
@@ -311,7 +315,7 @@ async function sendWelcomeAutomationEmail(input: {
     to: email,
     from: resolved.fromHeader ?? `${resolved.fromName} <${resolved.fromEmail}>`,
     replyTo: campaign.replyTo?.trim() || resolved.replyTo || resolved.fromEmail,
-    subject: campaign.subject,
+    subject: applyCampaignMergeText(campaign.subject, merge),
     html,
     listUnsubscribeUrl: buildWorkspaceMailingListUnsubscribeUrl(
       input.unsubscribeToken,
