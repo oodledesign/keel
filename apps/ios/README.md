@@ -99,7 +99,7 @@ Accept: application/json
 
 Optional query flags: `status=open|done|all` (default `open`), `client=<uuid>` for one client, `q` for a title `ilike`. Portal assignee rows stay off the list. Personal still hides other people’s life tasks.
 
-The list is `{ "items": [{ "id", "title", "status", "due", "client_id", "client_name" }] }`. Default is open tasks for the workspace (due today, overdue, later). Business lists include workspace tasks even when `user_id` is null. Title plus due and client name. Empty only when `items` is empty. A 403 is an error, not an empty list.
+The list is `{ "items": [{ "id", "title", "status", "due", "duration_minutes", "client_id", "client_name" }] }`. Default is open tasks for the workspace (due today, overdue, later). Business lists include workspace tasks even when `user_id` is null. Title plus due, optional duration, and client name. Empty only when `items` is empty. A 403 is an error, not an empty list.
 
 The iPhone list searches the loaded rows (title and client name) as you type, and filters by due (All / Today / Overdue / Upcoming / No date) and status (Open / Done / All). Business workspaces add a client chip (all, no client, or one client from `/clients`). `?client=` is sent only for a specific client. Completing a task still works; Add stays in the toolbar. Filter state resets when the workspace changes.
 
@@ -138,13 +138,13 @@ The Xcode project has the Push Notifications capability (`aps-environment` = dev
 
 ```
 POST {OZER_API_BASE}/api/native/v1/tasks
-{ "title", "due?", "client_id?", "workspace" }
+{ "title", "due?", "client_id?", "duration_minutes?", "workspace" }
 
 PATCH {OZER_API_BASE}/api/native/v1/tasks/{id}
-{ "title?", "due?", "client_id?", "status?" }
+{ "title?", "due?", "client_id?", "duration_minutes?", "status?" }
 ```
 
-`status` of `completed` or `done` marks the task done. `client_id` must belong to the workspace; `null` clears it. The iPhone list can add, edit, attach a client, and tick complete. The first ~20 open tasks for the selected workspace are cached on disk so a cold launch (including after an Xcode rebuild) still shows the last list immediately, then refreshes.
+`status` of `completed` or `done` marks the task done. `client_id` must belong to the workspace; `null` clears it. `duration_minutes` is optional estimated effort (integer minutes, max 10080). Omit it to leave unset; `null` on PATCH clears it. The iPhone list can add, edit, attach a client, set duration, and tick complete. The first ~20 open tasks for the selected workspace are cached on disk so a cold launch (including after an Xcode rebuild) still shows the last list immediately, then refreshes.
 
 ## Notes API
 

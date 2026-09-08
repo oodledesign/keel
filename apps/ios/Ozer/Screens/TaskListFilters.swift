@@ -161,13 +161,17 @@ struct TaskFilterChip: View {
     }
 }
 
-/// Due date (coral when overdue) plus client name. Used on the Tasks list row.
+/// Due date (coral when overdue), compact duration, and client name.
 struct TaskDueClientSubtitle: View {
     var item: TaskItem
     var treatAsCompleted: Bool = false
 
     private var dueText: String? {
         TaskItem.dueLabel(item.due)
+    }
+
+    private var durationText: String? {
+        item.durationLabel
     }
 
     private var clientText: String? {
@@ -180,14 +184,23 @@ struct TaskDueClientSubtitle: View {
     }
 
     var body: some View {
-        if dueText != nil || clientText != nil {
+        if dueText != nil || durationText != nil || clientText != nil {
             HStack(spacing: 0) {
                 if let dueText {
                     Text(dueText)
                         .foregroundStyle(isOverdue ? OzerPalette.coral : OzerPalette.plumMuted)
                         .accessibilityLabel(isOverdue ? "Overdue, \(dueText)" : dueText)
                 }
-                if dueText != nil, clientText != nil {
+                if dueText != nil, durationText != nil || clientText != nil {
+                    Text(" · ")
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+                if let durationText {
+                    Text(durationText)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .accessibilityLabel("Duration \(durationText)")
+                }
+                if durationText != nil, clientText != nil {
                     Text(" · ")
                         .foregroundStyle(OzerPalette.plumMuted)
                 }

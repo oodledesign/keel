@@ -11,6 +11,8 @@ struct TaskEditorView: View {
     @State private var title: String
     @State private var hasDue: Bool
     @State private var dueDate: Date
+    @State private var hoursText: String
+    @State private var minutesText: String
     @State private var selectedClientId: String?
     @State private var clients: [ClientItem] = []
     @State private var isSaving = false
@@ -29,6 +31,17 @@ struct TaskEditorView: View {
         _title = State(initialValue: existing?.title ?? "")
         _hasDue = State(initialValue: existing?.due != nil)
         _dueDate = State(initialValue: TaskItem.dueDate(from: existing?.due) ?? Date())
+        let parts = TaskItem.durationParts(from: existing?.durationMinutes)
+        _hoursText = State(
+            initialValue: existing?.durationMinutes == nil || parts.hours == 0
+                ? ""
+                : String(parts.hours)
+        )
+        _minutesText = State(
+            initialValue: existing?.durationMinutes == nil || parts.minutes == 0
+                ? ""
+                : String(parts.minutes)
+        )
         _selectedClientId = State(initialValue: existing?.clientId ?? initialClient?.id)
     }
 
@@ -60,6 +73,31 @@ struct TaskEditorView: View {
                         .datePickerStyle(.compact)
                         .tint(OzerPalette.coral)
                     }
+                }
+
+                Section {
+                    HStack(spacing: 12) {
+                        TextField("0", text: $hoursText)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(OzerPalette.plum)
+                            .frame(width: 56)
+                            .accessibilityLabel("Duration hours")
+                        Text("h")
+                            .foregroundStyle(OzerPalette.plumMuted)
+                        TextField("00", text: $minutesText)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(OzerPalette.plum)
+                            .frame(width: 56)
+                            .accessibilityLabel("Duration minutes")
+                        Text("m")
+                            .foregroundStyle(OzerPalette.plumMuted)
+                    }
+                } header: {
+                    Text("Duration")
+                } footer: {
+                    Text("Optional. How long this might take.")
                 }
 
                 if showsClientPicker {
@@ -157,6 +195,7 @@ struct TaskEditorView: View {
                 return
             }
             let due = hasDue ? TaskItem.dueString(from: dueDate) : nil
+            let durationMinutes = parsedDurationMinutes()
             let saved: TaskItem
             if let existing {
                 saved = try await api.updateTask(
@@ -166,6 +205,8 @@ struct TaskEditorView: View {
                     clearDue: !hasDue && existing.due != nil,
                     clientId: selectedClientId,
                     clearClient: showsClientPicker && selectedClientId == nil && existing.clientId != nil,
+                    durationMinutes: durationMinutes,
+                    clearDuration: durationMinutes == nil && existing.durationMinutes != nil,
                     status: markComplete ? "completed" : nil,
                     accessToken: token
                 )
@@ -174,6 +215,7 @@ struct TaskEditorView: View {
                     title: nextTitle,
                     due: due,
                     clientId: showsClientPicker ? selectedClientId : nil,
+                    durationMinutes: durationMinutes,
                     workspace: workspace,
                     accessToken: token
                 )
@@ -198,6 +240,17 @@ struct TaskEditorView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func parsedDurationMinutes() -> Int? {
+        let hours = Int(hoursText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        let minutes = Int(minutesText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        if hoursText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           minutesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        {
+            return nil
+        }
+        return TaskItem.combineDuration(hours: hours, minutes: minutes)
     }
 
     private func persistCache(_ task: TaskItem) {
