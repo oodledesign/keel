@@ -56,7 +56,7 @@ async function PublicWorkspaceFormPage({
 
   return (
     <main
-      className={`min-h-[100dvh] px-4 ${embed ? 'py-4' : 'py-10 sm:px-6'}`}
+      className={`flex min-h-[100dvh] flex-col px-4 ${embed ? 'py-4' : 'py-10 sm:px-6'}`}
       style={{ background: pageBackground }}
     >
       <PublicWorkspaceForm
