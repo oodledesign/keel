@@ -41,6 +41,7 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -166,6 +167,7 @@ function TaskCard({
                 {formatShortDate(task.due_date)}
               </span>
             )}
+            <TaskDurationMeta minutes={task.duration_minutes} />
             {assigneeLabel ? (
               <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {assigneeLabel}
@@ -280,8 +282,11 @@ function PhaseColumn({
   contactLookup: ContactLookup;
   onAddTask: (
     phaseId: string | null,
-    title: string,
-    subtaskTitles: string[],
+    draft: {
+      title: string;
+      durationMinutes: number | null;
+      subtasks: Array<{ title: string; durationMinutes: number | null }>;
+    },
   ) => void;
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
@@ -434,9 +439,7 @@ function PhaseColumn({
         <div className="border-t border-[color:var(--workspace-shell-border)]/80 p-2">
           <AddProjectTaskForm
             disabled={addingTask}
-            onSubmit={(title, subtaskTitles) =>
-              onAddTask(phase?.id ?? null, title, subtaskTitles)
-            }
+            onSubmit={(draft) => onAddTask(phase?.id ?? null, draft)}
           />
         </div>
       )}
@@ -454,8 +457,11 @@ function SortablePhaseColumn(props: {
   contactLookup: ContactLookup;
   onAddTask: (
     phaseId: string | null,
-    title: string,
-    subtaskTitles: string[],
+    draft: {
+      title: string;
+      durationMinutes: number | null;
+      subtasks: Array<{ title: string; durationMinutes: number | null }>;
+    },
   ) => void;
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
@@ -660,7 +666,14 @@ export function JobProjectBoard({
   );
 
   const handleAddTask = useCallback(
-    (phaseId: string | null, title: string, subtaskTitles: string[]) => {
+    (
+      phaseId: string | null,
+      draft: {
+        title: string;
+        durationMinutes: number | null;
+        subtasks: Array<{ title: string; durationMinutes: number | null }>;
+      },
+    ) => {
       setAddingTask(true);
       startTransition(async () => {
         try {
@@ -669,9 +682,13 @@ export function JobProjectBoard({
             accountSlug,
             jobId,
             phaseId,
-            title,
+            title: draft.title,
             priority: 'medium',
-            subtaskTitles,
+            durationMinutes: draft.durationMinutes,
+            subtaskTitles: draft.subtasks.map((item) => item.title),
+            subtaskDurations: draft.subtasks.map(
+              (item) => item.durationMinutes,
+            ),
           });
           const key = phaseId ?? UNPHASED_KEY;
           const next = { ...tasksByPhase };

@@ -22,6 +22,7 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import { DueDateInput } from '~/components/due-date-input';
+import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
@@ -319,6 +320,7 @@ export function ExtractWorkspaceTasksClient({
             title: r.title,
             notes: r.notes,
             dueDate: r.dueDate,
+            durationMinutes: r.durationMinutes,
             priority: r.priority,
             projectId: r.projectId,
             clientId: r.clientId,
@@ -329,6 +331,7 @@ export function ExtractWorkspaceTasksClient({
               title: s.title,
               notes: s.notes,
               dueDate: s.dueDate,
+              durationMinutes: s.durationMinutes,
               priority: s.priority,
               included: s.included,
             })),
@@ -626,6 +629,20 @@ export function ExtractWorkspaceTasksClient({
                             inputClassName="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                           />
                         </div>
+                        <TaskDurationFields
+                          value={row.durationMinutes}
+                          onChange={(next) =>
+                            setRows(
+                              (prev) =>
+                                prev?.map((r) =>
+                                  r.id === row.id
+                                    ? { ...r, durationMinutes: next }
+                                    : r,
+                                ) ?? null,
+                            )
+                          }
+                          idPrefix={`extract-duration-${row.id}`}
+                        />
                         <div>
                           <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                             Priority
@@ -774,6 +791,31 @@ export function ExtractWorkspaceTasksClient({
                                 }
                                 className="w-full max-w-xs"
                                 inputClassName="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
+                              />
+                              <TaskDurationFields
+                                value={st.durationMinutes}
+                                onChange={(next) =>
+                                  setRows(
+                                    (prev) =>
+                                      prev?.map((r) =>
+                                        r.id === row.id
+                                          ? {
+                                              ...r,
+                                              subtasks: r.subtasks.map((s) =>
+                                                s.id === st.id
+                                                  ? {
+                                                      ...s,
+                                                      durationMinutes: next,
+                                                    }
+                                                  : s,
+                                              ),
+                                            }
+                                          : r,
+                                      ) ?? null,
+                                  )
+                                }
+                                idPrefix={`extract-sub-duration-${st.id}`}
+                                compact
                               />
                               <Select
                                 value={st.priority}

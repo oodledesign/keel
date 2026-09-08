@@ -27,13 +27,16 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import {
+  TaskDurationFields,
+  TaskDurationMeta,
+} from '~/components/task-duration-fields';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 import { useCommandUndoStack } from '~/lib/hooks/use-command-undo-stack';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
-import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
 import {
   type PlanDocument,
   attachGoogleEventIdsToPlan,
@@ -46,6 +49,7 @@ import {
   blocksForCalendarSync,
   planGainedGoogleIds,
 } from '~/lib/planner/plan-calendar-sync';
+import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
 import {
   dayViewHrefWithDate,
   loadStoredPlan,
@@ -126,6 +130,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const tasksRef = useRef(tasks);
   tasksRef.current = tasks;
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDurationMinutes, setNewTaskDurationMinutes] = useState<
+    number | null
+  >(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const { push: pushUndo } = useCommandUndoStack();
@@ -587,6 +594,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
         priority: 'medium',
         dueDate: dateYmd,
         accountId: workspaceAccountId,
+        durationMinutes: newTaskDurationMinutes ?? undefined,
       });
 
       if (!result.success || !result.id) {
@@ -610,7 +618,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               : null,
           priority: 'medium',
           status: 'pending',
-          estimated_duration_minutes: null,
+          estimated_duration_minutes: newTaskDurationMinutes,
           due_date: dateYmd,
           dueDateLabel: isViewingToday ? 'Today' : dateYmd,
           notes: null,
@@ -628,6 +636,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
         },
       ]);
       setNewTaskTitle('');
+      setNewTaskDurationMinutes(null);
       toast.success('Task added');
       router.refresh();
     } finally {
@@ -822,26 +831,35 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               </span>
             </div>
 
-            <form onSubmit={addTask} className="flex items-center gap-2">
-              <input
-                value={newTaskTitle}
-                onChange={(event) => setNewTaskTitle(event.target.value)}
-                placeholder={
-                  isViewingToday
-                    ? 'Add a task for today…'
-                    : 'Add a task for this day…'
-                }
-                className="h-9 min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30 focus:border-[var(--ozer-accent)]/60 focus:outline-none"
+            <form onSubmit={addTask} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  value={newTaskTitle}
+                  onChange={(event) => setNewTaskTitle(event.target.value)}
+                  placeholder={
+                    isViewingToday
+                      ? 'Add a task for today…'
+                      : 'Add a task for this day…'
+                  }
+                  className="h-9 min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30 focus:border-[var(--ozer-accent)]/60 focus:outline-none"
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!newTaskTitle.trim() || isAddingTask}
+                  className="h-9 shrink-0 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+              <TaskDurationFields
+                compact
+                idPrefix="planner-add-duration"
+                value={newTaskDurationMinutes}
+                onChange={setNewTaskDurationMinutes}
+                disabled={isAddingTask}
               />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!newTaskTitle.trim() || isAddingTask}
-                className="h-9 shrink-0 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </Button>
             </form>
 
             {tasks.length === 0 ? (
@@ -1113,7 +1131,7 @@ function TaskRow({
           >
             {task.title}
           </p>
-          {clientName || metaLabel ? (
+          {clientName || metaLabel || task.estimated_duration_minutes ? (
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
               {clientName ? (
                 <PlannerClientPill
@@ -1127,6 +1145,7 @@ function TaskRow({
                   {metaLabel}
                 </span>
               ) : null}
+              <TaskDurationMeta minutes={task.estimated_duration_minutes} />
             </div>
           ) : null}
           {task.notes?.trim() ? (

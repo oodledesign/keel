@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { createRecorderTask } from '~/lib/recorder/create-task';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 import { NativeHttpError } from './http';
 import {
@@ -39,7 +40,7 @@ export type { NativeTask } from './task-map';
 const TASK_LIST_LIMIT = 300;
 
 const TASK_SELECT =
-  'id, title, status, priority, due_date, account_id, user_id, assignee_contact_id, client_id';
+  'id, title, status, priority, due_date, duration_minutes, account_id, user_id, assignee_contact_id, client_id';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -244,6 +245,7 @@ export async function createNativeTask(input: {
   workspace: NativeWorkspace;
   title: string;
   due?: string | null;
+  durationMinutes?: number | null;
   clientId?: string | null;
   client: SupabaseClient;
 }) {
@@ -271,6 +273,7 @@ export async function createNativeTask(input: {
       accountId: input.workspace.id,
       title,
       dueDate: due,
+      durationMinutes: input.durationMinutes,
       clientId,
     });
   } catch (error) {
@@ -298,6 +301,7 @@ export async function updateNativeTask(input: {
   taskId: string;
   status?: string;
   due?: string | null;
+  durationMinutes?: number | null;
   title?: string;
   clientId?: string | null;
 }) {
@@ -339,6 +343,9 @@ export async function updateNativeTask(input: {
   }
   if (input.due !== undefined) {
     updates.due_date = parseDue(input.due);
+  }
+  if (input.durationMinutes !== undefined) {
+    updates.duration_minutes = clampDurationMinutes(input.durationMinutes);
   }
   if (input.clientId !== undefined) {
     const clientId = parseOptionalClientId(input.clientId);

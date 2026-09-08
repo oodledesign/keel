@@ -15,6 +15,7 @@ import {
 import { Badge } from '@kit/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 
 import { isCalendarOverdueYmd } from '../../_lib/due-date-ymd';
@@ -291,6 +292,7 @@ function TasksPanel({
                   {overdue ? ' · Overdue' : ''}
                 </span>
               ) : null}
+              <TaskDurationMeta minutes={task.durationMinutes} />
               <Badge
                 className="border-0 bg-amber-500/15 text-[11px] font-medium text-amber-300"
                 variant="outline"

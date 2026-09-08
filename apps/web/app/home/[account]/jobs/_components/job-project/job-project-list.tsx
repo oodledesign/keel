@@ -19,6 +19,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -125,6 +126,7 @@ function TaskRow({
             {task.title}
           </span>
         )}
+        <TaskDurationMeta minutes={task.duration_minutes} />
       </div>
 
       <div>

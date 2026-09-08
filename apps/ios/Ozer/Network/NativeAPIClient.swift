@@ -119,6 +119,7 @@ actor NativeAPIClient {
         title: String,
         due: String?,
         clientId: String?,
+        durationMinutes: Int? = nil,
         workspace: String,
         accessToken: String
     ) async throws -> TaskItem {
@@ -131,6 +132,9 @@ actor NativeAPIClient {
         }
         if let clientId, !clientId.isEmpty {
             body["client_id"] = clientId
+        }
+        if let durationMinutes = TaskItem.clampDurationMinutes(durationMinutes) {
+            body["duration_minutes"] = durationMinutes
         }
         let data = try await send(
             method: "POST",
@@ -153,6 +157,8 @@ actor NativeAPIClient {
         clearDue: Bool = false,
         clientId: String? = nil,
         clearClient: Bool = false,
+        durationMinutes: Int? = nil,
+        clearDuration: Bool = false,
         status: String? = nil,
         accessToken: String
     ) async throws -> TaskItem {
@@ -169,6 +175,11 @@ actor NativeAPIClient {
             body["client_id"] = NSNull()
         } else if let clientId {
             body["client_id"] = clientId
+        }
+        if clearDuration {
+            body["duration_minutes"] = NSNull()
+        } else if let durationMinutes = TaskItem.clampDurationMinutes(durationMinutes) {
+            body["duration_minutes"] = durationMinutes
         }
         if let status {
             body["status"] = status
@@ -978,16 +989,20 @@ struct TasksPayload: Codable, Equatable {
 }
 
 struct TaskItem: Codable, Identifiable, Equatable, Hashable {
+    static let maxDurationMinutes = 10_080
+
     var id: String
     var title: String
     var status: String?
     var due: String?
+    var durationMinutes: Int?
     var subtitle: String?
     var clientId: String?
     var clientName: String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, status, due, subtitle, name, description, body
+        case durationMinutes = "duration_minutes"
         case clientId = "client_id"
         case clientName = "client_name"
     }
@@ -997,6 +1012,7 @@ struct TaskItem: Codable, Identifiable, Equatable, Hashable {
         title: String,
         status: String? = nil,
         due: String?,
+        durationMinutes: Int? = nil,
         subtitle: String?,
         clientId: String? = nil,
         clientName: String? = nil
@@ -1005,6 +1021,7 @@ struct TaskItem: Codable, Identifiable, Equatable, Hashable {
         self.title = title
         self.status = status
         self.due = due
+        self.durationMinutes = Self.clampDurationMinutes(durationMinutes)
         self.subtitle = subtitle
         self.clientId = clientId
         self.clientName = clientName
@@ -1022,6 +1039,13 @@ struct TaskItem: Codable, Identifiable, Equatable, Hashable {
             ?? "Untitled"
         status = try container.decodeIfPresent(String.self, forKey: .status)
         due = try container.decodeIfPresent(String.self, forKey: .due)
+        if let value = try? container.decodeIfPresent(Int.self, forKey: .durationMinutes) {
+            durationMinutes = Self.clampDurationMinutes(value)
+        } else if let value = try? container.decodeIfPresent(Double.self, forKey: .durationMinutes) {
+            durationMinutes = Self.clampDurationMinutes(Int(value.rounded()))
+        } else {
+            durationMinutes = nil
+        }
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
             ?? container.decodeIfPresent(String.self, forKey: .description)
             ?? container.decodeIfPresent(String.self, forKey: .body)
@@ -1035,6 +1059,7 @@ struct TaskItem: Codable, Identifiable, Equatable, Hashable {
         try container.encode(title, forKey: .title)
         try container.encodeIfPresent(status, forKey: .status)
         try container.encodeIfPresent(due, forKey: .due)
+        try container.encodeIfPresent(durationMinutes, forKey: .durationMinutes)
         try container.encodeIfPresent(subtitle, forKey: .subtitle)
         try container.encodeIfPresent(clientId, forKey: .clientId)
         try container.encodeIfPresent(clientName, forKey: .clientName)
@@ -1060,20 +1085,51 @@ struct TaskItem: Codable, Identifiable, Equatable, Hashable {
         return calendar.startOfDay(for: dueDate) < calendar.startOfDay(for: Date())
     }
 
-    /// Due date plus client name when present.
+    var durationLabel: String? {
+        Self.formatDuration(durationMinutes)
+    }
+
+    /// Due date, compact duration, and client name when present.
     var displaySubtitle: String? {
         let dueText = Self.dueLabel(due)
+        let durationText = durationLabel
         let client = clientName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if let dueText, !client.isEmpty {
-            return "\(dueText) · \(client)"
-        }
-        if let dueText {
-            return dueText
-        }
-        if !client.isEmpty {
-            return client
+        var parts: [String] = []
+        if let dueText { parts.append(dueText) }
+        if let durationText { parts.append(durationText) }
+        if !client.isEmpty { parts.append(client) }
+        if !parts.isEmpty {
+            return parts.joined(separator: " · ")
         }
         return subtitle
+    }
+
+    static func clampDurationMinutes(_ value: Int?) -> Int? {
+        guard let value, value > 0, value <= maxDurationMinutes else { return nil }
+        return value
+    }
+
+    static func formatDuration(_ minutes: Int?) -> String? {
+        guard let minutes = clampDurationMinutes(minutes) else { return nil }
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours > 0, remainder > 0 {
+            return "\(hours)h \(remainder)m"
+        }
+        if hours > 0 {
+            return "\(hours)h"
+        }
+        return "\(remainder)m"
+    }
+
+    static func durationParts(from total: Int?) -> (hours: Int, minutes: Int) {
+        guard let total = clampDurationMinutes(total) else { return (0, 0) }
+        return (total / 60, total % 60)
+    }
+
+    static func combineDuration(hours: Int, minutes: Int) -> Int? {
+        guard hours >= 0, minutes >= 0 else { return nil }
+        return clampDurationMinutes(hours * 60 + minutes)
     }
 
     /// Calendar date only. Parse and format in UTC so the day does not shift.

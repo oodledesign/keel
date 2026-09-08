@@ -9,6 +9,7 @@ import { createTaskForUser } from '@kit/tasks/create-task';
 import type { Database } from '~/lib/database.types';
 import { addDaysYmd, clampDueDays } from '~/lib/invoices/invoice-due-date';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 export type TaskRecurrenceFrequency =
   | 'weekly'
@@ -31,6 +32,7 @@ export type TaskRecurringSeriesRow = {
   day_of_month: number | null;
   next_create_at: string;
   due_days: number;
+  duration_minutes: number | null;
   end_at: string | null;
   max_occurrences: number | null;
   occurrences_created: number;
@@ -108,6 +110,7 @@ export type CreateTaskRecurringSeriesInput = {
   firstCreateDate: string;
   dayOfMonth?: number | null;
   dueDays?: number;
+  durationMinutes?: number | null;
   endAt?: string | null;
   maxOccurrences?: number | null;
   /** Create the first task now when firstCreateDate is today or past. Default true. */
@@ -152,6 +155,7 @@ export async function createTaskRecurringSeries(
     title,
     priority: input.priority ?? 'medium',
     notes: input.notes?.trim() || null,
+    duration_minutes: clampDurationMinutes(input.durationMinutes),
     project_id: input.projectId ?? null,
     client_id: input.clientId ?? null,
     area_id: input.areaId ?? null,
@@ -192,6 +196,7 @@ export async function createTaskRecurringSeries(
       day_of_month: dayOfMonth,
       next_create_at: firstDate.toISOString(),
       due_days: dueDays,
+      duration_minutes: clampDurationMinutes(input.durationMinutes),
       end_at: input.endAt ?? null,
       max_occurrences: input.maxOccurrences ?? null,
       occurrences_created: 0,
@@ -240,6 +245,7 @@ async function spawnTaskFromSeries(
     areaId: series.area_id ?? undefined,
     accountId: series.account_id ?? undefined,
     notes: series.notes,
+    durationMinutes: series.duration_minutes,
     source: 'recurring',
     recurringSeriesId: series.id,
   });
@@ -277,6 +283,7 @@ export type UpdateTaskRecurringSeriesInput = {
   nextCreateDate?: string;
   dayOfMonth?: number | null;
   dueDays?: number;
+  durationMinutes?: number | null;
   status?: 'active' | 'paused' | 'ended';
   projectId?: string | null;
   clientId?: string | null;
@@ -314,6 +321,10 @@ export async function updateTaskRecurringSeries(
 
   if (input.dueDays !== undefined) {
     updates.due_days = clampDueDays(input.dueDays, 0);
+  }
+
+  if (input.durationMinutes !== undefined) {
+    updates.duration_minutes = clampDurationMinutes(input.durationMinutes);
   }
 
   if (input.status !== undefined) {
@@ -365,7 +376,7 @@ export async function updateTaskRecurringSeries(
     .eq('id', input.seriesId)
     .eq('user_id', user.id)
     .select(
-      'id, title, frequency, status, next_create_at, due_days, occurrences_created, account_id, priority, notes, day_of_month, project_id, client_id, area_id',
+      'id, title, frequency, status, next_create_at, due_days, duration_minutes, occurrences_created, account_id, priority, notes, day_of_month, project_id, client_id, area_id',
     )
     .single();
 
@@ -388,6 +399,10 @@ function mapSeriesListItem(
     nextCreateAt,
     nextCreateYmd: toDateOnlyIso(nextCreateAt),
     dueDays: Number(row.due_days ?? 0),
+    durationMinutes:
+      typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+        ? Math.round(row.duration_minutes)
+        : null,
     occurrencesCreated: Number(row.occurrences_created ?? 0),
     accountId: (row.account_id as string | null) ?? null,
     priority: String(row.priority ?? 'medium'),
@@ -407,6 +422,7 @@ export type TaskRecurringSeriesListItem = {
   nextCreateAt: string;
   nextCreateYmd: string;
   dueDays: number;
+  durationMinutes: number | null;
   occurrencesCreated: number;
   accountId: string | null;
   priority: string;
@@ -426,7 +442,7 @@ export async function listTaskRecurringSeriesForUser(): Promise<
 
   const { data, error } = await seriesTable(client)
     .select(
-      'id, title, frequency, status, next_create_at, due_days, occurrences_created, account_id, priority, notes, day_of_month, project_id, client_id, area_id',
+      'id, title, frequency, status, next_create_at, due_days, duration_minutes, occurrences_created, account_id, priority, notes, day_of_month, project_id, client_id, area_id',
     )
     .eq('user_id', user.id)
     .in('status', ['active', 'paused'])

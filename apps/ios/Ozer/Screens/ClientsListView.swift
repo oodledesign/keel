@@ -351,11 +351,10 @@ struct ClientDetailView: View {
                                     .font(.body.weight(.medium))
                                     .foregroundStyle(OzerPalette.plum)
                                     .strikethrough(item.isCompleted || completingIds.contains(item.id))
-                                if let subtitle = item.displaySubtitle {
-                                    Text(subtitle)
-                                        .font(.subheadline)
-                                        .foregroundStyle(OzerPalette.plumMuted)
-                                }
+                                TaskDueClientSubtitle(
+                                    item: item,
+                                    treatAsCompleted: completingIds.contains(item.id)
+                                )
                             }
                         }
                         .padding(16)

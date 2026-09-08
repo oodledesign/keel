@@ -23,6 +23,13 @@ const CreateTaskBodySchema = z.object({
     .nullable(),
   workspace: z.string().min(1),
   client_id: z.string().uuid().optional().nullable(),
+  duration_minutes: z
+    .number()
+    .int()
+    .positive()
+    .max(10080)
+    .optional()
+    .nullable(),
 });
 
 export async function GET(request: Request) {
@@ -77,6 +84,7 @@ export async function POST(request: Request) {
       workspace,
       title: parsed.data.title,
       due: parsed.data.due,
+      durationMinutes: parsed.data.duration_minutes,
       clientId: parsed.data.client_id,
       client: auth.context.supabase,
     });

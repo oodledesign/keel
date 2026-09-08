@@ -126,6 +126,7 @@ export type DashboardSuggestedEmailTask = {
   title: string;
   detail: string | null;
   suggestedDueDate: string | null;
+  suggestedDurationMinutes: number | null;
   threadId: string;
   threadSubject: string;
   emailSentAt: string | null;
@@ -143,6 +144,7 @@ export type DashboardMeetingReviewItem = {
   suggestedTitle: string;
   meetingTitle: string;
   suggestedDueDate: string | null;
+  suggestedDurationMinutes: number | null;
   suggestedAssigneeId: string | null;
   clientName: string | null;
   clientPictureUrl: string | null;
@@ -373,6 +375,7 @@ async function loadDashboardPageDataImpl(
         id,
         suggested_title,
         suggested_due_date,
+        suggested_duration_minutes,
         suggested_assignee_id,
         meeting_transcripts:meeting_transcript_id (
           title,
@@ -762,6 +765,11 @@ async function loadDashboardPageDataImpl(
         suggestedDueDate: toIsoDateString(
           row.suggested_due_date as string | null | undefined,
         ),
+        suggestedDurationMinutes:
+          typeof row.suggested_duration_minutes === 'number' &&
+          row.suggested_duration_minutes > 0
+            ? Math.round(row.suggested_duration_minutes)
+            : null,
         suggestedAssigneeId:
           (row.suggested_assignee_id as string | null | undefined) ?? null,
         clientName,
@@ -812,6 +820,7 @@ async function loadDashboardPageDataImpl(
       title: item.title,
       detail: item.detail,
       suggestedDueDate: toIsoDateString(item.suggestedDueDate),
+      suggestedDurationMinutes: item.suggestedDurationMinutes,
       threadId: item.threadId,
       threadSubject: item.threadSubject,
       emailSentAt: item.emailSentAt,

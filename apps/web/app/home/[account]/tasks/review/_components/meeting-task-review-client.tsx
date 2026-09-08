@@ -33,6 +33,7 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
@@ -63,6 +64,7 @@ type ItemDraft = {
   title: string;
   description: string;
   dueDate: string;
+  durationMinutes: number | null;
   assigneeId: string;
 };
 
@@ -110,6 +112,7 @@ function buildDraft(item: MeetingReviewItem): ItemDraft {
     title: item.suggestedTitle,
     description: item.suggestedDescription ?? '',
     dueDate: item.suggestedDueDate ?? '',
+    durationMinutes: item.suggestedDurationMinutes,
     assigneeId: item.suggestedAssigneeId ?? '',
   };
 }
@@ -218,6 +221,7 @@ export function MeetingTaskReviewClient({
           title: draft.title.trim(),
           description: draft.description.trim() || null,
           dueDate: draft.dueDate.trim() || null,
+          durationMinutes: draft.durationMinutes,
         });
         toast.success(
           edited
@@ -513,6 +517,14 @@ export function MeetingTaskReviewClient({
                           })
                         }
                         className="h-9 max-w-[180px] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
+                      />
+                      <TaskDurationFields
+                        value={draft.durationMinutes}
+                        onChange={(next) =>
+                          updateDraft(item.id, { durationMinutes: next })
+                        }
+                        idPrefix={`review-duration-${item.id}`}
+                        compact
                       />
                     </div>
 

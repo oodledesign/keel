@@ -27,6 +27,7 @@ import {
 } from '@kit/ui/select';
 import { Switch } from '@kit/ui/switch';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 import { createClient } from '~/home/[account]/clients/_lib/server/server-actions';
 import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
@@ -115,6 +116,7 @@ export function AddTaskDialog({
   const formRef = useRef<HTMLFormElement>(null);
 
   const [priority, setPriority] = useState('medium');
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [assignTo, setAssignTo] = useState('none');
   const [repeat, setRepeat] = useState(false);
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
@@ -291,6 +293,7 @@ export function AddTaskDialog({
         title,
         priority,
         dueDate: repeat ? undefined : dueDate || undefined,
+        durationMinutes: durationMinutes ?? undefined,
         projectId: selected?.type === 'project' ? selected.id : undefined,
         areaId: selected?.type === 'area' ? selected.id : undefined,
         clientId: selected?.type === 'client' ? selected.id : undefined,
@@ -314,6 +317,7 @@ export function AddTaskDialog({
 
       setOpen(false);
       setPriority('medium');
+      setDurationMinutes(null);
       setAssignTo('none');
       setRepeat(false);
       formRef.current?.reset();
@@ -438,6 +442,13 @@ export function AddTaskDialog({
               </div>
             )}
           </div>
+
+          <TaskDurationFields
+            value={durationMinutes}
+            onChange={setDurationMinutes}
+            disabled={isPending}
+            idPrefix="add-task-duration"
+          />
 
           <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/50 p-3">
             <div className="flex items-center justify-between gap-3">

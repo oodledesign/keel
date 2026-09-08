@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
+
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
   JobBoardResult,
@@ -151,6 +153,7 @@ function ProgressTaskCard({
                 {formatShortDate(task.due_date)}
               </span>
             ) : null}
+            <TaskDurationMeta minutes={task.duration_minutes} />
             {assignee ? (
               <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {assignee.name ?? assignee.email ?? 'Assigned'}

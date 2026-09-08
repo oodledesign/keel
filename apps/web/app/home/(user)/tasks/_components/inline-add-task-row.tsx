@@ -8,6 +8,8 @@ import { Plus } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
+
 import { createTask } from '../../_lib/actions/task-actions';
 
 type InlineAddTaskRowProps = {
@@ -24,6 +26,7 @@ export function InlineAddTaskRow({
   const router = useRouter();
   const [active, setActive] = useState(false);
   const [title, setTitle] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -37,11 +40,13 @@ export function InlineAddTaskRow({
       const result = await createTask({
         title: trimmed,
         priority,
+        durationMinutes: durationMinutes ?? undefined,
         clientId: clientId ?? undefined,
         accountId: workspaceAccountId,
       });
       if (result.success) {
         setTitle('');
+        setDurationMinutes(null);
         setActive(false);
         router.refresh();
       } else {
@@ -94,6 +99,13 @@ export function InlineAddTaskRow({
             placeholder="Task name, press Enter to save"
             className="h-11 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[var(--ozer-accent)]/50 focus:ring-1 focus:ring-[var(--ozer-accent)]/30 focus:outline-none"
             aria-label="New task title"
+          />
+          <TaskDurationFields
+            value={durationMinutes}
+            onChange={setDurationMinutes}
+            disabled={isPending}
+            idPrefix="inline-add-duration"
+            compact
           />
           {error ? (
             <p className="text-xs text-rose-300/90">{error}</p>

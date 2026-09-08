@@ -35,6 +35,7 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
 
@@ -78,6 +79,7 @@ export function JobProjectTaskSheet({
   const [status, setStatus] = useState('todo');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [links, setLinks] = useState<TaskLinkDraft[]>([]);
   const [noteRefs, setNoteRefs] = useState<NoteRefDraft[]>([]);
@@ -94,6 +96,7 @@ export function JobProjectTaskSheet({
     setStatus(task.status || 'todo');
     setPriority(task.priority || 'medium');
     setDueDate(task.due_date ?? '');
+    setDurationMinutes(task.duration_minutes);
     setNotes(task.notes ?? '');
     setLinks(
       (task.links ?? []).map((link) => ({
@@ -196,6 +199,7 @@ export function JobProjectTaskSheet({
             | 'cancelled',
           priority: priority as 'low' | 'medium' | 'high' | 'urgent',
           dueDate: dueDate ? new Date(dueDate) : null,
+          durationMinutes,
           notes: notes.trim() || null,
           links: nextLinks,
           noteRefs,
@@ -315,6 +319,13 @@ export function JobProjectTaskSheet({
                 className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
               />
             </div>
+
+            <TaskDurationFields
+              value={durationMinutes}
+              onChange={setDurationMinutes}
+              disabled={!canEditJobs || pending}
+              idPrefix="job-task-duration"
+            />
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">

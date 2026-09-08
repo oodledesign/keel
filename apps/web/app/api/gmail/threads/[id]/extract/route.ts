@@ -220,6 +220,7 @@ export async function POST(request: Request, context: RouteContext) {
     title: item.title,
     detail: item.detail,
     suggested_due_date: item.suggestedDueDate,
+    suggested_duration_minutes: item.suggestedDurationMinutes,
     source_excerpt: item.sourceExcerpt,
     assignee_confidence: item.assigneeConfidence,
     suggested_assignee_id: resolveSuggestedAssigneeId(

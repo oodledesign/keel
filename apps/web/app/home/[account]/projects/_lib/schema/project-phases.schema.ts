@@ -20,7 +20,10 @@ const optionalNullableDate = z.preprocess(
   (value) => (value == null || value === '' ? null : value),
   z.union([z.null(), z.coerce.date()]).optional(),
 );
-const optionalNullableInt = z.number().int().nullable().optional();
+const optionalDurationMinutes = z.preprocess(
+  (value) => (value == null || value === '' ? null : value),
+  z.number().int().positive().max(10080).nullable().optional(),
+);
 
 const accountJobFields = {
   accountId: z.string().uuid(),
@@ -106,13 +109,18 @@ export const CreateJobTaskSchema = z.object({
   ...accountJobSlugFields,
   phaseId: z.string().uuid().nullable(),
   title: z.string().min(1).max(500),
-  status: taskStatus.optional().default('todo'),
-  priority: taskPriority.optional().default('medium'),
+  status: taskStatus.optional(),
+  priority: taskPriority.optional(),
   assigneeUserId: z.string().uuid().optional(),
   dueDate: optionalNullableDate,
+  durationMinutes: optionalDurationMinutes,
   sortOrder: z.number().int().min(0).optional(),
   parentTaskId: z.string().uuid().nullable().optional(),
   subtaskTitles: z.array(z.string().trim().min(1).max(500)).max(25).optional(),
+  subtaskDurations: z
+    .array(z.number().int().positive().max(10080).nullable())
+    .max(25)
+    .optional(),
 });
 
 export const TaskLinkSchema = z.object({
@@ -136,6 +144,7 @@ export const UpdateJobTaskSchema = z.object({
   assigneeUserId: z.string().uuid().nullable().optional(),
   assigneeContactId: z.string().uuid().nullable().optional(),
   dueDate: optionalNullableDate,
+  durationMinutes: optionalDurationMinutes,
   notes: z.string().max(20000).nullable().optional(),
   links: z.array(TaskLinkSchema).max(20).optional(),
   noteRefs: z.array(TaskNoteRefSchema).max(30).optional(),
@@ -286,6 +295,7 @@ export type JobBoardTask = {
   status: string;
   priority: string;
   due_date: string | null;
+  duration_minutes: number | null;
   sort_order: number | null;
   phase_id: string | null;
   job_id: string | null;

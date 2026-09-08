@@ -54,6 +54,7 @@ const reviewItemSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
+  durationMinutes: z.number().int().positive().max(10080).nullable().optional(),
 });
 
 export const approveMeetingActionItem = enhanceAction(
@@ -70,6 +71,7 @@ export const approveMeetingActionItem = enhanceAction(
       title: input.title,
       description: input.description,
       dueDate: input.dueDate,
+      durationMinutes: input.durationMinutes,
     });
 
     revalidateReviewPages(input.accountSlug);
@@ -131,7 +133,7 @@ export const bulkApproveHighConfidenceMeetingItems = enhanceAction(
     const { data: rows, error } = await client
       .from('meeting_action_items')
       .select(
-        'id, suggested_title, suggested_description, suggested_due_date, assignee_confidence, suggested_assignee_id',
+        'id, suggested_title, suggested_description, suggested_due_date, suggested_duration_minutes, assignee_confidence, suggested_assignee_id',
       )
       .eq('account_id', input.accountId)
       .eq('status', 'pending_review');
@@ -152,6 +154,7 @@ export const bulkApproveHighConfidenceMeetingItems = enhanceAction(
       suggested_title: string;
       suggested_description: string | null;
       suggested_due_date: string | null;
+      suggested_duration_minutes: number | null;
       suggested_assignee_id: string;
     }>;
 
@@ -171,6 +174,7 @@ export const bulkApproveHighConfidenceMeetingItems = enhanceAction(
         title: item.suggested_title,
         description: item.suggested_description,
         dueDate: item.suggested_due_date,
+        durationMinutes: item.suggested_duration_minutes,
       });
       plannerTaskIds.push(result.plannerTaskId);
     }

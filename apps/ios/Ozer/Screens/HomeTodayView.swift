@@ -332,7 +332,7 @@ struct HomeTodayView: View {
                     } label: {
                         compactRow(
                             title: item.title,
-                            subtitle: TaskItem.dueLabel(item.due),
+                            subtitle: homeTaskSubtitle(item),
                             highlight: item.showsOverdueDueDate
                         )
                     }
@@ -429,6 +429,13 @@ struct HomeTodayView: View {
                 }
             }
         }
+    }
+
+    private func homeTaskSubtitle(_ item: TaskItem) -> String? {
+        let text = [TaskItem.dueLabel(item.due), item.durationLabel]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+        return text.isEmpty ? nil : text
     }
 
     private func compactRow(title: String, subtitle: String?, highlight: Bool = false) -> some View {

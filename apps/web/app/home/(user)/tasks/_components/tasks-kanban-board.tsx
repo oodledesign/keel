@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/core';
 import { AlertTriangle, Flame, User } from 'lucide-react';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import {
   isAssignedToSomeoneElse,
   taskAssigneeDisplayName,
@@ -202,6 +203,7 @@ function BoardCard({
             </span>
           )}
           {!overdue && task.dueDateLabel && <span>{task.dueDateLabel}</span>}
+          <TaskDurationMeta minutes={task.durationMinutes} />
           {task.priority !== 'low' && task.priority !== 'medium' && (
             <span
               className={`flex items-center gap-0.5 font-medium ${priorityCfg.className}`}

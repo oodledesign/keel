@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendSignature } from './signature';
 import { parseExtractResponse, stripJsonFences } from './json';
+import { appendSignature } from './signature';
 
 describe('email-assistant json', () => {
   it('strips markdown fences before parsing', () => {
@@ -14,6 +14,7 @@ describe('email-assistant json', () => {
         title: 'Send quote',
         detail: 'By Friday',
         suggestedDueDate: '2026-06-13',
+        suggestedDurationMinutes: null,
         sourceExcerpt: 'Please send the quote by Friday',
         assigneeConfidence: 0.9,
         suggestedAssigneeEmail: 'dan@example.com',
@@ -35,6 +36,7 @@ describe('email-assistant json', () => {
         title: 'Follow up',
         detail: null,
         suggestedDueDate: null,
+        suggestedDurationMinutes: null,
         sourceExcerpt: 'I will follow up tomorrow',
         assigneeConfidence: 0.8,
         suggestedAssigneeEmail: null,
@@ -49,6 +51,18 @@ describe('email-assistant json', () => {
     );
 
     expect(parsed[0]?.sourceExcerpt?.length).toBeLessThanOrEqual(200);
+  });
+
+  it('parses mentioned durations and leaves others null', () => {
+    const parsed = parseExtractResponse(
+      '{"items":[{"title":"Prep deck","suggested_duration_minutes":30},{"title":"Workshop","suggested_duration_minutes":"2 hours"},{"title":"Call","suggested_duration_minutes":null}]}',
+    );
+
+    expect(parsed.map((item) => item.suggestedDurationMinutes)).toEqual([
+      30,
+      120,
+      null,
+    ]);
   });
 });
 

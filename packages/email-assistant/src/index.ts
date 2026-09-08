@@ -5,6 +5,7 @@ export { detectPipelineLead } from './detect-lead';
 export { extract } from './extract';
 export { appendSignature, draft } from './draft';
 export {
+  normalizeDurationMinutes,
   parseClassifyResponse,
   parseDetectPipelineLeadResponse,
   parseExtractResponse,

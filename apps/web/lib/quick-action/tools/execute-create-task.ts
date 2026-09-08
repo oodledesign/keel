@@ -23,6 +23,7 @@ export async function executeCreateTask(
     title: data.title,
     notes: data.notes,
     dueDate: data.dueDate ?? undefined,
+    durationMinutes: data.durationMinutes ?? undefined,
     priority: data.priority,
     projectId: data.projectId ?? undefined,
     clientId: data.clientId ?? undefined,

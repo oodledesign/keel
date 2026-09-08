@@ -35,9 +35,11 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
 import {
   parsePersonAssigneeSelectValue,
@@ -93,6 +95,7 @@ export function JobProjectTaskSheet({
   const [status, setStatus] = useState('todo');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [personAssignee, setPersonAssignee] = useState('__none__');
   const [personOptions, setPersonOptions] = useState<
@@ -105,6 +108,9 @@ export function JobProjectTaskSheet({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskDurationMinutes, setNewSubtaskDurationMinutes] = useState<
+    number | null
+  >(null);
   const [pending, startTransition] = useTransition();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -114,6 +120,7 @@ export function JobProjectTaskSheet({
     setStatus(task.status || 'todo');
     setPriority(task.priority || 'medium');
     setDueDate(task.due_date ?? '');
+    setDurationMinutes(task.duration_minutes);
     setNotes(task.notes ?? '');
     setPersonAssignee(
       task.assignee_contact_id
@@ -246,6 +253,7 @@ export function JobProjectTaskSheet({
             | 'cancelled',
           priority: priority as 'low' | 'medium' | 'high' | 'urgent',
           dueDate: dueDate ? new Date(`${dueDate}T12:00:00`) : null,
+          durationMinutes,
           notes: notes.trim() || null,
           links: nextLinks,
           noteRefs,
@@ -385,6 +393,13 @@ export function JobProjectTaskSheet({
               />
             </div>
 
+            <TaskDurationFields
+              value={durationMinutes}
+              onChange={setDurationMinutes}
+              disabled={!canEditJobs || pending}
+              idPrefix="job-task-duration"
+            />
+
             {!task.parent_task_id ? (
               <div className="space-y-2">
                 <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -399,6 +414,11 @@ export function JobProjectTaskSheet({
                       >
                         {subtask.status === 'done' ? '✓ ' : ''}
                         {subtask.title}
+                        {formatDurationMinutes(subtask.duration_minutes) ? (
+                          <span className="ml-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                            {formatDurationMinutes(subtask.duration_minutes)}
+                          </span>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -409,7 +429,7 @@ export function JobProjectTaskSheet({
                 )}
                 {canEditJobs ? (
                   <form
-                    className="flex gap-1"
+                    className="flex flex-wrap items-center gap-1"
                     onSubmit={(e) => {
                       e.preventDefault();
                       const trimmed = newSubtaskTitle.trim();
@@ -423,9 +443,11 @@ export function JobProjectTaskSheet({
                             phaseId: task.phase_id,
                             title: trimmed,
                             priority: 'medium',
+                            durationMinutes: newSubtaskDurationMinutes,
                             parentTaskId: task.id,
                           });
                           setNewSubtaskTitle('');
+                          setNewSubtaskDurationMinutes(null);
                           onSubtaskCreated?.(created as JobBoardTask);
                         } catch (err) {
                           toast.error(getErrorMessage(err));
@@ -438,7 +460,14 @@ export function JobProjectTaskSheet({
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       placeholder="New subtask title"
                       disabled={pending}
-                      className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm"
+                      className="h-8 min-w-[8rem] flex-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm"
+                    />
+                    <TaskDurationFields
+                      value={newSubtaskDurationMinutes}
+                      onChange={setNewSubtaskDurationMinutes}
+                      disabled={pending}
+                      idPrefix="job-new-subtask-duration"
+                      compact
                     />
                     <Button
                       type="submit"

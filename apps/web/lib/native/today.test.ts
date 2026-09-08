@@ -61,6 +61,7 @@ function nativeTask(
     title: overrides.title ?? overrides.id,
     status: overrides.status ?? 'pending',
     due: overrides.due ?? null,
+    duration_minutes: overrides.duration_minutes ?? null,
     workspace: overrides.workspace ?? 'oodle',
     client_id: overrides.client_id ?? null,
     client_name: overrides.client_name ?? null,

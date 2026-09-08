@@ -16,6 +16,7 @@ export function plannerTaskToPageTask(task: PlannerTask): TasksPageTask {
     priority: task.priority,
     dueDateLabel: task.dueDateLabel,
     dueDate: task.due_date,
+    durationMinutes: task.estimated_duration_minutes,
     accentColor: task.accentColor,
     clientId: task.clientId,
     projectId: task.projectId,

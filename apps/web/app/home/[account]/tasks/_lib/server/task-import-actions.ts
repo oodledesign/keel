@@ -18,6 +18,7 @@ import {
   applyCsvColumnMapping,
 } from '~/lib/csv/rows-to-records';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { parseDurationMinutes } from '~/lib/tasks/task-duration';
 
 const mappingSchema = z.record(z.string(), z.string());
 
@@ -43,6 +44,13 @@ const commitSchema = z.object({
         title: z.string().min(1),
         notes: z.string().nullable().optional(),
         dueDate: z.string().nullable().optional(),
+        durationMinutes: z
+          .number()
+          .int()
+          .positive()
+          .max(10080)
+          .nullable()
+          .optional(),
         priority: z.string().optional(),
         status: z.string().optional(),
         clientId: z.string().uuid().nullable().optional(),
@@ -76,6 +84,7 @@ export type TaskImportDraft = {
   title: string;
   notes: string | null;
   dueDate: string | null;
+  durationMinutes: number | null;
   priority: string;
   status: string;
   clientName: string | null;
@@ -125,11 +134,18 @@ export const previewTaskImportAction = enhanceAction(
       const projectName = emptyToNull(record.project_name);
       const dueRaw = emptyToNull(record.due_date);
       const dueDate = dueRaw ? parseUkDate(dueRaw) : null;
+      const durationRaw = emptyToNull(record.duration_minutes);
+      const durationMinutes = durationRaw
+        ? parseDurationMinutes(durationRaw)
+        : null;
       const errors: string[] = [];
       const warnings: string[] = [];
 
       if (!title) errors.push('Title is required');
       if (dueRaw && !dueDate) warnings.push('Could not parse due date');
+      if (durationRaw && durationMinutes == null) {
+        warnings.push('Could not parse duration');
+      }
 
       const clientId = mapNameToId(clientName, clients);
       const projectId = mapNameToId(projectName, projects);
@@ -145,6 +161,7 @@ export const previewTaskImportAction = enhanceAction(
         title,
         notes: emptyToNull(record.notes),
         dueDate,
+        durationMinutes,
         priority: emptyToNull(record.priority) ?? 'medium',
         status: emptyToNull(record.status) ?? 'todo',
         clientName,
@@ -181,6 +198,7 @@ export const commitTaskImportAction = enhanceAction(
           title: task.title,
           notes: task.notes ?? null,
           dueDate: task.dueDate ?? undefined,
+          durationMinutes: task.durationMinutes ?? undefined,
           priority: task.priority as 'low' | 'medium' | 'high' | 'urgent',
           status: task.status as
             | 'todo'

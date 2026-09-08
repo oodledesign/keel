@@ -24,13 +24,21 @@ const PatchTaskBodySchema = z
       .optional(),
     title: z.string().min(1).optional(),
     client_id: z.string().uuid().nullable().optional(),
+    duration_minutes: z
+      .number()
+      .int()
+      .positive()
+      .max(10080)
+      .nullable()
+      .optional(),
   })
   .refine(
     (value) =>
       value.status !== undefined ||
       value.due !== undefined ||
       value.title !== undefined ||
-      value.client_id !== undefined,
+      value.client_id !== undefined ||
+      value.duration_minutes !== undefined,
     { message: 'No task fields to update' },
   );
 
@@ -84,6 +92,7 @@ export async function PATCH(
       taskId: id,
       status: parsed.data.status,
       due: parsed.data.due,
+      durationMinutes: parsed.data.duration_minutes,
       title: parsed.data.title,
       clientId: parsed.data.client_id,
     });

@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTaskForUser } from '@kit/tasks/create-task';
 
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
 import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
 
@@ -92,6 +93,8 @@ export type CreateTaskInput = {
     jobId?: string | null;
   };
   notes?: string | null;
+  /** Optional estimated effort in minutes. */
+  durationMinutes?: number | null;
   /** Team workspace when creating from a business context without project/client. */
   accountId?: string;
   /** Team member assignee (defaults to current user). */
@@ -120,6 +123,7 @@ export async function createTask(input: CreateTaskInput) {
         title: input.title,
         priority: normalizeTaskPriorityForDb(input.priority),
         notes: input.notes,
+        durationMinutes: input.durationMinutes,
         projectId: input.projectId,
         areaId: input.areaId,
         clientId: input.clientId,
@@ -167,6 +171,7 @@ export async function createTask(input: CreateTaskInput) {
     parentTaskContext: input.parentTaskContext,
     accountId: input.accountId,
     notes: input.notes,
+    durationMinutes: input.durationMinutes,
     assigneeUserId: input.assigneeUserId,
     assigneeContactId: input.assigneeContactId,
   });
@@ -203,6 +208,7 @@ export async function updateTaskRecurringSeriesAction(input: {
   nextCreateDate: string;
   dayOfMonth?: number | null;
   dueDays?: number;
+  durationMinutes?: number | null;
   status?: 'active' | 'paused' | 'ended';
   assignment?: TaskAssignmentUpdate;
 }) {
@@ -257,6 +263,7 @@ export async function updateTaskRecurringSeriesAction(input: {
       nextCreateDate: input.nextCreateDate,
       dayOfMonth: input.dayOfMonth,
       dueDays: input.dueDays,
+      durationMinutes: input.durationMinutes,
       status: input.status,
       projectId,
       clientId,
@@ -316,6 +323,7 @@ export type UpdateTaskInput = {
   priority?: string;
   status?: string;
   dueDate?: string | null;
+  durationMinutes?: number | null;
   notes?: string | null;
   /** Attached workspace notes `[{ id, title }]`. */
   noteRefs?: Array<{ id: string; title: string }>;
@@ -338,6 +346,9 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
   }
   if (input.status !== undefined) updates.status = uiStatusToDb(input.status);
   if (input.dueDate !== undefined) updates.due_date = input.dueDate || null;
+  if (input.durationMinutes !== undefined) {
+    updates.duration_minutes = clampDurationMinutes(input.durationMinutes);
+  }
   if (input.notes !== undefined) updates.notes = input.notes?.trim() || null;
   if (input.noteRefs !== undefined) {
     const uniqueIds = [...new Set(input.noteRefs.map((ref) => ref.id))];

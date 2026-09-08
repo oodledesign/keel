@@ -10,6 +10,7 @@ export type SuggestedEmailTaskItem = {
   title: string;
   detail: string | null;
   suggestedDueDate: string | null;
+  suggestedDurationMinutes: number | null;
   threadId: string;
   threadSubject: string;
   createdAt: string;
@@ -36,6 +37,7 @@ export async function loadSuggestedEmailActionItems(
       title,
       detail,
       suggested_due_date,
+      suggested_duration_minutes,
       thread_id,
       created_at,
       message_id,
@@ -149,6 +151,11 @@ export async function loadSuggestedEmailActionItems(
       title: ((row.title as string | null) ?? 'Task').trim() || 'Task',
       detail: (row.detail as string | null)?.trim() || null,
       suggestedDueDate: (row.suggested_due_date as string | null) ?? null,
+      suggestedDurationMinutes:
+        typeof row.suggested_duration_minutes === 'number' &&
+        row.suggested_duration_minutes > 0
+          ? Math.round(row.suggested_duration_minutes)
+          : null,
       threadId: row.thread_id as string,
       threadSubject:
         (typeof thread?.subject === 'string' ? thread.subject.trim() : '') ||

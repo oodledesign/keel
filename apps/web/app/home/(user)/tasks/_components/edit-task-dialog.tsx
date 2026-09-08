@@ -44,6 +44,7 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
 import pathsConfig from '~/config/paths.config';
 import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
@@ -174,6 +175,9 @@ function SubtaskEditorRow({
   const [draftTitle, setDraftTitle] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(
+    subtask.durationMinutes,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const { isDone, setOptimisticDone } = useOptimisticDone(
     subtask.status === 'completed',
@@ -220,6 +224,24 @@ function SubtaskEditorRow({
       onChange({ ...subtask, title: trimmed });
     }
   }, [onChange, subtask, title]);
+
+  const saveDuration = useCallback(
+    async (next: number | null) => {
+      setDurationMinutes(next);
+      if (next === subtask.durationMinutes) {
+        return;
+      }
+      setBusy(true);
+      const result = await updateTask(subtask.id, { durationMinutes: next });
+      setBusy(false);
+      if (result.success) {
+        onChange({ ...subtask, durationMinutes: next });
+      } else {
+        setDurationMinutes(subtask.durationMinutes);
+      }
+    },
+    [onChange, subtask],
+  );
 
   const handleDelete = useCallback(async () => {
     setBusy(true);
@@ -287,6 +309,13 @@ function SubtaskEditorRow({
           {subtask.title}
         </button>
       )}
+      <TaskDurationFields
+        value={durationMinutes}
+        onChange={(next) => void saveDuration(next)}
+        disabled={disabled || busy}
+        idPrefix={`subtask-duration-${subtask.id}`}
+        compact
+      />
       <button
         type="button"
         disabled={disabled || busy}
@@ -318,6 +347,9 @@ export function EditTaskDialog({
   const [priority, setPriority] = useState(task.priority);
   const [status, setStatus] = useState(task.status);
   const [dueDate, setDueDate] = useState(task.dueDate ?? '');
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(
+    task.durationMinutes,
+  );
   const [notes, setNotes] = useState(task.notes ?? '');
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
@@ -330,6 +362,9 @@ export function EditTaskDialog({
   >([]);
   const [personOptionsLoading, setPersonOptionsLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskDurationMinutes, setNewSubtaskDurationMinutes] = useState<
+    number | null
+  >(null);
   const [subtaskAdding, setSubtaskAdding] = useState(false);
   const [subtasks, setSubtasks] = useState<TasksPageTask[]>(
     task.subtasks ?? [],
@@ -446,6 +481,7 @@ export function EditTaskDialog({
       setPriority(task.priority);
       setStatus(task.status);
       setDueDate(task.dueDate ?? '');
+      setDurationMinutes(task.durationMinutes);
       setNotes(task.notes ?? '');
       setNoteRefs(task.noteRefs ?? []);
       setAssignTo(initialAssignTo(task));
@@ -453,6 +489,7 @@ export function EditTaskDialog({
       setError(null);
       setDeleteDialogOpen(false);
       setNewSubtaskTitle('');
+      setNewSubtaskDurationMinutes(null);
       setRepeat(false);
       setRepeatOpen(false);
       setPickerOpen(false);
@@ -545,6 +582,7 @@ export function EditTaskDialog({
       const result = await createTask({
         title: trimmed,
         priority: 'medium',
+        durationMinutes: newSubtaskDurationMinutes ?? undefined,
         parentTaskId: task.id,
         parentTaskContext: {
           projectId: task.projectId,
@@ -560,6 +598,7 @@ export function EditTaskDialog({
         return;
       }
       setNewSubtaskTitle('');
+      setNewSubtaskDurationMinutes(null);
       onSaved?.();
       await refreshSubtasks();
       router.refresh();
@@ -617,6 +656,7 @@ export function EditTaskDialog({
         priority,
         status,
         dueDate: dueDate || null,
+        durationMinutes,
         notes: notes.trim() || null,
         noteRefs: canAttachNotes ? noteRefs : undefined,
         assignment,
@@ -865,6 +905,12 @@ export function EditTaskDialog({
                   </button>
                 ) : null}
               </div>
+              <TaskDurationFields
+                value={durationMinutes}
+                onChange={setDurationMinutes}
+                disabled={isPending || isDeleting}
+                idPrefix="edit-task-duration"
+              />
             </div>
 
             {!task.recurringSeriesId && repeatOpen ? (
@@ -1227,7 +1273,7 @@ export function EditTaskDialog({
                   </div>
                 ) : null}
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                   <Input
                     id="new-subtask"
                     value={newSubtaskTitle}
@@ -1240,6 +1286,13 @@ export function EditTaskDialog({
                     }}
                     placeholder="New subtask title"
                     className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] sm:flex-1"
+                  />
+                  <TaskDurationFields
+                    value={newSubtaskDurationMinutes}
+                    onChange={setNewSubtaskDurationMinutes}
+                    disabled={subtaskAdding || isDeleting}
+                    idPrefix="new-subtask-duration"
+                    compact
                   />
                   <Button
                     type="button"

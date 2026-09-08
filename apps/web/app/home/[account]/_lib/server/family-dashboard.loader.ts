@@ -7,8 +7,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   isCalendarOverdueYmd,
   parseDueDateParts,
-  todayLocalYmd,
   toIsoDateString,
+  todayLocalYmd,
 } from '~/home/_lib/due-date-ymd';
 
 import type { GroupMember } from './group-dashboard.loader';
@@ -25,6 +25,7 @@ export type FamilyUpcomingTask = {
   title: string;
   dueDate: string | null;
   dueLabel: string;
+  durationMinutes: number | null;
   assignee: FamilyTaskAssignee | null;
   planName: string | null;
 };
@@ -83,7 +84,11 @@ function formatDueLabel(due: string | null): string {
   const p = parseDueDateParts(due);
   if (!p) return due;
   const d = new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0);
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
 }
 
 function startOfWeekMondayYmd(ref = todayLocalYmd()): string {
@@ -157,7 +162,7 @@ export const loadFamilyDashboardData = cache(
         const { data: taskRows } = await client
           .from('tasks')
           .select(
-            'id, title, status, due_date, project_id, user_id',
+            'id, title, status, due_date, duration_minutes, project_id, user_id',
           )
           .in('project_id', projectIds)
           .is('parent_task_id', null)
@@ -168,6 +173,7 @@ export const loadFamilyDashboardData = cache(
           id: string;
           title?: string | null;
           due_date?: string | null;
+          duration_minutes?: number | null;
           project_id?: string | null;
           user_id?: string | null;
         }>;
@@ -197,6 +203,10 @@ export const loadFamilyDashboardData = cache(
               title: t.title ?? 'Untitled task',
               dueDate: due,
               dueLabel: formatDueLabel(due),
+              durationMinutes:
+                typeof t.duration_minutes === 'number' && t.duration_minutes > 0
+                  ? Math.round(t.duration_minutes)
+                  : null,
               assignee,
               planName: t.project_id
                 ? (projectNames.get(t.project_id) ?? null)
@@ -207,7 +217,9 @@ export const loadFamilyDashboardData = cache(
     }
 
     const weekStart = startOfWeekMondayYmd(today);
-    const weekDates = Array.from({ length: 7 }, (_, i) => addDaysYmd(weekStart, i));
+    const weekDates = Array.from({ length: 7 }, (_, i) =>
+      addDaysYmd(weekStart, i),
+    );
     const dayFormatter = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
 
     const mealByDate = new Map<string, string>();

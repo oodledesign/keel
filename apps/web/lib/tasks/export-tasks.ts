@@ -1,4 +1,5 @@
 import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
 export type TaskExportRow = {
   title: string;
@@ -6,6 +7,7 @@ export type TaskExportRow = {
   status: string;
   priority: string;
   dueDate: string;
+  duration: string;
   client: string;
   project: string;
   assignee: string;
@@ -48,6 +50,7 @@ function mapTaskToRow(task: TasksPageTask, depth: number): TaskExportRow {
     status: STATUS_LABELS[task.status] ?? task.status,
     priority: PRIORITY_LABELS[task.priority] ?? task.priority,
     dueDate: cell(task.dueDateLabel || task.dueDate),
+    duration: cell(formatDurationMinutes(task.durationMinutes)),
     client: cell(task.clientName),
     project: cell(task.projectName),
     assignee: cell(task.assigneeName),
@@ -79,6 +82,7 @@ export type ScheduledSeriesExportInput = {
   status: string;
   nextCreateYmd: string;
   dueDays: number;
+  durationMinutes?: number | null;
   priority: string;
   notes: string | null;
 };
@@ -99,6 +103,7 @@ export function flattenScheduledSeriesForExport(
       PRIORITY_LABELS[item.priority as TasksPageTask['priority']] ??
       item.priority,
     dueDate: `Next ${item.nextCreateYmd} · due +${item.dueDays}d`,
+    duration: cell(formatDurationMinutes(item.durationMinutes)),
     client: '—',
     project: '—',
     assignee: '—',
@@ -115,6 +120,7 @@ const CSV_HEADERS = [
   'Status',
   'Priority',
   'Due date',
+  'Duration',
   'Client',
   'Project',
   'Assignee',
@@ -142,6 +148,7 @@ export function tasksToCsv(rows: TaskExportRow[]): string {
         escapeCsvCell(row.status),
         escapeCsvCell(row.priority),
         escapeCsvCell(row.dueDate),
+        escapeCsvCell(row.duration),
         escapeCsvCell(row.client),
         escapeCsvCell(row.project),
         escapeCsvCell(row.assignee),
@@ -163,7 +170,7 @@ export function tasksToPlainText(rows: TaskExportRow[]): string {
       const indent = '  '.repeat(row.depth);
       const lines = [
         `${indent}${row.title}`,
-        `${indent}Status: ${row.status} · Priority: ${row.priority} · Due: ${row.dueDate}`,
+        `${indent}Status: ${row.status} · Priority: ${row.priority} · Due: ${row.dueDate} · Duration: ${row.duration}`,
         `${indent}Client: ${row.client} · Project: ${row.project} · Assignee: ${row.assignee}`,
       ];
       if (row.workspace !== '—') {
@@ -187,8 +194,8 @@ export function tasksToMarkdown(rows: TaskExportRow[]): string {
   if (rows.length === 0) return '_No tasks in the current view._';
 
   const lines: string[] = [
-    '| Title | Description | Status | Priority | Due date | Client | Project | Assignee | Workspace | Area | Source |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Title | Description | Status | Priority | Due date | Duration | Client | Project | Assignee | Workspace | Area | Source |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
   ];
 
   for (const row of rows) {
@@ -197,7 +204,7 @@ export function tasksToMarkdown(rows: TaskExportRow[]): string {
         ? `${' '.repeat(row.depth)}↳ ${escapeMdCell(row.title)}`
         : escapeMdCell(row.title);
     lines.push(
-      `| ${title} | ${escapeMdCell(row.description || '—')} | ${escapeMdCell(row.status)} | ${escapeMdCell(row.priority)} | ${escapeMdCell(row.dueDate)} | ${escapeMdCell(row.client)} | ${escapeMdCell(row.project)} | ${escapeMdCell(row.assignee)} | ${escapeMdCell(row.workspace)} | ${escapeMdCell(row.area)} | ${escapeMdCell(row.source)} |`,
+      `| ${title} | ${escapeMdCell(row.description || '—')} | ${escapeMdCell(row.status)} | ${escapeMdCell(row.priority)} | ${escapeMdCell(row.dueDate)} | ${escapeMdCell(row.duration)} | ${escapeMdCell(row.client)} | ${escapeMdCell(row.project)} | ${escapeMdCell(row.assignee)} | ${escapeMdCell(row.workspace)} | ${escapeMdCell(row.area)} | ${escapeMdCell(row.source)} |`,
     );
   }
 

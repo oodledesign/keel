@@ -26,11 +26,8 @@ import {
   dismissSuggestedEmailTaskAction,
 } from '~/lib/email-assistant/email-assistant.actions';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
-import {
-  approveMeetingActionItem,
-  rejectMeetingActionItem,
-} from '../tasks/review/_lib/server/meeting-review-actions';
 import type {
   DashboardMeetingReviewItem,
   DashboardMeetingReviewSummary,
@@ -38,6 +35,10 @@ import type {
   DashboardSuggestedEmailTasksSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
+import {
+  approveMeetingActionItem,
+  rejectMeetingActionItem,
+} from '../tasks/review/_lib/server/meeting-review-actions';
 import { DashboardPanelTitle } from './dashboard-ui';
 import { DashboardUpcomingTaskItem } from './dashboard-upcoming-task-item';
 
@@ -59,7 +60,9 @@ type Props = {
   density?: 'sm' | 'md' | 'lg';
 };
 
-function formatSuggestedDueDate(value: string | null | undefined): string | null {
+function formatSuggestedDueDate(
+  value: string | null | undefined,
+): string | null {
   const parts = parseDueDateParts(value);
   if (!parts) return null;
 
@@ -358,6 +361,7 @@ export function DashboardTasksTabsCard({
                         item.clientName,
                         item.meetingTitle,
                         dueLabel ? `due ${dueLabel}` : null,
+                        formatDurationMinutes(item.suggestedDurationMinutes),
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -472,6 +476,7 @@ function EmailReviewRow({
               item.clientName,
               item.threadSubject,
               dueLabel ? `due ${dueLabel}` : null,
+              formatDurationMinutes(item.suggestedDurationMinutes),
             ]
               .filter(Boolean)
               .join(' · ')}

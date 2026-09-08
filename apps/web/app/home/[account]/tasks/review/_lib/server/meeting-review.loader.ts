@@ -18,6 +18,7 @@ export type MeetingReviewItem = {
   suggestedTitle: string;
   suggestedDescription: string | null;
   suggestedDueDate: string | null;
+  suggestedDurationMinutes: number | null;
   sourceExcerpt: string | null;
   assigneeConfidence: number | null;
   suggestedAssigneeId: string | null;
@@ -48,6 +49,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
         suggested_title,
         suggested_description,
         suggested_due_date,
+        suggested_duration_minutes,
         assignee_confidence,
         suggested_assignee_id,
         created_at,
@@ -113,6 +115,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       suggested_title: string;
       suggested_description: string | null;
       suggested_due_date: string | null;
+      suggested_duration_minutes: number | null;
       assignee_confidence: number | null;
       suggested_assignee_id: string | null;
       created_at: string;
@@ -189,6 +192,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       suggestedTitle: item.suggested_title,
       suggestedDescription: item.suggested_description,
       suggestedDueDate: item.suggested_due_date,
+      suggestedDurationMinutes: item.suggested_duration_minutes,
       sourceExcerpt: null,
       assigneeConfidence: item.assignee_confidence,
       suggestedAssigneeId: item.suggested_assignee_id,

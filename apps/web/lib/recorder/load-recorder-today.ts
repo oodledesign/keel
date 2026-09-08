@@ -25,7 +25,7 @@ import {
 const TASK_LIST_LIMIT = 300;
 
 const TASK_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes';
+  'id, title, status, priority, due_date, duration_minutes, project_id, client_id, area_id, account_id, parent_task_id, notes';
 
 type TaskRow = {
   id: string;
@@ -33,6 +33,7 @@ type TaskRow = {
   status?: string | null;
   priority?: string | null;
   due_date?: string | null;
+  duration_minutes?: number | null;
   project_id?: string | null;
   client_id?: string | null;
   area_id?: string | null;
@@ -77,6 +78,7 @@ export type RecorderTodayTask = {
   due_date: string | null;
   due_date_label: string | null;
   overdue: boolean;
+  duration_minutes: number | null;
   workspace_name: string | null;
   workspace_slug: string | null;
   client_name: string | null;
@@ -260,6 +262,11 @@ function rowToRecorderTask(
     maps.projects.get(row.project_id ?? '')?.account_id ||
     null;
 
+  const durationMinutes =
+    typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+      ? Math.round(row.duration_minutes)
+      : null;
+
   return {
     id: row.id,
     title: row.title?.trim() || 'Untitled task',
@@ -268,6 +275,7 @@ function rowToRecorderTask(
     due_date: dueDate,
     due_date_label: formatDueDateLabel(dueDate),
     overdue,
+    duration_minutes: durationMinutes,
     workspace_name: workspaceName,
     workspace_slug: workspaceSlug,
     client_name: clientName,

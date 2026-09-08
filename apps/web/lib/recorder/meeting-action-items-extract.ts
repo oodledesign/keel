@@ -5,7 +5,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
 import type { ExtractAccountMember } from '@kit/email-assistant';
-import { parseExtractResponse, stripJsonFences } from '@kit/email-assistant';
+import {
+  normalizeDurationMinutes,
+  parseExtractResponse,
+  stripJsonFences,
+} from '@kit/email-assistant';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { callAI } from '~/lib/ai/router';
@@ -17,6 +21,10 @@ const MeetingExtractItemSchema = z.object({
   suggested_title: z.string().optional(),
   suggested_description: z.string().nullable().optional(),
   suggested_due_date: z.string().nullable().optional(),
+  suggested_duration_minutes: z
+    .union([z.number(), z.string()])
+    .nullable()
+    .optional(),
   source_excerpt: z.string().nullable().optional(),
   task_confidence: z.number().nullable().optional(),
   assignee_confidence: z.number().nullable().optional(),
@@ -33,6 +41,7 @@ export type MeetingExtractedActionItem = {
   suggestedTitle: string;
   suggestedDescription: string | null;
   suggestedDueDate: string | null;
+  suggestedDurationMinutes: number | null;
   sourceExcerpt: string | null;
   taskConfidence: number | null;
   assigneeConfidence: number | null;
@@ -60,6 +69,7 @@ Return ONLY valid JSON, no prose, no markdown fences:
       "suggested_title": string,
       "suggested_description": string|null,
       "suggested_due_date": "YYYY-MM-DD"|null,
+      "suggested_duration_minutes": number|null,
       "source_excerpt": string,
       "task_confidence": number,
       "assignee_confidence": number,
@@ -72,6 +82,7 @@ Rules:
 - Only include explicit action items — commitments to do something, not discussion topics or FYIs.
 - Use [] when there are no actionable items.
 - Infer due dates from phrases like "by Friday" using the provided current date; use null when unknown.
+- Infer suggested_duration_minutes only when the transcript mentions effort (e.g. "30 mins", "2 hours"). Use an integer number of minutes. Use null when no duration is mentioned — do not guess.
 - Keep suggested_title short and imperative; put supporting context in suggested_description.
 - source_excerpt: verbatim quote from the transcript supporting this task (max ~200 characters).
 - task_confidence is 0-1 for how clearly this is a real, actionable commitment (not a vague idea).
@@ -164,6 +175,7 @@ export function parseMeetingExtractResponse(
         suggestedTitle: item.title,
         suggestedDescription: item.detail,
         suggestedDueDate: item.suggestedDueDate,
+        suggestedDurationMinutes: item.suggestedDurationMinutes,
         sourceExcerpt: item.sourceExcerpt,
         taskConfidence: null,
         assigneeConfidence: item.assigneeConfidence,
@@ -185,6 +197,7 @@ export function parseMeetingExtractResponse(
       suggestedTitle: item.title,
       suggestedDescription: item.detail,
       suggestedDueDate: item.suggestedDueDate,
+      suggestedDurationMinutes: item.suggestedDurationMinutes,
       sourceExcerpt: item.sourceExcerpt,
       taskConfidence: null,
       assigneeConfidence: item.assigneeConfidence,
@@ -202,6 +215,9 @@ export function parseMeetingExtractResponse(
         suggestedTitle: title,
         suggestedDescription: description,
         suggestedDueDate: normalizeDueDate(item.suggested_due_date),
+        suggestedDurationMinutes: normalizeDurationMinutes(
+          item.suggested_duration_minutes,
+        ),
         sourceExcerpt: normalizeExcerpt(item.source_excerpt),
         taskConfidence: normalizeConfidence(item.task_confidence),
         assigneeConfidence: normalizeConfidence(item.assignee_confidence),

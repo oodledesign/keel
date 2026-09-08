@@ -15,6 +15,9 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
+
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
 import { createJobTask, updateJobTask } from '../../_lib/server/server-actions';
@@ -33,7 +36,7 @@ const TASK_STATUSES = [
   'cancelled',
 ] as const;
 
-const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export function PhaseTasksPanel({
   accountId,
@@ -52,6 +55,9 @@ export function PhaseTasksPanel({
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [draftTitle, setDraftTitle] = useState('');
+  const [draftDurationMinutes, setDraftDurationMinutes] = useState<
+    number | null
+  >(null);
   const [, startTransition] = useTransition();
 
   const patchTask = useCallback(
@@ -69,15 +75,17 @@ export function PhaseTasksPanel({
             status: updates.status as
               | (typeof TASK_STATUSES)[number]
               | undefined,
-            priority: updates.priority as
-              | (typeof PRIORITIES)[number]
-              | undefined,
+            priority: updates.priority as TaskPriority | undefined,
             dueDate:
               updates.due_date === undefined
                 ? undefined
                 : updates.due_date
                   ? new Date(`${updates.due_date}T12:00:00`)
                   : null,
+            durationMinutes:
+              updates.duration_minutes === undefined
+                ? undefined
+                : updates.duration_minutes,
           });
           setTasks((prev) =>
             prev.map((t) => (t.id === task.id ? (saved as JobBoardTask) : t)),
@@ -104,9 +112,11 @@ export function PhaseTasksPanel({
           phaseId,
           title,
           priority: 'medium',
+          durationMinutes: draftDurationMinutes,
         });
         setTasks((prev) => [...prev, task as JobBoardTask]);
         setDraftTitle('');
+        setDraftDurationMinutes(null);
       } catch (err) {
         toast.error(getErrorMessage(err));
       }
@@ -182,11 +192,24 @@ export function PhaseTasksPanel({
                       }
                     }}
                   />
+                  <TaskDurationFields
+                    compact
+                    idPrefix={`phase-task-${task.id}`}
+                    value={task.duration_minutes}
+                    onChange={(next) => {
+                      if (next !== task.duration_minutes) {
+                        patchTask(task, { duration_minutes: next });
+                      }
+                    }}
+                  />
                 </>
               ) : (
                 <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                   {TASK_STATUS_LABELS[task.status] ?? task.status} ·{' '}
                   {formatShortDate(task.due_date)}
+                  {task.duration_minutes
+                    ? ` · ${formatDurationMinutes(task.duration_minutes)}`
+                    : ''}
                 </span>
               )}
             </div>
@@ -195,22 +218,30 @@ export function PhaseTasksPanel({
       </div>
 
       {canEdit && (
-        <form onSubmit={addTask} className="mt-3 flex gap-1">
-          <Input
-            value={draftTitle}
-            onChange={(e) => setDraftTitle(e.target.value)}
-            placeholder="Add task…"
-            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
+        <form onSubmit={addTask} className="mt-3 space-y-1.5">
+          <div className="flex gap-1">
+            <Input
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              placeholder="Add task…"
+              className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+              disabled={!draftTitle.trim()}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          <TaskDurationFields
+            compact
+            idPrefix="phase-add-duration"
+            value={draftDurationMinutes}
+            onChange={setDraftDurationMinutes}
           />
-          <Button
-            type="submit"
-            size="sm"
-            variant="ghost"
-            className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-            disabled={!draftTitle.trim()}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
         </form>
       )}
     </section>

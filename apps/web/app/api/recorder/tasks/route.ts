@@ -16,6 +16,13 @@ const CreateTaskBodySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .nullable(),
+  duration_minutes: z
+    .number()
+    .int()
+    .positive()
+    .max(10080)
+    .optional()
+    .nullable(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   notes: z.string().optional().nullable(),
   project_id: z.string().uuid().optional().nullable(),
@@ -51,6 +58,7 @@ export async function POST(request: Request) {
       accountId: parsed.data.account_id,
       title: parsed.data.title,
       dueDate: parsed.data.due_date,
+      durationMinutes: parsed.data.duration_minutes,
       priority: parsed.data.priority,
       notes: parsed.data.notes,
       projectId: parsed.data.project_id,

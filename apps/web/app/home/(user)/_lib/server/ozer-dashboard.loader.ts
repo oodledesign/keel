@@ -38,6 +38,7 @@ export type PersonalDashboardTask = {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate: string | null;
   dueLabel: string;
+  durationMinutes: number | null;
   isOverdue: boolean;
   workspaceName: string;
   workspaceSlug: string | null;
@@ -228,6 +229,7 @@ type TaskRow = {
   status?: string | null;
   priority?: string | null;
   due_date?: string | null;
+  duration_minutes?: number | null;
   project_id?: string | null;
   client_id?: string | null;
   account_id?: string | null;
@@ -323,6 +325,10 @@ async function mapTasksToDashboard(
       priority: mapPriority(row.priority),
       dueDate: due,
       dueLabel: formatDueLabel(due, overdue),
+      durationMinutes:
+        typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+          ? Math.round(row.duration_minutes)
+          : null,
       isOverdue: overdue,
       workspaceName: ws?.name?.trim() || ws?.slug || 'Personal',
       workspaceSlug: ws?.slug ?? null,
@@ -666,7 +672,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
   const { data: focusRows } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, account_id, job_id',
+      'id, title, status, priority, due_date, duration_minutes, project_id, client_id, account_id, job_id',
     )
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
@@ -678,7 +684,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
   const { data: upcomingRows } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, project_id, client_id, account_id, job_id',
+      'id, title, status, priority, due_date, duration_minutes, project_id, client_id, account_id, job_id',
     )
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
