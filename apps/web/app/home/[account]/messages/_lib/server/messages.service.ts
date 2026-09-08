@@ -21,6 +21,7 @@ import {
   loadPortalEnabledContactsForClient,
   resolveClientOrgForClient,
 } from './messages-participants';
+import { loadLinkedWorkItem } from './messages-work-item';
 
 type ThreadType = 'direct' | 'group' | 'job' | 'client_portal';
 type ComposeType = 'direct' | 'group' | 'job' | 'client';
@@ -64,6 +65,15 @@ export type ChatMessageItem = {
 
 export function createMessagesService() {
   return new MessagesService();
+}
+
+function isJobIdForeignKeyError(message: string | undefined) {
+  const text = (message ?? '').toLowerCase();
+  return (
+    text.includes('chat_threads_job_id_fkey') ||
+    (text.includes('job_id') &&
+      (text.includes('foreign key') || text.includes('violates')))
+  );
 }
 
 class MessagesService {
@@ -439,8 +449,18 @@ class MessagesService {
         }
       }
     }
+    const linkedWorkItem = params.jobId
+      ? await loadLinkedWorkItem(this.admin, {
+          accountId: params.accountId,
+          workItemId: params.jobId,
+        })
+      : null;
+    const linkedJobId =
+      linkedWorkItem?.source === 'project' ? linkedWorkItem.id : null;
+
     const linkedClientId =
       params.clientId ??
+      linkedWorkItem?.clientId ??
       (await this.inferClientIdFromContacts(params.accountId, contactIds));
     const linkedOrg = linkedClientId
       ? await resolveClientOrgForClient(this.admin, linkedClientId)
@@ -453,20 +473,36 @@ class MessagesService {
           ? 'direct'
           : 'group';
 
-    const { data: thread, error } = await this.admin
+    const threadPayload = {
+      account_id: params.accountId,
+      type: storedType,
+      title: params.title?.trim() || null,
+      job_id: linkedJobId,
+      client_id: linkedClientId,
+      client_org_id: linkedOrg?.client_org_id ?? null,
+      is_client_wide: false,
+      created_by: params.userId,
+    };
+
+    let { data: thread, error } = await this.admin
       .from('chat_threads')
-      .insert({
-        account_id: params.accountId,
-        type: storedType,
-        title: params.title?.trim() || null,
-        job_id: params.jobId ?? null,
-        client_id: linkedClientId,
-        client_org_id: linkedOrg?.client_org_id ?? null,
-        is_client_wide: false,
-        created_by: params.userId,
-      })
+      .insert(threadPayload)
       .select('id')
       .single();
+
+    // Project IDs are valid work items, but older DBs still FK job_id → jobs.
+    // Create the chat anyway so compose does not surface a Next.js digest.
+    if (error && linkedJobId && isJobIdForeignKeyError(error.message)) {
+      console.warn(
+        '[messages] job_id FK fallback: created thread without project link',
+        { linkedJobId, error: error.message },
+      );
+      ({ data: thread, error } = await this.admin
+        .from('chat_threads')
+        .insert({ ...threadPayload, job_id: null })
+        .select('id')
+        .single());
+    }
 
     if (error || !thread) {
       throw new Error(error?.message ?? 'Failed to create thread');
@@ -920,13 +956,12 @@ class MessagesService {
     await this.access.assertThreadParticipant(params.threadId, params.userId);
 
     if (params.jobId) {
-      const { data: job, error: jobError } = await this.admin
-        .from('jobs')
-        .select('id, account_id')
-        .eq('id', params.jobId)
-        .maybeSingle();
-      if (jobError || !job || job.account_id !== params.accountId) {
-        throw new Error('Invalid job for this account');
+      const workItem = await loadLinkedWorkItem(this.admin, {
+        accountId: params.accountId,
+        workItemId: params.jobId,
+      });
+      if (!workItem || workItem.source !== 'project') {
+        throw new Error('Invalid project for this account');
       }
     }
 

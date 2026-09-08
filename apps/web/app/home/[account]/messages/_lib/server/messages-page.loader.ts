@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
+import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
 import {
   getDefaultAccountPath,
@@ -46,7 +47,7 @@ export async function loadMessagesPageData(accountSlug: string) {
 
   const admin = getSupabaseServerAdminClient();
   const service = createMessagesService();
-  const [threads, membersRes, jobsRes] = await Promise.all([
+  const [threads, membersRes, projectsRes] = await Promise.all([
     service.listThreads({
       accountId: account.id,
       userId: workspace.user.id,
@@ -57,12 +58,27 @@ export async function loadMessagesPageData(accountSlug: string) {
       .select('user_id, account_role')
       .eq('account_id', account.id),
     admin
-      .from('jobs')
-      .select('id, title')
+      .from('projects')
+      .select('id, name, title, client_id')
       .eq('account_id', account.id)
       .order('updated_at', { ascending: false })
       .limit(300),
   ]);
+
+  const projectRows = (projectsRes.data ?? []) as Array<{
+    id: string;
+    name: string | null;
+    title: string | null;
+    client_id: string | null;
+  }>;
+  const projectIds = projectRows.map((project) => project.id);
+  const { data: assignmentRows } =
+    projectIds.length > 0
+      ? await admin
+          .from('project_assignments')
+          .select('project_id, user_id')
+          .in('project_id', projectIds)
+      : { data: [] as Array<{ project_id: string; user_id: string }> };
 
   const [clientOptions, contactOptions] = access.canMessageClients
     ? await Promise.all([
@@ -88,6 +104,22 @@ export async function loadMessagesPageData(accountSlug: string) {
     : [];
   const userEmailMap = new Map(users.map((u) => [u.id, u.email ?? '']));
 
+  const userNameMap = new Map(
+    users.map((u) => {
+      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+      const first = String(meta.first_name ?? '').trim();
+      const last = String(meta.last_name ?? '').trim();
+      const fromParts = [first, last].filter(Boolean).join(' ').trim();
+      const name =
+        (typeof meta.full_name === 'string' && meta.full_name.trim()) ||
+        (typeof meta.name === 'string' && meta.name.trim()) ||
+        fromParts ||
+        u.email ||
+        'Team member';
+      return [u.id, name] as const;
+    }),
+  );
+
   const memberOptions = memberships
     .filter((m) =>
       access.canMessageClients
@@ -98,13 +130,27 @@ export async function loadMessagesPageData(accountSlug: string) {
       userId: m.user_id,
       role: m.account_role,
       email: userEmailMap.get(m.user_id) ?? 'Unknown',
+      name:
+        userNameMap.get(m.user_id) ??
+        userEmailMap.get(m.user_id) ??
+        'Team member',
     }));
 
-  const jobOptions = (
-    (jobsRes.data ?? []) as Array<{ id: string; title: string | null }>
-  ).map((j) => ({
-    id: j.id,
-    title: j.title?.trim() || 'Untitled job',
+  const assigneesByProject = new Map<string, string[]>();
+  for (const row of (assignmentRows ?? []) as Array<{
+    project_id: string;
+    user_id: string;
+  }>) {
+    const list = assigneesByProject.get(row.project_id) ?? [];
+    list.push(row.user_id);
+    assigneesByProject.set(row.project_id, list);
+  }
+
+  const jobOptions = projectRows.map((project) => ({
+    id: project.id,
+    title: deliveryProjectTitle(project),
+    clientId: project.client_id,
+    assigneeUserIds: assigneesByProject.get(project.id) ?? [],
   }));
 
   return {

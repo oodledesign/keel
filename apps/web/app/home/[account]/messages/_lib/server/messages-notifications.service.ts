@@ -12,6 +12,7 @@ import { collectMessageNotifyRecipients } from '~/lib/messages/messages-notify-r
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import { loadContactDisplayByIds } from './messages-participants';
+import { loadWorkItemTitleById } from './messages-work-item';
 
 function escapeHtml(value: string) {
   return value
@@ -327,12 +328,7 @@ class MessagesNotificationsService {
 
     let linkedJobTitle: string | null = null;
     if (thread?.job_id) {
-      const { data: job } = await this.client
-        .from('jobs')
-        .select('title')
-        .eq('id', thread.job_id)
-        .maybeSingle();
-      linkedJobTitle = (job?.title as string | undefined) ?? null;
+      linkedJobTitle = await loadWorkItemTitleById(this.client, thread.job_id);
     }
 
     // Load up to 11 most-recent messages (the just-sent one plus up to 10

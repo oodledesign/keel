@@ -39,7 +39,11 @@ export const CreateThreadSchema = z.object({
   userId: z.string().uuid(),
   type: ThreadComposeTypeSchema,
   title: z.string().max(180).optional(),
-  jobId: z.string().uuid().nullable().optional(),
+  jobId: z
+    .union([z.string().uuid(), z.literal('')])
+    .nullable()
+    .optional()
+    .transform((value) => value || null),
   clientId: z.string().uuid().optional(),
   memberUserIds: z.array(z.string().uuid()).optional(),
   clientIds: z.array(z.string().uuid()).optional(),
