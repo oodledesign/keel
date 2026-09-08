@@ -18,7 +18,17 @@ import {
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import { renderPropertyHiveOzerListingFields } from '~/lib/commercial/property-hive-custom-fields';
+import {
+  type FeedActingAgentContact,
+  type FeedActingAgentInput,
+  type FeedCoAgentRow,
+  indexStaffPhonesByEmail,
+  renderFeedContactsXml,
+  renderFeedJointAgentsXml,
+  toFeedActingAgentContacts,
+} from '~/lib/commercial/property-hive-feed-contacts';
 import { collectPropertyHiveFeedMedia } from '~/lib/commercial/property-hive-feed-media';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 const FEED_TOKEN_META_KEY = 'xml_feed_token';
 
@@ -71,6 +81,7 @@ type ListingRow = {
   on_market_at: string | null;
   created_at: string;
   updated_at: string;
+  account_branch_id?: string | null;
 };
 
 type UnitRow = {
@@ -95,25 +106,14 @@ type MediaRow = {
   created_at?: string | null;
 };
 
-type CoAgentFeedRow = {
+type CoAgentFeedRow = FeedCoAgentRow & {
   listing_id: string;
-  contact_name: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
-  clients:
-    | {
-        display_name: string | null;
-        company_name: string | null;
-        email: string | null;
-        phone: string | null;
-      }
-    | {
-        display_name: string | null;
-        company_name: string | null;
-        email: string | null;
-        phone: string | null;
-      }[]
-    | null;
+};
+
+type ActingAgentFeedRow = {
+  listing_id: string;
+  user_id: string;
+  sort_order: number;
 };
 
 function adminDb(): SupabaseClient {
@@ -356,6 +356,7 @@ function renderPropertyXml(
   coAgents: CoAgentFeedRow[] = [],
   signedByPath: Map<string, string> = new Map(),
   siteUrl: string | null = null,
+  actingAgents: FeedActingAgentContact[] = [],
 ): string {
   const disposalType = (listing.disposal_type as DisposalType) ?? 'to_let';
   const includesToLet = disposalIncludesToLet(disposalType);
@@ -482,66 +483,8 @@ function renderPropertyXml(
 
   const availXml = renderAvailabilities(disposalType);
 
-  const resolveClient = (row: CoAgentFeedRow) =>
-    Array.isArray(row.clients) ? row.clients[0] : row.clients;
-
-  const contactsXml =
-    coAgents.length === 0
-      ? '<contacts/>'
-      : `<contacts>${coAgents
-          .map((row) => {
-            const linked = resolveClient(row);
-            const office =
-              linked?.company_name?.trim() ||
-              linked?.display_name?.trim() ||
-              'Joint agent';
-            const name =
-              row.contact_name?.trim() ||
-              linked?.display_name?.trim() ||
-              office;
-            const email =
-              row.contact_email?.trim() || linked?.email?.trim() || '';
-            const tel =
-              row.contact_phone?.trim() || linked?.phone?.trim() || '';
-            return [
-              '<contact>',
-              el('name', name),
-              el('email', email),
-              el('tel', tel),
-              el('mobile', tel),
-              el('office', office),
-              '<branch/>',
-              '</contact>',
-            ].join('');
-          })
-          .join('')}</contacts>`;
-
-  const jointAgentsXml =
-    coAgents.length === 0
-      ? '<joint_agents/>'
-      : `<joint_agents>${coAgents
-          .map((row) => {
-            const linked = resolveClient(row);
-            const office =
-              linked?.company_name?.trim() ||
-              linked?.display_name?.trim() ||
-              'Joint agent';
-            const name = row.contact_name?.trim() || office;
-            const email =
-              row.contact_email?.trim() || linked?.email?.trim() || '';
-            const tel =
-              row.contact_phone?.trim() || linked?.phone?.trim() || '';
-            return [
-              '<joint_agent>',
-              el('name', name),
-              el('email', email),
-              el('tel', tel),
-              el('mobile', tel),
-              el('office', office),
-              '</joint_agent>',
-            ].join('');
-          })
-          .join('')}</joint_agents>`;
+  const contactsXml = renderFeedContactsXml(actingAgents);
+  const jointAgentsXml = renderFeedJointAgentsXml(coAgents);
 
   return [
     '<property>',
@@ -774,6 +717,135 @@ async function findAccountIdByFeedToken(
   return data.account_id as string;
 }
 
+async function loadStaffPhonesByEmail(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<Map<string, string>> {
+  try {
+    const signatures = supabaseCustomSchema(client, 'signatures');
+    const { data, error } = await signatures
+      .from('staff')
+      .select('email, signature_email, phone_direct, phone_mobile')
+      .eq('account_id', accountId);
+
+    if (error) {
+      console.error(
+        '[property-hive-feed] staff phone load error:',
+        error.message,
+      );
+      return new Map();
+    }
+
+    return indexStaffPhonesByEmail(data ?? []);
+  } catch (err) {
+    console.error(
+      '[property-hive-feed] staff phone load error:',
+      err instanceof Error ? err.message : err,
+    );
+    return new Map();
+  }
+}
+
+async function loadActingAgentsByListing(
+  client: SupabaseClient,
+  accountId: string,
+  listingRows: ListingRow[],
+): Promise<Map<string, FeedActingAgentContact[]>> {
+  const listingIds = listingRows.map((listing) => listing.id);
+  const agentsByListing = new Map<string, FeedActingAgentContact[]>();
+  if (!listingIds.length) return agentsByListing;
+
+  const { data: agentRows, error: agentError } = await client
+    .from('commercial_listing_agents')
+    .select('listing_id, user_id, sort_order')
+    .eq('account_id', accountId)
+    .in('listing_id', listingIds)
+    .order('sort_order', { ascending: true });
+
+  if (agentError) {
+    console.error(
+      '[property-hive-feed] acting agents load error:',
+      agentError.message,
+    );
+    return agentsByListing;
+  }
+
+  const rows = (agentRows ?? []) as ActingAgentFeedRow[];
+  if (!rows.length) return agentsByListing;
+
+  const listingById = new Map(
+    listingRows.map((listing) => [listing.id, listing]),
+  );
+  const userIds = [...new Set(rows.map((row) => row.user_id))];
+
+  const [
+    { data: accountRow },
+    { data: branchRows },
+    { data: memberAccounts },
+    phoneByEmail,
+  ] = await Promise.all([
+    client.from('accounts').select('name').eq('id', accountId).maybeSingle(),
+    client
+      .from('account_branches')
+      .select('id, name')
+      .eq('account_id', accountId),
+    client.from('accounts').select('id, name, email').in('id', userIds),
+    loadStaffPhonesByEmail(client, accountId),
+  ]);
+
+  const officeName =
+    (accountRow?.name as string | null | undefined)?.trim() || '';
+  const branchNameById = new Map<string, string>();
+  for (const branch of (branchRows ?? []) as Array<{
+    id: string;
+    name: string | null;
+  }>) {
+    const name = branch.name?.trim();
+    if (name) branchNameById.set(branch.id, name);
+  }
+
+  const memberById = new Map<
+    string,
+    { name: string | null; email: string | null }
+  >();
+
+  for (const member of (memberAccounts ?? []) as Array<{
+    id: string;
+    name: string | null;
+    email: string | null;
+  }>) {
+    memberById.set(member.id, {
+      name: member.name,
+      email: member.email,
+    });
+  }
+
+  const inputsByListing = new Map<string, FeedActingAgentInput[]>();
+  for (const row of rows) {
+    const member = memberById.get(row.user_id);
+    const email = member?.email?.trim() || null;
+    const list = inputsByListing.get(row.listing_id) ?? [];
+    list.push({
+      name: member?.name ?? null,
+      email,
+      phone: email ? (phoneByEmail.get(email.toLowerCase()) ?? null) : null,
+    });
+    inputsByListing.set(row.listing_id, list);
+  }
+
+  for (const [listingId, agents] of inputsByListing) {
+    const listing = listingById.get(listingId);
+    const branchId = listing?.account_branch_id?.trim() || null;
+    const mapped = toFeedActingAgentContacts(agents, {
+      office: officeName,
+      branch: branchId ? (branchNameById.get(branchId) ?? '') : '',
+    });
+    if (mapped.length) agentsByListing.set(listingId, mapped);
+  }
+
+  return agentsByListing;
+}
+
 /**
  * Build Kato-compatible listing XML for a portal feed token.
  * EACH and website (Property Hive) both exclude listings with an unpublished
@@ -845,31 +917,36 @@ export async function buildCommercialFeedXml(
 
   const listingIds = listingRows.map((l) => l.id);
 
-  const [{ data: units }, { data: media }, { data: coAgentRows }] =
-    await Promise.all([
-      client
-        .from('commercial_listing_units')
-        .select('*')
-        .in('listing_id', listingIds)
-        .order('sort_order'),
-      client
-        .from('commercial_listing_media')
-        .select('*')
-        .in('listing_id', listingIds)
-        .eq('is_private', false)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true })
-        .order('id', { ascending: true }),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (client as any)
-        .from('commercial_listing_co_agents')
-        .select(
-          'listing_id, contact_name, contact_email, contact_phone, clients(display_name, company_name, email, phone)',
-        )
-        .eq('account_id', accountId)
-        .in('listing_id', listingIds)
-        .order('sort_order'),
-    ]);
+  const [
+    { data: units },
+    { data: media },
+    { data: coAgentRows },
+    actingAgentsByListing,
+  ] = await Promise.all([
+    client
+      .from('commercial_listing_units')
+      .select('*')
+      .in('listing_id', listingIds)
+      .order('sort_order'),
+    client
+      .from('commercial_listing_media')
+      .select('*')
+      .in('listing_id', listingIds)
+      .eq('is_private', false)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (client as any)
+      .from('commercial_listing_co_agents')
+      .select(
+        'listing_id, contact_name, contact_email, contact_phone, clients(display_name, company_name, email, phone)',
+      )
+      .eq('account_id', accountId)
+      .in('listing_id', listingIds)
+      .order('sort_order'),
+    loadActingAgentsByListing(client, accountId, listingRows),
+  ]);
 
   const unitsByListing = new Map<string, UnitRow[]>();
   for (const unit of (units ?? []) as UnitRow[]) {
@@ -917,6 +994,7 @@ export async function buildCommercialFeedXml(
       coAgentsByListing.get(listing.id) ?? [],
       signedByPath,
       siteUrl,
+      actingAgentsByListing.get(listing.id) ?? [],
     ),
   );
 
