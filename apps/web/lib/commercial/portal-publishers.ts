@@ -1201,6 +1201,55 @@ export async function setEachListingFeedInclusion(input: {
 }
 
 /**
+ * Per-disposal Rightmove on/off — same inclusion pattern as Website / EACH.
+ * On publishes this listing; off removes it. Bulk push remains a separate tool.
+ */
+export async function setRightmoveListingInclusion(input: {
+  accountId: string;
+  listingId: string;
+  enabled: boolean;
+}): Promise<CommercialPortalPublication> {
+  const { accountId, listingId, enabled } = input;
+
+  if (!enabled) {
+    const publication = await unpublishFromRightmove(accountId, listingId);
+    if (publication.status === 'error') {
+      throw new Error(
+        publication.last_error ??
+          'Could not remove this disposal from Rightmove',
+      );
+    }
+    return publication;
+  }
+
+  const listing = await loadListingForPortalValidation(accountId, listingId);
+  const onMarket =
+    listing.status === 'marketing' || listing.status === 'under_offer';
+  if (!onMarket) {
+    throw new Error(
+      'Set status to Marketing or Under offer before publishing this disposal to Rightmove',
+    );
+  }
+
+  const missing = validateRightmoveCommercialFields(listing);
+  if (missing.length) {
+    throw new Error(
+      `Missing Rightmove commercial fields: ${missing.join(', ')}`,
+    );
+  }
+
+  const publication = await publishToRightmove(accountId, listingId);
+  if (publication.status !== 'published') {
+    throw new Error(
+      publication.last_error ??
+        'Rightmove did not publish this disposal — try again',
+    );
+  }
+
+  return publication;
+}
+
+/**
  * EACH pulls its dedicated Kato-compatible XML feed.
  * Records a feed-linked publication after basic field checks (explicit include).
  */

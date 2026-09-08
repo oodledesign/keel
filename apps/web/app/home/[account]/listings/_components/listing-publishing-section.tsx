@@ -12,6 +12,7 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
 import pathsConfig from '~/config/paths.config';
+import { workspacePublishingHref as workspacePublishingPath } from '~/lib/commercial/listing-routes';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -59,11 +60,7 @@ export function ListingPublishingSection({
     .replace('[account]', accountSlug)
     .replace('[id]', listing.id);
   const brochureEditorHref = `${listingBase}/brochure`;
-  const workspacePublishingHref =
-    pathsConfig.app.accountCommercialPublishing.replace(
-      '[account]',
-      accountSlug,
-    );
+  const workspacePublishingHref = workspacePublishingPath(accountSlug);
 
   const brochurePath = listing.brochureShareToken
     ? pathsConfig.app.brochureShare.replace(
@@ -94,6 +91,7 @@ export function ListingPublishingSection({
         listing={listing}
         publications={publications}
         accountId={accountId}
+        accountSlug={accountSlug}
         media={media}
         listingUrlTemplate={listingUrlTemplate}
       />

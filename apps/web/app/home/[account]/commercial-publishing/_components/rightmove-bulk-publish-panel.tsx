@@ -36,13 +36,13 @@ import {
   TableRow,
 } from '@kit/ui/table';
 
+import { RightmovePublicationStatusBadge } from '~/components/commercial/rightmove-publication-status-badge';
 import pathsConfig from '~/config/paths.config';
 import { LISTING_STATUS_LABELS } from '~/lib/commercial/commercial-constants';
 import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
-  formatRightmovePublicationStatus,
-  formatRightmoveUpdatedAt,
   type RightmoveDisposalStatusRow,
+  formatRightmoveUpdatedAt,
 } from '~/lib/commercial/rightmove-publish-status';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -58,9 +58,7 @@ function jobProgressLabel(job: RightmoveBulkJobPublic | null): string | null {
     return 'No Marketing / Under offer disposals to push';
   }
   if (job.isActive) {
-    const current = job.lastListingName
-      ? ` — ${job.lastListingName}`
-      : '';
+    const current = job.lastListingName ? ` — ${job.lastListingName}` : '';
     return `Pushing ${job.processed} of ${job.total}${current}`;
   }
   if (job.status === 'completed') {
@@ -172,9 +170,7 @@ export function RightmoveBulkPublishPanel({
 
   const progress = jobProgressLabel(job);
   const percent =
-    job && job.total > 0
-      ? Math.round((job.processed / job.total) * 100)
-      : 0;
+    job && job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
 
   const listingHref = (listingId: string) =>
     `${pathsConfig.app.accountListingDetail
@@ -182,8 +178,9 @@ export function RightmoveBulkPublishPanel({
       .replace('[id]', listingId)}/publishing`;
 
   const statusCounts = useMemo(() => {
-    const published = rows.filter((row) => row.rightmoveStatus === 'published')
-      .length;
+    const published = rows.filter(
+      (row) => row.rightmoveStatus === 'published',
+    ).length;
     const failed = rows.filter((row) => row.rightmoveStatus === 'error').length;
     return { published, failed, total: rows.length };
   }, [rows]);
@@ -207,7 +204,9 @@ export function RightmoveBulkPublishPanel({
               {startPending || job?.isActive ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : null}
-              {job?.isActive ? 'Pushing to Rightmove…' : 'Push all to Rightmove'}
+              {job?.isActive
+                ? 'Pushing to Rightmove…'
+                : 'Push all to Rightmove'}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -296,15 +295,15 @@ export function RightmoveBulkPublishPanel({
                             </p>
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm text-[var(--workspace-shell-text)]">
-                              {formatRightmovePublicationStatus(
+                            <RightmovePublicationStatusBadge
+                              status={
                                 row.rightmoveStatus === 'none'
                                   ? null
-                                  : row.rightmoveStatus,
-                              )}
-                            </p>
+                                  : row.rightmoveStatus
+                              }
+                            />
                             {row.lastError ? (
-                              <p className="max-w-xs truncate text-xs text-rose-500">
+                              <p className="mt-1 max-w-xs truncate text-xs text-rose-500">
                                 {row.lastError}
                               </p>
                             ) : null}
@@ -331,7 +330,7 @@ export function RightmoveBulkPublishPanel({
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="whitespace-nowrap text-xs text-[var(--workspace-shell-text-muted)]">
+                          <TableCell className="text-xs whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                             {formatRightmoveUpdatedAt(row.lastUpdatedAt)}
                           </TableCell>
                         </TableRow>

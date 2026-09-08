@@ -15,26 +15,22 @@ import {
   TooltipTrigger,
 } from '@kit/ui/tooltip';
 
-import { setEachListingFeedInclusionAction } from '../../commercial-publishing/_lib/server/server-actions';
+import { setRightmoveListingInclusionAction } from '../../commercial-publishing/_lib/server/server-actions';
 
-const EACH_FEED_HELP =
-  'On by default for Marketing / Under offer. Switch off to exclude this disposal from the EACH XML feed.';
+const RIGHTMOVE_FEED_HELP =
+  'On = publish this disposal to Rightmove now. Off = remove it from Rightmove. Bulk “push all” in Website & portals is for many listings at once.';
 
-export function ListingEachFeedToggle({
+export function ListingRightmoveFeedToggle({
   accountId,
   listingId,
   initialEnabled,
-  compact = false,
   disabled = false,
   onBeforeEnable,
 }: {
   accountId: string;
   listingId: string;
   initialEnabled: boolean;
-  /** Tighter layout for overview header. */
-  compact?: boolean;
   disabled?: boolean;
-  /** Return false to cancel enabling (e.g. remaining publish steps). */
   onBeforeEnable?: () => boolean | Promise<boolean>;
 }) {
   const router = useRouter();
@@ -46,7 +42,7 @@ export function ListingEachFeedToggle({
     setEnabled(next);
     startTransition(async () => {
       try {
-        const result = await setEachListingFeedInclusionAction({
+        const result = await setRightmoveListingInclusionAction({
           accountId,
           listingId,
           enabled: next,
@@ -54,14 +50,14 @@ export function ListingEachFeedToggle({
         setEnabled(result.enabled);
         toast.success(
           result.enabled
-            ? 'EACH: included in feed (when on-market)'
-            : 'EACH: switched off for this disposal',
+            ? 'Rightmove: published this disposal'
+            : 'Rightmove: unpublished this disposal',
         );
         router.refresh();
       } catch (error) {
         setEnabled(previous);
         toast.error(
-          error instanceof Error ? error.message : 'Could not update EACH',
+          error instanceof Error ? error.message : 'Could not update Rightmove',
         );
       }
     });
@@ -79,17 +75,11 @@ export function ListingEachFeedToggle({
   };
 
   return (
-    <div
-      className={
-        compact
-          ? 'flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2'
-          : 'flex items-center justify-between gap-3'
-      }
-    >
+    <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-            EACH feed
+            Rightmove
           </p>
           <TooltipProvider delayDuration={200}>
             <Tooltip>
@@ -97,28 +87,33 @@ export function ListingEachFeedToggle({
                 <button
                   type="button"
                   className="inline-flex shrink-0 rounded-full text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-text)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none"
-                  aria-label="About EACH feed"
+                  aria-label="About Rightmove publishing"
                 >
                   <Info className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs text-xs">
-                {EACH_FEED_HELP}
+                {RIGHTMOVE_FEED_HELP}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
-        {compact ? (
-          <p className="text-[11px] text-[var(--workspace-shell-text)]/50">
-            {enabled ? 'Included when on-market' : 'Excluded from feed'}
-          </p>
-        ) : null}
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {enabled
+            ? pending
+              ? 'Publishing to Rightmove…'
+              : 'Published to Rightmove'
+            : pending
+              ? 'Updating Rightmove…'
+              : 'Not on Rightmove'}
+        </p>
       </div>
       <Switch
         checked={enabled}
         disabled={pending || disabled}
         onCheckedChange={onCheckedChange}
-        aria-label="Include listing in EACH feed"
+        aria-label="Publish this disposal to Rightmove"
+        data-test="rightmove-channel-toggle"
       />
     </div>
   );

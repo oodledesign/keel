@@ -4,6 +4,7 @@ import { isRightmoveBulkJobStale } from '../rightmove-bulk-job-types';
 import {
   collectRightmoveUrls,
   formatRightmovePublicationStatus,
+  rightmovePublicationStatusBadgeClass,
 } from '../rightmove-publish-status';
 
 describe('collectRightmoveUrls', () => {
@@ -38,6 +39,21 @@ describe('formatRightmovePublicationStatus', () => {
   it('labels stored portal statuses', () => {
     expect(formatRightmovePublicationStatus('published')).toBe('Published');
     expect(formatRightmovePublicationStatus(null)).toBe('Not pushed');
+    expect(formatRightmovePublicationStatus('error')).toBe('Failed');
+  });
+});
+
+describe('rightmovePublicationStatusBadgeClass', () => {
+  it('uses distinct tones for published, not pushed, and failed', () => {
+    const published = rightmovePublicationStatusBadgeClass('published');
+    const notPushed = rightmovePublicationStatusBadgeClass(null);
+    const failed = rightmovePublicationStatusBadgeClass('error');
+
+    expect(published).toMatch(/emerald/);
+    expect(notPushed).toMatch(/amber/);
+    expect(failed).toMatch(/rose/);
+    expect(published).not.toBe(notPushed);
+    expect(notPushed).not.toBe(failed);
   });
 });
 

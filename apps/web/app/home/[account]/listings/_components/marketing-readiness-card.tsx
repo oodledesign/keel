@@ -6,7 +6,7 @@ import { AlertTriangle, Check, Circle } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
-import pathsConfig from '~/config/paths.config';
+import { listingTabHref } from '~/lib/commercial/listing-routes';
 import {
   type MarketingReadiness,
   getMarketingReadiness,
@@ -18,18 +18,6 @@ import type {
   CommercialListingMedia,
   CommercialPortalPublication,
 } from '../_lib/server/listings.service';
-
-function tabHref(
-  accountSlug: string,
-  listingId: string,
-  tab: 'marketing' | 'media' | 'management' | 'overview' | 'publishing',
-) {
-  const base = pathsConfig.app.accountListingDetail
-    .replace('[account]', accountSlug)
-    .replace('[id]', listingId);
-  if (tab === 'overview') return base;
-  return `${base}/${tab}`;
-}
 
 export function MarketingReadinessCard({
   listing,
@@ -97,7 +85,7 @@ export function MarketingReadinessCard({
                 </p>
                 {!item.pass && item.hrefTab ? (
                   <Link
-                    href={tabHref(accountSlug, listing.id, item.hrefTab)}
+                    href={listingTabHref(accountSlug, listing.id, item.hrefTab)}
                     className="text-xs text-[var(--ozer-accent)] hover:underline"
                   >
                     {item.hint}
@@ -113,18 +101,5 @@ export function MarketingReadinessCard({
         </ul>
       </CardContent>
     </Card>
-  );
-}
-
-export function confirmPublishIfNotReady(
-  readiness: MarketingReadiness,
-): boolean {
-  if (readiness.ready) return true;
-  const missing = readiness.items
-    .filter((i) => !i.pass)
-    .map((i) => i.label)
-    .join(', ');
-  return window.confirm(
-    `This disposal is not fully marketing-ready (${readiness.passCount}/${readiness.total}). Missing: ${missing}. Continue anyway?`,
   );
 }
