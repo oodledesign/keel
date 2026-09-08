@@ -258,14 +258,19 @@ export function FormEmailSettingsPanel({
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      if (openTemplateId === template.id) {
-                        setOpenTemplateId(undefined);
-                      }
+                      const remaining = settings.templates.filter(
+                        (item) => item.id !== template.id,
+                      );
+                      setOpenTemplateId(
+                        remaining.length === 1
+                          ? remaining[0]?.id
+                          : openTemplateId === template.id
+                            ? undefined
+                            : openTemplateId,
+                      );
                       onChange({
                         ...settings,
-                        templates: settings.templates.filter(
-                          (item) => item.id !== template.id,
-                        ),
+                        templates: remaining,
                         rules: settings.rules.filter(
                           (rule) => rule.templateId !== template.id,
                         ),
