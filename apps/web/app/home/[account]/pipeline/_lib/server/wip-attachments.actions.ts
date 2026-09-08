@@ -176,7 +176,8 @@ export const listWipAttachmentNotes = enhanceAction(
         'id, title, content, created_at, updated_at, created_by, assigned_to',
       )
       .eq('account_id', input.accountId)
-      .order('created_at', { ascending: true })
+      // Newest first: expanded ladder + instruction activity show recent updates at the top.
+      .order('created_at', { ascending: false })
       .limit(50);
 
     if (input.pipelineDealId) {

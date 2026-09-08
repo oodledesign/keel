@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { Loader2, Pencil, Plus } from 'lucide-react';
 
@@ -15,6 +15,8 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+
+import { sortWipNotesNewestFirst } from '~/lib/commercial/sort-wip-notes';
 
 import {
   type WipAttachmentNote,
@@ -220,15 +222,22 @@ export function WipAttachmentsStrip({
     });
   };
 
+  const notesNewestFirst = useMemo(
+    () => sortWipNotesNewestFirst(notes),
+    [notes],
+  );
+
   if (!pipelineDealId && !commercialRequirementId) {
     return null;
   }
 
   const visibleNotes =
-    activityOnly && !showAllNotes ? notes.slice(0, previewCount) : notes;
+    activityOnly && !showAllNotes
+      ? notesNewestFirst.slice(0, previewCount)
+      : notesNewestFirst;
   const hiddenCount =
     activityOnly && !showAllNotes
-      ? Math.max(0, notes.length - previewCount)
+      ? Math.max(0, notesNewestFirst.length - previewCount)
       : 0;
 
   return (
