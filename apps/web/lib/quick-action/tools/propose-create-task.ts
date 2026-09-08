@@ -3,6 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+import { parseDurationMinutes } from '~/lib/tasks/task-duration';
 
 import { signQuickActionToken } from '../action-token';
 import type { QuickActionContext } from '../context';
@@ -20,6 +21,14 @@ const proposeCreateTaskSchema = z.object({
   notes: z.string().trim().max(5000).optional().nullable(),
   due_date: z.string().trim().optional().nullable(),
   due_date_phrase: z.string().trim().optional().nullable(),
+  duration_minutes: z
+    .number()
+    .int()
+    .positive()
+    .max(10080)
+    .optional()
+    .nullable(),
+  duration_phrase: z.string().trim().optional().nullable(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   project_id: z.string().uuid().optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
@@ -85,6 +94,9 @@ export async function proposeCreateTask(
     dueDate: parsed.due_date,
     dueDatePhrase: parsed.due_date_phrase,
   });
+  const durationMinutes =
+    parsed.duration_minutes ??
+    parseDurationMinutes(parsed.duration_phrase ?? '');
 
   const priority = parsed.priority ?? 'medium';
   const notes = parsed.notes?.trim() || null;
@@ -97,6 +109,7 @@ export async function proposeCreateTask(
       title: parsed.title,
       notes,
       dueDate,
+      durationMinutes,
       priority,
       projectId,
       clientId,
@@ -113,6 +126,7 @@ export async function proposeCreateTask(
       title: parsed.title,
       notes,
       dueDate,
+      durationMinutes,
       priority,
       projectName,
       clientName,
@@ -141,6 +155,14 @@ export const proposeCreateTaskToolDefinition = {
         type: 'string',
         description:
           'Relative due date phrase if due_date is unknown, e.g. "this week", "friday"',
+      },
+      duration_minutes: {
+        type: 'number',
+        description: 'Estimated effort in minutes when the user mentions it',
+      },
+      duration_phrase: {
+        type: 'string',
+        description: 'Spoken duration such as "30 mins" or "2 hours"',
       },
       priority: {
         type: 'string',

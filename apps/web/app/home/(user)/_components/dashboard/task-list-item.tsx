@@ -10,6 +10,8 @@ import {
   Pencil,
 } from 'lucide-react';
 
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
+
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { EditTaskDialog } from '../../tasks/_components/edit-task-dialog';
 
@@ -91,6 +93,9 @@ export function TaskListItem({
               </span>
             )}
             {dueDate && <span>{dueDate}</span>}
+            {editTask?.durationMinutes ? (
+              <span>{formatDurationMinutes(editTask.durationMinutes)}</span>
+            ) : null}
             {priority !== 'low' && (
               <span className={`font-medium ${priorityCfg.className}`}>
                 {priority === 'urgent' && (

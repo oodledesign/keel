@@ -70,6 +70,7 @@ export type ExtractedTaskReviewRow = {
   title: string;
   notes: string | null;
   dueDate: string | null;
+  durationMinutes: number | null;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   projectId: string | null;
   clientId: string | null;
@@ -81,6 +82,7 @@ export type ExtractedTaskReviewRow = {
     title: string;
     notes: string | null;
     dueDate: string | null;
+    durationMinutes: number | null;
     priority: 'low' | 'medium' | 'high' | 'urgent';
     included: boolean;
   }>;
@@ -194,6 +196,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
         title: d.title,
         notes: d.notes,
         dueDate: d.dueDate,
+        durationMinutes: d.durationMinutes,
         priority: d.priority,
         projectId,
         clientId: preferredClient?.id ?? clientId,
@@ -204,6 +207,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
           title: s.title,
           notes: s.notes,
           dueDate: s.dueDate,
+          durationMinutes: s.durationMinutes,
           priority: s.priority,
           included: true,
         })),
@@ -220,6 +224,7 @@ const subCommitSchema = z.object({
   title: z.string().min(1),
   notes: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
+  durationMinutes: z.number().int().positive().max(10080).nullable().optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   included: z.boolean(),
 });
@@ -229,6 +234,7 @@ const commitItemSchema = z.object({
   title: z.string().min(1),
   notes: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
+  durationMinutes: z.number().int().positive().max(10080).nullable().optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   projectId: z.string().uuid().nullable(),
   clientId: z.string().uuid().nullable(),
@@ -343,6 +349,7 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
         title: item.title,
         priority: item.priority,
         dueDate: item.dueDate ?? undefined,
+        durationMinutes: item.durationMinutes ?? undefined,
         projectId: projectId ?? undefined,
         clientId: clientId ?? undefined,
         accountId: input.accountId,
@@ -371,6 +378,7 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
             suggested_title: item.title.trim(),
             suggested_description: item.notes?.trim() || null,
             suggested_due_date: item.dueDate || null,
+            suggested_duration_minutes: item.durationMinutes ?? null,
             status: 'approved',
             planner_task_id: parentResult.id,
             reviewed_at: new Date().toISOString(),
@@ -401,6 +409,7 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
           title: st.title,
           priority: st.priority,
           dueDate: st.dueDate ?? undefined,
+          durationMinutes: st.durationMinutes ?? undefined,
           projectId: projectId ?? undefined,
           clientId: clientId ?? undefined,
           accountId: input.accountId,

@@ -122,6 +122,7 @@ export type PortalProjectTask = {
   status: string;
   priority: string | null;
   dueDate: string | null;
+  durationMinutes: number | null;
   phaseId: string | null;
   /** Contact assignee preferred; otherwise team member (`user_id`). */
   assigneeName: string | null;
@@ -133,6 +134,7 @@ export type PortalMyTask = {
   status: string;
   priority: string | null;
   dueDate: string | null;
+  durationMinutes: number | null;
   notes: string | null;
   projectId: string | null;
   projectName: string | null;
@@ -188,6 +190,7 @@ export type PortalOverviewTask = {
   title: string;
   status: string;
   dueDate: string | null;
+  durationMinutes: number | null;
   projectId: string | null;
   projectName: string | null;
   assigneeName: string | null;
@@ -885,7 +888,7 @@ class ClientPortalService {
     const { data, error } = await this.db
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, phase_id, user_id, assignee_contact_id',
+        'id, title, status, priority, due_date, duration_minutes, phase_id, user_id, assignee_contact_id',
       )
       .eq('project_id', projectId)
       .order('sort_order', { ascending: true })
@@ -896,7 +899,9 @@ class ClientPortalService {
       if (/assignee_contact_id/i.test(error.message)) {
         const fallback = await this.db
           .from('tasks')
-          .select('id, title, status, priority, due_date, phase_id, user_id')
+          .select(
+            'id, title, status, priority, due_date, duration_minutes, phase_id, user_id',
+          )
           .eq('project_id', projectId)
           .order('sort_order', { ascending: true })
           .order('created_at', { ascending: true });
@@ -914,6 +919,7 @@ class ClientPortalService {
             status: string;
             priority: string | null;
             due_date: string | null;
+            duration_minutes?: number | null;
             phase_id?: string | null;
             user_id?: string | null;
             assignee_contact_id?: string | null;
@@ -931,6 +937,7 @@ class ClientPortalService {
         status: string;
         priority: string | null;
         due_date: string | null;
+        duration_minutes?: number | null;
         phase_id?: string | null;
         user_id?: string | null;
         assignee_contact_id?: string | null;
@@ -945,6 +952,7 @@ class ClientPortalService {
       status: string;
       priority: string | null;
       due_date: string | null;
+      duration_minutes?: number | null;
       phase_id?: string | null;
       user_id?: string | null;
       assignee_contact_id?: string | null;
@@ -985,6 +993,10 @@ class ClientPortalService {
         status: row.status ?? 'todo',
         priority: row.priority,
         dueDate: row.due_date,
+        durationMinutes:
+          typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+            ? Math.round(row.duration_minutes)
+            : null,
         phaseId: row.phase_id ?? null,
         assigneeName,
       };
@@ -1034,7 +1046,9 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('tasks')
-      .select('id, title, status, priority, due_date, notes, project_id')
+      .select(
+        'id, title, status, priority, due_date, duration_minutes, notes, project_id',
+      )
       .eq('assignee_contact_id', contactId)
       .order('due_date', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
@@ -1050,6 +1064,7 @@ class ClientPortalService {
       status: string;
       priority: string | null;
       due_date: string | null;
+      duration_minutes?: number | null;
       notes: string | null;
       project_id: string | null;
     }>;
@@ -1079,6 +1094,10 @@ class ClientPortalService {
       status: row.status ?? 'todo',
       priority: row.priority,
       dueDate: row.due_date,
+      durationMinutes:
+        typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+          ? Math.round(row.duration_minutes)
+          : null,
       notes: row.notes,
       projectId: row.project_id,
       projectName: row.project_id
@@ -1105,7 +1124,7 @@ class ClientPortalService {
     const { data, error } = await this.db
       .from('tasks')
       .select(
-        'id, title, status, due_date, project_id, user_id, assignee_contact_id',
+        'id, title, status, due_date, duration_minutes, project_id, user_id, assignee_contact_id',
       )
       .in('project_id', projectIds)
       .not('status', 'in', '(done,completed,cancelled)')
@@ -1117,7 +1136,9 @@ class ClientPortalService {
       if (/assignee_contact_id/i.test(error.message)) {
         const fallback = await this.db
           .from('tasks')
-          .select('id, title, status, due_date, project_id, user_id')
+          .select(
+            'id, title, status, due_date, duration_minutes, project_id, user_id',
+          )
           .in('project_id', projectIds)
           .not('status', 'in', '(done,completed,cancelled)')
           .order('due_date', { ascending: true, nullsFirst: false })
@@ -1136,6 +1157,7 @@ class ClientPortalService {
             title: string;
             status: string;
             due_date: string | null;
+            duration_minutes?: number | null;
             project_id: string | null;
             user_id?: string | null;
             assignee_contact_id?: string | null;
@@ -1153,6 +1175,7 @@ class ClientPortalService {
         title: string;
         status: string;
         due_date: string | null;
+        duration_minutes?: number | null;
         project_id: string | null;
         user_id?: string | null;
         assignee_contact_id?: string | null;
@@ -1167,6 +1190,7 @@ class ClientPortalService {
       title: string;
       status: string;
       due_date: string | null;
+      duration_minutes?: number | null;
       project_id: string | null;
       user_id?: string | null;
       assignee_contact_id?: string | null;
@@ -1180,6 +1204,7 @@ class ClientPortalService {
         status: row.status,
         priority: null,
         due_date: row.due_date,
+        duration_minutes: row.duration_minutes,
         phase_id: null,
         user_id: row.user_id,
         assignee_contact_id: row.assignee_contact_id,
@@ -1195,6 +1220,11 @@ class ClientPortalService {
         title: row.title,
         status: row.status ?? 'todo',
         dueDate: row.due_date,
+        durationMinutes:
+          mapped?.durationMinutes ??
+          (typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+            ? Math.round(row.duration_minutes)
+            : null),
         projectId: row.project_id,
         projectName: row.project_id
           ? (projectNameById.get(row.project_id) ?? null)
@@ -1227,7 +1257,9 @@ class ClientPortalService {
       })
       .eq('id', taskId)
       .eq('assignee_contact_id', contactId)
-      .select('id, title, status, priority, due_date, notes, project_id')
+      .select(
+        'id, title, status, priority, due_date, duration_minutes, notes, project_id',
+      )
       .maybeSingle();
 
     if (error) {
@@ -1241,6 +1273,7 @@ class ClientPortalService {
       status: string;
       priority: string | null;
       due_date: string | null;
+      duration_minutes?: number | null;
       notes: string | null;
       project_id: string | null;
     };
@@ -1261,6 +1294,10 @@ class ClientPortalService {
       status: row.status ?? 'done',
       priority: row.priority,
       dueDate: row.due_date,
+      durationMinutes:
+        typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+          ? Math.round(row.duration_minutes)
+          : null,
       notes: row.notes,
       projectId: row.project_id,
       projectName,

@@ -8,6 +8,7 @@ import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { assertTasksModuleEnabled } from '~/lib/quick-action/module-access';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 const TASK_DB_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent']);
 
@@ -55,6 +56,7 @@ export type CreateRecorderTaskInput = {
   title: string;
   priority?: string;
   dueDate?: string | null;
+  durationMinutes?: number | null;
   notes?: string | null;
   projectId?: string | null;
   clientId?: string | null;
@@ -76,9 +78,8 @@ export async function createRecorderTask(input: CreateRecorderTaskInput) {
     .eq('account_id', input.accountId)
     .neq('status', 'done');
 
-  const { assertOpenTaskCreateAllowed } = await import(
-    '~/lib/billing/entitlements'
-  );
+  const { assertOpenTaskCreateAllowed } =
+    await import('~/lib/billing/entitlements');
   const taskCap = await assertOpenTaskCreateAllowed(
     admin,
     input.accountId,
@@ -117,6 +118,7 @@ export async function createRecorderTask(input: CreateRecorderTaskInput) {
       title,
       priority: normalizeTaskPriority(input.priority),
       due_date: input.dueDate?.trim() || null,
+      duration_minutes: clampDurationMinutes(input.durationMinutes),
       notes: input.notes?.trim() || null,
       project_id: projectId,
       client_id: clientId,

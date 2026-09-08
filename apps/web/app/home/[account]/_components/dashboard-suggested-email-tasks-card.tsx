@@ -15,6 +15,7 @@ import {
   acceptSuggestedEmailTaskAction,
   dismissSuggestedEmailTaskAction,
 } from '~/lib/email-assistant/email-assistant.actions';
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
 import type { DashboardSuggestedEmailTasksSummary } from '../_lib/server/dashboard-page.loader';
 import { DashboardPanelTitle } from './dashboard-ui';
@@ -154,6 +155,7 @@ export function DashboardSuggestedEmailTasksCard({
                       item.suggestedDueDate
                         ? `due ${item.suggestedDueDate}`
                         : null,
+                      formatDurationMinutes(item.suggestedDurationMinutes),
                     ]
                       .filter(Boolean)
                       .join(' · ')}

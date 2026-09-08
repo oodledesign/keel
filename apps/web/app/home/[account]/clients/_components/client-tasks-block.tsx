@@ -33,6 +33,10 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import {
+  TaskDurationFields,
+  TaskDurationMeta,
+} from '~/components/task-duration-fields';
+import {
   createTask,
   getTasksForClient,
 } from '~/home/(user)/_lib/actions/task-actions';
@@ -154,6 +158,10 @@ export function ClientTasksBlock({
                       {task.dueDateLabel}
                     </span>
                   )}
+                  <TaskDurationMeta
+                    minutes={task.durationMinutes}
+                    className="hidden sm:inline-flex"
+                  />
                   {canEditClients && (
                     <button
                       type="button"
@@ -238,6 +246,7 @@ function AddTaskForClientDialog({
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -254,6 +263,7 @@ function AddTaskForClientDialog({
         title: trimmed,
         priority,
         dueDate: dueDate || undefined,
+        durationMinutes: durationMinutes ?? undefined,
         clientId,
         accountId: workspaceAccountId,
       });
@@ -265,6 +275,7 @@ function AddTaskForClientDialog({
       setTitle('');
       setPriority('medium');
       setDueDate('');
+      setDurationMinutes(null);
       onSuccess();
     });
   }
@@ -325,6 +336,12 @@ function AddTaskForClientDialog({
               />
             </div>
           </div>
+          <TaskDurationFields
+            value={durationMinutes}
+            onChange={setDurationMinutes}
+            disabled={isPending}
+            idPrefix="client-add-duration"
+          />
           {error && <p className="text-sm text-rose-400">{error}</p>}
           <DialogFooter>
             <Button

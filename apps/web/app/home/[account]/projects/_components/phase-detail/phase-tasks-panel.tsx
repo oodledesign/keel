@@ -24,6 +24,8 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
+
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
 import {
@@ -105,7 +107,11 @@ export function PhaseTasksPanel({
     [accountId, accountSlug, jobId, startTransition],
   );
 
-  const addTask = (title: string, subtaskTitles: string[]) => {
+  const addTask = (draft: {
+    title: string;
+    durationMinutes: number | null;
+    subtasks: Array<{ title: string; durationMinutes: number | null }>;
+  }) => {
     startTransition(async () => {
       try {
         const task = await createJobTask({
@@ -113,9 +119,11 @@ export function PhaseTasksPanel({
           accountSlug,
           jobId,
           phaseId,
-          title,
+          title: draft.title,
           priority: 'medium',
-          subtaskTitles,
+          durationMinutes: draft.durationMinutes,
+          subtaskTitles: draft.subtasks.map((item) => item.title),
+          subtaskDurations: draft.subtasks.map((item) => item.durationMinutes),
         });
         const created = task as JobBoardTask;
         setTasks((prev) => [...prev, created, ...(created.subtasks ?? [])]);
@@ -239,6 +247,7 @@ export function PhaseTasksPanel({
                   {formatShortDate(task.due_date)}
                 </span>
               )}
+              <TaskDurationMeta minutes={task.duration_minutes} />
             </div>
             {childTasks(task.id).length > 0 ? (
               <ul className="mt-2 space-y-1 border-t border-[color:var(--workspace-shell-border)]/60 pt-2">
@@ -250,6 +259,14 @@ export function PhaseTasksPanel({
                     <span>
                       {subtask.status === 'done' ? '✓ ' : '○ '}
                       {subtask.title}
+                      {subtask.duration_minutes ? (
+                        <>
+                          {' · '}
+                          <TaskDurationMeta
+                            minutes={subtask.duration_minutes}
+                          />
+                        </>
+                      ) : null}
                     </span>
                     {canEdit ? (
                       <button

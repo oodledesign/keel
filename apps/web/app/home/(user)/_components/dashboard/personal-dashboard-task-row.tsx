@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { cn } from '@kit/ui/utils';
 
 import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 
 import type { PersonalDashboardTask } from '../../_lib/server/ozer-dashboard.loader';
@@ -62,6 +63,7 @@ export function PersonalDashboardTaskRow(props: {
               {task.isOverdue ? `Overdue · ${task.dueLabel}` : task.dueLabel}
             </span>
           ) : null}
+          <TaskDurationMeta minutes={task.durationMinutes} />
         </div>
       </div>
       <span

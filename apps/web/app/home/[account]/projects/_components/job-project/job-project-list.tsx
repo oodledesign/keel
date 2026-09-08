@@ -31,6 +31,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -206,6 +207,7 @@ function TaskRow({
             {formatShortDate(task.due_date)}
           </span>
         )}
+        <TaskDurationMeta minutes={task.duration_minutes} className="mt-1" />
       </div>
 
       <div>
@@ -323,7 +325,11 @@ function PhaseGroup({
   );
 
   const handleAddTask = useCallback(
-    (title: string, subtaskTitles: string[]) => {
+    (draft: {
+      title: string;
+      durationMinutes: number | null;
+      subtasks: Array<{ title: string; durationMinutes: number | null }>;
+    }) => {
       setAddingTask(true);
       startTransition(async () => {
         try {
@@ -332,9 +338,13 @@ function PhaseGroup({
             accountSlug,
             jobId,
             phaseId: phase?.id ?? null,
-            title,
+            title: draft.title,
             priority: 'medium',
-            subtaskTitles,
+            durationMinutes: draft.durationMinutes,
+            subtaskTitles: draft.subtasks.map((item) => item.title),
+            subtaskDurations: draft.subtasks.map(
+              (item) => item.durationMinutes,
+            ),
           });
           onTasksChange(phaseKey, [
             ...tasks,

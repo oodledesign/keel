@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,7 @@ async function insertTaskForActionItem(input: {
   detail: string | null;
   sourceExcerpt: string | null;
   suggestedDueDate: string | null;
+  suggestedDurationMinutes?: number | null;
   projectId?: string | null;
   clientId?: string | null;
 }) {
@@ -34,6 +36,7 @@ async function insertTaskForActionItem(input: {
       sourceLabel: 'Email',
     }),
     due_date: input.suggestedDueDate,
+    duration_minutes: clampDurationMinutes(input.suggestedDurationMinutes),
     project_id: input.projectId ?? null,
     client_id: input.clientId ?? null,
     status: 'todo',
@@ -77,7 +80,7 @@ export async function POST(request: Request, context: RouteContext) {
   const { data: actionItem, error: actionError } = await auth.client
     .from('email_action_items')
     .select(
-      'id, user_id, title, detail, source_excerpt, suggested_due_date, account_id, client_id, project_id, status, task_id',
+      'id, user_id, title, detail, source_excerpt, suggested_due_date, suggested_duration_minutes, account_id, client_id, project_id, status, task_id',
     )
     .eq('id', actionId)
     .eq('user_id', auth.user.id)
@@ -97,6 +100,7 @@ export async function POST(request: Request, context: RouteContext) {
     detail: string | null;
     source_excerpt: string | null;
     suggested_due_date: string | null;
+    suggested_duration_minutes: number | null;
     account_id: string | null;
     client_id: string | null;
     project_id: string | null;
@@ -122,6 +126,7 @@ export async function POST(request: Request, context: RouteContext) {
       detail: item.detail,
       sourceExcerpt: item.source_excerpt,
       suggestedDueDate: item.suggested_due_date,
+      suggestedDurationMinutes: item.suggested_duration_minutes,
       projectId: body.projectId ?? item.project_id ?? null,
       clientId: body.clientId ?? item.client_id ?? null,
     });

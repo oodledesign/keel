@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 import { formatWorkspaceAmount } from '~/lib/currency/workspace-currency';
@@ -408,6 +409,7 @@ function TasksPanel({
                 {task.dueDate}
               </span>
             ) : null}
+            <TaskDurationMeta minutes={task.durationMinutes} />
             <Badge
               className={`text-[10px] ${priorityColour[task.priority] ?? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50'}`}
             >

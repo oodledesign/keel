@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { callAnthropicText, type GenerateTextFn } from './anthropic';
+import { type GenerateTextFn, callAnthropicText } from './anthropic';
 import { parseExtractResponse } from './json';
 import type { EmailActionItem, ExtractContext } from './types';
 
@@ -12,6 +12,7 @@ Return ONLY JSON, no prose, no markdown fences:
       "title": string,
       "detail": string|null,
       "suggested_due_date": "YYYY-MM-DD"|null,
+      "suggested_duration_minutes": number|null,
       "source_excerpt": string,
       "assignee_confidence": number,
       "suggested_assignee_email": string|null
@@ -23,6 +24,7 @@ Rules:
 - Only include explicit action items — commitments to do something, not FYIs or discussion topics.
 - Use [] when there are no actionable items.
 - Infer due dates from phrases like "by Friday" using the provided current date; use null when unknown.
+- Infer suggested_duration_minutes only when the source mentions effort (e.g. "30 mins", "2 hours", "1h 30m"). Use an integer number of minutes. Use null when no duration is mentioned — do not guess.
 - Keep titles short and imperative; put supporting context in detail.
 - source_excerpt: verbatim quote from the thread supporting this task (max ~200 characters).
 

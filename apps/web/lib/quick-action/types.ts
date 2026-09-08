@@ -11,6 +11,7 @@ export type QuickActionPreviewCreateTask = {
   title: string;
   notes: string | null;
   dueDate: string | null;
+  durationMinutes: number | null;
   priority: string;
   projectName: string | null;
   clientName: string | null;
@@ -41,6 +42,7 @@ export type CreateTaskActionData = {
   title: string;
   notes: string | null;
   dueDate: string | null;
+  durationMinutes: number | null;
   priority: string;
   projectId: string | null;
   clientId: string | null;

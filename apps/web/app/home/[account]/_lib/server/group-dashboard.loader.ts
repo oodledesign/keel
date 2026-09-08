@@ -26,6 +26,7 @@ export type GroupTask = {
   status: string;
   priority: string;
   dueDate: string | null;
+  durationMinutes: number | null;
   projectName: string | null;
 };
 
@@ -107,7 +108,9 @@ export const loadGroupDashboardData = cache(
     if (projectIds.length > 0) {
       const { data: taskRows } = await client
         .from('tasks')
-        .select('id, title, status, priority, due_date, project_id')
+        .select(
+          'id, title, status, priority, due_date, duration_minutes, project_id',
+        )
         .in('project_id', projectIds)
         .is('parent_task_id', null)
         .not('status', 'eq', 'done')
@@ -125,6 +128,7 @@ export const loadGroupDashboardData = cache(
           status?: string | null;
           priority?: string | null;
           due_date?: string | null;
+          duration_minutes?: number | null;
           project_id?: string | null;
         }>
       ).map((t) => ({
@@ -133,6 +137,10 @@ export const loadGroupDashboardData = cache(
         status: t.status ?? 'todo',
         priority: t.priority ?? 'medium',
         dueDate: toIsoDateString(t.due_date),
+        durationMinutes:
+          typeof t.duration_minutes === 'number' && t.duration_minutes > 0
+            ? Math.round(t.duration_minutes)
+            : null,
         projectName: t.project_id
           ? (projectNameMap.get(t.project_id) ?? null)
           : null,

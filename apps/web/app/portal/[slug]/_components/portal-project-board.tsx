@@ -9,6 +9,8 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
+
 import type {
   PortalProjectPhase,
   PortalProjectTask,
@@ -74,6 +76,11 @@ function TaskCardMeta({ task }: { task: PortalProjectTask }) {
       {dueLabel ? (
         <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
           {dueLabel}
+        </span>
+      ) : null}
+      {formatDurationMinutes(task.durationMinutes) ? (
+        <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+          {formatDurationMinutes(task.durationMinutes)}
         </span>
       ) : null}
     </div>
@@ -292,6 +299,11 @@ function PortalProjectListView({
                       {dueLabel ? (
                         <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
                           {dueLabel}
+                        </span>
+                      ) : null}
+                      {formatDurationMinutes(task.durationMinutes) ? (
+                        <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                          {formatDurationMinutes(task.durationMinutes)}
                         </span>
                       ) : null}
                     </div>

@@ -4,6 +4,8 @@ import { useCallback, useMemo, useState, useTransition } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
+
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
   JobBoardResult,
@@ -180,6 +182,7 @@ function ProgressTaskCard({
                 {formatShortDate(task.due_date)}
               </span>
             ) : null}
+            <TaskDurationMeta minutes={task.duration_minutes} />
             {assigneeLabel ? (
               <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {assigneeLabel}
@@ -296,7 +299,14 @@ export function JobProjectProgressBoard({
   }
 
   const handleAddTask = useCallback(
-    (status: ProgressStatus, title: string, subtaskTitles: string[]) => {
+    (
+      status: ProgressStatus,
+      draft: {
+        title: string;
+        durationMinutes: number | null;
+        subtasks: Array<{ title: string; durationMinutes: number | null }>;
+      },
+    ) => {
       setAddingTask(true);
       startTransition(async () => {
         try {
@@ -305,10 +315,14 @@ export function JobProjectProgressBoard({
             accountSlug,
             jobId,
             phaseId: defaultPhaseId,
-            title,
+            title: draft.title,
             status,
             priority: 'medium',
-            subtaskTitles,
+            durationMinutes: draft.durationMinutes,
+            subtaskTitles: draft.subtasks.map((item) => item.title),
+            subtaskDurations: draft.subtasks.map(
+              (item) => item.durationMinutes,
+            ),
           });
           const created = task as JobBoardTask;
           const key = created.phase_id ?? UNPHASED_KEY;
@@ -428,9 +442,7 @@ export function JobProjectProgressBoard({
                 <div className="border-t border-[color:var(--workspace-shell-border)]/80 p-2">
                   <AddProjectTaskForm
                     disabled={addingTask}
-                    onSubmit={(title, subtaskTitles) =>
-                      handleAddTask(col.key, title, subtaskTitles)
-                    }
+                    onSubmit={(draft) => handleAddTask(col.key, draft)}
                   />
                 </div>
               ) : null}

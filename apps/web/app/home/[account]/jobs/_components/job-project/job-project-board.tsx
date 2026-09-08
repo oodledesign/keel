@@ -42,6 +42,10 @@ import {
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
+import {
+  TaskDurationFields,
+  TaskDurationMeta,
+} from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -140,6 +144,7 @@ function TaskCard({
                 {formatShortDate(task.due_date)}
               </span>
             )}
+            <TaskDurationMeta minutes={task.duration_minutes} />
             {assignee && (
               <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {assignee.name ?? assignee.email ?? 'Assigned'}
@@ -227,7 +232,11 @@ function PhaseColumn({
   jobId: string;
   canEditJobs: boolean;
   memberLookup: MemberLookup;
-  onAddTask: (phaseId: string | null, title: string) => void;
+  onAddTask: (
+    phaseId: string | null,
+    title: string,
+    durationMinutes: number | null,
+  ) => void;
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
@@ -239,6 +248,9 @@ function PhaseColumn({
     data: { phaseId: phase?.id ?? null },
   });
   const [draftTitle, setDraftTitle] = useState('');
+  const [draftDurationMinutes, setDraftDurationMinutes] = useState<
+    number | null
+  >(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const colour = phase?.colour ?? '#64748B';
@@ -373,27 +385,37 @@ function PhaseColumn({
             e.preventDefault();
             const title = draftTitle.trim();
             if (!title) return;
-            onAddTask(phase?.id ?? null, title);
+            onAddTask(phase?.id ?? null, title, draftDurationMinutes);
             setDraftTitle('');
+            setDraftDurationMinutes(null);
           }}
         >
-          <div className="flex gap-1">
-            <Input
-              value={draftTitle}
-              onChange={(e) => setDraftTitle(e.target.value)}
-              placeholder="Add task…"
-              className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
+          <div className="space-y-1.5">
+            <div className="flex gap-1">
+              <Input
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                placeholder="Add task…"
+                className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
+                disabled={addingTask}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                variant="ghost"
+                className="h-8 shrink-0 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                disabled={!draftTitle.trim() || addingTask}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <TaskDurationFields
+              compact
+              idPrefix={`job-add-${columnId}`}
+              value={draftDurationMinutes}
+              onChange={setDraftDurationMinutes}
               disabled={addingTask}
             />
-            <Button
-              type="submit"
-              size="sm"
-              variant="ghost"
-              className="h-8 shrink-0 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-              disabled={!draftTitle.trim() || addingTask}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
         </form>
       )}
@@ -408,7 +430,11 @@ function SortablePhaseColumn(props: {
   jobId: string;
   canEditJobs: boolean;
   memberLookup: MemberLookup;
-  onAddTask: (phaseId: string | null, title: string) => void;
+  onAddTask: (
+    phaseId: string | null,
+    title: string,
+    durationMinutes: number | null,
+  ) => void;
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
@@ -589,7 +615,7 @@ export function JobProjectBoard({
   );
 
   const handleAddTask = useCallback(
-    (phaseId: string | null, title: string) => {
+    (phaseId: string | null, title: string, durationMinutes: number | null) => {
       setAddingTask(true);
       startTransition(async () => {
         try {
@@ -600,6 +626,7 @@ export function JobProjectBoard({
             phaseId,
             title,
             priority: 'medium',
+            durationMinutes,
           });
           const key = phaseId ?? UNPHASED_KEY;
           const next = { ...tasksByPhase };

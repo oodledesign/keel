@@ -25,6 +25,7 @@ import {
 } from '~/lib/email-assistant/email-assistant.actions';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 import type { SuggestedEmailTaskItem } from '~/lib/email-assistant/suggested-email-tasks.loader';
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
 type Props = {
   accountSlug?: string;
@@ -229,6 +230,7 @@ export function SuggestedEmailTasksClient({
                         item.suggestedDueDate
                           ? `due ${item.suggestedDueDate}`
                           : null,
+                        formatDurationMinutes(item.suggestedDurationMinutes),
                       ]
                         .filter(Boolean)
                         .join(' · ')}

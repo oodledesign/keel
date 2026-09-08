@@ -50,6 +50,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { useCommandUndoStack } from '~/lib/hooks/use-command-undo-stack';
 import {
@@ -66,6 +67,7 @@ import {
   isAssignedToSomeoneElse,
   taskAssigneeDisplayName,
 } from '~/lib/tasks/task-assignee';
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
 
 import {
@@ -91,6 +93,7 @@ type ScheduledSeriesItem = {
   nextCreateAt: string;
   nextCreateYmd: string;
   dueDays: number;
+  durationMinutes: number | null;
   occurrencesCreated: number;
   accountId: string | null;
   priority: string;
@@ -1990,6 +1993,9 @@ export function TasksPageClient({
                       {formatDueDateLabel(series.nextCreateYmd) ||
                         series.nextCreateYmd}
                       {series.dueDays > 0 ? ` · due +${series.dueDays}d` : null}
+                      {series.durationMinutes
+                        ? ` · ${formatDurationMinutes(series.durationMinutes)}`
+                        : null}
                       {' · '}
                       {series.occurrencesCreated} created
                       {series.status === 'paused' ? ' · paused' : null}
@@ -2277,7 +2283,8 @@ function TaskRow({
             ) : null}
           </div>
         </div>
-        <div className="sm:hidden">
+        <div className="flex items-center gap-2 sm:hidden">
+          <TaskDurationMeta minutes={task.durationMinutes} />
           <TaskRowMetaColumn
             taskId={task.id}
             dueDate={task.dueDate}
@@ -2290,7 +2297,8 @@ function TaskRow({
             onDueDateChanged={onDueDateChanged}
           />
         </div>
-        <div className="hidden sm:block">
+        <div className="hidden items-center justify-end gap-2 sm:flex">
+          <TaskDurationMeta minutes={task.durationMinutes} />
           <InlineDueDate
             taskId={task.id}
             dueDate={task.dueDate}

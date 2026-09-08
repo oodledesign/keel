@@ -11,6 +11,10 @@ const ExtractItemSchema = z.object({
   title: z.string(),
   detail: z.string().nullable().optional(),
   suggested_due_date: z.string().nullable().optional(),
+  suggested_duration_minutes: z
+    .union([z.number(), z.string()])
+    .nullable()
+    .optional(),
   source_excerpt: z.string().nullable().optional(),
   assignee_confidence: z.number().nullable().optional(),
   suggested_assignee_email: z.string().nullable().optional(),
@@ -46,6 +50,54 @@ export function stripJsonFences(text: string): string {
   }
 
   return trimmed;
+}
+
+const MAX_DURATION_MINUTES = 10_080;
+
+/** Keep in sync with `apps/web/lib/tasks/task-duration.ts` (this package cannot import from the web app). */
+export function normalizeDurationMinutes(
+  value: number | string | null | undefined,
+): number | null {
+  if (value == null || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return null;
+    const rounded = Math.round(value);
+    return rounded > 0 && rounded <= MAX_DURATION_MINUTES ? rounded : null;
+  }
+
+  const text = value.trim().toLowerCase();
+  if (!text) return null;
+
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    const rounded = Math.round(Number(text));
+    return rounded > 0 && rounded <= MAX_DURATION_MINUTES ? rounded : null;
+  }
+
+  const combined =
+    /(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\s*(?:and\s*)?(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/.exec(
+      text,
+    );
+  if (combined) {
+    const total = Number(combined[1]) * 60 + Number(combined[2]);
+    const rounded = Math.round(total);
+    return rounded > 0 && rounded <= MAX_DURATION_MINUTES ? rounded : null;
+  }
+
+  const hourOnly = /(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b/.exec(text);
+  const minuteOnly = /(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/.exec(text);
+  if (hourOnly && !minuteOnly) {
+    const rounded = Math.round(Number(hourOnly[1]) * 60);
+    return rounded > 0 && rounded <= MAX_DURATION_MINUTES ? rounded : null;
+  }
+  if (minuteOnly) {
+    const rounded = Math.round(Number(minuteOnly[1]));
+    return rounded > 0 && rounded <= MAX_DURATION_MINUTES ? rounded : null;
+  }
+
+  return null;
 }
 
 function normalizeDueDate(value: string | null | undefined): string | null {
@@ -120,6 +172,9 @@ export function parseExtractResponse(raw: string): EmailActionItem[] {
       title: item.title.trim(),
       detail: item.detail?.trim() || null,
       suggestedDueDate: normalizeDueDate(item.suggested_due_date),
+      suggestedDurationMinutes: normalizeDurationMinutes(
+        item.suggested_duration_minutes,
+      ),
       sourceExcerpt: normalizeExcerpt(item.source_excerpt),
       assigneeConfidence: normalizeConfidence(item.assignee_confidence),
       suggestedAssigneeEmail: normalizeEmail(item.suggested_assignee_email),
@@ -251,6 +306,7 @@ export function serializeExtractResponse(
       title: item.title,
       detail: item.detail,
       suggested_due_date: item.suggestedDueDate,
+      suggested_duration_minutes: item.suggestedDurationMinutes,
       source_excerpt: item.sourceExcerpt,
       assignee_confidence: item.assigneeConfidence,
       suggested_assignee_email: item.suggestedAssigneeEmail,

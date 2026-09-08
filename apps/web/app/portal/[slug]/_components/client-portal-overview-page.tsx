@@ -54,6 +54,7 @@ export default async function ClientPortalOverviewPage({
       title: task.title,
       status: task.status,
       dueDate: task.dueDate,
+      durationMinutes: task.durationMinutes,
       projectId: task.projectId,
       projectName: task.projectName,
       assigneeName: null,

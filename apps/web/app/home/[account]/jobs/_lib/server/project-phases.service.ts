@@ -17,6 +17,7 @@ import {
 } from '~/lib/jobs/project-notifications';
 import { isBuiltinPhaseTemplateName } from '~/lib/projects/phase-template-builtins';
 import { PROJECT_BOARD_TEMPLATE } from '~/lib/projects/project-board-phase-template';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
 
 import {
@@ -100,7 +101,7 @@ const TASK_STATUSES = [
 ] as const;
 
 const JOB_BOARD_TASK_SELECT =
-  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, parent_task_id, notes, links, note_refs' as const;
+  'id, title, status, priority, due_date, duration_minutes, sort_order, phase_id, project_id, user_id, parent_task_id, notes, links, note_refs' as const;
 
 function normalizeTaskLinks(
   value: unknown,
@@ -149,6 +150,10 @@ function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
     status: String(row.status ?? 'todo'),
     priority: String(row.priority ?? 'medium'),
     due_date: (row.due_date as string | null) ?? null,
+    duration_minutes:
+      typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+        ? Math.round(row.duration_minutes)
+        : null,
     sort_order: (row.sort_order as number | null) ?? null,
     phase_id: (row.phase_id as string | null) ?? null,
     job_id: (row.project_id as string | null) ?? null,
@@ -1025,6 +1030,7 @@ class ProjectPhasesService {
         status: 'todo',
         priority: input.priority ?? 'medium',
         due_date: dueDateYmd,
+        duration_minutes: clampDurationMinutes(input.durationMinutes),
         user_id: assigneeUserId,
         project_id: input.jobId,
         phase_id: input.phaseId,
@@ -1051,6 +1057,7 @@ class ProjectPhasesService {
         status: 'todo' as const,
         priority: input.priority ?? 'medium',
         due_date: dueDateYmd,
+        duration_minutes: clampDurationMinutes(input.subtaskDurations?.[index]),
         user_id: assigneeUserId,
         project_id: input.jobId,
         phase_id: input.phaseId,
@@ -1120,6 +1127,9 @@ class ProjectPhasesService {
     }
     if (input.dueDate !== undefined) {
       payload.due_date = dueDateToYmd(input.dueDate);
+    }
+    if (input.durationMinutes !== undefined) {
+      payload.duration_minutes = clampDurationMinutes(input.durationMinutes);
     }
     if (input.notes !== undefined) {
       payload.notes = input.notes?.trim() ? input.notes.trim() : null;

@@ -8,6 +8,8 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { toast } from '@kit/ui/sonner';
 
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
+
 import { formatPortalDate } from '../../_components/portal-badges';
 import type { PortalMyTask } from '../../_lib/server/client-portal.service';
 import { completePortalMyTask } from '../../_lib/server/server-actions';
@@ -85,6 +87,7 @@ export function PortalMyTasksList({
                       task.dueDate
                         ? `Due ${formatPortalDate(task.dueDate)}`
                         : null,
+                      formatDurationMinutes(task.durationMinutes),
                       task.priority ? task.priority : null,
                     ]
                       .filter(Boolean)

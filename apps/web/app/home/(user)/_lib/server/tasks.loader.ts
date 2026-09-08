@@ -25,10 +25,10 @@ const ACTIVE_TASK_STATUSES = ['todo', 'in_progress', 'client_review'] as const;
 
 /** Include notes so list/export views can show descriptions without a second fetch. */
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
+  'id, title, status, priority, due_date, duration_minutes, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
 
 const TASK_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
+  'id, title, status, priority, due_date, duration_minutes, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
 
 /** Same as TASK_SELECT; kept for call sites that try series first. */
 const TASK_SELECT_WITH_SERIES = TASK_SELECT;
@@ -47,6 +47,7 @@ type TaskQueryRow = {
   status?: string | null;
   priority?: string | null;
   due_date?: string | null;
+  duration_minutes?: number | null;
   project_id?: string | null;
   client_id?: string | null;
   area_id?: string | null;
@@ -138,6 +139,8 @@ export type TasksPageTask = {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDateLabel: string;
   dueDate: string | null; // ISO date for edit form
+  /** Optional estimated effort in minutes. */
+  durationMinutes: number | null;
   accentColor: string | null;
   /** Direct `tasks.client_id`, or the linked project's client when the task is only on a project. */
   clientId: string | null;
@@ -466,6 +469,10 @@ function taskRowToPageTask(
     priority: (row.priority as TasksPageTask['priority']) ?? 'medium',
     dueDateLabel: formatDueDateLabel(dueDateRaw),
     dueDate: toIsoDateString(dueDateRaw),
+    durationMinutes:
+      typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+        ? Math.round(row.duration_minutes)
+        : null,
     accentColor,
     clientId: resolvedClientId,
     projectId: row.project_id ?? null,
@@ -900,7 +907,7 @@ export async function loadTaskById(
     const fallback = await client
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs',
+        'id, title, status, priority, due_date, duration_minutes, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs',
       )
       .eq('user_id', user.id)
       .eq('parent_task_id', taskId)
@@ -964,7 +971,7 @@ async function fetchActiveThenCompletedTaskRows(
 
   if (
     activeError &&
-    /note_refs|recurring_series_id|source|assignee_contact_id/i.test(
+    /note_refs|recurring_series_id|source|assignee_contact_id|duration_minutes/i.test(
       `${activeError.message ?? ''}`,
     )
   ) {

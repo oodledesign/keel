@@ -26,6 +26,7 @@ import {
 } from '@kit/ui/select';
 import { Textarea } from '@kit/ui/textarea';
 
+import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 
 import {
@@ -62,6 +63,7 @@ export type EditableScheduledSeries = {
   nextCreateAt?: string;
   nextCreateYmd: string;
   dueDays: number;
+  durationMinutes: number | null;
   occurrencesCreated: number;
   accountId: string | null;
   priority: string;
@@ -126,6 +128,7 @@ export function EditScheduledSeriesDialog({
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
   const [nextCreateDate, setNextCreateDate] = useState('');
   const [dueDays, setDueDays] = useState('0');
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [status, setStatus] = useState<'active' | 'paused'>('active');
 
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
@@ -150,6 +153,7 @@ export function EditScheduledSeriesDialog({
     );
     setNextCreateDate(series.nextCreateYmd);
     setDueDays(String(series.dueDays ?? 0));
+    setDurationMinutes(series.durationMinutes);
     setStatus(series.status === 'paused' ? 'paused' : 'active');
     setAssignTo(initialAssignTo(series));
     setError(null);
@@ -213,6 +217,7 @@ export function EditScheduledSeriesDialog({
             : (series.dayOfMonth ?? null)
           : null,
         dueDays: Number.isFinite(dueDaysNum) ? dueDaysNum : 0,
+        durationMinutes,
         status,
         assignment: assignmentFromSelection(assignTo, options),
       });
@@ -312,6 +317,11 @@ export function EditScheduledSeriesDialog({
                 className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
+            <TaskDurationFields
+              value={durationMinutes}
+              onChange={setDurationMinutes}
+              idPrefix="series-duration"
+            />
             <div className="space-y-2">
               <Label className="text-[var(--workspace-shell-text-muted)]">
                 Priority

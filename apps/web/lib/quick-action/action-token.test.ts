@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { signQuickActionToken, verifyQuickActionToken } from './action-token';
 
@@ -26,6 +26,7 @@ describe('quick action tokens', () => {
         title: 'Test task',
         notes: null,
         dueDate: '2026-06-14',
+        durationMinutes: 30,
         priority: 'medium',
         projectId: null,
         clientId: null,

@@ -6,6 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { schedulePublishedTaskIfEnabled } from '~/lib/recorder/schedule-published-task';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 import { snapDueDateYmd } from '~/lib/workspace-focus';
 import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
 
@@ -24,6 +25,7 @@ export type PublishMeetingTaskInput = {
   title?: string;
   description?: string | null;
   dueDate?: string | null;
+  durationMinutes?: number | null;
 };
 
 export type PublishMeetingTaskResult = {
@@ -38,6 +40,7 @@ type MeetingActionItemRow = {
   suggested_title: string;
   suggested_description: string | null;
   suggested_due_date: string | null;
+  suggested_duration_minutes: number | null;
   suggested_assignee_id: string | null;
   source_excerpt: string | null;
   meeting_transcript_id: string;
@@ -90,6 +93,7 @@ export async function publishMeetingTaskToPlanner(
       suggested_title,
       suggested_description,
       suggested_due_date,
+      suggested_duration_minutes,
       suggested_assignee_id,
       source_excerpt,
       meeting_transcript_id,
@@ -156,6 +160,11 @@ export async function publishMeetingTaskToPlanner(
     title,
     notes: buildTaskNotes(description, item.source_excerpt),
     due_date: dueDate,
+    duration_minutes: clampDurationMinutes(
+      input.durationMinutes !== undefined
+        ? input.durationMinutes
+        : item.suggested_duration_minutes,
+    ),
     client_id: clientId,
     status: 'todo',
     priority: 'medium',

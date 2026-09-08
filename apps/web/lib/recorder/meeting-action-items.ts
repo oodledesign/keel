@@ -95,6 +95,7 @@ function mapExtractedItemToRow(
     suggested_due_date: item.suggestedDueDate
       ? snapDueDateYmd(item.suggestedDueDate, scheduling)
       : null,
+    suggested_duration_minutes: item.suggestedDurationMinutes,
     source_excerpt: item.sourceExcerpt,
     assignee_confidence: item.assigneeConfidence,
     suggested_assignee_id: resolveSuggestedAssigneeId(

@@ -7,6 +7,10 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
+import {
+  TaskDurationFields,
+  TaskDurationMeta,
+} from '~/components/task-duration-fields';
 import type { ProjectGuestPermissions } from '~/lib/projects/project-guests.types';
 
 type TaskRow = {
@@ -15,6 +19,7 @@ type TaskRow = {
   status: string;
   priority: string | null;
   due_date: string | null;
+  duration_minutes: number | null;
   user_id: string | null;
   notes: string | null;
 };
@@ -39,11 +44,18 @@ export function GuestProjectBoard(props: {
       status: String(row.status ?? 'todo'),
       priority: (row.priority as string | null) ?? null,
       due_date: (row.due_date as string | null) ?? null,
+      duration_minutes:
+        typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+          ? Math.round(row.duration_minutes)
+          : null,
       user_id: (row.user_id as string | null) ?? null,
       notes: (row.notes as string | null) ?? null,
     })),
   );
   const [newTitle, setNewTitle] = useState('');
+  const [newDurationMinutes, setNewDurationMinutes] = useState<number | null>(
+    null,
+  );
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
     {},
   );
@@ -87,9 +99,10 @@ export function GuestProjectBoard(props: {
                     user_id: user.id,
                     status: 'todo',
                     priority: 'medium',
+                    duration_minutes: newDurationMinutes,
                   })
                   .select(
-                    'id, title, status, priority, due_date, user_id, notes',
+                    'id, title, status, priority, due_date, duration_minutes, user_id, notes',
                   )
                   .single();
 
@@ -102,11 +115,17 @@ export function GuestProjectBoard(props: {
                     status: String(data.status ?? 'todo'),
                     priority: (data.priority as string | null) ?? null,
                     due_date: (data.due_date as string | null) ?? null,
+                    duration_minutes:
+                      typeof data.duration_minutes === 'number' &&
+                      data.duration_minutes > 0
+                        ? Math.round(data.duration_minutes)
+                        : null,
                     user_id: (data.user_id as string | null) ?? null,
                     notes: (data.notes as string | null) ?? null,
                   },
                 ]);
                 setNewTitle('');
+                setNewDurationMinutes(null);
                 toast.success('Task created');
               } catch (err) {
                 toast.error(
@@ -116,12 +135,21 @@ export function GuestProjectBoard(props: {
             });
           }}
         >
-          <Input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Add a task…"
-            className="border-[color:var(--workspace-shell-border)]"
-          />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end">
+            <Input
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Add a task…"
+              className="border-[color:var(--workspace-shell-border)]"
+            />
+            <TaskDurationFields
+              compact
+              idPrefix="guest-add-duration"
+              value={newDurationMinutes}
+              onChange={setNewDurationMinutes}
+              disabled={pending}
+            />
+          </div>
           <Button type="submit" disabled={pending || !newTitle.trim()}>
             Add
           </Button>
@@ -146,6 +174,10 @@ export function GuestProjectBoard(props: {
                   <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
                     {task.title}
                   </p>
+                  <TaskDurationMeta
+                    minutes={task.duration_minutes}
+                    className="mt-1"
+                  />
                   {props.permissions.edit_own_task ? (
                     <select
                       className="mt-2 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs text-[var(--workspace-shell-text)]"

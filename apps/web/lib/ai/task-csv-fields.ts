@@ -8,6 +8,7 @@ export const TASK_CSV_FIELDS = [
   'title',
   'notes',
   'due_date',
+  'duration_minutes',
   'priority',
   'status',
   'client_name',
@@ -24,6 +25,7 @@ export const TASK_CSV_FIELD_OPTIONS: Array<{
   { value: 'title', label: 'Title (required)' },
   { value: 'notes', label: 'Notes / description' },
   { value: 'due_date', label: 'Due date' },
+  { value: 'duration_minutes', label: 'Duration (minutes)' },
   { value: 'priority', label: 'Priority' },
   { value: 'status', label: 'Status' },
   { value: 'client_name', label: 'Client name' },
@@ -83,6 +85,7 @@ export function heuristicTaskMapping(
   assign('title', 'title', 'task', 'subject', 'name');
   assign('notes', 'notes', 'description', 'details', 'body');
   assign('due_date', 'due date', 'due', 'deadline');
+  assign('duration_minutes', 'duration', 'estimate', 'minutes', 'hours');
   assign('priority', 'priority', 'urgency');
   assign('status', 'status', 'state');
   assign('client_name', 'client', 'customer', 'company');
@@ -104,6 +107,7 @@ export const TASK_CSV_TEMPLATE_HEADERS = [
   'Title',
   'Notes',
   'Due date',
+  'Duration minutes',
   'Priority',
   'Status',
   'Client name',
@@ -118,6 +122,7 @@ export function buildTaskImportTemplateCsv(): string {
         'Follow up proposal',
         'Send revised quote after call',
         '2026-08-01',
+        '30',
         'high',
         'todo',
         'Acme Ltd',
@@ -127,6 +132,7 @@ export function buildTaskImportTemplateCsv(): string {
         'Book kickoff meeting',
         '',
         '01/08/2026',
+        '2 hours',
         'medium',
         'todo',
         'Jordan Lee',

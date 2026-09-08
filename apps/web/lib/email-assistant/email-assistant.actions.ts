@@ -28,6 +28,7 @@ import {
 } from '~/lib/email-assistant/set-thread-category';
 import { syncCategoryToGmail } from '~/lib/email-assistant/sync-category-to-gmail';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
+import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 import { EMAIL_THREAD_CATEGORIES } from './email-thread-categories';
 
@@ -41,7 +42,6 @@ const MarkEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),
   accountSlug: z.string().min(1).optional(),
 });
-
 
 const ModifyEmailThreadLabelsSchema = z.object({
   threadId: z.string().uuid(),
@@ -199,7 +199,6 @@ export const setEmailThreadCategoryAction = enhanceAction(
   },
 );
 
-
 export const modifyEmailThreadLabelsAction = enhanceAction(
   async (data, user) => {
     const result = await modifyThreadGmailLabels({
@@ -302,7 +301,7 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
     const { data: actionItem, error: actionError } = await client
       .from('email_action_items')
       .select(
-        'id, title, detail, source_excerpt, suggested_due_date, client_id, project_id, status, account_id',
+        'id, title, detail, source_excerpt, suggested_due_date, suggested_duration_minutes, client_id, project_id, status, account_id',
       )
       .eq('id', data.actionItemId)
       .eq('user_id', user.id)
@@ -325,6 +324,9 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
         sourceLabel: 'Email',
       }),
       due_date: actionItem.suggested_due_date,
+      duration_minutes: clampDurationMinutes(
+        actionItem.suggested_duration_minutes,
+      ),
       project_id: actionItem.project_id ?? null,
       client_id: actionItem.client_id ?? null,
       account_id: actionItem.account_id ?? data.accountId ?? null,

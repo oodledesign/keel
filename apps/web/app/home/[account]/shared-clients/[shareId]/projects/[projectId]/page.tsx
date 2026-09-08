@@ -36,7 +36,7 @@ async function PartnerSharedProjectPage({
   const { data: tasks } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, user_id, notes, sort_order, created_at',
+      'id, title, status, priority, due_date, duration_minutes, user_id, notes, sort_order, created_at',
     )
     .eq('project_id', projectId)
     .order('sort_order', { ascending: true });

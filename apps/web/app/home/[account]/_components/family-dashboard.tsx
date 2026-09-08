@@ -7,6 +7,7 @@ import { Calendar, CheckSquare, Clock, Sparkles, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { cn } from '@kit/ui/utils';
 
+import { TaskDurationMeta } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
 
 import type {
@@ -211,11 +212,14 @@ function UpcomingTasksPanel({
               </p>
             ) : null}
           </div>
-          {task.dueLabel ? (
-            <span className="shrink-0 text-xs text-[var(--workspace-shell-text)]/50">
-              {task.dueLabel}
-            </span>
-          ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {task.dueLabel ? (
+              <span className="text-xs text-[var(--workspace-shell-text)]/50">
+                {task.dueLabel}
+              </span>
+            ) : null}
+            <TaskDurationMeta minutes={task.durationMinutes} />
+          </div>
         </li>
       ))}
     </ul>

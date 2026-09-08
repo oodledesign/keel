@@ -10,6 +10,7 @@ import {
   todayLocalYmd,
 } from '~/home/_lib/due-date-ymd';
 import { callAI } from '~/lib/ai/router';
+import { normalizeDurationMinutes } from '~/lib/tasks/task-duration';
 
 import { formatExtractInstructionsBlock } from './extract-instructions';
 
@@ -17,6 +18,7 @@ const AnthropicSubtaskSchema = z.object({
   title: z.string(),
   notes: z.string().optional().nullable(),
   due_date: z.string().nullable().optional(),
+  duration_minutes: z.union([z.number(), z.string()]).nullable().optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
 });
 
@@ -24,6 +26,7 @@ const AnthropicParentSchema = z.object({
   title: z.string(),
   notes: z.string().optional().nullable(),
   due_date: z.string().nullable().optional(),
+  duration_minutes: z.union([z.number(), z.string()]).nullable().optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   suggested_project_name: z.string().nullable().optional(),
   suggested_client_name: z.string().nullable().optional(),
@@ -41,6 +44,7 @@ export type ExtractedWorkspaceTaskDraft = {
   title: string;
   notes: string | null;
   dueDate: string | null;
+  durationMinutes: number | null;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   suggestedProjectName: string | null;
   suggestedClientName: string | null;
@@ -51,6 +55,7 @@ export type ExtractedWorkspaceTaskDraft = {
     title: string;
     notes: string | null;
     dueDate: string | null;
+    durationMinutes: number | null;
     priority: 'low' | 'medium' | 'high' | 'urgent';
   }>;
 };
@@ -203,6 +208,7 @@ Return ONLY valid JSON matching this shape (no markdown fences):
       "title": "string",
       "notes": "string or null — context from the source for this parent task",
       "due_date": "YYYY-MM-DD or null — infer deadlines from dates spoken in the call; use null only when no deadline is implied",
+      "duration_minutes": "integer minutes or null — only when the source mentions effort such as 30 mins or 2 hours",
       "priority": "low" | "medium" | "high" | "urgent",
       "suggested_project_name": "string or null — best matching name from the project list, or null",
       "suggested_client_name": "string or null — best matching name from the client list, or null",
@@ -210,7 +216,7 @@ Return ONLY valid JSON matching this shape (no markdown fences):
       "suggested_assignee_email": "string or null — email from the people lists when known",
       "suggested_assignee_name": "string or null — display name from the people lists",
       "subtasks": [
-        { "title": "string", "notes": "string or null", "due_date": "YYYY-MM-DD or null", "priority": "low"|"medium"|"high"|"urgent" }
+        { "title": "string", "notes": "string or null", "due_date": "YYYY-MM-DD or null", "duration_minutes": "integer minutes or null", "priority": "low"|"medium"|"high"|"urgent" }
       ]
     }
   ]
@@ -223,6 +229,7 @@ Rules:
 - Prefer project OR client suggestion when the text clearly references one; use null when unclear.
 - Assignee: only set suggested_assignee_* when the source clearly makes someone responsible (e.g. “Sarah will send…”, “Can you pick this up, Dan?”). Prefer matching calendar attendees and the people lists. Use kind "member" for team, "contact" for client contacts. Never invent people; use nulls when unclear.
 - Dates: only ISO strings YYYY-MM-DD or null.
+- Duration: set duration_minutes only when the source mentions how long the work might take (“30 mins”, “2 hours”, “1h 30m”). Convert to integer minutes. Use null when no duration is mentioned — do not guess.
 - Calendar context: the call/meeting took place on ${meetingDateYmd} (local). Treat that day as “today” for relative phrases in the transcript (“tomorrow”, “Friday”, “next week”, “end of week”, “in two days”). Prefer concrete deadlines mentioned in the conversation over inventing dates.
 - For actionable due dates, use year ${currentYearStr} or a later year when the source implies a future deadline. If the text gives month/day (or "June 20", "20/6") without a year, assume the next occurrence on or after ${meetingDateYmd} — almost always ${currentYearStr} or ${nextYearStr}. Do not use past years unless the source explicitly names that year for a historical reference (then prefer null for due_date if it is not an actionable deadline).`;
 
@@ -264,6 +271,7 @@ Workspace projects (choose names that best match the text; we map to ids server-
       meetingDateYmd,
       now: meetingRefDate,
     }),
+    durationMinutes: normalizeDurationMinutes(item.duration_minutes),
     priority: normalizePriority(item.priority),
     suggestedProjectName: item.suggested_project_name?.trim() || null,
     suggestedClientName: item.suggested_client_name?.trim() || null,
@@ -278,6 +286,7 @@ Workspace projects (choose names that best match the text; we map to ids server-
         meetingDateYmd,
         now: meetingRefDate,
       }),
+      durationMinutes: normalizeDurationMinutes(s.duration_minutes),
       priority: normalizePriority(s.priority),
     })),
   }));

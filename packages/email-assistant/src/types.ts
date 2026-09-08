@@ -3,6 +3,8 @@ export type EmailActionItem = {
   title: string;
   detail: string | null;
   suggestedDueDate: string | null;
+  /** Minutes when the email mentions effort; null otherwise. */
+  suggestedDurationMinutes: number | null;
   sourceExcerpt: string | null;
   /** 0-1 confidence that suggestedAssigneeEmail is correct. */
   assigneeConfidence: number | null;
@@ -42,6 +44,7 @@ export type ExtractResponseJson = {
     title: string;
     detail?: string | null;
     suggested_due_date?: string | null;
+    suggested_duration_minutes?: number | string | null;
     source_excerpt?: string | null;
     assignee_confidence?: number | null;
     suggested_assignee_email?: string | null;

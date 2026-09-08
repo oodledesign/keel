@@ -12,6 +12,17 @@ const TASK_STATUSES = new Set([
 
 const TASK_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent'] as const);
 
+const MAX_DURATION_MINUTES = 10_080;
+
+function clampDurationMinutes(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value)) {
+    return null;
+  }
+
+  const rounded = Math.round(value);
+  return rounded > 0 && rounded <= MAX_DURATION_MINUTES ? rounded : null;
+}
+
 export type TaskStatus = typeof TASK_STATUSES extends Set<infer T> ? T : never;
 export type TaskPriority =
   typeof TASK_PRIORITIES extends Set<infer T> ? T : never;
@@ -22,6 +33,8 @@ export type CreateTaskInput = {
   status?: TaskStatus;
   notes?: string | null;
   dueDate?: string;
+  /** Optional estimated effort in minutes. */
+  durationMinutes?: number | null;
   projectId?: string;
   areaId?: string;
   clientId?: string;
@@ -209,11 +222,14 @@ export async function createTaskForUser(
     ? userId
     : input.assigneeUserId?.trim() || userId;
 
+  const durationMinutes = clampDurationMinutes(input.durationMinutes);
+
   const insertRow = {
     title,
     priority,
     status,
     due_date: input.dueDate || null,
+    ...(durationMinutes != null ? { duration_minutes: durationMinutes } : {}),
     project_id: projectId,
     area_id: areaId,
     client_id: clientId,

@@ -139,7 +139,7 @@ export function toPlannerTask(
     workspaceSlug: task.workspaceSlug,
     priority: task.priority,
     status: task.status,
-    estimated_duration_minutes: null,
+    estimated_duration_minutes: task.durationMinutes,
     due_date: task.dueDate,
     dueDateLabel: task.dueDateLabel,
     notes: task.notes,

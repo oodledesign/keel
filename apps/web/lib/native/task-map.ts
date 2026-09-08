@@ -21,6 +21,7 @@ export type NativeTask = {
   title: string;
   status: NativeTaskStatus;
   due: string | null;
+  duration_minutes: number | null;
   workspace: string;
   client_id: string | null;
   client_name: string | null;
@@ -31,6 +32,7 @@ export type NativeTaskRow = {
   title?: string | null;
   status?: string | null;
   due_date?: string | null;
+  duration_minutes?: number | null;
   account_id?: string | null;
   user_id?: string | null;
   assignee_contact_id?: string | null;
@@ -154,6 +156,10 @@ export function toNativeTask(
     title: row.title?.trim() || 'Untitled task',
     status: mapNativeTaskStatus(row.status),
     due: row.due_date?.trim() || null,
+    duration_minutes:
+      typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+        ? Math.round(row.duration_minutes)
+        : null,
     workspace: workspace.slug,
     client_id: row.client_id?.trim() || null,
     client_name: clientName?.trim() || null,

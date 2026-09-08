@@ -26,6 +26,7 @@ const createTaskSchema = z.object({
   status: taskStatusSchema.optional().default('todo'),
   priority: taskPrioritySchema.optional().default('medium'),
   due_date: z.string().trim().optional(),
+  duration_minutes: z.number().int().positive().max(10080).optional(),
   project_id: z.string().uuid().optional(),
   area_id: z.string().uuid().optional(),
   notes: z.string().optional(),
@@ -37,6 +38,13 @@ const updateTaskSchema = z.object({
   status: taskStatusSchema.optional(),
   priority: taskPrioritySchema.optional(),
   due_date: z.string().trim().nullable().optional(),
+  duration_minutes: z
+    .number()
+    .int()
+    .positive()
+    .max(10080)
+    .nullable()
+    .optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -46,6 +54,7 @@ type TaskRow = {
   status: string | null;
   priority: string | null;
   due_date: string | null;
+  duration_minutes: number | null;
   project_id: string | null;
   area_id: string | null;
 };
@@ -57,6 +66,7 @@ function mapTask(row: TaskRow) {
     status: row.status,
     priority: row.priority,
     due_date: row.due_date,
+    duration_minutes: row.duration_minutes,
     project_id: row.project_id,
     area_id: row.area_id,
   };
@@ -75,7 +85,9 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     async (input) => {
       let query = supabase
         .from('tasks')
-        .select('id, title, status, priority, due_date, project_id, area_id')
+        .select(
+          'id, title, status, priority, due_date, duration_minutes, project_id, area_id',
+        )
         .order('due_date', { ascending: true, nullsFirst: false })
         .limit(input.limit);
 
@@ -108,6 +120,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         status: input.status,
         priority: input.priority,
         dueDate: input.due_date,
+        durationMinutes: input.duration_minutes,
         projectId: input.project_id,
         areaId: input.area_id,
         notes: input.notes,
@@ -120,7 +133,9 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
 
       const { data, error } = await supabase
         .from('tasks')
-        .select('id, title, status, priority, due_date, project_id, area_id')
+        .select(
+          'id, title, status, priority, due_date, duration_minutes, project_id, area_id',
+        )
         .eq('id', result.id)
         .single();
 
@@ -142,6 +157,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         status: input.status,
         priority: input.priority,
         due_date: input.due_date,
+        duration_minutes: input.duration_minutes,
         notes:
           input.notes === undefined ? undefined : input.notes?.trim() || null,
       });
@@ -154,7 +170,9 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         .from('tasks')
         .update(updates)
         .eq('id', input.id)
-        .select('id, title, status, priority, due_date, project_id, area_id')
+        .select(
+          'id, title, status, priority, due_date, duration_minutes, project_id, area_id',
+        )
         .maybeSingle();
 
       assertSupabaseOk(data, error, 'update task');

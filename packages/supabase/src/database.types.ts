@@ -7887,6 +7887,7 @@ export type Database = {
           status: string
           suggested_assignee_id: string | null
           suggested_due_date: string | null
+          suggested_duration_minutes: number | null
           task_id: string | null
           thread_id: string
           title: string
@@ -7905,6 +7906,7 @@ export type Database = {
           status?: string
           suggested_assignee_id?: string | null
           suggested_due_date?: string | null
+          suggested_duration_minutes?: number | null
           task_id?: string | null
           thread_id: string
           title: string
@@ -7923,6 +7925,7 @@ export type Database = {
           status?: string
           suggested_assignee_id?: string | null
           suggested_due_date?: string | null
+          suggested_duration_minutes?: number | null
           task_id?: string | null
           thread_id?: string
           title?: string
@@ -11338,6 +11341,7 @@ export type Database = {
           suggested_assignee_id: string | null
           suggested_description: string | null
           suggested_due_date: string | null
+          suggested_duration_minutes: number | null
           suggested_title: string
         }
         Insert: {
@@ -11355,6 +11359,7 @@ export type Database = {
           suggested_assignee_id?: string | null
           suggested_description?: string | null
           suggested_due_date?: string | null
+          suggested_duration_minutes?: number | null
           suggested_title: string
         }
         Update: {
@@ -11372,6 +11377,7 @@ export type Database = {
           suggested_assignee_id?: string | null
           suggested_description?: string | null
           suggested_due_date?: string | null
+          suggested_duration_minutes?: number | null
           suggested_title?: string
         }
         Relationships: [
@@ -15420,6 +15426,7 @@ export type Database = {
           created_at: string
           day_of_month: number | null
           due_days: number
+          duration_minutes: number | null
           end_at: string | null
           frequency: string
           id: string
@@ -15441,6 +15448,7 @@ export type Database = {
           created_at?: string
           day_of_month?: number | null
           due_days?: number
+          duration_minutes?: number | null
           end_at?: string | null
           frequency: string
           id?: string
@@ -15462,6 +15470,7 @@ export type Database = {
           created_at?: string
           day_of_month?: number | null
           due_days?: number
+          duration_minutes?: number | null
           end_at?: string | null
           frequency?: string
           id?: string
@@ -15562,6 +15571,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           due_date: string | null
+          duration_minutes: number | null
           google_calendar_event_id: string | null
           group_id: string | null
           id: string
@@ -15591,6 +15601,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           due_date?: string | null
+          duration_minutes?: number | null
           google_calendar_event_id?: string | null
           group_id?: string | null
           id?: string
@@ -15620,6 +15631,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           due_date?: string | null
+          duration_minutes?: number | null
           google_calendar_event_id?: string | null
           group_id?: string | null
           id?: string

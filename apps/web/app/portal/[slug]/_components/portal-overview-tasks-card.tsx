@@ -10,6 +10,8 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { cn } from '@kit/ui/utils';
 
+import { formatDurationMinutes } from '~/lib/tasks/task-duration';
+
 import type { PortalOverviewTask } from '../_lib/server/client-portal.service';
 import { formatPortalDate } from './portal-badges';
 
@@ -105,6 +107,7 @@ export function PortalOverviewTasksCard({
                     task.dueDate
                       ? `Due ${formatPortalDate(task.dueDate)}`
                       : null,
+                    formatDurationMinutes(task.durationMinutes),
                   ]
                     .filter(Boolean)
                     .join(' · ')}

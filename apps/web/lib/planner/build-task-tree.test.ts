@@ -20,6 +20,7 @@ function baseTask(overrides: Partial<TasksPageTask> = {}): TasksPageTask {
     priority: 'medium',
     dueDateLabel: 'Today',
     dueDate: '2026-07-03',
+    durationMinutes: null,
     accentColor: null,
     clientId: null,
     projectId: null,

@@ -172,6 +172,7 @@ describe('toNativeTask', () => {
       title: 'Send invoice',
       status: 'pending',
       due: '2026-09-02',
+      duration_minutes: null,
       workspace: 'oodle',
       client_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       client_name: 'Hope and Wonder',

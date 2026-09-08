@@ -106,6 +106,12 @@ If you prefer not to use the CLI, you can run the migration SQL in the **Supabas
 1. Open your project → **SQL Editor**.
 2. Run the contents of the migration file(s) you need.
 
+To add **task duration** (`duration_minutes` on tasks, plus suggested duration on email/meeting action items and recurring series), run:
+
+- `apps/web/supabase/migrations/20261119120000_tasks_duration_minutes.sql`
+
+Local: `pnpm supabase:web:reset` or `cd apps/web && supabase migration up`. Hosted: `cd apps/web && supabase db push`. Then `pnpm supabase:web:typegen` if you regenerate types from the live schema.
+
 To add **only the Contractor role** and its permissions, run the SQL from:
 
 - `apps/web/supabase/migrations/20260216000001_contractor_role_and_clients_view.sql`
