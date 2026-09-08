@@ -15,11 +15,11 @@ import {
   buildEachFeedUrl,
   buildPropertyHiveFeedUrl,
 } from '~/lib/commercial/property-hive-feed';
-import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
   loadLatestRightmoveBulkJob,
   toPublicRightmoveBulkJob,
 } from '~/lib/commercial/rightmove-bulk-job';
+import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
   getRightmoveEnvironmentLabel,
   isRightmoveOAuthConfigured,
@@ -140,15 +140,32 @@ export async function loadCommercialPublishingSettings(
     Boolean(b.rightmoveBranchId?.trim()),
   );
 
-  const { data: issueRows } = await client
-    .from('commercial_portal_publications')
-    .select(
-      'id, listing_id, portal, status, last_sync_at, last_error, commercial_listings(name)',
-    )
-    .eq('account_id', accountId)
-    .or('status.eq.error,last_error.not.is.null')
-    .order('last_sync_at', { ascending: false, nullsFirst: false })
-    .limit(15);
+  const [
+    { data: issueRows, error: issueError },
+    latestBulkJob,
+    linkedInConnection,
+    pendingOrgs,
+  ] = await Promise.all([
+    client
+      .from('commercial_portal_publications')
+      .select(
+        'id, listing_id, portal, status, last_sync_at, last_error, commercial_listings(name)',
+      )
+      .eq('account_id', accountId)
+      .or('status.eq.error,last_error.not.is.null')
+      .order('last_sync_at', { ascending: false, nullsFirst: false })
+      .limit(15),
+    loadLatestRightmoveBulkJob(client as never, accountId),
+    loadLinkedInOrgConnection(client, accountId),
+    loadPendingLinkedInOrgs(),
+  ]);
+
+  if (issueError) {
+    console.error(
+      '[commercial-publishing] recentPublicationIssues:',
+      issueError.message,
+    );
+  }
 
   const recentPublicationIssues = (
     (issueRows ?? []) as Array<Record<string, unknown>>
@@ -187,9 +204,7 @@ export async function loadCommercialPublishingSettings(
       branchConfigured,
       configured: oauthConfigured,
       workspaceBranches,
-      bulkJob: await loadLatestRightmoveBulkJob(client as never, accountId).then(
-        (job) => (job ? toPublicRightmoveBulkJob(job) : null),
-      ),
+      bulkJob: latestBulkJob ? toPublicRightmoveBulkJob(latestBulkJob) : null,
     },
     each: {
       configured: eachFeedEnabled,
@@ -198,8 +213,8 @@ export async function loadCommercialPublishingSettings(
     },
     linkedin: {
       configured: isLinkedInAppConfigured(),
-      connection: await loadLinkedInOrgConnection(client, accountId),
-      pendingOrgs: await loadPendingLinkedInOrgs(),
+      connection: linkedInConnection,
+      pendingOrgs,
     },
     recentPublicationIssues,
   };

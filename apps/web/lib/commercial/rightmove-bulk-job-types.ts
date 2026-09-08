@@ -9,6 +9,12 @@ export const RIGHTMOVE_BULK_JOB_STATUSES = [
 export type RightmoveBulkJobStatus =
   (typeof RIGHTMOVE_BULK_JOB_STATUSES)[number];
 
+export type RightmoveBulkFailureDetail = {
+  listingId: string;
+  name: string;
+  error: string;
+};
+
 export type RightmoveBulkJob = {
   id: string;
   accountId: string;
@@ -22,6 +28,7 @@ export type RightmoveBulkJob = {
   lastListingId: string | null;
   lastListingName: string | null;
   failureNames: string[];
+  failureDetails: RightmoveBulkFailureDetail[];
   startedAt: string;
   heartbeatAt: string;
   lockedUntil: string | null;
@@ -43,7 +50,7 @@ export function isRightmoveBulkJobStale(
   const heartbeat = new Date(job.heartbeatAt).getTime();
   if (!Number.isFinite(heartbeat)) return true;
   if (nowMs - heartbeat >= STALE_HEARTBEAT_MS) return true;
-  if (!job.lockedUntil) return nowMs - heartbeat >= STALE_HEARTBEAT_MS;
+  if (!job.lockedUntil) return false;
   const lockedUntil = new Date(job.lockedUntil).getTime();
   return Number.isFinite(lockedUntil) && lockedUntil <= nowMs;
 }
