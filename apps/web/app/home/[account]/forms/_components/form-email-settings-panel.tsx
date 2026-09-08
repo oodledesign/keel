@@ -4,6 +4,12 @@ import { useState } from 'react';
 
 import { Plus, Trash2 } from 'lucide-react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@kit/ui/accordion';
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
@@ -23,6 +29,8 @@ import {
   type FormEmailMergeToken,
   type FormNotifyMemberOption,
   MAX_FORM_NOTIFY_EMAILS,
+  WORKSPACE_FORM_EMAIL_KINDS,
+  type WorkspaceFormEmailKind,
   type WorkspaceFormEmailRule,
   type WorkspaceFormEmailSettings,
   type WorkspaceFormEmailTemplate,
@@ -47,12 +55,22 @@ type Props = {
 
 const ALWAYS = '__always__';
 
+const TEMPLATE_KIND_LABELS: Record<WorkspaceFormEmailKind, string> = {
+  autoresponder: 'Auto-reply',
+  notification: 'Team notification',
+};
+
 export function FormEmailSettingsPanel({
   settings,
   fields,
   members,
   onChange,
 }: Props) {
+  const [openTemplateId, setOpenTemplateId] = useState<string | undefined>(
+    () =>
+      settings.templates.length === 1 ? settings.templates[0]?.id : undefined,
+  );
+
   const optionFields = fields.filter(
     (field) => field.options && field.options.length > 0,
   );
@@ -84,6 +102,7 @@ export function FormEmailSettingsPanel({
       ...settings,
       templates: [...settings.templates, template],
     });
+    setOpenTemplateId(template.id);
   }
 
   function addRule(kind: WorkspaceFormEmailRule['kind']) {
@@ -98,6 +117,7 @@ export function FormEmailSettingsPanel({
           createEmptyFormEmailRule(kind, settings.rules, template.id),
         ],
       });
+      setOpenTemplateId(template.id);
       return;
     }
     onChange({
@@ -139,83 +159,127 @@ export function FormEmailSettingsPanel({
           <p className={`text-sm ${workspaceTextMuted}`}>
             No templates yet. RSVP forms start with Yes / No replies.
           </p>
-        ) : null}
-        {settings.templates.map((template) => (
-          <div
-            key={template.id}
-            className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-4"
+        ) : (
+          <Accordion
+            type="single"
+            collapsible
+            value={openTemplateId ?? ''}
+            onValueChange={(value) => setOpenTemplateId(value || undefined)}
+            className="space-y-3"
           >
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor={`form-email-tpl-name-${template.id}`}>
-                  Name
-                </Label>
-                <Input
-                  id={`form-email-tpl-name-${template.id}`}
-                  value={template.name}
-                  onChange={(event) =>
-                    updateTemplate(template.id, { name: event.target.value })
-                  }
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor={`form-email-tpl-subject-${template.id}`}>
-                  Subject
-                </Label>
-                <Input
-                  id={`form-email-tpl-subject-${template.id}`}
-                  value={template.subject}
-                  onChange={(event) =>
-                    updateTemplate(template.id, { subject: event.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <FormMergeTokenChips
-              tokens={mergeTokens}
-              onInsertSubject={(token) =>
-                updateTemplate(template.id, {
-                  subject: appendPlainToken(template.subject, token),
-                })
-              }
-              onInsertBody={(token) =>
-                updateTemplate(template.id, {
-                  bodyHtml: insertFormEmailMergeToken(template.bodyHtml, token),
-                })
-              }
-            />
-            <div className="grid gap-1.5">
-              <Label>Body</Label>
-              <WorkspaceRichTextEditor
-                value={template.bodyHtml}
-                onChange={(html) =>
-                  updateTemplate(template.id, { bodyHtml: html })
-                }
-                placeholder="Use merge tokens such as {{name}}, {{form_name}}, or {{field_key}}."
-                minHeight={100}
-              />
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() =>
-                onChange({
-                  ...settings,
-                  templates: settings.templates.filter(
-                    (item) => item.id !== template.id,
-                  ),
-                  rules: settings.rules.filter(
-                    (rule) => rule.templateId !== template.id,
-                  ),
-                })
-              }
-            >
-              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-              Remove template
-            </Button>
-          </div>
-        ))}
+            {settings.templates.map((template) => (
+              <AccordionItem
+                key={template.id}
+                value={template.id}
+                className="rounded-xl border border-[color:var(--workspace-shell-border)] px-0"
+                data-test={`form-email-template-${template.id}`}
+              >
+                <AccordionTrigger
+                  className={`px-4 py-3 hover:no-underline ${workspaceText}`}
+                >
+                  <span className="flex min-w-0 flex-1 items-center gap-3 pr-3 text-left">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">
+                        {template.name.trim() || 'Untitled template'}
+                      </span>
+                      {template.subject.trim() ? (
+                        <span
+                          className={`mt-0.5 block truncate text-xs font-normal ${workspaceTextMuted}`}
+                        >
+                          {template.subject}
+                        </span>
+                      ) : null}
+                    </span>
+                    <TemplateKindBadges
+                      kinds={templateKindsFor(settings.rules, template.id)}
+                    />
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 px-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor={`form-email-tpl-name-${template.id}`}>
+                        Name
+                      </Label>
+                      <Input
+                        id={`form-email-tpl-name-${template.id}`}
+                        value={template.name}
+                        onChange={(event) =>
+                          updateTemplate(template.id, {
+                            name: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor={`form-email-tpl-subject-${template.id}`}>
+                        Subject
+                      </Label>
+                      <Input
+                        id={`form-email-tpl-subject-${template.id}`}
+                        value={template.subject}
+                        onChange={(event) =>
+                          updateTemplate(template.id, {
+                            subject: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <FormMergeTokenChips
+                    tokens={mergeTokens}
+                    onInsertSubject={(token) =>
+                      updateTemplate(template.id, {
+                        subject: appendPlainToken(template.subject, token),
+                      })
+                    }
+                    onInsertBody={(token) =>
+                      updateTemplate(template.id, {
+                        bodyHtml: insertFormEmailMergeToken(
+                          template.bodyHtml,
+                          token,
+                        ),
+                      })
+                    }
+                  />
+                  <div className="grid gap-1.5">
+                    <Label>Body</Label>
+                    <WorkspaceRichTextEditor
+                      value={template.bodyHtml}
+                      onChange={(html) =>
+                        updateTemplate(template.id, { bodyHtml: html })
+                      }
+                      placeholder="Use merge tokens such as {{name}}, {{form_name}}, or {{field_key}}."
+                      minHeight={100}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (openTemplateId === template.id) {
+                        setOpenTemplateId(undefined);
+                      }
+                      onChange({
+                        ...settings,
+                        templates: settings.templates.filter(
+                          (item) => item.id !== template.id,
+                        ),
+                        rules: settings.rules.filter(
+                          (rule) => rule.templateId !== template.id,
+                        ),
+                      });
+                    }}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Remove template
+                  </Button>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        )}
       </div>
 
       <RuleList
@@ -470,6 +534,39 @@ function RuleList({
         );
       })}
     </div>
+  );
+}
+
+function templateKindsFor(
+  rules: WorkspaceFormEmailRule[],
+  templateId: string,
+): WorkspaceFormEmailKind[] {
+  const kinds = new Set<WorkspaceFormEmailKind>();
+  for (const rule of rules) {
+    if (rule.templateId === templateId) {
+      kinds.add(rule.kind);
+    }
+  }
+  return WORKSPACE_FORM_EMAIL_KINDS.filter((kind) => kinds.has(kind));
+}
+
+function TemplateKindBadges({ kinds }: { kinds: WorkspaceFormEmailKind[] }) {
+  const labels =
+    kinds.length > 0
+      ? kinds.map((kind) => TEMPLATE_KIND_LABELS[kind])
+      : ['Unused'];
+
+  return (
+    <span className="flex shrink-0 flex-wrap justify-end gap-1">
+      {labels.map((label) => (
+        <span
+          key={label}
+          className={`rounded-md border border-[color:var(--workspace-shell-border)] px-1.5 py-0.5 text-[11px] font-medium ${workspaceTextMuted}`}
+        >
+          {label}
+        </span>
+      ))}
+    </span>
   );
 }
 
