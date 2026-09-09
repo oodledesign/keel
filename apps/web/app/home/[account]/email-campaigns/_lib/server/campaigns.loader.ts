@@ -84,7 +84,13 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
       accountId,
       campaign.audienceType,
       campaign.audienceConfig,
-    ),
+    ).catch((error: unknown) => {
+      console.warn(
+        '[campaigns] audience estimate failed',
+        error instanceof Error ? error.message : error,
+      );
+      return 0;
+    }),
     loadCampaignUsageSnapshot({
       accountId,
       contactsUsed: audienceOptions.subscriberCount,

@@ -2,18 +2,22 @@
 
 import { useMemo, useState } from 'react';
 
+import Link from 'next/link';
+
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { RadioGroup, RadioGroupItem } from '@kit/ui/radio-group';
 import { Textarea } from '@kit/ui/textarea';
 
+import pathsConfig from '~/config/paths.config';
 import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import {
   AUDIENCE_TYPE_HINT,
   AUDIENCE_TYPE_LABEL,
   type CampaignAudienceConfig,
   type CampaignAudienceType,
+  campaignAudienceListMissing,
   parseAudienceEmailInput,
 } from '~/lib/campaigns/campaign-audience';
 import type { CampaignAudienceList } from '~/lib/campaigns/campaign.types';
@@ -30,6 +34,7 @@ export type AudiencePickerOption = {
 };
 
 export function CampaignAudiencePicker({
+  accountSlug,
   audienceType,
   audienceConfig,
   estimatedCount,
@@ -41,6 +46,7 @@ export function CampaignAudiencePicker({
   disabled,
   onChange,
 }: {
+  accountSlug: string;
   audienceType: CampaignAudienceType;
   audienceConfig: CampaignAudienceConfig;
   estimatedCount: number;
@@ -60,6 +66,12 @@ export function CampaignAudiencePicker({
   }) => void;
 }) {
   const growth = hasCampaignsGrowthFeatures(planTier);
+  const audiencesHref = pathsConfig.app.accountEmailCampaignAudiences.replace(
+    '[account]',
+    accountSlug,
+  );
+  const listMissing = campaignAudienceListMissing(audienceType, audienceConfig);
+  const showListRadio = growth && (lists.length > 0 || audienceType === 'list');
   const [manualText, setManualText] = useState(
     (audienceConfig.emails ?? []).join(', '),
   );
@@ -79,7 +91,7 @@ export function CampaignAudiencePicker({
       audienceConfig:
         next === 'custom'
           ? audienceConfig
-          : { emails: [], clientIds: [], contactIds: [] },
+          : { emails: [], clientIds: [], contactIds: [], listId: null },
     });
   };
 
@@ -116,7 +128,7 @@ export function CampaignAudiencePicker({
             ['clients', counts.clientCount],
             ['contacts', counts.contactCount],
             ['custom', null],
-            ...(growth
+            ...(showListRadio
               ? ([['list', lists.length]] as Array<
                   [CampaignAudienceType, number | null]
                 >)
@@ -147,12 +159,43 @@ export function CampaignAudiencePicker({
         ))}
       </RadioGroup>
 
+      {growth && lists.length === 0 && audienceType !== 'list' ? (
+        <div
+          className="space-y-1 rounded-md border border-[color:var(--workspace-shell-border)] p-3"
+          data-test="campaign-audience-create-list-prompt"
+        >
+          <p className={`text-sm font-medium ${workspaceText}`}>Saved list</p>
+          <p className={`text-sm ${workspaceTextMuted}`}>
+            No saved lists yet.{' '}
+            <Link
+              href={audiencesHref}
+              className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+              data-test="campaign-create-audience-list"
+            >
+              Create a list
+            </Link>{' '}
+            to target one.
+          </p>
+        </div>
+      ) : null}
+
       {audienceType === 'list' && growth ? (
         <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
           <Label className={workspaceText}>Saved list</Label>
           {lists.length === 0 ? (
-            <p className={`text-sm ${workspaceTextMuted}`}>
-              No saved lists yet. Create one from the Audiences tab.
+            <p
+              className={`text-sm ${workspaceTextMuted}`}
+              data-test="campaign-audience-empty-lists"
+            >
+              No saved lists yet.{' '}
+              <Link
+                href={audiencesHref}
+                className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                data-test="campaign-create-audience-list"
+              >
+                Create a list
+              </Link>{' '}
+              before sending.
             </p>
           ) : (
             <select
@@ -177,6 +220,14 @@ export function CampaignAudiencePicker({
               ))}
             </select>
           )}
+          {listMissing && lists.length > 0 ? (
+            <p
+              className={`text-sm ${workspaceTextMuted}`}
+              data-test="campaign-audience-pick-list"
+            >
+              Pick a list (or create one) before sending.
+            </p>
+          ) : null}
         </div>
       ) : null}
 

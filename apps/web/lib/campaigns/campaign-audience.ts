@@ -67,6 +67,20 @@ export function parseCampaignAudienceConfig(
   };
 }
 
+/** Drafts may store `list` with no listId yet. Block only at send/schedule. */
+export const CAMPAIGN_AUDIENCE_LIST_REQUIRED =
+  'Pick a list (or create one) before sending';
+
+export function campaignAudienceListMissing(
+  audienceType: CampaignAudienceType | string,
+  audienceConfig: CampaignAudienceConfig | unknown,
+): boolean {
+  return (
+    parseCampaignAudienceType(audienceType) === 'list' &&
+    !parseCampaignAudienceConfig(audienceConfig).listId
+  );
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function normalizeAudienceEmails(emails: string[]): string[] {

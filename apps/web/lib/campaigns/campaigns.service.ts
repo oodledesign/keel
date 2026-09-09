@@ -49,8 +49,10 @@ import {
 import { buildWorkspaceMailingListUnsubscribeUrl } from '~/lib/workspace-forms/workspace-mailing-list';
 
 import {
+  CAMPAIGN_AUDIENCE_LIST_REQUIRED,
   type CampaignAudienceConfig,
   type CampaignAudienceType,
+  campaignAudienceListMissing,
   parseCampaignAudienceConfig,
   parseCampaignAudienceType,
 } from './campaign-audience';
@@ -984,6 +986,14 @@ class CampaignsService {
   }
 
   private assertReadyToSend(campaign: EmailCampaign) {
+    if (
+      campaignAudienceListMissing(
+        campaign.audienceType,
+        campaign.audienceConfig,
+      )
+    ) {
+      throw new Error(CAMPAIGN_AUDIENCE_LIST_REQUIRED);
+    }
     if (!campaign.subject.trim()) {
       throw new Error('Add a subject before sending');
     }

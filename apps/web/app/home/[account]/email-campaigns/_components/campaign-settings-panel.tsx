@@ -17,6 +17,7 @@ import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import {
   type CampaignAudienceConfig,
   type CampaignAudienceType,
+  campaignAudienceListMissing,
   parseCampaignAudienceConfig,
 } from '~/lib/campaigns/campaign-audience';
 import {
@@ -140,6 +141,11 @@ export function CampaignSettingsPanel({
     if (audienceType === 'subscribers') return audienceOptions.subscriberCount;
     if (audienceType === 'clients') return audienceOptions.clientCount;
     if (audienceType === 'contacts') return audienceOptions.contactCount;
+    if (audienceType === 'list') {
+      return campaignAudienceListMissing(audienceType, audienceConfig)
+        ? 0
+        : audienceCount;
+    }
     const emails = audienceConfig.emails?.length ?? 0;
     const clients = audienceConfig.clientIds?.length ?? 0;
     const contacts = audienceConfig.contactIds?.length ?? 0;
@@ -273,6 +279,7 @@ export function CampaignSettingsPanel({
       </div>
 
       <CampaignAudiencePicker
+        accountSlug={accountSlug}
         audienceType={audienceType}
         audienceConfig={audienceConfig}
         estimatedCount={liveEstimate}
@@ -318,7 +325,11 @@ export function CampaignSettingsPanel({
               <Button
                 type="button"
                 variant="outline"
-                disabled={pending || !scheduledAt}
+                disabled={
+                  pending ||
+                  !scheduledAt ||
+                  campaignAudienceListMissing(audienceType, audienceConfig)
+                }
                 data-test="campaign-settings-schedule"
                 onClick={() => {
                   startTransition(async () => {
@@ -401,7 +412,11 @@ export function CampaignSettingsPanel({
               startTransition(async () => {
                 try {
                   await saveSettings();
-                  toast.success('Settings saved');
+                  toast.success(
+                    campaignAudienceListMissing(audienceType, audienceConfig)
+                      ? 'Draft saved. Pick a list (or create one) before sending.'
+                      : 'Settings saved',
+                  );
                   router.refresh();
                 } catch (error) {
                   toast.error(

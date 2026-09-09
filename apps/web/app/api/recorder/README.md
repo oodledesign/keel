@@ -24,3 +24,12 @@ Email + task review counts when those features exist for the user:
 - **Tasks** — suggested email action items (`email_action_items.status = suggested`) and meeting items pending review (`meeting_action_items.status = pending_review`).
 
 `null` when no mailbox is connected **and** there are no suggested/meeting-review items, or those tables are unavailable. Recorder auth is user-scoped via the admin client, so email triage **is** readable without a session cookie.
+
+## Messages
+
+Mac Assistant also polls these cookie-free aliases (same `keel_` bearer token as Today):
+
+`GET /api/recorder/messages`
+`GET /api/recorder/messages/threads`
+
+Both return `{ "items": [thread…] }` using the native messages thread list. Optional query: `workspace` or `account_id` (defaults to the token account), `limit`, `client`. Write/send stays on `/api/native/v1/messages`.

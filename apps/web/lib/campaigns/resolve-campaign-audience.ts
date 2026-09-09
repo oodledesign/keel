@@ -284,8 +284,10 @@ export async function resolveCampaignAudience(
   }
 
   if (type === 'list') {
+    // Incomplete drafts are valid: list type with no list chosen yet.
+    // Count/render must not throw; send/schedule assert separately.
     if (!config.listId) {
-      throw new Error('Choose a saved audience list');
+      return [];
     }
     const list = await loadAudienceList(client, accountId, config.listId);
     const filters = parseAudienceListFilters({
