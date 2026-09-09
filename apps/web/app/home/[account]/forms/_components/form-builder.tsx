@@ -46,6 +46,7 @@ import {
   WORKSPACE_FORM_PAGE_BACKGROUND_LABELS,
   type WorkspaceFormLayout,
   type WorkspaceFormPageBackground,
+  isRsvpLikeWorkspaceForm,
 } from '~/lib/workspace-forms/form-theme';
 import { ensureMailingListFields } from '~/lib/workspace-forms/mailing-list-fields';
 import {
@@ -254,8 +255,19 @@ export function FormBuilder({
         <TabsContent value="submissions" className="mt-0">
           <FormSubmissionsList
             accountSlug={accountSlug}
+            formId={form.id}
+            fields={fields}
             submissions={submissions}
             destination={destination}
+            isRsvp={isRsvpLikeWorkspaceForm({
+              eventAddress: eventAddress.trim() || null,
+              eventDate: eventDate.trim() || null,
+              eventTime: eventTime.trim() || null,
+              destination,
+              submitLabel,
+              name,
+              fields,
+            })}
           />
         </TabsContent>
 
