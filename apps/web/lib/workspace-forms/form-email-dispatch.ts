@@ -10,6 +10,7 @@ import {
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
 import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
+import { formEditorTabHref } from '~/lib/workspace-forms/form-editor-tab';
 
 import {
   type WorkspaceFormEmailSettings,
@@ -48,9 +49,12 @@ function formSubmissionsUrl(
   const base = (
     process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://ozer.so'
   ).replace(/\/$/, '');
-  const path = pathsConfig.app.accountFormDetail
-    .replace('[account]', accountSlug)
-    .replace('[formId]', formId);
+  const path = formEditorTabHref(
+    pathsConfig.app.accountFormDetail
+      .replace('[account]', accountSlug)
+      .replace('[formId]', formId),
+    'submissions',
+  );
   return `${base}${path}`;
 }
 

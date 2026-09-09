@@ -43,16 +43,62 @@ export function normalizeSubmissionEmail(
   return trimmed || null;
 }
 
+export function submissionUniqueKey(submission: {
+  id: string;
+  contactEmail: string | null;
+}): string {
+  return normalizeSubmissionEmail(submission.contactEmail) ?? submission.id;
+}
+
 export function countSubmissionStats(
   submissions: Array<{ id: string; contactEmail: string | null }>,
 ): { total: number; unique: number } {
   const uniqueKeys = new Set<string>();
   for (const submission of submissions) {
-    uniqueKeys.add(
-      normalizeSubmissionEmail(submission.contactEmail) ?? submission.id,
-    );
+    uniqueKeys.add(submissionUniqueKey(submission));
   }
   return { total: submissions.length, unique: uniqueKeys.size };
+}
+
+/**
+ * Unique by email when present (same key as RSVP unique count); otherwise
+ * each row. When an email repeats, the latest `createdAt` wins.
+ */
+export function selectUniqueSubmissions<
+  T extends { id: string; contactEmail: string | null; createdAt: string },
+>(submissions: T[]): T[] {
+  const latestFirst = [...submissions].sort((left, right) => {
+    const delta =
+      Date.parse(right.createdAt) - Date.parse(left.createdAt) ||
+      right.id.localeCompare(left.id);
+    return delta;
+  });
+
+  const seen = new Set<string>();
+  const selected: T[] = [];
+  for (const submission of latestFirst) {
+    const key = submissionUniqueKey(submission);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(submission);
+  }
+  return selected;
+}
+
+export function submissionRecordLabel(
+  submission: {
+    commercialEnquiryId?: string | null;
+    clientId?: string | null;
+    requirementId?: string | null;
+    pipelineDealId?: string | null;
+  },
+  submissionsOnly: boolean,
+): string {
+  if (submission.commercialEnquiryId) return 'Listing enquiry';
+  if (submission.clientId) return 'Mailing-list contact';
+  if (submission.requirementId) return 'Requirement';
+  if (submission.pipelineDealId) return 'Pipeline enquiry';
+  return submissionsOnly ? 'Submission' : 'Stored only';
 }
 
 export function groupSubmissionIdsByEmail(
