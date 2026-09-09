@@ -9,6 +9,7 @@ import { hasCampaignsProFeatures } from '~/lib/billing/campaign-pricing';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
 import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
+import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
 import {
   loadCampaignAnalyticsBundle,
@@ -174,4 +175,72 @@ export async function loadCampaignsGrowthHub(accountId: string) {
     contactsUsed: subscribers.length,
   });
   return { lists, automations, campaigns, snapshot };
+}
+
+export async function loadCampaignAudienceWorkspace(accountId: string) {
+  const client = getSupabaseServerClient();
+  const contacts = createCampaignContactsService(client);
+  const listsService = createAudienceListsService(client);
+  const [hub, categories, workspaceContacts] = await Promise.all([
+    loadCampaignsGrowthHub(accountId),
+    contacts.listCategories(accountId).catch(() => []),
+    contacts.listContacts(accountId, { limit: 400 }).catch(() => []),
+  ]);
+
+  const membersByList: Record<
+    string,
+    Awaited<ReturnType<typeof listsService.listMembers>>
+  > = {};
+
+  await Promise.all(
+    hub.lists
+      .filter((row) => row.source === 'manual')
+      .map(async (list) => {
+        try {
+          membersByList[list.id] = await listsService.listMembers(
+            accountId,
+            list.id,
+          );
+        } catch {
+          membersByList[list.id] = [];
+        }
+      }),
+  );
+
+  return {
+    ...hub,
+    categories,
+    contacts: workspaceContacts,
+    membersByList,
+  };
+}
+
+export async function loadCampaignContactsPage(
+  accountId: string,
+  options?: {
+    query?: string;
+    categoryId?: string | null;
+    industry?: string | null;
+  },
+) {
+  const client = getSupabaseServerClient();
+  const contactsService = createCampaignContactsService(client);
+  const [hub, categories, contacts] = await Promise.all([
+    loadCampaignsGrowthHub(accountId),
+    contactsService.listCategories(accountId).catch(() => []),
+    contactsService
+      .listContacts(accountId, {
+        query: options?.query,
+        categoryId: options?.categoryId,
+        industry: options?.industry,
+        limit: 500,
+      })
+      .catch(() => []),
+  ]);
+
+  return {
+    ...hub,
+    categories,
+    contacts,
+  };
 }

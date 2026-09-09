@@ -8,7 +8,7 @@ import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.load
 import { CampaignAudienceListsPanel } from '../_components/campaign-audience-lists-panel';
 import { CampaignUpgradeCta } from '../_components/campaign-upgrade-cta';
 import { CampaignsHubNav } from '../_components/campaigns-hub-nav';
-import { loadCampaignsGrowthHub } from '../_lib/server/campaigns.loader';
+import { loadCampaignAudienceWorkspace } from '../_lib/server/campaigns.loader';
 
 interface AudiencesPageProps {
   params: Promise<{ account: string }>;
@@ -19,7 +19,7 @@ export const generateMetadata = async () => ({ title: 'Campaign audiences' });
 async function AudiencesPage({ params }: AudiencesPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  const data = await loadCampaignsGrowthHub(workspace.account.id);
+  const data = await loadCampaignAudienceWorkspace(workspace.account.id);
   const growth = hasCampaignsGrowthFeatures(data.snapshot.planTier);
 
   return (
@@ -27,7 +27,7 @@ async function AudiencesPage({ params }: AudiencesPageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Audiences"
-        description="Named lists with logic filters. Growth and Pro."
+        description="Named lists — logic filters or manual membership. Growth and Pro."
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
         <CampaignsHubNav accountSlug={accountSlug} />
@@ -36,6 +36,9 @@ async function AudiencesPage({ params }: AudiencesPageProps) {
             accountId={workspace.account.id}
             accountSlug={accountSlug}
             lists={data.lists}
+            categories={data.categories}
+            contacts={data.contacts}
+            membersByList={data.membersByList}
           />
         ) : (
           <CampaignUpgradeCta

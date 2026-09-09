@@ -45,6 +45,7 @@ type ListedPerson = {
   displayName: string | null;
   clientType?: string | null;
   companyName?: string | null;
+  industry?: string | null;
   createdAt?: string | null;
   consentedAt?: string | null;
 };
@@ -166,7 +167,9 @@ async function listContactsWithEmail(
   contactIds?: string[],
 ): Promise<ListedPerson[]> {
   let query = fromTable(client, 'contacts')
-    .select('id, email, full_name, first_name, last_name, created_at')
+    .select(
+      'id, email, full_name, first_name, last_name, company_name, industry, created_at',
+    )
     .eq('account_id', accountId)
     .not('email', 'is', null);
 
@@ -199,6 +202,8 @@ async function listContactsWithEmail(
       id: String(row.id),
       email,
       displayName: displayName || null,
+      companyName: (row.company_name as string | null) ?? null,
+      industry: (row.industry as string | null) ?? null,
       createdAt: (row.created_at as string | null) ?? null,
     });
   }
@@ -220,10 +225,96 @@ async function loadAudienceList(
   if (!data) throw new Error('Saved audience list not found');
   return data as {
     id: string;
-    source: 'subscribers' | 'clients' | 'contacts';
+    source: 'subscribers' | 'clients' | 'contacts' | 'manual';
     match_mode: 'all' | 'any';
     filters: unknown;
   };
+}
+
+async function listManualListContacts(
+  client: SupabaseClient,
+  accountId: string,
+  listId: string,
+): Promise<ListedPerson[]> {
+  const { data, error } = await fromTable(
+    client,
+    'campaign_audience_list_members',
+  )
+    .select(
+      'contact_id, contacts ( id, email, full_name, first_name, last_name, company_name, industry, created_at )',
+    )
+    .eq('account_id', accountId)
+    .eq('list_id', listId)
+    .limit(5000);
+
+  if (error) throw new Error(error.message);
+
+  const people: ListedPerson[] = [];
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const contact = (row.contacts ?? {}) as Record<string, unknown>;
+    const email = String(contact.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!email) continue;
+    const displayName =
+      String(contact.full_name ?? '').trim() ||
+      [contact.first_name, contact.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+      null;
+    people.push({
+      id: String(contact.id ?? row.contact_id),
+      email,
+      displayName: displayName || null,
+      companyName: (contact.company_name as string | null) ?? null,
+      industry: (contact.industry as string | null) ?? null,
+      createdAt: (contact.created_at as string | null) ?? null,
+    });
+  }
+  return people;
+}
+
+async function loadContactCategoryMap(
+  client: SupabaseClient,
+  accountId: string,
+  contactIds: string[],
+): Promise<Map<string, { ids: string[]; names: string[] }>> {
+  const map = new Map<string, { ids: string[]; names: string[] }>();
+  if (contactIds.length === 0) return map;
+
+  const { data, error } = await fromTable(
+    client,
+    'campaign_contact_category_assignments',
+  )
+    .select(
+      'contact_id, category_id, campaign_contact_categories ( id, name, archived_at )',
+    )
+    .eq('account_id', accountId)
+    .in('contact_id', contactIds);
+
+  if (error) {
+    const logger = await getLogger();
+    logger.warn(
+      { name: 'campaigns.audience', error: error.message },
+      'List contact categories failed',
+    );
+    return map;
+  }
+
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const category = (row.campaign_contact_categories ?? {}) as Record<
+      string,
+      unknown
+    >;
+    if (category.archived_at) continue;
+    const contactId = String(row.contact_id);
+    const current = map.get(contactId) ?? { ids: [], names: [] };
+    current.ids.push(String(row.category_id));
+    if (category.name) current.names.push(String(category.name));
+    map.set(contactId, current);
+  }
+  return map;
 }
 
 /**
@@ -304,7 +395,17 @@ export async function resolveCampaignAudience(
       }
     > = [];
 
-    if (list.source === 'subscribers') {
+    if (list.source === 'manual') {
+      const members = await listManualListContacts(client, accountId, list.id);
+      for (const row of members) {
+        mergeRecipient(byEmail, {
+          email: row.email,
+          displayName: row.displayName,
+          clientId: null,
+          contactId: row.id,
+        });
+      }
+    } else if (list.source === 'subscribers') {
       const subscribers = await listWorkspaceMailingListSubscribers(
         client,
         accountId,
@@ -333,13 +434,23 @@ export async function resolveCampaignAudience(
           preferenceId: null,
         });
       }
-    } else {
+    } else if (list.source === 'contacts') {
       const contacts = await listContactsWithEmail(client, accountId);
+      const categoryMap = await loadContactCategoryMap(
+        client,
+        accountId,
+        contacts.map((row) => row.id),
+      );
       for (const row of contacts) {
+        const categories = categoryMap.get(row.id);
         subjects.push({
           email: row.email,
           displayName: row.displayName,
           createdAt: row.createdAt,
+          companyName: row.companyName,
+          industry: row.industry,
+          categoryIds: categories?.ids,
+          categoryNames: categories?.names,
           clientId: null,
           contactId: row.id,
           preferenceId: null,
@@ -347,16 +458,18 @@ export async function resolveCampaignAudience(
       }
     }
 
-    const matched = applyAudienceFilters(subjects, filters);
-    for (const row of matched) {
-      const extra = row as (typeof subjects)[number];
-      mergeRecipient(byEmail, {
-        email: extra.email,
-        displayName: extra.displayName,
-        clientId: extra.clientId,
-        contactId: extra.contactId,
-        preferenceId: extra.preferenceId,
-      });
+    if (list.source !== 'manual') {
+      const matched = applyAudienceFilters(subjects, filters);
+      for (const row of matched) {
+        const extra = row as (typeof subjects)[number];
+        mergeRecipient(byEmail, {
+          email: extra.email,
+          displayName: extra.displayName,
+          clientId: extra.clientId,
+          contactId: extra.contactId,
+          preferenceId: extra.preferenceId,
+        });
+      }
     }
   }
 

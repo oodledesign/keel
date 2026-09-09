@@ -4,6 +4,8 @@
 import { z } from 'zod';
 
 export const AUDIENCE_FILTER_FIELDS = [
+  'category',
+  'industry',
   'email_domain',
   'email',
   'display_name',
@@ -15,9 +17,18 @@ export const AUDIENCE_FILTER_FIELDS = [
 
 export type AudienceFilterField = (typeof AUDIENCE_FILTER_FIELDS)[number];
 
-export const AUDIENCE_FILTER_OPS = ['eq', 'contains', 'gte'] as const;
+export const AUDIENCE_FILTER_OPS = ['eq', 'contains', 'gte', 'in'] as const;
 
 export type AudienceFilterOp = (typeof AUDIENCE_FILTER_OPS)[number];
+
+export const AUDIENCE_LIST_SOURCES = [
+  'subscribers',
+  'clients',
+  'contacts',
+  'manual',
+] as const;
+
+export type AudienceListSource = (typeof AUDIENCE_LIST_SOURCES)[number];
 
 export const AudienceFilterRuleSchema = z.object({
   field: z.enum(AUDIENCE_FILTER_FIELDS),
@@ -28,7 +39,7 @@ export const AudienceFilterRuleSchema = z.object({
 export type AudienceFilterRule = z.infer<typeof AudienceFilterRuleSchema>;
 
 export const AudienceListFiltersSchema = z.object({
-  source: z.enum(['subscribers', 'clients', 'contacts']),
+  source: z.enum(AUDIENCE_LIST_SOURCES),
   matchMode: z.enum(['all', 'any']).default('all'),
   rules: z.array(AudienceFilterRuleSchema).max(12).default([]),
 });
@@ -37,6 +48,8 @@ export type AudienceListFilters = z.infer<typeof AudienceListFiltersSchema>;
 
 export const AUDIENCE_FILTER_FIELD_LABEL: Record<AudienceFilterField, string> =
   {
+    category: 'Category',
+    industry: 'Industry',
     email_domain: 'Email domain',
     email: 'Email contains',
     display_name: 'Name contains',
@@ -46,10 +59,38 @@ export const AUDIENCE_FILTER_FIELD_LABEL: Record<AudienceFilterField, string> =
     has_company: 'Has company name',
   };
 
+export const AUDIENCE_FILTER_FIELD_GROUPS: Array<{
+  label: string;
+  fields: AudienceFilterField[];
+}> = [
+  { label: 'Categories', fields: ['category'] },
+  { label: 'Industry', fields: ['industry'] },
+  {
+    label: 'Contact details',
+    fields: [
+      'email_domain',
+      'email',
+      'display_name',
+      'subscribed_after',
+      'created_after',
+      'client_type',
+      'has_company',
+    ],
+  },
+];
+
 export const AUDIENCE_FILTER_OP_LABEL: Record<AudienceFilterOp, string> = {
   eq: 'is',
   contains: 'contains',
   gte: 'on or after',
+  in: 'is one of',
+};
+
+export const AUDIENCE_LIST_SOURCE_LABEL: Record<AudienceListSource, string> = {
+  subscribers: 'Subscribers',
+  clients: 'Clients',
+  contacts: 'Contacts',
+  manual: 'Manual list',
 };
 
 export type AudienceFilterSubject = {
@@ -59,6 +100,9 @@ export type AudienceFilterSubject = {
   createdAt?: string | null;
   clientType?: string | null;
   companyName?: string | null;
+  industry?: string | null;
+  categoryIds?: string[];
+  categoryNames?: string[];
 };
 
 function domainOf(email: string): string {
@@ -100,9 +144,42 @@ function matchesRule(
       if (value === 'false' || value === '0' || value === 'no') return !has;
       return has;
     }
+    case 'industry': {
+      const industry = (subject.industry ?? '').trim().toLowerCase();
+      const tokens = splitFilterList(rule.value);
+      if (tokens.length === 0) return true;
+      if (rule.op === 'in') {
+        return tokens.some((token) => industry === token);
+      }
+      if (rule.op === 'contains') {
+        return industry.includes(value);
+      }
+      return industry === value;
+    }
+    case 'category': {
+      const ids = (subject.categoryIds ?? []).map((id) => id.toLowerCase());
+      const names = (subject.categoryNames ?? []).map((name) =>
+        name.trim().toLowerCase(),
+      );
+      const tokens = splitFilterList(rule.value);
+      if (tokens.length === 0) return true;
+      const hasToken = (token: string) =>
+        ids.includes(token) || names.includes(token);
+      if (rule.op === 'in') {
+        return tokens.some(hasToken);
+      }
+      return tokens.every(hasToken);
+    }
     default:
       return true;
   }
+}
+
+export function splitFilterList(value: string): string[] {
+  return value
+    .split(/[,|]/)
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length > 0);
 }
 
 export function applyAudienceFilters(

@@ -12,16 +12,24 @@ import { canUseAddon } from '~/lib/billing/entitlements';
 import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
 import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
+import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
 import { isCampaignQuotaError } from '~/lib/campaigns/campaign-quota-error';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
 
 import {
+  ArchiveContactCategorySchema,
+  AssignContactCategoriesSchema,
+  AudienceListMembersSchema,
+  BulkAddContactsToListSchema,
   CancelScheduleCampaignSchema,
   CreateCampaignSchema,
+  CreateListFromCategorySchema,
   DeleteAudienceListSchema,
   DeleteAutomationSchema,
   SaveAudienceListSchema,
   SaveAutomationSchema,
+  SaveCampaignContactSchema,
+  SaveContactCategorySchema,
   ScheduleCampaignSchema,
   SendCampaignSchema,
   SendCampaignTestSchema,
@@ -33,6 +41,26 @@ function campaignsPath(accountSlug: string) {
     '[account]',
     accountSlug,
   );
+}
+
+function audiencesPath(accountSlug: string) {
+  return pathsConfig.app.accountEmailCampaignAudiences.replace(
+    '[account]',
+    accountSlug,
+  );
+}
+
+function contactsPath(accountSlug: string) {
+  return pathsConfig.app.accountEmailCampaignContacts.replace(
+    '[account]',
+    accountSlug,
+  );
+}
+
+function revalidateAudiencePaths(accountSlug: string) {
+  revalidatePath(campaignsPath(accountSlug));
+  revalidatePath(audiencesPath(accountSlug));
+  revalidatePath(contactsPath(accountSlug));
 }
 
 function campaignPath(accountSlug: string, campaignId: string) {
@@ -283,14 +311,16 @@ export const saveAudienceListAction = enhanceAction(
           userId: user.id,
           name: data.name,
           filters: data.filters,
+          contactIds: data.contactIds,
         });
-    revalidatePath(campaignsPath(data.accountSlug));
-    revalidatePath(
-      pathsConfig.app.accountEmailCampaignAudiences.replace(
-        '[account]',
-        data.accountSlug,
-      ),
-    );
+    if (data.listId && data.filters.source === 'manual' && data.contactIds) {
+      await service.replaceMembers({
+        accountId: data.accountId,
+        listId: list.id,
+        contactIds: data.contactIds,
+      });
+    }
+    revalidateAudiencePaths(data.accountSlug);
     return { success: true as const, listId: list.id };
   },
   { auth: true, schema: SaveAudienceListSchema },
@@ -304,15 +334,184 @@ export const deleteAudienceListAction = enhanceAction(
       data.accountId,
       data.listId,
     );
-    revalidatePath(
-      pathsConfig.app.accountEmailCampaignAudiences.replace(
-        '[account]',
-        data.accountSlug,
-      ),
-    );
+    revalidateAudiencePaths(data.accountSlug);
     return { success: true as const };
   },
   { auth: true, schema: DeleteAudienceListSchema },
+);
+
+export const addAudienceListMembersAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    const added = await createAudienceListsService(client).addMembers({
+      accountId: data.accountId,
+      listId: data.listId,
+      contactIds: data.contactIds,
+    });
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const, added };
+  },
+  { auth: true, schema: AudienceListMembersSchema },
+);
+
+export const removeAudienceListMembersAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    await createAudienceListsService(client).removeMembers({
+      accountId: data.accountId,
+      listId: data.listId,
+      contactIds: data.contactIds,
+    });
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const };
+  },
+  { auth: true, schema: AudienceListMembersSchema },
+);
+
+export const createListFromCategoryAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    const contacts = createCampaignContactsService(client);
+    const lists = createAudienceListsService(client);
+    const categories = await contacts.listCategories(data.accountId);
+    const category = categories.find((row) => row.id === data.categoryId);
+    if (!category || category.archivedAt) {
+      throw new Error('Category not found');
+    }
+
+    const list =
+      data.mode === 'logic'
+        ? await lists.create({
+            accountId: data.accountId,
+            userId: user.id,
+            name: data.name,
+            filters: {
+              source: 'contacts',
+              matchMode: 'all',
+              rules: [{ field: 'category', op: 'eq', value: category.id }],
+            },
+          })
+        : await lists.create({
+            accountId: data.accountId,
+            userId: user.id,
+            name: data.name,
+            filters: { source: 'manual', matchMode: 'all', rules: [] },
+            contactIds: await contacts.listContactIdsInCategory(
+              data.accountId,
+              data.categoryId,
+            ),
+          });
+
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const, listId: list.id };
+  },
+  { auth: true, schema: CreateListFromCategorySchema },
+);
+
+export const saveCampaignContactAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    if ((data.categoryIds ?? []).length > 0) {
+      await requireGrowthCampaigns(data.accountId);
+    }
+    const contact = await createCampaignContactsService(client).saveContact({
+      accountId: data.accountId,
+      userId: user.id,
+      contactId: data.contactId,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      fullName: data.fullName,
+      phone: data.phone,
+      companyName: data.companyName,
+      industry: data.industry,
+      categoryIds: data.categoryIds,
+    });
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const, contactId: contact.id };
+  },
+  { auth: true, schema: SaveCampaignContactSchema },
+);
+
+export const saveContactCategoryAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    const category = await createCampaignContactsService(client).saveCategory({
+      accountId: data.accountId,
+      userId: user.id,
+      categoryId: data.categoryId,
+      name: data.name,
+    });
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const, categoryId: category.id };
+  },
+  { auth: true, schema: SaveContactCategorySchema },
+);
+
+export const archiveContactCategoryAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    await createCampaignContactsService(client).archiveCategory(
+      data.accountId,
+      data.categoryId,
+    );
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const };
+  },
+  { auth: true, schema: ArchiveContactCategorySchema },
+);
+
+export const assignContactCategoriesAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    await createCampaignContactsService(client).addCategoriesToContacts({
+      accountId: data.accountId,
+      contactIds: data.contactIds,
+      categoryIds: data.categoryIds,
+    });
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const };
+  },
+  { auth: true, schema: AssignContactCategoriesSchema },
+);
+
+export const bulkAddContactsToListAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    await requireGrowthCampaigns(data.accountId);
+    const lists = createAudienceListsService(client);
+    const listId = data.listId;
+
+    if (!listId) {
+      if (!data.newListName?.trim()) {
+        throw new Error('Choose an existing list or name a new one');
+      }
+      const created = await lists.create({
+        accountId: data.accountId,
+        userId: user.id,
+        name: data.newListName,
+        filters: { source: 'manual', matchMode: 'all', rules: [] },
+        contactIds: data.contactIds,
+      });
+      revalidateAudiencePaths(data.accountSlug);
+      return { success: true as const, listId: created.id, created: true };
+    }
+
+    await lists.addMembers({
+      accountId: data.accountId,
+      listId,
+      contactIds: data.contactIds,
+    });
+    revalidateAudiencePaths(data.accountSlug);
+    return { success: true as const, listId, created: false };
+  },
+  { auth: true, schema: BulkAddContactsToListSchema },
 );
 
 export const saveAutomationAction = enhanceAction(
