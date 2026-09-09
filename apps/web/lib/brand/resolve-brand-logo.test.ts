@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  brandLogoChoiceIsExact,
   brandLogoSurfaceForPage,
+  resolveBrandLogoChoice,
   resolveBrandLogoForSurface,
 } from './resolve-brand-logo';
 
@@ -45,5 +47,36 @@ describe('brandLogoSurfaceForPage', () => {
   it('follows the page background when the logo sits on the page', () => {
     expect(brandLogoSurfaceForPage({ pageOnDark: true })).toBe('dark');
     expect(brandLogoSurfaceForPage({ pageOnDark: false })).toBe('light');
+  });
+});
+
+describe('resolveBrandLogoChoice', () => {
+  it('uses the primary logo first, then light, then dark', () => {
+    expect(resolveBrandLogoChoice(brand, 'primary')).toBe(brand.logo_url);
+    expect(
+      resolveBrandLogoChoice(
+        {
+          logo_on_light_url: brand.logo_on_light_url,
+          logo_on_dark_url: brand.logo_on_dark_url,
+        },
+        'primary',
+      ),
+    ).toBe(brand.logo_on_light_url);
+  });
+
+  it('falls back when the chosen variant is missing', () => {
+    expect(
+      resolveBrandLogoChoice({ logo_url: brand.logo_url }, 'on_dark'),
+    ).toBe(brand.logo_url);
+    expect(
+      resolveBrandLogoChoice(
+        { logo_on_light_url: brand.logo_on_light_url },
+        'on_dark',
+      ),
+    ).toBe(brand.logo_on_light_url);
+    expect(brandLogoChoiceIsExact(brand, 'on_light')).toBe(true);
+    expect(
+      brandLogoChoiceIsExact({ logo_url: brand.logo_url }, 'on_light'),
+    ).toBe(false);
   });
 });

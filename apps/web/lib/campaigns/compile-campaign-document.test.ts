@@ -221,4 +221,96 @@ describe('compileCampaignDocument', () => {
       'footer',
     );
   });
+
+  it('uses the chosen brand logo variant with fallback', () => {
+    const branded = {
+      ...brand,
+      logo_on_light_url: 'https://cdn.example.com/on-light.png',
+      logo_on_dark_url: 'https://cdn.example.com/on-dark.png',
+    };
+
+    const dark = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [{ id: 'logo', type: 'logo', logoVariant: 'on_dark' }],
+      },
+      branded,
+    );
+    expect(dark).toContain('https://cdn.example.com/on-dark.png');
+    expect(dark).not.toContain('https://cdn.example.com/on-light.png');
+
+    const missing = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [{ id: 'logo', type: 'logo', logoVariant: 'on_dark' }],
+      },
+      { ...brand, logo_on_dark_url: null },
+    );
+    expect(missing).toContain('https://cdn.example.com/logo.png');
+  });
+
+  it('persists block background and padding into compiled HTML', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 'h1',
+            type: 'heading',
+            text: 'Padded heading',
+            level: 2,
+            backgroundColor: '#FFF4E8',
+            padding: { top: 8, right: 16, bottom: 8, left: 16 },
+          },
+          {
+            id: 'logo',
+            type: 'logo',
+            backgroundColor: 'transparent',
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain('background:#FFF4E8');
+    expect(html).toContain('padding:8px 16px 8px 16px');
+    expect(html).toContain('padding:20px 28px 20px 28px');
+    expect(html).not.toMatch(/logo[\s\S]*background:#0D2344/);
+  });
+
+  it('renders image alignment, presets, and full width', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 'img-full',
+            type: 'image',
+            src: 'https://cdn.example.com/hero.jpg',
+            alt: 'Hero',
+            size: 'full',
+            align: 'center',
+          },
+          {
+            id: 'img-custom',
+            type: 'image',
+            src: 'https://cdn.example.com/small.jpg',
+            alt: 'Small',
+            size: 'custom',
+            width: 200,
+            height: 80,
+            align: 'right',
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain('width="600"');
+    expect(html).toContain('width:100%;max-width:600px');
+    expect(html).toContain('padding:0px 0px 0px 0px');
+    expect(html).toContain('width="200"');
+    expect(html).toContain('height="80"');
+    expect(html).toContain('align="right"');
+  });
 });

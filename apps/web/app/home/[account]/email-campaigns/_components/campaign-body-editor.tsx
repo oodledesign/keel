@@ -35,7 +35,15 @@ import {
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import { resolveBrandLogoChoice } from '~/lib/brand/resolve-brand-logo';
+import {
+  paddingCss,
+  resolveCampaignBlockBackground,
+  resolveCampaignBlockPadding,
+  resolveCampaignImageLayout,
+} from '~/lib/campaigns/campaign-block-style';
 import type {
+  CampaignAlign,
   CampaignBlock,
   CampaignBrand,
   CampaignColumnContent,
@@ -78,6 +86,7 @@ const BLOCK_ICONS: Record<string, typeof Type> = {
 export function CampaignBodyEditor({
   document,
   brand,
+  accountId,
   disabled,
   onChange,
   previewWidth,
@@ -85,6 +94,7 @@ export function CampaignBodyEditor({
 }: {
   document: CampaignDocument;
   brand: CampaignBrand;
+  accountId?: string;
   disabled?: boolean;
   onChange: (document: CampaignDocument) => void;
   previewWidth: 'desktop' | 'mobile';
@@ -252,6 +262,8 @@ export function CampaignBodyEditor({
         >
           <CampaignBlockInspector
             block={selected ?? null}
+            brand={brand}
+            accountId={accountId}
             disabled={disabled}
             onChange={(patch) => {
               if (!selected) return;
@@ -410,6 +422,19 @@ function IconAction({
   );
 }
 
+function canvasBoxStyle(
+  block: CampaignBlock,
+  brand: CampaignBrand,
+  extra?: { textAlign?: CampaignAlign },
+) {
+  const background = resolveCampaignBlockBackground(block, brand);
+  return {
+    background: background ?? undefined,
+    padding: paddingCss(resolveCampaignBlockPadding(block)),
+    textAlign: extra?.textAlign,
+  };
+}
+
 function CanvasBlockPreview({
   block,
   brand,
@@ -417,34 +442,46 @@ function CanvasBlockPreview({
   block: CampaignBlock;
   brand: CampaignBrand;
 }) {
-  const primary = brand.primary_color || '#0D2344';
   const accent = brand.accent_color || '#57C87F';
 
   switch (block.type) {
-    case 'logo':
+    case 'logo': {
+      const logoUrl = resolveBrandLogoChoice(
+        brand,
+        block.logoVariant ?? 'primary',
+      );
       return (
         <div
-          className="px-7 py-5"
-          style={{ background: primary, textAlign: block.align ?? 'left' }}
+          style={canvasBoxStyle(block, brand, {
+            textAlign: block.align ?? 'left',
+          })}
         >
-          {brand.logo_url ? (
+          {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={brand.logo_url}
-              alt=""
-              className="inline-block h-10 w-auto"
-            />
+            <img src={logoUrl} alt="" className="inline-block h-10 w-auto" />
           ) : (
-            <span className="text-sm text-white">Workspace logo</span>
+            <span
+              className="text-sm"
+              style={{
+                color: resolveCampaignBlockBackground(block, brand)
+                  ? '#ffffff'
+                  : '#6b5c63',
+              }}
+            >
+              Workspace logo
+            </span>
           )}
         </div>
       );
+    }
     case 'heading':
       return (
         <div
-          className="px-7 py-3 font-semibold text-[#09111F]"
+          className="font-semibold text-[#09111F]"
           style={{
-            textAlign: block.align ?? 'left',
+            ...canvasBoxStyle(block, brand, {
+              textAlign: block.align ?? 'left',
+            }),
             fontSize: block.level === 1 ? 28 : 22,
           }}
         >
@@ -455,27 +492,49 @@ function CanvasBlockPreview({
       return (
         <div
           className={cn(
-            'px-7 py-3 text-[16px] leading-relaxed text-[#09111F]',
+            'text-[16px] leading-relaxed text-[#09111F]',
             RICH_TEXT_LIST_CLASS,
           )}
-          style={{ textAlign: block.align ?? 'left' }}
+          style={canvasBoxStyle(block, brand, {
+            textAlign: block.align ?? 'left',
+          })}
           dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.html) }}
         />
       );
-    case 'image':
+    case 'image': {
+      const layout = resolveCampaignImageLayout(block);
       return block.src && isSafeHttpUrl(block.src) ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={block.src} alt={block.alt} className="w-full px-7 py-3" />
+        <div
+          style={canvasBoxStyle(block, brand, {
+            textAlign: block.align ?? 'left',
+          })}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={block.src}
+            alt={block.alt}
+            className="inline-block max-w-full"
+            style={{
+              width: layout.fullWidth ? '100%' : layout.width,
+              height: layout.height ?? 'auto',
+            }}
+          />
+        </div>
       ) : (
-        <div className="px-7 py-8 text-center text-sm text-[#6b5c63]">
-          Add an image URL in the inspector
+        <div
+          className="text-center text-sm text-[#6b5c63]"
+          style={canvasBoxStyle(block, brand)}
+        >
+          Add an image URL, upload, or pick a workspace file
         </div>
       );
+    }
     case 'button':
       return (
         <div
-          className="px-7 py-3"
-          style={{ textAlign: block.align ?? 'center' }}
+          style={canvasBoxStyle(block, brand, {
+            textAlign: block.align ?? 'center',
+          })}
         >
           <span
             className="inline-block rounded-md px-6 py-3 text-sm font-semibold text-white"
@@ -487,22 +546,35 @@ function CanvasBlockPreview({
       );
     case 'divider':
       return (
-        <div className="px-7 py-3">
+        <div style={canvasBoxStyle(block, brand)}>
           <div className="border-t border-[#e4ddd6]" />
         </div>
       );
     case 'spacer':
-      return <div style={{ height: block.height }} />;
+      return (
+        <div
+          style={{
+            ...canvasBoxStyle(block, brand),
+            height: block.height,
+          }}
+        />
+      );
     case 'columns':
       return (
-        <div className="grid grid-cols-2 gap-4 px-7 py-3 text-[15px] text-[#09111F]">
+        <div
+          className="grid grid-cols-2 gap-4 text-[15px] text-[#09111F]"
+          style={canvasBoxStyle(block, brand)}
+        >
           <ColumnPreview content={block.left} />
           <ColumnPreview content={block.right} />
         </div>
       );
     case 'footer':
       return (
-        <div className="px-7 py-3 text-xs leading-5 text-[#6b5c63]">
+        <div
+          className="text-xs leading-5 text-[#6b5c63]"
+          style={canvasBoxStyle(block, brand)}
+        >
           {block.text}
           <div className="mt-1 underline">Unsubscribe</div>
         </div>
@@ -511,9 +583,10 @@ function CanvasBlockPreview({
       return (
         <div
           className={cn(
-            'px-7 py-3 text-[16px] leading-relaxed text-[#09111F]',
+            'text-[16px] leading-relaxed text-[#09111F]',
             RICH_TEXT_LIST_CLASS,
           )}
+          style={canvasBoxStyle(block, brand)}
           dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.html) }}
         />
       );

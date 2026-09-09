@@ -1,4 +1,16 @@
 import {
+  type BrandLogoChoice,
+  resolveBrandLogoChoice,
+} from '~/lib/brand/resolve-brand-logo';
+
+import {
+  isCampaignHexColor,
+  paddingCss,
+  resolveCampaignBlockBackground,
+  resolveCampaignBlockPadding,
+  resolveCampaignImageLayout,
+} from './campaign-block-style';
+import {
   CAMPAIGN_DOCUMENT_MARKER,
   type CampaignAlign,
   type CampaignBlock,
@@ -17,8 +29,6 @@ const MUTED_COLOR = '#6b5c63';
 const INFO_COLOR = '#41606F';
 const PAGE_BG = '#f4f1ec';
 const DIVIDER_COLOR = '#e4ddd6';
-
-const HEX_COLOR_RE = /^#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?$/;
 
 const ALLOWED_RICH_TAGS = new Set([
   'p',
@@ -113,79 +123,114 @@ function renderBlock(
 ): string {
   switch (block.type) {
     case 'logo':
-      return renderLogoRow(brand, colors.primary, block.align);
+      return renderLogoRow(block, brand);
     case 'heading':
-      return renderHeadingRow(block);
+      return renderHeadingRow(block, brand);
     case 'text':
-      return renderTextRow(block);
+      return renderTextRow(block, brand);
     case 'image':
-      return renderImageRow(block);
+      return renderImageRow(block, brand);
     case 'button':
-      return renderButtonRow(block, colors.accent);
+      return renderButtonRow(block, colors.accent, brand);
     case 'divider':
-      return renderDividerRow();
+      return renderDividerRow(block, brand);
     case 'spacer':
-      return renderSpacerRow(block.height);
+      return renderSpacerRow(block, brand);
     case 'columns':
-      return renderColumnsRow(block);
+      return renderColumnsRow(block, brand);
     case 'footer':
-      return renderFooterRow(block.text, unsubscribeUrl);
+      return renderFooterRow(block, unsubscribeUrl, brand);
     case 'html':
-      return renderHtmlRow(block.html);
+      return renderHtmlRow(block, brand);
   }
 }
 
 function renderLogoRow(
+  block: Extract<CampaignBlock, { type: 'logo' }>,
   brand: CampaignBrand,
-  primary: string,
-  align: CampaignAlign = 'left',
 ): string {
-  const logo = brand.logo_url
-    ? `<img src="${escapeAttr(brand.logo_url)}" alt="" height="40" style="display:block;max-height:40px;width:auto;border:0;" />`
+  const variant = (block.logoVariant ?? 'primary') as BrandLogoChoice;
+  const src = resolveBrandLogoChoice(brand, variant);
+  const logo = src
+    ? `<img src="${escapeAttr(src)}" alt="" height="40" style="display:block;max-height:40px;width:auto;border:0;" />`
     : '';
 
-  return row(
-    `<td align="${align}" style="background:${primary};padding:20px 28px;">${logo}</td>`,
-  );
+  return styledRow(logo, {
+    align: block.align ?? 'left',
+    background: resolveCampaignBlockBackground(block, brand),
+    padding: resolveCampaignBlockPadding(block),
+  });
 }
 
-function renderHeadingRow(block: Extract<CampaignBlock, { type: 'heading' }>) {
+function renderHeadingRow(
+  block: Extract<CampaignBlock, { type: 'heading' }>,
+  brand: CampaignBrand,
+) {
   const size = block.level === 1 ? 28 : 22;
   const weight = block.level === 1 ? 700 : 600;
   const align = block.align ?? 'left';
   const text = escapeTextKeepMerge(block.text.trim() || 'Heading');
 
-  return contentRow(
+  return styledRow(
     `<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:${size}px;line-height:1.3;font-weight:${weight};color:${CONTENT_COLOR};text-align:${align};">${text}</p>`,
+    {
+      align,
+      background: resolveCampaignBlockBackground(block, brand),
+      padding: resolveCampaignBlockPadding(block),
+    },
   );
 }
 
-function renderTextRow(block: Extract<CampaignBlock, { type: 'text' }>) {
+function renderTextRow(
+  block: Extract<CampaignBlock, { type: 'text' }>,
+  brand: CampaignBrand,
+) {
   const align = block.align ?? 'left';
   const html = sanitizeRichText(block.html) || '<p></p>';
 
-  return contentRow(
+  return styledRow(
     `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${CONTENT_COLOR};text-align:${align};">${html}</div>`,
+    {
+      align,
+      background: resolveCampaignBlockBackground(block, brand),
+      padding: resolveCampaignBlockPadding(block),
+    },
   );
 }
 
-function renderImageRow(block: Extract<CampaignBlock, { type: 'image' }>) {
+function renderImageRow(
+  block: Extract<CampaignBlock, { type: 'image' }>,
+  brand: CampaignBrand,
+) {
   if (!block.src.trim() || !isSafeHttpUrl(block.src)) {
     return '';
   }
 
-  const image = `<img src="${escapeAttr(block.src)}" alt="${escapeAttr(block.alt)}" width="544" style="display:block;width:100%;max-width:544px;height:auto;border:0;" />`;
+  const layout = resolveCampaignImageLayout(block);
+  const heightAttr = layout.height ? ` height="${layout.height}"` : '';
+  const heightStyle = layout.height
+    ? `height:${layout.height}px;`
+    : 'height:auto;';
+  const widthStyle = layout.fullWidth
+    ? `width:100%;max-width:${layout.width}px;`
+    : `width:${layout.width}px;max-width:100%;`;
+  const image = `<img src="${escapeAttr(block.src)}" alt="${escapeAttr(block.alt)}" width="${layout.width}"${heightAttr} style="display:block;${widthStyle}${heightStyle}border:0;" />`;
   const inner =
     block.href && isSafeHttpUrl(block.href)
       ? `<a href="${escapeAttr(block.href)}" style="text-decoration:none;">${image}</a>`
       : image;
 
-  return contentRow(inner);
+  return styledRow(inner, {
+    align: block.align ?? 'left',
+    background: resolveCampaignBlockBackground(block, brand),
+    padding: resolveCampaignBlockPadding(block),
+  });
 }
 
 function renderButtonRow(
   block: Extract<CampaignBlock, { type: 'button' }>,
   accent: string,
+  brand: CampaignBrand,
 ) {
   const rawHref = block.href.trim();
   const href =
@@ -195,7 +240,7 @@ function renderButtonRow(
   const label = escapeTextKeepMerge(block.label.trim() || 'Read more');
   const align = block.align ?? 'center';
 
-  return contentRow(
+  return styledRow(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${align}" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
       <tr>
         <td align="center" bgcolor="${accent}" style="background:${accent};border-radius:6px;">
@@ -203,25 +248,44 @@ function renderButtonRow(
         </td>
       </tr>
     </table>`,
-    align,
+    {
+      align,
+      background: resolveCampaignBlockBackground(block, brand),
+      padding: resolveCampaignBlockPadding(block),
+    },
   );
 }
 
-function renderDividerRow() {
-  return contentRow(
+function renderDividerRow(
+  block: Extract<CampaignBlock, { type: 'divider' }>,
+  brand: CampaignBrand,
+) {
+  return styledRow(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td style="border-top:1px solid ${DIVIDER_COLOR};font-size:0;line-height:0;">&nbsp;</td></tr></table>`,
+    {
+      background: resolveCampaignBlockBackground(block, brand),
+      padding: resolveCampaignBlockPadding(block),
+    },
   );
 }
 
-function renderSpacerRow(height: number) {
-  const px = Math.min(120, Math.max(8, height));
-  return row(
-    `<td style="height:${px}px;line-height:${px}px;font-size:0;">&nbsp;</td>`,
-  );
+function renderSpacerRow(
+  block: Extract<CampaignBlock, { type: 'spacer' }>,
+  brand: CampaignBrand,
+) {
+  const px = Math.min(120, Math.max(8, block.height));
+  return styledRow(`&nbsp;`, {
+    background: resolveCampaignBlockBackground(block, brand),
+    padding: resolveCampaignBlockPadding(block),
+    extraTdStyle: `height:${px}px;line-height:${px}px;font-size:0;`,
+  });
 }
 
-function renderColumnsRow(block: Extract<CampaignBlock, { type: 'columns' }>) {
-  return contentRow(
+function renderColumnsRow(
+  block: Extract<CampaignBlock, { type: 'columns' }>,
+  brand: CampaignBrand,
+) {
+  return styledRow(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
       <tr>
         <td class="ozer-email-col" width="50%" valign="top" style="width:50%;padding:0 12px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${CONTENT_COLOR};">
@@ -232,6 +296,10 @@ function renderColumnsRow(block: Extract<CampaignBlock, { type: 'columns' }>) {
         </td>
       </tr>
     </table>`,
+    {
+      background: resolveCampaignBlockBackground(block, brand),
+      padding: resolveCampaignBlockPadding(block),
+    },
   );
 }
 
@@ -251,7 +319,12 @@ function renderColumnContent(column: CampaignColumnContent): string {
   return sanitizeRichText(column.html) || '&nbsp;';
 }
 
-function renderFooterRow(text: string, unsubscribeUrl: string): string {
+function renderFooterRow(
+  block: Extract<CampaignBlock, { type: 'footer' }> | string,
+  unsubscribeUrl: string,
+  brand?: CampaignBrand,
+): string {
+  const text = typeof block === 'string' ? block : block.text;
   const safeText = escapeTextKeepMerge(
     text.trim() ||
       'You are receiving this because you subscribed to updates from this workspace.',
@@ -261,22 +334,57 @@ function renderFooterRow(text: string, unsubscribeUrl: string): string {
       ? '{{unsubscribe_url}}'
       : escapeAttr(unsubscribeUrl);
 
-  return contentRow(
+  const padding =
+    typeof block === 'string'
+      ? resolveCampaignBlockPadding({
+          id: 'footer',
+          type: 'footer',
+          text,
+        })
+      : resolveCampaignBlockPadding(block);
+  const background =
+    typeof block === 'string'
+      ? null
+      : resolveCampaignBlockBackground(block, brand);
+
+  return styledRow(
     `<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:${MUTED_COLOR};">${safeText}<br /><a href="${href}" style="color:${INFO_COLOR};text-decoration:underline;">Unsubscribe</a></p>`,
+    { background, padding },
   );
 }
 
-function renderHtmlRow(html: string): string {
-  const cleaned = stripDangerousHtml(html).trim();
+function renderHtmlRow(
+  block: Extract<CampaignBlock, { type: 'html' }>,
+  brand: CampaignBrand,
+): string {
+  const cleaned = stripDangerousHtml(block.html).trim();
   if (!cleaned) return '';
-  return contentRow(
+  return styledRow(
     `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${CONTENT_COLOR};">${cleaned}</div>`,
+    {
+      background: resolveCampaignBlockBackground(block, brand),
+      padding: resolveCampaignBlockPadding(block),
+    },
   );
 }
 
-function contentRow(inner: string, align: CampaignAlign = 'left'): string {
+function styledRow(
+  inner: string,
+  options: {
+    align?: CampaignAlign;
+    background?: string | null;
+    padding: ReturnType<typeof resolveCampaignBlockPadding>;
+    extraTdStyle?: string;
+  },
+): string {
+  const align = options.align ?? 'left';
+  const background = options.background
+    ? `background:${options.background};`
+    : '';
+  const extra = options.extraTdStyle ?? '';
+
   return row(
-    `<td align="${align}" style="padding:12px 28px;font-family:Arial,Helvetica,sans-serif;color:${CONTENT_COLOR};">${inner}</td>`,
+    `<td align="${align}" style="${background}padding:${paddingCss(options.padding)};font-family:Arial,Helvetica,sans-serif;color:${CONTENT_COLOR};${extra}">${inner}</td>`,
   );
 }
 
@@ -285,7 +393,7 @@ function row(inner: string): string {
 }
 
 function safeColor(value: string | null | undefined, fallback: string): string {
-  return value && HEX_COLOR_RE.test(value) ? value : fallback;
+  return isCampaignHexColor(value) ? value : fallback;
 }
 
 function escapeHtml(value: string): string {

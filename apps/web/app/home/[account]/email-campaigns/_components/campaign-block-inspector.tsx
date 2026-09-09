@@ -14,10 +14,25 @@ import {
 } from '@kit/ui/select';
 import { Textarea } from '@kit/ui/textarea';
 
+import {
+  brandLogoChoiceIsExact,
+  resolveBrandLogoChoice,
+} from '~/lib/brand/resolve-brand-logo';
+import {
+  CAMPAIGN_PADDING_PRESETS,
+  type CampaignPaddingPreset,
+  defaultCampaignBlockPadding,
+  detectCampaignPaddingPreset,
+  isCampaignHexColor,
+} from '~/lib/campaigns/campaign-block-style';
 import type {
   CampaignAlign,
   CampaignBlock,
+  CampaignBrand,
   CampaignColumnContent,
+  CampaignImageSize,
+  CampaignLogoVariant,
+  CampaignPadding,
 } from '~/lib/campaigns/campaign-document';
 import { isCampaignFormUrlToken } from '~/lib/campaigns/form-link';
 import { CAMPAIGN_MERGE_FIELDS } from '~/lib/campaigns/merge-fields';
@@ -28,15 +43,20 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { CampaignImagePicker } from './campaign-image-picker';
 import { CampaignTextBlockEditor } from './campaign-text-block-editor';
 
 export function CampaignBlockInspector({
   block,
+  brand,
+  accountId,
   disabled,
   onChange,
   onInsertMerge,
 }: {
   block: CampaignBlock | null;
+  brand: CampaignBrand;
+  accountId?: string;
   disabled?: boolean;
   onChange: (patch: Partial<CampaignBlock>) => void;
   onInsertMerge: (token: string) => void;
@@ -57,14 +77,17 @@ export function CampaignBlockInspector({
 
       {block.type === 'logo' ? (
         <>
+          <LogoVariantField
+            value={block.logoVariant}
+            brand={brand}
+            disabled={disabled}
+            onChange={(logoVariant) => onChange({ logoVariant })}
+          />
           <AlignField
             value={block.align}
             disabled={disabled}
             onChange={(align) => onChange({ align })}
           />
-          <p className={`text-xs ${workspaceTextMuted}`}>
-            Uses the workspace logo from Brand settings.
-          </p>
         </>
       ) : null}
 
@@ -125,9 +148,15 @@ export function CampaignBlockInspector({
 
       {block.type === 'image' ? (
         <ImageFields
+          accountId={accountId}
           src={block.src}
           alt={block.alt}
           href={block.href}
+          align={block.align}
+          size={block.size}
+          width={block.width}
+          height={block.height}
+          showLayout
           disabled={disabled}
           onChange={onChange}
         />
@@ -196,12 +225,14 @@ export function CampaignBlockInspector({
         <div className="space-y-4">
           <ColumnFields
             title="Left"
+            accountId={accountId}
             value={block.left}
             disabled={disabled}
             onChange={(left) => onChange({ left })}
           />
           <ColumnFields
             title="Right"
+            accountId={accountId}
             value={block.right}
             disabled={disabled}
             onChange={(right) => onChange({ right })}
@@ -244,9 +275,16 @@ export function CampaignBlockInspector({
 
       {block.type === 'divider' ? (
         <p className={`text-xs ${workspaceTextMuted}`}>
-          A thin rule between sections. No extra settings.
+          A thin rule between sections.
         </p>
       ) : null}
+
+      <BlockLayoutFields
+        block={block}
+        brand={brand}
+        disabled={disabled}
+        onChange={onChange}
+      />
     </div>
   );
 }
@@ -286,9 +324,62 @@ function AlignField({
           <SelectItem className={workspaceSelectItemClass} value="center">
             Centre
           </SelectItem>
+          <SelectItem className={workspaceSelectItemClass} value="right">
+            Right
+          </SelectItem>
         </SelectContent>
       </Select>
     </Field>
+  );
+}
+
+function LogoVariantField({
+  value,
+  brand,
+  disabled,
+  onChange,
+}: {
+  value?: CampaignLogoVariant;
+  brand: CampaignBrand;
+  disabled?: boolean;
+  onChange: (variant: CampaignLogoVariant) => void;
+}) {
+  const choice = value ?? 'primary';
+  const resolved = resolveBrandLogoChoice(brand, choice);
+  const exact = brandLogoChoiceIsExact(brand, choice);
+
+  return (
+    <>
+      <Field label="Logo">
+        <Select
+          value={choice}
+          disabled={disabled}
+          onValueChange={(next) => onChange(next as CampaignLogoVariant)}
+        >
+          <SelectTrigger data-test="campaign-logo-variant">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className={workspaceSelectContentClass}>
+            <SelectItem className={workspaceSelectItemClass} value="primary">
+              Primary
+            </SelectItem>
+            <SelectItem className={workspaceSelectItemClass} value="on_light">
+              On light
+            </SelectItem>
+            <SelectItem className={workspaceSelectItemClass} value="on_dark">
+              On dark
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <p className={`text-xs ${workspaceTextMuted}`}>
+        {resolved
+          ? exact
+            ? 'Uses the matching logo from Brand settings.'
+            : 'That variant is not uploaded — using the next available brand logo.'
+          : 'No workspace logo yet. Add one in Brand settings.'}
+      </p>
+    </>
   );
 }
 
@@ -323,28 +414,46 @@ function MergeChips({
 }
 
 function ImageFields({
+  accountId,
   src,
   alt,
   href,
+  align,
+  size,
+  width,
+  height,
+  showLayout,
   disabled,
   onChange,
 }: {
+  accountId?: string;
   src: string;
   alt: string;
   href?: string;
+  align?: CampaignAlign;
+  size?: CampaignImageSize;
+  width?: number;
+  height?: number;
+  showLayout?: boolean;
   disabled?: boolean;
-  onChange: (patch: { src?: string; alt?: string; href?: string }) => void;
+  onChange: (patch: {
+    src?: string;
+    alt?: string;
+    href?: string;
+    align?: CampaignAlign;
+    size?: CampaignImageSize;
+    width?: number;
+    height?: number;
+  }) => void;
 }) {
   return (
     <>
-      <Field label="Image URL">
-        <Input
-          value={src}
-          disabled={disabled}
-          placeholder="https://"
-          onChange={(event) => onChange({ src: event.target.value })}
-        />
-      </Field>
+      <CampaignImagePicker
+        accountId={accountId}
+        src={src}
+        disabled={disabled}
+        onChange={(next) => onChange({ src: next })}
+      />
       <Field label="Alt text">
         <Input
           value={alt}
@@ -360,17 +469,118 @@ function ImageFields({
           onChange={(event) => onChange({ href: event.target.value })}
         />
       </Field>
+      {showLayout ? (
+        <>
+          <AlignField
+            value={align}
+            disabled={disabled}
+            onChange={(next) => onChange({ align: next })}
+          />
+          <Field label="Size">
+            <Select
+              value={size ?? 'default'}
+              disabled={disabled}
+              onValueChange={(value) => {
+                if (value === 'default') {
+                  onChange({
+                    size: undefined,
+                    width: undefined,
+                    height: undefined,
+                  });
+                  return;
+                }
+                onChange({ size: value as CampaignImageSize });
+              }}
+            >
+              <SelectTrigger data-test="campaign-image-size">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className={workspaceSelectContentClass}>
+                <SelectItem
+                  className={workspaceSelectItemClass}
+                  value="default"
+                >
+                  Default
+                </SelectItem>
+                <SelectItem className={workspaceSelectItemClass} value="full">
+                  Full width
+                </SelectItem>
+                <SelectItem className={workspaceSelectItemClass} value="large">
+                  Large
+                </SelectItem>
+                <SelectItem className={workspaceSelectItemClass} value="medium">
+                  Medium
+                </SelectItem>
+                <SelectItem className={workspaceSelectItemClass} value="small">
+                  Small
+                </SelectItem>
+                <SelectItem className={workspaceSelectItemClass} value="custom">
+                  Custom
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          {size === 'custom' ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Width (px)">
+                <Input
+                  type="number"
+                  min={40}
+                  max={600}
+                  value={width ?? 544}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    onChange({
+                      size: 'custom',
+                      width: Math.min(
+                        600,
+                        Math.max(40, Number(event.target.value) || 544),
+                      ),
+                    })
+                  }
+                />
+              </Field>
+              <Field label="Height (px)">
+                <Input
+                  type="number"
+                  min={20}
+                  max={1200}
+                  value={height ?? ''}
+                  placeholder="Auto"
+                  disabled={disabled}
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    onChange({
+                      size: 'custom',
+                      height: raw
+                        ? Math.min(1200, Math.max(20, Number(raw) || 20))
+                        : undefined,
+                    });
+                  }}
+                />
+              </Field>
+            </div>
+          ) : null}
+          {size === 'full' ? (
+            <p className={`text-xs ${workspaceTextMuted}`}>
+              Full width spans the email. Set padding to None for edge-to-edge.
+            </p>
+          ) : null}
+        </>
+      ) : null}
     </>
   );
 }
 
 function ColumnFields({
   title,
+  accountId,
   value,
   disabled,
   onChange,
 }: {
   title: string;
+  accountId?: string;
   value: CampaignColumnContent;
   disabled?: boolean;
   onChange: (value: CampaignColumnContent) => void;
@@ -410,6 +620,7 @@ function ColumnFields({
         />
       ) : (
         <ImageFields
+          accountId={accountId}
           src={value.src}
           alt={value.alt}
           href={value.href}
@@ -417,6 +628,222 @@ function ColumnFields({
           onChange={(patch) => onChange({ ...value, ...patch })}
         />
       )}
+    </div>
+  );
+}
+
+function BlockLayoutFields({
+  block,
+  brand,
+  disabled,
+  onChange,
+}: {
+  block: CampaignBlock;
+  brand: CampaignBrand;
+  disabled?: boolean;
+  onChange: (patch: Partial<CampaignBlock>) => void;
+}) {
+  const imageSize = block.type === 'image' ? block.size : undefined;
+  const preset = detectCampaignPaddingPreset(
+    block.padding,
+    block.type,
+    imageSize,
+  );
+  const padding =
+    block.padding ?? defaultCampaignBlockPadding(block.type, imageSize);
+  const background =
+    block.backgroundColor === 'transparent' ||
+    block.backgroundColor === '' ||
+    block.backgroundColor === null
+      ? ''
+      : (block.backgroundColor ?? '');
+  const swatches = [
+    brand.primary_color,
+    brand.secondary_color,
+    brand.accent_color,
+  ].filter((value): value is string => isCampaignHexColor(value));
+
+  return (
+    <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-3">
+      <p className={`text-xs font-medium ${workspaceText}`}>Layout</p>
+      <Field label="Background">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="color"
+            className="h-9 w-12 cursor-pointer rounded border border-[color:var(--workspace-shell-border)] bg-transparent disabled:opacity-50"
+            value={
+              background.startsWith('#') ? background.slice(0, 7) : '#ffffff'
+            }
+            disabled={disabled}
+            aria-label="Background colour"
+            onChange={(event) =>
+              onChange({ backgroundColor: event.target.value })
+            }
+          />
+          <Input
+            value={background}
+            disabled={disabled}
+            placeholder="None"
+            className="max-w-[120px] font-mono text-sm"
+            spellCheck={false}
+            onChange={(event) =>
+              onChange({
+                backgroundColor: event.target.value.trim() || 'transparent',
+              })
+            }
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 px-2 text-xs"
+            disabled={disabled}
+            onClick={() => onChange({ backgroundColor: 'transparent' })}
+          >
+            None
+          </Button>
+        </div>
+      </Field>
+      {swatches.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {swatches.map((color) => (
+            <button
+              key={color}
+              type="button"
+              disabled={disabled}
+              title={color}
+              aria-label={`Use brand colour ${color}`}
+              className="h-6 w-6 rounded-full border border-[color:var(--workspace-shell-border)] disabled:opacity-50"
+              style={{ background: color }}
+              onClick={() => onChange({ backgroundColor: color })}
+            />
+          ))}
+        </div>
+      ) : null}
+      {block.type === 'logo' && !block.backgroundColor ? (
+        <p className={`text-xs ${workspaceTextMuted}`}>
+          Default background is the brand primary colour. Choose None to sit the
+          logo on the email body.
+        </p>
+      ) : null}
+
+      <Field label="Padding">
+        <Select
+          value={preset}
+          disabled={disabled}
+          onValueChange={(value) => {
+            const next = value as CampaignPaddingPreset;
+            if (next === 'default') {
+              onChange({ padding: undefined });
+              return;
+            }
+            if (next === 'custom') {
+              onChange({ padding });
+              return;
+            }
+            onChange({ padding: { ...CAMPAIGN_PADDING_PRESETS[next] } });
+          }}
+        >
+          <SelectTrigger data-test="campaign-block-padding">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className={workspaceSelectContentClass}>
+            <SelectItem className={workspaceSelectItemClass} value="default">
+              Default
+            </SelectItem>
+            <SelectItem className={workspaceSelectItemClass} value="none">
+              None
+            </SelectItem>
+            <SelectItem className={workspaceSelectItemClass} value="tight">
+              Tight
+            </SelectItem>
+            <SelectItem
+              className={workspaceSelectItemClass}
+              value="comfortable"
+            >
+              Comfortable
+            </SelectItem>
+            <SelectItem className={workspaceSelectItemClass} value="custom">
+              Custom
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+
+      {preset === 'custom' ? (
+        <CustomPaddingFields
+          value={padding}
+          disabled={disabled}
+          onChange={(next) => onChange({ padding: next })}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function CustomPaddingFields({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: CampaignPadding;
+  disabled?: boolean;
+  onChange: (padding: CampaignPadding) => void;
+}) {
+  const side = (label: keyof CampaignPadding, display: string) => (
+    <Field label={display}>
+      <Input
+        type="number"
+        min={0}
+        max={160}
+        value={value[label]}
+        disabled={disabled}
+        onChange={(event) => {
+          if (event.target.value === '') return;
+          onChange({
+            ...value,
+            [label]: Math.min(
+              160,
+              Math.max(0, Number(event.target.value) || 0),
+            ),
+          });
+        }}
+      />
+    </Field>
+  );
+
+  return (
+    <div className="space-y-2">
+      <Field label="All sides">
+        <Input
+          type="number"
+          min={0}
+          max={160}
+          value={
+            value.top === value.right &&
+            value.right === value.bottom &&
+            value.bottom === value.left
+              ? value.top
+              : ''
+          }
+          placeholder="Mixed"
+          disabled={disabled}
+          onChange={(event) => {
+            if (event.target.value === '') return;
+            const next = Math.min(
+              160,
+              Math.max(0, Number(event.target.value) || 0),
+            );
+            onChange({ top: next, right: next, bottom: next, left: next });
+          }}
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        {side('top', 'Top')}
+        {side('right', 'Right')}
+        {side('bottom', 'Bottom')}
+        {side('left', 'Left')}
+      </div>
     </div>
   );
 }
