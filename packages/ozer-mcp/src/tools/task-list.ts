@@ -18,16 +18,52 @@ export const taskListStatusSchema = z.enum([
 export const taskListSortSchema = z.enum(['updated', 'due', 'priority']);
 
 export const listTasksSchema = z.object({
-  status: taskListStatusSchema.optional().default('outstanding'),
-  account_id: z.string().uuid().optional(),
-  client_id: z.string().uuid().optional(),
-  project_id: z.string().uuid().optional(),
+  status: taskListStatusSchema
+    .optional()
+    .default('outstanding')
+    .describe(
+      'outstanding (default) is todo + in_progress + client_review. Use all to include done/cancelled. Do not set a single status unless asked.',
+    ),
+  account_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'Workspace id from list_workspaces. Omit to include all authorized workspaces.',
+    ),
+  client_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'CRM client id. Only pass when the user names a specific client.',
+    ),
+  project_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe('Project id. Only pass when the user names a specific project.'),
   area_id: z.string().uuid().optional(),
   parent_task_id: z.string().uuid().optional(),
-  include_subtasks: z.boolean().optional().default(false),
-  mine: z.boolean().optional().default(false),
-  q: z.string().trim().min(1).max(200).optional(),
-  sort: taskListSortSchema.optional().default('updated'),
+  include_subtasks: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('Default false: root tasks only. Set true to mix in subtasks.'),
+  mine: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe(
+      'When true, only tasks assigned to the authenticated user (tasks.user_id).',
+    ),
+  q: z.string().trim().min(1).max(200).optional().describe('Title search.'),
+  sort: taskListSortSchema
+    .optional()
+    .default('updated')
+    .describe(
+      'updated (default) is recently updated first. due matches the Ozer tasks page (soonest due). priority ranks the current page after the updated window.',
+    ),
   limit: z
     .number()
     .int()
@@ -35,7 +71,13 @@ export const listTasksSchema = z.object({
     .max(TASK_LIST_MAX_LIMIT)
     .optional()
     .default(TASK_LIST_DEFAULT_LIMIT),
-  offset: z.number().int().min(0).optional().default(0),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .default(0)
+    .describe('Use meta.next_offset when meta.truncated is true.'),
 });
 
 export type ListTasksInput = z.infer<typeof listTasksSchema>;

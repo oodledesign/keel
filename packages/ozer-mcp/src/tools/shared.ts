@@ -95,7 +95,7 @@ export async function loadUserWorkspaces(
   const workspaces = new Map<string, McpWorkspace>();
 
   for (const row of (memberships.data ?? []) as MembershipWorkspaceEmbed[]) {
-    const embedded = unwrapEmbed(row.accounts) ?? unwrapEmbed(row.account);
+    const embedded = unwrapEmbed(row.account) ?? unwrapEmbed(row.accounts);
     const workspace = mapWorkspaceRow(embedded, row.account_id);
     if (workspace) {
       workspaces.set(workspace.id, workspace);

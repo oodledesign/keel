@@ -86,8 +86,8 @@ const createSubtaskSchema = z.object({
 });
 
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, duration_minutes, updated_at, project_id, client_id, area_id, account_id, parent_task_id, user_id';
-const TASK_DETAIL_SELECT = `${TASK_LIST_SELECT}, notes`;
+  'id, title, status, priority, due_date, duration_minutes, updated_at, project_id, client_id, area_id, account_id, parent_task_id';
+const TASK_DETAIL_SELECT = `${TASK_LIST_SELECT}, notes, user_id`;
 
 type TaskRow = {
   id: string;
@@ -521,7 +521,9 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       const { data, error, count } = await query;
       assertSupabaseOk(data, error, 'list tasks');
 
-      const rows = sortTaskRows((data ?? []) as TaskRow[], input.sort);
+      const fetched = (data ?? []) as TaskRow[];
+      const rows =
+        input.sort === 'priority' ? sortTaskRows(fetched, 'priority') : fetched;
       const extras = await enrichTaskListRows(supabase, rows, workspaces);
       const totalCount = count ?? rows.length;
       const truncated = input.offset + rows.length < totalCount;
