@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Inbox, ListChecks, Mail, Plus, Settings2, Share2 } from 'lucide-react';
 
@@ -26,6 +26,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
+import {
+  type FormEditorTab,
+  formEditorTabHref,
+  parseFormEditorTab,
+} from '~/lib/workspace-forms/form-editor-tab';
 import type {
   FormNotifyMemberOption,
   WorkspaceFormEmailSettings,
@@ -78,9 +83,11 @@ const FORM_EDITOR_TABS = [
   { id: 'settings', label: 'Settings', icon: Settings2 },
   { id: 'notifications', label: 'Notifications', icon: Mail },
   { id: 'share', label: 'Share and Embed', icon: Share2 },
-] as const;
-
-type FormEditorTab = (typeof FORM_EDITOR_TABS)[number]['id'];
+] as const satisfies ReadonlyArray<{
+  id: FormEditorTab;
+  label: string;
+  icon: typeof Inbox;
+}>;
 
 const formEditorTabTriggerClass = cn(
   'gap-1.5 rounded-lg px-3 py-2 text-sm',
@@ -96,6 +103,7 @@ type Props = {
   members: FormNotifyMemberOption[];
   submissions: WorkspaceFormSubmissionRecord[];
   showListingDestination: boolean;
+  initialTab?: FormEditorTab;
 };
 
 export function FormBuilder({
@@ -105,8 +113,12 @@ export function FormBuilder({
   members,
   submissions,
   showListingDestination,
+  initialTab,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = parseFormEditorTab(searchParams.get('tab') ?? initialTab);
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(form.name);
   const [description, setDescription] = useState(form.description ?? '');
@@ -129,7 +141,14 @@ export function FormBuilder({
   const [activeFieldId, setActiveFieldId] = useState<string | null>(
     form.fields[0]?.id ?? null,
   );
-  const [tab, setTab] = useState<FormEditorTab>('builder');
+
+  function setTab(next: string) {
+    const resolved = parseFormEditorTab(next);
+    if (resolved === tab) return;
+    router.replace(formEditorTabHref(pathname, resolved, searchParams), {
+      scroll: false,
+    });
+  }
 
   function updateField(id: string, patch: Partial<WorkspaceFormField>) {
     setFields((current) =>
@@ -222,11 +241,7 @@ export function FormBuilder({
 
   return (
     <div className="space-y-6 px-4 py-6 lg:px-8">
-      <Tabs
-        value={tab}
-        onValueChange={(value) => setTab(value as FormEditorTab)}
-        className="gap-0"
-      >
+      <Tabs value={tab} onValueChange={setTab} className="gap-0">
         <TabsList
           className="mb-6 flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-[var(--workspace-control-surface)] p-1 text-[var(--workspace-shell-text-muted)]"
           data-test="form-editor-tabs"

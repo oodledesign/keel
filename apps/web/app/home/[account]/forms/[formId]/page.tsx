@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { parseFormEditorTab } from '~/lib/workspace-forms/form-editor-tab';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import {
@@ -21,14 +22,16 @@ import { loadWorkspaceFormDetail } from '../_lib/server/forms.loader';
 
 interface FormDetailPageProps {
   params: Promise<{ account: string; formId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 export const generateMetadata = async () => ({
   title: 'Edit form',
 });
 
-async function FormDetailPage({ params }: FormDetailPageProps) {
+async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
   const { account: accountSlug, formId } = await params;
+  const query = await searchParams;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, FORMS_WORKSPACE_SPACE_TYPES);
 
@@ -71,6 +74,7 @@ async function FormDetailPage({ params }: FormDetailPageProps) {
           showListingDestination={isCommercialPropertyProfile(
             workspace.workspaceProfile,
           )}
+          initialTab={parseFormEditorTab(query.tab)}
         />
       </PageBody>
     </>
