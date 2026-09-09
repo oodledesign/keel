@@ -56,18 +56,26 @@ grant execute on function public.is_super_admin() to authenticated;
 * public.is_mfa_compliant
 * Check if the user meets MFA requirements if they have MFA enabled.
 * If the user has MFA enabled, then the user must have aal2 enabled. Otherwise, the user must have aal1 enabled (default behavior).
+* OAuth client tokens (client_id claim) are treated as compliant because agents cannot complete AAL2.
 */
 create or replace function public.is_mfa_compliant() returns boolean
     set search_path = '' as
 $$
 begin
+    -- OAuth 2.1 client tokens (MCP / ChatGPT / Claude) are separately
+    -- consented and revocable. Agents cannot complete AAL2 step-up, so a
+    -- verified MFA factor would otherwise hide every RLS-gated row.
+    if nullif((select auth.jwt() ->> 'client_id'), '') is not null then
+        return true;
+    end if;
+
     return array[(select auth.jwt()->>'aal')] <@ (
         select
             case
                 when count(id) > 0 then array['aal2']
                 else array['aal1', 'aal2']
                 end as aal
-        from auth.mfa_factors
+    from auth.mfa_factors
         where ((select auth.uid()) = auth.mfa_factors.user_id) and auth.mfa_factors.status = 'verified'
     );
 end

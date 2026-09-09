@@ -133,6 +133,14 @@ describe('resolveAppSubdomainRedirect', () => {
 
     expect(
       resolveAppSubdomainRedirect(
+        new URL(
+          'https://app.ozer.so/.well-known/oauth-protected-resource/api/mcp',
+        ),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
         new URL('https://app.ozer.so/oauth/consent?authorization_id=test'),
       ),
     ).toBeNull();

@@ -1,10 +1,9 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-import {
-  SUPABASE_JWKS_URL,
-  getOAuthProtectedResourceMetadataUrl,
-} from './config';
+import { SUPABASE_AUTH_SERVER, SUPABASE_JWKS_URL } from './config';
 import type { McpRequestContext } from './context';
+import { withMcpCors } from './cors';
+import { getOAuthWwwAuthenticateHeader } from './metadata';
 import { createOzerMcpSupabaseClient } from './supabase';
 
 export type AuthResult =
@@ -13,21 +12,21 @@ export type AuthResult =
 
 type VerifiedMcpToken = {
   sub: string;
-  clientId: string | null;
+  clientId: string;
 };
 
 const jwks = createRemoteJWKSet(new URL(SUPABASE_JWKS_URL));
 
 function unauthorized(message = 'Unauthorized'): Response {
-  const resourceMetadata = getOAuthProtectedResourceMetadataUrl();
-
-  return new Response(JSON.stringify({ error: message }), {
-    status: 401,
-    headers: {
-      'Content-Type': 'application/json',
-      'WWW-Authenticate': `Bearer resource_metadata="${resourceMetadata}"`,
-    },
-  });
+  return withMcpCors(
+    new Response(JSON.stringify({ error: message }), {
+      status: 401,
+      headers: {
+        'Content-Type': 'application/json',
+        'WWW-Authenticate': getOAuthWwwAuthenticateHeader(),
+      },
+    }),
+  );
 }
 
 function extractBearerToken(request: Request): string | null {
@@ -40,20 +39,28 @@ function extractBearerToken(request: Request): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
+function readClientId(payload: Record<string, unknown>): string | null {
+  if (typeof payload.client_id === 'string' && payload.client_id.trim()) {
+    return payload.client_id.trim();
+  }
+
+  return null;
+}
+
 async function verifyAccessToken(token: string): Promise<VerifiedMcpToken> {
-  const { payload } = await jwtVerify(token, jwks);
+  const { payload } = await jwtVerify(token, jwks, {
+    issuer: SUPABASE_AUTH_SERVER,
+  });
 
   const sub = typeof payload.sub === 'string' ? payload.sub : null;
   if (!sub) {
     throw new Error('Token is missing subject');
   }
 
-  const clientId =
-    typeof payload.client_id === 'string'
-      ? payload.client_id
-      : typeof payload.azp === 'string'
-        ? payload.azp
-        : null;
+  const clientId = readClientId(payload as Record<string, unknown>);
+  if (!clientId) {
+    throw new Error('Token is not an OAuth client token');
+  }
 
   return { sub, clientId };
 }
@@ -80,7 +87,10 @@ export async function authenticateMcpRequest(
       },
     };
   } catch (error) {
-    console.error('[ozer-mcp] Failed to validate OAuth access token:', error);
+    const reason = error instanceof Error ? error.message : 'unknown';
+    console.error('[ozer-mcp] Failed to validate OAuth access token', {
+      reason,
+    });
     return { ok: false, response: unauthorized('Invalid or expired token') };
   }
 }
