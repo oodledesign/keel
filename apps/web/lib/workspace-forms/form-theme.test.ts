@@ -82,6 +82,11 @@ describe('isRsvpLikeWorkspaceForm', () => {
       isRsvpLikeWorkspaceForm({ eventAddress: 'The Clubhouse, London' }),
     ).toBe(true);
 
+    expect(isRsvpLikeWorkspaceForm({ eventDate: '15 October' })).toBe(true);
+    expect(isRsvpLikeWorkspaceForm({ eventTime: '8:00am - 10:00am' })).toBe(
+      true,
+    );
+
     expect(
       isRsvpLikeWorkspaceForm({
         fields: [

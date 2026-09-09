@@ -175,7 +175,7 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
       let deals: PipelineDealRow[] = [];
 
       if (accountId) {
-        let dealsQuery = supabase
+        const dealsQuery = supabase
           .from('pipeline_deals')
           .select(
             'id, name, contact_name, company_name, stage, value, next_action_date',

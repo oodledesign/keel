@@ -57,6 +57,8 @@ export type WorkspaceFormRecord = {
   submitLabel: string;
   successMessage: string | null;
   eventAddress: string | null;
+  eventDate: string | null;
+  eventTime: string | null;
   fields: WorkspaceFormField[];
   theme: WorkspaceFormTheme;
   emailSettings: WorkspaceFormEmailSettings;
@@ -101,6 +103,8 @@ type FormRow = {
   submit_label: string | null;
   success_message: string | null;
   event_address: string | null;
+  event_date: string | null;
+  event_time: string | null;
   fields: unknown;
   theme: unknown;
   email_settings: unknown;
@@ -125,9 +129,13 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     submitLabel: row.submit_label?.trim() || 'Submit',
     successMessage: row.success_message,
     eventAddress: row.event_address?.trim() || null,
+    eventDate: row.event_date?.trim() || null,
+    eventTime: row.event_time?.trim() || null,
     fields,
     theme: withResolvedFormLayout(parsedTheme, {
       eventAddress: row.event_address,
+      eventDate: row.event_date,
+      eventTime: row.event_time,
       destination: row.destination,
       submitLabel: row.submit_label,
       name: row.name,
@@ -317,6 +325,8 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
           submit_label: templateDefaults.submitLabel,
           success_message: templateDefaults.successMessage,
           event_address: templateDefaults.eventAddress,
+          event_date: templateDefaults.eventDate,
+          event_time: templateDefaults.eventTime,
           fields,
           theme: serializeWorkspaceFormTheme(templateDefaults.theme),
           email_settings: serializeWorkspaceFormEmailSettings(
@@ -352,6 +362,8 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         submit_label: input.submitLabel?.trim() || 'Submit',
         success_message: input.successMessage?.trim() || null,
         event_address: input.eventAddress?.trim() || null,
+        event_date: input.eventDate?.trim() || null,
+        event_time: input.eventTime?.trim() || null,
         fields,
       };
 

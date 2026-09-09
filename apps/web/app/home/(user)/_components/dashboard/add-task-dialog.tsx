@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { Loader2, Plus, Sparkles } from 'lucide-react';
+import { Loader2, Plus, Repeat, Sparkles, X } from 'lucide-react';
 
 import {
   Dialog,
@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Switch } from '@kit/ui/switch';
+import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
@@ -59,9 +60,28 @@ const FREQUENCIES = [
 
 type RecurrenceFrequency = (typeof FREQUENCIES)[number]['key'];
 
+type DraftSubtask = {
+  key: string;
+  title: string;
+  durationMinutes: number | null;
+};
+
 function todayYmd() {
   return new Date().toISOString().slice(0, 10);
 }
+
+function createDraftSubtask(): DraftSubtask {
+  return {
+    key:
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `subtask-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    title: '',
+    durationMinutes: null,
+  };
+}
+
+const accentLinkClass = 'font-medium text-[var(--ozer-accent)] hover:underline';
 
 export type { CreateTaskWorkspaceChoice };
 
@@ -117,6 +137,10 @@ export function AddTaskDialog({
 
   const [priority, setPriority] = useState('medium');
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
+  const [notes, setNotes] = useState('');
+  const [showDescription, setShowDescription] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState(false);
+  const [draftSubtasks, setDraftSubtasks] = useState<DraftSubtask[]>([]);
   const [assignTo, setAssignTo] = useState('none');
   const [repeat, setRepeat] = useState(false);
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
@@ -186,6 +210,11 @@ export function AddTaskDialog({
       setFirstCreateDate(todayYmd());
       setDayOfMonth(String(new Date().getUTCDate()));
       setDueDays('0');
+      setDurationMinutes(null);
+      setNotes('');
+      setShowDescription(false);
+      setEditingWorkspace(false);
+      setDraftSubtasks([]);
       setTargetKey(
         lifeOnly
           ? PERSONAL_WORKSPACE_VALUE
@@ -289,11 +318,19 @@ export function AddTaskDialog({
     }
 
     startTransition(async () => {
+      const parentContext = {
+        projectId: selected?.type === 'project' ? selected.id : null,
+        clientId: selected?.type === 'client' ? selected.id : null,
+        areaId: selected?.type === 'area' ? selected.id : null,
+        accountId: targetAccountId ?? null,
+      };
+
       const result = await createTask({
         title,
         priority,
         dueDate: repeat ? undefined : dueDate || undefined,
         durationMinutes: durationMinutes ?? undefined,
+        notes: notes.trim() || undefined,
         projectId: selected?.type === 'project' ? selected.id : undefined,
         areaId: selected?.type === 'area' ? selected.id : undefined,
         clientId: selected?.type === 'client' ? selected.id : undefined,
@@ -315,9 +352,48 @@ export function AddTaskDialog({
         return;
       }
 
+      const parentId = result.id;
+      const pendingSubtasks = draftSubtasks
+        .map((item) => ({
+          title: item.title.trim(),
+          durationMinutes: item.durationMinutes,
+        }))
+        .filter((item) => item.title.length > 0);
+
+      if (parentId && pendingSubtasks.length > 0) {
+        const children = await Promise.all(
+          pendingSubtasks.map((subtask) =>
+            createTask({
+              title: subtask.title,
+              priority,
+              dueDate: repeat ? undefined : dueDate || undefined,
+              durationMinutes: subtask.durationMinutes ?? undefined,
+              parentTaskId: parentId,
+              parentTaskContext: parentContext,
+              projectId: selected?.type === 'project' ? selected.id : undefined,
+              clientId: selected?.type === 'client' ? selected.id : undefined,
+              areaId: selected?.type === 'area' ? selected.id : undefined,
+              accountId: targetAccountId,
+            }),
+          ),
+        );
+
+        const failed = children.filter((child) => !child.success);
+        if (failed.length > 0) {
+          toast.error(
+            failed[0]?.error ??
+              'Task created, but one or more subtasks could not be added',
+          );
+        }
+      }
+
       setOpen(false);
       setPriority('medium');
       setDurationMinutes(null);
+      setNotes('');
+      setShowDescription(false);
+      setEditingWorkspace(false);
+      setDraftSubtasks([]);
       setAssignTo('none');
       setRepeat(false);
       formRef.current?.reset();
@@ -334,6 +410,17 @@ export function AddTaskDialog({
 
   const projects = options.filter((o) => o.type === 'project');
   const clients = options.filter((o) => o.type === 'client');
+  const workspaceLabel = isPersonalTarget
+    ? 'Personal'
+    : (teamChoices.find((w) => w.id === targetKey)?.name ?? 'This workspace');
+
+  function toggleRepeat() {
+    setRepeat((current) => !current);
+  }
+
+  function addDraftSubtask() {
+    setDraftSubtasks((current) => [...current, createDraftSubtask()]);
+  }
 
   const description = lifeOnly
     ? 'Assign to a life area, or leave unassigned. Tasks created here stay in Personal.'
@@ -380,12 +467,41 @@ export function AddTaskDialog({
               placeholder="What needs to be done?"
               required
               autoFocus
+              data-test="add-task-title"
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
+            {showDescription ? (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="add-task-notes"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Description
+                </Label>
+                <Textarea
+                  id="add-task-notes"
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Add context, links, or notes…"
+                  rows={3}
+                  data-test="add-task-description"
+                  className="resize-none border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDescription(true)}
+                className={`text-xs ${accentLinkClass}`}
+                data-test="add-task-add-description"
+              >
+                Add description
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 space-y-2 sm:flex-1">
               <Label className="text-[var(--workspace-shell-text-muted)]">
                 Priority
               </Label>
@@ -402,191 +518,211 @@ export function AddTaskDialog({
                 </SelectContent>
               </Select>
             </div>
-            {!repeat ? (
-              <div className="space-y-2">
-                <Label
-                  htmlFor="dueDate"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Due date
-                </Label>
-                <Input
-                  id="dueDate"
-                  name="dueDate"
-                  type="date"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label
-                  htmlFor="dueDays"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Due after create
-                </Label>
-                <div className="flex items-center gap-2">
+
+            <TaskDurationFields
+              value={durationMinutes}
+              onChange={setDurationMinutes}
+              disabled={isPending}
+              idPrefix="add-task-duration"
+              className="sm:shrink-0"
+            />
+
+            <div className="flex min-w-0 items-end gap-1 sm:flex-1">
+              {!repeat ? (
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Label
+                    htmlFor="dueDate"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Due date
+                  </Label>
                   <Input
-                    id="dueDays"
-                    type="number"
-                    min={0}
-                    max={365}
-                    value={dueDays}
-                    onChange={(e) => setDueDays(e.target.value)}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                    id="dueDate"
+                    name="dueDate"
+                    type="date"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                   />
-                  <span className="shrink-0 text-sm text-[var(--workspace-shell-text-muted)]">
-                    days
-                  </span>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Label
+                    htmlFor="dueDays"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Due after create
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="dueDays"
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={dueDays}
+                      onChange={(e) => setDueDays(e.target.value)}
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                    />
+                    <span className="shrink-0 text-sm text-[var(--workspace-shell-text-muted)]">
+                      days
+                    </span>
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={toggleRepeat}
+                aria-pressed={repeat}
+                aria-label={repeat ? 'Turn off repeat' : 'Repeat this task'}
+                title={repeat ? 'Turn off repeat' : 'Repeat this task'}
+                data-test="add-task-repeat"
+                className={`mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                  repeat
+                    ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                    : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]'
+                }`}
+              >
+                <Repeat className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          <TaskDurationFields
-            value={durationMinutes}
-            onChange={setDurationMinutes}
-            disabled={isPending}
-            idPrefix="add-task-duration"
-          />
-
-          <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/50 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <Label
-                  htmlFor="repeat-task"
-                  className="text-[var(--workspace-shell-text)]"
-                >
-                  Repeat
+          {repeat ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Frequency
                 </Label>
-                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  Create this task on a schedule, like recurring invoices
-                </p>
+                <Select
+                  value={frequency}
+                  onValueChange={(value) =>
+                    setFrequency(value as RecurrenceFrequency)
+                  }
+                >
+                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                    {FREQUENCIES.map((item) => (
+                      <SelectItem key={item.key} value={item.key}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Switch
-                id="repeat-task"
-                checked={repeat}
-                onCheckedChange={setRepeat}
-              />
-            </div>
 
-            {repeat ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="text-[var(--workspace-shell-text-muted)]">
-                    Frequency
-                  </Label>
-                  <Select
-                    value={frequency}
-                    onValueChange={(value) =>
-                      setFrequency(value as RecurrenceFrequency)
+              <div className="space-y-2">
+                <Label
+                  htmlFor="firstCreateDate"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  First create date
+                </Label>
+                <Input
+                  id="firstCreateDate"
+                  type="date"
+                  value={firstCreateDate}
+                  onChange={(e) => {
+                    setFirstCreateDate(e.target.value);
+                    if (e.target.value) {
+                      const day = Number.parseInt(
+                        e.target.value.slice(8, 10),
+                        10,
+                      );
+                      if (Number.isFinite(day)) {
+                        setDayOfMonth(String(day));
+                      }
                     }
-                  >
+                  }}
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                />
+              </div>
+
+              {showDayOfMonth ? (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Day of month
+                  </Label>
+                  <Select value={dayOfMonth} onValueChange={setDayOfMonth}>
                     <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                      {FREQUENCIES.map((item) => (
-                        <SelectItem key={item.key} value={item.key}>
-                          {item.label}
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(
+                        (day) => (
+                          <SelectItem key={day} value={String(day)}>
+                            {day}
+                            {day === 31
+                              ? ' (or last day of shorter months)'
+                              : ''}
+                          </SelectItem>
+                        ),
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    Each occurrence is created on this calendar day. Due date is{' '}
+                    {dueDays === '0' ? 'the same day' : `${dueDays} days later`}
+                    .
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--workspace-shell-text-muted)] sm:col-span-2">
+                  Repeats on the same weekday as the first create date. Due date
+                  is{' '}
+                  {dueDays === '0' ? 'the same day' : `${dueDays} days later`}.
+                </p>
+              )}
+            </div>
+          ) : null}
+
+          {lifeOnly ? null : (
+            <div className="space-y-2">
+              {editingWorkspace && canSwitchWorkspace ? (
+                <div className="space-y-2">
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Workspace
+                  </Label>
+                  <Select
+                    value={targetKey}
+                    onValueChange={(next) => {
+                      handleTargetChange(next);
+                      setEditingWorkspace(false);
+                    }}
+                  >
+                    <SelectTrigger
+                      data-test="add-task-workspace-select"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                      <SelectItem value={PERSONAL_WORKSPACE_VALUE}>
+                        Personal
+                      </SelectItem>
+                      {(teamChoices ?? []).map((choice) => (
+                        <SelectItem key={choice.id} value={choice.id}>
+                          {choice.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="firstCreateDate"
-                    className="text-[var(--workspace-shell-text-muted)]"
-                  >
-                    First create date
-                  </Label>
-                  <Input
-                    id="firstCreateDate"
-                    type="date"
-                    value={firstCreateDate}
-                    onChange={(e) => {
-                      setFirstCreateDate(e.target.value);
-                      if (e.target.value) {
-                        const day = Number.parseInt(
-                          e.target.value.slice(8, 10),
-                          10,
-                        );
-                        if (Number.isFinite(day)) {
-                          setDayOfMonth(String(day));
-                        }
-                      }
-                    }}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
-
-                {showDayOfMonth ? (
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label className="text-[var(--workspace-shell-text-muted)]">
-                      Day of month
-                    </Label>
-                    <Select value={dayOfMonth} onValueChange={setDayOfMonth}>
-                      <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map(
-                          (day) => (
-                            <SelectItem key={day} value={String(day)}>
-                              {day}
-                              {day === 31
-                                ? ' (or last day of shorter months)'
-                                : ''}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                      Each occurrence is created on this calendar day. Due date
-                      is{' '}
-                      {dueDays === '0'
-                        ? 'the same day'
-                        : `${dueDays} days later`}
-                      .
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-[var(--workspace-shell-text-muted)] sm:col-span-2">
-                    Repeats on the same weekday as the first create date. Due
-                    date is{' '}
-                    {dueDays === '0' ? 'the same day' : `${dueDays} days later`}
-                    .
-                  </p>
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          {canSwitchWorkspace ? (
-            <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">
-                Workspace
-              </Label>
-              <Select value={targetKey} onValueChange={handleTargetChange}>
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                  <SelectItem value={PERSONAL_WORKSPACE_VALUE}>
-                    Personal
-                  </SelectItem>
-                  {(teamChoices ?? []).map((choice) => (
-                    <SelectItem key={choice.id} value={choice.id}>
-                      {choice.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              ) : canSwitchWorkspace ? (
+                <button
+                  type="button"
+                  onClick={() => setEditingWorkspace(true)}
+                  className={`text-xs ${accentLinkClass}`}
+                  data-test="add-task-workspace-link"
+                >
+                  Workspace: {workspaceLabel}
+                </button>
+              ) : (
+                <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+                  Workspace: {workspaceLabel}
+                </p>
+              )}
             </div>
-          ) : null}
+          )}
 
           <div className="space-y-2">
             <Label className="text-[var(--workspace-shell-text-muted)]">
@@ -650,6 +786,73 @@ export function AddTaskDialog({
                 )}
               </div>
             ) : null}
+          </div>
+
+          <div className="space-y-2">
+            {draftSubtasks.length > 0 ? (
+              <div className="space-y-2">
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Subtasks
+                </Label>
+                {draftSubtasks.map((subtask) => (
+                  <div
+                    key={subtask.key}
+                    className="flex flex-col gap-2 sm:flex-row sm:items-end"
+                  >
+                    <Input
+                      value={subtask.title}
+                      onChange={(event) =>
+                        setDraftSubtasks((current) =>
+                          current.map((item) =>
+                            item.key === subtask.key
+                              ? { ...item, title: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                      placeholder="Subtask title"
+                      data-test="add-task-subtask-title"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] sm:flex-1"
+                    />
+                    <TaskDurationFields
+                      value={subtask.durationMinutes}
+                      onChange={(next) =>
+                        setDraftSubtasks((current) =>
+                          current.map((item) =>
+                            item.key === subtask.key
+                              ? { ...item, durationMinutes: next }
+                              : item,
+                          ),
+                        )
+                      }
+                      disabled={isPending}
+                      compact
+                      idPrefix={`add-task-subtask-${subtask.key}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraftSubtasks((current) =>
+                          current.filter((item) => item.key !== subtask.key),
+                        )
+                      }
+                      aria-label="Remove subtask"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={addDraftSubtask}
+              className={`text-xs ${accentLinkClass}`}
+              data-test="add-task-add-subtask"
+            >
+              {draftSubtasks.length > 0 ? 'Add another subtask' : 'Add subtask'}
+            </button>
           </div>
 
           {error && <p className="text-sm text-rose-400">{error}</p>}

@@ -317,6 +317,8 @@ export function buildFormEmailVars(input: {
   formName: string;
   accountName: string;
   eventAddress: string | null;
+  eventDate?: string | null;
+  eventTime?: string | null;
   contactName: string;
   contactEmail: string;
   fields: WorkspaceFormField[];
@@ -333,6 +335,8 @@ export function buildFormEmailVars(input: {
     event_name: input.formName,
     account_name: input.accountName,
     event_address: input.eventAddress?.trim() || '',
+    event_date: input.eventDate?.trim() || '',
+    event_time: input.eventTime?.trim() || '',
     name: input.contactName,
     email: input.contactEmail,
     submitter_name: input.contactName,
@@ -392,6 +396,8 @@ export function listFormEmailMergeTokens(
     { token: '{{account_name}}', label: 'Workspace', group: 'builtin' },
     { token: '{{event_name}}', label: 'Event name', group: 'builtin' },
     { token: '{{event_address}}', label: 'Event address', group: 'builtin' },
+    { token: '{{event_date}}', label: 'Event date', group: 'builtin' },
+    { token: '{{event_time}}', label: 'Event time', group: 'builtin' },
     {
       token: '{{submission_url}}',
       label: 'Submissions link',

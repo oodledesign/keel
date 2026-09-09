@@ -1,7 +1,8 @@
 import 'server-only';
 
-import { after } from 'next/server';
 import { cache } from 'react';
+
+import { after } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -50,6 +51,8 @@ export type PublicWorkspaceForm = {
   name: string;
   description: string | null;
   eventAddress: string | null;
+  eventDate: string | null;
+  eventTime: string | null;
   destination: WorkspaceFormDestination;
   listingId: string | null;
   shareToken: string;
@@ -77,6 +80,8 @@ type FormRow = {
   submit_label: string | null;
   success_message: string | null;
   event_address: string | null;
+  event_date: string | null;
+  event_time: string | null;
   fields: unknown;
   theme: unknown;
   email_settings: unknown;
@@ -98,7 +103,7 @@ export async function loadPublicWorkspaceFormByToken(
   if (!token || token.length < 16) return null;
 
   const selectColumns =
-    'id, account_id, name, description, event_address, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
+    'id, account_id, name, description, event_address, event_date, event_time, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
 
   const byShare = await fromTable(admin, 'workspace_forms')
     .select(selectColumns)
@@ -145,6 +150,8 @@ export async function loadPublicWorkspaceFormByToken(
     name: row.name,
     description: row.description,
     eventAddress: row.event_address?.trim() || null,
+    eventDate: row.event_date?.trim() || null,
+    eventTime: row.event_time?.trim() || null,
     destination: row.destination,
     listingId: row.listing_id,
     shareToken: row.share_token,
@@ -160,6 +167,8 @@ export async function loadPublicWorkspaceFormByToken(
     fields,
     theme: withResolvedFormLayout(parsedTheme, {
       eventAddress: row.event_address,
+      eventDate: row.event_date,
+      eventTime: row.event_time,
       destination: row.destination,
       submitLabel: row.submit_label,
       name: row.name,

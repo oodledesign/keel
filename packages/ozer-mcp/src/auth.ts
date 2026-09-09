@@ -1,10 +1,10 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-import type { McpRequestContext } from './context';
 import {
-  getOAuthProtectedResourceMetadataUrl,
   SUPABASE_JWKS_URL,
+  getOAuthProtectedResourceMetadataUrl,
 } from './config';
+import type { McpRequestContext } from './context';
 import { createOzerMcpSupabaseClient } from './supabase';
 
 export type AuthResult =

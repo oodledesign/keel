@@ -9,7 +9,7 @@ import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-cont
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
-import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
+import { applyDurationScheduleToMarkdown } from '~/lib/planner/apply-duration-schedule';
 import {
   type PlanDocument,
   attachGoogleEventIdsToPlan,
@@ -23,6 +23,7 @@ import {
   blocksForCalendarSync,
   planGainedGoogleIds,
 } from '~/lib/planner/plan-calendar-sync';
+import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
 import {
   loadStoredPlan,
   plannerScopeKey,
@@ -333,6 +334,12 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
 
       if (accumulated.trim()) {
         const dateYmd = toLocalDateYmd(new Date(date));
+        accumulated = applyDurationScheduleToMarkdown(
+          accumulated,
+          payload.tasks,
+          { workingHours: payload.working_hours },
+        );
+        setPlanMarkdown(accumulated);
 
         saveStoredPlan(initialData.scope, dateYmd, {
           markdown: accumulated,

@@ -21,12 +21,14 @@ export function TaskDurationFields({
   disabled,
   idPrefix = 'task-duration',
   compact = false,
+  className,
 }: {
   value: number | null;
   onChange: (next: number | null) => void;
   disabled?: boolean;
   idPrefix?: string;
   compact?: boolean;
+  className?: string;
 }) {
   const parts = splitDurationMinutes(value);
   const hours = value == null ? '' : String(parts.hours || '');
@@ -47,7 +49,7 @@ export function TaskDurationFields({
   };
 
   return (
-    <div className={cn('space-y-2', compact && 'space-y-1')}>
+    <div className={cn('space-y-2', compact && 'space-y-1', className)}>
       {compact ? null : (
         <Label
           htmlFor={`${idPrefix}-hours`}

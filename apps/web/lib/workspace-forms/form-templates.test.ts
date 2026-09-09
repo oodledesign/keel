@@ -75,6 +75,9 @@ describe('workspace form templates', () => {
     expect(defaults.successMessage).toMatch(/RSVP/i);
     expect(defaults.fields.map((field) => field.key)).toContain('attendance');
     expect(defaults.theme.layout).toBe('event');
+    expect(defaults.eventAddress).toBeNull();
+    expect(defaults.eventDate).toBeNull();
+    expect(defaults.eventTime).toBeNull();
     expect(
       defaults.emailSettings.rules.some((rule) => rule.equals === 'Yes'),
     ).toBe(true);

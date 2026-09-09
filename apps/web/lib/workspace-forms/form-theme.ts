@@ -122,6 +122,8 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
 
 export type WorkspaceFormLayoutHints = {
   eventAddress?: string | null;
+  eventDate?: string | null;
+  eventTime?: string | null;
   destination?: string | null;
   submitLabel?: string | null;
   name?: string | null;
@@ -134,6 +136,7 @@ export function isRsvpLikeWorkspaceForm(
   hints: WorkspaceFormLayoutHints,
 ): boolean {
   if (hints.eventAddress?.trim()) return true;
+  if (hints.eventDate?.trim() || hints.eventTime?.trim()) return true;
   if (/rsvp/i.test(`${hints.submitLabel ?? ''} ${hints.name ?? ''}`)) {
     return true;
   }

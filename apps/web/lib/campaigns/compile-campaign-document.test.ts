@@ -170,6 +170,28 @@ describe('compileCampaignDocument', () => {
     ]);
   });
 
+  it('keeps bullet lists in compiled text blocks', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 't-list',
+            type: 'text',
+            html: '<ul><li>Coffee</li><li>Tea</li></ul>',
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain(
+      '<ul style="margin:0 0 12px;padding-left:20px;list-style-type:disc;">',
+    );
+    expect(html).toContain('<li style="margin:0 0 4px;">Coffee</li>');
+    expect(html).toContain('<li style="margin:0 0 4px;">Tea</li>');
+  });
+
   it('appends an unsubscribe footer when the document has none', () => {
     const html = compileCampaignDocument(
       {
