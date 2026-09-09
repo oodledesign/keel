@@ -12,6 +12,7 @@ import {
   mergeValuesForRecipient,
 } from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
+import { resolveCampaignReplyTo } from '~/lib/campaigns/resolve-campaign-reply-to';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
   getPlatformSesFrom,
@@ -314,7 +315,11 @@ async function sendWelcomeAutomationEmail(input: {
   const { messageId } = await sendCampaignEmailViaSes({
     to: email,
     from: resolved.fromHeader ?? `${resolved.fromName} <${resolved.fromEmail}>`,
-    replyTo: campaign.replyTo?.trim() || resolved.replyTo || resolved.fromEmail,
+    replyTo: resolveCampaignReplyTo({
+      campaignReplyTo: campaign.replyTo,
+      fromEmail: resolved.fromEmail,
+      workspaceReplyTo: resolved.replyTo,
+    }),
     subject: applyCampaignMergeText(campaign.subject, merge),
     html,
     listUnsubscribeUrl: buildWorkspaceMailingListUnsubscribeUrl(
