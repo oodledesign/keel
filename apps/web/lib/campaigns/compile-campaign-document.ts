@@ -346,7 +346,12 @@ export function sanitizeRichText(html: string): string {
       }
 
       if (tag === 'ul' || tag === 'ol') {
-        return `<${tag} style="margin:0 0 12px;padding-left:20px;">`;
+        const listStyle = tag === 'ul' ? 'disc' : 'decimal';
+        return `<${tag} style="margin:0 0 12px;padding-left:20px;list-style-type:${listStyle};">`;
+      }
+
+      if (tag === 'li') {
+        return `<li style="margin:0 0 4px;">`;
       }
 
       return `<${tag}>`;

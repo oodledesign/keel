@@ -12,6 +12,7 @@ import { cn } from '@kit/ui/utils';
 
 import { isSafeHttpUrl } from '~/lib/campaigns/campaign-document';
 import { CAMPAIGN_MERGE_FIELDS } from '~/lib/campaigns/merge-fields';
+import { RICH_TEXT_LIST_CLASS } from '~/lib/rich-text-html';
 import { workspaceText, workspaceTextMuted } from '~/lib/workspace-ui';
 
 export function CampaignTextBlockEditor({
@@ -50,6 +51,7 @@ export function CampaignTextBlockEditor({
         class: cn(
           'min-h-[96px] px-3 py-2 text-sm leading-relaxed outline-none',
           workspaceText,
+          RICH_TEXT_LIST_CLASS,
         ),
       },
     },
@@ -84,6 +86,18 @@ export function CampaignTextBlockEditor({
           active={editor.isActive('underline')}
           disabled={disabled}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
+        />
+        <ToolbarButton
+          label="List"
+          active={editor.isActive('bulletList')}
+          disabled={disabled}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        />
+        <ToolbarButton
+          label="1."
+          active={editor.isActive('orderedList')}
+          disabled={disabled}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
         />
         <ToolbarButton
           label="Link"

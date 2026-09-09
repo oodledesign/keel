@@ -41,7 +41,6 @@ import type {
   CampaignColumnContent,
   CampaignDocument,
 } from '~/lib/campaigns/campaign-document';
-import { isCampaignFormUrlToken } from '~/lib/campaigns/form-link';
 import {
   CAMPAIGN_BLOCK_LIBRARY,
   createCampaignBlock,
@@ -54,6 +53,8 @@ import {
   updateCampaignBlock,
 } from '~/lib/campaigns/campaign-document';
 import { sanitizeRichText } from '~/lib/campaigns/compile-campaign-document';
+import { isCampaignFormUrlToken } from '~/lib/campaigns/form-link';
+import { RICH_TEXT_LIST_CLASS } from '~/lib/rich-text-html';
 import {
   workspacePanelCard,
   workspaceText,
@@ -453,7 +454,10 @@ function CanvasBlockPreview({
     case 'text':
       return (
         <div
-          className="px-7 py-3 text-[16px] leading-relaxed text-[#09111F]"
+          className={cn(
+            'px-7 py-3 text-[16px] leading-relaxed text-[#09111F]',
+            RICH_TEXT_LIST_CLASS,
+          )}
           style={{ textAlign: block.align ?? 'left' }}
           dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.html) }}
         />
@@ -506,7 +510,10 @@ function CanvasBlockPreview({
     case 'html':
       return (
         <div
-          className="px-7 py-3 text-[16px] leading-relaxed text-[#09111F]"
+          className={cn(
+            'px-7 py-3 text-[16px] leading-relaxed text-[#09111F]',
+            RICH_TEXT_LIST_CLASS,
+          )}
           dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.html) }}
         />
       );
@@ -524,6 +531,9 @@ function ColumnPreview({ content }: { content: CampaignColumnContent }) {
   }
 
   return (
-    <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(content.html) }} />
+    <div
+      className={RICH_TEXT_LIST_CLASS}
+      dangerouslySetInnerHTML={{ __html: sanitizeRichText(content.html) }}
+    />
   );
 }

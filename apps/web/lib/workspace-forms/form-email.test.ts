@@ -82,6 +82,8 @@ describe('workspace form email settings', () => {
       formName: 'Summer party',
       accountName: 'Ozer Studio',
       eventAddress: '12 Market Street, Leeds',
+      eventDate: '15 October',
+      eventTime: '8:00am - 10:00am',
       contactName: 'Ada',
       contactEmail: 'ada@example.com',
       fields,
@@ -91,10 +93,12 @@ describe('workspace form email settings', () => {
 
     expect(
       interpolateFormEmailText(
-        'Hi {{name}} — {{attendance}} at {{event_name}} ({{event_address}})',
+        'Hi {{name}} — {{attendance}} at {{event_name}} ({{event_address}}) {{event_date}} {{event_time}}',
         vars,
       ),
-    ).toBe('Hi Ada — Yes at Summer party (12 Market Street, Leeds)');
+    ).toBe(
+      'Hi Ada — Yes at Summer party (12 Market Street, Leeds) 15 October 8:00am - 10:00am',
+    );
 
     expect(
       interpolateFormEmailText(
@@ -208,6 +212,8 @@ describe('workspace form email settings', () => {
     const tokens = listFormEmailMergeTokens(
       workspaceFormFieldsForTemplate('rsvp'),
     );
+    expect(tokens.some((item) => item.token === '{{event_date}}')).toBe(true);
+    expect(tokens.some((item) => item.token === '{{event_time}}')).toBe(true);
     expect(tokens.some((item) => item.token === '{{answers}}')).toBe(true);
     expect(tokens.some((item) => item.token === '{{attendance}}')).toBe(true);
     expect(tokens.some((item) => item.token === '{{name}}')).toBe(true);

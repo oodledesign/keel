@@ -17,6 +17,7 @@ import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 
 import { saveAccountBrandSettings } from '../_lib/server/account-brand-actions';
+import { BrandLogoVariantUploader } from './brand-logo-variant-uploader';
 
 function normalizeHex(input: string): string {
   const t = input.trim();
@@ -102,7 +103,7 @@ export function BrandSettingsForm({
                 pictureUrl,
               }}
               heading="Business logo"
-              description="Shown in the sidebar workspace switcher, emails, and signature templates."
+              description="Primary logo for the sidebar, emails, and signatures. Add light- and dark-mode logos below for public pages."
             />
           ) : (
             <div className="space-y-2">
@@ -127,6 +128,24 @@ export function BrandSettingsForm({
             </div>
           )}
         </div>
+
+        <BrandLogoVariantUploader
+          accountId={accountId}
+          variant="on_light"
+          heading="Light-mode logo"
+          description="Used on light backgrounds (public forms, cream pages). Falls back to the business logo."
+          value={initialBrand.logo_on_light_url}
+          canEdit={canEdit}
+        />
+
+        <BrandLogoVariantUploader
+          accountId={accountId}
+          variant="on_dark"
+          heading="Dark-mode logo"
+          description="Used on dark backgrounds (navy or brand-gradient pages). Falls back to the business logo."
+          value={initialBrand.logo_on_dark_url}
+          canEdit={canEdit}
+        />
 
         <div className="space-y-2">
           <Label htmlFor="brand-portal-slug">Client portal slug</Label>

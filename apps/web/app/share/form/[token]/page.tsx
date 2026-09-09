@@ -1,3 +1,7 @@
+import {
+  brandLogoSurfaceForPage,
+  resolveBrandLogoForSurface,
+} from '~/lib/brand/resolve-brand-logo';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { brandPageGradientCss } from '~/lib/workspace-forms/form-theme';
 import { loadCachedPublicWorkspaceForm } from '~/lib/workspace-forms/public-form';
@@ -53,6 +57,11 @@ async function PublicWorkspaceFormPage({
   const pageBackground = brandGradient
     ? brandPageGradientCss(form.brand.primary_color)
     : form.brand.secondary_color || '#FBF6EC';
+  const useContentShell = !embed;
+  const logoSurface = brandLogoSurfaceForPage({
+    pageOnDark: brandGradient,
+    logoOnLightShell: useContentShell,
+  });
 
   return (
     <main
@@ -65,6 +74,8 @@ async function PublicWorkspaceFormPage({
         formName={form.name}
         description={form.description}
         eventAddress={form.eventAddress}
+        eventDate={form.eventDate}
+        eventTime={form.eventTime}
         layout={form.theme.layout}
         submitLabel={form.submitLabel}
         successMessage={form.successMessage}
@@ -73,10 +84,11 @@ async function PublicWorkspaceFormPage({
         propertyId={query.property ?? null}
         embed={embed}
         prefillEmail={query.email ?? null}
-        logoUrl={form.brand.logo_url}
+        logoUrl={resolveBrandLogoForSurface(form.brand, logoSurface)}
         accentColor={form.brand.accent_color}
         primaryColor={form.brand.primary_color}
-        chromeOnDark={brandGradient}
+        chromeOnDark={brandGradient && !useContentShell}
+        contentShell={useContentShell}
       />
     </main>
   );

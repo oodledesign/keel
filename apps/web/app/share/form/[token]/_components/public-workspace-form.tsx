@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
-import { Check } from 'lucide-react';
+import { Calendar, Check, Clock, MapPin } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -17,7 +17,11 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
-import { formDescriptionToHtml } from '~/lib/workspace-forms/form-description';
+import { RICH_TEXT_LIST_CLASS } from '~/lib/rich-text-html';
+import {
+  formDescriptionHasHeading,
+  formDescriptionToHtml,
+} from '~/lib/workspace-forms/form-description';
 import {
   type WorkspaceFormField,
   publicVisibleFields,
@@ -33,6 +37,8 @@ type Props = {
   formName: string;
   description: string | null;
   eventAddress: string | null;
+  eventDate?: string | null;
+  eventTime?: string | null;
   layout: WorkspaceFormLayout;
   submitLabel: string;
   successMessage: string;
@@ -47,6 +53,8 @@ type Props = {
   primaryColor: string;
   /** Light text for workspace name/title when page bg is dark brand gradient. */
   chromeOnDark?: boolean;
+  /** Wrap event info + form in a soft off-white shell. */
+  contentShell?: boolean;
 };
 
 export function PublicWorkspaceForm({
@@ -55,6 +63,8 @@ export function PublicWorkspaceForm({
   formName,
   description,
   eventAddress,
+  eventDate,
+  eventTime,
   layout,
   submitLabel,
   successMessage,
@@ -67,6 +77,7 @@ export function PublicWorkspaceForm({
   accentColor,
   primaryColor,
   chromeOnDark = false,
+  contentShell = false,
 }: Props) {
   const visibleFields = useMemo(() => publicVisibleFields(fields), [fields]);
   const [values, setValues] = useState<Record<string, string | boolean>>(() => {
@@ -164,6 +175,8 @@ export function PublicWorkspaceForm({
       formName={formName}
       descriptionHtml={descriptionHtml}
       eventAddress={eventAddress}
+      eventDate={eventDate}
+      eventTime={eventTime}
       logoUrl={logoUrl}
       primaryColor={primaryColor}
       chromeOnDark={chromeOnDark}
@@ -181,16 +194,18 @@ export function PublicWorkspaceForm({
       style={{ ['--form-accent' as string]: accentColor }}
     >
       <div
-        className={
-          eventLayout
-            ? 'grid items-start gap-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'
-            : undefined
-        }
+        className={cn(
+          eventLayout &&
+            'grid items-start gap-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]',
+          contentShell &&
+            'rounded-3xl border border-black/5 bg-[var(--ozer-cream-100,#F2E9DB)] p-5 shadow-sm sm:p-8',
+        )}
         data-test={
           eventLayout
             ? 'public-form-event-layout'
             : 'public-form-standard-layout'
         }
+        data-content-shell={contentShell ? 'true' : undefined}
       >
         {eventLayout ? (
           <aside className="md:sticky md:top-8">{intro}</aside>
@@ -245,6 +260,8 @@ function PublicFormIntro({
   formName,
   descriptionHtml,
   eventAddress,
+  eventDate,
+  eventTime,
   logoUrl,
   primaryColor,
   chromeOnDark,
@@ -255,6 +272,8 @@ function PublicFormIntro({
   formName: string;
   descriptionHtml: string;
   eventAddress: string | null;
+  eventDate?: string | null;
+  eventTime?: string | null;
   logoUrl?: string | null;
   primaryColor: string;
   chromeOnDark: boolean;
@@ -263,6 +282,9 @@ function PublicFormIntro({
 }) {
   const muted = chromeOnDark ? 'text-white/70' : 'text-neutral-500';
   const body = chromeOnDark ? 'text-white/80' : 'text-neutral-600';
+  const titleColor = chromeOnDark ? '#FFFFFF' : primaryColor;
+  const showDescriptionTitle =
+    Boolean(descriptionHtml) && !formDescriptionHasHeading(descriptionHtml);
 
   return (
     <div
@@ -287,34 +309,104 @@ function PublicFormIntro({
       </p>
       <h1
         className="font-heading mt-2 text-2xl font-bold md:text-3xl"
-        style={{ color: chromeOnDark ? '#FFFFFF' : primaryColor }}
+        style={{ color: titleColor }}
       >
         {formName}
       </h1>
-      {eventAddress ? (
-        <p
-          className={cn(
-            'mt-3 text-sm leading-relaxed whitespace-pre-line',
-            body,
-          )}
-        >
-          {eventAddress}
-        </p>
-      ) : null}
+      <EventMetaList
+        eventAddress={eventAddress}
+        eventDate={eventDate}
+        eventTime={eventTime}
+        className={cn('mt-4', body, align === 'center' && 'items-center')}
+        align={align}
+      />
       {descriptionHtml ? (
-        <div
-          className={cn(
-            'mt-3 text-sm leading-relaxed',
-            body,
-            '[&_a]:underline',
-            '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
-            '[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
-            '[&_p]:my-1',
-          )}
-          dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-        />
+        <div className={cn('mt-6', body)}>
+          {showDescriptionTitle ? (
+            <h2
+              className="font-heading mb-2 text-base font-semibold"
+              style={{ color: titleColor }}
+            >
+              About
+            </h2>
+          ) : null}
+          <div
+            className={cn(
+              'text-sm leading-relaxed',
+              '[&_a]:underline',
+              RICH_TEXT_LIST_CLASS,
+              '[&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold',
+              '[&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold',
+            )}
+            dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+          />
+        </div>
       ) : null}
     </div>
+  );
+}
+
+function EventMetaList({
+  eventAddress,
+  eventDate,
+  eventTime,
+  className,
+  align,
+}: {
+  eventAddress: string | null;
+  eventDate?: string | null;
+  eventTime?: string | null;
+  className?: string;
+  align: 'left' | 'center';
+}) {
+  const items = [
+    eventAddress
+      ? {
+          icon: MapPin,
+          label: 'Venue',
+          value: eventAddress,
+          test: 'event-address',
+        }
+      : null,
+    eventDate
+      ? { icon: Calendar, label: 'Date', value: eventDate, test: 'event-date' }
+      : null,
+    eventTime
+      ? { icon: Clock, label: 'Time', value: eventTime, test: 'event-time' }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  if (items.length === 0) return null;
+
+  return (
+    <ul
+      className={cn(
+        'flex flex-col gap-2 text-sm',
+        align === 'center' ? 'items-center' : 'items-stretch',
+        className,
+      )}
+    >
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <li
+            key={item.test}
+            className={cn(
+              'flex max-w-full gap-2.5 leading-relaxed',
+              'items-start',
+              align === 'center' && 'justify-center text-left',
+            )}
+            data-test={`public-form-${item.test}`}
+          >
+            <Icon className="mt-0.5 size-4 shrink-0 opacity-80" aria-hidden />
+            <span className="whitespace-pre-line">
+              <span className="sr-only">{item.label}: </span>
+              {item.value}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

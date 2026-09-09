@@ -29,6 +29,8 @@ const staffBase: SignaturesStaffRow = {
 const brand = {
   account_id: 'account-1',
   logo_url: 'https://cdn.example.com/brand-logo.png',
+  logo_on_light_url: null,
+  logo_on_dark_url: null,
   primary_color: '#0D2344',
   secondary_color: '#FFFFFF',
   accent_color: '#e63329',
