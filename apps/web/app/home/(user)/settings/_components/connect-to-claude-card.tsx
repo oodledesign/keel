@@ -16,7 +16,8 @@ export function ConnectToClaudeCard({ connectorUrl }: Props) {
   const [copied, setCopied] = useState(false);
 
   const steps = [
-    'In Claude: Settings → Connectors → Add custom connector',
+    'Claude: Settings → Connectors → Add custom connector',
+    'ChatGPT: Settings → Connectors → Developer mode → Add custom connector',
     `Paste the connector URL: ${connectorUrl}`,
     'Click Connect, then approve access on the Ozer consent screen',
   ];
@@ -41,7 +42,7 @@ export function ConnectToClaudeCard({ connectorUrl }: Props) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-              Connect to Claude
+              Connect Claude or ChatGPT
             </h3>
             <Badge
               variant="outline"
@@ -51,9 +52,9 @@ export function ConnectToClaudeCard({ connectorUrl }: Props) {
             </Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Link Claude to your Ozer tasks so you can create, list and update
-            them from chat. Disconnect any time from Claude&apos;s connector
-            settings.
+            Link Claude or ChatGPT to your Ozer tasks so you can create, list
+            and update them from chat. Disconnect any time from the connector
+            settings in that app.
           </p>
 
           <div className="mt-4">
@@ -88,8 +89,8 @@ export function ConnectToClaudeCard({ connectorUrl }: Props) {
           </ol>
 
           <p className="mt-4 text-xs text-[var(--workspace-shell-text-muted)]">
-            Requires a Claude Pro, Max, Team or Enterprise plan, or Claude Free
-            with one custom connector slot.
+            Claude needs Pro, Max, Team or Enterprise, or Free with one custom
+            connector slot. ChatGPT needs Developer mode on a paid plan.
           </p>
         </div>
       </div>

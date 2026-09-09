@@ -9,6 +9,13 @@ export const SUPABASE_OAUTH_AS_DISCOVERY_URL = `${SUPABASE_PROJECT_ORIGIN}/.well
 
 export const SUPABASE_JWKS_URL = `${SUPABASE_PROJECT_AUTH_BASE}/.well-known/jwks.json`;
 
+/** User-facing OIDC scopes. Do not advertise offline_access (MCP spec). */
+export const MCP_OAUTH_SCOPES = ['openid', 'email', 'profile'] as const;
+
+export function getAuthorizationServerIssuer(): string {
+  return SUPABASE_AUTH_SERVER;
+}
+
 export function getMcpAppOrigin(): string {
   return (
     process.env.NEXT_PUBLIC_APP_SITE_URL?.replace(/\/+$/, '') ??
@@ -22,7 +29,7 @@ export function getMcpResourceUrl(): string {
 }
 
 export function getOAuthProtectedResourceMetadataUrl(): string {
-  return `${getMcpAppOrigin()}/.well-known/oauth-protected-resource`;
+  return `${getMcpAppOrigin()}/.well-known/oauth-protected-resource/api/mcp`;
 }
 
 export function getMcpConnectorIconUrl(): string {

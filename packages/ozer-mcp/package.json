@@ -7,7 +7,8 @@
     "clean": "git clean -xdf .turbo node_modules",
     "format": "prettier --check \"**/*.{ts,md,json}\"",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "prettier": "@kit/prettier-config",
   "exports": {
@@ -25,6 +26,7 @@
     "@kit/prettier-config": "workspace:*",
     "@kit/tsconfig": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

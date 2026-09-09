@@ -4,9 +4,12 @@ Ozer MCP server package — Streamable HTTP transport with Supabase OAuth 2.1 an
 
 ## Routes (apps/web)
 
-Single endpoint at `/api/mcp` (GET/POST/DELETE) using stateless Streamable HTTP.
+Single endpoint at `/api/mcp` (GET/POST/DELETE/OPTIONS) using stateless Streamable HTTP.
 
-Protected resource metadata: `/.well-known/oauth-protected-resource`
+Protected resource metadata:
+
+- `/.well-known/oauth-protected-resource`
+- `/.well-known/oauth-protected-resource/api/mcp` (RFC 9728 path insertion)
 
 OAuth consent UI: `/oauth/consent` with decision POST at `/api/oauth/decision`
 
@@ -26,17 +29,29 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return handleMcpRequest(request);
 }
+
+export async function OPTIONS(request: Request) {
+  return handleMcpRequest(request);
+}
 ```
 
 ## Authentication
 
-Every MCP request requires `Authorization: Bearer <supabase_oauth_access_token>`. Invalid or missing tokens receive `401` with:
+Every MCP request requires `Authorization: Bearer <supabase_oauth_access_token>`.
+Tokens must be OAuth client tokens (`client_id` claim) issued by the Supabase
+project. Session JWTs are rejected. Invalid or missing tokens receive `401` with:
 
 ```
-WWW-Authenticate: Bearer resource_metadata="https://app.ozer.so/.well-known/oauth-protected-resource"
+WWW-Authenticate: Bearer resource_metadata="https://app.ozer.so/.well-known/oauth-protected-resource/api/mcp", scope="openid email profile"
 ```
 
-Database work runs through an anon-key client carrying the user's token — no service role.
+Browser clients (ChatGPT web, Claude.ai) need CORS on metadata, 401 challenges,
+and `/api/mcp` including OPTIONS. Database work runs through an anon-key client
+carrying the user's token — no service role.
+
+JSON-RPC notifications such as `notifications/initialized` correctly return
+**202 Accepted** with an empty body. `initialize`, `tools/list`, and `tools/call`
+return **200** JSON.
 
 ## Task tools
 
@@ -62,4 +77,5 @@ Point at `https://app.ozer.so/api/mcp` (or `http://localhost:3000/api/mcp` local
 
 ```bash
 pnpm --filter @kit/ozer-mcp typecheck
+pnpm --filter @kit/ozer-mcp test
 ```

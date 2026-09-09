@@ -120,6 +120,7 @@ export function OAuthConsentCard({
           <input type="hidden" name="decision" value="approve" />
           <Button
             type="submit"
+            data-test="oauth-consent-approve"
             className="w-full bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
           >
             Approve
@@ -132,7 +133,12 @@ export function OAuthConsentCard({
             value={authorizationId}
           />
           <input type="hidden" name="decision" value="deny" />
-          <Button type="submit" variant="outline" className="w-full">
+          <Button
+            type="submit"
+            variant="outline"
+            data-test="oauth-consent-deny"
+            className="w-full"
+          >
             Deny
           </Button>
         </form>

@@ -1,6 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 
 import { authenticateMcpRequest } from './auth';
+import { mcpCorsPreflightResponse, withMcpCors } from './cors';
 import { createOzerMcpServer } from './server';
 
 async function closeMcpSession(
@@ -17,7 +18,7 @@ function wrapStreamingResponse(
 ): Response {
   if (!response.body) {
     void onComplete();
-    return response;
+    return withMcpCors(response);
   }
 
   const [clientStream, drainStream] = response.body.tee();
@@ -27,14 +28,53 @@ function wrapStreamingResponse(
     .catch(() => undefined)
     .finally(onComplete);
 
-  return new Response(clientStream, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
+  return withMcpCors(
+    new Response(clientStream, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    }),
+  );
+}
+
+export function readJsonRpcMethod(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return undefined;
+  }
+
+  const method = (body as { method?: unknown }).method;
+  return typeof method === 'string' ? method : undefined;
+}
+
+export function jsonRpcHasId(body: unknown): boolean {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return false;
+  }
+
+  return 'id' in body && (body as { id?: unknown }).id !== undefined;
+}
+
+function logMcpResponse(input: {
+  httpMethod: string;
+  rpcMethod?: string;
+  hasJsonRpcId: boolean;
+  status: number;
+  contentType: string | null;
+}) {
+  console.info('[ozer-mcp] request', {
+    httpMethod: input.httpMethod,
+    rpcMethod: input.rpcMethod ?? null,
+    hasJsonRpcId: input.hasJsonRpcId,
+    status: input.status,
+    contentType: input.contentType,
   });
 }
 
 export async function handleMcpRequest(request: Request): Promise<Response> {
+  if (request.method === 'OPTIONS') {
+    return mcpCorsPreflightResponse();
+  }
+
   const auth = await authenticateMcpRequest(request);
   if (!auth.ok) {
     return auth.response;
@@ -57,13 +97,21 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
       parsedBody = await request.clone().json();
     } catch {
       await closeMcpSession(server, transport);
-      return new Response('Invalid JSON body', { status: 400 });
+      return withMcpCors(new Response('Invalid JSON body', { status: 400 }));
     }
   }
 
   try {
     const response = await transport.handleRequest(request, { parsedBody });
     const contentType = response.headers.get('content-type') ?? '';
+
+    logMcpResponse({
+      httpMethod: request.method,
+      rpcMethod: readJsonRpcMethod(parsedBody),
+      hasJsonRpcId: jsonRpcHasId(parsedBody),
+      status: response.status,
+      contentType,
+    });
 
     if (contentType.includes('text/event-stream')) {
       return wrapStreamingResponse(response, () =>
@@ -72,10 +120,12 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
     }
 
     await closeMcpSession(server, transport);
-    return response;
+    return withMcpCors(response);
   } catch (error) {
     console.error('[ozer-mcp] Failed to handle MCP request:', error);
     await closeMcpSession(server, transport);
-    return new Response('Error handling MCP request', { status: 500 });
+    return withMcpCors(
+      new Response('Error handling MCP request', { status: 500 }),
+    );
   }
 }
