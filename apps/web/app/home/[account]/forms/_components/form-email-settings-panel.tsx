@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { Switch } from '@kit/ui/switch';
-import { Textarea } from '@kit/ui/textarea';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
 import {
@@ -45,6 +44,8 @@ import {
   workspaceText,
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
+
+import { FormNotifyEmailChips } from './form-notify-email-chips';
 
 type Props = {
   settings: WorkspaceFormEmailSettings;
@@ -111,12 +112,8 @@ export function FormEmailSettingsPanel({
     // first autoresponder template.
     const preferred =
       kind === 'notification'
-        ? settings.templates.find((template) =>
-            /notif/i.test(template.name),
-          )
-        : settings.templates.find(
-            (template) => !/notif/i.test(template.name),
-          );
+        ? settings.templates.find((template) => /notif/i.test(template.name))
+        : settings.templates.find((template) => !/notif/i.test(template.name));
     const templateId = preferred?.id ?? settings.templates[0]?.id;
 
     if (!templateId) {
@@ -157,7 +154,6 @@ export function FormEmailSettingsPanel({
     });
   }
 
-  const extraEmailsText = settings.notifyEmails.join('\n');
   const mergeTokens = listFormEmailMergeTokens(fields);
 
   return (
@@ -413,23 +409,11 @@ export function FormEmailSettingsPanel({
           <Label htmlFor="form-email-notify-extra">
             Extra notification addresses (max {MAX_FORM_NOTIFY_EMAILS})
           </Label>
-          <Textarea
+          <FormNotifyEmailChips
             id="form-email-notify-extra"
-            rows={6}
-            value={extraEmailsText}
-            placeholder={'one@example.com\ntwo@example.com'}
-            onChange={(event) => {
-              const emails = event.target.value
-                .split(/[\n,]+/)
-                .map((line) => line.trim())
-                .filter(Boolean)
-                .slice(0, MAX_FORM_NOTIFY_EMAILS);
-              onChange({ ...settings, notifyEmails: emails });
-            }}
+            emails={settings.notifyEmails}
+            onChange={(notifyEmails) => onChange({ ...settings, notifyEmails })}
           />
-          <p className={`text-xs ${workspaceTextMuted}`}>
-            One email per line. These are not form questions.
-          </p>
         </div>
       </div>
 

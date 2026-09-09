@@ -56,6 +56,80 @@ export const DEFAULT_WORKSPACE_FORM_EMAIL_SETTINGS: WorkspaceFormEmailSettings =
 
 export const MAX_FORM_NOTIFY_EMAILS = 10;
 
+/** Same check used when persisting extra team-notification addresses. */
+export const FORM_NOTIFY_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export type CommitFormNotifyEmailsResult = {
+  emails: string[];
+  added: string[];
+  invalid: string[];
+  duplicates: string[];
+  overflow: string[];
+};
+
+export function normalizeFormNotifyEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export function isValidFormNotifyEmail(value: string): boolean {
+  const email = normalizeFormNotifyEmail(value);
+  return (
+    email.length > 0 &&
+    email.length <= 160 &&
+    FORM_NOTIFY_EMAIL_PATTERN.test(email)
+  );
+}
+
+/** Split a typed or pasted draft on commas, semicolons, and newlines. */
+export function splitFormNotifyEmailDraft(raw: string): string[] {
+  return raw
+    .split(/[,;\n\r]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Commit one or more draft addresses onto the existing notify list.
+ * Invalid tokens are returned so the input can keep them for correction.
+ */
+export function commitFormNotifyEmails(
+  current: string[],
+  draft: string,
+): CommitFormNotifyEmailsResult {
+  const tokens = splitFormNotifyEmailDraft(draft);
+  const emails = [
+    ...new Set(
+      current.map(normalizeFormNotifyEmail).filter(isValidFormNotifyEmail),
+    ),
+  ];
+  const seen = new Set(emails);
+  const added: string[] = [];
+  const invalid: string[] = [];
+  const duplicates: string[] = [];
+  const overflow: string[] = [];
+
+  for (const token of tokens) {
+    const email = normalizeFormNotifyEmail(token);
+    if (!isValidFormNotifyEmail(email)) {
+      invalid.push(token.trim());
+      continue;
+    }
+    if (seen.has(email)) {
+      duplicates.push(email);
+      continue;
+    }
+    if (emails.length >= MAX_FORM_NOTIFY_EMAILS) {
+      overflow.push(email);
+      continue;
+    }
+    seen.add(email);
+    emails.push(email);
+    added.push(email);
+  }
+
+  return { emails, added, invalid, duplicates, overflow };
+}
+
 export const FORM_EMAIL_ANSWERS_TOKEN_KEYS = [
   'answers',
   'submitted_answers',
@@ -160,14 +234,12 @@ export function parseWorkspaceFormEmailSettings(
     : [];
 
   const notifyEmails = Array.isArray(row.notifyEmails)
-    ? [
-        ...new Set(
-          row.notifyEmails
-            .filter((email): email is string => typeof email === 'string')
-            .map((email) => email.trim().toLowerCase())
-            .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
-        ),
-      ].slice(0, MAX_FORM_NOTIFY_EMAILS)
+    ? commitFormNotifyEmails(
+        [],
+        row.notifyEmails
+          .filter((email): email is string => typeof email === 'string')
+          .join('\n'),
+      ).emails
     : [];
 
   return {

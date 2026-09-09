@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_FORM_NOTIFY_EMAILS,
   buildFormEmailVars,
+  commitFormNotifyEmails,
   composeFormNotificationBody,
   defaultRsvpEmailSettings,
   interpolateFormEmailHtml,
   interpolateFormEmailText,
+  isValidFormNotifyEmail,
   listFormEmailMergeTokens,
   listFormSubmittedAnswers,
   matchFormEmailTemplate,
   parseWorkspaceFormEmailSettings,
   renderFormAnswersHtml,
+  splitFormNotifyEmailDraft,
   withFormEmailHtmlVars,
 } from './form-email';
 import { workspaceFormFieldsForTemplate } from './form-templates';
@@ -218,5 +222,63 @@ describe('workspace form email settings', () => {
     expect(tokens.some((item) => item.token === '{{attendance}}')).toBe(true);
     expect(tokens.some((item) => item.token === '{{name}}')).toBe(true);
     expect(tokens.filter((item) => item.token === '{{name}}')).toHaveLength(1);
+  });
+});
+
+describe('form notify email chips', () => {
+  it('splits pasted drafts on commas, semicolons, and newlines', () => {
+    expect(
+      splitFormNotifyEmailDraft(
+        'one@example.com, two@example.com;three@x.co\nfour@x.co',
+      ),
+    ).toEqual([
+      'one@example.com',
+      'two@example.com',
+      'three@x.co',
+      'four@x.co',
+    ]);
+  });
+
+  it('rejects invalid addresses and keeps existing pills', () => {
+    expect(isValidFormNotifyEmail('not-an-email')).toBe(false);
+    const result = commitFormNotifyEmails(
+      ['host@example.com'],
+      'not-an-email, also bad',
+    );
+    expect(result.emails).toEqual(['host@example.com']);
+    expect(result.invalid).toEqual(['not-an-email', 'also bad']);
+    expect(result.added).toEqual([]);
+  });
+
+  it('leaves the current list unchanged for a whitespace-only draft', () => {
+    const result = commitFormNotifyEmails(['host@example.com'], '   ');
+    expect(result.emails).toEqual(['host@example.com']);
+    expect(result.added).toEqual([]);
+    expect(result.invalid).toEqual([]);
+  });
+
+  it('rejects addresses longer than 160 characters', () => {
+    const local = 'a'.repeat(150);
+    const tooLong = `${local}@example.com`;
+    expect(tooLong.length).toBeGreaterThan(160);
+    expect(isValidFormNotifyEmail(tooLong)).toBe(false);
+    expect(isValidFormNotifyEmail('ok@example.com')).toBe(true);
+  });
+
+  it('adds unique valid emails, skips duplicates, and caps at the max', () => {
+    const existing = Array.from(
+      { length: MAX_FORM_NOTIFY_EMAILS - 1 },
+      (_, index) => `host${index}@example.com`,
+    );
+    const result = commitFormNotifyEmails(
+      existing,
+      'Host0@Example.com, new@example.com, extra@example.com',
+    );
+
+    expect(result.added).toEqual(['new@example.com']);
+    expect(result.duplicates).toEqual(['host0@example.com']);
+    expect(result.overflow).toEqual(['extra@example.com']);
+    expect(result.emails).toHaveLength(MAX_FORM_NOTIFY_EMAILS);
+    expect(result.emails.at(-1)).toBe('new@example.com');
   });
 });
