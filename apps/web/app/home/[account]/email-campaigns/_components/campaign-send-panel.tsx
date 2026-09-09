@@ -13,7 +13,11 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import type { CampaignAnalyticsBundle } from '~/lib/campaigns/campaign-analytics';
-import { AUDIENCE_TYPE_LABEL } from '~/lib/campaigns/campaign-audience';
+import {
+  AUDIENCE_TYPE_LABEL,
+  CAMPAIGN_AUDIENCE_LIST_REQUIRED,
+  campaignAudienceListMissing,
+} from '~/lib/campaigns/campaign-audience';
 import {
   CAMPAIGN_TIMEZONES,
   formatZonedInstant,
@@ -83,6 +87,14 @@ export function CampaignSendPanel({
   const contentHref = pathsConfig.app.accountEmailCampaignContent
     .replace('[account]', accountSlug)
     .replace('[campaignId]', campaign.id);
+  const audiencesHref = pathsConfig.app.accountEmailCampaignAudiences.replace(
+    '[account]',
+    accountSlug,
+  );
+  const listAudienceIncomplete = campaignAudienceListMissing(
+    campaign.audienceType,
+    campaign.audienceConfig,
+  );
 
   const fromLabel = campaign.fromName?.trim()
     ? `${campaign.fromName.trim()} <${campaign.fromEmail || brand.contact_email || 'workspace'}>`
@@ -147,10 +159,24 @@ export function CampaignSendPanel({
 
         {editable ? (
           <div className="flex flex-col gap-2 pt-2">
+            {listAudienceIncomplete ? (
+              <p
+                className={`text-sm ${workspaceTextMuted}`}
+                data-test="campaign-send-pick-list"
+              >
+                {CAMPAIGN_AUDIENCE_LIST_REQUIRED}.{' '}
+                <Link
+                  href={audiencesHref}
+                  className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                >
+                  Create a list
+                </Link>
+              </p>
+            ) : null}
             <Button
               type="button"
               variant="outline"
-              disabled={pending}
+              disabled={pending || listAudienceIncomplete}
               data-test="campaign-send-test"
               onClick={() => setSendTestOpen(true)}
             >
@@ -185,6 +211,7 @@ export function CampaignSendPanel({
               className={workspaceBtnPrimary}
               disabled={
                 pending ||
+                listAudienceIncomplete ||
                 insufficientSendUnits ||
                 contactsBlocked ||
                 audienceCount === 0
@@ -239,7 +266,7 @@ export function CampaignSendPanel({
               />
               <Button
                 variant="outline"
-                disabled={pending || !scheduledAt}
+                disabled={pending || listAudienceIncomplete || !scheduledAt}
                 data-test="campaign-schedule"
                 onClick={() => {
                   startTransition(async () => {
