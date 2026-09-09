@@ -35,6 +35,7 @@ import {
   mergeValuesForRecipient,
 } from '~/lib/campaigns/merge-fields';
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
+import { resolveCampaignReplyTo } from '~/lib/campaigns/resolve-campaign-reply-to';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
 import {
   SendingDomainError,
@@ -631,7 +632,11 @@ class CampaignsService {
 
     const fromName = resolved.fromName;
     const fromHeader = resolved.fromHeader ?? `${fromName} <${fromEmail}>`;
-    const replyTo = campaign.replyTo?.trim() || resolved.replyTo || fromEmail;
+    const replyTo = resolveCampaignReplyTo({
+      campaignReplyTo: campaign.replyTo,
+      fromEmail,
+      workspaceReplyTo: resolved.replyTo,
+    });
     const limit = Math.max(1, Math.min(input.batchSize ?? 40, 100));
 
     const { data, error } = await fromTable(
@@ -916,7 +921,11 @@ class CampaignsService {
 
     const fromName = resolved.fromName;
     const fromHeader = resolved.fromHeader ?? `${fromName} <${fromEmail}>`;
-    const replyTo = campaign.replyTo?.trim() || resolved.replyTo || fromEmail;
+    const replyTo = resolveCampaignReplyTo({
+      campaignReplyTo: campaign.replyTo,
+      fromEmail,
+      workspaceReplyTo: resolved.replyTo,
+    });
     const subjectTemplate = campaignTestSubject(campaign.subject);
     const unsubscribeUrl = buildWorkspaceMailingListUnsubscribeUrl(
       CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
