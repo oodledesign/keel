@@ -80,6 +80,7 @@ export async function handleRecorderMessageThreadsGet(
       }),
     );
   } catch (error) {
+    // Mac Assistant polls these aliases; empty 200 avoids 404/5xx log noise.
     console.error(`[${logName}]`, error);
     return NextResponse.json({ items: [] });
   }

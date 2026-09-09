@@ -170,7 +170,7 @@ export function CampaignAudiencePicker({
             <Link
               href={audiencesHref}
               className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
-              data-test="campaign-create-audience-list"
+              data-test="campaign-create-audience-list-prompt"
             >
               Create a list
             </Link>{' '}
@@ -191,7 +191,7 @@ export function CampaignAudiencePicker({
               <Link
                 href={audiencesHref}
                 className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
-                data-test="campaign-create-audience-list"
+                data-test="campaign-create-audience-list-picker"
               >
                 Create a list
               </Link>{' '}
