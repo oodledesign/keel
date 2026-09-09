@@ -21,6 +21,7 @@ import { Textarea } from '@kit/ui/textarea';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
+import { applyDurationScheduleToMarkdown } from '~/lib/planner/apply-duration-schedule';
 import { savePlannerPlanClient } from '~/lib/planner/plan-save-client';
 import {
   loadStoredPlan,
@@ -187,6 +188,12 @@ export function ReplanDialog({
       if (!accumulated.trim()) {
         throw new Error('The planner returned an empty plan');
       }
+
+      accumulated = applyDurationScheduleToMarkdown(
+        accumulated,
+        openTasks.map(plannerTaskToPayload),
+        { workingHours: preferences.workingHours },
+      );
 
       saveStoredPlan(scope, dateYmd, {
         markdown: accumulated,
