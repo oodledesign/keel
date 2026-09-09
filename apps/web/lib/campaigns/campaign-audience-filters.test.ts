@@ -13,6 +13,7 @@ const people = [
     createdAt: '2026-01-15T00:00:00.000Z',
     clientType: 'occupier',
     companyName: 'Analytical Engines',
+    industry: 'Technology',
   },
   {
     email: 'bob@gmail.com',
@@ -21,6 +22,7 @@ const people = [
     createdAt: '2025-06-01T00:00:00.000Z',
     clientType: 'investor',
     companyName: null,
+    industry: 'Commercial property',
   },
 ];
 
@@ -93,6 +95,44 @@ describe('campaign audience filters', () => {
         source: 'contacts',
         matchMode: 'all',
         rules: [{ field: 'category', op: 'in', value: 'press,cat-vip' }],
+      }),
+    );
+    expect(oneOf).toHaveLength(2);
+  });
+
+  it('filters industry with is, contains, and is-one-of', () => {
+    const isExact = applyAudienceFilters(
+      people,
+      parseAudienceListFilters({
+        source: 'contacts',
+        matchMode: 'all',
+        rules: [{ field: 'industry', op: 'eq', value: 'technology' }],
+      }),
+    );
+    expect(isExact.map((row) => row.email)).toEqual(['ada@agency.com']);
+
+    const contains = applyAudienceFilters(
+      people,
+      parseAudienceListFilters({
+        source: 'contacts',
+        matchMode: 'all',
+        rules: [{ field: 'industry', op: 'contains', value: 'property' }],
+      }),
+    );
+    expect(contains.map((row) => row.email)).toEqual(['bob@gmail.com']);
+
+    const oneOf = applyAudienceFilters(
+      people,
+      parseAudienceListFilters({
+        source: 'contacts',
+        matchMode: 'all',
+        rules: [
+          {
+            field: 'industry',
+            op: 'in',
+            value: 'technology, commercial property',
+          },
+        ],
       }),
     );
     expect(oneOf).toHaveLength(2);

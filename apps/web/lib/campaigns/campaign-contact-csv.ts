@@ -1,6 +1,6 @@
 /**
  * Client-safe CSV mapping + row validation for Campaigns contacts.
- * Email is required; name/first/last/phone/company are optional.
+ * Email is required; name/first/last/phone/company/industry are optional.
  */
 import { z } from 'zod';
 
@@ -17,6 +17,7 @@ export const CAMPAIGN_CONTACT_CSV_FIELDS = [
   'full_name',
   'phone',
   'company_name',
+  'industry',
 ] as const;
 
 export type CampaignContactCsvField =
@@ -33,6 +34,7 @@ export const CAMPAIGN_CONTACT_CSV_FIELD_OPTIONS: Array<{
   { value: 'full_name', label: 'Full name' },
   { value: 'phone', label: 'Phone' },
   { value: 'company_name', label: 'Company' },
+  { value: 'industry', label: 'Industry' },
 ];
 
 const FIELD_SET = new Set<string>(CAMPAIGN_CONTACT_CSV_FIELDS);
@@ -47,6 +49,7 @@ export type CampaignContactCsvDraft = {
   fullName: string;
   phone: string | null;
   companyName: string | null;
+  industry: string | null;
   errors: string[];
 };
 
@@ -108,11 +111,12 @@ export function heuristicCampaignContactMapping(headers: string[]): {
     'organization',
     'business',
   );
+  assign('industry', 'industry', 'sector', 'vertical');
 
   return {
     mapping,
     notes: used.has('email')
-      ? 'Mapped email and any matching name/phone/company columns.'
+      ? 'Mapped email and any matching name/phone/company/industry columns.'
       : 'No email column detected — map Email before preview.',
     aiUsed: false,
   };
@@ -175,6 +179,7 @@ export function parseCampaignContactCsvRows(
     });
     const phone = record.phone?.trim() || null;
     const companyName = record.company_name?.trim() || null;
+    const industry = record.industry?.trim() || null;
     const errors: string[] = [];
 
     if (!email) {
@@ -191,6 +196,7 @@ export function parseCampaignContactCsvRows(
       fullName: names.fullName,
       phone,
       companyName,
+      industry,
       errors,
     };
   });
@@ -213,8 +219,8 @@ export const CampaignContactCsvMappingSchema = z.record(z.string(), z.string());
 
 export function buildCampaignContactImportTemplateCsv() {
   return [
-    'email,first_name,last_name,phone,company_name',
-    'ada@example.com,Ada,Lovelace,+44 20 0000 0000,Analytical Engines',
-    'bob@example.com,Bob,Martin,,',
+    'email,first_name,last_name,phone,company_name,industry',
+    'ada@example.com,Ada,Lovelace,+44 20 0000 0000,Analytical Engines,Technology',
+    'bob@example.com,Bob,Martin,,,',
   ].join('\n');
 }

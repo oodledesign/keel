@@ -43,10 +43,14 @@ function mapContact(
     fullName: names.fullName,
     phone: (row.phone as string | null) ?? null,
     companyName: (row.company_name as string | null) ?? null,
+    industry: (row.industry as string | null) ?? null,
     createdAt: String(row.created_at ?? ''),
     categoryIds,
   };
 }
+
+const CONTACT_SELECT =
+  'id, account_id, email, first_name, last_name, full_name, phone, company_name, industry, created_at';
 
 export function createCampaignContactsService(client: SupabaseClient) {
   return new CampaignContactsService(client);
@@ -60,6 +64,7 @@ class CampaignContactsService {
     options?: {
       query?: string;
       categoryId?: string | null;
+      industry?: string | null;
       limit?: number;
     },
   ): Promise<CampaignWorkspaceContact[]> {
@@ -74,9 +79,7 @@ class CampaignContactsService {
     }
 
     let query = fromTable(this.client, 'contacts')
-      .select(
-        'id, account_id, email, first_name, last_name, full_name, phone, company_name, created_at',
-      )
+      .select(CONTACT_SELECT)
       .eq('account_id', accountId)
       .order('full_name', { ascending: true })
       .limit(limit);
@@ -85,11 +88,16 @@ class CampaignContactsService {
       query = query.in('id', scopedIds.slice(0, limit));
     }
 
+    const industry = options?.industry?.trim();
+    if (industry) {
+      query = query.ilike('industry', `%${industry.replace(/[%_]/g, '')}%`);
+    }
+
     const search = options?.query?.trim();
     if (search) {
       const like = `%${search.replace(/[%_]/g, '')}%`;
       query = query.or(
-        `email.ilike.${like},full_name.ilike.${like},first_name.ilike.${like},last_name.ilike.${like},company_name.ilike.${like},phone.ilike.${like}`,
+        `email.ilike.${like},full_name.ilike.${like},first_name.ilike.${like},last_name.ilike.${like},company_name.ilike.${like},industry.ilike.${like},phone.ilike.${like}`,
       );
     }
 
@@ -123,9 +131,7 @@ class CampaignContactsService {
     contactId: string,
   ): Promise<CampaignWorkspaceContact | null> {
     const { data, error } = await fromTable(this.client, 'contacts')
-      .select(
-        'id, account_id, email, first_name, last_name, full_name, phone, company_name, created_at',
-      )
+      .select(CONTACT_SELECT)
       .eq('account_id', accountId)
       .eq('id', contactId)
       .maybeSingle();
@@ -148,6 +154,7 @@ class CampaignContactsService {
     fullName?: string | null;
     phone?: string | null;
     companyName?: string | null;
+    industry?: string | null;
     knownExisting?: CampaignWorkspaceContact | null;
   }): Promise<{ contact: CampaignWorkspaceContact; created: boolean }> {
     const email = input.email.trim().toLowerCase();
@@ -172,13 +179,14 @@ class CampaignContactsService {
       if (input.companyName !== undefined) {
         patch.company_name = input.companyName?.trim() || null;
       }
+      if (input.industry !== undefined) {
+        patch.industry = input.industry?.trim() || null;
+      }
       const { data, error } = await fromTable(this.client, 'contacts')
         .update(patch)
         .eq('id', existing.id)
         .eq('account_id', input.accountId)
-        .select(
-          'id, account_id, email, first_name, last_name, full_name, phone, company_name, created_at',
-        )
+        .select(CONTACT_SELECT)
         .single();
       if (error || !data) {
         throw new Error(error?.message ?? 'Could not update contact');
@@ -202,13 +210,12 @@ class CampaignContactsService {
       full_name: names.fullName,
       phone: input.phone?.trim() || null,
       company_name: input.companyName?.trim() || null,
+      industry: input.industry?.trim() || null,
     };
 
     const { data, error } = await fromTable(this.client, 'contacts')
       .insert(insertPayload)
-      .select(
-        'id, account_id, email, first_name, last_name, full_name, phone, company_name, created_at',
-      )
+      .select(CONTACT_SELECT)
       .single();
 
     if (error || !data) {
@@ -217,7 +224,7 @@ class CampaignContactsService {
         const retry = await fromTable(this.client, 'contacts')
           .insert(insertPayload)
           .select(
-            'id, account_id, email, first_name, last_name, full_name, phone, created_at',
+            'id, account_id, email, first_name, last_name, full_name, phone, industry, created_at',
           )
           .single();
         if (retry.error || !retry.data) {
@@ -251,6 +258,7 @@ class CampaignContactsService {
       fullName?: string | null;
       phone?: string | null;
       companyName?: string | null;
+      industry?: string | null;
     }>,
   ): Promise<{
     created: number;
@@ -278,6 +286,7 @@ class CampaignContactsService {
           fullName: draft.fullName,
           phone: draft.phone,
           companyName: draft.companyName,
+          industry: draft.industry,
           knownExisting: existing.get(draft.email.trim().toLowerCase()) ?? null,
         });
         contactIds.push(result.contact.id);
@@ -304,6 +313,7 @@ class CampaignContactsService {
     fullName?: string | null;
     phone?: string | null;
     companyName?: string | null;
+    industry?: string | null;
     categoryIds?: string[];
   }): Promise<CampaignWorkspaceContact> {
     const email = input.email.trim().toLowerCase();
@@ -325,12 +335,11 @@ class CampaignContactsService {
           full_name: names.fullName,
           phone: input.phone?.trim() || null,
           company_name: input.companyName?.trim() || null,
+          industry: input.industry?.trim() || null,
         })
         .eq('id', input.contactId)
         .eq('account_id', input.accountId)
-        .select(
-          'id, account_id, email, first_name, last_name, full_name, phone, company_name, created_at',
-        )
+        .select(CONTACT_SELECT)
         .single();
       if (error || !data) {
         throw new Error(error?.message ?? 'Could not update contact');
@@ -347,6 +356,7 @@ class CampaignContactsService {
         fullName: names.fullName,
         phone: input.phone,
         companyName: input.companyName,
+        industry: input.industry,
       });
       contact = result.contact;
     }
@@ -550,9 +560,7 @@ class CampaignContactsService {
     if (normalized.length === 0) return result;
 
     const { data, error } = await fromTable(this.client, 'contacts')
-      .select(
-        'id, account_id, email, first_name, last_name, full_name, phone, company_name, created_at',
-      )
+      .select(CONTACT_SELECT)
       .eq('account_id', accountId)
       .not('email', 'is', null)
       .limit(5000);

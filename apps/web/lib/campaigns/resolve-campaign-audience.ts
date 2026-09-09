@@ -45,6 +45,7 @@ type ListedPerson = {
   displayName: string | null;
   clientType?: string | null;
   companyName?: string | null;
+  industry?: string | null;
   createdAt?: string | null;
   consentedAt?: string | null;
 };
@@ -167,7 +168,7 @@ async function listContactsWithEmail(
 ): Promise<ListedPerson[]> {
   let query = fromTable(client, 'contacts')
     .select(
-      'id, email, full_name, first_name, last_name, company_name, created_at',
+      'id, email, full_name, first_name, last_name, company_name, industry, created_at',
     )
     .eq('account_id', accountId)
     .not('email', 'is', null);
@@ -202,6 +203,7 @@ async function listContactsWithEmail(
       email,
       displayName: displayName || null,
       companyName: (row.company_name as string | null) ?? null,
+      industry: (row.industry as string | null) ?? null,
       createdAt: (row.created_at as string | null) ?? null,
     });
   }
@@ -239,7 +241,7 @@ async function listManualListContacts(
     'campaign_audience_list_members',
   )
     .select(
-      'contact_id, contacts ( id, email, full_name, first_name, last_name, company_name, created_at )',
+      'contact_id, contacts ( id, email, full_name, first_name, last_name, company_name, industry, created_at )',
     )
     .eq('account_id', accountId)
     .eq('list_id', listId)
@@ -266,6 +268,7 @@ async function listManualListContacts(
       email,
       displayName: displayName || null,
       companyName: (contact.company_name as string | null) ?? null,
+      industry: (contact.industry as string | null) ?? null,
       createdAt: (contact.created_at as string | null) ?? null,
     });
   }
@@ -443,6 +446,7 @@ export async function resolveCampaignAudience(
           displayName: row.displayName,
           createdAt: row.createdAt,
           companyName: row.companyName,
+          industry: row.industry,
           categoryIds: categories?.ids,
           categoryNames: categories?.names,
           clientId: null,

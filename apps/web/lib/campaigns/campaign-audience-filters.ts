@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 export const AUDIENCE_FILTER_FIELDS = [
   'category',
+  'industry',
   'email_domain',
   'email',
   'display_name',
@@ -48,6 +49,7 @@ export type AudienceListFilters = z.infer<typeof AudienceListFiltersSchema>;
 export const AUDIENCE_FILTER_FIELD_LABEL: Record<AudienceFilterField, string> =
   {
     category: 'Category',
+    industry: 'Industry',
     email_domain: 'Email domain',
     email: 'Email contains',
     display_name: 'Name contains',
@@ -62,6 +64,7 @@ export const AUDIENCE_FILTER_FIELD_GROUPS: Array<{
   fields: AudienceFilterField[];
 }> = [
   { label: 'Categories', fields: ['category'] },
+  { label: 'Industry', fields: ['industry'] },
   {
     label: 'Contact details',
     fields: [
@@ -97,6 +100,7 @@ export type AudienceFilterSubject = {
   createdAt?: string | null;
   clientType?: string | null;
   companyName?: string | null;
+  industry?: string | null;
   categoryIds?: string[];
   categoryNames?: string[];
 };
@@ -139,6 +143,18 @@ function matchesRule(
       const has = Boolean(subject.companyName?.trim());
       if (value === 'false' || value === '0' || value === 'no') return !has;
       return has;
+    }
+    case 'industry': {
+      const industry = (subject.industry ?? '').trim().toLowerCase();
+      const tokens = splitFilterList(rule.value);
+      if (tokens.length === 0) return true;
+      if (rule.op === 'in') {
+        return tokens.some((token) => industry === token);
+      }
+      if (rule.op === 'contains') {
+        return industry.includes(value);
+      }
+      return industry === value;
     }
     case 'category': {
       const ids = (subject.categoryIds ?? []).map((id) => id.toLowerCase());

@@ -76,6 +76,7 @@ export const SaveCampaignContactSchema = z.object({
   fullName: z.string().trim().max(160).optional().nullable(),
   phone: z.string().trim().max(40).optional().nullable(),
   companyName: z.string().trim().max(160).optional().nullable(),
+  industry: z.string().trim().max(120).optional().nullable(),
   categoryIds: z.array(z.string().uuid()).max(40).optional(),
 });
 

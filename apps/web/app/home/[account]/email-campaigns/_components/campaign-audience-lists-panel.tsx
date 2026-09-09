@@ -137,7 +137,8 @@ export function CampaignAudienceListsPanel({
         return (
           contact.fullName.toLowerCase().includes(q) ||
           (contact.email ?? '').toLowerCase().includes(q) ||
-          (contact.companyName ?? '').toLowerCase().includes(q)
+          (contact.companyName ?? '').toLowerCase().includes(q) ||
+          (contact.industry ?? '').toLowerCase().includes(q)
         );
       })
       .slice(0, 40);
@@ -480,9 +481,11 @@ function RuleRow({
   const ops: AudienceFilterOp[] =
     rule.field === 'category'
       ? ['eq', 'in']
-      : rule.field === 'subscribed_after' || rule.field === 'created_after'
-        ? ['gte']
-        : ['eq', 'contains'];
+      : rule.field === 'industry'
+        ? ['contains', 'eq', 'in']
+        : rule.field === 'subscribed_after' || rule.field === 'created_after'
+          ? ['gte']
+          : ['eq', 'contains'];
 
   return (
     <div className="grid gap-2 sm:grid-cols-3">
@@ -493,7 +496,12 @@ function RuleRow({
           const field = event.target.value as AudienceFilterRule['field'];
           onChange({
             field,
-            op: field === 'category' ? 'eq' : rule.op,
+            op:
+              field === 'category'
+                ? 'eq'
+                : field === 'industry'
+                  ? 'contains'
+                  : rule.op,
             value:
               field === 'category' ? (categories[0]?.id ?? '') : rule.value,
           });
@@ -532,7 +540,13 @@ function RuleRow({
       ) : (
         <Input
           value={rule.value}
-          placeholder="Value"
+          placeholder={
+            rule.field === 'industry'
+              ? rule.op === 'in'
+                ? 'office, retail, industrial'
+                : 'Industry'
+              : 'Value'
+          }
           onChange={(event) => onChange({ ...rule, value: event.target.value })}
         />
       )}

@@ -122,6 +122,7 @@ export type CampaignWorkspaceContact = {
   fullName: string;
   phone: string | null;
   companyName: string | null;
+  industry: string | null;
   createdAt: string;
   categoryIds: string[];
 };

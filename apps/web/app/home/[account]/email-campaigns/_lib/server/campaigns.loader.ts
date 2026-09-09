@@ -211,7 +211,11 @@ export async function loadCampaignAudienceWorkspace(accountId: string) {
 
 export async function loadCampaignContactsPage(
   accountId: string,
-  options?: { query?: string; categoryId?: string | null },
+  options?: {
+    query?: string;
+    categoryId?: string | null;
+    industry?: string | null;
+  },
 ) {
   const client = getSupabaseServerClient();
   const contactsService = createCampaignContactsService(client);
@@ -222,6 +226,7 @@ export async function loadCampaignContactsPage(
       .listContacts(accountId, {
         query: options?.query,
         categoryId: options?.categoryId,
+        industry: options?.industry,
         limit: 500,
       })
       .catch(() => []),

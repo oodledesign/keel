@@ -10,7 +10,7 @@ import { loadCampaignContactsPage } from '../_lib/server/campaigns.loader';
 
 interface ContactsPageProps {
   params: Promise<{ account: string }>;
-  searchParams: Promise<{ q?: string; category?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; industry?: string }>;
 }
 
 export const generateMetadata = async () => ({ title: 'Campaign contacts' });
@@ -22,6 +22,7 @@ async function ContactsPage({ params, searchParams }: ContactsPageProps) {
   const data = await loadCampaignContactsPage(workspace.account.id, {
     query: query.q,
     categoryId: query.category || null,
+    industry: query.industry || null,
   });
 
   return (
@@ -43,6 +44,7 @@ async function ContactsPage({ params, searchParams }: ContactsPageProps) {
           nextTierName={data.snapshot.nextTierName}
           initialQuery={query.q}
           initialCategoryId={query.category}
+          initialIndustry={query.industry}
         />
       </PageBody>
     </>

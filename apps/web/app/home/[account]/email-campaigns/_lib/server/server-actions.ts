@@ -427,6 +427,7 @@ export const saveCampaignContactAction = enhanceAction(
       fullName: data.fullName,
       phone: data.phone,
       companyName: data.companyName,
+      industry: data.industry,
       categoryIds: data.categoryIds,
     });
     revalidateAudiencePaths(data.accountSlug);

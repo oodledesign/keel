@@ -49,6 +49,7 @@ export function CampaignContactsPage({
   nextTierName,
   initialQuery,
   initialCategoryId,
+  initialIndustry,
 }: {
   accountId: string;
   accountSlug: string;
@@ -59,12 +60,14 @@ export function CampaignContactsPage({
   nextTierName?: string | null;
   initialQuery?: string;
   initialCategoryId?: string;
+  initialIndustry?: string;
 }) {
   const router = useRouter();
   const growth = hasCampaignsGrowthFeatures(planTier);
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState(initialQuery ?? '');
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryId ?? '');
+  const [industryFilter, setIndustryFilter] = useState(initialIndustry ?? '');
   const [selected, setSelected] = useState<string[]>([]);
   const [listId, setListId] = useState(
     lists.find((list) => list.source === 'manual')?.id ?? '',
@@ -85,15 +88,24 @@ export function CampaignContactsPage({
       if (categoryFilter && !contact.categoryIds.includes(categoryFilter)) {
         return false;
       }
+      if (
+        industryFilter &&
+        !(contact.industry ?? '')
+          .toLowerCase()
+          .includes(industryFilter.trim().toLowerCase())
+      ) {
+        return false;
+      }
       if (!q) return true;
       return (
         contact.fullName.toLowerCase().includes(q) ||
         (contact.email ?? '').toLowerCase().includes(q) ||
         (contact.phone ?? '').toLowerCase().includes(q) ||
-        (contact.companyName ?? '').toLowerCase().includes(q)
+        (contact.companyName ?? '').toLowerCase().includes(q) ||
+        (contact.industry ?? '').toLowerCase().includes(q)
       );
     });
-  }, [contacts, query, categoryFilter]);
+  }, [contacts, query, categoryFilter, industryFilter]);
 
   const selectedSet = new Set(selected);
   const allVisibleSelected =
@@ -103,6 +115,7 @@ export function CampaignContactsPage({
     const params = new URLSearchParams();
     if (query.trim()) params.set('q', query.trim());
     if (categoryFilter) params.set('category', categoryFilter);
+    if (industryFilter.trim()) params.set('industry', industryFilter.trim());
     const href = `${pathsConfig.app.accountEmailCampaignContacts.replace(
       '[account]',
       accountSlug,
@@ -139,6 +152,31 @@ export function CampaignContactsPage({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="w-44 space-y-1">
+            <Label>Industry</Label>
+            <Input
+              list="campaign-contact-industries"
+              value={industryFilter}
+              placeholder="Any industry"
+              onChange={(event) => setIndustryFilter(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') applySearch();
+              }}
+            />
+            <datalist id="campaign-contact-industries">
+              {[
+                ...new Set(
+                  contacts
+                    .map((contact) => contact.industry?.trim())
+                    .filter((value): value is string => Boolean(value)),
+                ),
+              ]
+                .sort((a, b) => a.localeCompare(b))
+                .map((value) => (
+                  <option key={value} value={value} />
+                ))}
+            </datalist>
           </div>
           <Button type="button" variant="outline" onClick={applySearch}>
             Filter
@@ -333,6 +371,7 @@ export function CampaignContactsPage({
                 <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Email</th>
                 <th className="px-3 py-2 font-medium">Company</th>
+                <th className="px-3 py-2 font-medium">Industry</th>
                 <th className="px-3 py-2 font-medium">Categories</th>
                 <th className="px-3 py-2 font-medium" />
               </tr>
@@ -340,7 +379,7 @@ export function CampaignContactsPage({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className={`px-3 py-6 ${workspaceTextMuted}`}>
+                  <td colSpan={7} className={`px-3 py-6 ${workspaceTextMuted}`}>
                     No contacts match. Create one or upload a CSV.
                   </td>
                 </tr>
@@ -371,6 +410,9 @@ export function CampaignContactsPage({
                     </td>
                     <td className={`px-3 py-2 ${workspaceTextMuted}`}>
                       {contact.companyName || '—'}
+                    </td>
+                    <td className={`px-3 py-2 ${workspaceTextMuted}`}>
+                      {contact.industry || '—'}
                     </td>
                     <td className={`px-3 py-2 ${workspaceTextMuted}`}>
                       {contact.categoryIds
@@ -605,6 +647,7 @@ function ContactFormDialog({
   const [lastName, setLastName] = useState(contact?.lastName ?? '');
   const [phone, setPhone] = useState(contact?.phone ?? '');
   const [companyName, setCompanyName] = useState(contact?.companyName ?? '');
+  const [industry, setIndustry] = useState(contact?.industry ?? '');
   const [categoryIds, setCategoryIds] = useState<string[]>(
     contact?.categoryIds ?? [],
   );
@@ -655,6 +698,14 @@ function ContactFormDialog({
             />
           </div>
         </div>
+        <div className="space-y-1">
+          <Label>Industry</Label>
+          <Input
+            value={industry}
+            placeholder="e.g. Commercial property"
+            onChange={(event) => setIndustry(event.target.value)}
+          />
+        </div>
         {categories.length > 0 ? (
           <div className="space-y-2">
             <Label>Categories</Label>
@@ -703,6 +754,7 @@ function ContactFormDialog({
                     lastName,
                     phone,
                     companyName,
+                    industry,
                     categoryIds,
                   });
                   toast.success(

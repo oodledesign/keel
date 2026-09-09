@@ -108,7 +108,7 @@ export const previewCampaignContactImportAction = enhanceAction(
       return {
         id: String(draft.rowIndex),
         label: draft.fullName || draft.email || `Row ${draft.rowIndex + 1}`,
-        detail: [draft.email, draft.companyName, draft.phone]
+        detail: [draft.email, draft.companyName, draft.industry, draft.phone]
           .filter(Boolean)
           .join(' · '),
         errors: draft.errors,
