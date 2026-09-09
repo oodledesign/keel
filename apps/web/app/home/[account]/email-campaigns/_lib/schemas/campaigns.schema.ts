@@ -42,12 +42,69 @@ export const SaveAudienceListSchema = z.object({
   listId: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(120),
   filters: AudienceListFiltersSchema,
+  contactIds: z.array(z.string().uuid()).max(5000).optional(),
 });
 
 export const DeleteAudienceListSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),
   listId: z.string().uuid(),
+});
+
+export const AudienceListMembersSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  listId: z.string().uuid(),
+  contactIds: z.array(z.string().uuid()).min(1).max(5000),
+});
+
+export const CreateListFromCategorySchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  categoryId: z.string().uuid(),
+  name: z.string().trim().min(1).max(120),
+  mode: z.enum(['logic', 'manual']),
+});
+
+export const SaveCampaignContactSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  contactId: z.string().uuid().optional(),
+  email: z.string().trim().email().max(320),
+  firstName: z.string().trim().max(80).optional().nullable(),
+  lastName: z.string().trim().max(80).optional().nullable(),
+  fullName: z.string().trim().max(160).optional().nullable(),
+  phone: z.string().trim().max(40).optional().nullable(),
+  companyName: z.string().trim().max(160).optional().nullable(),
+  categoryIds: z.array(z.string().uuid()).max(40).optional(),
+});
+
+export const SaveContactCategorySchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  categoryId: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(80),
+});
+
+export const ArchiveContactCategorySchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  categoryId: z.string().uuid(),
+});
+
+export const AssignContactCategoriesSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  contactIds: z.array(z.string().uuid()).min(1).max(5000),
+  categoryIds: z.array(z.string().uuid()).min(1).max(40),
+});
+
+export const BulkAddContactsToListSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  listId: z.string().uuid().optional(),
+  newListName: z.string().trim().min(1).max(120).optional(),
+  contactIds: z.array(z.string().uuid()).min(1).max(5000),
 });
 
 export const SaveAutomationSchema = z.object({

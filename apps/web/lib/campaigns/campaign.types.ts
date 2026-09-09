@@ -87,11 +87,43 @@ export type CampaignAudienceList = {
   accountId: string;
   createdBy: string | null;
   name: string;
-  source: 'subscribers' | 'clients' | 'contacts';
+  source: 'subscribers' | 'clients' | 'contacts' | 'manual';
   matchMode: 'all' | 'any';
   filters: unknown;
+  memberCount?: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CampaignAudienceListMember = {
+  id: string;
+  listId: string;
+  contactId: string;
+  email: string | null;
+  displayName: string;
+  createdAt: string;
+};
+
+export type CampaignContactCategory = {
+  id: string;
+  accountId: string;
+  name: string;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CampaignWorkspaceContact = {
+  id: string;
+  accountId: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  fullName: string;
+  phone: string | null;
+  companyName: string | null;
+  createdAt: string;
+  categoryIds: string[];
 };
 
 export type CampaignAutomation = {

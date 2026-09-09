@@ -63,6 +63,51 @@ describe('campaign audience filters', () => {
     expect(matched).toHaveLength(2);
   });
 
+  it('matches category is and is-one-of', () => {
+    const withCats = [
+      {
+        ...people[0]!,
+        categoryIds: ['cat-vip'],
+        categoryNames: ['VIP'],
+      },
+      {
+        ...people[1]!,
+        categoryIds: ['cat-press'],
+        categoryNames: ['Press'],
+      },
+    ];
+
+    const isVip = applyAudienceFilters(
+      withCats,
+      parseAudienceListFilters({
+        source: 'contacts',
+        matchMode: 'all',
+        rules: [{ field: 'category', op: 'eq', value: 'cat-vip' }],
+      }),
+    );
+    expect(isVip.map((row) => row.email)).toEqual(['ada@agency.com']);
+
+    const oneOf = applyAudienceFilters(
+      withCats,
+      parseAudienceListFilters({
+        source: 'contacts',
+        matchMode: 'all',
+        rules: [{ field: 'category', op: 'in', value: 'press,cat-vip' }],
+      }),
+    );
+    expect(oneOf).toHaveLength(2);
+  });
+
+  it('accepts manual list source', () => {
+    expect(
+      parseAudienceListFilters({
+        source: 'manual',
+        matchMode: 'all',
+        rules: [],
+      }).source,
+    ).toBe('manual');
+  });
+
   it('filters subscribed_after dates', () => {
     const matched = applyAudienceFilters(
       people,

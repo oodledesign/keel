@@ -1,6 +1,14 @@
 {
   "title": "Campaigns",
   "description": "Email your mailing-list subscribers as your workspace, not Ozer.",
+  "audiences": {
+    "title": "Audiences",
+    "description": "Named lists — logic filters or manual membership. Growth and Pro."
+  },
+  "contacts": {
+    "title": "Contacts",
+    "description": "Everyone in this workspace you can add to campaign lists."
+  },
   "module": {
     "disabled": {
       "title": "Campaigns isn’t enabled",
