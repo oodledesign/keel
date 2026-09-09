@@ -70,6 +70,8 @@ export const UpdateWorkspaceFormSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(8000).optional().nullable(),
   eventAddress: z.string().max(240).optional().nullable(),
+  eventDate: z.string().max(120).optional().nullable(),
+  eventTime: z.string().max(120).optional().nullable(),
   destination: z.enum(WORKSPACE_FORM_DESTINATIONS),
   listingId: z.string().uuid().optional().nullable(),
   status: z.enum(WORKSPACE_FORM_STATUSES).optional(),

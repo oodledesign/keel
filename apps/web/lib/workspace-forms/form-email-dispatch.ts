@@ -33,6 +33,8 @@ type DispatchForm = {
   accountSlug: string | null;
   name: string;
   eventAddress: string | null;
+  eventDate?: string | null;
+  eventTime?: string | null;
   fields: WorkspaceFormField[];
   emailSettings: WorkspaceFormEmailSettings;
   brand: AccountBrandResolved;
@@ -182,6 +184,8 @@ export async function dispatchWorkspaceFormEmails(input: {
     formName: input.form.name,
     accountName: input.form.accountName,
     eventAddress: input.form.eventAddress,
+    eventDate: input.form.eventDate,
+    eventTime: input.form.eventTime,
     contactName: input.contact.contactName,
     contactEmail: input.contact.contactEmail,
     fields: input.form.fields,
@@ -239,9 +243,7 @@ export async function dispatchWorkspaceFormEmails(input: {
     settings.notifyMemberIds,
   );
   const submitterEmail = input.contact.contactEmail.trim().toLowerCase();
-  const candidates = [
-    ...new Set([...memberEmails, ...settings.notifyEmails]),
-  ];
+  const candidates = [...new Set([...memberEmails, ...settings.notifyEmails])];
   const recipients = candidates.filter((email) => email !== submitterEmail);
 
   if (recipients.length === 0) {

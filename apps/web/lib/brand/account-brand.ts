@@ -15,6 +15,8 @@ export type AccountBrandSettingsRow = {
   secondary_color: string | null;
   accent_color: string | null;
   logo_url: string | null;
+  logo_on_light_url: string | null;
+  logo_on_dark_url: string | null;
   website_url: string | null;
   address: string | null;
   contact_email: string | null;
@@ -30,6 +32,8 @@ export type AccountBrandResolved = {
   secondary_color: string;
   accent_color: string;
   logo_url: string | null;
+  logo_on_light_url: string | null;
+  logo_on_dark_url: string | null;
   website_url: string | null;
   address: string | null;
   contact_email: string | null;
@@ -46,6 +50,10 @@ function resolveBrand(
     secondary_color: row?.secondary_color?.trim() || DEFAULT_BRAND_SECONDARY,
     accent_color: row?.accent_color?.trim() || DEFAULT_BRAND_ACCENT,
     logo_url: toSupabasePublicStorageUrl(row?.logo_url?.trim()) || null,
+    logo_on_light_url:
+      toSupabasePublicStorageUrl(row?.logo_on_light_url?.trim()) || null,
+    logo_on_dark_url:
+      toSupabasePublicStorageUrl(row?.logo_on_dark_url?.trim()) || null,
     website_url: row?.website_url?.trim() || null,
     address: row?.address?.trim() || null,
     contact_email: row?.contact_email?.trim() || null,
@@ -60,7 +68,7 @@ export async function loadAccountBrandResolved(
   const { data, error } = await admin
     .from('account_brand_settings')
     .select(
-      'account_id, primary_color, secondary_color, accent_color, logo_url, website_url, address, contact_email, phone',
+      'account_id, primary_color, secondary_color, accent_color, logo_url, logo_on_light_url, logo_on_dark_url, website_url, address, contact_email, phone',
     )
     .eq('account_id', accountId)
     .maybeSingle();

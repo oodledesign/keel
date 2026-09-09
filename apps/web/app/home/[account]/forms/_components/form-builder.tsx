@@ -110,6 +110,8 @@ export function FormBuilder({
   const [name, setName] = useState(form.name);
   const [description, setDescription] = useState(form.description ?? '');
   const [eventAddress, setEventAddress] = useState(form.eventAddress ?? '');
+  const [eventDate, setEventDate] = useState(form.eventDate ?? '');
+  const [eventTime, setEventTime] = useState(form.eventTime ?? '');
   const [destination, setDestination] = useState(form.destination);
   const [listingId, setListingId] = useState(form.listingId ?? '');
   const [submitLabel, setSubmitLabel] = useState(form.submitLabel);
@@ -158,6 +160,8 @@ export function FormBuilder({
           name: name.trim() || 'Untitled form',
           description: description.trim() || null,
           eventAddress: eventAddress.trim() || null,
+          eventDate: eventDate.trim() || null,
+          eventTime: eventTime.trim() || null,
           destination,
           listingId: listingId || null,
           submitLabel: submitLabel.trim() || 'Submit',
@@ -357,6 +361,33 @@ export function FormBuilder({
                 fill this in.
               </p>
             </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="event-date">Event date</Label>
+                <Input
+                  id="event-date"
+                  value={eventDate}
+                  onChange={(event) => setEventDate(event.target.value)}
+                  placeholder="15 October"
+                  data-test="form-event-date"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="event-time">Event time</Label>
+                <Input
+                  id="event-time"
+                  value={eventTime}
+                  onChange={(event) => setEventTime(event.target.value)}
+                  placeholder="8:00am – 10:00am"
+                  data-test="form-event-time"
+                />
+              </div>
+            </div>
+            <p className={`-mt-2 text-xs ${workspaceTextMuted}`}>
+              Optional. Shown with icons on the public page when filled in —
+              same as the event address, not a submitter question.
+            </p>
           </section>
 
           <section className={`${workspacePanelCard} space-y-4 p-5`}>

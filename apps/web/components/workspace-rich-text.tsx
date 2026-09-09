@@ -1,10 +1,11 @@
 'use client';
 
-import { Bold, Italic, Link2, List, ListOrdered } from 'lucide-react';
+import { Bold, Heading2, Italic, Link2, List, ListOrdered } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
 import { useControlledSanitizedHtmlEditor } from '~/lib/controlled-content-editable';
+import { RICH_TEXT_LIST_CLASS } from '~/lib/rich-text-html';
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
 
 type WorkspaceRichTextEditorProps = {
@@ -50,6 +51,9 @@ export function WorkspaceRichTextEditor({
         <ToolbarBtn label="Italic" onClick={() => exec('italic')}>
           <Italic className="h-3.5 w-3.5" />
         </ToolbarBtn>
+        <ToolbarBtn label="Title" onClick={() => exec('formatBlock', 'h2')}>
+          <Heading2 className="h-3.5 w-3.5" />
+        </ToolbarBtn>
         <ToolbarBtn
           label="Bullet list"
           onClick={() => exec('insertUnorderedList')}
@@ -79,9 +83,8 @@ export function WorkspaceRichTextEditor({
           'workspace-rich-text-editor min-w-0 px-3 py-2 text-sm text-[var(--workspace-shell-text)] outline-none',
           'empty:before:pointer-events-none empty:before:text-[var(--workspace-shell-text)]/35 empty:before:content-[attr(data-placeholder)]',
           '[&_a]:text-[var(--ozer-accent-muted)] [&_a]:underline',
-          '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
-          '[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
-          '[&_p]:my-1',
+          RICH_TEXT_LIST_CLASS,
+          '[&_h2]:mt-2 [&_h2]:text-base [&_h2]:font-semibold',
         )}
         style={{ minHeight }}
       />
@@ -129,9 +132,7 @@ export function WorkspaceRichTextHtml({
       className={cn(
         'workspace-rich-text-html text-sm leading-relaxed text-[var(--workspace-shell-text)]/80',
         '[&_a]:text-[var(--ozer-accent-muted)] [&_a]:underline',
-        '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
-        '[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
-        '[&_p]:my-1',
+        RICH_TEXT_LIST_CLASS,
         '[&_h2]:mt-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-[var(--workspace-shell-text)]',
         '[&_h3]:mt-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[var(--workspace-shell-text)]',
         className,

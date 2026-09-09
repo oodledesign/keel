@@ -158,6 +158,8 @@ export function workspaceFormCreateDefaultsForTemplate(
   suggestedDestination: WorkspaceFormDestination;
   theme: WorkspaceFormTheme;
   eventAddress: string | null;
+  eventDate: string | null;
+  eventTime: string | null;
   emailSettings: WorkspaceFormEmailSettings;
 } {
   const meta = WORKSPACE_FORM_TEMPLATE_META[template];
@@ -174,6 +176,8 @@ export function workspaceFormCreateDefaultsForTemplate(
       layoutExplicit: false,
     },
     eventAddress: null,
+    eventDate: null,
+    eventTime: null,
     emailSettings: isRsvp
       ? defaultRsvpEmailSettings()
       : {
