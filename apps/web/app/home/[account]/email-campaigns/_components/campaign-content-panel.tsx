@@ -51,6 +51,8 @@ export function CampaignContentPanel({
     secondary_color?: string | null;
     accent_color?: string | null;
     logo_url: string | null;
+    logo_on_light_url?: string | null;
+    logo_on_dark_url?: string | null;
     website_url?: string | null;
     contact_email: string | null;
   };
@@ -185,6 +187,7 @@ export function CampaignContentPanel({
         key={document.blocks[0]?.id ?? 'empty'}
         document={document}
         brand={brand}
+        accountId={accountId}
         onChange={setDocument}
         disabled={!editable}
         previewWidth={previewWidth}
@@ -251,7 +254,11 @@ export function CampaignContentPanel({
         <Button asChild variant="outline">
           <Link href={settingsHref}>Settings</Link>
         </Button>
-        <Button asChild className={workspaceBtnPrimary} data-test="campaign-content-goto-send">
+        <Button
+          asChild
+          className={workspaceBtnPrimary}
+          data-test="campaign-content-goto-send"
+        >
           <Link href={sendHref}>
             <Send className="mr-2 h-4 w-4" />
             Send
