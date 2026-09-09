@@ -1,8 +1,7 @@
-import { z } from 'zod';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { OzerMcpToolRegistrar } from './types';
+import { z } from 'zod';
+
 import {
   assertAccountAccess,
   assertClientOrgAccess,
@@ -10,6 +9,7 @@ import {
   loadUserAccountIds,
   toolJson,
 } from './shared';
+import type { OzerMcpToolRegistrar } from './types';
 
 const createNoteSchema = z.object({
   content: z.string().trim().min(1),

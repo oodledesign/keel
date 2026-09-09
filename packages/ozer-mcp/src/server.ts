@@ -1,4 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { getMcpConnectorIconUrl } from './config';
 import type { McpRequestContext } from './context';

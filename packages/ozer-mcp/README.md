@@ -38,6 +38,20 @@ WWW-Authenticate: Bearer resource_metadata="https://app.ozer.so/.well-known/oaut
 
 Database work runs through an anon-key client carrying the user's token — no service role.
 
+## Task tools
+
+| Tool             | Purpose                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `list_tasks`     | List tasks (optional status / project / area / parent_task_id). Includes `duration_minutes` and `parent_task_id`. |
+| `get_task`       | Fetch one task by id with notes, project/area names, and a subtasks summary.                                      |
+| `create_task`    | Create a root task. Optional `duration_minutes` is estimated effort. Use `create_subtask` for children.           |
+| `update_task`    | Patch a task (root or subtask): title, status, priority, due date, duration, notes, `project_id`, `area_id`.      |
+| `list_subtasks`  | List children of a parent task (`tasks.parent_task_id`).                                                          |
+| `create_subtask` | Create a child under a root parent. Inherits project/area. Optional duration, status, priority, due date, notes.  |
+| `update_subtask` | Patch a subtask with the same fields as `update_task`.                                                            |
+
+Subtasks are the same `tasks` rows as the web app: `parent_task_id` points at the root parent. Nesting a subtask under another subtask is rejected.
+
 ## Testing
 
 ```bash
