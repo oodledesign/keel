@@ -11,7 +11,9 @@ import {
   normalizeSubmissionEmail,
   parseStoredSubmissionColumns,
   sanitizeSubmissionColumnIds,
+  selectUniqueSubmissions,
   submissionBuiltinValue,
+  submissionRecordLabel,
 } from './form-submissions-view';
 import { workspaceFormFieldsForTemplate } from './form-templates';
 
@@ -56,6 +58,31 @@ describe('countSubmissionStats', () => {
         submission('5', '  '),
       ]),
     ).toEqual({ total: 5, unique: 4 });
+  });
+});
+
+describe('selectUniqueSubmissions', () => {
+  it('keeps the latest row per email and every missing-email row', () => {
+    expect(
+      selectUniqueSubmissions([
+        { id: 'old', contactEmail: 'ada@example.com', createdAt: '2026-01-01' },
+        { id: 'new', contactEmail: 'ADA@example.com', createdAt: '2026-03-01' },
+        { id: 'none', contactEmail: null, createdAt: '2026-02-01' },
+      ]).map((item) => item.id),
+    ).toEqual(['new', 'none']);
+  });
+});
+
+describe('submissionRecordLabel', () => {
+  it('prefers linked records and falls back for list-only forms', () => {
+    expect(submissionRecordLabel({ commercialEnquiryId: 'e1' }, false)).toBe(
+      'Listing enquiry',
+    );
+    expect(submissionRecordLabel({ clientId: 'c1' }, false)).toBe(
+      'Mailing-list contact',
+    );
+    expect(submissionRecordLabel({}, true)).toBe('Submission');
+    expect(submissionRecordLabel({}, false)).toBe('Stored only');
   });
 });
 

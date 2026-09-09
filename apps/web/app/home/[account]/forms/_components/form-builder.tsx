@@ -256,6 +256,7 @@ export function FormBuilder({
           <FormSubmissionsList
             accountSlug={accountSlug}
             formId={form.id}
+            formName={name}
             fields={fields}
             submissions={submissions}
             destination={destination}

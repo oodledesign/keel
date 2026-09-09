@@ -4,7 +4,7 @@ import { useMemo, useState, useSyncExternalStore } from 'react';
 
 import Link from 'next/link';
 
-import { Columns3, Mail } from 'lucide-react';
+import { Columns3, Download, Mail } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -33,6 +33,7 @@ import {
   submissionBuiltinValue,
   submissionColumnStorageKey,
   submissionFieldValue,
+  submissionRecordLabel,
 } from '~/lib/workspace-forms/form-submissions-view';
 import {
   workspacePanelCard,
@@ -41,10 +42,12 @@ import {
 } from '~/lib/workspace-ui';
 
 import type { WorkspaceFormSubmissionRecord } from '../_lib/server/workspace-forms.service';
+import { FormSubmissionsExportDialog } from './form-submissions-export-dialog';
 
 type Props = {
   accountSlug: string;
   formId: string;
+  formName: string;
   fields: WorkspaceFormField[];
   submissions: WorkspaceFormSubmissionRecord[];
   destination?: string;
@@ -79,17 +82,6 @@ function recordHref(
   }
 
   return null;
-}
-
-function recordLabel(
-  submission: WorkspaceFormSubmissionRecord,
-  submissionsOnly: boolean,
-) {
-  if (submission.commercialEnquiryId) return 'Listing enquiry';
-  if (submission.clientId) return 'Mailing-list contact';
-  if (submission.requirementId) return 'Requirement';
-  if (submission.pipelineDealId) return 'Pipeline enquiry';
-  return submissionsOnly ? 'Submission' : 'Stored only';
 }
 
 function formatReceivedAt(iso: string) {
@@ -144,6 +136,7 @@ function useSubmissionColumns(formId: string, fields: WorkspaceFormField[]) {
 export function FormSubmissionsList({
   accountSlug,
   formId,
+  formName,
   fields,
   submissions,
   destination,
@@ -165,6 +158,7 @@ export function FormSubmissionsList({
   );
   const [emailFilter, setEmailFilter] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const visibleSubmissions = useMemo(() => {
     if (!emailFilter) return submissions;
@@ -200,12 +194,25 @@ export function FormSubmissionsList({
           </p>
         </div>
         {submissions.length > 0 ? (
-          <ColumnPicker
-            options={options}
-            columns={columns}
-            defaults={defaults}
-            onChange={saveColumns}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setExportOpen(true)}
+              data-test="export-submissions"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </Button>
+            <ColumnPicker
+              options={options}
+              columns={columns}
+              defaults={defaults}
+              onChange={saveColumns}
+            />
+          </div>
         ) : null}
       </div>
 
@@ -321,6 +328,16 @@ export function FormSubmissionsList({
           </div>
         </>
       )}
+
+      <FormSubmissionsExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        formName={formName}
+        fields={fields}
+        submissions={submissions}
+        tableColumns={columns}
+        submissionsOnly={submissionsOnly}
+      />
 
       <SubmissionDetailDialog
         accountSlug={accountSlug}
@@ -456,7 +473,7 @@ function SubmissionCell({
 
   if (column === 'record') {
     const href = recordHref(accountSlug, submission);
-    const label = recordLabel(submission, submissionsOnly);
+    const label = submissionRecordLabel(submission, submissionsOnly);
     return href ? (
       <Link
         href={href}
@@ -591,10 +608,10 @@ function SubmissionDetailDialog({
                       href={href}
                       className="text-[var(--workspace-shell-accent-text)] underline-offset-4 hover:underline"
                     >
-                      {recordLabel(submission, submissionsOnly)}
+                      {submissionRecordLabel(submission, submissionsOnly)}
                     </Link>
                   ) : (
-                    recordLabel(submission, submissionsOnly)
+                    submissionRecordLabel(submission, submissionsOnly)
                   )}
                 </dd>
               </div>
