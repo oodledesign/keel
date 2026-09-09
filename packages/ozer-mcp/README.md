@@ -53,19 +53,29 @@ JSON-RPC notifications such as `notifications/initialized` correctly return
 **202 Accepted** with an empty body. `initialize`, `tools/list`, and `tools/call`
 return **200** JSON.
 
+## Workspace tools
+
+| Tool              | Purpose                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| `list_workspaces` | List team and personal accounts the OAuth user belongs to. Use `account_id` to scope other tools. |
+
+OAuth is user-level (not bound to one workspace). `list_tasks` defaults to outstanding work across all authorized workspaces.
+
 ## Task tools
 
-| Tool             | Purpose                                                                                                           |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `list_tasks`     | List tasks (optional status / project / area / parent_task_id). Includes `duration_minutes` and `parent_task_id`. |
-| `get_task`       | Fetch one task by id with notes, project/area names, and a subtasks summary.                                      |
-| `create_task`    | Create a root task. Optional `duration_minutes` is estimated effort. Use `create_subtask` for children.           |
-| `update_task`    | Patch a task (root or subtask): title, status, priority, due date, duration, notes, `project_id`, `area_id`.      |
-| `list_subtasks`  | List children of a parent task (`tasks.parent_task_id`).                                                          |
-| `create_subtask` | Create a child under a root parent. Inherits project/area. Optional duration, status, priority, due date, notes.  |
-| `update_subtask` | Patch a subtask with the same fields as `update_task`.                                                            |
+| Tool             | Purpose                                                                                                                                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_tasks`     | List current outstanding tasks across authorized workspaces (all clients/projects unless filtered). Defaults: `status=outstanding`, `sort=updated`, root tasks only, `limit=100`. Returns names plus `meta` (`total_count`, `truncated`). |
+| `get_task`       | Fetch one task by id with notes, project/client/workspace/area names, and a subtasks summary.                                                                                                                                             |
+| `create_task`    | Create a root task. Optional `duration_minutes` is estimated effort. Use `create_subtask` for children.                                                                                                                                   |
+| `update_task`    | Patch a task (root or subtask): title, status, priority, due date, duration, notes, `project_id`, `area_id`.                                                                                                                              |
+| `list_subtasks`  | List children of a parent task (`tasks.parent_task_id`).                                                                                                                                                                                  |
+| `create_subtask` | Create a child under a root parent. Inherits project/area. Optional duration, status, priority, due date, notes.                                                                                                                          |
+| `update_subtask` | Patch a subtask with the same fields as `update_task`.                                                                                                                                                                                    |
 
 Subtasks are the same `tasks` rows as the web app: `parent_task_id` points at the root parent. Nesting a subtask under another subtask is rejected.
+
+`list_tasks` does not apply an implicit client or project filter. Pass `account_id` from `list_workspaces`, or `client_id` / `project_id`, only when the user asks to narrow the list. Use `offset` when `meta.truncated` is true.
 
 ## Testing
 

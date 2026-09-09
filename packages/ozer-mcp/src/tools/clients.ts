@@ -83,7 +83,7 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
     'list_clients',
     {
       description:
-        'List client organizations the authenticated user belongs to via client_members.',
+        'List client portal organizations (client_orgs via client_members). These are not CRM clients and are not required before list_tasks. For current work across clients, call list_tasks with no client filter.',
       inputSchema: z.object({}),
     },
     async () => {

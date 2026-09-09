@@ -71,7 +71,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
     'list_projects',
     {
       description:
-        'List projects in workspaces the authenticated user belongs to.',
+        'List projects in workspaces the authenticated user belongs to. Optional business_id or status. Do not pick a project just to list tasks — list_tasks already returns outstanding work across all clients and projects. Use list_workspaces if you need an account_id.',
       inputSchema: listProjectsSchema,
     },
     async (input) => {
