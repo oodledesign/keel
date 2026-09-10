@@ -27,21 +27,23 @@ import {
   type ProjectsUiVariant,
   projectDetailHref,
 } from '~/lib/projects/project-paths';
+import {
+  type ProjectStatus,
+  fallbackProjectStatuses,
+  getProjectGroupId,
+  projectStatusStyle,
+} from '~/lib/projects/project-statuses';
 import { workspaceBtnPrimary } from '~/lib/workspace-ui';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import { updateJob } from '../../_lib/server/server-actions';
+import { ProjectStatusSelect } from '../project-status-select';
 import {
-  JOB_STATUS_CELL,
   type JobPriority,
-  type JobStatus,
   PHASE_CELL,
   PRIORITY_CELL,
-  PROJECT_GROUPS,
-  type ProjectGroupId,
   formatTimelineRange,
   formatValue,
-  getProjectGroupId,
   truncateText,
 } from './jobs-pm.constants';
 
@@ -82,6 +84,7 @@ export function JobsPmMainTable({
   onAddProject,
   uiVariant,
   personalScope = false,
+  statuses: statusesProp,
 }: {
   jobs: JobsPmRow[];
   campaigns?: Array<{ id: string; name: string; clientCount?: number }>;
@@ -94,10 +97,12 @@ export function JobsPmMainTable({
   onAddProject: () => void;
   uiVariant: ProjectsUiVariant;
   personalScope?: boolean;
+  statuses?: ProjectStatus[];
 }) {
-  const [collapsed, setCollapsed] = useState<Record<ProjectGroupId, boolean>>(
-    {},
-  );
+  const statuses = statusesProp?.length
+    ? statusesProp
+    : fallbackProjectStatuses(accountId);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [, startTransition] = useTransition();
   const isSimple = uiVariant === 'simple';
   const hideValue = isContractorView || isSimple;
@@ -108,18 +113,40 @@ export function JobsPmMainTable({
   );
 
   const grouped = useMemo(() => {
-    return PROJECT_GROUPS.map((group) => ({
-      ...group,
-      jobs: jobs.filter((job) =>
-        group.statuses.includes(job.status as JobStatus),
-      ),
-    })).filter((group) => group.jobs.length > 0);
-  }, [jobs]);
+    const bySlug = new Map<string, JobsPmRow[]>();
+    for (const job of jobs) {
+      const list = bySlug.get(job.status) ?? [];
+      list.push(job);
+      bySlug.set(job.status, list);
+    }
+
+    const known = statuses
+      .map((status) => ({
+        id: status.slug,
+        label: `${status.label} projects`,
+        accent: status.color,
+        jobs: bySlug.get(status.slug) ?? [],
+      }))
+      .filter((group) => group.jobs.length > 0);
+
+    const knownSlugs = new Set(statuses.map((status) => status.slug));
+    const orphans = jobs.filter((job) => !knownSlugs.has(job.status));
+    if (orphans.length > 0) {
+      known.push({
+        id: '_other',
+        label: 'Other',
+        accent: PRIORITY_CELL.low.bg,
+        jobs: orphans,
+      });
+    }
+
+    return known;
+  }, [jobs, statuses]);
 
   const jobDetailPathFor = (id: string) =>
     projectDetailHref(accountSlug, id, personalScope);
 
-  const handleStatusChange = (jobId: string, status: JobStatus) => {
+  const handleStatusChange = (jobId: string, status: string) => {
     if (!canEditJobs) return;
     startTransition(async () => {
       try {
@@ -209,7 +236,11 @@ export function JobsPmMainTable({
       ) : null}
       {grouped.map((group) => {
         const isCollapsed = collapsed[group.id] ?? false;
-        const phaseStyle = PHASE_CELL[group.id];
+        const phaseStyle = {
+          label: group.label.replace(/ projects$/i, ''),
+          bg: group.accent,
+          text: projectStatusStyle(group.id, statuses).text,
+        };
 
         return (
           <section key={group.id} className="mb-1">
@@ -263,13 +294,14 @@ export function JobsPmMainTable({
                       const member = primaryAssignee
                         ? memberById.get(primaryAssignee.user_id)
                         : null;
-                      const statusStyle =
-                        JOB_STATUS_CELL[job.status as JobStatus] ??
-                        JOB_STATUS_CELL.pending;
+                      const statusStyle = projectStatusStyle(
+                        job.status,
+                        statuses,
+                      );
                       const priorityStyle =
                         PRIORITY_CELL[job.priority as JobPriority] ??
                         PRIORITY_CELL.medium;
-                      const groupId = getProjectGroupId(job.status);
+                      const groupId = getProjectGroupId(job.status, statuses);
                       const rowPhase = PHASE_CELL[groupId];
 
                       return (
@@ -332,31 +364,15 @@ export function JobsPmMainTable({
                           </td>
                           <td className="px-2 py-1.5">
                             {canEditJobs ? (
-                              <Select
+                              <ProjectStatusSelect
                                 value={job.status}
-                                onValueChange={(v) =>
-                                  handleStatusChange(job.id, v as JobStatus)
+                                onValueChange={(value) =>
+                                  handleStatusChange(job.id, value)
                                 }
-                              >
-                                <SelectTrigger
-                                  className="h-8 w-full border-0 px-2 text-xs font-medium shadow-none focus:ring-0"
-                                  style={{
-                                    backgroundColor: statusStyle.bg,
-                                    color: statusStyle.text,
-                                  }}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(JOB_STATUS_CELL).map(
-                                    ([key, val]) => (
-                                      <SelectItem key={key} value={key}>
-                                        {val.label}
-                                      </SelectItem>
-                                    ),
-                                  )}
-                                </SelectContent>
-                              </Select>
+                                statuses={statuses}
+                                coloured
+                                triggerClassName="h-8 w-full border-0 px-2 text-xs font-medium shadow-none focus:ring-0"
+                              />
                             ) : (
                               <StatusPill style={statusStyle} />
                             )}
@@ -446,7 +462,11 @@ export function JobsPmMainTable({
                       <td />
                       <td />
                       <td className="px-2 py-2">
-                        <GroupSummaryBar jobs={group.jobs} field="status" />
+                        <GroupSummaryBar
+                          jobs={group.jobs}
+                          field="status"
+                          statuses={statuses}
+                        />
                       </td>
                       <td className="px-2 py-2">
                         <GroupSummaryBar jobs={group.jobs} field="priority" />
@@ -518,11 +538,13 @@ function StatusPill({
 function GroupSummaryBar({
   jobs,
   field,
+  statuses = [],
 }: {
   jobs: JobsPmRow[];
   field: 'status' | 'priority';
+  statuses?: ProjectStatus[];
 }) {
-  const palette = field === 'status' ? JOB_STATUS_CELL : PRIORITY_CELL;
+  const palette = field === 'status' ? null : PRIORITY_CELL;
 
   const counts = jobs.reduce<Record<string, number>>((acc, job) => {
     const key = job[field];
@@ -542,7 +564,10 @@ function GroupSummaryBar({
   return (
     <div className="flex h-2 overflow-hidden rounded-full">
       {segments.map(([key, count]) => {
-        const style = palette[key as keyof typeof palette];
+        const style =
+          field === 'status'
+            ? projectStatusStyle(key, statuses)
+            : palette?.[key as keyof typeof palette];
         return (
           <div
             key={key}

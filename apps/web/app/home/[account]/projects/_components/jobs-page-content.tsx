@@ -23,9 +23,11 @@ import {
   type ProjectsUiVariant,
   projectDetailHref,
 } from '~/lib/projects/project-paths';
+import type { ProjectStatus } from '~/lib/projects/project-statuses';
 
 import { listCampaignProjects } from '../_lib/campaign/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
+import { listProjectStatuses } from '../_lib/server/project-status-actions';
 import { listAccountMembers, listJobs } from '../_lib/server/server-actions';
 import { CreateProjectDialog } from './create-project-dialog';
 import { JobsPmMainTable, type JobsPmRow } from './jobs-pm/jobs-pm-main-table';
@@ -52,9 +54,11 @@ export function JobsPageContent({
   initialJobs,
   initialCampaigns,
   initialMembers,
+  initialStatuses,
   sharedPartnerProjects = [],
   personalScope = false,
   projectDetailPathBuilder,
+  canManageStatuses = false,
 }: {
   accountSlug: string;
   accountId: string;
@@ -73,6 +77,8 @@ export function JobsPageContent({
   sharedPartnerProjects?: PartnerBoardProject[];
   personalScope?: boolean;
   projectDetailPathBuilder?: (id: string) => string;
+  initialStatuses?: ProjectStatus[];
+  canManageStatuses?: boolean;
 }) {
   const isSimple = uiVariant === 'simple';
   const copy =
@@ -127,6 +133,9 @@ export function JobsPageContent({
       picture_url?: string | null;
     }[]
   >(isSimple ? [] : (initialMembers ?? []));
+  const [statuses, setStatuses] = useState<ProjectStatus[]>(
+    initialStatuses ?? [],
+  );
 
   const openCreateDialog = useCallback(
     (type: 'delivery' | 'campaign' = 'delivery') => {
@@ -255,6 +264,13 @@ export function JobsPageContent({
   }, [search]);
 
   useEffect(() => {
+    if (initialStatuses !== undefined) return;
+    listProjectStatuses({ accountId })
+      .then((rows) => setStatuses(Array.isArray(rows) ? rows : []))
+      .catch(() => setStatuses([]));
+  }, [accountId, initialStatuses]);
+
+  useEffect(() => {
     if (isSimple || initialMembers !== undefined) {
       return;
     }
@@ -363,17 +379,36 @@ export function JobsPageContent({
           </h1>
           <ChevronDown className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
         </div>
-        {canEditJobs && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 border-[color:var(--workspace-shell-border)] text-xs text-[var(--workspace-shell-text-muted)]"
-            onClick={() => openCreateDialog('delivery')}
-          >
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            New project
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canManageStatuses && !personalScope && !isSimple ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs text-[var(--workspace-shell-text-muted)]"
+              asChild
+            >
+              <Link
+                href={pathsConfig.app.accountProjectStatusesSettings.replace(
+                  '[account]',
+                  accountSlug,
+                )}
+              >
+                Manage statuses
+              </Link>
+            </Button>
+          ) : null}
+          {canEditJobs && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border-[color:var(--workspace-shell-border)] text-xs text-[var(--workspace-shell-text-muted)]"
+              onClick={() => openCreateDialog('delivery')}
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              New project
+            </Button>
+          )}
+        </div>
       </div>
 
       {!isSimple ? (
@@ -472,6 +507,7 @@ export function JobsPageContent({
           onAddProject={() => openCreateDialog('delivery')}
           uiVariant={uiVariant}
           personalScope={personalScope}
+          statuses={statuses}
         />
       ) : view === 'kanban' ? (
         <ProjectsKanbanView
@@ -482,6 +518,7 @@ export function JobsPageContent({
           personalScope={personalScope}
           projectDetailPathBuilder={projectDetailPathBuilder}
           onStatusUpdated={fetchJobs}
+          statuses={statuses}
         />
       ) : view === 'timeline' ? (
         <JobsPmTimelineView
@@ -505,6 +542,7 @@ export function JobsPageContent({
         defaultType={createDialogType}
         personalScope={personalScope}
         projectDetailPathBuilder={projectDetailPathBuilder}
+        statuses={statuses}
       />
     </div>
   );

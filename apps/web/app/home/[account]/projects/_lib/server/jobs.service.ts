@@ -17,6 +17,7 @@ import {
   PROJECT_DELIVERY_NOTES_TABLE,
   PROJECT_PRIMARY_CLIENT_EMBED,
 } from '~/lib/projects/delivery-project-db';
+import { closedProjectStatusSlugs } from '~/lib/projects/project-statuses';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
 import { isRecoverableProjectsClientsEmbedError } from '../../../_lib/server/supabase-errors';
@@ -33,6 +34,7 @@ import type {
   RemoveJobAssignmentInput,
   UpdateJobInput,
 } from '../schema/jobs.schema';
+import { createProjectStatusesService } from './project-statuses.service';
 
 type AccountRole = 'owner' | 'admin' | 'staff' | 'contractor' | 'client' | null;
 
@@ -130,6 +132,7 @@ class JobsService {
   private mapDeliveryRow(row: Record<string, unknown>) {
     return {
       ...row,
+      id: String(row.id ?? ''),
       title: deliveryProjectTitle(
         row as { title?: string | null; name?: string | null },
       ),
@@ -160,10 +163,18 @@ class JobsService {
       .order('created_at', { ascending: false })
       .range(from, to);
 
+    const needsClosedFilter = tab === 'active' || tab === 'completed';
+    const closedSlugs = needsClosedFilter
+      ? closedProjectStatusSlugs(
+          await createProjectStatusesService(this.client).list(accountId),
+        )
+      : [];
+    const closedFilter = `(${closedSlugs.map((slug) => `"${slug}"`).join(',')})`;
+
     if (tab === 'active') {
-      q = q.not('status', 'in', '("completed","cancelled")');
+      q = q.not('status', 'in', closedFilter);
     } else if (tab === 'completed') {
-      q = q.in('status', ['completed', 'cancelled']);
+      q = q.in('status', closedSlugs);
     }
 
     if (query?.trim()) {
@@ -205,9 +216,9 @@ class JobsService {
         );
       }
       if (tab === 'active') {
-        fallbackQ = fallbackQ.not('status', 'in', '("completed","cancelled")');
+        fallbackQ = fallbackQ.not('status', 'in', closedFilter);
       } else if (tab === 'completed') {
-        fallbackQ = fallbackQ.in('status', ['completed', 'cancelled']);
+        fallbackQ = fallbackQ.in('status', closedSlugs);
       }
       if (query?.trim()) {
         const term = `%${query.trim()}%`;
@@ -234,33 +245,25 @@ class JobsService {
       .from(PROJECT_ASSIGNMENTS_TABLE)
       .select('project_id, user_id, role_on_project')
       .in('project_id', jobIds);
-    const countByJob = (assignments ?? []).reduce<Record<string, number>>(
-      (acc, a: { project_id: string }) => {
-        acc[a.project_id] = (acc[a.project_id] ?? 0) + 1;
-        return acc;
-      },
-      {},
-    );
-    const assigneesByJob = (assignments ?? []).reduce<
-      Record<string, { user_id: string; role_on_job: string | null }[]>
-    >(
-      (
-        acc,
-        row: {
-          project_id: string;
-          user_id: string;
-          role_on_project: string | null;
-        },
-      ) => {
-        if (!acc[row.project_id]) acc[row.project_id] = [];
-        acc[row.project_id].push({
-          user_id: row.user_id,
-          role_on_job: row.role_on_project,
-        });
-        return acc;
-      },
-      {},
-    );
+    const assignmentRows = (assignments ?? []) as Array<{
+      project_id: string;
+      user_id: string;
+      role_on_project: string | null;
+    }>;
+    const countByJob: Record<string, number> = {};
+    const assigneesByJob: Record<
+      string,
+      { user_id: string; role_on_job: string | null }[]
+    > = {};
+    for (const row of assignmentRows) {
+      countByJob[row.project_id] = (countByJob[row.project_id] ?? 0) + 1;
+      const assignees = assigneesByJob[row.project_id] ?? [];
+      assignees.push({
+        user_id: row.user_id,
+        role_on_job: row.role_on_project,
+      });
+      assigneesByJob[row.project_id] = assignees;
+    }
     const data = jobs.map((job) => ({
       ...job,
       assignment_count: countByJob[job.id] ?? 0,
@@ -299,7 +302,7 @@ class JobsService {
         name: input.title,
         title: input.title,
         description: input.description ?? null,
-        status: input.status ?? 'pending',
+        status: input.status ?? null,
         priority: input.priority ?? 'medium',
         start_date: input.start_date ?? null,
         due_date: input.is_ongoing ? null : (input.due_date ?? null),

@@ -47,6 +47,7 @@ export async function loadJobsPageData(accountSlug: string) {
   const canViewJobs = access.canViewProjects && jobsModuleEnabled;
   const canEditJobs = access.canCreateJob;
   const canDeleteJobs = access.isOwner || access.isAdmin;
+  const canManageStatuses = access.isOwner || access.isAdmin;
 
   return {
     accountId: account.id,
@@ -55,6 +56,7 @@ export async function loadJobsPageData(accountSlug: string) {
     canViewJobs,
     canEditJobs,
     canDeleteJobs,
+    canManageStatuses,
     isContractorView: access.isContractor,
     spaceType,
   };

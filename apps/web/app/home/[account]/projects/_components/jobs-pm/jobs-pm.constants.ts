@@ -101,12 +101,7 @@ export const PHASE_CELL: Record<
   },
 };
 
-export function getProjectGroupId(status: string): ProjectGroupId {
-  if (status === 'pending') return 'upcoming';
-  if (status === 'in_progress' || status === 'on_hold') return 'ongoing';
-  if (status === 'completed') return 'completed';
-  return 'cancelled';
-}
+export { getProjectGroupId } from '~/lib/projects/project-statuses';
 
 export function formatTimelineRange(
   start: string | null,

@@ -19,13 +19,15 @@ import {
 } from './shared';
 import type { OzerMcpToolRegistrar } from './types';
 
-const projectStatusSchema = z.enum([
-  'pending',
-  'in_progress',
-  'on_hold',
-  'completed',
-  'cancelled',
-]);
+const projectStatusSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(48)
+  .regex(/^[a-z][a-z0-9_]{0,47}$/)
+  .describe(
+    'Workspace project status slug (e.g. pending, in_progress, invoiced). Use a status defined for the workspace.',
+  );
 
 const listProjectsSchema = z.object({
   account_id: z
@@ -58,7 +60,7 @@ const createProjectSchema = z.object({
   name: z.string().trim().min(1),
   account_id: z.string().uuid().describe('Workspace to create the project in.'),
   client_id: z.string().uuid().optional(),
-  status: projectStatusSchema.optional().default('pending'),
+  status: projectStatusSchema.optional(),
   description: z.string().optional(),
   start_date: z.string().trim().optional(),
   due_date: z.string().trim().optional(),
@@ -384,7 +386,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
         name: input.name,
         title: input.name,
         description: input.description ?? null,
-        status: input.status,
+        status: input.status ?? null,
         start_date: input.start_date ?? null,
         due_date: input.due_date ?? null,
         created_by: userId,

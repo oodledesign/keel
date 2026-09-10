@@ -2,8 +2,11 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import type { ProjectStatus } from '~/lib/projects/project-statuses';
+
 import { createCampaignProjectsService } from '../campaign/server/campaign-projects.service';
 import { createJobsService } from './jobs.service';
+import { createProjectStatusesService } from './project-statuses.service';
 
 export type JobsPageInitialData = {
   jobs: unknown[];
@@ -15,6 +18,7 @@ export type JobsPageInitialData = {
     email: string | null;
     picture_url?: string | null;
   }>;
+  statuses: ProjectStatus[];
 };
 
 export async function loadJobsPageInitialData(
@@ -31,20 +35,24 @@ export async function loadJobsPageInitialData(
   const jobsService = createJobsService(client);
   const campaignService = createCampaignProjectsService(client);
 
-  const [jobsResult, campaignsResult, membersResult] = await Promise.all([
-    jobsService.listJobs({
-      accountId,
-      tab: 'all',
-      page: 1,
-      pageSize: 50,
-    }),
-    includeCampaigns
-      ? campaignService.listProjects({ accountId })
-      : Promise.resolve([]),
-    includeMembers
-      ? client.rpc('get_account_members', { account_slug: accountSlug })
-      : Promise.resolve({ data: [] }),
-  ]);
+  const [jobsResult, campaignsResult, membersResult, statuses] =
+    await Promise.all([
+      jobsService.listJobs({
+        accountId,
+        tab: 'all',
+        page: 1,
+        pageSize: 50,
+      }),
+      includeCampaigns
+        ? campaignService.listProjects({ accountId })
+        : Promise.resolve([]),
+      includeMembers
+        ? client.rpc('get_account_members', { account_slug: accountSlug })
+        : Promise.resolve({ data: [] }),
+      createProjectStatusesService(client)
+        .list(accountId)
+        .catch(() => [] as ProjectStatus[]),
+    ]);
 
   const jobsPayload = jobsResult as { data?: unknown[]; total?: number };
   const campaignRows = Array.isArray(campaignsResult)
@@ -66,5 +74,6 @@ export async function loadJobsPageInitialData(
       ? (((membersResult as { data?: JobsPageInitialData['members'] }).data ??
           []) as JobsPageInitialData['members'])
       : [],
+    statuses,
   };
 }

@@ -59,6 +59,7 @@ async function JobsPage({ params }: JobsPageProps) {
     canViewJobs,
     canEditJobs,
     isContractorView,
+    canManageStatuses,
   } = await loadJobsPageData(accountSlug);
 
   const isFamily = spaceType === 'family';
@@ -94,6 +95,8 @@ async function JobsPage({ params }: JobsPageProps) {
           initialJobs={initialData?.jobs as never}
           initialCampaigns={initialData?.campaigns}
           initialMembers={initialData?.members}
+          initialStatuses={initialData?.statuses}
+          canManageStatuses={canManageStatuses}
           sharedPartnerProjects={sharedPartnerProjects}
         />
       </PageBody>

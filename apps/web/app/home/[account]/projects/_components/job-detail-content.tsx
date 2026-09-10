@@ -41,6 +41,10 @@ import {
   isPersonalProjectsScope,
   projectListHref,
 } from '~/lib/projects/project-paths';
+import {
+  type ProjectStatus,
+  projectStatusLabel,
+} from '~/lib/projects/project-statuses';
 
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
@@ -103,14 +107,6 @@ type JobNote = {
   created_at: string;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  in_progress: 'In progress',
-  on_hold: 'On hold',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
-
 const PRIORITY_LABELS: Record<string, string> = {
   low: 'Low',
   medium: 'Medium',
@@ -164,6 +160,7 @@ export function JobDetailContent({
   linksTableAvailable = true,
   linkOptions,
   defaultLink,
+  statuses,
 }: {
   accountSlug: string;
   accountId: string;
@@ -183,6 +180,7 @@ export function JobDetailContent({
   linksTableAvailable?: boolean;
   linkOptions: LinkOption[];
   defaultLink: LinkValue;
+  statuses?: ProjectStatus[];
 }) {
   const jobsPath = projectListHref(accountSlug);
   const isPersonal = isPersonalProjectsScope(accountSlug);
@@ -462,7 +460,7 @@ export function JobDetailContent({
                       : 'border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]'
                 }`}
               >
-                {STATUS_LABELS[job.status] ?? job.status}
+                {projectStatusLabel(job.status, statuses ?? [])}
               </span>
               <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                 {PRIORITY_LABELS[job.priority] ?? job.priority}
