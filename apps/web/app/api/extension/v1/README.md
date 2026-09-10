@@ -20,7 +20,12 @@ Creates a workspace task, note, or contact stub. `kind=contact` is a People stub
 
 ## Speaker events
 
-Live stamps belong on the local Assistant (`http://127.0.0.1:17834/v1/speaker-events`). This route is the cloud buffer when Assistant is offline, and a pull path for a later Assistant build.
+Live stamps belong on the local Assistant
+(`POST http://127.0.0.1:18791/v1/meet/speaker-stamps`, body
+`{ name, startedAt, endedAt }` or `{ events: [...] }`). Temporary aliases:
+`http://127.0.0.1:17834/v1/health` and `POST /v1/speaker-events`. This route is
+the cloud buffer when Assistant is offline, and a pull path for a later
+Assistant build.
 
 `POST /api/extension/v1/speaker-events`
 
@@ -67,7 +72,10 @@ Saves a meeting-transcript note (unless `create_note=false`), runs the existing 
 
 See `apps/ozer-extension/README.md`. The Mac app should expose:
 
-- `GET http://127.0.0.1:17834/v1/health`
-- `POST http://127.0.0.1:17834/v1/speaker-events`
+- `GET http://127.0.0.1:18791/v1/health`
+- `POST http://127.0.0.1:18791/v1/meet/speaker-stamps`
+
+Temporary aliases for older local builds: `GET http://127.0.0.1:17834/v1/health`
+and `POST http://127.0.0.1:17834/v1/speaker-events`.
 
 Native messaging host `so.ozer.assistant` is documented as a later alternative. The extension does not tap WebRTC audio or run ASR.

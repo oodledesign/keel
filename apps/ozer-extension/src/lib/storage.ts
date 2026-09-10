@@ -3,8 +3,22 @@ import {
   DEFAULT_OZER_ORIGIN,
   type ExtensionWorkspace,
   OZER_ASSISTANT_DEFAULT_ORIGIN,
+  OZER_ASSISTANT_LEGACY_ORIGIN,
   type PendingCapture,
 } from './protocol';
+
+const LEGACY_ASSISTANT_DEFAULTS = new Set([
+  OZER_ASSISTANT_LEGACY_ORIGIN,
+  'http://localhost:17834',
+]);
+
+function resolveAssistantOrigin(stored?: string | null): string {
+  const origin = stored?.trim().replace(/\/+$/, '') ?? '';
+  if (!origin || LEGACY_ASSISTANT_DEFAULTS.has(origin)) {
+    return OZER_ASSISTANT_DEFAULT_ORIGIN;
+  }
+  return origin;
+}
 
 export type ExtensionSettings = {
   meetBridgeEnabled: boolean;
@@ -38,14 +52,24 @@ export async function loadSettings(): Promise<ExtensionSettings> {
   if (!area) return { ...DEFAULT_SETTINGS };
   const result = await area.get(SETTINGS_KEY);
   const stored = result[SETTINGS_KEY] as Partial<ExtensionSettings> | undefined;
-  return { ...DEFAULT_SETTINGS, ...stored };
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    assistantOrigin: resolveAssistantOrigin(stored?.assistantOrigin),
+  };
 }
 
 export async function saveSettings(
   patch: Partial<ExtensionSettings>,
 ): Promise<ExtensionSettings> {
   const current = await loadSettings();
-  const next = { ...current, ...patch };
+  const next = {
+    ...current,
+    ...patch,
+    assistantOrigin: resolveAssistantOrigin(
+      patch.assistantOrigin ?? current.assistantOrigin,
+    ),
+  };
   const area = chromeStorage();
   if (area) {
     await area.set({ [SETTINGS_KEY]: next });

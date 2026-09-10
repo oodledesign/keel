@@ -195,7 +195,7 @@ chrome.runtime.onMessage.addListener(
             settings.assistantOrigin,
           );
           assistantOnline = delivered || assistantOnline;
-          if (settings.token) {
+          if (!delivered && settings.token) {
             await postOzerSpeakerEvents(
               settings.token,
               {

@@ -68,7 +68,7 @@ Class names change. We prefer `aria-*` and `data-*`. We never scrape cookies or 
 
 Live stamps into the **current** transcript need the Mac app. Hypothesis confirmed: a localhost HTTP receiver is the thinnest path (native messaging host `so.ozer.assistant` is a later alternative; not required for v1).
 
-Default origin: `http://127.0.0.1:17834`
+Canonical origin (keel-assistant): `http://127.0.0.1:18791`
 
 ```http
 GET /v1/health
@@ -76,24 +76,26 @@ GET /v1/health
 ```
 
 ```http
-POST /v1/speaker-events
+POST /v1/meet/speaker-stamps
+Content-Type: application/json
+
+{ "name": "Ada Lovelace", "startedAt": "2026-09-10T10:02:00.000Z", "endedAt": "2026-09-10T10:04:00.000Z" }
+```
+
+A batch is also accepted:
+
+```http
+POST /v1/meet/speaker-stamps
 Content-Type: application/json
 
 {
-  "sessionId": "abc-defg-hij",
-  "meetUrl": "https://meet.google.com/abc-defg-hij",
-  "meetCode": "abc-defg-hij",
   "events": [
-    {
-      "name": "Ada Lovelace",
-      "startedAt": "2026-09-10T10:02:00.000Z",
-      "endedAt": "2026-09-10T10:04:00.000Z",
-      "source": "active_speaker",
-      "confidence": "high"
-    }
+    { "name": "Ada Lovelace", "startedAt": "…", "endedAt": "…" }
   ]
 }
 ```
+
+Temporary aliases for older local builds (`http://127.0.0.1:17834`): `GET /v1/health` and `POST /v1/speaker-events` (richer `{ sessionId, events }` envelope).
 
 If Assistant is down, the extension POSTs the same events to `https://app.ozer.so/api/extension/v1/speaker-events` (keel buffer). Assistant can later `GET /api/extension/v1/speaker-events?session_id=…`.
 
@@ -101,4 +103,4 @@ Companion routes and connect page live in this repo: `apps/web/app/api/extension
 
 ## Permissions
 
-`storage`, `activeTab`, `scripting`, `contextMenus`, `identity`, plus host access for Meet, `app.ozer.so`, and `127.0.0.1:17834`. Capture on arbitrary pages uses `activeTab` after a user gesture — not `<all_urls>`.
+`storage`, `activeTab`, `scripting`, `contextMenus`, `identity`, plus host access for Meet, `app.ozer.so`, and `127.0.0.1:18791` (plus temporary `17834` aliases). Capture on arbitrary pages uses `activeTab` after a user gesture — not `<all_urls>`.
