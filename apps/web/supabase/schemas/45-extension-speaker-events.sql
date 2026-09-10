@@ -63,3 +63,5 @@ create policy extension_speaker_events_delete
     user_id = (select auth.uid())
     or public.has_role_on_account(account_id)
   );
+
+notify pgrst, 'reload schema';

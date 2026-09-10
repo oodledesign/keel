@@ -21,7 +21,6 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    user_id: auth.user_id,
     account_id: auth.account_id,
     workspaces: workspaces
       .filter((workspace) => workspace.slug)

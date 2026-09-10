@@ -36,10 +36,7 @@
     "http://127.0.0.1:17834/*",
     "http://localhost:17834/*"
   ],
-  "optional_host_permissions": [
-    "http://localhost:3000/*",
-    "https://*.ozer.so/*"
-  ],
+  "optional_host_permissions": ["https://*.ozer.so/*"],
   "content_scripts": [
     {
       "matches": ["https://meet.google.com/*"],

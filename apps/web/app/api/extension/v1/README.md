@@ -6,7 +6,7 @@ Connect tokens are created at `/connect/chrome-extension` (Chrome identity redir
 
 ## Status
 
-`GET /api/extension/v1/status` → `{ ok, user_id, account_id, workspaces }`
+`GET /api/extension/v1/status` → `{ ok, account_id, workspaces }`
 
 ## Capture
 

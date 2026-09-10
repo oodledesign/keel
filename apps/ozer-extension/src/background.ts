@@ -11,6 +11,7 @@ import {
 } from './lib/ozer-api';
 import type { ExtensionSpeakerEvent, PendingCapture } from './lib/protocol';
 import {
+  type ExtensionSettings,
   clearToken,
   isKeelToken,
   loadPendingCapture,
@@ -33,7 +34,7 @@ type RuntimeMessage =
   | { type: 'connect-code'; code: string; state: string }
   | { type: 'save-token'; token: string }
   | { type: 'disconnect' }
-  | { type: 'save-settings'; patch: Record<string, unknown> }
+  | { type: 'save-settings'; patch: Partial<ExtensionSettings> }
   | {
       type: 'capture';
       payload: PendingCapture & { email?: string; phone?: string };

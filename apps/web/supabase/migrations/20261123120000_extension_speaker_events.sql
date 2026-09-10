@@ -30,6 +30,7 @@ COMMENT ON TABLE public.extension_speaker_events IS
 
 ALTER TABLE public.extension_speaker_events ENABLE ROW LEVEL SECURITY;
 
+REVOKE ALL ON public.extension_speaker_events FROM authenticated, service_role;
 GRANT SELECT, INSERT, DELETE
   ON public.extension_speaker_events
   TO authenticated, service_role;

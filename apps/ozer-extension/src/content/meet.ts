@@ -71,7 +71,10 @@ function tick() {
   ensureSession(observation.meetCode);
   lastObservationName = observation.name;
   const closed = tracker.observe(observation, new Date().toISOString());
-  if (closed) pending.push(closed);
+  if (closed) {
+    pending.push(closed);
+    if (pending.length > 200) pending.splice(0, pending.length - 200);
+  }
 
   void chrome.runtime.sendMessage(
     {
