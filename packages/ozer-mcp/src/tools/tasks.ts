@@ -4,7 +4,22 @@ import { z } from 'zod';
 
 import { createTaskForUser } from '@kit/tasks/create-task';
 
-import { assertSupabaseOk, pickDefined, toolJson } from './shared';
+import { loadLinkedNames, uniqueIds } from './lookup';
+import {
+  type McpWorkspace,
+  assertSupabaseOk,
+  loadUserWorkspaces,
+  pickDefined,
+  toolJson,
+} from './shared';
+import {
+  buildTaskListHint,
+  ilikeContains,
+  listTasksSchema,
+  resolveTaskListStatuses,
+  shouldRestrictToRootTasks,
+  sortTaskRows,
+} from './task-list';
 import type { OzerMcpToolRegistrar } from './types';
 
 const taskStatusSchema = z.enum([
@@ -30,14 +45,6 @@ const durationMinutesUpdateSchema = z
   .nullable()
   .optional();
 
-const listTasksSchema = z.object({
-  status: taskStatusSchema.optional(),
-  project_id: z.string().uuid().optional(),
-  area_id: z.string().uuid().optional(),
-  parent_task_id: z.string().uuid().optional(),
-  limit: z.number().int().min(1).max(200).optional().default(50),
-});
-
 const getTaskSchema = z.object({
   id: z.string().uuid(),
 });
@@ -49,6 +56,7 @@ const createTaskSchema = z.object({
   due_date: z.string().trim().optional(),
   duration_minutes: durationMinutesCreateSchema,
   project_id: z.string().uuid().optional(),
+  client_id: z.string().uuid().optional(),
   area_id: z.string().uuid().optional(),
   notes: z.string().optional(),
 });
@@ -61,6 +69,7 @@ const updateTaskSchema = z.object({
   due_date: z.string().trim().nullable().optional(),
   duration_minutes: durationMinutesUpdateSchema,
   project_id: z.string().uuid().nullable().optional(),
+  client_id: z.string().uuid().nullable().optional(),
   area_id: z.string().uuid().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
@@ -80,8 +89,8 @@ const createSubtaskSchema = z.object({
 });
 
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, duration_minutes, project_id, area_id, parent_task_id';
-const TASK_DETAIL_SELECT = `${TASK_LIST_SELECT}, notes, account_id`;
+  'id, title, status, priority, due_date, duration_minutes, updated_at, project_id, client_id, area_id, account_id, parent_task_id';
+const TASK_DETAIL_SELECT = `${TASK_LIST_SELECT}, notes, user_id`;
 
 type TaskRow = {
   id: string;
@@ -90,14 +99,25 @@ type TaskRow = {
   priority: string | null;
   due_date: string | null;
   duration_minutes: number | null;
+  updated_at?: string | null;
   project_id: string | null;
+  client_id?: string | null;
   area_id: string | null;
   parent_task_id?: string | null;
   notes?: string | null;
   account_id?: string | null;
+  user_id?: string | null;
 };
 
-function mapTask(row: TaskRow) {
+type TaskListExtras = {
+  project_name?: string | null;
+  client_name?: string | null;
+  area_name?: string | null;
+  workspace_name?: string | null;
+  workspace_slug?: string | null;
+};
+
+function mapTask(row: TaskRow, extras?: TaskListExtras) {
   return {
     id: row.id,
     title: row.title,
@@ -105,20 +125,23 @@ function mapTask(row: TaskRow) {
     priority: row.priority,
     due_date: row.due_date,
     duration_minutes: row.duration_minutes,
+    updated_at: row.updated_at ?? null,
     project_id: row.project_id,
+    project_name: extras?.project_name ?? null,
+    client_id: row.client_id ?? null,
+    client_name: extras?.client_name ?? null,
     area_id: row.area_id,
+    account_id: row.account_id ?? null,
+    workspace_name: extras?.workspace_name ?? null,
+    workspace_slug: extras?.workspace_slug ?? null,
     parent_task_id: row.parent_task_id ?? null,
   };
 }
 
-function mapTaskDetail(
-  row: TaskRow,
-  extras?: { project_name?: string | null; area_name?: string | null },
-) {
+function mapTaskDetail(row: TaskRow, extras?: TaskListExtras) {
   return {
-    ...mapTask(row),
+    ...mapTask(row, extras),
     notes: row.notes ?? null,
-    project_name: extras?.project_name ?? null,
     area_name: extras?.area_name ?? null,
   };
 }
@@ -152,6 +175,7 @@ function buildTaskUpdates(input: {
   duration_minutes?: number | null;
   notes?: string | null;
   project_id?: string | null;
+  client_id?: string | null;
   area_id?: string | null;
 }) {
   return pickDefined({
@@ -161,6 +185,7 @@ function buildTaskUpdates(input: {
     due_date: input.due_date,
     duration_minutes: input.duration_minutes,
     project_id: input.project_id,
+    client_id: input.client_id,
     area_id: input.area_id,
     notes: input.notes === undefined ? undefined : input.notes?.trim() || null,
   });
@@ -203,15 +228,10 @@ async function loadChildTasks(
 async function loadAssignmentNames(
   supabase: SupabaseClient,
   row: TaskRow,
-): Promise<{ project_name: string | null; area_name: string | null }> {
-  const [projectResult, areaResult] = await Promise.all([
-    row.project_id
-      ? supabase
-          .from('projects')
-          .select('id, name, title')
-          .eq('id', row.project_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+  workspaces?: McpWorkspace[],
+): Promise<TaskListExtras> {
+  const [extras, areaResult] = await Promise.all([
+    loadLinkedNames(supabase, [row], workspaces),
     row.area_id
       ? supabase
           .from('areas')
@@ -221,12 +241,6 @@ async function loadAssignmentNames(
       : Promise.resolve({ data: null, error: null }),
   ]);
 
-  if (projectResult.error) {
-    console.warn(
-      '[ozer-mcp] could not load project name:',
-      projectResult.error.message,
-    );
-  }
   if (areaResult.error) {
     console.warn(
       '[ozer-mcp] could not load area name:',
@@ -234,16 +248,22 @@ async function loadAssignmentNames(
     );
   }
 
-  const project = projectResult.data as {
-    name?: string | null;
-    title?: string | null;
-  } | null;
-  const area = areaResult.data as { name?: string | null } | null;
-
   return {
-    project_name: project?.name?.trim() || project?.title?.trim() || null,
-    area_name: area?.name?.trim() || null,
+    ...(extras.get(row.id) ?? {}),
+    area_name:
+      (areaResult.data as { name?: string | null } | null)?.name?.trim() ||
+      null,
   };
+}
+
+async function mapNamedTask(
+  supabase: SupabaseClient,
+  row: TaskRow,
+  userId: string,
+) {
+  const workspaces = await loadUserWorkspaces(supabase, userId);
+  const extras = await loadAssignmentNames(supabase, row, workspaces);
+  return mapTaskDetail(row, extras);
 }
 
 async function applyTaskFieldUpdates(
@@ -256,25 +276,57 @@ async function applyTaskFieldUpdates(
   if (input.project_id) {
     const { data, error } = await supabase
       .from('projects')
-      .select('account_id')
+      .select('account_id, client_id')
       .eq('id', input.project_id)
       .maybeSingle();
 
     assertSupabaseOk(data, error, 'resolve project');
 
-    const accountId = (data as { account_id?: string | null } | null)
-      ?.account_id;
-    if (!accountId) {
+    const project = data as {
+      account_id?: string | null;
+      client_id?: string | null;
+    } | null;
+    if (!project?.account_id) {
       throw new Error('Project not found');
     }
 
-    updates.account_id = accountId;
+    updates.account_id = project.account_id;
+    if (input.client_id === undefined && project.client_id) {
+      updates.client_id = project.client_id;
+    }
+  }
+
+  if (input.client_id) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('account_id')
+      .eq('id', input.client_id)
+      .maybeSingle();
+
+    assertSupabaseOk(data, error, 'resolve client');
+
+    const accountId = (data as { account_id?: string | null } | null)
+      ?.account_id;
+    if (!accountId) {
+      throw new Error('Client not found');
+    }
+
+    if (
+      typeof updates.account_id === 'string' &&
+      updates.account_id !== accountId
+    ) {
+      throw new Error('Client and project must belong to the same workspace');
+    }
+
+    if (!updates.account_id) {
+      updates.account_id = accountId;
+    }
   }
 
   if (input.area_id) {
     const { data, error } = await supabase
       .from('areas')
-      .select('id')
+      .select('id, account_id')
       .eq('id', input.area_id)
       .maybeSingle();
 
@@ -282,6 +334,15 @@ async function applyTaskFieldUpdates(
 
     if (!data) {
       throw new Error('Area not found');
+    }
+
+    const areaAccountId = (data as { account_id?: string | null }).account_id;
+    if (
+      areaAccountId &&
+      typeof updates.account_id === 'string' &&
+      updates.account_id !== areaAccountId
+    ) {
+      throw new Error('Area must belong to the same workspace as the task');
     }
   }
 
@@ -318,18 +379,47 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'list_tasks',
     {
       description:
-        'List tasks for the authenticated user with optional filters. Includes duration_minutes and parent_task_id (null for root tasks; set when the row is a subtask). Use list_subtasks or get_task for children of a parent.',
+        'List current outstanding tasks across authorized Ozer workspaces (all clients and projects unless filtered). Defaults: status=outstanding (todo/in_progress/client_review), sort=updated (recently updated first), root tasks only, limit=100. Do not pass client_id or project_id unless the user names a client or project. Use list_workspaces + account_id to focus one workspace. Use offset when meta.truncated is true. Set status=all to include done/cancelled; sort=due for soonest due first (Ozer tasks page). Use list_subtasks or get_task for children.',
       inputSchema: listTasksSchema,
     },
     async (input) => {
+      const workspaces = await loadUserWorkspaces(supabase, userId);
+
+      if (
+        input.account_id &&
+        !workspaces.some((workspace) => workspace.id === input.account_id)
+      ) {
+        throw new Error('Access denied for this workspace');
+      }
+
+      const statuses = resolveTaskListStatuses(input.status);
+      const from = input.offset;
+      const to = input.offset + input.limit - 1;
+
       let query = supabase
         .from('tasks')
-        .select(TASK_LIST_SELECT)
-        .order('due_date', { ascending: true, nullsFirst: false })
-        .limit(input.limit);
+        .select(TASK_LIST_SELECT, { count: 'exact' })
+        .range(from, to);
 
-      if (input.status) {
-        query = query.eq('status', input.status);
+      if (input.sort === 'due') {
+        query = query.order('due_date', {
+          ascending: true,
+          nullsFirst: false,
+        });
+      } else {
+        query = query
+          .order('updated_at', { ascending: false, nullsFirst: false })
+          .order('due_date', { ascending: true, nullsFirst: false });
+      }
+
+      if (statuses) {
+        query = query.in('status', [...statuses]);
+      }
+      if (input.account_id) {
+        query = query.eq('account_id', input.account_id);
+      }
+      if (input.client_id) {
+        query = query.eq('client_id', input.client_id);
       }
       if (input.project_id) {
         query = query.eq('project_id', input.project_id);
@@ -339,13 +429,66 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       }
       if (input.parent_task_id) {
         query = query.eq('parent_task_id', input.parent_task_id);
+      } else if (shouldRestrictToRootTasks(input)) {
+        query = query.is('parent_task_id', null);
+      }
+      if (input.mine) {
+        query = query.eq('user_id', userId);
+      }
+      if (input.q) {
+        query = query.ilike('title', ilikeContains(input.q));
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       assertSupabaseOk(data, error, 'list tasks');
 
+      const fetched = (data ?? []) as TaskRow[];
+      const rows =
+        input.sort === 'priority' ? sortTaskRows(fetched, 'priority') : fetched;
+      const extras = await loadLinkedNames(supabase, rows, workspaces);
+      const totalCount = count ?? rows.length;
+      const truncated = input.offset + rows.length < totalCount;
+      const nextOffset = truncated ? input.offset + rows.length : null;
+      const representedWorkspaceIds = uniqueIds(
+        rows.map((row) => row.account_id),
+      );
+      const representedWorkspaces = workspaces.filter((workspace) =>
+        representedWorkspaceIds.includes(workspace.id),
+      );
+
       return toolJson({
-        tasks: (data ?? []).map((row) => mapTask(row as TaskRow)),
+        tasks: rows.map((row) => mapTask(row, extras.get(row.id))),
+        meta: {
+          total_count: totalCount,
+          returned_count: rows.length,
+          limit: input.limit,
+          offset: input.offset,
+          truncated,
+          next_offset: nextOffset,
+          status: input.status,
+          sort: input.sort,
+          workspaces:
+            representedWorkspaces.length > 0
+              ? representedWorkspaces
+              : workspaces,
+          authorized_workspaces: workspaces,
+          scoped_account_id: input.account_id ?? null,
+          filters: {
+            client_id: input.client_id ?? null,
+            project_id: input.project_id ?? null,
+            area_id: input.area_id ?? null,
+            parent_task_id: input.parent_task_id ?? null,
+            include_subtasks: input.include_subtasks,
+            mine: input.mine,
+            q: input.q ?? null,
+          },
+          hint: buildTaskListHint({
+            truncated,
+            nextOffset,
+            workspaceCount: workspaces.length,
+            scopedAccountId: input.account_id,
+          }),
+        },
       });
     },
   );
@@ -354,15 +497,16 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'get_task',
     {
       description:
-        'Fetch one task by id, including notes, duration_minutes, project/area, parent_task_id, and a subtasks summary (id, title, status, duration, due date).',
+        'Fetch one task by id, including notes, duration_minutes, project/client/workspace/area names, parent_task_id, and a subtasks summary (id, title, status, duration, due date).',
       inputSchema: getTaskSchema,
     },
     async (input) => {
       const task = await loadTaskRow(supabase, input.id);
-      const [assignment, subtasks] = await Promise.all([
-        loadAssignmentNames(supabase, task),
+      const [workspaces, subtasks] = await Promise.all([
+        loadUserWorkspaces(supabase, userId),
         loadChildTasks(supabase, task.id),
       ]);
+      const assignment = await loadAssignmentNames(supabase, task, workspaces);
 
       return toolJson({
         task: mapTaskDetail(task, assignment),
@@ -376,7 +520,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'create_task',
     {
       description:
-        'Create a root task for the authenticated user. duration_minutes is optional estimated effort (max 10080). To add children, use create_subtask with the returned id as parent_task_id.',
+        'Create a root task for the authenticated user. Optional project_id and client_id link it to a project/client (use search_projects / search_clients). duration_minutes is optional estimated effort (max 10080). To add children, use create_subtask with the returned id as parent_task_id.',
       inputSchema: createTaskSchema,
     },
     async (input) => {
@@ -387,6 +531,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         dueDate: input.due_date,
         durationMinutes: input.duration_minutes,
         projectId: input.project_id,
+        clientId: input.client_id,
         areaId: input.area_id,
         notes: input.notes,
         source: 'mcp',
@@ -397,7 +542,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       }
 
       const task = await loadTaskRow(supabase, result.id, 'load created task');
-      return toolJson({ task: mapSubtask(task) });
+      return toolJson({ task: await mapNamedTask(supabase, task, userId) });
     },
   );
 
@@ -405,12 +550,12 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'update_task',
     {
       description:
-        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, and area_id. Use create_subtask / list_subtasks / update_subtask for child tasks.',
+        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, client_id, and area_id. Use create_subtask / list_subtasks / update_subtask for child tasks.',
       inputSchema: updateTaskSchema,
     },
     async (input) => {
       const task = await applyTaskFieldUpdates(supabase, input);
-      return toolJson({ task: mapSubtask(task) });
+      return toolJson({ task: await mapNamedTask(supabase, task, userId) });
     },
   );
 
@@ -469,6 +614,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         parentTaskId: parent.id,
         parentTaskContext: {
           projectId: parent.project_id,
+          clientId: parent.client_id,
           areaId: parent.area_id,
           accountId: parent.account_id,
         },
@@ -485,7 +631,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         'load created subtask',
       );
       return toolJson({
-        subtask: mapSubtask(subtask),
+        subtask: await mapNamedTask(supabase, subtask, userId),
         parent_task_id: parent.id,
       });
     },
@@ -502,7 +648,9 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       const subtask = await applyTaskFieldUpdates(supabase, input, {
         requireSubtask: true,
       });
-      return toolJson({ subtask: mapSubtask(subtask) });
+      return toolJson({
+        subtask: await mapNamedTask(supabase, subtask, userId),
+      });
     },
   );
 };

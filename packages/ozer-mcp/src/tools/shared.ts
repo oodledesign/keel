@@ -20,24 +20,105 @@ export function assertSupabaseOk<T>(
   return data;
 }
 
+export type McpWorkspace = {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  space_type: string | null;
+  is_personal_account: boolean;
+};
+
+type MembershipWorkspaceEmbed = {
+  account_id?: string | null;
+  accounts?: McpWorkspaceRow | McpWorkspaceRow[] | null;
+  account?: McpWorkspaceRow | McpWorkspaceRow[] | null;
+};
+
+type McpWorkspaceRow = {
+  id?: string | null;
+  name?: string | null;
+  slug?: string | null;
+  space_type?: string | null;
+  is_personal_account?: boolean | null;
+};
+
+function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+function mapWorkspaceRow(
+  row: McpWorkspaceRow | null,
+  fallbackId?: string | null,
+): McpWorkspace | null {
+  const id = row?.id ?? fallbackId ?? null;
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    name: row?.name?.trim() || null,
+    slug: row?.slug?.trim() || null,
+    space_type: row?.space_type ?? null,
+    is_personal_account: Boolean(row?.is_personal_account),
+  };
+}
+
+export async function loadUserWorkspaces(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<McpWorkspace[]> {
+  const withEmbed = await supabase
+    .from('accounts_memberships')
+    .select(
+      'account_id, account:accounts(id, name, slug, space_type, is_personal_account)',
+    )
+    .eq('user_id', userId);
+
+  const memberships = withEmbed.error
+    ? await supabase
+        .from('accounts_memberships')
+        .select('account_id')
+        .eq('user_id', userId)
+    : withEmbed;
+
+  assertSupabaseOk(
+    memberships.data,
+    memberships.error,
+    'load account memberships',
+  );
+
+  const workspaces = new Map<string, McpWorkspace>();
+
+  for (const row of (memberships.data ?? []) as MembershipWorkspaceEmbed[]) {
+    const embedded = unwrapEmbed(row.account) ?? unwrapEmbed(row.accounts);
+    const workspace = mapWorkspaceRow(embedded, row.account_id);
+    if (workspace) {
+      workspaces.set(workspace.id, workspace);
+    }
+  }
+
+  return [...workspaces.values()].sort((left, right) => {
+    if (left.is_personal_account !== right.is_personal_account) {
+      return left.is_personal_account ? 1 : -1;
+    }
+
+    return (left.name ?? left.slug ?? left.id).localeCompare(
+      right.name ?? right.slug ?? right.id,
+    );
+  });
+}
+
 export async function loadUserAccountIds(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('accounts_memberships')
-    .select('account_id')
-    .eq('user_id', userId);
-
-  assertSupabaseOk(data, error, 'load account memberships');
-
-  return [
-    ...new Set(
-      (data ?? [])
-        .map((row) => (row as { account_id: string }).account_id)
-        .filter(Boolean),
-    ),
-  ];
+  const workspaces = await loadUserWorkspaces(supabase, userId);
+  return workspaces.map((workspace) => workspace.id);
 }
 
 export async function assertAccountAccess(
