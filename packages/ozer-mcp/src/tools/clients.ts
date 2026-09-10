@@ -427,7 +427,14 @@ async function loadLinkedContacts(
     .order('is_primary', { ascending: false });
 
   if (legacy.error) {
-    return [];
+    if (
+      isMissingColumnError(legacy.error) ||
+      isMissingRelationError(legacy.error)
+    ) {
+      return [];
+    }
+
+    throwSupabaseError('load client contacts', legacy.error);
   }
 
   return (
@@ -682,17 +689,18 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
         'create client',
       );
 
-      const row = created;
       if (clientType === 'individual' && payload.first_name) {
         await maybeCreatePrimaryContact(supabase, userId, {
           accountId: input.account_id,
-          clientId: row.id,
+          clientId: created.id,
           firstName: payload.first_name,
           lastName: payload.last_name,
           email: payload.email,
           phone: payload.phone,
         });
       }
+
+      const row = await loadCrmClientRow(supabase, created.id);
 
       return toolJson({
         client: mapCrmClient(
@@ -718,6 +726,10 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
         !accountId ||
         !workspaces.some((workspace) => workspace.id === accountId)
       ) {
+        throw new Error('Client not found');
+      }
+
+      if (existing.archived_at) {
         throw new Error('Client not found');
       }
 
@@ -794,7 +806,7 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
         throw new Error('Provide at least one field to update');
       }
 
-      const updated = await writeWithOptionalColumns<CrmClientRow>(
+      await writeWithOptionalColumns<CrmClientRow>(
         (row) =>
           supabase
             .from('clients')
@@ -807,8 +819,10 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
         'update client',
       );
 
+      const row = await loadCrmClientRow(supabase, input.id);
+
       return toolJson({
-        client: mapCrmClient(updated, workspaceExtras(workspaces, accountId)),
+        client: mapCrmClient(row, workspaceExtras(workspaces, accountId)),
       });
     },
   );
@@ -876,20 +890,18 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
       const clientOrg = org as ClientOrgRow;
       const accountId = clientOrg.business_id;
 
-      const { data: linkedClients, error: linkedClientsError } = await supabase
+      const linkedClients = await supabase
         .from('clients')
         .select('id')
         .eq('client_org_id', input.id);
 
-      assertSupabaseOk(
-        linkedClients,
-        linkedClientsError,
-        'load linked clients',
-      );
+      if (linkedClients.error && !isMissingColumnError(linkedClients.error)) {
+        throwSupabaseError('load linked clients', linkedClients.error);
+      }
 
-      const clientIds = (linkedClients ?? []).map(
-        (row) => (row as { id: string }).id,
-      );
+      const clientIds = linkedClients.error
+        ? []
+        : (linkedClients.data ?? []).map((row) => (row as { id: string }).id);
 
       let tasks: TaskRow[] = [];
 

@@ -637,15 +637,16 @@ export const registerContactTools: OzerMcpToolRegistrar = (server, context) => {
         'create contact',
       );
 
-      const row = created;
       if (input.client_id) {
         await linkContactToClient(supabase, {
-          contactId: row.id,
+          contactId: created.id,
           clientId: input.client_id,
           role: input.role,
           isPrimary: input.is_primary,
         });
       }
+
+      const row = await loadContactRow(supabase, created.id);
 
       const clients = linkedClient
         ? [
@@ -733,9 +734,8 @@ export const registerContactTools: OzerMcpToolRegistrar = (server, context) => {
         throw new Error('Provide at least one field to update');
       }
 
-      let row = existing;
       if (Object.keys(updates).length > 0) {
-        const updated = await writeWithOptionalColumns<ContactRow>(
+        await writeWithOptionalColumns<ContactRow>(
           (payload) =>
             supabase
               .from('contacts')
@@ -747,8 +747,6 @@ export const registerContactTools: OzerMcpToolRegistrar = (server, context) => {
           updates,
           'update contact',
         );
-
-        row = updated;
       }
 
       if (input.client_id) {
@@ -765,14 +763,17 @@ export const registerContactTools: OzerMcpToolRegistrar = (server, context) => {
           existing.client_id,
         );
         const primary = links.find((link) => link.is_primary) ?? links[0];
-        if (primary) {
-          await supabase
-            .from('client_contacts')
-            .update({ role: input.role })
-            .eq('contact_id', input.id)
-            .eq('client_id', primary.client_id);
+        if (!primary) {
+          throw new Error('No linked client to set role on');
         }
+        await supabase
+          .from('client_contacts')
+          .update({ role: input.role })
+          .eq('contact_id', input.id)
+          .eq('client_id', primary.client_id);
       }
+
+      const row = await loadContactRow(supabase, input.id);
 
       const [clients, categories] = await Promise.all([
         loadContactClientLinks(supabase, input.id, row.client_id),

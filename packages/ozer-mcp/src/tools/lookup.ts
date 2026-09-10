@@ -194,16 +194,25 @@ export async function loadSearchableClients(
     return [];
   }
 
-  const { data, error } = await supabase
+  const select =
+    'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id';
+  const active = await supabase
     .from('clients')
-    .select(
-      'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id',
-    )
-    .in('account_id', accountIds);
+    .select(select)
+    .in('account_id', accountIds)
+    .is('archived_at', null);
 
-  assertSupabaseOk(data, error, 'load clients for search');
+  const result =
+    active.error && isMissingColumnError(active.error)
+      ? await supabase
+          .from('clients')
+          .select(select)
+          .in('account_id', accountIds)
+      : active;
 
-  return ((data ?? []) as ClientNameRow[])
+  assertSupabaseOk(result.data, result.error, 'load clients for search');
+
+  return ((result.data ?? []) as ClientNameRow[])
     .map((row) => {
       const name = clientDisplayName(row);
       if (!name || !row.id) {
@@ -462,20 +471,33 @@ export async function assertClientInWorkspace(
   clientId: string,
   accountId: string,
 ): Promise<ClientNameRow> {
-  const { data, error } = await supabase
+  const select =
+    'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id, archived_at';
+  const active = await supabase
     .from('clients')
-    .select(
-      'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id',
-    )
+    .select(select)
     .eq('id', clientId)
     .eq('account_id', accountId)
+    .is('archived_at', null)
     .maybeSingle();
 
-  assertSupabaseOk(data, error, 'resolve client');
+  const result =
+    active.error && isMissingColumnError(active.error)
+      ? await supabase
+          .from('clients')
+          .select(
+            'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id',
+          )
+          .eq('id', clientId)
+          .eq('account_id', accountId)
+          .maybeSingle()
+      : active;
 
-  if (!data) {
+  assertSupabaseOk(result.data, result.error, 'resolve client');
+
+  if (!result.data) {
     throw new Error('Client not found in this workspace');
   }
 
-  return data as ClientNameRow;
+  return result.data as ClientNameRow;
 }

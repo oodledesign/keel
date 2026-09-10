@@ -147,6 +147,10 @@ async function selectMeetings(
     assertSupabaseOk(primary.data, primary.error, 'list meetings');
   }
 
+  if (filters.project_id) {
+    return [];
+  }
+
   let legacy = supabase
     .from('meeting_transcripts')
     .select(MEETING_LIST_SELECT_LEGACY)
