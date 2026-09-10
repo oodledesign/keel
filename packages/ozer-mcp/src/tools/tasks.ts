@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { createTaskForUser } from '@kit/tasks/create-task';
 
+import { loadLinkedNames, uniqueIds } from './lookup';
 import {
   type McpWorkspace,
   assertSupabaseOk,
@@ -55,6 +56,7 @@ const createTaskSchema = z.object({
   due_date: z.string().trim().optional(),
   duration_minutes: durationMinutesCreateSchema,
   project_id: z.string().uuid().optional(),
+  client_id: z.string().uuid().optional(),
   area_id: z.string().uuid().optional(),
   notes: z.string().optional(),
 });
@@ -67,6 +69,7 @@ const updateTaskSchema = z.object({
   due_date: z.string().trim().nullable().optional(),
   duration_minutes: durationMinutesUpdateSchema,
   project_id: z.string().uuid().nullable().optional(),
+  client_id: z.string().uuid().nullable().optional(),
   area_id: z.string().uuid().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
@@ -172,6 +175,7 @@ function buildTaskUpdates(input: {
   duration_minutes?: number | null;
   notes?: string | null;
   project_id?: string | null;
+  client_id?: string | null;
   area_id?: string | null;
 }) {
   return pickDefined({
@@ -181,6 +185,7 @@ function buildTaskUpdates(input: {
     due_date: input.due_date,
     duration_minutes: input.duration_minutes,
     project_id: input.project_id,
+    client_id: input.client_id,
     area_id: input.area_id,
     notes: input.notes === undefined ? undefined : input.notes?.trim() || null,
   });
@@ -220,51 +225,13 @@ async function loadChildTasks(
   return (data ?? []) as TaskRow[];
 }
 
-type ProjectNameRow = {
-  id: string;
-  name?: string | null;
-  title?: string | null;
-};
-
-type ClientNameRow = {
-  id: string;
-  display_name?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  company_name?: string | null;
-};
-
-function projectDisplayName(project: ProjectNameRow | null): string | null {
-  return project?.name?.trim() || project?.title?.trim() || null;
-}
-
-function clientDisplayName(client: ClientNameRow | null): string | null {
-  const displayName = client?.display_name?.trim();
-  if (displayName) {
-    return displayName;
-  }
-
-  const fullName = [client?.first_name, client?.last_name]
-    .filter((value): value is string => Boolean(value?.trim()))
-    .map((value) => value.trim())
-    .join(' ');
-
-  return fullName || client?.company_name?.trim() || null;
-}
-
-function uniqueIds(values: Array<string | null | undefined>): string[] {
-  return [
-    ...new Set(values.filter((value): value is string => Boolean(value))),
-  ];
-}
-
 async function loadAssignmentNames(
   supabase: SupabaseClient,
   row: TaskRow,
   workspaces?: McpWorkspace[],
 ): Promise<TaskListExtras> {
   const [extras, areaResult] = await Promise.all([
-    enrichTaskListRows(supabase, [row], workspaces),
+    loadLinkedNames(supabase, [row], workspaces),
     row.area_id
       ? supabase
           .from('areas')
@@ -289,101 +256,14 @@ async function loadAssignmentNames(
   };
 }
 
-async function enrichTaskListRows(
+async function mapNamedTask(
   supabase: SupabaseClient,
-  rows: TaskRow[],
-  workspaces: McpWorkspace[] = [],
-): Promise<Map<string, TaskListExtras>> {
-  const extras = new Map<string, TaskListExtras>();
-  const workspacesById = new Map(
-    workspaces.map((workspace) => [workspace.id, workspace]),
-  );
-
-  const projectIds = uniqueIds(rows.map((row) => row.project_id));
-  const clientIds = uniqueIds(rows.map((row) => row.client_id));
-  const accountIds = uniqueIds(
-    rows
-      .map((row) => row.account_id)
-      .filter((id) => id && !workspacesById.has(id)),
-  );
-
-  const [projectsResult, clientsResult, accountsResult] = await Promise.all([
-    projectIds.length > 0
-      ? supabase.from('projects').select('id, name, title').in('id', projectIds)
-      : Promise.resolve({ data: [], error: null }),
-    clientIds.length > 0
-      ? supabase
-          .from('clients')
-          .select('id, display_name, first_name, last_name, company_name')
-          .in('id', clientIds)
-      : Promise.resolve({ data: [], error: null }),
-    accountIds.length > 0
-      ? supabase
-          .from('accounts')
-          .select('id, name, slug, space_type, is_personal_account')
-          .in('id', accountIds)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  if (projectsResult.error) {
-    console.warn(
-      '[ozer-mcp] could not load project names:',
-      projectsResult.error.message,
-    );
-  }
-  if (clientsResult.error) {
-    console.warn(
-      '[ozer-mcp] could not load client names:',
-      clientsResult.error.message,
-    );
-  }
-  if (accountsResult.error) {
-    console.warn(
-      '[ozer-mcp] could not load workspace names:',
-      accountsResult.error.message,
-    );
-  }
-
-  const projectsById = new Map(
-    ((projectsResult.data ?? []) as ProjectNameRow[]).map((row) => [
-      row.id,
-      row,
-    ]),
-  );
-  const clientsById = new Map(
-    ((clientsResult.data ?? []) as ClientNameRow[]).map((row) => [row.id, row]),
-  );
-
-  for (const account of (accountsResult.data ?? []) as McpWorkspace[]) {
-    if (account.id) {
-      workspacesById.set(account.id, {
-        id: account.id,
-        name: account.name?.trim() || null,
-        slug: account.slug?.trim() || null,
-        space_type: account.space_type ?? null,
-        is_personal_account: Boolean(account.is_personal_account),
-      });
-    }
-  }
-
-  for (const row of rows) {
-    const workspace = row.account_id
-      ? workspacesById.get(row.account_id)
-      : undefined;
-
-    extras.set(row.id, {
-      project_name: projectDisplayName(
-        row.project_id ? (projectsById.get(row.project_id) ?? null) : null,
-      ),
-      client_name: clientDisplayName(
-        row.client_id ? (clientsById.get(row.client_id) ?? null) : null,
-      ),
-      workspace_name: workspace?.name ?? null,
-      workspace_slug: workspace?.slug ?? null,
-    });
-  }
-
-  return extras;
+  row: TaskRow,
+  userId: string,
+) {
+  const workspaces = await loadUserWorkspaces(supabase, userId);
+  const extras = await loadAssignmentNames(supabase, row, workspaces);
+  return mapTaskDetail(row, extras);
 }
 
 async function applyTaskFieldUpdates(
@@ -396,25 +276,57 @@ async function applyTaskFieldUpdates(
   if (input.project_id) {
     const { data, error } = await supabase
       .from('projects')
-      .select('account_id')
+      .select('account_id, client_id')
       .eq('id', input.project_id)
       .maybeSingle();
 
     assertSupabaseOk(data, error, 'resolve project');
 
-    const accountId = (data as { account_id?: string | null } | null)
-      ?.account_id;
-    if (!accountId) {
+    const project = data as {
+      account_id?: string | null;
+      client_id?: string | null;
+    } | null;
+    if (!project?.account_id) {
       throw new Error('Project not found');
     }
 
-    updates.account_id = accountId;
+    updates.account_id = project.account_id;
+    if (input.client_id === undefined && project.client_id) {
+      updates.client_id = project.client_id;
+    }
+  }
+
+  if (input.client_id) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('account_id')
+      .eq('id', input.client_id)
+      .maybeSingle();
+
+    assertSupabaseOk(data, error, 'resolve client');
+
+    const accountId = (data as { account_id?: string | null } | null)
+      ?.account_id;
+    if (!accountId) {
+      throw new Error('Client not found');
+    }
+
+    if (
+      typeof updates.account_id === 'string' &&
+      updates.account_id !== accountId
+    ) {
+      throw new Error('Client and project must belong to the same workspace');
+    }
+
+    if (!updates.account_id) {
+      updates.account_id = accountId;
+    }
   }
 
   if (input.area_id) {
     const { data, error } = await supabase
       .from('areas')
-      .select('id')
+      .select('id, account_id')
       .eq('id', input.area_id)
       .maybeSingle();
 
@@ -422,6 +334,15 @@ async function applyTaskFieldUpdates(
 
     if (!data) {
       throw new Error('Area not found');
+    }
+
+    const areaAccountId = (data as { account_id?: string | null }).account_id;
+    if (
+      areaAccountId &&
+      typeof updates.account_id === 'string' &&
+      updates.account_id !== areaAccountId
+    ) {
+      throw new Error('Area must belong to the same workspace as the task');
     }
   }
 
@@ -524,7 +445,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       const fetched = (data ?? []) as TaskRow[];
       const rows =
         input.sort === 'priority' ? sortTaskRows(fetched, 'priority') : fetched;
-      const extras = await enrichTaskListRows(supabase, rows, workspaces);
+      const extras = await loadLinkedNames(supabase, rows, workspaces);
       const totalCount = count ?? rows.length;
       const truncated = input.offset + rows.length < totalCount;
       const nextOffset = truncated ? input.offset + rows.length : null;
@@ -599,7 +520,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'create_task',
     {
       description:
-        'Create a root task for the authenticated user. duration_minutes is optional estimated effort (max 10080). To add children, use create_subtask with the returned id as parent_task_id.',
+        'Create a root task for the authenticated user. Optional project_id and client_id link it to a project/client (use search_projects / search_clients). duration_minutes is optional estimated effort (max 10080). To add children, use create_subtask with the returned id as parent_task_id.',
       inputSchema: createTaskSchema,
     },
     async (input) => {
@@ -610,6 +531,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         dueDate: input.due_date,
         durationMinutes: input.duration_minutes,
         projectId: input.project_id,
+        clientId: input.client_id,
         areaId: input.area_id,
         notes: input.notes,
         source: 'mcp',
@@ -620,7 +542,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       }
 
       const task = await loadTaskRow(supabase, result.id, 'load created task');
-      return toolJson({ task: mapSubtask(task) });
+      return toolJson({ task: await mapNamedTask(supabase, task, userId) });
     },
   );
 
@@ -628,12 +550,12 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'update_task',
     {
       description:
-        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, and area_id. Use create_subtask / list_subtasks / update_subtask for child tasks.',
+        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, client_id, and area_id. Use create_subtask / list_subtasks / update_subtask for child tasks.',
       inputSchema: updateTaskSchema,
     },
     async (input) => {
       const task = await applyTaskFieldUpdates(supabase, input);
-      return toolJson({ task: mapSubtask(task) });
+      return toolJson({ task: await mapNamedTask(supabase, task, userId) });
     },
   );
 
@@ -692,6 +614,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         parentTaskId: parent.id,
         parentTaskContext: {
           projectId: parent.project_id,
+          clientId: parent.client_id,
           areaId: parent.area_id,
           accountId: parent.account_id,
         },
@@ -708,7 +631,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         'load created subtask',
       );
       return toolJson({
-        subtask: mapSubtask(subtask),
+        subtask: await mapNamedTask(supabase, subtask, userId),
         parent_task_id: parent.id,
       });
     },
@@ -725,7 +648,9 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       const subtask = await applyTaskFieldUpdates(supabase, input, {
         requireSubtask: true,
       });
-      return toolJson({ subtask: mapSubtask(subtask) });
+      return toolJson({
+        subtask: await mapNamedTask(supabase, subtask, userId),
+      });
     },
   );
 };

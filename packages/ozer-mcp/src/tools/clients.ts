@@ -1,16 +1,24 @@
 import { z } from 'zod';
 
+import { filterNamedByQuery, loadSearchableClients } from './lookup';
 import {
   OPEN_TASK_STATUSES,
   assertClientOrgAccess,
   assertSupabaseOk,
   dealDisplayName,
+  loadUserWorkspaces,
   toolJson,
 } from './shared';
 import type { OzerMcpToolRegistrar } from './types';
 
 const getClientSchema = z.object({
   id: z.string().uuid(),
+});
+
+const searchClientsSchema = z.object({
+  q: z.string().trim().min(1).max(200).describe('CRM client name search.'),
+  account_id: z.string().uuid().optional(),
+  limit: z.number().int().min(1).max(50).optional().default(20),
 });
 
 type ClientOrgRow = {
@@ -78,6 +86,52 @@ function mapDeal(row: PipelineDealRow, clientOrgId: string) {
 
 export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
   const { supabase, userId } = context;
+
+  server.registerTool(
+    'search_clients',
+    {
+      description:
+        'Fuzzy-search CRM clients (not portal client_orgs) by name across authorized workspaces. Returns id, name, and workspace. Use this when the user names a client before create_task, create_project, or extract_tasks. Do not search just to list current tasks.',
+      inputSchema: searchClientsSchema,
+    },
+    async (input) => {
+      const workspaces = await loadUserWorkspaces(supabase, userId);
+      const accountIds = input.account_id
+        ? workspaces.some((workspace) => workspace.id === input.account_id)
+          ? [input.account_id]
+          : []
+        : workspaces.map((workspace) => workspace.id);
+
+      if (accountIds.length === 0) {
+        return toolJson({ clients: [] });
+      }
+
+      const matches = filterNamedByQuery(
+        await loadSearchableClients(supabase, accountIds),
+        input.q,
+        input.limit,
+      );
+      const workspacesById = new Map(
+        workspaces.map((workspace) => [workspace.id, workspace]),
+      );
+
+      return toolJson({
+        clients: matches.map((match) => {
+          const workspace = match.account_id
+            ? workspacesById.get(match.account_id)
+            : undefined;
+
+          return {
+            id: match.id,
+            name: match.name,
+            account_id: match.account_id,
+            workspace_name: workspace?.name ?? null,
+            workspace_slug: workspace?.slug ?? null,
+          };
+        }),
+      });
+    },
+  );
 
   server.registerTool(
     'list_clients',
@@ -175,22 +229,16 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
       let deals: PipelineDealRow[] = [];
 
       if (accountId) {
-        const dealsQuery = supabase
+        const { data: dealRows, error: dealsError } = await supabase
           .from('pipeline_deals')
           .select(
-            'id, name, contact_name, company_name, stage, value, next_action_date',
+            'id, name, contact_name, company_name, stage, value, next_action_date, client_org_id',
           )
-          .eq('account_id', accountId);
+          .eq('account_id', accountId)
+          .eq('client_org_id', input.id);
 
-        const { data: dealRows, error: dealsError } = await dealsQuery;
         assertSupabaseOk(dealRows, dealsError, 'load client pipeline deals');
-
-        deals = ((dealRows ?? []) as PipelineDealRow[]).filter((deal) => {
-          if (deal.client_org_id) {
-            return deal.client_org_id === input.id;
-          }
-          return true;
-        });
+        deals = (dealRows ?? []) as PipelineDealRow[];
       }
 
       return toolJson({

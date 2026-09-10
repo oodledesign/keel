@@ -53,11 +53,14 @@ JSON-RPC notifications such as `notifications/initialized` correctly return
 **202 Accepted** with an empty body. `initialize`, `tools/list`, and `tools/call`
 return **200** JSON.
 
+MCP tools never delete rows.
+
 ## Workspace tools
 
-| Tool              | Purpose                                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------------------- |
-| `list_workspaces` | List team and personal accounts the OAuth user belongs to. Use `account_id` to scope other tools. |
+| Tool              | Purpose                                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `list_workspaces` | List team and personal accounts the OAuth user belongs to. Use `account_id` to scope other tools.   |
+| `today_digest`    | Overdue + due today + recently updated outstanding root tasks, with client/project/workspace names. |
 
 OAuth is user-level (not bound to one workspace). `list_tasks` defaults to outstanding work across all authorized workspaces.
 
@@ -67,15 +70,47 @@ OAuth is user-level (not bound to one workspace). `list_tasks` defaults to outst
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `list_tasks`     | List current outstanding tasks across authorized workspaces (all clients/projects unless filtered). Defaults: `status=outstanding`, `sort=updated`, root tasks only, `limit=100`. Returns names plus `meta` (`total_count`, `truncated`). |
 | `get_task`       | Fetch one task by id with notes, project/client/workspace/area names, and a subtasks summary.                                                                                                                                             |
-| `create_task`    | Create a root task. Optional `duration_minutes` is estimated effort. Use `create_subtask` for children.                                                                                                                                   |
-| `update_task`    | Patch a task (root or subtask): title, status, priority, due date, duration, notes, `project_id`, `area_id`.                                                                                                                              |
+| `create_task`    | Create a root task. Optional `project_id`, `client_id`, `duration_minutes`. Use `search_*` when the user names a client/project.                                                                                                          |
+| `update_task`    | Patch a task: title, status, priority, due date, duration, notes, `project_id`, `client_id`, `area_id`.                                                                                                                                   |
 | `list_subtasks`  | List children of a parent task (`tasks.parent_task_id`).                                                                                                                                                                                  |
-| `create_subtask` | Create a child under a root parent. Inherits project/area. Optional duration, status, priority, due date, notes.                                                                                                                          |
+| `create_subtask` | Create a child under a root parent. Inherits project/client/area.                                                                                                                                                                         |
 | `update_subtask` | Patch a subtask with the same fields as `update_task`.                                                                                                                                                                                    |
+| `extract_tasks`  | Parse a chat dump or bullets into proposed tasks (`mode=dry_run`, default) or create them (`mode=commit`). Links client/project on explicit ids or high-confidence name matches.                                                          |
 
 Subtasks are the same `tasks` rows as the web app: `parent_task_id` points at the root parent. Nesting a subtask under another subtask is rejected.
 
 `list_tasks` does not apply an implicit client or project filter. Pass `account_id` from `list_workspaces`, or `client_id` / `project_id`, only when the user asks to narrow the list. Use `offset` when `meta.truncated` is true.
+
+## Client and project tools
+
+| Tool              | Purpose                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `search_clients`  | Fuzzy CRM client search (id + name + workspace). Not portal `client_orgs`.         |
+| `search_projects` | Fuzzy project search (id + name + client + workspace).                             |
+| `list_clients`    | Portal client orgs via `client_members`. Prefer `search_clients` for CRM work.     |
+| `get_client`      | One portal client org with open tasks and pipeline deals.                          |
+| `list_projects`   | Projects in authorized workspaces. Optional `account_id` / `client_id` / `status`. |
+| `get_project`     | One project with outstanding tasks and names.                                      |
+| `create_project`  | Create a delivery project (`name` + `account_id`, optional client/status/dates).   |
+| `update_project`  | Patch name, status, dates, description, or client link.                            |
+
+## Notes
+
+| Tool          | Purpose                                                                            |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `create_note` | Create a note; optional links to task, CRM client, project, or meeting transcript. |
+| `update_note` | Patch title, content, or links.                                                    |
+| `get_note`    | Fetch one note by id.                                                              |
+| `list_notes`  | Recent notes; optional `account_id`, `task_id`, `client_id`, `project_id`, or `q`. |
+
+## Pipeline
+
+| Tool                   | Purpose                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| `list_pipeline_deals`  | Open deals by default (hides won/lost/completed). Optional `account_id` / `stage`.       |
+| `get_pipeline_deal`    | One deal by id.                                                                          |
+| `update_deal`          | Safe fields only: `stage`, `next_action_date`, `notes`. Does not change value or delete. |
+| `update_pipeline_deal` | Alias of `update_deal`.                                                                  |
 
 ## Testing
 
