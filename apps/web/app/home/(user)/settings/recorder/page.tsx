@@ -34,6 +34,10 @@ function PersonalRecorderSettingsPage() {
       >
         <PersonalApiTokensSection />
       </Suspense>
+      <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
+        The Ozer Chrome extension uses the same personal API tokens. Connect
+        from the extension, or paste a token on its options page.
+      </p>
       <p className="mt-4 text-sm">
         <Link
           href={pathsConfig.app.personalAccountDictationHistory}

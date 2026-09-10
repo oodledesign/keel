@@ -1,0 +1,145 @@
+:root {
+  --ozer-plum-900: #351e28;
+  --ozer-plum-950: #2a1720;
+  --ozer-coral-500: #ff5c34;
+  --ozer-cream-50: #fbf6ec;
+  --ozer-text-muted: #b7a4ac;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-width: 360px;
+  background: var(--ozer-plum-900);
+  color: var(--ozer-cream-50);
+  font: 400 14px/1.45 ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  padding: 16px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+p,
+label,
+.muted {
+  color: var(--ozer-text-muted);
+}
+
+.muted {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+
+.card {
+  border: 1px solid rgba(251, 246, 236, 0.1);
+  background: var(--ozer-plum-950);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  margin-bottom: 10px;
+  border: 1px solid rgba(251, 246, 236, 0.14);
+  background: #351e28;
+  color: var(--ozer-cream-50);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+button,
+.button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: 600 13px/1.2 inherit;
+  cursor: pointer;
+  background: var(--ozer-coral-500);
+  color: #fff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button.secondary,
+.button.secondary {
+  background: transparent;
+  color: var(--ozer-cream-50);
+  border: 1px solid rgba(251, 246, 236, 0.2);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ozer-text-muted);
+}
+
+.dot.ok {
+  background: #7dce82;
+}
+
+.dot.warn {
+  background: #e6b84d;
+}
+
+.dot.bad {
+  background: var(--ozer-coral-500);
+}
+
+.error {
+  color: #ffb4a2;
+  font-size: 13px;
+}
+
+.ok-text {
+  color: #c8e6c9;
+  font-size: 13px;
+}

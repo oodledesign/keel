@@ -1,0 +1,14 @@
+#ozer-meet-bridge-chip {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2147483646;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #2a1720;
+  color: #fbf6ec;
+  font: 500 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 8px 24px rgba(42, 23, 32, 0.28);
+  pointer-events: none;
+}

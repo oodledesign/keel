@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ozer</title>
+    <link rel="stylesheet" href="shared.css" />
+  </head>
+  <body>
+    <h1>Ozer</h1>
+    <p class="muted">Capture to your workspace. Meet speaker names stay separate when Meet shows them.</p>
+
+    <div class="card">
+      <div id="signed-in" class="status"></div>
+      <div id="assistant" class="status"></div>
+      <div id="meet" class="status"></div>
+      <div class="row">
+        <button id="connect" type="button">Connect workspace</button>
+        <button id="disconnect" class="secondary" type="button">Disconnect</button>
+        <a class="button secondary" href="options.html">Options</a>
+      </div>
+    </div>
+
+    <div class="card" id="meet-helpers">
+      <label for="meet-link">Meet helpers</label>
+      <input id="meet-link" readonly />
+      <div class="row">
+        <button id="copy-link" class="secondary" type="button">Copy meeting link</button>
+        <button id="open-ozer" class="secondary" type="button">Open in Ozer</button>
+      </div>
+      <p class="muted" id="recording-nudge">Assistant recording status shows above. This extension does not tap Meet audio.</p>
+    </div>
+
+    <div class="card">
+      <label for="kind">Capture to Ozer</label>
+      <select id="kind">
+        <option value="task">Task</option>
+        <option value="note">Note</option>
+        <option value="contact">Contact stub</option>
+      </select>
+      <label for="title">Title / name</label>
+      <input id="title" />
+      <label for="body">Details</label>
+      <textarea id="body"></textarea>
+      <label for="email">Email (contact only)</label>
+      <input id="email" type="email" />
+      <div class="row">
+        <button id="save" type="button">Save to Ozer</button>
+        <button id="extract" class="secondary" type="button">Extract tasks</button>
+      </div>
+      <p id="message" class="muted"></p>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Capture to Ozer</title>
+    <link rel="stylesheet" href="shared.css" />
+  </head>
+  <body>
+    <h1>Capture to Ozer</h1>
+    <p class="muted" id="signed-in"></p>
+    <label for="kind">Save as</label>
+    <select id="kind">
+      <option value="task">Task</option>
+      <option value="note">Note</option>
+      <option value="contact">Contact stub</option>
+    </select>
+    <label for="title">Title / name</label>
+    <input id="title" />
+    <label for="body">Details</label>
+    <textarea id="body"></textarea>
+    <div class="row">
+      <button id="save" type="button">Save</button>
+    </div>
+    <p id="message" class="muted"></p>
+    <script src="capture.js"></script>
+  </body>
+</html>
