@@ -22,6 +22,7 @@ export const LISTING_CSV_FIELDS = [
   'asking_rent',
   'asking_rent_to',
   'asking_price',
+  'asking_price_qualifier',
   'rent_frequency',
   'summary',
   'description',
@@ -56,6 +57,10 @@ export const LISTING_CSV_FIELD_OPTIONS: Array<{
   { value: 'asking_rent', label: 'Rent / asking rent from' },
   { value: 'asking_rent_to', label: 'Rent to' },
   { value: 'asking_price', label: 'Sale price' },
+  {
+    value: 'asking_price_qualifier',
+    label: 'Sale price qualifier (OIEO / OIRO / Guide Price)',
+  },
   { value: 'rent_frequency', label: 'Rent metric' },
   { value: 'summary', label: 'Summary' },
   { value: 'description', label: 'Terms / description' },
@@ -141,6 +146,12 @@ export function heuristicListingMapping(
   assignExact('asking_rent', 'rent from');
   assignExact('asking_rent_to', 'rent to');
   assignExact('asking_price', 'price (sortable)', 'price');
+  assignExact(
+    'asking_price_qualifier',
+    'asking price qualifier',
+    'sale price qualifier',
+    'price qualifier',
+  );
   assignExact('rent_frequency', 'rent metric');
   assignExact('tenure', 'lease type', 'sale type');
   assignExact('sector', 'property type');

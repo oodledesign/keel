@@ -33,6 +33,7 @@ import { Switch } from '@kit/ui/switch';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import pathsConfig from '~/config/paths.config';
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
   ENQUIRY_SOURCES,
   ENQUIRY_SOURCE_LABELS,
@@ -250,9 +251,11 @@ export function ListingOverviewSection({
         <SummaryCard
           label="Asking price"
           value={
-            listing.hidePriceFromMarketing
-              ? 'On application'
-              : formatMoney(listing.askingPricePence)
+            formatAskingPrice({
+              askingPricePence: listing.askingPricePence,
+              askingPriceQualifier: listing.askingPriceQualifier,
+              hidePriceFromMarketing: listing.hidePriceFromMarketing,
+            }) ?? '—'
           }
         />
         <SummaryCard

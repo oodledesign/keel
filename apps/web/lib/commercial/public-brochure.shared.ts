@@ -1,4 +1,6 @@
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
+  type AskingPriceQualifier,
   DISPOSAL_TYPE_LABELS,
   type DisposalType,
   disposalIncludesForSale,
@@ -52,6 +54,7 @@ export type BrochureListing = {
   askingRentPence: number | null;
   askingRentToPence: number | null;
   askingPricePence: number | null;
+  askingPriceQualifier?: AskingPriceQualifier | string | null;
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
   hidePriceFromMarketing: boolean;
@@ -141,8 +144,13 @@ export function formatBrochureRent(listing: BrochureListing): string | null {
 
 export function formatBrochurePrice(listing: BrochureListing): string | null {
   if (!disposalIncludesForSale(listing.disposalType)) return null;
-  if (listing.hidePriceFromMarketing) return 'POA';
-  return formatBrochureMoney(listing.askingPricePence) ?? 'POA';
+  return (
+    formatAskingPrice({
+      askingPricePence: listing.askingPricePence,
+      askingPriceQualifier: listing.askingPriceQualifier,
+      hidePriceFromMarketing: listing.hidePriceFromMarketing,
+    }) ?? 'POA'
+  );
 }
 
 export function formatBrochureSize(listing: BrochureListing): string | null {

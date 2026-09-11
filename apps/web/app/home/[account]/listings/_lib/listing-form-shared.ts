@@ -1,8 +1,10 @@
 import {
+  type AskingPriceQualifier,
   type DisposalType,
   type ListingLetType,
   type ListingStatus,
   disposalIncludesToLet,
+  normalizeAskingPriceQualifier,
 } from '~/lib/commercial/commercial-constants';
 
 import type { CreateListingInput } from './schema/listings.schema';
@@ -26,6 +28,7 @@ export const listingEmptyForm = {
   askingRent: '',
   askingRentTo: '',
   askingPrice: '',
+  askingPriceQualifier: 'none' as AskingPriceQualifier,
   rentFrequency: 'per_annum',
   hideRentFromMarketing: false,
   hidePriceFromMarketing: false,
@@ -95,6 +98,9 @@ export function listingToFormState(
       listing.askingPricePence != null
         ? String(listing.askingPricePence / 100)
         : '',
+    askingPriceQualifier: normalizeAskingPriceQualifier(
+      listing.askingPriceQualifier,
+    ),
     rentFrequency: listing.rentFrequency ?? 'per_annum',
     hideRentFromMarketing: listing.hideRentFromMarketing,
     hidePriceFromMarketing: listing.hidePriceFromMarketing,
@@ -180,6 +186,9 @@ export function formStateToListingPayload(
     askingPricePence: form.askingPrice
       ? Math.round(parseFloat(form.askingPrice) * 100)
       : null,
+    askingPriceQualifier: normalizeAskingPriceQualifier(
+      form.askingPriceQualifier,
+    ),
     rentFrequency: form.rentFrequency || null,
     hideRentFromMarketing: form.hideRentFromMarketing,
     hidePriceFromMarketing: form.hidePriceFromMarketing,

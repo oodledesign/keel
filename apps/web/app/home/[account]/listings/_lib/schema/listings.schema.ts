@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  ASKING_PRICE_QUALIFIERS,
   BREEAM_RATINGS,
   DISPOSAL_TYPES,
   LISTING_CONTROLLED_BY,
@@ -74,6 +75,7 @@ export const CreateListingSchema = z.object({
   askingRentPence: z.number().int().min(0).optional().nullable(),
   askingRentToPence: z.number().int().min(0).optional().nullable(),
   askingPricePence: z.number().int().min(0).optional().nullable(),
+  askingPriceQualifier: z.enum(ASKING_PRICE_QUALIFIERS).optional(),
   rentFrequency: z.string().optional().nullable(),
   hideRentFromMarketing: z.boolean().optional(),
   hidePriceFromMarketing: z.boolean().optional(),

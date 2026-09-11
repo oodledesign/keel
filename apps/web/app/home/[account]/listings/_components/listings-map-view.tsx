@@ -16,11 +16,12 @@ import MapboxMap, {
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
-import { formatListingRent } from '~/lib/commercial/listing-money';
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
 } from '~/lib/commercial/commercial-constants';
+import { formatListingRent } from '~/lib/commercial/listing-money';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
@@ -34,15 +35,6 @@ const UK_DEFAULT = {
   latitude: 52.5,
   zoom: 5.5,
 } as const;
-
-function formatMoney(pence: number | null) {
-  if (pence == null) return null;
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(pence / 100);
-}
 
 function formatSize(listing: CommercialListing) {
   if (listing.sizeMinSqft == null && listing.sizeMaxSqft == null) return null;
@@ -133,7 +125,11 @@ function moneyLabel(listing: CommercialListing) {
     listing.askingRentToPence,
     listing.rentFrequency,
   );
-  const price = formatMoney(listing.askingPricePence);
+  const price = formatAskingPrice({
+    askingPricePence: listing.askingPricePence,
+    askingPriceQualifier: listing.askingPriceQualifier,
+    hidePriceFromMarketing: listing.hidePriceFromMarketing,
+  });
   const parts: string[] = [];
   if (rent) parts.push(rent);
   if (price) parts.push(price);
