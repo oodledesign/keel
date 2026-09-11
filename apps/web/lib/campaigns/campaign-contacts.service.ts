@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { composeCampaignContactName } from './campaign-contact-csv';
+import { enrichCampaignContacts } from './campaign-contact-display';
 import type {
   CampaignContactCategory,
   CampaignWorkspaceContact,
@@ -46,6 +47,8 @@ function mapContact(
     industry: (row.industry as string | null) ?? null,
     createdAt: String(row.created_at ?? ''),
     categoryIds,
+    lists: [],
+    subscriberStatus: 'none',
   };
 }
 
@@ -107,23 +110,7 @@ class CampaignContactsService {
     const contacts = ((data ?? []) as Array<Record<string, unknown>>).map(
       (row) => mapContact(row),
     );
-    if (contacts.length === 0) return [];
-
-    const assignments = await this.listAssignments(
-      accountId,
-      contacts.map((contact) => contact.id),
-    );
-    const byContact = new Map<string, string[]>();
-    for (const row of assignments) {
-      const current = byContact.get(row.contactId) ?? [];
-      current.push(row.categoryId);
-      byContact.set(row.contactId, current);
-    }
-
-    return contacts.map((contact) => ({
-      ...contact,
-      categoryIds: byContact.get(contact.id) ?? [],
-    }));
+    return this.attachContactMeta(accountId, contacts);
   }
 
   async getContact(
@@ -138,11 +125,10 @@ class CampaignContactsService {
 
     if (error) throw new Error(error.message);
     if (!data) return null;
-    const assignments = await this.listAssignments(accountId, [contactId]);
-    return mapContact(
-      data as Record<string, unknown>,
-      assignments.map((row) => row.categoryId),
-    );
+    const [contact] = await this.attachContactMeta(accountId, [
+      mapContact(data as Record<string, unknown>),
+    ]);
+    return contact ?? null;
   }
 
   async upsertByEmail(input: {
@@ -536,6 +522,101 @@ class CampaignContactsService {
     return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
       contactId: String(row.contact_id),
       categoryId: String(row.category_id),
+    }));
+  }
+
+  private async attachContactMeta(
+    accountId: string,
+    contacts: CampaignWorkspaceContact[],
+  ): Promise<CampaignWorkspaceContact[]> {
+    if (contacts.length === 0) return contacts;
+
+    const contactIds = contacts.map((contact) => contact.id);
+    const emails = [
+      ...new Set(
+        contacts
+          .map((contact) => contact.email?.trim().toLowerCase())
+          .filter((email): email is string => Boolean(email)),
+      ),
+    ];
+
+    const [assignments, memberships, preferences] = await Promise.all([
+      this.listAssignments(accountId, contactIds),
+      this.listListMemberships(accountId, contactIds),
+      this.listSubscriberPreferences(accountId, emails),
+    ]);
+
+    const categoryByContact = new Map<string, string[]>();
+    for (const row of assignments) {
+      const current = categoryByContact.get(row.contactId) ?? [];
+      current.push(row.categoryId);
+      categoryByContact.set(row.contactId, current);
+    }
+
+    return enrichCampaignContacts(contacts, {
+      categoryByContact,
+      memberships,
+      preferences,
+    });
+  }
+
+  private async listListMemberships(
+    accountId: string,
+    contactIds: string[],
+  ): Promise<Array<{ contactId: string; listId: string; listName: string }>> {
+    if (contactIds.length === 0) return [];
+
+    const { data, error } = await fromTable(
+      this.client,
+      'campaign_audience_list_members',
+    )
+      .select('contact_id, list_id, campaign_audience_lists ( id, name )')
+      .eq('account_id', accountId)
+      .in('contact_id', contactIds);
+
+    if (error) throw new Error(error.message);
+
+    return ((data ?? []) as Array<Record<string, unknown>>)
+      .map((row) => {
+        const list = (
+          Array.isArray(row.campaign_audience_lists)
+            ? row.campaign_audience_lists[0]
+            : row.campaign_audience_lists
+        ) as Record<string, unknown> | null;
+        const listName = String(list?.name ?? '').trim();
+        if (!listName) return null;
+        return {
+          contactId: String(row.contact_id),
+          listId: String(row.list_id),
+          listName,
+        };
+      })
+      .filter(
+        (row): row is { contactId: string; listId: string; listName: string } =>
+          row !== null,
+      );
+  }
+
+  private async listSubscriberPreferences(
+    accountId: string,
+    emails: string[],
+  ): Promise<Array<{ email: string; marketingStatus: unknown }>> {
+    if (emails.length === 0) return [];
+
+    const { data, error } = await fromTable(
+      this.client,
+      'workspace_mailing_preferences',
+    )
+      .select('email, marketing_status')
+      .eq('account_id', accountId)
+      .eq('purpose', 'workspace_mailing_list')
+      .in('email', emails);
+
+    if (error) throw new Error(error.message);
+
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      email: String(row.email ?? ''),
+      marketingStatus: row.marketing_status,
     }));
   }
 
