@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  applyItemStatus,
-  itemsStatusKey,
-  mergePendingStatuses,
-} from './project-board-status';
+import { applyItemStatus, mergePendingStatuses } from './project-board-status';
 
 describe('applyItemStatus', () => {
   it('updates only the matching item and leaves others untouched', () => {
@@ -47,24 +43,11 @@ describe('mergePendingStatuses', () => {
     const items = [{ id: 'a', status: 'pending' }];
     expect(mergePendingStatuses(items, new Map())).toBe(items);
   });
-});
 
-describe('itemsStatusKey', () => {
-  it('changes only when an id or status changes', () => {
-    const a = [
-      { id: 'a', status: 'pending' },
-      { id: 'b', status: 'in_progress' },
-    ];
-    const same = [
-      { id: 'a', status: 'pending' },
-      { id: 'b', status: 'in_progress' },
-    ];
-    const moved = [
-      { id: 'a', status: 'completed' },
-      { id: 'b', status: 'in_progress' },
-    ];
-
-    expect(itemsStatusKey(a)).toBe(itemsStatusKey(same));
-    expect(itemsStatusKey(a)).not.toBe(itemsStatusKey(moved));
+  it('applies a pending slug even when it is an empty string', () => {
+    const items = [{ id: 'a', status: 'pending' }];
+    expect(mergePendingStatuses(items, new Map([['a', '']]))).toEqual([
+      { id: 'a', status: '' },
+    ]);
   });
 });

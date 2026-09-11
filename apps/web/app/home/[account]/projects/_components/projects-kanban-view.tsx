@@ -119,7 +119,11 @@ export function ProjectsKanbanView({
   const [overColumn, setOverColumn] = useState<BoardStatus | null>(null);
   const [, startTransition] = useTransition();
   const pendingMovesRef = useRef(new Map<string, string>());
+  const moveSeqRef = useRef(0);
+  const inFlightSeqRef = useRef(new Map<string, number>());
 
+  // Keep in-flight drops when the parent list re-renders with stale statuses
+  // (new array identity, filter refetch). Pending slugs win until save settles.
   useEffect(() => {
     setLocalItems(mergePendingStatuses(items, pendingMovesRef.current));
   }, [items]);
@@ -155,6 +159,7 @@ export function ProjectsKanbanView({
     itemId: string,
     status: string,
     previousStatus: string,
+    seq: number,
   ) => {
     if (itemId.startsWith('shared:')) {
       return;
@@ -162,12 +167,20 @@ export function ProjectsKanbanView({
     startTransition(async () => {
       try {
         await updateJob({ accountId, jobId: itemId, status });
-        pendingMovesRef.current.delete(itemId);
+        if (inFlightSeqRef.current.get(itemId) === seq) {
+          pendingMovesRef.current.delete(itemId);
+          inFlightSeqRef.current.delete(itemId);
+        }
         toast.success('Status updated');
       } catch (err) {
-        pendingMovesRef.current.delete(itemId);
-        setLocalItems((prev) => applyItemStatus(prev, itemId, previousStatus));
-        onJobStatusChange?.(itemId, previousStatus);
+        if (inFlightSeqRef.current.get(itemId) === seq) {
+          pendingMovesRef.current.delete(itemId);
+          inFlightSeqRef.current.delete(itemId);
+          setLocalItems((prev) =>
+            applyItemStatus(prev, itemId, previousStatus),
+          );
+          onJobStatusChange?.(itemId, previousStatus);
+        }
         toast.error(getErrorMessage(err));
       }
     });
@@ -235,10 +248,12 @@ export function ProjectsKanbanView({
     if (currentColumn === nextStatus) return;
 
     const previousStatus = item.status;
+    const seq = ++moveSeqRef.current;
     pendingMovesRef.current.set(itemId, nextStatus);
+    inFlightSeqRef.current.set(itemId, seq);
     setLocalItems((prev) => applyItemStatus(prev, itemId, nextStatus));
     onJobStatusChange?.(itemId, nextStatus);
-    persistStatus(itemId, nextStatus, previousStatus);
+    persistStatus(itemId, nextStatus, previousStatus, seq);
   };
 
   const handleDragCancel = () => {

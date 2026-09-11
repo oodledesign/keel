@@ -287,33 +287,6 @@ export function JobsPageContent({
     router.replace(nextPath, { scroll: false });
   }, [canEditJobs, openCreateDialog, pathname, router, searchParams]);
 
-  if (!canViewJobs) {
-    return (
-      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8">
-        <p className="text-center text-[var(--workspace-shell-text-muted)]">
-          You don&apos;t have access to {copy.accessDenied} in this account.
-        </p>
-      </div>
-    );
-  }
-
-  const viewTabs: {
-    key: PageView;
-    label: string;
-    icon: typeof LayoutGrid;
-  }[] = isSimple
-    ? [
-        { key: 'table', label: 'Main table', icon: LayoutGrid },
-        { key: 'kanban', label: 'Board', icon: Columns3 },
-        { key: 'timeline', label: 'Timeline', icon: GanttChart },
-      ]
-    : [
-        { key: 'table', label: 'Main table', icon: LayoutGrid },
-        { key: 'kanban', label: 'Board', icon: Columns3 },
-        { key: 'timeline', label: 'Timeline', icon: GanttChart },
-        { key: 'schedule', label: 'Schedule', icon: CalendarDays },
-      ];
-
   const visibleCampaigns = useMemo(
     () =>
       isSimple || typeFilter === 'delivery'
@@ -366,6 +339,33 @@ export function JobsPageContent({
     visibleCampaigns,
     visibleJobs,
   ]);
+
+  if (!canViewJobs) {
+    return (
+      <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8">
+        <p className="text-center text-[var(--workspace-shell-text-muted)]">
+          You don&apos;t have access to {copy.accessDenied} in this account.
+        </p>
+      </div>
+    );
+  }
+
+  const viewTabs: {
+    key: PageView;
+    label: string;
+    icon: typeof LayoutGrid;
+  }[] = isSimple
+    ? [
+        { key: 'table', label: 'Main table', icon: LayoutGrid },
+        { key: 'kanban', label: 'Board', icon: Columns3 },
+        { key: 'timeline', label: 'Timeline', icon: GanttChart },
+      ]
+    : [
+        { key: 'table', label: 'Main table', icon: LayoutGrid },
+        { key: 'kanban', label: 'Board', icon: Columns3 },
+        { key: 'timeline', label: 'Timeline', icon: GanttChart },
+        { key: 'schedule', label: 'Schedule', icon: CalendarDays },
+      ];
 
   const typeFilters: { key: ProjectTypeFilter; label: string }[] = [
     { key: 'all', label: 'All' },

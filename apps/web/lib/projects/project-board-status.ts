@@ -1,6 +1,8 @@
 /**
  * In-place board helpers shared by the projects kanban and its parent list.
- * Status is a string so fixed columns and custom workspace slugs (#105) both work.
+ * Status is a string so fixed columns and custom workspace slugs both work
+ * in client state. Persist still goes through `updateJob`; until #105 lands,
+ * `UpdateJobSchema.status` only accepts the five built-in values.
  */
 
 export function applyItemStatus<T extends { id: string; status: string }>(
@@ -8,9 +10,7 @@ export function applyItemStatus<T extends { id: string; status: string }>(
   itemId: string,
   status: string,
 ): T[] {
-  return items.map((item) =>
-    item.id === itemId ? { ...item, status } : item,
-  );
+  return items.map((item) => (item.id === itemId ? { ...item, status } : item));
 }
 
 export function mergePendingStatuses<T extends { id: string; status: string }>(
@@ -22,13 +22,10 @@ export function mergePendingStatuses<T extends { id: string; status: string }>(
   }
 
   return items.map((item) => {
-    const status = pending.get(item.id);
-    return status ? { ...item, status } : item;
-  });
-}
+    if (!pending.has(item.id)) {
+      return item;
+    }
 
-export function itemsStatusKey(
-  items: ReadonlyArray<{ id: string; status: string }>,
-): string {
-  return items.map((item) => `${item.id}:${item.status}`).join('|');
+    return { ...item, status: pending.get(item.id) as string };
+  });
 }
