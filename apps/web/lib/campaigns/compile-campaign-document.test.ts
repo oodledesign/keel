@@ -8,7 +8,10 @@ import {
   reorderCampaignBlocks,
   resolveCampaignDocument,
 } from './campaign-document';
-import { compileCampaignDocument } from './compile-campaign-document';
+import {
+  compileCampaignDocument,
+  resolveCampaignSendHtml,
+} from './compile-campaign-document';
 import { applyCampaignMergeFields } from './merge-fields';
 
 const brand = {
@@ -238,6 +241,9 @@ describe('compileCampaignDocument', () => {
     );
     expect(dark).toContain('https://cdn.example.com/on-dark.png');
     expect(dark).not.toContain('https://cdn.example.com/on-light.png');
+    expect(dark).toMatch(
+      /<td[^>]*width="100%"[^>]*bgcolor="#0D2344"[^>]*>[\s\S]*?<img src="https:\/\/cdn\.example\.com\/on-dark\.png"/,
+    );
 
     const missing = compileCampaignDocument(
       {
@@ -280,7 +286,7 @@ describe('compileCampaignDocument', () => {
     expect(html).not.toMatch(/logo[\s\S]*background:#0D2344/);
   });
 
-  it('emits light color-scheme, filled surfaces, nested logos, and a hairline divider', () => {
+  it('emits light color-scheme, full-width logo plates, a durable divider, and Spark-safe type', () => {
     const branded = {
       ...brand,
       logo_on_light_url: 'https://cdn.example.com/on-light.png',
@@ -291,10 +297,13 @@ describe('compileCampaignDocument', () => {
       {
         version: 1,
         blocks: [
+          { id: 'logo-primary', type: 'logo', logoVariant: 'primary' },
           { id: 'logo-light', type: 'logo', logoVariant: 'on_light' },
           { id: 'logo-dark', type: 'logo', logoVariant: 'on_dark' },
           { id: 'div', type: 'divider' },
           { id: 't1', type: 'text', html: '<p>Hello</p>' },
+          { id: 'h1', type: 'heading', text: 'Title', level: 1 },
+          { id: 'h2', type: 'heading', text: 'Section', level: 2 },
         ],
       },
       branded,
@@ -303,6 +312,7 @@ describe('compileCampaignDocument', () => {
     expect(html).toContain('name="color-scheme"');
     expect(html).toContain('name="supported-color-schemes"');
     expect(html).toContain('content="light only"');
+    expect(html).toContain('class="ozer-email-body"');
     expect(html).toContain('bgcolor="#f4f1ec"');
     expect(html).toContain('background-color:#f4f1ec');
     expect(html).toContain('bgcolor="#FFFFFF"');
@@ -310,17 +320,67 @@ describe('compileCampaignDocument', () => {
     expect(html).toContain('bgcolor="#0D2344"');
     expect(html).toContain('background-color:#0D2344');
     expect(html).toContain('color:#333333');
+    expect(html).toContain('-webkit-text-size-adjust:100%');
+    expect(html).toContain('text-size-adjust:100%');
+    expect(html).toContain('class="ozer-email-content"');
+    expect(html).toContain('class="ozer-email-copy"');
+    expect(html).toContain('font-size:20px');
+    expect(html).toContain('font-size:32px');
+    expect(html).toContain('font-size:26px');
+    expect(html).toContain('font-size: 22px !important');
+    expect(html).toContain('td.ozer-email-content');
+    expect(html).toMatch(
+      /<td[^>]*width="100%"[^>]*bgcolor="#0D2344"[^>]*>[\s\S]*?<img src="https:\/\/cdn\.example\.com\/logo\.png"/,
+    );
+    expect(html).toMatch(
+      /<td[^>]*width="100%"[^>]*bgcolor="#FFFFFF"[^>]*>[\s\S]*?<img src="https:\/\/cdn\.example\.com\/on-light\.png"/,
+    );
     expect(html).toMatch(
       /<td[^>]*bgcolor="#FFFFFF"[^>]*>\s*<img src="https:\/\/cdn\.example\.com\/on-light\.png"/,
     );
     expect(html).toMatch(
       /<td[^>]*bgcolor="#0D2344"[^>]*>\s*<img src="https:\/\/cdn\.example\.com\/on-dark\.png"/,
     );
-    expect(html).toContain('height="1"');
-    expect(html).toContain('bgcolor="#B8AFA6"');
-    expect(html).toContain('background-color:#B8AFA6');
+    expect(html).toContain('height="4"');
+    expect(html).toContain('height:4px');
+    expect(html).toContain('bgcolor="#6B6560"');
+    expect(html).toContain('background-color:#6B6560');
+    expect(html).toContain('border-top:2px solid #6B6560');
+    expect(html).toContain('mso-line-height-rule:exactly');
+    expect(html).not.toContain('height="1"');
     expect(html).not.toContain('border-top:1px solid');
+    expect(html).not.toContain('#B8AFA6');
     expect(html).not.toContain('#e4ddd6');
+  });
+
+  it('recompiles from body_document on send instead of stale html_body', () => {
+    const document = {
+      version: 1 as const,
+      blocks: [
+        { id: 't1', type: 'text' as const, html: '<p>Fresh compile</p>' },
+        { id: 'div', type: 'divider' as const },
+      ],
+    };
+    const stale =
+      '<p>Old draft without dark-mode hardening</p><!-- ozer-campaign-document:v1 -->';
+
+    const html = resolveCampaignSendHtml(document, brand, stale);
+
+    expect(html).toContain('Fresh compile');
+    expect(html).toContain('ozer-campaign-document:v1');
+    expect(html).toContain('font-size:20px');
+    expect(html).toContain('bgcolor="#6B6560"');
+    expect(html).toContain('-webkit-text-size-adjust:100%');
+    expect(html).not.toContain('Old draft without dark-mode hardening');
+  });
+
+  it('falls back to stored html_body when the document is empty', () => {
+    const stale = '<p>Legacy HTML campaign</p>';
+
+    expect(resolveCampaignSendHtml(null, brand, stale)).toBe(stale);
+    expect(
+      resolveCampaignSendHtml({ version: 1, blocks: [] }, brand, stale),
+    ).toBe(stale);
   });
 
   it('lets an explicit logo background win over variant pairing', () => {

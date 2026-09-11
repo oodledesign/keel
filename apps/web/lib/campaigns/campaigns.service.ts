@@ -780,9 +780,11 @@ class CampaignsService {
             recipientEmail: recipient.email,
           }),
         });
+        // Recompile from body_document so stale stored html_body cannot ship.
         const html = renderCampaignHtml({
           brand,
           htmlBody: campaign.htmlBody,
+          document: campaign.bodyDocument,
           merge,
           unsubscribeToken: token,
         });
@@ -992,6 +994,7 @@ class CampaignsService {
         const html = renderCampaignHtml({
           brand,
           htmlBody: campaign.htmlBody,
+          document: campaign.bodyDocument,
           merge,
           unsubscribeToken: CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
         });
