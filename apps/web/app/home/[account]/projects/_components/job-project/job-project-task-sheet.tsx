@@ -34,11 +34,13 @@ import {
 } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
+import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
 import {
@@ -346,7 +348,12 @@ export function JobProjectTaskSheet({
                   onValueChange={setStatus}
                   disabled={!canEditJobs || pending}
                 >
-                  <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
+                  <SelectTrigger
+                    className={cn(
+                      'mt-1 border-0 font-medium shadow-none',
+                      taskStatusBadgeClass(status),
+                    )}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

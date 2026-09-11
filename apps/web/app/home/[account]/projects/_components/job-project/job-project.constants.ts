@@ -1,6 +1,9 @@
 import { ozerColors } from '~/lib/ozer/design-tokens';
+import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
 
 import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
+
+export { TASK_STATUS_LABELS } from '~/lib/projects/task-status-badge';
 
 export const DEFAULT_DELIVERY_PHASES = [
   { name: 'Discovery', colour: ozerColors.info },
@@ -18,38 +21,18 @@ export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
 };
 
 export const PHASE_STATUS_STYLES: Record<PhaseStatus, string> = {
-  not_started:
-    'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]',
-  in_progress:
-    'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-  blocked: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  complete: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-};
-
-export const TASK_STATUS_LABELS: Record<string, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  client_review: 'Client review',
-  done: 'Done',
-  cancelled: 'Cancelled',
-};
-
-export const TASK_STATUS_STYLES: Record<string, string> = {
-  todo: 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
-  in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
-  client_review:
-    'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-  done: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-  cancelled:
-    'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
+  not_started: taskStatusBadgeClass('not_started'),
+  in_progress: taskStatusBadgeClass('in_progress'),
+  blocked: taskStatusBadgeClass('blocked'),
+  complete: taskStatusBadgeClass('complete'),
 };
 
 /** Column accent colours for the Progress (status) kanban. */
 export const PROGRESS_STATUS_COLOURS: Record<string, string> = {
-  todo: '#64748B',
-  in_progress: ozerColors.info,
-  client_review: ozerColors.accent,
-  done: '#16A34A',
+  todo: ozerColors.gold,
+  in_progress: ozerColors.accent,
+  client_review: ozerColors.info,
+  done: '#059669',
 };
 
 export const PRIORITY_DOT: Record<string, string> = {

@@ -30,9 +30,12 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
+import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
+import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
@@ -171,7 +174,12 @@ function TaskRow({
             value={task.status}
             onValueChange={(status) => patch({ status })}
           >
-            <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text)]">
+            <SelectTrigger
+              className={cn(
+                'h-8 border-0 text-xs font-medium shadow-none',
+                taskStatusBadgeClass(task.status),
+              )}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -183,9 +191,10 @@ function TaskRow({
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-            {TASK_STATUS_LABELS[task.status] ?? task.status}
-          </span>
+          <TaskStatusBadge
+            status={task.status}
+            className="text-[11px] normal-case tracking-normal"
+          />
         )}
       </div>
 

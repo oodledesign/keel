@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useMemo, useRef, useTransition } from 'react';
 
 import Link from 'next/link';
 
 import { toast } from '@kit/ui/sonner';
 
+import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -91,13 +92,11 @@ function PhaseBar({
   );
 
   const dragRef = useRef<'start' | 'end' | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
   const onPointerDown = (edge: 'start' | 'end') => (e: React.PointerEvent) => {
     if (!canEditJobs) return;
     e.preventDefault();
     dragRef.current = edge;
-    setIsDragging(true);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
@@ -121,7 +120,6 @@ function PhaseBar({
 
   const onPointerUp = () => {
     dragRef.current = null;
-    setIsDragging(false);
   };
 
   const colour = phase.colour ?? '#FF5C34';
@@ -197,7 +195,6 @@ function PhaseBar({
         }}
       >
         {phase.name}
-        {isDragging ? '' : ` · ${PHASE_STATUS_LABELS[phase.status]}`}
       </Link>
     </div>
   );
@@ -321,6 +318,11 @@ export function JobProjectTimeline({
                 <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
                   {phase.progressPct}% complete
                 </p>
+                <TaskStatusBadge
+                  status={phase.status}
+                  label={PHASE_STATUS_LABELS[phase.status]}
+                  className="mt-1 normal-case tracking-normal"
+                />
               </div>
               <div className="relative rounded-lg bg-[var(--workspace-control-surface)]/30 px-1">
                 <PhaseBar

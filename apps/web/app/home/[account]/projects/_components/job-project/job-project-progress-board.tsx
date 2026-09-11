@@ -4,7 +4,9 @@ import { useCallback, useMemo, useState, useTransition } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
+import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
+import { taskStatusSelectClass } from '~/lib/projects/task-status-badge';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
@@ -18,7 +20,6 @@ import {
   PRIORITY_DOT,
   PROGRESS_STATUS_COLOURS,
   TASK_STATUS_LABELS,
-  TASK_STATUS_STYLES,
   UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
@@ -151,9 +152,7 @@ function ProgressTaskCard({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {canEditJobs ? (
               <select
-                className={`rounded-full border-0 px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase outline-none ${
-                  TASK_STATUS_STYLES[status] ?? TASK_STATUS_STYLES.todo
-                }`}
+                className={taskStatusSelectClass(status)}
                 value={status}
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
@@ -169,13 +168,7 @@ function ProgressTaskCard({
                 ))}
               </select>
             ) : (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                  TASK_STATUS_STYLES[status] ?? TASK_STATUS_STYLES.todo
-                }`}
-              >
-                {TASK_STATUS_LABELS[status] ?? status.replace('_', ' ')}
-              </span>
+              <TaskStatusBadge status={status} />
             )}
             {task.due_date ? (
               <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">

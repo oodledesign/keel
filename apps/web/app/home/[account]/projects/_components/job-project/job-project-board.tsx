@@ -41,6 +41,7 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
 
@@ -62,7 +63,6 @@ import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
   PRIORITY_DOT,
-  TASK_STATUS_STYLES,
   UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
@@ -155,13 +155,7 @@ function TaskCard({
             {task.title}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                TASK_STATUS_STYLES[task.status] ?? TASK_STATUS_STYLES.todo
-              }`}
-            >
-              {task.status.replace('_', ' ')}
-            </span>
+            <TaskStatusBadge status={task.status} />
             {task.due_date && (
               <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
                 {formatShortDate(task.due_date)}
