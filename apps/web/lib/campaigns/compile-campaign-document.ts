@@ -336,6 +336,9 @@ function renderDividerRow(
   block: Extract<CampaignBlock, { type: 'divider' }>,
   brand: CampaignBrand,
 ) {
+  // Gmail often collapses a 1px hairline; Spark already shows grey.
+  // 4px filled cell + 2px border-top is intentional belt-and-braces
+  // (clients that honour both may show ~6px, which is acceptable).
   return styledRow(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td height="${DIVIDER_HEIGHT_PX}"${fillBgcolor(DIVIDER_COLOR)} style="${fillCss(DIVIDER_COLOR)}font-size:0;line-height:0;height:${DIVIDER_HEIGHT_PX}px;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>`,
     {

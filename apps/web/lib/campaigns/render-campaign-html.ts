@@ -26,7 +26,7 @@ function applyUnsubscribeUrl(html: string, unsubscribeUrl: string): string {
     </p>`;
 }
 
-function escapeHtml(value: string) {
+function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -41,21 +41,18 @@ export function renderCampaignHtml(input: {
   merge: CampaignMergeValues;
   unsubscribeToken: string;
 }): string {
-  const htmlBody = resolveCampaignSendHtml(
+  const resolvedHtml = resolveCampaignSendHtml(
     input.document,
     input.brand,
     input.htmlBody,
   );
-  const merged = applyCampaignMergeFields(htmlBody, input.merge);
+  const merged = applyCampaignMergeFields(resolvedHtml, input.merge);
   const unsubscribeUrl = buildWorkspaceMailingListUnsubscribeUrl(
     input.unsubscribeToken,
   );
   const withUnsubscribe = applyUnsubscribeUrl(merged, unsubscribeUrl);
 
-  if (
-    isCampaignDocumentHtml(htmlBody) ||
-    Boolean(input.document?.blocks.length)
-  ) {
+  if (isCampaignDocumentHtml(resolvedHtml)) {
     return withUnsubscribe;
   }
 
