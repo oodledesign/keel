@@ -75,6 +75,42 @@ const WORKSPACE_EMAIL_CAMPAIGNS = 'workspace_email_campaigns';
 const WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS =
   'workspace_email_campaign_recipients';
 
+/** Hub / picker rows — skip compiled html_body (often large). */
+const CAMPAIGN_LIST_COLUMNS = [
+  'id',
+  'account_id',
+  'created_by',
+  'name',
+  'subject',
+  'subject_b',
+  'ab_enabled',
+  'ab_split_percent',
+  'preview_text',
+  'body_document',
+  'from_name',
+  'from_email',
+  'reply_to',
+  'audience_type',
+  'audience_config',
+  'status',
+  'scheduled_at',
+  'scheduled_timezone',
+  'sent_at',
+  'audience_count',
+  'sent_count',
+  'failed_count',
+  'skipped_count',
+  'unsubscribed_count',
+  'delivered_count',
+  'open_count',
+  'click_count',
+  'bounce_count',
+  'complaint_count',
+  'last_error',
+  'created_at',
+  'updated_at',
+].join(',');
+
 function fromTable(client: SupabaseClient, table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (client as any).from(table);
@@ -130,7 +166,8 @@ class CampaignsService {
       this.client,
       WORKSPACE_EMAIL_CAMPAIGNS,
     )
-      .select('*')
+      // Omit html_body — hub cards use a CSS miniature + body_document hints.
+      .select(CAMPAIGN_LIST_COLUMNS)
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
 

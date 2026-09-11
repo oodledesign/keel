@@ -2,8 +2,6 @@ import Link from 'next/link';
 
 import { Mail } from 'lucide-react';
 
-import { Badge } from '@kit/ui/badge';
-
 import pathsConfig from '~/config/paths.config';
 import type { CampaignBrand } from '~/lib/campaigns/campaign-document';
 import type { EmailCampaign } from '~/lib/campaigns/campaign.types';
@@ -14,16 +12,9 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { CampaignListThumbnail } from './campaign-list-thumbnail';
+import { CampaignStatusBadge } from './campaign-status-badge';
 import { CreateCampaignButton } from './create-campaign-button';
-
-const STATUS_LABEL: Record<EmailCampaign['status'], string> = {
-  draft: 'Draft',
-  scheduled: 'Scheduled',
-  sending: 'Sending',
-  sent: 'Sent',
-  cancelled: 'Cancelled',
-  failed: 'Failed',
-};
 
 export function CampaignsList({
   accountId,
@@ -71,27 +62,38 @@ export function CampaignsList({
               <Link
                 key={campaign.id}
                 href={href}
+                data-test="campaign-card"
                 className={`${workspacePanelCard} block px-4 py-4 transition-colors hover:bg-[var(--workspace-shell-panel-hover)]`}
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className={`font-semibold ${workspaceText}`}>
-                      {campaign.name}
-                    </h3>
-                    <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-                      {campaign.subject || 'No subject yet'}
-                    </p>
+                <div className="flex items-start gap-3">
+                  <CampaignListThumbnail
+                    brand={brand}
+                    subject={campaign.subject}
+                    bodyDocument={campaign.bodyDocument}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className={`font-semibold ${workspaceText}`}>
+                          {campaign.name}
+                        </h3>
+                        <p
+                          className={`mt-1 truncate text-sm ${workspaceTextMuted}`}
+                        >
+                          {campaign.subject || 'No subject yet'}
+                        </p>
+                      </div>
+                      <CampaignStatusBadge status={campaign.status} />
+                    </div>
+                    {campaign.status === 'sent' ||
+                    campaign.status === 'sending' ? (
+                      <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
+                        {campaign.sentCount} sent · {campaign.failedCount}{' '}
+                        failed · {campaign.unsubscribedCount} unsubscribed
+                      </p>
+                    ) : null}
                   </div>
-                  <Badge variant="outline">
-                    {STATUS_LABEL[campaign.status]}
-                  </Badge>
                 </div>
-                {campaign.status === 'sent' || campaign.status === 'sending' ? (
-                  <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
-                    {campaign.sentCount} sent · {campaign.failedCount} failed ·{' '}
-                    {campaign.unsubscribedCount} unsubscribed
-                  </p>
-                ) : null}
               </Link>
             );
           })}

@@ -34,24 +34,37 @@ async function CampaignsPage({ params }: CampaignsPageProps) {
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
         <CampaignsHubNav accountSlug={accountSlug} />
-        <CampaignUsageCard
-          snapshot={data.usage}
-          accountSlug={accountSlug}
-          fromEmail={data.brand.contact_email}
-        />
-        <CampaignAudienceCard
-          subscriberCount={data.subscriberCount}
-          subscribers={data.subscribers}
-        />
-        <CampaignsList
-          accountId={workspace.account.id}
-          accountSlug={accountSlug}
-          campaigns={data.campaigns}
-          brand={data.brand}
-          workspace={campaignTemplateWorkspaceFromProfile(
-            workspace.workspaceProfile,
-          )}
-        />
+        <div
+          className="grid gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]"
+          data-test="campaigns-hub-layout"
+        >
+          <aside
+            className="min-w-0 space-y-4 lg:sticky lg:top-6"
+            data-test="campaigns-hub-summary"
+          >
+            <CampaignUsageCard
+              snapshot={data.usage}
+              accountSlug={accountSlug}
+              fromEmail={data.brand.contact_email}
+              layout="stack"
+            />
+            <CampaignAudienceCard
+              subscriberCount={data.subscriberCount}
+              subscribers={data.subscribers}
+            />
+          </aside>
+          <div className="min-w-0" data-test="campaigns-hub-list">
+            <CampaignsList
+              accountId={workspace.account.id}
+              accountSlug={accountSlug}
+              campaigns={data.campaigns}
+              brand={data.brand}
+              workspace={campaignTemplateWorkspaceFromProfile(
+                workspace.workspaceProfile,
+              )}
+            />
+          </div>
+        </div>
       </PageBody>
     </>
   );
