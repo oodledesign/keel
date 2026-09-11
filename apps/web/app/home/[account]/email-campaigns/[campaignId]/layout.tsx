@@ -35,10 +35,10 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
 
   return (
     <>
-      <div className="px-4 pt-4 lg:px-6">
+      <div className="px-4 pt-4 pb-1 lg:px-6">
         <Link
           href={campaignsHref}
-          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          className="text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-accent-text)]"
           data-test="campaign-back-to-all"
         >
           <Trans i18nKey="campaigns:backToList" />
