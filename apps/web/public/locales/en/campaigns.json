@@ -1,6 +1,7 @@
 {
   "title": "Campaigns",
   "description": "Email your mailing-list subscribers as your workspace, not Ozer.",
+  "backToList": "← All campaigns",
   "audiences": {
     "title": "Audiences",
     "description": "Named lists — logic filters or manual membership. Growth and Pro."
