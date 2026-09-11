@@ -10,6 +10,7 @@ import {
   PROJECT_ASSIGNMENTS_TABLE,
 } from '~/lib/projects/delivery-project-db';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
+import { computeTaskProgress } from '~/lib/tasks/compute-task-progress';
 
 import {
   isMissingColumnError,
@@ -40,6 +41,8 @@ type TaskRow = {
   project_id: string | null;
   status: string | null;
   due_date: string | null;
+  parent_task_id: string | null;
+  duration_minutes: number | null;
 };
 
 type AssignmentRow = {
@@ -68,8 +71,14 @@ function isTaskOpen(status: string | null | undefined): boolean {
 function jobProgressPercent(job: JobRow, tasks: TaskRow[]): number {
   const jobTasks = tasks.filter((t) => t.project_id === job.id);
   if (jobTasks.length > 0) {
-    const done = jobTasks.filter((t) => !isTaskOpen(t.status)).length;
-    return Math.round((done / jobTasks.length) * 100);
+    return computeTaskProgress(
+      jobTasks.map((task) => ({
+        id: task.id,
+        status: task.status ?? 'todo',
+        parent_task_id: task.parent_task_id,
+        duration_minutes: task.duration_minutes,
+      })),
+    ).progressPct;
   }
 
   switch (job.status) {
@@ -148,6 +157,11 @@ function mapLegacyTaskRows(rows: Array<Record<string, unknown>>): TaskRow[] {
       null,
     status: (row.status as string | null) ?? null,
     due_date: (row.due_date as string | null) ?? null,
+    parent_task_id: (row.parent_task_id as string | null) ?? null,
+    duration_minutes:
+      typeof row.duration_minutes === 'number' && row.duration_minutes > 0
+        ? Math.round(row.duration_minutes)
+        : null,
   }));
 }
 
@@ -223,8 +237,20 @@ async function loadTasksByProjectIds(
 
   let result = await db
     .from('tasks')
-    .select('id, client_id, project_id, status, due_date')
+    .select(
+      'id, client_id, project_id, status, due_date, duration_minutes, parent_task_id',
+    )
     .in('project_id', projectIds);
+
+  if (result.error && isMissingColumnError(result.error)) {
+    const message = `${result.error.message ?? ''}`.toLowerCase();
+    if (/duration_minutes|parent_task_id/.test(message)) {
+      result = await db
+        .from('tasks')
+        .select('id, client_id, project_id, status, due_date')
+        .in('project_id', projectIds);
+    }
+  }
 
   if (result.error && isMissingColumnError(result.error)) {
     result = await db
@@ -255,8 +281,20 @@ async function loadTasksByClientIds(
 ): Promise<TaskRow[]> {
   let result = await db
     .from('tasks')
-    .select('id, client_id, project_id, status, due_date')
+    .select(
+      'id, client_id, project_id, status, due_date, duration_minutes, parent_task_id',
+    )
     .in('client_id', clientIds);
+
+  if (result.error && isMissingColumnError(result.error)) {
+    const message = `${result.error.message ?? ''}`.toLowerCase();
+    if (/duration_minutes|parent_task_id/.test(message)) {
+      result = await db
+        .from('tasks')
+        .select('id, client_id, project_id, status, due_date')
+        .in('client_id', clientIds);
+    }
+  }
 
   if (result.error && isMissingColumnError(result.error)) {
     result = await db

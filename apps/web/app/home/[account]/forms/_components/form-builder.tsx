@@ -269,6 +269,7 @@ export function FormBuilder({
 
         <TabsContent value="submissions" className="mt-0">
           <FormSubmissionsList
+            accountId={form.accountId}
             accountSlug={accountSlug}
             formId={form.id}
             formName={name}

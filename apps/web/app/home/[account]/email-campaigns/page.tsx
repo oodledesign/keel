@@ -58,6 +58,7 @@ async function CampaignsPage({ params }: CampaignsPageProps) {
               accountId={workspace.account.id}
               accountSlug={accountSlug}
               campaigns={data.campaigns}
+              seriesCount={data.series.length}
               brand={data.brand}
               workspace={campaignTemplateWorkspaceFromProfile(
                 workspace.workspaceProfile,

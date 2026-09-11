@@ -1,11 +1,22 @@
 'use client';
 
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore, useTransition } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { Columns3, Download, Mail } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -17,6 +28,7 @@ import {
   DialogTitle,
 } from '@kit/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -42,10 +54,12 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { deleteWorkspaceFormSubmissionAction } from '../_lib/server/server-actions';
 import type { WorkspaceFormSubmissionRecord } from '../_lib/server/workspace-forms.service';
 import { FormSubmissionsExportDialog } from './form-submissions-export-dialog';
 
 type Props = {
+  accountId: string;
   accountSlug: string;
   formId: string;
   formName: string;
@@ -135,6 +149,7 @@ function useSubmissionColumns(formId: string, fields: WorkspaceFormField[]) {
 }
 
 export function FormSubmissionsList({
+  accountId,
   accountSlug,
   formId,
   formName,
@@ -161,9 +176,12 @@ export function FormSubmissionsList({
     formId,
     fields,
   );
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [emailFilter, setEmailFilter] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [removeId, setRemoveId] = useState<string | null>(null);
 
   const visibleSubmissions = useMemo(() => {
     if (!emailFilter) return submissions;
@@ -335,16 +353,29 @@ export function FormSubmissionsList({
                         </td>
                       ))}
                       <td className="py-3">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2"
-                          onClick={() => setOpenId(submission.id)}
-                          data-test={`open-submission-${submission.id}`}
-                        >
-                          View
-                        </Button>
+                        <div className="flex flex-wrap justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() => setOpenId(submission.id)}
+                            data-test={`open-submission-${submission.id}`}
+                          >
+                            View
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-[var(--ozer-coral-600)]"
+                            disabled={pending}
+                            onClick={() => setRemoveId(submission.id)}
+                            data-test={`remove-submission-${submission.id}`}
+                          >
+                            Remove
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -377,7 +408,81 @@ export function FormSubmissionsList({
         }}
         onOpenRelated={setOpenId}
       />
+
+      <RemoveSubmissionDialog
+        open={Boolean(removeId)}
+        pending={pending}
+        isRsvp={isRsvp}
+        onOpenChange={(open) => {
+          if (!open) setRemoveId(null);
+        }}
+        onConfirm={() => {
+          if (!removeId) return;
+          startTransition(async () => {
+            try {
+              await deleteWorkspaceFormSubmissionAction({
+                accountId,
+                accountSlug,
+                formId,
+                submissionId: removeId,
+              });
+              setRemoveId(null);
+              toast.success(isRsvp ? 'RSVP removed' : 'Submission removed');
+              router.refresh();
+            } catch (error) {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : 'Could not remove submission',
+              );
+            }
+          });
+        }}
+      />
     </section>
+  );
+}
+
+function RemoveSubmissionDialog({
+  open,
+  pending,
+  isRsvp,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  pending: boolean;
+  isRsvp: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  const noun = isRsvp ? 'RSVP' : 'submission';
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove this {noun}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This deletes the form response. Linked contacts or pipeline records
+            are not deleted. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={pending}
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+            onClick={(event) => {
+              event.preventDefault();
+              onConfirm();
+            }}
+            data-test="confirm-remove-submission"
+          >
+            {pending ? 'Removing…' : `Remove ${noun}`}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { Mail } from 'lucide-react';
+import { FolderKanban, Mail } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
 import type { CampaignBrand } from '~/lib/campaigns/campaign-document';
@@ -20,15 +20,22 @@ export function CampaignsList({
   accountId,
   accountSlug,
   campaigns,
+  seriesCount = 0,
   brand,
   workspace,
 }: {
   accountId: string;
   accountSlug: string;
   campaigns: EmailCampaign[];
+  seriesCount?: number;
   brand: CampaignBrand;
   workspace: CampaignTemplateWorkspace;
 }) {
+  const recurringHref = pathsConfig.app.accountEmailCampaignRecurring.replace(
+    '[account]',
+    accountSlug,
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -40,7 +47,25 @@ export function CampaignsList({
         />
       </div>
 
-      {campaigns.length === 0 ? (
+      {seriesCount > 0 ? (
+        <Link
+          href={recurringHref}
+          data-test="campaigns-recurring-folder"
+          className={`${workspacePanelCard} block px-4 py-4 transition-colors hover:bg-[var(--workspace-shell-panel-hover)]`}
+        >
+          <div className="flex items-start gap-3">
+            <FolderKanban className={`mt-0.5 h-5 w-5 ${workspaceTextMuted}`} />
+            <div>
+              <h3 className={`font-semibold ${workspaceText}`}>Recurring</h3>
+              <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+                {seriesCount} series · weekly drafts generated ahead
+              </p>
+            </div>
+          </div>
+        </Link>
+      ) : null}
+
+      {campaigns.length === 0 && seriesCount === 0 ? (
         <div className={`${workspacePanelCard} px-6 py-12 text-center`}>
           <Mail className={`mx-auto h-10 w-10 ${workspaceTextMuted}`} />
           <h2 className={`mt-4 text-lg font-semibold ${workspaceText}`}>

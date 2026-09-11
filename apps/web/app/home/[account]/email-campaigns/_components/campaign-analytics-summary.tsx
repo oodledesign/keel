@@ -13,20 +13,69 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+type MetricTone =
+  | 'sent'
+  | 'delivered'
+  | 'opens'
+  | 'clicks'
+  | 'bounces'
+  | 'complaints'
+  | 'unsubscribes';
+
+const METRIC_TONE: Record<MetricTone, { card: string; dot: string }> = {
+  sent: {
+    card: 'bg-[color-mix(in_srgb,var(--ozer-accent)_10%,var(--workspace-shell-panel))]',
+    dot: 'bg-[var(--ozer-accent)]',
+  },
+  delivered: {
+    card: 'bg-[color-mix(in_srgb,var(--ozer-sage-500)_12%,var(--workspace-shell-panel))]',
+    dot: 'bg-[var(--ozer-sage-500)]',
+  },
+  opens: {
+    card: 'bg-[color-mix(in_srgb,var(--ozer-info)_12%,var(--workspace-shell-panel))]',
+    dot: 'bg-[var(--ozer-info)]',
+  },
+  clicks: {
+    card: 'bg-[color-mix(in_srgb,var(--ozer-gold-500)_16%,var(--workspace-shell-panel))]',
+    dot: 'bg-[var(--ozer-gold-500)]',
+  },
+  bounces: {
+    card: 'bg-[color-mix(in_srgb,var(--ozer-coral-400)_14%,var(--workspace-shell-panel))]',
+    dot: 'bg-[var(--ozer-coral-400)]',
+  },
+  complaints: {
+    card: 'bg-[color-mix(in_srgb,var(--ozer-coral-600)_14%,var(--workspace-shell-panel))]',
+    dot: 'bg-[var(--ozer-coral-600)]',
+  },
+  unsubscribes: {
+    card: 'bg-[color-mix(in_srgb,var(--ozer-text-muted)_12%,var(--workspace-shell-panel))]',
+    dot: 'bg-[var(--ozer-text-muted)]',
+  },
+};
+
 function Card({
   label,
   value,
   hint,
+  tone,
 }: {
   label: string;
   value: string | number;
   hint?: string;
+  tone: MetricTone;
 }) {
+  const palette = METRIC_TONE[tone];
   return (
-    <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-3">
+    <div
+      className={`rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-3 ${palette.card}`}
+    >
       <p
-        className={`text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+        className={`flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
       >
+        <span
+          aria-hidden="true"
+          className={`inline-block size-1.5 rounded-full ${palette.dot}`}
+        />
         {label}
       </p>
       <p
@@ -71,36 +120,42 @@ export function CampaignAnalyticsSummary({
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        <Card label="Sent" value={rates.sent} />
+        <Card label="Sent" value={rates.sent} tone="sent" />
         <Card
           label="Delivered"
           value={rates.delivered}
           hint={growth ? formatRate(rates.deliveryRate) : undefined}
+          tone="delivered"
         />
         <Card
           label="Opens"
           value={campaign.openCount}
           hint={`${rates.uniqueOpens} unique${growth ? ` · ${formatRate(rates.openRate)}` : ''}`}
+          tone="opens"
         />
         <Card
           label="Clicks"
           value={campaign.clickCount}
           hint={`${rates.uniqueClicks} unique${growth ? ` · ${formatRate(rates.clickRate)}` : ''}`}
+          tone="clicks"
         />
         <Card
           label="Bounces"
           value={rates.bounces}
           hint={growth ? formatRate(rates.bounceRate) : undefined}
+          tone="bounces"
         />
         <Card
           label="Complaints"
           value={rates.complaints}
           hint={growth ? formatRate(rates.complaintRate) : undefined}
+          tone="complaints"
         />
         <Card
           label="Unsubscribes"
           value={rates.unsubscribes}
           hint={growth ? formatRate(rates.unsubscribeRate) : undefined}
+          tone="unsubscribes"
         />
       </div>
 

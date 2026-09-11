@@ -5,11 +5,14 @@ import { cache } from 'react';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { createWorkspaceFormsService } from '~/home/[account]/forms/_lib/server/workspace-forms.service';
 import { hasCampaignsProFeatures } from '~/lib/billing/campaign-pricing';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
 import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
 import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
+import type { CampaignLinkedFormSubmissions } from '~/lib/campaigns/campaign-form-submissions';
+import { createCampaignSeriesService } from '~/lib/campaigns/campaign-series.service';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
 import {
   loadCampaignAnalyticsBundle,
@@ -24,6 +27,7 @@ import {
   isSendingDomainVerified,
   loadAccountSendingDomain,
 } from '~/lib/sending-domains/server';
+import { isRsvpLikeWorkspaceForm } from '~/lib/workspace-forms/form-theme';
 import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
 
 export async function loadCampaignsPage(accountId: string) {
@@ -31,8 +35,10 @@ export async function loadCampaignsPage(accountId: string) {
   const admin = getSupabaseServerAdminClient();
   const service = createCampaignsService(client);
 
-  const [campaigns, subscribers, brand] = await Promise.all([
+  const seriesService = createCampaignSeriesService(client);
+  const [campaigns, series, subscribers, brand] = await Promise.all([
     service.list(accountId),
+    seriesService.list(accountId).catch(() => []),
     listWorkspaceMailingListSubscribers(admin, accountId),
     loadAccountBrandResolved(accountId),
   ]);
@@ -44,10 +50,50 @@ export async function loadCampaignsPage(accountId: string) {
 
   return {
     campaigns,
+    series,
     subscriberCount: subscribers.length,
     subscribers: subscribers.slice(0, 25),
     usage: snapshot,
     brand,
+  };
+}
+
+export async function loadCampaignsRecurringPage(accountId: string) {
+  const client = getSupabaseServerClient();
+  const seriesService = createCampaignSeriesService(client);
+  const series = await seriesService.list(accountId);
+  const instancesBySeries = await Promise.all(
+    series.map(async (row) => ({
+      series: row,
+      instances: await seriesService.listInstances(accountId, row.id),
+    })),
+  );
+  return { groups: instancesBySeries };
+}
+
+export async function loadCampaignSeriesDetail(
+  accountId: string,
+  seriesId: string,
+) {
+  const client = getSupabaseServerClient();
+  const admin = getSupabaseServerAdminClient();
+  const seriesService = createCampaignSeriesService(client);
+  const [series, instances, brand, audienceOptions, lists] = await Promise.all([
+    seriesService.get(accountId, seriesId),
+    seriesService.listInstances(accountId, seriesId),
+    loadAccountBrandResolved(accountId),
+    listAudiencePickerOptions(admin, accountId),
+    createAudienceListsService(client)
+      .list(accountId)
+      .catch(() => []),
+  ]);
+
+  return {
+    series,
+    instances,
+    brand,
+    audienceOptions,
+    lists,
   };
 }
 
@@ -99,6 +145,12 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
     loadCampaignAnalyticsBundle(admin, campaign, recipients),
   ]);
 
+  const series = campaign.seriesId
+    ? await createCampaignSeriesService(client)
+        .get(accountId, campaign.seriesId)
+        .catch(() => null)
+    : null;
+
   if (hasCampaignsProFeatures(snapshot.planTier)) {
     const peers = (await service.list(accountId)).filter(
       (row) => row.id !== campaign.id,
@@ -111,6 +163,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
 
   return {
     campaign,
+    series,
     recipients,
     subscriberCount: audienceOptions.subscriberCount,
     audienceCount,
@@ -244,3 +297,41 @@ export async function loadCampaignContactsPage(
     contacts,
   };
 }
+
+export const loadCampaignLinkedFormSubmissions = cache(
+  async function loadCampaignLinkedFormSubmissions(
+    accountId: string,
+    formId: string | null | undefined,
+  ): Promise<CampaignLinkedFormSubmissions | null> {
+    if (!formId) return null;
+
+    const client = getSupabaseServerClient();
+    const forms = createWorkspaceFormsService(client);
+    const form = await forms.getForm(accountId, formId).catch(() => null);
+    if (!form) return null;
+
+    const submissions = await forms
+      .listSubmissions(accountId, form.id)
+      .catch(() => []);
+
+    return {
+      formId: form.id,
+      formName: form.name,
+      isRsvp: isRsvpLikeWorkspaceForm({
+        name: form.name,
+        destination: form.destination,
+        eventAddress: form.eventAddress,
+        eventDate: form.eventDate,
+        eventTime: form.eventTime,
+        submitLabel: form.submitLabel,
+        fields: form.fields,
+      }),
+      submissions: submissions.map((row) => ({
+        id: row.id,
+        contactName: row.contactName,
+        contactEmail: row.contactEmail,
+        createdAt: row.createdAt,
+      })),
+    };
+  },
+);

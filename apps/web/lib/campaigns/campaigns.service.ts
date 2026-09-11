@@ -57,6 +57,12 @@ import {
   parseCampaignAudienceConfig,
   parseCampaignAudienceType,
 } from './campaign-audience';
+import {
+  type CampaignSendProgressSnapshot,
+  buildCampaignSendProgress,
+} from './campaign-send-progress';
+import { seriesInstanceMaySend } from './campaign-series-ready';
+import { generateMissingSeriesInstances } from './campaign-series.service';
 import type {
   EmailCampaign,
   EmailCampaignRecipient,
@@ -107,6 +113,9 @@ const CAMPAIGN_LIST_COLUMNS = [
   'bounce_count',
   'complaint_count',
   'last_error',
+  'series_id',
+  'occurrence_key',
+  'ready',
   'created_at',
   'updated_at',
 ].join(',');
@@ -150,6 +159,9 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     bounceCount: Number(row.bounce_count ?? 0),
     complaintCount: Number(row.complaint_count ?? 0),
     lastError: (row.last_error as string | null) ?? null,
+    seriesId: (row.series_id as string | null) ?? null,
+    occurrenceKey: (row.occurrence_key as string | null) ?? null,
+    ready: row.ready !== false,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -162,15 +174,21 @@ export function createCampaignsService(client: SupabaseClient) {
 class CampaignsService {
   constructor(private readonly client: SupabaseClient) {}
 
-  async list(accountId: string): Promise<EmailCampaign[]> {
-    const { data, error } = await fromTable(
-      this.client,
-      WORKSPACE_EMAIL_CAMPAIGNS,
-    )
+  async list(
+    accountId: string,
+    options?: { includeSeriesInstances?: boolean },
+  ): Promise<EmailCampaign[]> {
+    let query = fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
       // Omit html_body — hub cards use a CSS miniature + body_document hints.
       .select(CAMPAIGN_LIST_COLUMNS)
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
+
+    if (!options?.includeSeriesInstances) {
+      query = query.is('series_id', null);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw new Error(error.message);
     return ((data ?? []) as Array<Record<string, unknown>>).map(mapCampaign);
@@ -423,6 +441,68 @@ class CampaignsService {
     }));
   }
 
+  /**
+   * Live send progress from campaign counters + recipient-row status.
+   * Recipient rows update per email; campaign sent_count updates per batch.
+   */
+  async getSendProgress(
+    accountId: string,
+    campaignId: string,
+  ): Promise<CampaignSendProgressSnapshot> {
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
+      .select(
+        'status, audience_count, sent_count, failed_count, skipped_count, last_error',
+      )
+      .eq('account_id', accountId)
+      .eq('id', campaignId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Campaign not found');
+
+    const row = data as Record<string, unknown>;
+    const [sent, failed, skipped, pending] = await Promise.all([
+      this.countRecipientsByStatus(accountId, campaignId, 'sent'),
+      this.countRecipientsByStatus(accountId, campaignId, 'failed'),
+      this.countRecipientsByStatus(accountId, campaignId, 'skipped'),
+      this.countRecipientsByStatus(accountId, campaignId, 'pending'),
+    ]);
+    const hasRecipients = sent + failed + skipped + pending > 0;
+
+    return buildCampaignSendProgress({
+      status: row.status as EmailCampaignStatus,
+      audienceCount: Number(row.audience_count ?? 0),
+      sentCount: Number(row.sent_count ?? 0),
+      failedCount: Number(row.failed_count ?? 0),
+      skippedCount: Number(row.skipped_count ?? 0),
+      lastError: (row.last_error as string | null) ?? null,
+      recipientCounts: hasRecipients
+        ? { sent, failed, skipped, pending }
+        : null,
+    });
+  }
+
+  private async countRecipientsByStatus(
+    accountId: string,
+    campaignId: string,
+    status: EmailCampaignRecipient['status'],
+  ): Promise<number> {
+    const { count, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
+    )
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .eq('campaign_id', campaignId)
+      .eq('status', status);
+
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  }
+
   async schedule(input: {
     accountId: string;
     campaignId: string;
@@ -434,6 +514,7 @@ class CampaignsService {
     }
 
     this.assertReadyToSend(campaign);
+    // Scheduling a series instance is an explicit Ready path (same as Mark ready).
 
     const when = new Date(input.scheduledAt);
     if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
@@ -447,6 +528,7 @@ class CampaignsService {
       .update({
         status: 'scheduled',
         scheduled_at: when.toISOString(),
+        ...(campaign.seriesId ? { ready: true } : {}),
       })
       .eq('id', input.campaignId)
       .eq('account_id', input.accountId)
@@ -473,7 +555,11 @@ class CampaignsService {
       this.client,
       WORKSPACE_EMAIL_CAMPAIGNS,
     )
-      .update({ status: 'draft', scheduled_at: null })
+      .update({
+        status: 'draft',
+        ready: campaign.seriesId ? false : campaign.ready,
+        scheduled_at: campaign.seriesId ? campaign.scheduledAt : null,
+      })
       .eq('id', campaignId)
       .eq('account_id', accountId)
       .select('*')
@@ -499,6 +585,9 @@ class CampaignsService {
     const campaign = await this.get(input.accountId, input.campaignId);
     if (campaign.status !== 'draft' && campaign.status !== 'scheduled') {
       throw new Error('This campaign is not ready to send');
+    }
+    if (!seriesInstanceMaySend(campaign)) {
+      throw new Error('Mark this occurrence ready before sending');
     }
 
     this.assertReadyToSend(campaign);
@@ -1062,18 +1151,35 @@ class CampaignsService {
 export async function processDueCampaignSends(client: SupabaseClient): Promise<{
   started: number;
   continued: number;
+  generated: number;
 }> {
+  const generated = await generateMissingSeriesInstances(client);
+
   const service = createCampaignsService(client);
   let started = 0;
   let continued = 0;
 
   const { data: due } = await fromTable(client, WORKSPACE_EMAIL_CAMPAIGNS)
-    .select('id, account_id')
+    .select('id, account_id, series_id, ready')
     .eq('status', 'scheduled')
     .lte('scheduled_at', new Date().toISOString())
     .limit(10);
 
-  for (const row of (due ?? []) as Array<{ id: string; account_id: string }>) {
+  for (const row of (due ?? []) as Array<{
+    id: string;
+    account_id: string;
+    series_id: string | null;
+    ready: boolean | null;
+  }>) {
+    if (
+      !seriesInstanceMaySend({
+        seriesId: row.series_id,
+        ready: row.ready !== false,
+        status: 'scheduled',
+      })
+    ) {
+      continue;
+    }
     const { data: account } = await fromTable(client, 'accounts')
       .select('name')
       .eq('id', row.account_id)
@@ -1119,7 +1225,7 @@ export async function processDueCampaignSends(client: SupabaseClient): Promise<{
     }
   }
 
-  return { started, continued };
+  return { started, continued, generated };
 }
 
 export async function markCampaignRecipientsUnsubscribed(

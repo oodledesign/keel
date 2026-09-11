@@ -1,5 +1,9 @@
-import { Badge } from '@kit/ui/badge';
+import { cn } from '@kit/ui/utils';
 
+import {
+  campaignRecipientStatusBadgeClass,
+  campaignRecipientStatusLabel,
+} from '~/lib/campaigns/campaign-status';
 import type {
   EmailCampaign,
   EmailCampaignRecipient,
@@ -86,22 +90,46 @@ export function CampaignRecipientLog({
                     ) : null}
                   </td>
                   <td className="py-2">
-                    <Badge variant="outline">{row.status}</Badge>
-                    {row.unsubscribedAt ? (
-                      <Badge variant="secondary" className="ml-2">
-                        unsubscribed
-                      </Badge>
-                    ) : null}
-                    {row.bouncedAt ? (
-                      <Badge variant="destructive" className="ml-2">
-                        bounced
-                      </Badge>
-                    ) : null}
-                    {row.complaintAt ? (
-                      <Badge variant="destructive" className="ml-2">
-                        complaint
-                      </Badge>
-                    ) : null}
+                    <div className="flex flex-wrap gap-1.5">
+                      <span
+                        className={cn(
+                          'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+                          campaignRecipientStatusBadgeClass(row.status),
+                        )}
+                      >
+                        {campaignRecipientStatusLabel(row.status)}
+                      </span>
+                      {row.unsubscribedAt ? (
+                        <span
+                          className={cn(
+                            'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+                            campaignRecipientStatusBadgeClass('skipped'),
+                          )}
+                        >
+                          Unsubscribed
+                        </span>
+                      ) : null}
+                      {row.bouncedAt ? (
+                        <span
+                          className={cn(
+                            'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+                            campaignRecipientStatusBadgeClass('failed'),
+                          )}
+                        >
+                          Bounced
+                        </span>
+                      ) : null}
+                      {row.complaintAt ? (
+                        <span
+                          className={cn(
+                            'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+                            campaignRecipientStatusBadgeClass('failed'),
+                          )}
+                        >
+                          Complaint
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className={`py-2 ${workspaceTextMuted}`}>
                     {engagement || '—'}

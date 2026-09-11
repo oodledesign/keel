@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS,
   CAMPAIGN_STATUS_BADGE_CLASS,
   CAMPAIGN_STATUS_LABEL,
+  campaignRecipientStatusBadgeClass,
+  campaignRecipientStatusLabel,
   campaignStatusBadgeClass,
   campaignStatusLabel,
 } from './campaign-status';
@@ -43,9 +46,28 @@ describe('campaign status pills', () => {
     );
   });
 
+  it('labels recurring planner extras', () => {
+    expect(campaignStatusLabel('ready')).toBe('Ready');
+    expect(campaignStatusLabel('skipped')).toBe('Skipped');
+    expect(campaignStatusBadgeClass('ready')).toBe(
+      CAMPAIGN_STATUS_BADGE_CLASS.sent,
+    );
+  });
+
   it('covers the public label map', () => {
     expect(Object.keys(CAMPAIGN_STATUS_LABEL).sort()).toEqual(
       [...STATUSES].sort(),
     );
+  });
+
+  it('labels recipient send states with distinct pills', () => {
+    expect(campaignRecipientStatusLabel('pending')).toBe('Pending');
+    expect(campaignRecipientStatusLabel('sent')).toBe('Sent');
+    expect(campaignRecipientStatusBadgeClass('failed')).toBe(
+      CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS.failed,
+    );
+    expect(
+      new Set(Object.values(CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS)).size,
+    ).toBe(4);
   });
 });

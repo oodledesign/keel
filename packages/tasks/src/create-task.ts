@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@kit/supabase/database';
 
+import { clampDurationMinutes } from './parse-duration';
+
 const TASK_STATUSES = new Set([
   'todo',
   'in_progress',
@@ -11,17 +13,6 @@ const TASK_STATUSES = new Set([
 ] as const);
 
 const TASK_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent'] as const);
-
-const MAX_DURATION_MINUTES = 10_080;
-
-function clampDurationMinutes(value: number | null | undefined): number | null {
-  if (value == null || !Number.isFinite(value)) {
-    return null;
-  }
-
-  const rounded = Math.round(value);
-  return rounded > 0 && rounded <= MAX_DURATION_MINUTES ? rounded : null;
-}
 
 export type TaskStatus = typeof TASK_STATUSES extends Set<infer T> ? T : never;
 export type TaskPriority =
