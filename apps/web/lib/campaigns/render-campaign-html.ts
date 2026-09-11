@@ -4,7 +4,11 @@ import {
 } from '~/lib/brand/account-brand';
 import { buildWorkspaceMailingListUnsubscribeUrl } from '~/lib/workspace-forms/workspace-mailing-list';
 
-import { isCampaignDocumentHtml } from './campaign-document';
+import {
+  type CampaignDocument,
+  isCampaignDocumentHtml,
+} from './campaign-document';
+import { resolveCampaignSendHtml } from './compile-campaign-document';
 import {
   type CampaignMergeValues,
   applyCampaignMergeFields,
@@ -33,16 +37,25 @@ function escapeHtml(value: string) {
 export function renderCampaignHtml(input: {
   brand: AccountBrandResolved;
   htmlBody: string;
+  document?: CampaignDocument | null;
   merge: CampaignMergeValues;
   unsubscribeToken: string;
 }): string {
-  const merged = applyCampaignMergeFields(input.htmlBody, input.merge);
+  const htmlBody = resolveCampaignSendHtml(
+    input.document,
+    input.brand,
+    input.htmlBody,
+  );
+  const merged = applyCampaignMergeFields(htmlBody, input.merge);
   const unsubscribeUrl = buildWorkspaceMailingListUnsubscribeUrl(
     input.unsubscribeToken,
   );
   const withUnsubscribe = applyUnsubscribeUrl(merged, unsubscribeUrl);
 
-  if (isCampaignDocumentHtml(input.htmlBody)) {
+  if (
+    isCampaignDocumentHtml(htmlBody) ||
+    Boolean(input.document?.blocks.length)
+  ) {
     return withUnsubscribe;
   }
 
