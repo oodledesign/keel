@@ -210,6 +210,31 @@ describe('buildBrochureDocument', () => {
     expect(text(contact!.slots, 'branchEmail')).toBe('info@bracketts.co.uk');
   });
 
+  it('bakes the branch shopfront URL into the contact page slot', () => {
+    const doc = buildBrochureDocument(
+      brochureData({
+        branch: {
+          name: 'Tunbridge Wells',
+          address: '27/29 High Street, Tunbridge Wells, Kent, TN1 1UU',
+          phone: '01892 526111',
+          email: 'info@bracketts.co.uk',
+          shopfrontUrl: 'https://cdn.example.com/shopfront.jpg',
+        },
+      }),
+      {
+        orientation: 'landscape',
+        templateId: 'classic',
+      },
+    );
+    const contact = doc.pages.find((page) => page.layoutId === 'contact');
+    const shopfront = contact?.slots.shopfront;
+    expect(shopfront).toEqual({
+      type: 'image',
+      mediaId: null,
+      url: 'https://cdn.example.com/shopfront.jpg',
+    });
+  });
+
   it('stores key points without hyphen prefixes', () => {
     const doc = buildBrochureDocument(
       brochureData({

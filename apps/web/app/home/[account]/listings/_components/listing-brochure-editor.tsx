@@ -304,6 +304,58 @@ function PreviewPage({
     );
   }
 
+  if (page.layoutId === 'contact') {
+    const shopfront = slotImageUrl(page, 'shopfront');
+    return (
+      <div className={frameClass}>
+        <div
+          className={cn(
+            'flex h-full bg-white p-3',
+            landscape ? 'flex-row gap-3' : 'flex-col gap-2',
+          )}
+        >
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-xs font-semibold" style={{ color: primary }}>
+              {title || 'Contact'}
+            </p>
+            {slotText(page, 'branchName') ? (
+              <p className="text-[10px] font-medium text-[var(--workspace-shell-text)]">
+                {slotText(page, 'branchName')}
+              </p>
+            ) : null}
+            {slotText(page, 'branchAddress') ? (
+              <p className="text-[9px] leading-snug whitespace-pre-line text-[var(--workspace-shell-text-muted)]">
+                {slotText(page, 'branchAddress')}
+              </p>
+            ) : null}
+            {slotText(page, 'branchPhone') ? (
+              <p className="text-[9px] text-[var(--workspace-shell-text-muted)]">
+                {slotText(page, 'branchPhone')}
+              </p>
+            ) : null}
+            {slotText(page, 'branchEmail') ? (
+              <p className="text-[9px] text-[var(--workspace-shell-text-muted)]">
+                {slotText(page, 'branchEmail')}
+              </p>
+            ) : null}
+          </div>
+          {shopfront ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={shopfront}
+              alt=""
+              className={
+                landscape
+                  ? 'h-full w-[38%] rounded-sm object-cover'
+                  : 'h-28 w-full rounded-sm object-cover'
+              }
+            />
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (page.layoutId === 'map_amenities') {
     return (
       <div className={frameClass}>
@@ -404,6 +456,30 @@ function SlotEditor({
                     updateSlot(key, { type: 'text', text: e.target.value })
                   }
                 />
+              )}
+            </div>
+          );
+        }
+
+        if (slot.type === 'image' && key === 'shopfront') {
+          return (
+            <div key={key} className="grid gap-1.5">
+              <Label>Shopfront</Label>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                From workspace branch settings. Shown on the Contact page when
+                set.
+              </p>
+              {slot.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={slot.url}
+                  alt=""
+                  className="mt-1 h-24 w-full rounded-md object-cover"
+                />
+              ) : (
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  No shopfront photo on this branch.
+                </p>
               )}
             </div>
           );

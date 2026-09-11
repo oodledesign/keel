@@ -106,7 +106,12 @@ export function hydrateBrochureDocument(
       if (resolved) slots.plan = resolved;
     } else if (page.layoutId === 'contact') {
       const shopfront = data.branch?.shopfrontUrl?.trim() || null;
-      if (!hasImageUrl(slots.shopfront) && shopfront) {
+      const existing = slots.shopfront;
+      const lockedToListingMedia =
+        isImageSlot(existing) && Boolean(existing.mediaId);
+      // Branch settings are the source of truth unless the editor pinned a
+      // listing photo on this slot. Always refresh the public URL.
+      if (!lockedToListingMedia) {
         slots.shopfront = { type: 'image', mediaId: null, url: shopfront };
       }
     } else if (keys.length > 0 && page.layoutId.startsWith('photo_')) {
