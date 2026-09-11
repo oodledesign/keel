@@ -29,8 +29,17 @@ const CONTENT_COLOR = '#333333';
 const MUTED_COLOR = '#6b5c63';
 const INFO_COLOR = '#41606F';
 const PAGE_BG = '#f4f1ec';
-/** Mid-contrast hairline — `border-top` vanishes when clients invert. */
-const DIVIDER_COLOR = '#B8AFA6';
+/** Darker mid grey — Gmail collapses 1px hairlines even when Spark shows them. */
+const DIVIDER_COLOR = '#6B6560';
+const DIVIDER_HEIGHT_PX = 4;
+const BODY_FONT_SIZE_PX = 20;
+const MOBILE_BODY_FONT_SIZE_PX = 22;
+const HEADING_1_SIZE_PX = 32;
+const HEADING_2_SIZE_PX = 26;
+const FOOTER_FONT_SIZE_PX = 14;
+const TEXT_SIZE_ADJUST = '-webkit-text-size-adjust:100%;text-size-adjust:100%;';
+const CONTENT_TD_CLASS = 'ozer-email-content';
+const COPY_CLASS = 'ozer-email-copy';
 
 const ALLOWED_RICH_TAGS = new Set([
   'p',
@@ -86,6 +95,13 @@ ${CAMPAIGN_DOCUMENT_MARKER}
   @media only screen and (max-width: 620px) {
     .ozer-email-col { display: block !important; width: 100% !important; max-width: 100% !important; }
     .ozer-email-col + .ozer-email-col { padding-top: 16px !important; }
+    .ozer-email-body,
+    td.ozer-email-content,
+    .ozer-email-copy,
+    .ozer-email-copy p,
+    td.ozer-email-content p {
+      font-size: ${MOBILE_BODY_FONT_SIZE_PX}px !important;
+    }
   }
 </style>
 <!--[if mso]>
@@ -98,7 +114,7 @@ ${CAMPAIGN_DOCUMENT_MARKER}
 </noscript>
 <![endif]-->
 </head>
-<body bgcolor="${PAGE_BG}" style="margin:0;padding:0;${fillCss(PAGE_BG)}">
+<body class="ozer-email-body" bgcolor="${PAGE_BG}" style="margin:0;padding:0;${fillCss(PAGE_BG)}${TEXT_SIZE_ADJUST}">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"${fillBgcolor(PAGE_BG)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${fillCss(PAGE_BG)}">
   <tr>
     <td align="center"${fillBgcolor(PAGE_BG)} style="padding:24px 12px;${fillCss(PAGE_BG)}">
@@ -110,6 +126,24 @@ ${CAMPAIGN_DOCUMENT_MARKER}
 </table>
 </body>
 </html>`.trim();
+}
+
+/**
+ * Send path: compile from the live document + brand so stored `html_body`
+ * cannot ship a stale compiler snapshot (e.g. drafts saved before a markup change).
+ * Empty documents fall back to `htmlBody` for legacy HTML-only campaigns.
+ */
+export function resolveCampaignSendHtml(
+  document: CampaignDocument | null | undefined,
+  brand: CampaignBrand,
+  htmlBody: string,
+  options: CompileCampaignOptions = {},
+): string {
+  if (document?.blocks.length) {
+    return compileCampaignDocument(document, brand, options);
+  }
+
+  return htmlBody;
 }
 
 function resolveCompileColors(brand: CampaignBrand) {
@@ -170,6 +204,7 @@ function renderLogoRow(
     align: block.align ?? 'left',
     background,
     padding: resolveCampaignBlockPadding(block),
+    extraTdStyle: 'width:100%;',
   });
 }
 
@@ -198,14 +233,15 @@ function resolveLogoRowBackground(
     return colors.secondary;
   }
 
-  return explicit;
+  // primary / on_dark: full-width brand plate (outer styledRow td).
+  return explicit ?? colors.primary;
 }
 
 function renderHeadingRow(
   block: Extract<CampaignBlock, { type: 'heading' }>,
   brand: CampaignBrand,
 ) {
-  const size = block.level === 1 ? 28 : 22;
+  const size = block.level === 1 ? HEADING_1_SIZE_PX : HEADING_2_SIZE_PX;
   const weight = block.level === 1 ? 700 : 600;
   const align = block.align ?? 'left';
   const text = escapeTextKeepMerge(block.text.trim() || 'Heading');
@@ -228,11 +264,12 @@ function renderTextRow(
   const html = sanitizeRichText(block.html) || '<p></p>';
 
   return styledRow(
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${CONTENT_COLOR};text-align:${align};">${html}</div>`,
+    `<div class="${COPY_CLASS}" style="font-family:Arial,Helvetica,sans-serif;font-size:${BODY_FONT_SIZE_PX}px;line-height:1.6;color:${CONTENT_COLOR};text-align:${align};">${html}</div>`,
     {
       align,
       background: resolveCampaignBlockBackground(block, brand),
       padding: resolveCampaignBlockPadding(block),
+      tdClass: CONTENT_TD_CLASS,
     },
   );
 }
@@ -299,11 +336,15 @@ function renderDividerRow(
   block: Extract<CampaignBlock, { type: 'divider' }>,
   brand: CampaignBrand,
 ) {
+  // Gmail often collapses a 1px hairline; Spark already shows grey.
+  // 4px filled cell + 2px border-top is intentional belt-and-braces
+  // (clients that honour both may show ~6px, which is acceptable).
   return styledRow(
-    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td height="1"${fillBgcolor(DIVIDER_COLOR)} style="${fillCss(DIVIDER_COLOR)}font-size:0;line-height:0;height:1px;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>`,
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td height="${DIVIDER_HEIGHT_PX}"${fillBgcolor(DIVIDER_COLOR)} style="${fillCss(DIVIDER_COLOR)}font-size:0;line-height:0;height:${DIVIDER_HEIGHT_PX}px;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>`,
     {
       background: resolveCampaignBlockBackground(block, brand),
       padding: resolveCampaignBlockPadding(block),
+      extraTdStyle: `border-top:2px solid ${DIVIDER_COLOR};`,
     },
   );
 }
@@ -327,10 +368,10 @@ function renderColumnsRow(
   return styledRow(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
       <tr>
-        <td class="ozer-email-col" width="50%" valign="top" style="width:50%;padding:0 12px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${CONTENT_COLOR};">
+        <td class="ozer-email-col ${COPY_CLASS}" width="50%" valign="top" style="width:50%;padding:0 12px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:${BODY_FONT_SIZE_PX}px;line-height:1.6;color:${CONTENT_COLOR};${TEXT_SIZE_ADJUST}">
           ${renderColumnContent(block.left)}
         </td>
-        <td class="ozer-email-col" width="50%" valign="top" style="width:50%;padding:0 0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${CONTENT_COLOR};">
+        <td class="ozer-email-col ${COPY_CLASS}" width="50%" valign="top" style="width:50%;padding:0 0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:${BODY_FONT_SIZE_PX}px;line-height:1.6;color:${CONTENT_COLOR};${TEXT_SIZE_ADJUST}">
           ${renderColumnContent(block.right)}
         </td>
       </tr>
@@ -338,6 +379,7 @@ function renderColumnsRow(
     {
       background: resolveCampaignBlockBackground(block, brand),
       padding: resolveCampaignBlockPadding(block),
+      tdClass: CONTENT_TD_CLASS,
     },
   );
 }
@@ -387,7 +429,7 @@ function renderFooterRow(
       : resolveCampaignBlockBackground(block, brand);
 
   return styledRow(
-    `<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:${MUTED_COLOR};">${safeText}<br /><a href="${href}" style="color:${INFO_COLOR};text-decoration:underline;">Unsubscribe</a></p>`,
+    `<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:${FOOTER_FONT_SIZE_PX}px;line-height:1.5;color:${MUTED_COLOR};">${safeText}<br /><a href="${href}" style="color:${INFO_COLOR};text-decoration:underline;">Unsubscribe</a></p>`,
     { background, padding },
   );
 }
@@ -399,10 +441,11 @@ function renderHtmlRow(
   const cleaned = stripDangerousHtml(block.html).trim();
   if (!cleaned) return '';
   return styledRow(
-    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:${CONTENT_COLOR};">${cleaned}</div>`,
+    `<div class="${COPY_CLASS}" style="font-family:Arial,Helvetica,sans-serif;font-size:${BODY_FONT_SIZE_PX}px;line-height:1.6;color:${CONTENT_COLOR};">${cleaned}</div>`,
     {
       background: resolveCampaignBlockBackground(block, brand),
       padding: resolveCampaignBlockPadding(block),
+      tdClass: CONTENT_TD_CLASS,
     },
   );
 }
@@ -422,15 +465,18 @@ function styledRow(
     background?: string | null;
     padding: ReturnType<typeof resolveCampaignBlockPadding>;
     extraTdStyle?: string;
+    tdClass?: string;
   },
 ): string {
   const align = options.align ?? 'left';
   const background = options.background ? fillCss(options.background) : '';
   const bgcolor = options.background ? fillBgcolor(options.background) : '';
   const extra = options.extraTdStyle ?? '';
+  const widthAttr = options.background ? ' width="100%"' : '';
+  const classAttr = options.tdClass ? ` class="${options.tdClass}"` : '';
 
   return row(
-    `<td align="${align}"${bgcolor} style="${background}padding:${paddingCss(options.padding)};font-family:Arial,Helvetica,sans-serif;color:${CONTENT_COLOR};${extra}">${inner}</td>`,
+    `<td${classAttr} align="${align}"${widthAttr}${bgcolor} style="${background}padding:${paddingCss(options.padding)};font-family:Arial,Helvetica,sans-serif;color:${CONTENT_COLOR};${TEXT_SIZE_ADJUST}${extra}">${inner}</td>`,
   );
 }
 

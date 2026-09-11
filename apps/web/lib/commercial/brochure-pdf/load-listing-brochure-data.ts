@@ -373,6 +373,8 @@ export async function loadListingBrochureData(
 
   let brand: PublicBrochureData['brand'] = {
     logoUrl: null,
+    logoOnLightUrl: null,
+    logoOnDarkUrl: null,
     primaryColor: DEFAULT_BRAND_PRIMARY,
     secondaryColor: DEFAULT_BRAND_SECONDARY,
     accentColor: DEFAULT_BRAND_ACCENT,
@@ -387,6 +389,8 @@ export async function loadListingBrochureData(
     const resolved = await loadAccountBrandResolved(listing.accountId);
     brand = {
       logoUrl: resolved.logo_url,
+      logoOnLightUrl: resolved.logo_on_light_url,
+      logoOnDarkUrl: resolved.logo_on_dark_url,
       primaryColor: resolved.primary_color,
       secondaryColor: resolved.secondary_color,
       accentColor: resolved.accent_color,

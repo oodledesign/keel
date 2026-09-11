@@ -818,40 +818,22 @@ export function ListingMarketingEditor({
             </Button>
           </CardContent>
         </Card>
-      </div>
-
-      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-        <MarketingReadinessCard
-          listing={listing}
-          accountSlug={accountSlug}
-          media={media}
-          publications={publications}
-          readiness={getMarketingReadiness({
-            listing: {
-              ...listing,
-              summary,
-              keyPoints: keyPoints.map((p) => p.text.trim()).filter(Boolean),
-            },
-            media,
-            publications,
-          })}
-        />
 
         <Card
           id="price-display"
           className={`${workspacePanelCard} scroll-mt-36`}
         >
           <CardHeader>
-            <CardTitle className="text-sm text-[var(--workspace-shell-text)]">
+            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
               Price display
             </CardTitle>
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               Hide figures as POA on particulars. Go-live channels live on
               Publishing.
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2.5">
               <span className="text-sm text-[var(--workspace-shell-text)]/70">
                 Hide rent (POA)
               </span>
@@ -861,6 +843,20 @@ export function ListingMarketingEditor({
                 onCheckedChange={(enabled) => {
                   setForm((current) => ({ ...current, hideRent: enabled }));
                   saveMarketing({ hideRentFromMarketing: enabled });
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2.5">
+              <span className="text-sm text-[var(--workspace-shell-text)]/70">
+                Hide price (POA)
+              </span>
+              <Switch
+                checked={hidePrice}
+                disabled={pending || readOnly}
+                onCheckedChange={(enabled) => {
+                  setForm((current) => ({ ...current, hidePrice: enabled }));
+                  saveMarketing({ hidePriceFromMarketing: enabled });
                 }}
               />
             </div>
@@ -923,7 +919,7 @@ export function ListingMarketingEditor({
                   </Select>
                 </div>
 
-                <p className="text-sm text-[var(--workspace-shell-text)]">
+                <p className="text-sm text-[var(--workspace-shell-text)] sm:col-span-2">
                   {formatAskingPrice({
                     askingPricePence: askingPrice
                       ? Math.round(parseFloat(askingPrice) * 100)
@@ -937,22 +933,26 @@ export function ListingMarketingEditor({
                 </p>
               </>
             ) : null}
-
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-[var(--workspace-shell-text)]/70">
-                Hide price (POA)
-              </span>
-              <Switch
-                checked={hidePrice}
-                disabled={pending || readOnly}
-                onCheckedChange={(enabled) => {
-                  setForm((current) => ({ ...current, hidePrice: enabled }));
-                  saveMarketing({ hidePriceFromMarketing: enabled });
-                }}
-              />
-            </div>
           </CardContent>
         </Card>
+      </div>
+
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+        <MarketingReadinessCard
+          listing={listing}
+          accountSlug={accountSlug}
+          media={media}
+          publications={publications}
+          readiness={getMarketingReadiness({
+            listing: {
+              ...listing,
+              summary,
+              keyPoints: keyPoints.map((p) => p.text.trim()).filter(Boolean),
+            },
+            media,
+            publications,
+          })}
+        />
       </aside>
     </div>
   );

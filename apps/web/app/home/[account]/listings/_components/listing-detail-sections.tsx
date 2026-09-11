@@ -52,6 +52,7 @@ import type {
   CommercialListing,
   CommercialListingMedia,
   CommercialListingUnit,
+  CommercialPortalPublication,
   ListingParty,
 } from '../_lib/server/listings.service';
 import {
@@ -69,6 +70,7 @@ import { ListingFormModal } from './listing-form-modal';
 import { ListingInternalNotesCard } from './listing-internal-notes-card';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
+import { ListingOverviewChannelStatus } from './listing-overview-channel-status';
 import { ListingPeopleStrip } from './listing-people-strip';
 import { ListingUnitFormModal } from './listing-unit-form-modal';
 
@@ -183,6 +185,7 @@ export function ListingOverviewSection({
   accountSlug,
   interestSummary,
   parties = [],
+  publications = [],
 }: {
   listing: CommercialListing;
   accountId: string;
@@ -196,6 +199,7 @@ export function ListingOverviewSection({
     awaitingFeedback?: number;
   };
   parties?: ListingParty[];
+  publications?: CommercialPortalPublication[];
 }) {
   const { listing } = useListingState(initial);
   const [matchBadgeCount, setMatchBadgeCount] = useState(
@@ -235,6 +239,11 @@ export function ListingOverviewSection({
         accountSlug={accountSlug}
         parties={parties}
         managementHref={managementHref}
+      />
+      <ListingOverviewChannelStatus
+        listing={listing}
+        accountSlug={accountSlug}
+        publications={publications}
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard

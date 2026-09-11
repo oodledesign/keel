@@ -4,10 +4,11 @@ import Image from 'next/image';
 
 import { motion, useReducedMotion } from 'framer-motion';
 
-import type {
-  BrochureListing,
-  BrochureMediaItem,
-  PublicBrochureData,
+import {
+  type BrochureListing,
+  type BrochureMediaItem,
+  type PublicBrochureData,
+  resolveBrochureBrandLogo,
 } from '~/lib/commercial/public-brochure.shared';
 import {
   formatBrochureAddress,
@@ -425,7 +426,7 @@ export function BrochureSlideView({ data, slide }: BrochureSlideViewProps) {
         <CoverSlide
           listing={data.listing}
           coverUrl={coverUrl}
-          logoUrl={data.brand.logoUrl}
+          logoUrl={resolveBrochureBrandLogo(data.brand, 'dark')}
           accountName={data.accountName}
         />
       );

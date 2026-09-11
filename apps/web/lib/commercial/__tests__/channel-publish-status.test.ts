@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getCirculationChannelStatus,
   getEachChannelStatus,
   getRightmoveChannelStatus,
   getWebsiteChannelStatus,
@@ -158,5 +159,34 @@ describe('getRightmoveChannelStatus', () => {
     });
     expect(status.state).toBe('blocked');
     expect(status.blockers).toContain('Missing office');
+  });
+});
+
+describe('getCirculationChannelStatus', () => {
+  it('is Off when auto-circulate is disabled', () => {
+    const status = getCirculationChannelStatus({
+      listing: { status: 'marketing', autoCirculateMatches: false },
+    });
+    expect(status.state).toBe('off');
+    expect(status.switchOn).toBe(false);
+    expect(status.canEnable).toBe(true);
+  });
+
+  it('is Blocked when included but not on a live match status', () => {
+    const status = getCirculationChannelStatus({
+      listing: { status: 'draft', autoCirculateMatches: true },
+    });
+    expect(status.state).toBe('blocked');
+    expect(status.switchOn).toBe(true);
+    expect(status.blockers[0]).toMatch(/Instructed, Marketing, or Under offer/);
+  });
+
+  it('is Included when auto-circulate is on and the listing can match', () => {
+    const status = getCirculationChannelStatus({
+      listing: { status: 'marketing', autoCirculateMatches: true },
+    });
+    expect(status.state).toBe('live');
+    expect(status.label).toBe('Included');
+    expect(status.blockers).toEqual([]);
   });
 });

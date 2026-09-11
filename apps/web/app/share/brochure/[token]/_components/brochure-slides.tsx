@@ -10,9 +10,10 @@ import {
   BrochureSlideView as ContentSlideView,
   brochureFadeProps,
 } from '~/lib/commercial/brochure-slides';
-import type {
-  BrochureAgent,
-  PublicBrochureData,
+import {
+  type BrochureAgent,
+  type PublicBrochureData,
+  resolveBrochurePlateLogo,
 } from '~/lib/commercial/public-brochure.shared';
 
 import { BrochureEnquireForm } from './brochure-enquire-form';
@@ -72,16 +73,17 @@ function AgentCard({ agent }: { agent: BrochureAgent }) {
 
 function ContactSlide({ data }: { data: PublicBrochureData }) {
   const reduced = useReducedMotion() ?? false;
+  const plateLogo = resolveBrochurePlateLogo(data.brand);
 
   return (
     <div className="h-full w-full overflow-y-auto bg-[var(--brochure-primary)]">
       <div className="flex min-h-full items-center justify-center px-6 py-20 sm:px-10 md:px-16">
         <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-2 lg:items-center">
           <div>
-            {data.brand.logoUrl ? (
+            {plateLogo ? (
               <motion.div className="mb-6" {...brochureFadeProps(reduced)}>
                 <Image
-                  src={data.brand.logoUrl}
+                  src={plateLogo}
                   alt={data.accountName ?? 'Agency'}
                   width={180}
                   height={56}
@@ -118,22 +120,6 @@ function ContactSlide({ data }: { data: PublicBrochureData }) {
                 className="mt-6 space-y-3"
                 {...brochureFadeProps(reduced, 0.12)}
               >
-                {data.branch.shopfrontUrl ? (
-                  <div className="relative aspect-[16/10] max-w-sm overflow-hidden rounded-2xl border border-white/15 bg-black/20">
-                    <Image
-                      src={data.branch.shopfrontUrl}
-                      alt={
-                        data.branch.name
-                          ? `${data.branch.name} shopfront`
-                          : 'Office shopfront'
-                      }
-                      fill
-                      unoptimized
-                      sizes="(max-width: 1024px) 80vw, 24rem"
-                      className="object-cover"
-                    />
-                  </div>
-                ) : null}
                 {data.branch.name && data.branch.name !== data.accountName ? (
                   <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-dark)]">
                     {data.branch.name}
@@ -162,6 +148,22 @@ function ContactSlide({ data }: { data: PublicBrochureData }) {
                     </a>
                   ) : null}
                 </div>
+                {data.branch.shopfrontUrl ? (
+                  <div className="relative aspect-[16/10] max-w-sm overflow-hidden rounded-2xl border border-white/15 bg-black/20">
+                    <Image
+                      src={data.branch.shopfrontUrl}
+                      alt={
+                        data.branch.name
+                          ? `${data.branch.name} shopfront`
+                          : 'Office shopfront'
+                      }
+                      fill
+                      unoptimized
+                      sizes="(max-width: 1024px) 80vw, 24rem"
+                      className="object-cover"
+                    />
+                  </div>
+                ) : null}
               </motion.div>
             ) : null}
 

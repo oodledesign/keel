@@ -4,7 +4,11 @@ import {
 } from '~/lib/brand/account-brand';
 import { buildWorkspaceMailingListUnsubscribeUrl } from '~/lib/workspace-forms/workspace-mailing-list';
 
-import { isCampaignDocumentHtml } from './campaign-document';
+import {
+  type CampaignDocument,
+  isCampaignDocumentHtml,
+} from './campaign-document';
+import { resolveCampaignSendHtml } from './compile-campaign-document';
 import {
   type CampaignMergeValues,
   applyCampaignMergeFields,
@@ -22,7 +26,7 @@ function applyUnsubscribeUrl(html: string, unsubscribeUrl: string): string {
     </p>`;
 }
 
-function escapeHtml(value: string) {
+function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -33,16 +37,22 @@ function escapeHtml(value: string) {
 export function renderCampaignHtml(input: {
   brand: AccountBrandResolved;
   htmlBody: string;
+  document?: CampaignDocument | null;
   merge: CampaignMergeValues;
   unsubscribeToken: string;
 }): string {
-  const merged = applyCampaignMergeFields(input.htmlBody, input.merge);
+  const resolvedHtml = resolveCampaignSendHtml(
+    input.document,
+    input.brand,
+    input.htmlBody,
+  );
+  const merged = applyCampaignMergeFields(resolvedHtml, input.merge);
   const unsubscribeUrl = buildWorkspaceMailingListUnsubscribeUrl(
     input.unsubscribeToken,
   );
   const withUnsubscribe = applyUnsubscribeUrl(merged, unsubscribeUrl);
 
-  if (isCampaignDocumentHtml(input.htmlBody)) {
+  if (isCampaignDocumentHtml(resolvedHtml)) {
     return withUnsubscribe;
   }
 

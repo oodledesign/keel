@@ -242,12 +242,18 @@ async function sendWelcomeAutomationEmail(input: {
     throw new Error(insertError?.message ?? 'Could not enqueue automation');
   }
 
-  try {
-    const campaignId = input.automation.campaignId;
-    if (!campaignId) {
-      throw new Error('Automation has no linked campaign');
-    }
+  const campaignId = input.automation.campaignId;
+  if (!campaignId) {
+    await fromTable(input.client, 'campaign_automation_runs')
+      .update({
+        status: 'skipped',
+        error_message: 'Automation has no linked campaign',
+      })
+      .eq('id', run.id);
+    return;
+  }
 
+  try {
     await debitCampaignCredits(input.accountId, 1, campaignId);
   } catch (error) {
     await fromTable(input.client, 'campaign_automation_runs')
@@ -308,6 +314,7 @@ async function sendWelcomeAutomationEmail(input: {
   const html = renderCampaignHtml({
     brand,
     htmlBody: campaign.htmlBody,
+    document: campaign.bodyDocument,
     merge,
     unsubscribeToken: input.unsubscribeToken,
   });
