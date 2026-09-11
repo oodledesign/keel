@@ -39,6 +39,7 @@ import {
   fallbackProjectStatuses,
 } from '~/lib/projects/project-statuses';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
+import { kanbanColumnClassName } from '~/lib/projects/projects-kanban-layout';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { updateJob } from '../_lib/server/server-actions';
@@ -330,32 +331,45 @@ function KanbanColumn({
     )
     .map((item) => `item:${item.id}`);
 
+  const isEmpty = items.length === 0;
+
   return (
     <section
       ref={setNodeRef}
-      className={cn(
-        'flex min-h-[280px] w-[min(100%,240px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] transition-colors md:w-60',
-        (isOver || isDroppableOver) &&
-          'border-[var(--ozer-accent)]/40 bg-[color:var(--ozer-accent)]/5',
-      )}
+      className={kanbanColumnClassName({
+        isEmpty,
+        isOver: isOver || isDroppableOver,
+      })}
     >
-      <header className="border-b border-[color:var(--workspace-shell-border)] px-3 py-2.5">
-        <h3 className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-          {label}
-          <span className="ml-2 text-[var(--workspace-shell-text-muted)]">
-            {items.length}
-          </span>
+      <header
+        className={cn(
+          'border-b border-[color:var(--workspace-shell-border)] py-2.5',
+          isEmpty ? 'px-1.5' : 'px-3',
+        )}
+      >
+        <h3
+          className={cn(
+            'text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase',
+            isEmpty && 'flex flex-col items-center gap-0.5 text-center',
+          )}
+          title={label}
+        >
+          <span className={cn(isEmpty && 'w-full truncate')}>{label}</span>
+          <span className={cn(!isEmpty && 'ml-2')}>{items.length}</span>
         </h3>
       </header>
       <SortableContext
         items={sortableIds}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
-          {items.length === 0 ? (
-            <p className="px-2 py-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-              No projects
-            </p>
+        <div
+          className={cn(
+            'flex flex-1 flex-col gap-2 overflow-y-auto p-2',
+            isEmpty && 'min-h-[200px]',
+          )}
+        >
+          {isEmpty ? (
+            <p className="sr-only">No projects</p>
           ) : (
             items.map((item) => {
               const href = item.href ?? detailPath(item.id);
