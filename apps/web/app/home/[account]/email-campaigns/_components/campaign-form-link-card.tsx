@@ -66,6 +66,7 @@ export function CampaignFormLinkCard({
             </span>
           </span>
           <ChevronDown
+            aria-hidden="true"
             className={cn(
               'h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/45 transition-transform',
               'group-data-[state=open]:rotate-180',
@@ -151,10 +152,9 @@ export function CampaignFormLinkCard({
                       }
                     />
                     <span>
-                      Prefill the form email field with the
-                      recipient&apos;s email (
-                      <code className="text-xs">?email=</code> on the public
-                      link)
+                      Prefill the form email field with the recipient&apos;s
+                      email (<code className="text-xs">?email=</code> on the
+                      public link)
                     </span>
                   </label>
 
