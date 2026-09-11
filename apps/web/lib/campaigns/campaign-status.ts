@@ -144,11 +144,10 @@ export function parseCampaignSubscriberStatus(
   value: unknown,
 ): CampaignSubscriberStatus {
   if (
-    value === 'subscribed' ||
-    value === 'unsubscribed' ||
-    value === 'suppressed'
+    typeof value === 'string' &&
+    (CAMPAIGN_SUBSCRIBER_STATUSES as readonly string[]).includes(value)
   ) {
-    return value;
+    return value as CampaignSubscriberStatus;
   }
 
   return 'none';

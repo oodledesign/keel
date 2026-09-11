@@ -25,6 +25,7 @@ function mapCategory(row: Record<string, unknown>): CampaignContactCategory {
   };
 }
 
+/** Lists/status default empty; `listContacts` / `getContact` rehydrate them. */
 function mapContact(
   row: Record<string, unknown>,
   categoryIds: string[] = [],
@@ -570,7 +571,9 @@ class CampaignContactsService {
       this.client,
       'campaign_audience_list_members',
     )
-      .select('contact_id, list_id, campaign_audience_lists ( id, name )')
+      .select(
+        'contact_id, list_id, campaign_audience_lists ( id, name, source )',
+      )
       .eq('account_id', accountId)
       .in('contact_id', contactIds);
 
@@ -583,6 +586,9 @@ class CampaignContactsService {
             ? row.campaign_audience_lists[0]
             : row.campaign_audience_lists
         ) as Record<string, unknown> | null;
+        // Membership rows should only exist on manual lists; still ignore
+        // leftovers if a list was later switched to a logic source.
+        if (list?.source !== 'manual') return null;
         const listName = String(list?.name ?? '').trim();
         if (!listName) return null;
         return {
