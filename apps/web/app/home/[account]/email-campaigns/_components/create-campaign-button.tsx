@@ -45,6 +45,10 @@ export function CreateCampaignButton({
         onOpenChange={setOpen}
         brand={brand}
         workspace={workspace}
+        recurringHref={pathsConfig.app.accountEmailCampaignRecurringNew.replace(
+          '[account]',
+          accountSlug,
+        )}
         onSelect={({ template, document }) => {
           startTransition(async () => {
             try {
