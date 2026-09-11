@@ -121,4 +121,18 @@ describe('commercial circulation preference pause and restore', () => {
 
     expect(updates).toHaveLength(0);
   });
+
+  it('is a no-op when the row is already subscribed', async () => {
+    const { client, updates } = createPreferenceClient({
+      row: {
+        id: 'circ-1',
+        marketing_status: 'subscribed',
+      },
+    });
+    const circulation = createCommercialCirculationService(client as never);
+
+    await circulation.resubscribe(ACCOUNT_ID, EMAIL);
+
+    expect(updates).toHaveLength(0);
+  });
 });

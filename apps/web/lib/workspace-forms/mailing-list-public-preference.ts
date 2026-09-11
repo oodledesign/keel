@@ -76,7 +76,8 @@ export async function resubscribeMailingListPublicPreference(
         { consentSource: 'unsubscribe_page_resubscribe' },
       );
     } catch {
-      // Business workspaces have no circulation rows; ignore.
+      // Best-effort: missing circulation rows are a no-op; ignore DB errors
+      // so business workspaces can still resubscribe to the mailing list.
     }
   }
 
