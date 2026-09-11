@@ -18,12 +18,12 @@ Token audience is the **environment URL**, not Microsoft Graph:
 
 Create these in **the customer’s Entra ID + Dataverse environment** (not Ozer’s). Do not commit secrets.
 
-| Settings field | Where to copy it |
-| --- | --- |
-| **Directory (tenant) ID** | Entra admin → Microsoft Entra ID → Overview |
-| **Environment URL** | Power Platform admin → Environments → the org → Environment URL, e.g. `https://arcanum.crm11.dynamics.com` (https, no trailing path) |
-| **Application (client) ID** | Entra → App registrations → the app → Overview |
-| **Client secret** | App registration → Certificates & secrets → **Value** of a new client secret (shown once). Not the Secret ID. |
+| Settings field              | Where to copy it                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Directory (tenant) ID**   | Entra admin → Microsoft Entra ID → Overview                                                                                          |
+| **Environment URL**         | Power Platform admin → Environments → the org → Environment URL, e.g. `https://arcanum.crm11.dynamics.com` (https, no trailing path) |
+| **Application (client) ID** | Entra → App registrations → the app → Overview                                                                                       |
+| **Client secret**           | App registration → Certificates & secrets → **Value** of a new client secret (shown once). Not the Secret ID.                        |
 
 ### Azure app registration
 
@@ -40,14 +40,14 @@ Ozer stores the client secret with **AES-256-GCM** using `TOKEN_ENCRYPTION_KEY` 
 
 ## Default field mapping (configurable)
 
-| Ozer | Dataverse Contact (default) | Dataverse Lead |
-| --- | --- | --- |
-| Email | `emailaddress1` | `emailaddress1` |
-| First name | `firstname` | `firstname` |
-| Last name | `lastname` | `lastname` |
-| Company | Find/create **Account** by `name`, bind `nathan.k@example.net` | `companyname` |
-| Marketing opted in | `donotemail = false`, `donotbulkemail = false` | same |
-| Marketing opted out | `donotemail = true`, `donotbulkemail = true` | same |
+| Ozer                | Dataverse Contact (default)                                                   | Dataverse Lead  |
+| ------------------- | ----------------------------------------------------------------------------- | --------------- |
+| Email               | `emailaddress1`                                                               | `emailaddress1` |
+| First name          | `firstname`                                                                   | `firstname`     |
+| Last name           | `lastname`                                                                    | `lastname`      |
+| Company             | Find/create **Account** by `name`, bind `parentcustomerid_account@odata.bind` | `companyname`   |
+| Marketing opted in  | `donotemail = false`, `donotbulkemail = false`                                | same            |
+| Marketing opted out | `donotemail = true`, `donotbulkemail = true`                                  | same            |
 
 Optional **extra consent field**: a custom boolean on Contact/Lead (e.g. `new_ozerconsent` or a publisher prefix). Set it in Campaigns → Dynamics. Customer Insights option-set fields are **not** auto-mapped — create a boolean if Arcanum needs an explicit flag besides `donotemail`.
 

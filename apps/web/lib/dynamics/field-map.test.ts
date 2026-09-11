@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  accountBindAttribute,
   buildDataverseAttributes,
   consentAttributes,
   defaultDynamicsFieldMapping,
@@ -97,9 +98,16 @@ describe('dynamics field map', () => {
     expect(escapeODataString("O'Brien")).toBe("O''Brien");
     expect(
       parseDataverseEntityId(
-        "https://org.crm.dynamics.com/api/data/v9.2/contacts(11111111-1111-4111-8111-111111111111)",
+        'https://org.crm.dynamics.com/api/data/v9.2/contacts(11111111-1111-4111-8111-111111111111)',
       ),
     ).toBe('11111111-1111-4111-8111-111111111111');
+  });
+
+  it('uses the Dataverse Account navigation bind per entity', () => {
+    expect(accountBindAttribute('contact')).toBe(
+      'parentcustomerid_account@odata.bind',
+    );
+    expect(accountBindAttribute('lead')).toBe('parentaccountid@odata.bind');
   });
 
   it('drops unknown mapping keys and keeps defaults', () => {

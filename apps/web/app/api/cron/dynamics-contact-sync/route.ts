@@ -1,6 +1,6 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { isCronDisabled, cronSkippedResponse } from '~/lib/cron/cron-guards';
+import { cronSkippedResponse, isCronDisabled } from '~/lib/cron/cron-guards';
 import { processDueDynamicsSyncJobs } from '~/lib/dynamics/sync.service';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 

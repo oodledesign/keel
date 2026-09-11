@@ -1,4 +1,7 @@
+import 'server-only';
+
 import {
+  accountBindAttribute,
   buildDataverseAttributes,
   dataverseApiRoot,
   dataverseTokenScope,
@@ -54,9 +57,7 @@ class DataverseClient {
     http?: DynamicsHttp;
   }) {
     this.tenantId = input.tenantId.trim();
-    this.environmentUrl = normalizeDynamicsEnvironmentUrl(
-      input.environmentUrl,
-    );
+    this.environmentUrl = normalizeDynamicsEnvironmentUrl(input.environmentUrl);
     this.applicationId = input.applicationId.trim();
     this.clientSecret = input.clientSecret;
     this.http = input.http ?? { fetch };
@@ -117,7 +118,10 @@ class DataverseClient {
     mapping: DynamicsFieldMapping;
     subscriber: DynamicsSubscriber;
   }): Promise<DataverseUpsertResult> {
-    const attributes = buildDataverseAttributes(input.mapping, input.subscriber);
+    const attributes = buildDataverseAttributes(
+      input.mapping,
+      input.subscriber,
+    );
     const set = entitySetName(input.entity);
     const idField = entityIdField(input.entity);
 
@@ -128,7 +132,8 @@ class DataverseClient {
       const accountId = await this.resolveAccountId(
         input.subscriber.companyName,
       );
-      attributes['nathan.k@example.net'] = `/accounts(${accountId})`;
+      attributes[accountBindAttribute(input.entity)] =
+        `/accounts(${accountId})`;
     }
 
     const existingId = await this.findByEmail(
@@ -146,21 +151,16 @@ class DataverseClient {
       return { id: existingId, created: false, entity: input.entity };
     }
 
-    const created = await this.requestJson<Record<string, unknown>>(
-      `/${set}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(attributes),
-        preferRepresentation: true,
-      },
-    );
+    const created = await this.requestJson<Record<string, unknown>>(`/${set}`, {
+      method: 'POST',
+      body: JSON.stringify(attributes),
+      preferRepresentation: true,
+    });
 
     const id =
       (typeof created[idField] === 'string' ? created[idField] : null) ??
       parseDataverseEntityId(
-        typeof created['@odata.id'] === 'string'
-          ? created['@odata.id']
-          : null,
+        typeof created['@odata.id'] === 'string' ? created['@odata.id'] : null,
       );
 
     if (!id) {
@@ -174,7 +174,9 @@ class DataverseClient {
     const filter = `name eq '${escapeODataString(name)}'`;
     const json = await this.requestJson<{
       value?: Array<{ accountid?: string }>;
-    }>(`/accounts?$select=accountid&$filter=${encodeURIComponent(filter)}&$top=1`);
+    }>(
+      `/accounts?$select=accountid&$filter=${encodeURIComponent(filter)}&$top=1`,
+    );
 
     const existing = json.value?.[0]?.accountid;
     if (existing) return existing;
@@ -189,7 +191,9 @@ class DataverseClient {
     );
 
     if (!created.accountid) {
-      throw new Error('Dataverse created an Account but did not return accountid');
+      throw new Error(
+        'Dataverse created an Account but did not return accountid',
+      );
     }
 
     return created.accountid;

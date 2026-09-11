@@ -43,9 +43,30 @@ async function requireCampaignsAddon(userId: string, accountId: string) {
   return client;
 }
 
+async function requireDynamicsAdmin(userId: string, accountId: string) {
+  const client = await requireCampaignsAddon(userId, accountId);
+  const { data, error } = await client
+    .from('accounts_memberships')
+    .select('account_role')
+    .eq('account_id', accountId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+
+  const role = (data as { account_role?: string } | null)?.account_role;
+  if (role !== 'owner' && role !== 'admin') {
+    throw new Error(
+      'Only workspace owners and admins can manage the Dynamics connection.',
+    );
+  }
+
+  return client;
+}
+
 export const saveDynamicsConnectionAction = enhanceAction(
   async function (data, user) {
-    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const client = await requireDynamicsAdmin(user.id, data.accountId);
     const service = createDynamicsConnectionService(client);
     const connection = await service.save({
       accountId: data.accountId,
@@ -66,7 +87,7 @@ export const saveDynamicsConnectionAction = enhanceAction(
 
 export const disconnectDynamicsConnectionAction = enhanceAction(
   async function (data, user) {
-    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const client = await requireDynamicsAdmin(user.id, data.accountId);
     const connection = await createDynamicsConnectionService(client).disconnect(
       data.accountId,
     );
@@ -79,7 +100,7 @@ export const disconnectDynamicsConnectionAction = enhanceAction(
 export const testDynamicsConnectionAction = enhanceAction(
   async function (data, user) {
     const logger = await getLogger();
-    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const client = await requireDynamicsAdmin(user.id, data.accountId);
     const service = createDynamicsConnectionService(client);
     const secrets = await service.loadSecrets(data.accountId);
 
@@ -113,7 +134,7 @@ export const testDynamicsConnectionAction = enhanceAction(
 
 export const retryDynamicsSyncJobsAction = enhanceAction(
   async function (data, user) {
-    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const client = await requireDynamicsAdmin(user.id, data.accountId);
     const reset = await retryFailedDynamicsSyncJobs(client, data.accountId);
     const result = await processDueDynamicsSyncJobs(client, {
       accountId: data.accountId,

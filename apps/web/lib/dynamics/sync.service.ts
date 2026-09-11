@@ -90,17 +90,19 @@ export async function scheduleDynamicsMailingListSync(input: {
     marketingOptedIn: input.marketingOptedIn,
   };
 
-  const { error } = await fromTable(input.client, 'workspace_dynamics_sync_jobs')
-    .insert({
-      account_id: input.accountId,
-      preference_id: input.preferenceId ?? null,
-      client_id: input.clientId ?? null,
-      email: input.email,
-      payload,
-      status: 'pending',
-      attempts: 0,
-      next_retry_at: new Date().toISOString(),
-    });
+  const { error } = await fromTable(
+    input.client,
+    'workspace_dynamics_sync_jobs',
+  ).insert({
+    account_id: input.accountId,
+    preference_id: input.preferenceId ?? null,
+    client_id: input.clientId ?? null,
+    email: input.email,
+    payload,
+    status: 'pending',
+    attempts: 0,
+    next_retry_at: new Date().toISOString(),
+  });
 
   if (error) {
     logger.warn(
@@ -250,7 +252,10 @@ export async function retryFailedDynamicsSyncJobs(
   client: SupabaseClient,
   accountId: string,
 ): Promise<number> {
-  const { data, error } = await fromTable(client, 'workspace_dynamics_sync_jobs')
+  const { data, error } = await fromTable(
+    client,
+    'workspace_dynamics_sync_jobs',
+  )
     .update({
       status: 'pending',
       next_retry_at: new Date().toISOString(),

@@ -2,7 +2,11 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { canEncryptDynamicsSecrets, decryptDynamicsSecret, encryptDynamicsSecret } from './crypto';
+import {
+  canEncryptDynamicsSecrets,
+  decryptDynamicsSecret,
+  encryptDynamicsSecret,
+} from './crypto';
 import {
   defaultDynamicsFieldMapping,
   normalizeDynamicsEnvironmentUrl,
@@ -109,7 +113,9 @@ class DynamicsConnectionService {
     entity: DynamicsEntity;
     fieldMapping: DynamicsFieldMapping;
   }): Promise<DynamicsConnectionPublic> {
-    const environmentUrl = normalizeDynamicsEnvironmentUrl(input.environmentUrl);
+    const environmentUrl = normalizeDynamicsEnvironmentUrl(
+      input.environmentUrl,
+    );
     validateDynamicsFieldMapping(input.fieldMapping);
 
     const existing = await fromTable(

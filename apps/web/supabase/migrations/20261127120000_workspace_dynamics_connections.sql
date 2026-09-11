@@ -81,22 +81,22 @@ DROP POLICY IF EXISTS workspace_dynamics_connections_insert
 CREATE POLICY workspace_dynamics_connections_insert
   ON public.workspace_dynamics_connections
   FOR INSERT TO authenticated
-  WITH CHECK (public.is_account_member(account_id));
+  WITH CHECK (public.is_account_admin(account_id));
 
 DROP POLICY IF EXISTS workspace_dynamics_connections_update
   ON public.workspace_dynamics_connections;
 CREATE POLICY workspace_dynamics_connections_update
   ON public.workspace_dynamics_connections
   FOR UPDATE TO authenticated
-  USING (public.is_account_member(account_id))
-  WITH CHECK (public.is_account_member(account_id));
+  USING (public.is_account_admin(account_id))
+  WITH CHECK (public.is_account_admin(account_id));
 
 DROP POLICY IF EXISTS workspace_dynamics_connections_delete
   ON public.workspace_dynamics_connections;
 CREATE POLICY workspace_dynamics_connections_delete
   ON public.workspace_dynamics_connections
   FOR DELETE TO authenticated
-  USING (public.is_account_member(account_id));
+  USING (public.is_account_admin(account_id));
 
 DROP POLICY IF EXISTS workspace_dynamics_connections_service_role
   ON public.workspace_dynamics_connections;
@@ -118,22 +118,22 @@ DROP POLICY IF EXISTS workspace_dynamics_sync_jobs_insert
 CREATE POLICY workspace_dynamics_sync_jobs_insert
   ON public.workspace_dynamics_sync_jobs
   FOR INSERT TO authenticated
-  WITH CHECK (public.is_account_member(account_id));
+  WITH CHECK (public.is_account_admin(account_id));
 
 DROP POLICY IF EXISTS workspace_dynamics_sync_jobs_update
   ON public.workspace_dynamics_sync_jobs;
 CREATE POLICY workspace_dynamics_sync_jobs_update
   ON public.workspace_dynamics_sync_jobs
   FOR UPDATE TO authenticated
-  USING (public.is_account_member(account_id))
-  WITH CHECK (public.is_account_member(account_id));
+  USING (public.is_account_admin(account_id))
+  WITH CHECK (public.is_account_admin(account_id));
 
 DROP POLICY IF EXISTS workspace_dynamics_sync_jobs_delete
   ON public.workspace_dynamics_sync_jobs;
 CREATE POLICY workspace_dynamics_sync_jobs_delete
   ON public.workspace_dynamics_sync_jobs
   FOR DELETE TO authenticated
-  USING (public.is_account_member(account_id));
+  USING (public.is_account_admin(account_id));
 
 DROP POLICY IF EXISTS workspace_dynamics_sync_jobs_service_role
   ON public.workspace_dynamics_sync_jobs;

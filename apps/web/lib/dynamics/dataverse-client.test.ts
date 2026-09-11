@@ -16,7 +16,9 @@ function jsonResponse(body: unknown, status = 200, headers?: HeadersInit) {
 
 describe('dataverse upsert client', () => {
   it('requests a client-credentials token then WhoAmI', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === TOKEN_URL) {
         return jsonResponse({ access_token: 'tok', expires_in: 3600 });
@@ -36,7 +38,7 @@ describe('dataverse upsert client', () => {
       environmentUrl: ENV,
       applicationId: '22222222-2222-4222-8222-222222222222',
       clientSecret: 'secret',
-      http: { fetch: fetchMock as unknown as typeof fetch },
+      http: { fetch: fetchMock },
     });
 
     await expect(client.whoAmI()).resolves.toMatchObject({
@@ -45,7 +47,9 @@ describe('dataverse upsert client', () => {
 
     const tokenCall = fetchMock.mock.calls[0];
     expect(String(tokenCall?.[0])).toBe(TOKEN_URL);
-    expect(String(tokenCall?.[1]?.body)).toContain('grant_type=client_credentials');
+    expect(String(tokenCall?.[1]?.body)).toContain(
+      'grant_type=client_credentials',
+    );
     expect(String(tokenCall?.[1]?.body)).toContain(
       encodeURIComponent(`${ENV}/.default`),
     );
@@ -54,7 +58,9 @@ describe('dataverse upsert client', () => {
   it('PATCHes an existing contact and POSTs when missing', async () => {
     const calls: Array<{ url: string; method?: string; body?: string }> = [];
 
-    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       calls.push({
         url,
@@ -66,14 +72,19 @@ describe('dataverse upsert client', () => {
         return jsonResponse({ access_token: 'tok', expires_in: 3600 });
       }
       if (url.includes('/contacts?') && url.includes('$filter=')) {
-        if (url.includes(encodeURIComponent("emailaddress1 eq 'ada@example.com'"))) {
+        if (
+          url.includes(encodeURIComponent("emailaddress1 eq 'ada@example.com'"))
+        ) {
           return jsonResponse({
             value: [{ contactid: 'contact-existing' }],
           });
         }
         return jsonResponse({ value: [] });
       }
-      if (url.endsWith('/contacts(contact-existing)') && init?.method === 'PATCH') {
+      if (
+        url.endsWith('/contacts(contact-existing)') &&
+        init?.method === 'PATCH'
+      ) {
         return new Response(null, { status: 204 });
       }
       if (url.endsWith('/contacts') && init?.method === 'POST') {
@@ -90,7 +101,7 @@ describe('dataverse upsert client', () => {
       environmentUrl: ENV,
       applicationId: '22222222-2222-4222-8222-222222222222',
       clientSecret: 'secret',
-      http: { fetch: fetchMock as unknown as typeof fetch },
+      http: { fetch: fetchMock },
     });
 
     const mapping = defaultDynamicsFieldMapping('contact');
@@ -115,7 +126,9 @@ describe('dataverse upsert client', () => {
 
     const patch = calls.find((call) => call.method === 'PATCH');
     expect(patch?.body).toContain('"donotemail":false');
-    expect(patch?.body).toContain('"nathan.k@example.net":"/accounts(account-1)"');
+    expect(patch?.body).toContain(
+      '"parentcustomerid_account@odata.bind":"/accounts(account-1)"',
+    );
 
     await expect(
       client.upsertSubscriber({
@@ -135,12 +148,16 @@ describe('dataverse upsert client', () => {
       entity: 'contact',
     });
 
-    const post = calls.find((call) => call.method === 'POST' && call.url.endsWith('/contacts'));
+    const post = calls.find(
+      (call) => call.method === 'POST' && call.url.endsWith('/contacts'),
+    );
     expect(post?.body).toContain('"donotemail":true');
   });
 
   it('surfaces Dataverse error messages from failed upserts', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === TOKEN_URL) {
         return jsonResponse({ access_token: 'tok', expires_in: 3600 });
@@ -156,7 +173,7 @@ describe('dataverse upsert client', () => {
       environmentUrl: ENV,
       applicationId: '22222222-2222-4222-8222-222222222222',
       clientSecret: 'secret',
-      http: { fetch: fetchMock as unknown as typeof fetch },
+      http: { fetch: fetchMock },
     });
 
     await expect(

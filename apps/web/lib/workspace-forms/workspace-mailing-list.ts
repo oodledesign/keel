@@ -6,7 +6,6 @@ import { randomBytes } from 'crypto';
 
 import { fireNewSubscriberAutomations } from '~/lib/campaigns/campaign-automations.service';
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
-import { scheduleDynamicsMailingListSync } from '~/lib/dynamics/sync.service';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { normalizeCirculationEmail } from '~/lib/commercial/circulation/circulation-eligibility';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
@@ -14,6 +13,7 @@ import {
   type RequirementFormSubmission,
   upsertRequirementFromPublicForm,
 } from '~/lib/commercial/circulation/public-requirement-form';
+import { scheduleDynamicsMailingListSync } from '~/lib/dynamics/sync.service';
 
 import type { FormContactValues } from './form-fields';
 import type { MailingListSpec } from './mailing-list-fields';

@@ -146,8 +146,18 @@ export function validateDynamicsFieldMapping(mapping: DynamicsFieldMapping) {
 }
 
 /**
+ * Dataverse navigation bind for linking a Contact/Lead to an Account.
+ * Contact uses the Customer lookup; Lead uses parentaccountid.
+ */
+export function accountBindAttribute(entity: DynamicsEntity): string {
+  return entity === 'lead'
+    ? 'parentaccountid@odata.bind'
+    : 'parentcustomerid_account@odata.bind';
+}
+
+/**
  * Build a Dataverse create/update body. Company Account bind is applied
- * separately as `nathan.k@example.net` when strategy is account_lookup.
+ * separately via `accountBindAttribute` when strategy is account_lookup.
  */
 export function buildDataverseAttributes(
   mapping: DynamicsFieldMapping,
@@ -172,7 +182,10 @@ export function buildDataverseAttributes(
     attributes[mapping.company] = subscriber.companyName;
   }
 
-  Object.assign(attributes, consentAttributes(mapping, subscriber.marketingOptedIn));
+  Object.assign(
+    attributes,
+    consentAttributes(mapping, subscriber.marketingOptedIn),
+  );
 
   return attributes;
 }

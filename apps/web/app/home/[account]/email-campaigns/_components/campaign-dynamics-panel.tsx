@@ -278,9 +278,7 @@ export function CampaignDynamicsPanel({
               value={companyStrategy}
               disabled={!canEdit}
               onChange={(event) =>
-                setCompanyStrategy(
-                  event.target.value as typeof companyStrategy,
-                )
+                setCompanyStrategy(event.target.value as typeof companyStrategy)
               }
             >
               <option value="account_lookup">
