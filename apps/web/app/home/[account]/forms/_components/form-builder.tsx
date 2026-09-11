@@ -43,6 +43,7 @@ import {
   createWorkspaceFormField,
   duplicateWorkspaceFormField,
   ensureListingField,
+  publicVisibleFields,
 } from '~/lib/workspace-forms/form-fields';
 import {
   WORKSPACE_FORM_LAYOUTS,
@@ -146,6 +147,9 @@ export function FormBuilder({
     useState<WorkspaceFormEmailSettings>(form.emailSettings);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(
     form.fields[0]?.id ?? null,
+  );
+  const visibleStepById = new Map(
+    publicVisibleFields(fields).map((field, index) => [field.id, index + 1]),
   );
 
   function setTab(next: string) {
@@ -332,7 +336,11 @@ export function FormBuilder({
               index={index}
               total={fields.length}
               active={activeFieldId === field.id}
-              stepIndex={presentation === 'steps' ? index + 1 : null}
+              stepIndex={
+                presentation === 'steps'
+                  ? (visibleStepById.get(field.id) ?? null)
+                  : null
+              }
               onActivate={() => setActiveFieldId(field.id)}
               onChange={(patch) => updateField(field.id, patch)}
               onChangeType={(type) =>

@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import { Calendar, Check, ChevronLeft, Clock, MapPin } from 'lucide-react';
 
@@ -129,7 +135,7 @@ export function PublicWorkspaceForm({
 
   const descriptionHtml = formDescriptionToHtml(description);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!stepsMode) return;
     stepHeadingRef.current?.focus();
   }, [stepIndex, stepsMode]);
@@ -346,7 +352,11 @@ export function PublicWorkspaceForm({
                 />
               ))}
 
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
+              {error ? (
+                <p role="alert" className="text-sm text-red-600">
+                  {error}
+                </p>
+              ) : null}
 
               <Button
                 type="submit"
@@ -495,11 +505,19 @@ function PublicFormSteps({
       )}
 
       {stepError ? (
-        <p className="text-sm text-red-600" data-test="public-form-step-error">
+        <p
+          role="alert"
+          className="text-sm text-red-600"
+          data-test="public-form-step-error"
+        >
           {stepError}
         </p>
       ) : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
 
       <div className="mt-auto flex items-center justify-between gap-3 pt-2">
         {stepIndex > 0 ? (
