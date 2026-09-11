@@ -40,9 +40,16 @@ import {
   isThinNearbyAmenityList,
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
-import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
+import { brochureContactShopfrontBox } from '~/lib/commercial/brochure-pdf/contact-layout';
+import {
+  type PublicBrochureData,
+  resolveBrochurePlateLogo,
+} from '~/lib/commercial/public-brochure.shared';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
-import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+import {
+  supabaseStorageObjectPath,
+  toSupabasePublicStorageUrl,
+} from '~/lib/storage/public-url';
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 };
 const A4_LANDSCAPE = { width: 841.89, height: 595.28 };
@@ -174,45 +181,42 @@ function isWorkspaceSupabaseHost(url: string): boolean {
   }
 }
 
-function brandAssetsObjectPath(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    const match = parsed.pathname.match(
-      /\/storage\/v1\/object\/(?:public\/)?brand-assets\/(.+)$/i,
-    );
-    return match?.[1] ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
-}
+const BROCHURE_STORAGE_BUCKETS = [
+  'commercial-listing-media',
+  'brand-assets',
+] as const;
 
-async function downloadBrandAssetBytes(
+async function downloadStorageObjectBytes(
   url: string,
 ): Promise<Uint8Array | null> {
   if (!isWorkspaceSupabaseHost(url)) return null;
-  const path = brandAssetsObjectPath(url);
-  if (!path) return null;
 
   try {
     // Dynamic import so the admin client is only loaded when HTTP fetch fails.
     const { getSupabaseServerAdminClient } =
       await import('@kit/supabase/server-admin-client');
     const admin = getSupabaseServerAdminClient();
-    const { data, error } = await admin.storage
-      .from('brand-assets')
-      .download(path);
-    if (error || !data) return null;
-    return new Uint8Array(await data.arrayBuffer());
+
+    for (const bucket of BROCHURE_STORAGE_BUCKETS) {
+      const path = supabaseStorageObjectPath(url, bucket);
+      if (!path) continue;
+      const { data, error } = await admin.storage.from(bucket).download(path);
+      if (error || !data) continue;
+      return new Uint8Array(await data.arrayBuffer());
+    }
   } catch {
     return null;
   }
+
+  return null;
 }
 
 async function fetchImageBytes(url: string | null): Promise<Uint8Array | null> {
   if (!url) return null;
+  // Signed listing-media URLs must not be rewritten to /object/public/sign/...
   const normalized = toSupabasePublicStorageUrl(url) ?? url;
   if (!isSafeRemoteImageUrl(normalized)) {
-    const fromStorage = await downloadBrandAssetBytes(normalized);
+    const fromStorage = await downloadStorageObjectBytes(normalized);
     if (fromStorage) return fromStorage;
     console.error('[brochure-pdf] blocked unsafe image url host');
     return null;
@@ -237,12 +241,14 @@ async function fetchImageBytes(url: string | null): Promise<Uint8Array | null> {
       } else {
         return new Uint8Array(await res.arrayBuffer());
       }
+    } else {
+      console.error('[brochure-pdf] image fetch failed:', res.status);
     }
   } catch {
-    // Fall through to brand-assets storage download.
+    // Fall through to workspace storage download.
   }
 
-  return downloadBrandAssetBytes(normalized);
+  return downloadStorageObjectBytes(normalized);
 }
 
 async function convertImageBytesToJpeg(
@@ -1603,27 +1609,20 @@ async function renderContact(
   }
 
   if (shopfrontImg) {
-    const photoW = landscape
-      ? Math.min(280, width * 0.36)
-      : Math.min(260, width - margin * 2);
-    const photoH = landscape ? Math.min(200, height - 180) : 160;
-    const photoX = landscape ? width - margin - photoW : margin;
-    const photoY = landscape ? height - 110 - photoH : by - photoH - 12;
-    drawImageInBox(
-      page,
-      shopfrontImg,
-      { x: photoX, y: photoY, width: photoW, height: photoH },
-      ctx.colors.soft,
-      'cover',
-    );
-    if (!landscape) {
-      by = photoY - 16;
-    }
+    const shopfrontBox = brochureContactShopfrontBox({
+      landscape,
+      pageWidth: width,
+      margin,
+      branchCardWidth: branchCardW,
+      afterAddressY: by,
+    });
+    drawImageInBox(page, shopfrontImg, shopfrontBox, ctx.colors.soft, 'cover');
+    by = shopfrontBox.y - 16;
   }
 
   const agents = ctx.data.agents.slice(0, 4);
   let x = landscape ? margin + branchCardW + 24 : margin;
-  let y = landscape ? Math.min(height - 118, by) : by - 20;
+  let y = landscape ? height - 118 : by - 20;
   const cardW = landscape
     ? (width - margin - x) / Math.max(1, Math.min(agents.length, 3)) - 8
     : (width - margin * 2) / 2 - 8;
@@ -1752,7 +1751,7 @@ export async function renderBrochurePdf(
     soft: rgb(0.94, 0.92, 0.9),
   };
 
-  const logoBytes = await fetchImageBytes(data.brand.logoUrl);
+  const logoBytes = await fetchImageBytes(resolveBrochurePlateLogo(data.brand));
   const logo = await embedImage(pdf, logoBytes);
 
   const ctx: RenderCtx = {

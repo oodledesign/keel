@@ -41,7 +41,10 @@ import {
   BROCHURE_LAYOUT_OPTIONS,
   createBlankBrochurePage,
 } from '~/lib/commercial/brochure-pdf/build-brochure-document';
-import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
+import {
+  type BrochureMediaItem,
+  resolveBrochurePlateLogo,
+} from '~/lib/commercial/public-brochure.shared';
 
 import {
   getListingBrochureDocument,
@@ -57,6 +60,8 @@ type ListingBrochureEditorProps = {
   accountName: string;
   brand: {
     logoUrl: string | null;
+    logoOnLightUrl?: string | null;
+    logoOnDarkUrl?: string | null;
     primaryColor: string;
     secondaryColor: string;
     accentColor: string;
@@ -95,6 +100,7 @@ function PreviewPage({
   const primary = brand.primaryColor || 'var(--ozer-plum-900, #351E28)';
   const accent = brand.accentColor || 'var(--ozer-coral-500, #FF5C34)';
   const paper = 'var(--ozer-cream-50, #FBF6EC)';
+  const plateLogo = resolveBrochurePlateLogo(brand);
   const landscape = orientation === 'landscape';
   const title =
     slotText(page, 'title') ||
@@ -142,10 +148,10 @@ function PreviewPage({
                     : undefined,
               }}
             >
-              {brand.logoUrl ? (
+              {plateLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={brand.logoUrl}
+                  src={plateLogo}
                   alt=""
                   className="mb-1 h-6 w-auto max-w-full object-contain object-left"
                 />
@@ -206,10 +212,10 @@ function PreviewPage({
             className="flex flex-col gap-1 p-3"
             style={{ backgroundColor: primary, color: paper, minHeight: '32%' }}
           >
-            {brand.logoUrl ? (
+            {plateLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={brand.logoUrl}
+                src={plateLogo}
                 alt=""
                 className="mb-1 h-5 w-auto max-w-[40%] object-contain object-left"
               />
@@ -338,19 +344,15 @@ function PreviewPage({
                 {slotText(page, 'branchEmail')}
               </p>
             ) : null}
+            {shopfront ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={shopfront}
+                alt=""
+                className="mt-1 h-20 w-full rounded-sm object-cover"
+              />
+            ) : null}
           </div>
-          {shopfront ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={shopfront}
-              alt=""
-              className={
-                landscape
-                  ? 'h-full w-[38%] rounded-sm object-cover'
-                  : 'h-28 w-full rounded-sm object-cover'
-              }
-            />
-          ) : null}
         </div>
       </div>
     );

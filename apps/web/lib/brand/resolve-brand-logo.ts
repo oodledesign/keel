@@ -50,6 +50,20 @@ export function brandLogoSurfaceForPage(input: {
   return input.pageOnDark ? 'dark' : 'light';
 }
 
+/** Dark navy / brand plates use the on-dark logo; pale plates use on-light. */
+export function brandLogoSurfaceForHex(
+  hex: string | null | undefined,
+): BrandLogoSurface {
+  const cleaned = (hex ?? '').replace('#', '').trim();
+  if (!/^[0-9A-Fa-f]{6}$/.test(cleaned)) return 'dark';
+  const n = Number.parseInt(cleaned, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance < 0.55 ? 'dark' : 'light';
+}
+
 export const BRAND_LOGO_CHOICES = ['primary', 'on_light', 'on_dark'] as const;
 
 export type BrandLogoChoice = (typeof BRAND_LOGO_CHOICES)[number];
