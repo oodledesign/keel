@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -19,6 +19,7 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import type { PartnerBoardProject } from '~/lib/projects/partner-projects.loader';
+import { applyItemStatus } from '~/lib/projects/project-board-status';
 import {
   type ProjectsUiVariant,
   projectDetailHref,
@@ -157,6 +158,10 @@ export function JobsPageContent({
     '[account]',
     accountSlug,
   );
+
+  const handleJobStatusChange = useCallback((jobId: string, status: string) => {
+    setJobs((prev) => applyItemStatus(prev, jobId, status));
+  }, []);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -309,43 +314,58 @@ export function JobsPageContent({
         { key: 'schedule', label: 'Schedule', icon: CalendarDays },
       ];
 
-  const visibleCampaigns =
-    isSimple || typeFilter === 'delivery'
-      ? []
-      : campaigns.filter((row) => {
-          if (!searchDebounced.trim()) return true;
-          return row.name
-            .toLowerCase()
-            .includes(searchDebounced.trim().toLowerCase());
-        });
+  const visibleCampaigns = useMemo(
+    () =>
+      isSimple || typeFilter === 'delivery'
+        ? []
+        : campaigns.filter((row) => {
+            if (!searchDebounced.trim()) return true;
+            return row.name
+              .toLowerCase()
+              .includes(searchDebounced.trim().toLowerCase());
+          }),
+    [campaigns, isSimple, searchDebounced, typeFilter],
+  );
 
-  const visibleJobs = typeFilter === 'campaign' ? [] : jobs;
-  const sharedKanbanItems: ProjectsKanbanItem[] =
-    typeFilter === 'campaign'
-      ? []
-      : sharedPartnerProjects.map((project) => ({
-          id: `shared:${project.shareId}:${project.id}`,
-          projectType: 'delivery' as const,
-          status: project.status ?? 'in_progress',
-          title: project.name,
-          clientName: project.clientName,
-          dueDate: null,
-          href: pathsConfig.app.accountSharedClientProject
-            .replace('[account]', accountSlug)
-            .replace('[shareId]', project.shareId)
-            .replace('[projectId]', project.id),
-          sharedBadge: project.ownerAccountName
-            ? `Shared · ${project.ownerAccountName}`
-            : 'Shared',
-          readOnly: true,
-        }));
-  const kanbanItems: ProjectsKanbanItem[] = [
-    ...visibleJobs.map((row) =>
-      mapDeliveryRowToKanbanItem(row as Record<string, unknown>),
-    ),
-    ...visibleCampaigns.map((row) => mapCampaignRowToKanbanItem(row)),
-    ...sharedKanbanItems,
-  ];
+  const visibleJobs = useMemo(
+    () => (typeFilter === 'campaign' ? [] : jobs),
+    [jobs, typeFilter],
+  );
+  const kanbanItems = useMemo<ProjectsKanbanItem[]>(() => {
+    const sharedKanbanItems: ProjectsKanbanItem[] =
+      typeFilter === 'campaign'
+        ? []
+        : sharedPartnerProjects.map((project) => ({
+            id: `shared:${project.shareId}:${project.id}`,
+            projectType: 'delivery' as const,
+            status: project.status ?? 'in_progress',
+            title: project.name,
+            clientName: project.clientName,
+            dueDate: null,
+            href: pathsConfig.app.accountSharedClientProject
+              .replace('[account]', accountSlug)
+              .replace('[shareId]', project.shareId)
+              .replace('[projectId]', project.id),
+            sharedBadge: project.ownerAccountName
+              ? `Shared · ${project.ownerAccountName}`
+              : 'Shared',
+            readOnly: true,
+          }));
+
+    return [
+      ...visibleJobs.map((row) =>
+        mapDeliveryRowToKanbanItem(row as Record<string, unknown>),
+      ),
+      ...visibleCampaigns.map((row) => mapCampaignRowToKanbanItem(row)),
+      ...sharedKanbanItems,
+    ];
+  }, [
+    accountSlug,
+    sharedPartnerProjects,
+    typeFilter,
+    visibleCampaigns,
+    visibleJobs,
+  ]);
 
   const typeFilters: { key: ProjectTypeFilter; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -481,7 +501,7 @@ export function JobsPageContent({
           canEditJobs={canEditJobs}
           personalScope={personalScope}
           projectDetailPathBuilder={projectDetailPathBuilder}
-          onStatusUpdated={fetchJobs}
+          onJobStatusChange={handleJobStatusChange}
         />
       ) : view === 'timeline' ? (
         <JobsPmTimelineView
