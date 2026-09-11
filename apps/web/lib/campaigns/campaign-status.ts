@@ -12,6 +12,11 @@ export const CAMPAIGN_STATUS_LABEL: Record<EmailCampaignStatus, string> = {
   failed: 'Failed',
 };
 
+const EXTRA_STATUS_LABEL: Record<string, string> = {
+  ready: 'Ready',
+  skipped: 'Skipped',
+};
+
 /**
  * Soft tinted pills — same language as listing/job status chips.
  * Colours come from Ozer tokens (info / gold / coral / sage / muted).
@@ -37,6 +42,10 @@ export function campaignStatusLabel(
   if (status in CAMPAIGN_STATUS_LABEL) {
     return CAMPAIGN_STATUS_LABEL[status as EmailCampaignStatus];
   }
+  const extra = EXTRA_STATUS_LABEL[status];
+  if (extra) {
+    return extra;
+  }
 
   return status
     .replace(/_/g, ' ')
@@ -48,6 +57,12 @@ export function campaignStatusBadgeClass(
 ): string {
   if (status in CAMPAIGN_STATUS_BADGE_CLASS) {
     return CAMPAIGN_STATUS_BADGE_CLASS[status as EmailCampaignStatus];
+  }
+  if (status === 'ready') {
+    return CAMPAIGN_STATUS_BADGE_CLASS.sent;
+  }
+  if (status === 'skipped') {
+    return CAMPAIGN_STATUS_BADGE_CLASS.cancelled;
   }
 
   return CAMPAIGN_STATUS_BADGE_CLASS.cancelled;

@@ -24,6 +24,11 @@ const TABS = [
     path: 'accountEmailCampaignAutomations',
   },
   {
+    key: 'recurring',
+    label: 'Recurring',
+    path: 'accountEmailCampaignRecurring',
+  },
+  {
     key: 'dynamics',
     label: 'Dynamics',
     path: 'accountEmailCampaignDynamics',

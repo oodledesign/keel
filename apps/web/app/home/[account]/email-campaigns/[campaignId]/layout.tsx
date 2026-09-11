@@ -9,6 +9,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { CampaignInstanceBanner } from '../_components/campaign-instance-banner';
 import { CampaignNav } from '../_components/campaign-nav';
 import { loadCampaignDetail } from '../_lib/server/campaigns.loader';
 
@@ -28,20 +29,25 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
     notFound();
   }
 
-  const campaignsHref = pathsConfig.app.accountEmailCampaigns.replace(
-    '[account]',
-    account,
-  );
+  const backHref = data.series
+    ? pathsConfig.app.accountEmailCampaignSeriesDetail
+        .replace('[account]', account)
+        .replace('[seriesId]', data.series.id)
+    : pathsConfig.app.accountEmailCampaigns.replace('[account]', account);
 
   return (
     <>
       <div className="px-4 pt-4 pb-1 lg:px-6">
         <Link
-          href={campaignsHref}
+          href={backHref}
           className="text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-accent-text)]"
           data-test="campaign-back-to-all"
         >
-          <Trans i18nKey="campaigns:backToList" />
+          <Trans
+            i18nKey={
+              data.series ? 'campaigns:backToSeries' : 'campaigns:backToList'
+            }
+          />
         </Link>
       </div>
       <TeamAccountLayoutPageHeader
@@ -50,6 +56,14 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
         description={data.campaign.subject || 'Draft campaign'}
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
+        {data.series ? (
+          <CampaignInstanceBanner
+            accountId={workspace.account.id}
+            accountSlug={account}
+            campaign={data.campaign}
+            series={data.series}
+          />
+        ) : null}
         <CampaignNav accountSlug={account} campaignId={campaignId} />
         {children}
       </PageBody>

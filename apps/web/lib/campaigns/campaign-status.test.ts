@@ -46,6 +46,14 @@ describe('campaign status pills', () => {
     );
   });
 
+  it('labels recurring planner extras', () => {
+    expect(campaignStatusLabel('ready')).toBe('Ready');
+    expect(campaignStatusLabel('skipped')).toBe('Skipped');
+    expect(campaignStatusBadgeClass('ready')).toBe(
+      CAMPAIGN_STATUS_BADGE_CLASS.sent,
+    );
+  });
+
   it('covers the public label map', () => {
     expect(Object.keys(CAMPAIGN_STATUS_LABEL).sort()).toEqual(
       [...STATUSES].sort(),

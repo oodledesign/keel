@@ -22,6 +22,7 @@ import {
   type CampaignSendProgressSnapshot,
   buildCampaignSendProgress,
 } from '~/lib/campaigns/campaign-send-progress';
+import { seriesInstanceMaySend } from '~/lib/campaigns/campaign-series-ready';
 import {
   CAMPAIGN_TIMEZONES,
   formatZonedInstant,
@@ -134,6 +135,7 @@ export function CampaignSendPanel({
     ? `${campaign.fromName.trim()} <${campaign.fromEmail || brand.contact_email || 'workspace'}>`
     : campaign.fromEmail || brand.contact_email || 'workspace default';
 
+  const instanceBlocked = !seriesInstanceMaySend(campaign);
   const insufficientSendUnits =
     editable && audienceCount > 0 && usage.balance < audienceCount;
   const contactsBlocked =
@@ -271,10 +273,21 @@ export function CampaignSendPanel({
                 }
               />
             ) : null}
+            {instanceBlocked ? (
+              <p
+                className={`text-sm ${workspaceTextMuted}`}
+                data-test="campaign-send-not-ready"
+              >
+                Send now is blocked until this week is Ready. Mark Ready on the
+                planner, or confirm a schedule below — that also marks it Ready.
+                Drafts never go out on their own.
+              </p>
+            ) : null}
             <Button
               className={workspaceBtnPrimary}
               disabled={
                 busy ||
+                instanceBlocked ||
                 listAudienceIncomplete ||
                 insufficientSendUnits ||
                 contactsBlocked ||
