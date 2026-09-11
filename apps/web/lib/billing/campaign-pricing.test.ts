@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -119,8 +118,16 @@ describe('campaign pricing', () => {
         'STRIPE_PRICE_ADDON_CAMPAIGNS_GROWTH_MONTHLY',
         1900,
       ],
-      ['ozer-addon-campaigns', 'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY', 4900],
-      ['ozer-campaigns-pack-send-2k', 'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K', 600],
+      [
+        'ozer-addon-campaigns',
+        'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY',
+        4900,
+      ],
+      [
+        'ozer-campaigns-pack-send-2k',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K',
+        600,
+      ],
       [
         'ozer-campaigns-pack-send-2k',
         'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K_MONTHLY',
@@ -159,9 +166,14 @@ describe('campaign pricing', () => {
     ] as const;
 
     for (const [catalogId, envKey, amount] of required) {
-      expect(catalog).toContain(`catalogId: '${catalogId}'`);
-      expect(catalog).toContain(`envKey: '${envKey}'`);
-      expect(catalog).toContain(`amount: ${amount}`);
+      const marker = `catalogId: '${catalogId}'`;
+      const start = catalog.indexOf(marker);
+      expect(start).toBeGreaterThan(-1);
+
+      const next = catalog.indexOf("catalogId: '", start + marker.length);
+      const block = catalog.slice(start, next === -1 ? undefined : next);
+      expect(block).toContain(`envKey: '${envKey}'`);
+      expect(block).toContain(`amount: ${amount}`);
     }
 
     expect(OZER_STRIPE_PRICES.addon_campaigns_starter_monthly).toBeTruthy();
