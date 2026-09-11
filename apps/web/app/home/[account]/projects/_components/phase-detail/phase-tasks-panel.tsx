@@ -259,7 +259,7 @@ export function PhaseTasksPanel({
                   >
                     {taskStatusLabel(task.status)}
                   </span>
-                  {formatShortDate(task.due_date)}
+                  · {formatShortDate(task.due_date)}
                 </span>
               )}
               <TaskDurationMeta minutes={task.duration_minutes} />

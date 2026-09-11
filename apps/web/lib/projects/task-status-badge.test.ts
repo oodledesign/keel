@@ -10,10 +10,20 @@ import {
 
 describe('task status pills', () => {
   it('maps todo aliases to the yellow/amber pill', () => {
-    for (const status of ['todo', 'TODO', 'To do', 'open', 'pending']) {
+    for (const status of [
+      'todo',
+      'TODO',
+      'To do',
+      'open',
+      'pending',
+      'not_started',
+    ]) {
       expect(resolveTaskStatusBadgeKey(status)).toBe('todo');
       expect(taskStatusBadgeClass(status)).toBe(TASK_STATUS_BADGE_CLASS.todo);
     }
+    expect(resolveTaskStatusBadgeKey(null)).toBe('todo');
+    expect(resolveTaskStatusBadgeKey(undefined)).toBe('todo');
+    expect(resolveTaskStatusBadgeKey('')).toBe('todo');
     expect(taskStatusLabel('TODO')).toBe('To do');
     expect(taskStatusLabel('open')).toBe('To do');
   });

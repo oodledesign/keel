@@ -221,7 +221,7 @@ export function PhaseTasksPanel({
                   >
                     {taskStatusLabel(task.status)}
                   </span>
-                  {formatShortDate(task.due_date)}
+                  · {formatShortDate(task.due_date)}
                   {task.duration_minutes
                     ? ` · ${formatDurationMinutes(task.duration_minutes)}`
                     : ''}

@@ -95,7 +95,10 @@ export function taskStatusLabel(status: string | null | undefined): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-/** Exact-key map for existing `TASK_STATUS_STYLES.todo` lookups. */
+/**
+ * Exact-key map for existing `TASK_STATUS_STYLES.todo` lookups.
+ * Prefer `taskStatusBadgeClass()` for aliases and unknown customs.
+ */
 export const TASK_STATUS_STYLES: Record<string, string> = {
   todo: TASK_STATUS_BADGE_CLASS.todo,
   in_progress: TASK_STATUS_BADGE_CLASS.in_progress,
@@ -103,4 +106,5 @@ export const TASK_STATUS_STYLES: Record<string, string> = {
   done: TASK_STATUS_BADGE_CLASS.done,
   cancelled: TASK_STATUS_BADGE_CLASS.cancelled,
   blocked: TASK_STATUS_BADGE_CLASS.blocked,
+  unknown: TASK_STATUS_BADGE_CLASS.unknown,
 };
