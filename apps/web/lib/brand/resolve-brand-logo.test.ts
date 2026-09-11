@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   brandLogoChoiceIsExact,
+  brandLogoSurfaceForHex,
   brandLogoSurfaceForPage,
   resolveBrandLogoChoice,
   resolveBrandLogoForSurface,
@@ -47,6 +48,18 @@ describe('brandLogoSurfaceForPage', () => {
   it('follows the page background when the logo sits on the page', () => {
     expect(brandLogoSurfaceForPage({ pageOnDark: true })).toBe('dark');
     expect(brandLogoSurfaceForPage({ pageOnDark: false })).toBe('light');
+  });
+});
+
+describe('brandLogoSurfaceForHex', () => {
+  it('treats navy / dark brand plates as dark', () => {
+    expect(brandLogoSurfaceForHex('#0D2344')).toBe('dark');
+    expect(brandLogoSurfaceForHex('#351E28')).toBe('dark');
+  });
+
+  it('treats cream / white plates as light', () => {
+    expect(brandLogoSurfaceForHex('#FBF6EC')).toBe('light');
+    expect(brandLogoSurfaceForHex('#FFFFFF')).toBe('light');
   });
 });
 

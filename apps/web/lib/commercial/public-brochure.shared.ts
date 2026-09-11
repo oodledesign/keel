@@ -1,3 +1,8 @@
+import {
+  type BrandLogoSurface,
+  brandLogoSurfaceForHex,
+  resolveBrandLogoForSurface,
+} from '~/lib/brand/resolve-brand-logo';
 import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
   type AskingPriceQualifier,
@@ -120,6 +125,8 @@ export type PublicBrochureData = {
   accountName: string | null;
   brand: {
     logoUrl: string | null;
+    logoOnLightUrl?: string | null;
+    logoOnDarkUrl?: string | null;
     primaryColor: string;
     secondaryColor: string;
     accentColor: string;
@@ -211,6 +218,31 @@ export function formatBrochureSize(listing: BrochureListing): string | null {
 
 export function formatDisposalLabel(type: DisposalType): string {
   return DISPOSAL_TYPE_LABELS[type] ?? type;
+}
+
+export function brochureBrandLogoSources(brand: PublicBrochureData['brand']) {
+  return {
+    logo_url: brand.logoUrl,
+    logo_on_light_url: brand.logoOnLightUrl,
+    logo_on_dark_url: brand.logoOnDarkUrl,
+  };
+}
+
+export function resolveBrochureBrandLogo(
+  brand: PublicBrochureData['brand'],
+  surface: BrandLogoSurface,
+): string | null {
+  return resolveBrandLogoForSurface(brochureBrandLogoSources(brand), surface);
+}
+
+/** Logo for a coloured cover / contact plate using the brand primary. */
+export function resolveBrochurePlateLogo(
+  brand: PublicBrochureData['brand'],
+): string | null {
+  return resolveBrochureBrandLogo(
+    brand,
+    brandLogoSurfaceForHex(brand.primaryColor),
+  );
 }
 
 /** Last path segment of a public brochure URL (`/share/brochure/:token`). */
