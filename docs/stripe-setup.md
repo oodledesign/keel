@@ -58,6 +58,35 @@ Env key: `STRIPE_PRICE_COMMERCIAL_PROPERTY_MONTHLY` (lookup key `keel.commercial
 
 Checkout shows a promo-code field (`enableDiscountField`). For partner deals (e.g. Bracketts), create Stripe **Coupons** + **Promotion codes** in the Dashboard / API — Stripe does not chain “50% for 6 months then 15% forever” in one code; use an intro promo, then apply the lifetime promo when the intro ends.
 
+### Campaigns add-on (GBP)
+
+The catalog script includes **Ozer Campaigns** plus send packs and contact-cap bumps. Amounts match `apps/web/lib/billing/campaign-pricing.ts` and env keys in `stripe-price-ids.ts` / `billing.config.ts`.
+
+**Subscription tiers** (`ozer-addon-campaigns`):
+
+| Plan | Amount | Env key | Lookup key |
+|------|--------|---------|------------|
+| Starter | £9 / mo · 500 contacts · 5,000 sends | `STRIPE_PRICE_ADDON_CAMPAIGNS_STARTER_MONTHLY` | `keel.addon.campaigns.starter.monthly` |
+| Growth | £19 / mo · 2,500 · 20,000 | `STRIPE_PRICE_ADDON_CAMPAIGNS_GROWTH_MONTHLY` | `keel.addon.campaigns.growth.monthly` |
+| Pro | £49 / mo · 10,000 · 60,000 | `STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY` | `keel.addon.campaigns.pro.monthly` |
+
+**Send packs** (one-off lasts 12 months; monthly replenishes each cycle):
+
+| Pack | One-off | Monthly | Env keys |
+|------|---------|---------|----------|
+| +2,000 sends | £6 (`STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K`) | £5 (`…_2K_MONTHLY`) | lookup `keel.campaigns.pack.send_2k` / `.monthly` |
+| +10,000 sends | £24 (`…_SEND_10K`) | £20 (`…_10K_MONTHLY`) | `keel.campaigns.pack.send_10k` / `.monthly` |
+| +50,000 sends | £99 (`…_SEND_50K`) | £99 (`…_50K_MONTHLY`) | `keel.campaigns.pack.send_50k` / `.monthly` |
+
+**Contact bumps** (monthly only; no send units):
+
+| Bump | Amount | Env key | Lookup key |
+|------|--------|---------|------------|
+| +500 contacts | £8 / mo | `STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_500_MONTHLY` | `keel.campaigns.bump.contacts_500.monthly` |
+| +2,500 contacts | £29 / mo | `STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2500_MONTHLY` | `keel.campaigns.bump.contacts_2500.monthly` |
+
+Test and live Stripe are separate catalogs. Run `stripe:setup-catalog` with `sk_test_...` for Preview / local, then again with `sk_live_...` for Production. Paste each mode’s printed `price_…` IDs into the matching Vercel environment — do not reuse test IDs in live.
+
 ---
 
 ## 3. Enable Stripe Connect (invoice payments)
@@ -166,6 +195,19 @@ OAUTH_STATE_SECRET=...
 # All STRIPE_PRICE_* from stripe:setup-catalog output
 STRIPE_PRICE_COMMUNITY_MONTHLY=price_...
 # ... etc
+
+# Campaigns (from the same script output — test IDs for Preview, live IDs for Production)
+STRIPE_PRICE_ADDON_CAMPAIGNS_STARTER_MONTHLY=price_...
+STRIPE_PRICE_ADDON_CAMPAIGNS_GROWTH_MONTHLY=price_...
+STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY=price_...
+STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K=price_...
+STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K_MONTHLY=price_...
+STRIPE_PRICE_CAMPAIGNS_PACK_SEND_10K=price_...
+STRIPE_PRICE_CAMPAIGNS_PACK_SEND_10K_MONTHLY=price_...
+STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K=price_...
+STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_MONTHLY=price_...
+STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_500_MONTHLY=price_...
+STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2500_MONTHLY=price_...
 ```
 
 Redeploy after changing env vars.

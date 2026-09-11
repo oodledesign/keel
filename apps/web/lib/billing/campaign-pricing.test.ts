@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -97,5 +100,70 @@ describe('campaign pricing', () => {
     expect(hasCampaignsAutomations('growth')).toBe(true);
     expect(hasCampaignsAutomations('pro')).toBe(true);
     expect(hasCampaignsAutomations('none')).toBe(false);
+  });
+
+  it('is listed in stripe-setup-catalog with settled GBP amounts', () => {
+    const catalog = readFileSync(
+      path.resolve(__dirname, '../../scripts/stripe-setup-catalog.mjs'),
+      'utf8',
+    );
+
+    const required = [
+      [
+        'ozer-addon-campaigns',
+        'STRIPE_PRICE_ADDON_CAMPAIGNS_STARTER_MONTHLY',
+        900,
+      ],
+      [
+        'ozer-addon-campaigns',
+        'STRIPE_PRICE_ADDON_CAMPAIGNS_GROWTH_MONTHLY',
+        1900,
+      ],
+      ['ozer-addon-campaigns', 'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY', 4900],
+      ['ozer-campaigns-pack-send-2k', 'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K', 600],
+      [
+        'ozer-campaigns-pack-send-2k',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K_MONTHLY',
+        500,
+      ],
+      [
+        'ozer-campaigns-pack-send-10k',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_10K',
+        2400,
+      ],
+      [
+        'ozer-campaigns-pack-send-10k',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_10K_MONTHLY',
+        2000,
+      ],
+      [
+        'ozer-campaigns-pack-send-50k',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K',
+        9900,
+      ],
+      [
+        'ozer-campaigns-pack-send-50k',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_MONTHLY',
+        9900,
+      ],
+      [
+        'ozer-campaigns-bump-contacts-500',
+        'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_500_MONTHLY',
+        800,
+      ],
+      [
+        'ozer-campaigns-bump-contacts-2500',
+        'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2500_MONTHLY',
+        2900,
+      ],
+    ] as const;
+
+    for (const [catalogId, envKey, amount] of required) {
+      expect(catalog).toContain(`catalogId: '${catalogId}'`);
+      expect(catalog).toContain(`envKey: '${envKey}'`);
+      expect(catalog).toContain(`amount: ${amount}`);
+    }
+
+    expect(OZER_STRIPE_PRICES.addon_campaigns_starter_monthly).toBeTruthy();
   });
 });
