@@ -1,7 +1,10 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
+import { Trans } from '@kit/ui/trans';
 
+import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
@@ -25,8 +28,22 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
     notFound();
   }
 
+  const campaignsHref = pathsConfig.app.accountEmailCampaigns.replace(
+    '[account]',
+    account,
+  );
+
   return (
     <>
+      <div className="px-4 pt-4 lg:px-6">
+        <Link
+          href={campaignsHref}
+          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          data-test="campaign-back-to-all"
+        >
+          <Trans i18nKey="campaigns:backToList" />
+        </Link>
+      </div>
       <TeamAccountLayoutPageHeader
         account={account}
         title={data.campaign.name}
