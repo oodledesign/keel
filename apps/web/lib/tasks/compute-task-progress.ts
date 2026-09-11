@@ -53,8 +53,9 @@ export function computeTaskProgress(
     return { progressPct: 0, mode: 'count' };
   }
 
-  const withDuration = activeLeaves.filter((task) =>
-    hasPositiveDuration(task.duration_minutes),
+  const withDuration = activeLeaves.filter(
+    (task): task is TaskProgressInput & { duration_minutes: number } =>
+      hasPositiveDuration(task.duration_minutes),
   );
   const coverage = withDuration.length / activeLeaves.length;
 
