@@ -94,6 +94,7 @@ export function CampaignAutomationsPanel({
           <div className="space-y-2">
             <Label>Form scope</Label>
             <select
+              data-test="automation-form-scope"
               className={selectClassName}
               value={formId}
               onChange={(event) => setFormId(event.target.value)}
@@ -109,6 +110,7 @@ export function CampaignAutomationsPanel({
           <div className="space-y-2">
             <Label>Audience list scope</Label>
             <select
+              data-test="automation-list-scope"
               className={selectClassName}
               value={audienceListId}
               onChange={(event) => setAudienceListId(event.target.value)}

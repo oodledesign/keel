@@ -565,15 +565,19 @@ export async function submitMailingListSignup(input: {
 
   if (preference.marketingStatus === 'subscribed') {
     if (input.audienceListId) {
-      void addMailingSignupToAudienceList({
-        admin: input.admin,
-        accountId: input.accountId,
-        listId: input.audienceListId,
-        email,
-        contactName: input.contact.contactName,
-        companyName: input.contact.companyName ?? input.spec.companyName,
-        phone: input.contact.contactPhone,
-      }).catch(() => undefined);
+      try {
+        await addMailingSignupToAudienceList({
+          admin: input.admin,
+          accountId: input.accountId,
+          listId: input.audienceListId,
+          email,
+          contactName: input.contact.contactName,
+          companyName: input.contact.companyName ?? input.spec.companyName,
+          phone: input.contact.contactPhone,
+        });
+      } catch {
+        // List membership must not fail the public signup.
+      }
     }
 
     void fireNewSubscriberAutomations({
