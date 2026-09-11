@@ -537,6 +537,11 @@ async function getRedirects() {
       permanent: false,
     },
     {
+      source: '/app/:account/email-campaigns/dynamics',
+      destination: '/app/:account/settings/integrations/dynamics',
+      permanent: false,
+    },
+    {
       source: '/app/:account/campaigns/:id',
       destination: '/app/:account/projects/:id',
       permanent: true,

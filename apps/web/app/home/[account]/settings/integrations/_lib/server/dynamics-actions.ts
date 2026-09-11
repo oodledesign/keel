@@ -20,11 +20,18 @@ import {
   SaveDynamicsConnectionSchema,
 } from '../schemas/dynamics.schema';
 
-function dynamicsPath(accountSlug: string) {
-  return pathsConfig.app.accountEmailCampaignDynamics.replace(
+function revalidateDynamicsSettings(accountSlug: string) {
+  const integrations = pathsConfig.app.accountIntegrationsSettings.replace(
     '[account]',
     accountSlug,
   );
+  const dynamics = pathsConfig.app.accountIntegrationsDynamicsSettings.replace(
+    '[account]',
+    accountSlug,
+  );
+
+  revalidatePath(integrations);
+  revalidatePath(dynamics);
 }
 
 async function requireCampaignsAddon(userId: string, accountId: string) {
@@ -79,7 +86,7 @@ export const saveDynamicsConnectionAction = enhanceAction(
       entity: data.entity,
       fieldMapping: data.fieldMapping,
     });
-    revalidatePath(dynamicsPath(data.accountSlug));
+    revalidateDynamicsSettings(data.accountSlug);
     return connection;
   },
   { auth: true, schema: SaveDynamicsConnectionSchema },
@@ -91,7 +98,7 @@ export const disconnectDynamicsConnectionAction = enhanceAction(
     const connection = await createDynamicsConnectionService(client).disconnect(
       data.accountId,
     );
-    revalidatePath(dynamicsPath(data.accountSlug));
+    revalidateDynamicsSettings(data.accountSlug);
     return connection;
   },
   { auth: true, schema: DynamicsAccountSchema },
@@ -116,7 +123,7 @@ export const testDynamicsConnectionAction = enhanceAction(
         clientSecret: secrets.clientSecret,
       }).whoAmI();
       await service.recordTest(data.accountId, { ok: true });
-      revalidatePath(dynamicsPath(data.accountSlug));
+      revalidateDynamicsSettings(data.accountSlug);
       return { ok: true as const, organizationId: who.OrganizationId };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -125,7 +132,7 @@ export const testDynamicsConnectionAction = enhanceAction(
         'Dynamics connection test failed',
       );
       await service.recordTest(data.accountId, { ok: false, error: message });
-      revalidatePath(dynamicsPath(data.accountSlug));
+      revalidateDynamicsSettings(data.accountSlug);
       throw new Error(message);
     }
   },
@@ -139,7 +146,7 @@ export const retryDynamicsSyncJobsAction = enhanceAction(
     const result = await processDueDynamicsSyncJobs(client, {
       accountId: data.accountId,
     });
-    revalidatePath(dynamicsPath(data.accountSlug));
+    revalidateDynamicsSettings(data.accountSlug);
     return { reset, ...result };
   },
   { auth: true, schema: DynamicsAccountSchema },

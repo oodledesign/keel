@@ -113,6 +113,14 @@ export function buildWorkspaceSettingsNav(input: {
         accountSlug,
       ),
     },
+    {
+      id: 'integrations',
+      label: 'Integrations',
+      href: settingsPath(
+        pathsConfig.app.accountIntegrationsSettings,
+        accountSlug,
+      ),
+    },
   ];
 
   if (workspaceProfile === 'commercial_property') {
