@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { WORKSPACE_MAILING_LAWFUL_BASES } from '~/lib/workspace-forms/workspace-mailing-list';
+
 import { CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN } from './campaign-test-send';
 import {
   lookupCampaignRecipientByToken,
@@ -154,6 +156,38 @@ describe('campaign recipient unsubscribe tokens', () => {
     );
   });
 
+  it('creates an unsubscribed preference when a historic campaign token has none', async () => {
+    const { client, inserts } = createCampaignClient({
+      recipient: {
+        id: 'rec-1',
+        account_id: ACCOUNT_ID,
+        email: 'dana@example.com',
+      },
+      preference: null,
+    });
+
+    await expect(
+      unsubscribeCampaignRecipientByToken(client as never, TOKEN),
+    ).resolves.toEqual({
+      email: 'dana@example.com',
+      accountId: ACCOUNT_ID,
+      marketingStatus: 'unsubscribed',
+    });
+    expect(inserts[0]).toMatchObject({
+      table: 'workspace_mailing_preferences',
+      payload: {
+        marketing_status: 'unsubscribed',
+        lawful_basis: 'imported_historical',
+        consent_source: 'campaign_unsubscribe',
+        consent_copy_version: 'v1',
+        unsubscribe_token: TOKEN,
+      },
+    });
+    expect(WORKSPACE_MAILING_LAWFUL_BASES).toContain(
+      inserts[0]?.payload.lawful_basis,
+    );
+  });
+
   it('creates a subscribed preference when a campaign token has none', async () => {
     const { client, inserts } = createCampaignClient({
       recipient: {
@@ -175,9 +209,13 @@ describe('campaign recipient unsubscribe tokens', () => {
       table: 'workspace_mailing_preferences',
       payload: {
         marketing_status: 'subscribed',
+        lawful_basis: 'manual_opt_in',
         consent_source: 'unsubscribe_page_resubscribe',
         unsubscribe_token: TOKEN,
       },
     });
+    expect(WORKSPACE_MAILING_LAWFUL_BASES).toContain(
+      inserts[0]?.payload.lawful_basis,
+    );
   });
 });

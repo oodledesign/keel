@@ -8,6 +8,8 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
+  PUBLIC_MAILING_PREFERENCE_INVALID_LINK,
+  PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED,
   resubscribeMailingListPublicPreference,
   unsubscribeMailingListPublicPreference,
 } from '~/lib/workspace-forms/mailing-list-public-preference';
@@ -32,10 +34,16 @@ export const resubscribeMailingListAction = enhanceAction(
   async (formData: FormData) => {
     const token = parseToken(formData);
     const admin = getSupabaseServerAdminClient();
-    const result = await resubscribeMailingListPublicPreference(admin, token);
+    let result;
+
+    try {
+      result = await resubscribeMailingListPublicPreference(admin, token);
+    } catch {
+      throw new Error(PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED);
+    }
 
     if (!result || result.marketingStatus !== 'subscribed') {
-      throw new Error('This unsubscribe link is missing or invalid.');
+      throw new Error(PUBLIC_MAILING_PREFERENCE_INVALID_LINK);
     }
 
     redirect(mailingListUnsubscribePath(token, true));
@@ -47,10 +55,16 @@ export const unsubscribeMailingListAction = enhanceAction(
   async (formData: FormData) => {
     const token = parseToken(formData);
     const admin = getSupabaseServerAdminClient();
-    const result = await unsubscribeMailingListPublicPreference(admin, token);
+    let result;
+
+    try {
+      result = await unsubscribeMailingListPublicPreference(admin, token);
+    } catch {
+      throw new Error(PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED);
+    }
 
     if (!result) {
-      throw new Error('This unsubscribe link is missing or invalid.');
+      throw new Error(PUBLIC_MAILING_PREFERENCE_INVALID_LINK);
     }
 
     redirect(mailingListUnsubscribePath(token));

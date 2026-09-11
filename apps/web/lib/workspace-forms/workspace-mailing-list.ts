@@ -22,6 +22,17 @@ const CONSENT_COPY_VERSION = 'v1';
 
 export const WORKSPACE_MAILING_LIST_PURPOSE = PURPOSE;
 
+/** Allowed by `workspace_mailing_preferences_lawful_basis_check`. */
+export const WORKSPACE_MAILING_LAWFUL_BASES = [
+  'website_form',
+  'imported_historical',
+  'manual_opt_in',
+  'other',
+] as const;
+
+export type WorkspaceMailingLawfulBasis =
+  (typeof WORKSPACE_MAILING_LAWFUL_BASES)[number];
+
 function fromTable(client: SupabaseClient, table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (client as any).from(table);
@@ -203,7 +214,7 @@ export async function ensureWorkspaceMailingPreference(input: {
       email,
       purpose: PURPOSE,
       marketing_status: 'subscribed',
-      lawful_basis: 'website_form',
+      lawful_basis: 'website_form' satisfies WorkspaceMailingLawfulBasis,
       consent_source: input.consentSource ?? 'workspace_form',
       consent_copy_version: CONSENT_COPY_VERSION,
       unsubscribe_token: newUnsubscribeToken(),
