@@ -81,10 +81,26 @@ export async function resubscribeMailingListPublicPreference(
   token: string,
 ): Promise<PublicMailingPreferenceResult | null> {
   try {
-    return (
+    const result =
       (await resubscribeWorkspaceMailingListByToken(admin, token)) ??
-      (await resubscribeCampaignRecipientByToken(admin, token))
-    );
+      (await resubscribeCampaignRecipientByToken(admin, token));
+
+    if (!result) return null;
+
+    if (result.marketingStatus !== 'suppressed') {
+      try {
+        await createCommercialCirculationService(admin).resubscribe(
+          result.accountId,
+          result.email,
+          { consentSource: 'unsubscribe_page_resubscribe' },
+        );
+      } catch {
+        // Best-effort: missing circulation rows are a no-op; ignore DB errors
+        // so business workspaces can still resubscribe to the mailing list.
+      }
+    }
+
+    return result;
   } catch (err) {
     throwMappedPreferenceError(err);
   }
