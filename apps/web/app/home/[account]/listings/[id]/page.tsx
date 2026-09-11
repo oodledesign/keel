@@ -29,15 +29,17 @@ async function ListingOverviewPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [interestSummary, viewingsResult, parties] = await Promise.all([
-    service.getInterestSummary(listingId),
-    client
-      .from('commercial_viewings')
-      .select('status')
-      .eq('listing_id', listingId)
-      .eq('account_id', accountId),
-    service.listParties(listingId, accountId),
-  ]);
+  const [interestSummary, viewingsResult, parties, publications] =
+    await Promise.all([
+      service.getInterestSummary(listingId),
+      client
+        .from('commercial_viewings')
+        .select('status')
+        .eq('listing_id', listingId)
+        .eq('account_id', accountId),
+      service.listParties(listingId, accountId),
+      service.listPublicationsForListing(listingId),
+    ]);
 
   const viewingRows = viewingsResult.data ?? [];
   const upcomingViewings = viewingRows.filter(
@@ -53,6 +55,7 @@ async function ListingOverviewPage({ params }: PageProps) {
       accountId={accountId}
       accountSlug={slug}
       parties={parties}
+      publications={publications}
       interestSummary={{
         ...interestSummary,
         upcomingViewings,

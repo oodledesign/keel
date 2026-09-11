@@ -3,6 +3,7 @@ import {
   isEachFeedIncluded,
   isWebsiteFeedIncluded,
 } from '~/lib/commercial/each-feed-inclusion';
+import { ACTIVE_LISTING_STATUSES_FOR_MATCH } from '~/lib/commercial/match-scoring';
 
 export type ChannelPublishState = 'live' | 'off' | 'blocked' | 'unavailable';
 
@@ -287,6 +288,54 @@ export function getRightmoveChannelStatus(input?: {
     detail: 'Uploaded to Rightmove but not published — turn on to go live',
     blockers: enableBlockers,
     lastError,
+  };
+}
+
+export function getCirculationChannelStatus(input: {
+  listing: Pick<ListingInput, 'status'> & { autoCirculateMatches: boolean };
+}): ChannelPublishStatus {
+  const { listing } = input;
+  const switchOn = listing.autoCirculateMatches;
+  const liveForMatches = (
+    ACTIVE_LISTING_STATUSES_FOR_MATCH as readonly string[]
+  ).includes(listing.status);
+  const enableBlockers: string[] = [];
+  if (!liveForMatches) {
+    enableBlockers.push('Set status to Instructed, Marketing, or Under offer');
+  }
+
+  if (!switchOn) {
+    return {
+      state: 'off',
+      switchOn: false,
+      canEnable: enableBlockers.length === 0,
+      label: 'Off',
+      detail: 'Not included in automatic match emails',
+      blockers: enableBlockers,
+      lastError: null,
+    };
+  }
+
+  if (!liveForMatches) {
+    return {
+      state: 'blocked',
+      switchOn: true,
+      canEnable: false,
+      label: 'Blocked',
+      detail: 'Included, but not on a live match status yet',
+      blockers: enableBlockers,
+      lastError: null,
+    };
+  }
+
+  return {
+    state: 'live',
+    switchOn: true,
+    canEnable: true,
+    label: 'Included',
+    detail: 'Included in automatic match mailouts',
+    blockers: [],
+    lastError: null,
   };
 }
 
