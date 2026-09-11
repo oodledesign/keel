@@ -28,15 +28,15 @@ const DEFAULT_ACCENT = '#57C87F';
 const CONTENT_COLOR = '#333333';
 const MUTED_COLOR = '#6b5c63';
 const INFO_COLOR = '#41606F';
-const PAGE_BG = '#f4f1ec';
-/** Darker mid grey — Gmail collapses 1px hairlines even when Spark shows them. */
-const DIVIDER_COLOR = '#6B6560';
-const DIVIDER_HEIGHT_PX = 4;
-const BODY_FONT_SIZE_PX = 20;
-const MOBILE_BODY_FONT_SIZE_PX = 22;
-const HEADING_1_SIZE_PX = 32;
-const HEADING_2_SIZE_PX = 26;
-const FOOTER_FONT_SIZE_PX = 14;
+/** Mid grey hairline — visible on white, not a heavy full-bleed bar. */
+const DIVIDER_COLOR = '#C4BBB3';
+const DIVIDER_HEIGHT_PX = 2;
+/** Keep the rule inside content padding so it never spans the 600px card edge. */
+const DIVIDER_INSET_PX = 28;
+const BODY_FONT_SIZE_PX = 17;
+const HEADING_1_SIZE_PX = 28;
+const HEADING_2_SIZE_PX = 22;
+const FOOTER_FONT_SIZE_PX = 13;
 const TEXT_SIZE_ADJUST = '-webkit-text-size-adjust:100%;text-size-adjust:100%;';
 const CONTENT_TD_CLASS = 'ozer-email-content';
 const COPY_CLASS = 'ozer-email-copy';
@@ -65,6 +65,7 @@ export function compileCampaignDocument(
   options: CompileCampaignOptions = {},
 ): string {
   const colors = resolveCompileColors(brand);
+  const surface = colors.secondary;
   const unsubscribeUrl = options.unsubscribeUrl ?? '{{unsubscribe_url}}';
   const rows = document.blocks
     .map((block) => renderBlock(block, brand, colors, unsubscribeUrl))
@@ -79,6 +80,8 @@ export function compileCampaignDocument(
     );
   }
 
+  // One full-bleed paper + one 600px column. A contrasting canvas
+  // around a padded card reads as nested boxes in Gmail.
   return `
 ${CAMPAIGN_DOCUMENT_MARKER}
 <!DOCTYPE html>
@@ -95,13 +98,6 @@ ${CAMPAIGN_DOCUMENT_MARKER}
   @media only screen and (max-width: 620px) {
     .ozer-email-col { display: block !important; width: 100% !important; max-width: 100% !important; }
     .ozer-email-col + .ozer-email-col { padding-top: 16px !important; }
-    .ozer-email-body,
-    td.ozer-email-content,
-    .ozer-email-copy,
-    .ozer-email-copy p,
-    td.ozer-email-content p {
-      font-size: ${MOBILE_BODY_FONT_SIZE_PX}px !important;
-    }
   }
 </style>
 <!--[if mso]>
@@ -114,11 +110,11 @@ ${CAMPAIGN_DOCUMENT_MARKER}
 </noscript>
 <![endif]-->
 </head>
-<body class="ozer-email-body" bgcolor="${PAGE_BG}" style="margin:0;padding:0;${fillCss(PAGE_BG)}${TEXT_SIZE_ADJUST}">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"${fillBgcolor(PAGE_BG)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${fillCss(PAGE_BG)}">
+<body class="ozer-email-body" bgcolor="${surface}" style="margin:0;padding:0;${fillCss(surface)}${TEXT_SIZE_ADJUST}">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"${fillBgcolor(surface)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${fillCss(surface)}">
   <tr>
-    <td align="center"${fillBgcolor(PAGE_BG)} style="padding:24px 12px;${fillCss(PAGE_BG)}">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600"${fillBgcolor(colors.secondary)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;width:600px;max-width:600px;${fillCss(colors.secondary)}">
+    <td align="center"${fillBgcolor(surface)} style="${fillCss(surface)}">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600"${fillBgcolor(surface)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;width:600px;max-width:600px;${fillCss(surface)}">
         ${rows.join('\n')}
       </table>
     </td>
@@ -336,15 +332,20 @@ function renderDividerRow(
   block: Extract<CampaignBlock, { type: 'divider' }>,
   brand: CampaignBrand,
 ) {
-  // Gmail often collapses a 1px hairline; Spark already shows grey.
-  // 4px filled cell + 2px border-top is intentional belt-and-braces
-  // (clients that honour both may show ~6px, which is acceptable).
+  const padding = resolveCampaignBlockPadding(block);
+  const inset = {
+    ...padding,
+    left: Math.max(padding.left, DIVIDER_INSET_PX),
+    right: Math.max(padding.right, DIVIDER_INSET_PX),
+  };
+
+  // One technique only: an inset filled cell. Dual border-top + bar
+  // read as a full-bleed rule in Gmail and a double line in Spark.
   return styledRow(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td height="${DIVIDER_HEIGHT_PX}"${fillBgcolor(DIVIDER_COLOR)} style="${fillCss(DIVIDER_COLOR)}font-size:0;line-height:0;height:${DIVIDER_HEIGHT_PX}px;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>`,
     {
       background: resolveCampaignBlockBackground(block, brand),
-      padding: resolveCampaignBlockPadding(block),
-      extraTdStyle: `border-top:2px solid ${DIVIDER_COLOR};`,
+      padding: inset,
     },
   );
 }
@@ -516,6 +517,7 @@ function extractHref(attrs: string): string | null {
 
 export function sanitizeRichText(html: string): string {
   const withoutDanger = stripDangerousHtml(html);
+  let listDepth = 0;
 
   return withoutDanger.replace(
     /<\/?([a-zA-Z0-9]+)([^>]*)>/g,
@@ -531,6 +533,17 @@ export function sanitizeRichText(html: string): string {
         return '<br />';
       }
 
+      if (tag === 'ul' || tag === 'ol') {
+        if (closing) {
+          listDepth = Math.max(0, listDepth - 1);
+          return `</${tag}>`;
+        }
+
+        listDepth += 1;
+        const listStyle = tag === 'ul' ? 'disc' : 'decimal';
+        return `<${tag} style="margin:0 0 6px;padding-left:20px;list-style-type:${listStyle};">`;
+      }
+
       if (closing) {
         return `</${tag}>`;
       }
@@ -542,16 +555,14 @@ export function sanitizeRichText(html: string): string {
       }
 
       if (tag === 'p') {
+        if (listDepth > 0) {
+          return `<p style="margin:0;">`;
+        }
         return `<p style="margin:0 0 12px;">`;
       }
 
-      if (tag === 'ul' || tag === 'ol') {
-        const listStyle = tag === 'ul' ? 'disc' : 'decimal';
-        return `<${tag} style="margin:0 0 12px;padding-left:20px;list-style-type:${listStyle};">`;
-      }
-
       if (tag === 'li') {
-        return `<li style="margin:0 0 4px;">`;
+        return `<li style="margin:0 0 2px;padding:0;">`;
       }
 
       return `<${tag}>`;

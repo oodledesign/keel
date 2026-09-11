@@ -189,10 +189,34 @@ describe('compileCampaignDocument', () => {
     );
 
     expect(html).toContain(
-      '<ul style="margin:0 0 12px;padding-left:20px;list-style-type:disc;">',
+      '<ul style="margin:0 0 6px;padding-left:20px;list-style-type:disc;">',
     );
-    expect(html).toContain('<li style="margin:0 0 4px;">Coffee</li>');
-    expect(html).toContain('<li style="margin:0 0 4px;">Tea</li>');
+    expect(html).toContain('<li style="margin:0 0 2px;padding:0;">Coffee</li>');
+    expect(html).toContain('<li style="margin:0 0 2px;padding:0;">Tea</li>');
+  });
+
+  it('collapses TipTap paragraph wrappers inside list items', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 't-list',
+            type: 'text',
+            html: '<ul><li><p>Coffee</p></li><li><p>Tea</p></li></ul>',
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain(
+      '<li style="margin:0 0 2px;padding:0;"><p style="margin:0;">Coffee</p></li>',
+    );
+    expect(html).toContain(
+      '<li style="margin:0 0 2px;padding:0;"><p style="margin:0;">Tea</p></li>',
+    );
+    expect(html).not.toContain('<p style="margin:0 0 12px;">Coffee</p>');
   });
 
   it('appends an unsubscribe footer when the document has none', () => {
@@ -286,7 +310,7 @@ describe('compileCampaignDocument', () => {
     expect(html).not.toMatch(/logo[\s\S]*background:#0D2344/);
   });
 
-  it('emits light color-scheme, full-width logo plates, a durable divider, and Spark-safe type', () => {
+  it('emits light color-scheme, a flat paper, full-width logo plates, an inset divider, and calm type', () => {
     const branded = {
       ...brand,
       logo_on_light_url: 'https://cdn.example.com/on-light.png',
@@ -313,10 +337,13 @@ describe('compileCampaignDocument', () => {
     expect(html).toContain('name="supported-color-schemes"');
     expect(html).toContain('content="light only"');
     expect(html).toContain('class="ozer-email-body"');
-    expect(html).toContain('bgcolor="#f4f1ec"');
-    expect(html).toContain('background-color:#f4f1ec');
     expect(html).toContain('bgcolor="#FFFFFF"');
     expect(html).toContain('background-color:#FFFFFF');
+    expect(html).toMatch(
+      /<body[^>]*bgcolor="#FFFFFF"[\s\S]*?<table[^>]*width="100%"[^>]*bgcolor="#FFFFFF"[\s\S]*?<td[^>]*bgcolor="#FFFFFF"[^>]*style="[^"]*background-color:#FFFFFF[\s\S]*?<table[^>]*width="600"[^>]*bgcolor="#FFFFFF"/,
+    );
+    expect(html).not.toContain('padding:24px 12px');
+    expect(html).not.toContain('#f4f1ec');
     expect(html).toContain('bgcolor="#0D2344"');
     expect(html).toContain('background-color:#0D2344');
     expect(html).toContain('color:#333333');
@@ -324,11 +351,15 @@ describe('compileCampaignDocument', () => {
     expect(html).toContain('text-size-adjust:100%');
     expect(html).toContain('class="ozer-email-content"');
     expect(html).toContain('class="ozer-email-copy"');
-    expect(html).toContain('font-size:20px');
-    expect(html).toContain('font-size:32px');
-    expect(html).toContain('font-size:26px');
-    expect(html).toContain('font-size: 22px !important');
-    expect(html).toContain('td.ozer-email-content');
+    expect(html).toContain('font-size:17px');
+    expect(html).toContain('font-size:28px');
+    expect(html).toContain('font-size:22px');
+    expect(html).toContain('font-size:13px');
+    expect(html).not.toContain('font-size:20px');
+    expect(html).not.toContain('font-size:32px');
+    expect(html).not.toContain('font-size:26px');
+    expect(html).not.toContain('22px !important');
+    expect(html).not.toContain('td.ozer-email-content');
     expect(html).toMatch(
       /<td[^>]*width="100%"[^>]*bgcolor="#0D2344"[^>]*>[\s\S]*?<img src="https:\/\/cdn\.example\.com\/logo\.png"/,
     );
@@ -341,16 +372,39 @@ describe('compileCampaignDocument', () => {
     expect(html).toMatch(
       /<td[^>]*bgcolor="#0D2344"[^>]*>\s*<img src="https:\/\/cdn\.example\.com\/on-dark\.png"/,
     );
-    expect(html).toContain('height="4"');
-    expect(html).toContain('height:4px');
-    expect(html).toContain('bgcolor="#6B6560"');
-    expect(html).toContain('background-color:#6B6560');
-    expect(html).toContain('border-top:2px solid #6B6560');
+    expect(html).toContain('height="2"');
+    expect(html).toContain('height:2px');
+    expect(html).toContain('bgcolor="#C4BBB3"');
+    expect(html).toContain('background-color:#C4BBB3');
+    expect(html).toContain('padding:12px 28px 12px 28px');
     expect(html).toContain('mso-line-height-rule:exactly');
-    expect(html).not.toContain('height="1"');
+    expect(html).not.toContain('height="4"');
+    expect(html).not.toContain('border-top:2px solid');
     expect(html).not.toContain('border-top:1px solid');
+    expect(html).not.toContain('#6B6560');
     expect(html).not.toContain('#B8AFA6');
     expect(html).not.toContain('#e4ddd6');
+  });
+
+  it('keeps the divider inset even when block padding is none', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 'div',
+            type: 'divider',
+            padding: { top: 0, right: 0, bottom: 0, left: 0 },
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain('padding:0px 28px 0px 28px');
+    expect(html).toContain('height="2"');
+    expect(html).toContain('bgcolor="#C4BBB3"');
+    expect(html).not.toContain('border-top:');
   });
 
   it('recompiles from body_document on send instead of stale html_body', () => {
@@ -368,8 +422,8 @@ describe('compileCampaignDocument', () => {
 
     expect(html).toContain('Fresh compile');
     expect(html).toContain('ozer-campaign-document:v1');
-    expect(html).toContain('font-size:20px');
-    expect(html).toContain('bgcolor="#6B6560"');
+    expect(html).toContain('font-size:17px');
+    expect(html).toContain('bgcolor="#C4BBB3"');
     expect(html).toContain('-webkit-text-size-adjust:100%');
     expect(html).not.toContain('Old draft without dark-mode hardening');
   });
