@@ -520,8 +520,11 @@ async function loadDashboardPageDataImpl(
     for (const row of projectStatusCountsResult.data ?? []) {
       const status = (row.status as string | null) ?? '';
       if (status === 'completed') statusSummary.completed += 1;
-      else if (status === 'in_progress') statusSummary.inProgress += 1;
+      else if (status === 'cancelled') {
+        /* closed, not counted in the active summary */
+      } else if (status === 'in_progress') statusSummary.inProgress += 1;
       else if (status === 'pending') statusSummary.pending += 1;
+      else if (status) statusSummary.inProgress += 1;
     }
   }
 

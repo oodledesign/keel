@@ -1,12 +1,11 @@
 import { z } from 'zod';
 
-const jobStatus = z.enum([
-  'pending',
-  'in_progress',
-  'on_hold',
-  'completed',
-  'cancelled',
-]);
+const jobStatus = z
+  .string()
+  .trim()
+  .min(1)
+  .max(48)
+  .regex(/^[a-z][a-z0-9_]{0,47}$/);
 const jobPriority = z.enum(['low', 'medium', 'high', 'urgent']);
 
 const optionalString = z.string().optional();
@@ -17,23 +16,16 @@ const optionalDate = z.coerce.date().optional();
 const optionalNullableDate = z.union([z.coerce.date(), z.null()]).optional();
 
 // --- List jobs ---
-export const ListJobsSchema = z
-  .object({
-    accountId: z.string().uuid(),
-    tab: z.enum(['active', 'completed', 'all']),
-    page: z.coerce.number().int().min(1).optional().default(1),
-    pageSize: z.coerce.number().int().min(1).max(200).optional().default(20),
-    query: z.string().nullish().optional(),
-    status: jobStatus.nullish().optional(),
-    priority: jobPriority.nullish().optional(),
-    clientId: z.string().uuid().optional(),
-  })
-  .transform((input) => ({
-    ...input,
-    query: input.query?.trim() ? input.query.trim() : undefined,
-    status: input.status ?? undefined,
-    priority: input.priority ?? undefined,
-  }));
+export const ListJobsSchema = z.object({
+  accountId: z.string().uuid(),
+  tab: z.enum(['active', 'completed', 'all']),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).optional().default(20),
+  query: z.string().trim().min(1).optional(),
+  status: jobStatus.optional(),
+  priority: jobPriority.optional(),
+  clientId: z.string().uuid().optional(),
+});
 
 // --- Get job ---
 export const GetJobSchema = z.object({
@@ -47,7 +39,7 @@ export const CreateJobSchema = z.object({
   client_id: z.string().uuid().optional(),
   title: z.string().min(1, 'Title is required'),
   description: optionalString,
-  status: jobStatus.optional().default('pending'),
+  status: jobStatus.optional(),
   priority: jobPriority.optional().default('medium'),
   start_date: optionalDate,
   due_date: optionalDate,

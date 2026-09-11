@@ -26,6 +26,7 @@ import { JobDetailContent } from '../_components/job-detail-content';
 import { loadCampaignDetailPageData } from '../_lib/campaign/server/campaign-page.loader';
 import { loadJobsPageData } from '../_lib/server/jobs-page.loader';
 import { createJobsService } from '../_lib/server/jobs.service';
+import { createProjectStatusesService } from '../_lib/server/project-statuses.service';
 
 const PROJECT_DETAIL_SPACE_TYPES = [
   ...BUSINESS_WORKSPACE_SPACE_TYPES,
@@ -190,6 +191,10 @@ async function ProjectDetailPage({
       })
     : [];
 
+  const statuses = await createProjectStatusesService(client)
+    .list(accountId)
+    .catch(() => undefined);
+
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-2 py-2 md:px-3 md:py-3">
       <JobDetailContent
@@ -211,6 +216,7 @@ async function ProjectDetailPage({
         linksTableAvailable={workspaceContent.linksTableAvailable}
         linkOptions={workspaceContent.linkOptions}
         defaultLink={workspaceContent.defaultLink}
+        statuses={statuses}
       />
     </PageBody>
   );

@@ -29,19 +29,17 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { projectDetailHref } from '~/lib/projects/project-paths';
+import {
+  type ProjectStatus,
+  defaultProjectStatusSlug,
+  fallbackProjectStatuses,
+} from '~/lib/projects/project-statuses';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { updateJob } from '../_lib/server/server-actions';
 
-const STATUS_COLUMNS = [
-  { key: 'pending', label: 'Planned' },
-  { key: 'in_progress', label: 'In progress' },
-  { key: 'on_hold', label: 'On hold' },
-  { key: 'completed', label: 'Complete' },
-] as const;
-
-type BoardStatus = (typeof STATUS_COLUMNS)[number]['key'];
+type BoardColumn = { key: string; label: string };
 
 export type ProjectsKanbanItem = {
   id: string;
@@ -57,31 +55,33 @@ export type ProjectsKanbanItem = {
   readOnly?: boolean;
 };
 
-function isBoardStatus(value: string): value is BoardStatus {
-  return STATUS_COLUMNS.some((column) => column.key === value);
-}
-
-function columnForItem(item: ProjectsKanbanItem): BoardStatus {
+function columnForItem(
+  item: ProjectsKanbanItem,
+  columns: BoardColumn[],
+  fallback: string,
+): string {
   if (item.projectType === 'campaign') {
-    return 'in_progress';
+    return (
+      columns.find((column) => column.key === 'in_progress')?.key ?? fallback
+    );
   }
-  if (item.status === 'cancelled' || item.status === 'completed') {
-    return 'completed';
-  }
-  if (isBoardStatus(item.status)) {
+  if (columns.some((column) => column.key === item.status)) {
     return item.status;
   }
-  return 'pending';
+  return fallback;
 }
 
-function columnDroppableId(status: BoardStatus) {
+function columnDroppableId(status: string) {
   return `column:${status}`;
 }
 
-function parseColumnId(id: string | number | undefined): BoardStatus | null {
+function parseColumnId(
+  id: string | number | undefined,
+  columns: BoardColumn[],
+): string | null {
   if (typeof id !== 'string' || !id.startsWith('column:')) return null;
   const key = id.slice('column:'.length);
-  return isBoardStatus(key) ? key : null;
+  return columns.some((column) => column.key === key) ? key : null;
 }
 
 function parseItemId(id: string | number | undefined): string | null {
@@ -97,6 +97,7 @@ export function ProjectsKanbanView({
   personalScope = false,
   projectDetailPathBuilder,
   onStatusUpdated,
+  statuses: statusesProp,
 }: {
   accountSlug: string;
   accountId: string;
@@ -105,10 +106,19 @@ export function ProjectsKanbanView({
   personalScope?: boolean;
   projectDetailPathBuilder?: (id: string) => string;
   onStatusUpdated?: () => void;
+  statuses?: ProjectStatus[];
 }) {
+  const statuses = statusesProp?.length
+    ? statusesProp
+    : fallbackProjectStatuses(accountId);
+  const columns: BoardColumn[] = statuses.map((status) => ({
+    key: status.slug,
+    label: status.label,
+  }));
+  const fallbackStatus = defaultProjectStatusSlug(statuses);
   const [localItems, setLocalItems] = useState(items);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [overColumn, setOverColumn] = useState<BoardStatus | null>(null);
+  const [overColumn, setOverColumn] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -126,23 +136,22 @@ export function ProjectsKanbanView({
   );
 
   const itemsByColumn = useMemo(() => {
-    const map: Record<BoardStatus, ProjectsKanbanItem[]> = {
-      pending: [],
-      in_progress: [],
-      on_hold: [],
-      completed: [],
-    };
+    const map: Record<string, ProjectsKanbanItem[]> = Object.fromEntries(
+      columns.map((column) => [column.key, [] as ProjectsKanbanItem[]]),
+    );
     for (const item of localItems) {
-      map[columnForItem(item)].push(item);
+      const key = columnForItem(item, columns, fallbackStatus);
+      map[key] = map[key] ?? [];
+      map[key].push(item);
     }
     return map;
-  }, [localItems]);
+  }, [columns, fallbackStatus, localItems]);
 
   const activeItem = activeId
     ? (localItems.find((item) => item.id === activeId) ?? null)
     : null;
 
-  const persistStatus = (itemId: string, status: BoardStatus) => {
+  const persistStatus = (itemId: string, status: string) => {
     if (itemId.startsWith('shared:')) {
       return;
     }
@@ -169,13 +178,13 @@ export function ProjectsKanbanView({
     setActiveId(itemId);
     if (itemId) {
       const item = localItems.find((row) => row.id === itemId);
-      if (item) setOverColumn(columnForItem(item));
+      if (item) setOverColumn(columnForItem(item, columns, fallbackStatus));
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
     const overId = event.over?.id;
-    const asColumn = parseColumnId(overId);
+    const asColumn = parseColumnId(overId, columns);
     if (asColumn) {
       setOverColumn(asColumn);
       return;
@@ -183,7 +192,9 @@ export function ProjectsKanbanView({
     const overItemId = parseItemId(overId);
     if (overItemId) {
       const overItem = localItems.find((row) => row.id === overItemId);
-      if (overItem) setOverColumn(columnForItem(overItem));
+      if (overItem) {
+        setOverColumn(columnForItem(overItem, columns, fallbackStatus));
+      }
     }
   };
 
@@ -203,12 +214,14 @@ export function ProjectsKanbanView({
     }
 
     const nextStatus =
-      parseColumnId(event.over?.id) ??
+      parseColumnId(event.over?.id, columns) ??
       (() => {
         const overItemId = parseItemId(event.over?.id);
         if (!overItemId) return null;
         const overItem = localItems.find((row) => row.id === overItemId);
-        return overItem ? columnForItem(overItem) : null;
+        return overItem
+          ? columnForItem(overItem, columns, fallbackStatus)
+          : null;
       })() ??
       overColumn;
 
@@ -216,7 +229,7 @@ export function ProjectsKanbanView({
 
     if (!nextStatus) return;
 
-    const currentColumn = columnForItem(item);
+    const currentColumn = columnForItem(item, columns, fallbackStatus);
     if (currentColumn === nextStatus) return;
 
     setLocalItems((prev) =>
@@ -241,13 +254,13 @@ export function ProjectsKanbanView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-x-auto md:grid-cols-2 xl:grid-cols-4">
-        {STATUS_COLUMNS.map((column) => (
+      <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
+        {columns.map((column) => (
           <KanbanColumn
             key={column.key}
             status={column.key}
             label={column.label}
-            items={itemsByColumn[column.key]}
+            items={itemsByColumn[column.key] ?? []}
             detailPath={detailPath}
             canEditJobs={canEditJobs}
             isOver={overColumn === column.key && Boolean(activeId)}
@@ -270,7 +283,7 @@ function KanbanColumn({
   canEditJobs,
   isOver,
 }: {
-  status: BoardStatus;
+  status: string;
   label: string;
   items: ProjectsKanbanItem[];
   detailPath: (id: string) => string;
@@ -292,7 +305,7 @@ function KanbanColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        'flex min-h-[280px] flex-col rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] transition-colors',
+        'flex min-h-[280px] w-[min(100%,240px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] transition-colors md:w-60',
         (isOver || isDroppableOver) &&
           'border-[var(--ozer-accent)]/40 bg-[color:var(--ozer-accent)]/5',
       )}

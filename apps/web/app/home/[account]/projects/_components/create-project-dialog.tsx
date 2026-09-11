@@ -38,6 +38,11 @@ import {
   projectDetailHref,
 } from '~/lib/projects/project-paths';
 import {
+  type ProjectStatus,
+  defaultProjectStatusSlug,
+  fallbackProjectStatuses,
+} from '~/lib/projects/project-statuses';
+import {
   PROJECT_TYPE_META,
   type ProjectType,
 } from '~/lib/projects/project-types';
@@ -48,8 +53,10 @@ import {
 
 import { createCampaignProject } from '../_lib/campaign/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
+import { listProjectStatuses } from '../_lib/server/project-status-actions';
 import { createJob } from '../_lib/server/server-actions';
 import { ClientCombobox } from './client-combobox';
+import { ProjectStatusSelect } from './project-status-select';
 
 const TYPE_ICONS = {
   delivery: ClipboardList,
@@ -77,6 +84,7 @@ type Props = {
   hideTypePicker?: boolean;
   dialogTitle?: string;
   dialogDescription?: string;
+  statuses?: ProjectStatus[];
 };
 
 export function CreateProjectDialog({
@@ -93,6 +101,7 @@ export function CreateProjectDialog({
   hideTypePicker = false,
   dialogTitle: dialogTitleOverride,
   dialogDescription: dialogDescriptionOverride,
+  statuses: statusesProp,
 }: Props) {
   const router = useRouter();
   const isMaintenance = uiVariant === 'maintenance';
@@ -103,7 +112,13 @@ export function CreateProjectDialog({
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('pending');
+  const [loadedStatuses, setLoadedStatuses] = useState<ProjectStatus[]>(
+    statusesProp ?? [],
+  );
+  const statuses = loadedStatuses.length
+    ? loadedStatuses
+    : fallbackProjectStatuses(accountId);
+  const [status, setStatus] = useState(defaultProjectStatusSlug(statuses));
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
   const [isOngoing, setIsOngoing] = useState(false);
@@ -122,7 +137,7 @@ export function CreateProjectDialog({
     setName('');
     setClientId('');
     setDescription('');
-    setStatus('pending');
+    setStatus(defaultProjectStatusSlug(statuses));
     setPriority('medium');
     setDueDate('');
     setIsOngoing(false);
@@ -133,6 +148,23 @@ export function CreateProjectDialog({
       isMaintenance || isSimple || hideTypePicker ? 'delivery' : defaultType,
     );
   };
+
+  useEffect(() => {
+    if (statusesProp?.length) {
+      setLoadedStatuses(statusesProp);
+    }
+  }, [statusesProp]);
+
+  useEffect(() => {
+    if (!open || statusesProp?.length || !accountId) return;
+    listProjectStatuses({ accountId })
+      .then((rows) => {
+        if (Array.isArray(rows) && rows.length > 0) {
+          setLoadedStatuses(rows);
+        }
+      })
+      .catch(() => undefined);
+  }, [open, accountId, statusesProp]);
 
   useEffect(() => {
     if (!open) return;
@@ -210,12 +242,7 @@ export function CreateProjectDialog({
         title: name.trim(),
         description: description.trim() || undefined,
         client_id: isSimple ? undefined : clientId.trim() || undefined,
-        status: (isSimple ? 'pending' : status) as
-          | 'pending'
-          | 'in_progress'
-          | 'on_hold'
-          | 'completed'
-          | 'cancelled',
+        status: isSimple ? defaultProjectStatusSlug(statuses) : status,
         priority: (isSimple ? 'medium' : priority) as
           | 'low'
           | 'medium'
@@ -431,43 +458,12 @@ export function CreateProjectDialog({
                   <Label className="text-[var(--workspace-shell-text-muted)]">
                     Status
                   </Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger className={fieldClass}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className={workspaceSelectContentClass}>
-                      <SelectItem
-                        value="pending"
-                        className={workspaceSelectItemClass}
-                      >
-                        Pending
-                      </SelectItem>
-                      <SelectItem
-                        value="in_progress"
-                        className={workspaceSelectItemClass}
-                      >
-                        In progress
-                      </SelectItem>
-                      <SelectItem
-                        value="on_hold"
-                        className={workspaceSelectItemClass}
-                      >
-                        On hold
-                      </SelectItem>
-                      <SelectItem
-                        value="completed"
-                        className={workspaceSelectItemClass}
-                      >
-                        Completed
-                      </SelectItem>
-                      <SelectItem
-                        value="cancelled"
-                        className={workspaceSelectItemClass}
-                      >
-                        Cancelled
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <ProjectStatusSelect
+                    value={status}
+                    onValueChange={setStatus}
+                    statuses={statuses}
+                    triggerClassName={fieldClass}
+                  />
                 </div>
                 <div>
                   <Label className="text-[var(--workspace-shell-text-muted)]">

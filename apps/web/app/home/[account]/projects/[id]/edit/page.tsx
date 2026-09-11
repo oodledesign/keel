@@ -17,6 +17,7 @@ import {
 import { JobEditContent } from '../../_components/job-edit-content';
 import { loadJobsPageData } from '../../_lib/server/jobs-page.loader';
 import { createJobsService } from '../../_lib/server/jobs.service';
+import { createProjectStatusesService } from '../../_lib/server/project-statuses.service';
 
 interface JobEditPageProps {
   params: Promise<{ account: string; id: string }>;
@@ -47,13 +48,18 @@ async function JobEditPage({ params }: JobEditPageProps) {
   if (!id) notFound();
   if (!canEditJobs) notFound();
 
-  const service = createJobsService(getSupabaseServerClient());
+  const client = getSupabaseServerClient();
+  const service = createJobsService(client);
   let job: Awaited<ReturnType<typeof service.getJob>>;
   try {
     job = await service.getJob({ accountId, jobId: id });
   } catch {
     notFound();
   }
+
+  const statuses = await createProjectStatusesService(client)
+    .list(accountId)
+    .catch(() => undefined);
 
   return (
     <>
@@ -72,6 +78,7 @@ async function JobEditPage({ params }: JobEditPageProps) {
           canViewJobs={canViewJobs}
           canEditJobs={canEditJobs}
           canDeleteJobs={canDeleteJobs}
+          statuses={statuses}
         />
       </PageBody>
     </>

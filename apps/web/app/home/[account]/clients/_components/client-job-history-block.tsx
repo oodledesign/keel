@@ -7,16 +7,9 @@ import Link from 'next/link';
 import { Briefcase } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
+import { projectStatusLabel } from '~/lib/projects/project-statuses';
 
 import { getJobHistory } from '../_lib/server/server-actions';
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  in_progress: 'In progress',
-  on_hold: 'On hold',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
 
 type JobRow = {
   id: string;
@@ -90,7 +83,7 @@ export function ClientJobHistoryBlock({
                       : 'bg-amber-500/20 text-amber-400'
                   }`}
                 >
-                  {STATUS_LABELS[job.status] ?? job.status}
+                  {projectStatusLabel(job.status)}
                 </span>
                 <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
                   {new Date(job.created_at).toLocaleDateString('en-GB')}

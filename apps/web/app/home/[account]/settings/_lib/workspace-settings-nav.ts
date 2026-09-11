@@ -156,6 +156,15 @@ export function buildWorkspaceSettingsNav(input: {
       },
     );
 
+    items.push({
+      id: 'project-statuses',
+      label: 'Project statuses',
+      href: settingsPath(
+        pathsConfig.app.accountProjectStatusesSettings,
+        accountSlug,
+      ),
+    });
+
     if (isWorkNavModuleEnabled(moduleSettings, 'finances')) {
       items.push({
         id: 'finances',

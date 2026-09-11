@@ -33,6 +33,7 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
+import type { ProjectStatus } from '~/lib/projects/project-statuses';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -45,6 +46,7 @@ import {
 } from '../_lib/server/server-actions';
 import { ClientCombobox } from './client-combobox';
 import { ProjectPortalAccessPanel } from './project-portal-access-panel';
+import { ProjectStatusSelect } from './project-status-select';
 
 type Job = {
   id: string;
@@ -67,6 +69,7 @@ export function JobEditContent({
   job,
   canEditJobs,
   canDeleteJobs,
+  statuses,
 }: {
   accountSlug: string;
   accountId: string;
@@ -75,6 +78,7 @@ export function JobEditContent({
   canViewJobs: boolean;
   canEditJobs: boolean;
   canDeleteJobs: boolean;
+  statuses?: ProjectStatus[];
 }) {
   const router = useRouter();
   const jobsPath = pathsConfig.app.accountJobs.replace(
@@ -193,12 +197,7 @@ export function JobEditContent({
         title: title.trim(),
         description: description.trim() || null,
         client_id: clientId.trim() || null,
-        status: status as
-          | 'pending'
-          | 'in_progress'
-          | 'on_hold'
-          | 'completed'
-          | 'cancelled',
+        status,
         priority: priority as 'low' | 'medium' | 'high' | 'urgent',
         due_date: isOngoing ? null : dueDate ? new Date(dueDate) : null,
         is_ongoing: isOngoing,
@@ -357,18 +356,14 @@ export function JobEditContent({
               <Label className="text-[var(--workspace-shell-text-muted)]">
                 Status
               </Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In progress</SelectItem>
-                  <SelectItem value="on_hold">On hold</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="mt-1">
+                <ProjectStatusSelect
+                  value={status}
+                  onValueChange={setStatus}
+                  statuses={statuses}
+                  triggerClassName="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                />
+              </div>
             </div>
             <div>
               <Label className="text-[var(--workspace-shell-text-muted)]">

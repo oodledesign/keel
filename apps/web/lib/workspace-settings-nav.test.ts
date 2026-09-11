@@ -21,6 +21,7 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).toContain('general');
     expect(ids).toContain('payments');
     expect(ids).toContain('services');
+    expect(ids).toContain('project-statuses');
     expect(ids).toContain('brand');
     expect(ids).toContain('sending-domain');
     expect(ids).toContain('templates');
