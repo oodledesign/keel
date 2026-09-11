@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 
 import { fireNewSubscriberAutomations } from '~/lib/campaigns/campaign-automations.service';
+import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { normalizeCirculationEmail } from '~/lib/commercial/circulation/circulation-eligibility';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
@@ -226,11 +227,40 @@ export async function ensureWorkspaceMailingPreference(input: {
   return preference;
 }
 
+export type PublicMailingPreferenceResult = {
+  email: string;
+  accountId: string;
+  marketingStatus: WorkspaceMailingPreference['marketingStatus'];
+};
+
+export async function lookupWorkspaceMailingListByToken(
+  admin: SupabaseClient,
+  token: string,
+): Promise<PublicMailingPreferenceResult | null> {
+  if (!isUsableMailingListUnsubscribeToken(token)) return null;
+
+  const db = fromTable(admin, 'workspace_mailing_preferences');
+  const { data } = await db
+    .select('account_id, email, marketing_status')
+    .eq('unsubscribe_token', token)
+    .eq('purpose', PURPOSE)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  return {
+    email: String(data.email),
+    accountId: String(data.account_id),
+    marketingStatus:
+      data.marketing_status as WorkspaceMailingPreference['marketingStatus'],
+  };
+}
+
 export async function unsubscribeWorkspaceMailingListByToken(
   admin: SupabaseClient,
   token: string,
-): Promise<{ email: string; accountId: string } | null> {
-  if (!token || token.length < 16) return null;
+): Promise<PublicMailingPreferenceResult | null> {
+  if (!isUsableMailingListUnsubscribeToken(token)) return null;
 
   const db = fromTable(admin, 'workspace_mailing_preferences');
   const { data } = await db
@@ -253,6 +283,53 @@ export async function unsubscribeWorkspaceMailingListByToken(
   return {
     email: String(data.email),
     accountId: String(data.account_id),
+    marketingStatus: 'unsubscribed',
+  };
+}
+
+export async function resubscribeWorkspaceMailingListByToken(
+  admin: SupabaseClient,
+  token: string,
+): Promise<PublicMailingPreferenceResult | null> {
+  if (!isUsableMailingListUnsubscribeToken(token)) return null;
+
+  const db = fromTable(admin, 'workspace_mailing_preferences');
+  const { data } = await db
+    .select('id, account_id, email, marketing_status')
+    .eq('unsubscribe_token', token)
+    .eq('purpose', PURPOSE)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const current =
+    data.marketing_status as WorkspaceMailingPreference['marketingStatus'];
+
+  if (current === 'suppressed') {
+    return {
+      email: String(data.email),
+      accountId: String(data.account_id),
+      marketingStatus: 'suppressed',
+    };
+  }
+
+  if (current !== 'subscribed') {
+    const { error } = await db
+      .update({
+        marketing_status: 'subscribed',
+        unsubscribed_at: null,
+        consented_at: new Date().toISOString(),
+        consent_source: 'unsubscribe_page_resubscribe',
+      })
+      .eq('id', data.id);
+
+    if (error) throw new Error(error.message);
+  }
+
+  return {
+    email: String(data.email),
+    accountId: String(data.account_id),
+    marketingStatus: 'subscribed',
   };
 }
 

@@ -11,6 +11,11 @@ export const CAMPAIGN_TEST_MAX_RECIPIENTS = 20;
 /** Dummy unsubscribe token — not a real mailing preference. */
 export const CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN = 'campaign-test-preview';
 
+/** Public mailing-list / campaign unsubscribe tokens (hex, >= 16 chars). */
+export function isUsableMailingListUnsubscribeToken(token: string): boolean {
+  return token.length >= 16 && token !== CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN;
+}
+
 export function isValidCampaignTestEmail(value: string): boolean {
   return EMAIL_RE.test(value.trim());
 }
