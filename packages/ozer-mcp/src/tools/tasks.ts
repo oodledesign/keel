@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { createTaskForUser } from '@kit/tasks/create-task';
 
+import { resolveMcpCreateDurationMinutes } from './duration';
 import { loadLinkedNames, uniqueIds } from './lookup';
 import {
   type McpWorkspace,
@@ -36,7 +37,10 @@ const durationMinutesCreateSchema = z
   .int()
   .positive()
   .max(10080)
-  .optional();
+  .optional()
+  .describe(
+    'Estimated effort in minutes (1–10080). Always include when known; the server estimates from the title and notes if omitted.',
+  );
 const durationMinutesUpdateSchema = z
   .number()
   .int()
@@ -634,7 +638,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'create_task',
     {
       description:
-        'Create a root task for the authenticated user. Optional project_id, phase_id, and client_id link it to a project/phase/client (use search_projects / list_project_phases / search_clients). phase_id must belong to that project. duration_minutes is optional estimated effort (max 10080). To add children, use create_subtask with the returned id as parent_task_id.',
+        'Create a root task for the authenticated user. Always include duration_minutes (estimated effort in integer minutes, 1–10080). If omitted, the server estimates from the title and notes (keyword bands; default 30). Optional project_id, phase_id, and client_id link it to a project/phase/client (use search_projects / list_project_phases / search_clients). phase_id must belong to that project. To add children, use create_subtask with the returned id as parent_task_id.',
       inputSchema: createTaskSchema,
     },
     async (input) => {
@@ -655,7 +659,11 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         status: input.status,
         priority: input.priority,
         dueDate: input.due_date,
-        durationMinutes: input.duration_minutes,
+        durationMinutes: resolveMcpCreateDurationMinutes({
+          duration_minutes: input.duration_minutes,
+          title: input.title,
+          notes: input.notes,
+        }),
         projectId,
         phaseId,
         clientId: input.client_id,
@@ -715,7 +723,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'create_subtask',
     {
       description:
-        'Create a subtask under a root parent task. Inherits project/area from the parent. Accepts title plus optional duration_minutes, status, priority, due_date, and notes.',
+        'Create a subtask under a root parent task. Inherits project/area from the parent. Always include duration_minutes (integer minutes, 1–10080); if omitted, the server estimates from the title and notes (keyword bands; default 30). Also accepts optional status, priority, due_date, and notes.',
       inputSchema: createSubtaskSchema,
     },
     async (input) => {
@@ -736,7 +744,11 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         status: input.status,
         priority: input.priority,
         dueDate: input.due_date,
-        durationMinutes: input.duration_minutes,
+        durationMinutes: resolveMcpCreateDurationMinutes({
+          duration_minutes: input.duration_minutes,
+          title: input.title,
+          notes: input.notes,
+        }),
         notes: input.notes,
         parentTaskId: parent.id,
         phaseId: parent.phase_id ?? undefined,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveMcpCreateDurationMinutes } from './duration';
 import {
   createTaskSchema,
   resolveTaskPhaseAssignment,
@@ -34,6 +35,51 @@ function createPhaseLookup(phase: Record<string, unknown> | null) {
     },
   };
 }
+
+describe('create path duration defaulting', () => {
+  it('uses the caller value when duration_minutes is provided', () => {
+    expect(
+      resolveMcpCreateDurationMinutes({
+        title: 'Quick email',
+        duration_minutes: 90,
+      }),
+    ).toBe(90);
+  });
+
+  it('estimates from the title when duration_minutes is omitted', () => {
+    expect(
+      resolveMcpCreateDurationMinutes({
+        title: 'Write homepage copy',
+      }),
+    ).toBe(60);
+    expect(
+      resolveMcpCreateDurationMinutes({
+        title: 'Catch up with Oodle',
+      }),
+    ).toBe(30);
+  });
+
+  it('keeps create_task duration_minutes optional on the schema', () => {
+    expect(createTaskSchema.parse({ title: 'Write brief' })).toMatchObject({
+      title: 'Write brief',
+    });
+    expect(
+      createTaskSchema.parse({ title: 'Write brief' }).duration_minutes,
+    ).toBeUndefined();
+  });
+
+  it('does not invent duration_minutes on an unrelated update patch', () => {
+    expect(
+      updateTaskSchema.parse({
+        id: '77777777-7777-4777-8777-777777777777',
+        status: 'done',
+      }),
+    ).toEqual({
+      id: '77777777-7777-4777-8777-777777777777',
+      status: 'done',
+    });
+  });
+});
 
 describe('task phase schemas', () => {
   it('accepts an optional phase_id on create', () => {

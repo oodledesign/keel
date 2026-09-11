@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { createTaskForUser } from '@kit/tasks/create-task';
 
+import { resolveMcpCreateDurationMinutes } from './duration';
 import {
   type ParsedExtractTask,
   parseExtractText,
@@ -20,10 +21,23 @@ import type { OzerMcpToolRegistrar } from './types';
 
 const extractPrioritySchema = z.enum(['low', 'medium', 'high', 'urgent']);
 
+// null is treated as omitted and forces server-side estimation.
+const extractDurationMinutesSchema = z
+  .number()
+  .int()
+  .positive()
+  .max(10080)
+  .optional()
+  .nullable()
+  .describe(
+    'Estimated effort in minutes (1–10080). Always include when known; the server estimates from the title and notes if omitted.',
+  );
+
 const extractSubtaskInputSchema = z.object({
   title: z.string().trim().min(1),
   notes: z.string().optional().nullable(),
   due_date: z.string().optional().nullable(),
+  duration_minutes: extractDurationMinutesSchema,
   priority: extractPrioritySchema.optional(),
 });
 
@@ -31,6 +45,7 @@ const extractItemInputSchema = z.object({
   title: z.string().trim().min(1),
   notes: z.string().optional().nullable(),
   due_date: z.string().optional().nullable(),
+  duration_minutes: extractDurationMinutesSchema,
   priority: extractPrioritySchema.optional(),
   client_id: z.string().uuid().optional(),
   project_id: z.string().uuid().optional(),
@@ -39,7 +54,7 @@ const extractItemInputSchema = z.object({
   subtasks: z.array(extractSubtaskInputSchema).optional(),
 });
 
-const extractTasksSchema = z.object({
+export const extractTasksSchema = z.object({
   text: z
     .string()
     .trim()
@@ -153,7 +168,7 @@ export const registerExtractTaskTools: OzerMcpToolRegistrar = (
     'extract_tasks',
     {
       description:
-        'Turn a chat dump or bullet list into Ozer tasks (root + optional nested subtasks). Default mode=dry_run proposes titles, due dates, and suggested client/project matches — it does not write. Set mode=commit to create. Link project/client only when ids are provided or the name match is high confidence (exact). Medium matches stay suggestions unless accept_suggestions=true. Do not invent clients or projects.',
+        'Turn a chat dump or bullet list into Ozer tasks (root + optional nested subtasks). Default mode=dry_run proposes titles, due dates, duration_minutes, and suggested client/project matches — it does not write. Set mode=commit to create. Always include duration_minutes on each item/subtask when known; if omitted, the server estimates from the title and notes (keyword bands; default 30). Link project/client only when ids are provided or the name match is high confidence (exact). Medium matches stay suggestions unless accept_suggestions=true. Do not invent clients or projects.',
       inputSchema: extractTasksSchema,
     },
     async (input) => {
@@ -215,6 +230,11 @@ export const registerExtractTaskTools: OzerMcpToolRegistrar = (
           title: item.title,
           notes: item.notes,
           due_date: item.due_date,
+          duration_minutes: resolveMcpCreateDurationMinutes({
+            duration_minutes: structured?.duration_minutes,
+            title: item.title,
+            notes: item.notes,
+          }),
           priority: item.priority,
           suggested_client_name: item.suggested_client_name,
           suggested_project_name: item.suggested_project_name,
@@ -222,7 +242,15 @@ export const registerExtractTaskTools: OzerMcpToolRegistrar = (
           project: suggestionPayload(projectMatch, project.id),
           client_id: client.id,
           project_id: project.id,
-          subtasks: item.subtasks,
+          subtasks: item.subtasks.map((subtask, subIndex) => ({
+            ...subtask,
+            duration_minutes: resolveMcpCreateDurationMinutes({
+              duration_minutes:
+                structured?.subtasks?.[subIndex]?.duration_minutes,
+              title: subtask.title,
+              notes: subtask.notes,
+            }),
+          })),
         };
       });
 
@@ -242,6 +270,7 @@ export const registerExtractTaskTools: OzerMcpToolRegistrar = (
           title: item.title,
           notes: item.notes,
           dueDate: item.due_date ?? undefined,
+          durationMinutes: item.duration_minutes,
           priority: item.priority,
           clientId: item.client_id ?? undefined,
           projectId: item.project_id ?? undefined,
@@ -253,13 +282,18 @@ export const registerExtractTaskTools: OzerMcpToolRegistrar = (
           throw new Error(result.error);
         }
 
-        const createdSubtasks: Array<{ id: string; title: string }> = [];
+        const createdSubtasks: Array<{
+          id: string;
+          title: string;
+          duration_minutes: number;
+        }> = [];
 
         for (const subtask of item.subtasks) {
           const child = await createTaskForUser(supabase, userId, {
             title: subtask.title,
             notes: subtask.notes,
             dueDate: subtask.due_date ?? undefined,
+            durationMinutes: subtask.duration_minutes,
             priority: subtask.priority,
             parentTaskId: result.id,
             parentTaskContext: {
@@ -274,13 +308,17 @@ export const registerExtractTaskTools: OzerMcpToolRegistrar = (
             throw new Error(child.error);
           }
 
-          createdSubtasks.push({ id: child.id, title: subtask.title });
+          createdSubtasks.push({
+            id: child.id,
+            title: subtask.title,
+            duration_minutes: subtask.duration_minutes,
+          });
         }
 
         const { data, error } = await supabase
           .from('tasks')
           .select(
-            'id, title, status, priority, due_date, project_id, client_id, account_id, parent_task_id',
+            'id, title, status, priority, due_date, duration_minutes, project_id, client_id, account_id, parent_task_id',
           )
           .eq('id', result.id)
           .maybeSingle();
