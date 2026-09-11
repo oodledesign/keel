@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   type McpWorkspace,
   assertSupabaseOk,
+  isMissingColumnError,
   loadUserWorkspaces,
 } from './shared';
 
@@ -24,7 +25,24 @@ export type ClientNameRow = {
   first_name?: string | null;
   last_name?: string | null;
   company_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  client_type?: string | null;
   account_id?: string | null;
+};
+
+export type ContactNameRow = {
+  id: string;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  company_name?: string | null;
+  industry?: string | null;
+  account_id?: string | null;
+  client_id?: string | null;
 };
 
 export type SearchableNamed = {
@@ -74,6 +92,69 @@ export function clientDisplayName(
   return fullName || client?.company_name?.trim() || null;
 }
 
+export function resolveClientStoredDisplayName(params: {
+  clientType: 'individual' | 'business';
+  companyName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}): string {
+  const person = [params.firstName, params.lastName]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .map((value) => value.trim())
+    .join(' ');
+
+  if (params.clientType === 'individual') {
+    return person || params.firstName?.trim() || 'Unnamed';
+  }
+
+  return params.companyName?.trim() || person || 'Unnamed company';
+}
+
+export function composeContactFullName(input: {
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
+}): string {
+  const composed = [input.firstName, input.lastName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  if (composed) {
+    return composed;
+  }
+
+  return input.fullName?.trim() || '';
+}
+
+export function contactDisplayName(
+  contact: ContactNameRow | null | undefined,
+): string | null {
+  const fullName = composeContactFullName({
+    firstName: contact?.first_name,
+    lastName: contact?.last_name,
+    fullName: contact?.full_name,
+  });
+
+  return (
+    fullName || contact?.company_name?.trim() || contact?.email?.trim() || null
+  );
+}
+
+export function contactSearchHaystack(contact: ContactNameRow): string {
+  return [
+    contactDisplayName(contact),
+    contact.email,
+    contact.phone,
+    contact.company_name,
+    contact.industry,
+  ]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .join(' ')
+    .toLowerCase();
+}
+
 export function findBestNameMatch(
   query: string | null | undefined,
   rows: SearchableNamed[],
@@ -113,14 +194,25 @@ export async function loadSearchableClients(
     return [];
   }
 
-  const { data, error } = await supabase
+  const select =
+    'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id';
+  const active = await supabase
     .from('clients')
-    .select('id, display_name, first_name, last_name, company_name, account_id')
-    .in('account_id', accountIds);
+    .select(select)
+    .in('account_id', accountIds)
+    .is('archived_at', null);
 
-  assertSupabaseOk(data, error, 'load clients for search');
+  const result =
+    active.error && isMissingColumnError(active.error)
+      ? await supabase
+          .from('clients')
+          .select(select)
+          .in('account_id', accountIds)
+      : active;
 
-  return ((data ?? []) as ClientNameRow[])
+  assertSupabaseOk(result.data, result.error, 'load clients for search');
+
+  return ((result.data ?? []) as ClientNameRow[])
     .map((row) => {
       const name = clientDisplayName(row);
       if (!name || !row.id) {
@@ -167,6 +259,72 @@ export async function loadSearchableProjects(
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
+}
+
+export async function loadSearchableContacts(
+  supabase: SupabaseClient,
+  accountIds: string[],
+): Promise<Array<SearchableNamed & { row: ContactNameRow }>> {
+  if (accountIds.length === 0) {
+    return [];
+  }
+
+  const selectWithIndustry =
+    'id, full_name, first_name, last_name, email, phone, company_name, industry, account_id, client_id';
+  const withIndustry = await supabase
+    .from('contacts')
+    .select(selectWithIndustry)
+    .in('account_id', accountIds);
+
+  const result =
+    withIndustry.error && isMissingColumnError(withIndustry.error)
+      ? await supabase
+          .from('contacts')
+          .select(
+            'id, full_name, first_name, last_name, email, phone, account_id, client_id',
+          )
+          .in('account_id', accountIds)
+      : withIndustry;
+
+  assertSupabaseOk(result.data, result.error, 'load contacts for search');
+
+  return ((result.data ?? []) as ContactNameRow[])
+    .map((row) => {
+      const name = contactDisplayName(row);
+      if (!name || !row.id) {
+        return null;
+      }
+
+      return {
+        id: row.id,
+        name,
+        account_id: row.account_id ?? null,
+        row,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+}
+
+export function filterContactsByQuery<
+  T extends SearchableNamed & { row: ContactNameRow },
+>(rows: T[], query: string, limit: number): T[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return [];
+  }
+
+  return rows
+    .filter((row) => contactSearchHaystack(row.row).includes(needle))
+    .sort((left, right) => {
+      const leftExact = left.name.toLowerCase() === needle ? 0 : 1;
+      const rightExact = right.name.toLowerCase() === needle ? 0 : 1;
+      if (leftExact !== rightExact) {
+        return leftExact - rightExact;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .slice(0, limit);
 }
 
 export function filterNamedByQuery<T extends SearchableNamed>(
@@ -306,4 +464,40 @@ export async function requireWorkspaceAccess(
   }
 
   return workspaces;
+}
+
+export async function assertClientInWorkspace(
+  supabase: SupabaseClient,
+  clientId: string,
+  accountId: string,
+): Promise<ClientNameRow> {
+  const select =
+    'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id, archived_at';
+  const active = await supabase
+    .from('clients')
+    .select(select)
+    .eq('id', clientId)
+    .eq('account_id', accountId)
+    .is('archived_at', null)
+    .maybeSingle();
+
+  const result =
+    active.error && isMissingColumnError(active.error)
+      ? await supabase
+          .from('clients')
+          .select(
+            'id, display_name, first_name, last_name, company_name, email, phone, website, client_type, account_id',
+          )
+          .eq('id', clientId)
+          .eq('account_id', accountId)
+          .maybeSingle()
+      : active;
+
+  assertSupabaseOk(result.data, result.error, 'resolve client');
+
+  if (!result.data) {
+    throw new Error('Client not found in this workspace');
+  }
+
+  return result.data as ClientNameRow;
 }

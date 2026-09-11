@@ -1,8 +1,12 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 
+type SupabaseLikeError = {
+  message?: string;
+} | null;
+
 export function throwSupabaseError(
   operation: string,
-  error: PostgrestError | null,
+  error: PostgrestError | SupabaseLikeError,
 ): never {
   throw new Error(
     error?.message ? `${operation}: ${error.message}` : `${operation} failed`,
@@ -11,7 +15,7 @@ export function throwSupabaseError(
 
 export function assertSupabaseOk<T>(
   data: T,
-  error: PostgrestError | null,
+  error: PostgrestError | SupabaseLikeError,
   operation: string,
 ): T {
   if (error) {
@@ -168,6 +172,70 @@ export function pickDefined<T extends Record<string, unknown>>(
   return Object.fromEntries(
     Object.entries(input).filter(([, value]) => value !== undefined),
   ) as Partial<T>;
+}
+
+const MISSING_COLUMN_RE =
+  /column\s+(?:[\w.]+\.)?['"]?(\w+)['"]?|Could not find the ['"](\w+)['"] column/i;
+
+export function isMissingColumnError(
+  error: { message?: string } | null | undefined,
+): boolean {
+  return Boolean(
+    error?.message &&
+    /column .* does not exist|schema cache|Could not find the ['"]\w+['"] column/i.test(
+      error.message,
+    ),
+  );
+}
+
+export function isMissingRelationError(
+  error: { message?: string } | null | undefined,
+): boolean {
+  return Boolean(
+    error?.message &&
+    /could not find the table|relation .* does not exist|schema cache/i.test(
+      error.message,
+    ),
+  );
+}
+
+export function missingColumnName(
+  error: { message?: string } | null | undefined,
+): string | null {
+  if (!error?.message || !isMissingColumnError(error)) {
+    return null;
+  }
+
+  const match = error.message.match(MISSING_COLUMN_RE);
+  return match?.[1] ?? match?.[2] ?? null;
+}
+
+export async function writeWithOptionalColumns<T>(
+  write: (
+    row: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>,
+  row: Record<string, unknown>,
+  operation: string,
+): Promise<T> {
+  const current = { ...row };
+  let result = await write(current);
+
+  for (let attempt = 0; attempt < 6 && result.error; attempt += 1) {
+    const column = missingColumnName(result.error);
+    if (!column || !(column in current)) {
+      break;
+    }
+
+    delete current[column];
+    result = await write(current);
+  }
+
+  assertSupabaseOk(result.data, result.error, operation);
+  if (result.data == null) {
+    throw new Error(`${operation} failed`);
+  }
+
+  return result.data as T;
 }
 
 export function dealDisplayName(row: {

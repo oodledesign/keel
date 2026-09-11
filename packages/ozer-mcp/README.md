@@ -83,16 +83,43 @@ Subtasks are the same `tasks` rows as the web app: `parent_task_id` points at th
 
 ## Client and project tools
 
-| Tool              | Purpose                                                                            |
-| ----------------- | ---------------------------------------------------------------------------------- |
-| `search_clients`  | Fuzzy CRM client search (id + name + workspace). Not portal `client_orgs`.         |
-| `search_projects` | Fuzzy project search (id + name + client + workspace).                             |
-| `list_clients`    | Portal client orgs via `client_members`. Prefer `search_clients` for CRM work.     |
-| `get_client`      | One portal client org with open tasks and pipeline deals.                          |
-| `list_projects`   | Projects in authorized workspaces. Optional `account_id` / `client_id` / `status`. |
-| `get_project`     | One project with outstanding tasks and names.                                      |
-| `create_project`  | Create a delivery project (`name` + `account_id`, optional client/status/dates).   |
-| `update_project`  | Patch name, status, dates, description, or client link.                            |
+CRM `clients` are workspace companies/people. Portal `client_orgs` are a separate membership model. Use CRM tools unless the user is talking about the client portal.
+
+| Tool               | Purpose                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `search_clients`   | Fuzzy CRM client search (id + name + email + workspace). Not portal `client_orgs`. Search before `create_client` / `create_contact`. |
+| `list_clients`     | CRM clients in authorized workspaces (names + workspace). Optional `account_id` only when the user names a workspace.                |
+| `get_client`       | One CRM client with contacts, outstanding tasks, and workspace name.                                                                 |
+| `create_client`    | Create a CRM client (`account_id` required). Business needs `company_name`; individual needs `first_name`.                           |
+| `update_client`    | Patch CRM client fields (name, email, website, address, `commercial_role`). Cannot delete.                                           |
+| `list_client_orgs` | Portal organizations via `client_members`. Prefer `list_clients` / `search_clients` for CRM.                                         |
+| `get_client_org`   | One portal org with open tasks and pipeline deals.                                                                                   |
+| `search_projects`  | Fuzzy project search (id + name + client + workspace).                                                                               |
+| `list_projects`    | Projects in authorized workspaces. Optional `account_id` / `client_id` / `status`.                                                   |
+| `get_project`      | One project with outstanding tasks and names.                                                                                        |
+| `create_project`   | Create a delivery project (`name` + `account_id`, optional client/status/dates).                                                     |
+| `update_project`   | Patch name, status, dates, description, or client link.                                                                              |
+
+## Contacts
+
+People in `contacts`, optionally linked to CRM clients via `client_contacts`. Industry is `contacts.industry`. Campaign category names are read-only when those tables exist — tools do not invent category columns.
+
+| Tool              | Purpose                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `search_contacts` | Search by name, email, company, or industry. Optional `client_id` / `industry` only when the user names them.      |
+| `list_contacts`   | List CRM contacts. Optional `account_id` / `client_id`. Prefer `search_contacts` when looking up a person.         |
+| `get_contact`     | One contact with workspace name, linked CRM clients, industry, and campaign categories when present.               |
+| `create_contact`  | Create a person (`account_id` + name). Optional `client_id` (use `search_clients` first), `industry`, email/phone. |
+| `update_contact`  | Patch name, email, phone, company, industry, or link `client_id`. Cannot delete.                                   |
+
+## Meetings
+
+Stored as `meeting_transcripts` (Ozer recorder / pasted transcripts), not calendar events.
+
+| Tool            | Purpose                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `list_meetings` | List transcripts with title, date, excerpt, and client/project/workspace names. Optional `client_id` / `project_id` / title `q`. |
+| `get_meeting`   | One transcript with content (truncated if huge), optional AI summary, and client/project/workspace names.                        |
 
 ## Notes
 
@@ -124,3 +151,11 @@ Point at `https://app.ozer.so/api/mcp` (or `http://localhost:3000/api/mcp` local
 pnpm --filter @kit/ozer-mcp typecheck
 pnpm --filter @kit/ozer-mcp test
 ```
+
+### Verify in Claude / Inspector (Dan)
+
+1. `list_workspaces` then `search_clients` for a known CRM name — confirm `workspace_name` is present, not only ids.
+2. `create_client` for a throwaway business (`company_name`) and individual (`first_name`). Confirm they appear in the web CRM, not under portal orgs.
+3. `search_contacts` / `create_contact` (optionally `client_id` from step 2). Confirm `industry` writes to `contacts.industry` when passed.
+4. `list_meetings` then `get_meeting` on a real transcript — confirm client/project names and transcript content.
+5. Confirm there is no delete tool for clients, contacts, or meetings.
