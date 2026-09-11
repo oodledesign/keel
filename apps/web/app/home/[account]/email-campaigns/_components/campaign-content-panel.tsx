@@ -5,10 +5,11 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { Eye, Send } from 'lucide-react';
+import { Eye, Save, Send } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -24,7 +25,11 @@ import {
 import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { previewCampaignHtml } from '~/lib/campaigns/preview-campaign-html';
 import type { CampaignTemplateWorkspace } from '~/lib/campaigns/templates';
-import { workspaceBtnPrimary } from '~/lib/workspace-ui';
+import { MOBILE_FLOATING_CHROME_ABOVE } from '~/lib/mobile-nav/mobile-floating-chrome';
+import {
+  workspaceBtnPrimary,
+  workspacePanelShadowRaised,
+} from '~/lib/workspace-ui';
 
 import { updateCampaignAction } from '../_lib/server/server-actions';
 import { CampaignBodyEditor } from './campaign-body-editor';
@@ -100,9 +105,6 @@ export function CampaignContentPanel({
   const sendHref = pathsConfig.app.accountEmailCampaignSend
     .replace('[account]', accountSlug)
     .replace('[campaignId]', campaign.id);
-  const settingsHref = pathsConfig.app.accountEmailCampaignDetail
-    .replace('[account]', accountSlug)
-    .replace('[campaignId]', campaign.id);
 
   const save = () =>
     updateCampaignAction({
@@ -116,7 +118,7 @@ export function CampaignContentPanel({
     });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Build the email with blocks, form links, and templates. Preview opens
@@ -202,68 +204,78 @@ export function CampaignContentPanel({
         onPreviewWidthChange={setPreviewWidth}
       />
 
-      <div className="flex flex-wrap gap-2">
-        {editable ? (
+      <div
+        className={cn(
+          'fixed inset-x-0 z-40 flex justify-end border-t px-4 py-3 md:left-[var(--sidebar-width)] lg:px-8',
+          'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
+          workspacePanelShadowRaised,
+          MOBILE_FLOATING_CHROME_ABOVE,
+          'lg:bottom-0',
+        )}
+        data-test="campaign-content-actions"
+      >
+        <div className="flex flex-wrap justify-end gap-2">
+          {editable ? (
+            <Button
+              variant="secondary"
+              className="border border-[color:var(--workspace-shell-border)] font-semibold shadow-sm"
+              disabled={pending}
+              data-test="campaign-save-content"
+              onClick={() => {
+                startTransition(async () => {
+                  try {
+                    await save();
+                    toast.success('Content saved');
+                    router.refresh();
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : 'Could not save',
+                    );
+                  }
+                });
+              }}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save draft
+            </Button>
+          ) : null}
           <Button
-            variant="secondary"
+            type="button"
+            variant="outline"
             disabled={pending}
-            data-test="campaign-save-content"
+            data-test="campaign-preview-open"
             onClick={() => {
               startTransition(async () => {
                 try {
-                  await save();
-                  toast.success('Content saved');
+                  if (editable) {
+                    await save();
+                  }
+                  setPreviewOpen(true);
                   router.refresh();
                 } catch (error) {
                   toast.error(
-                    error instanceof Error ? error.message : 'Could not save',
+                    error instanceof Error
+                      ? error.message
+                      : 'Could not open preview',
                   );
                 }
               });
             }}
           >
-            Save draft
+            <Eye className="mr-2 h-4 w-4" />
+            Preview
           </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          disabled={pending}
-          data-test="campaign-preview-open"
-          onClick={() => {
-            startTransition(async () => {
-              try {
-                if (editable) {
-                  await save();
-                }
-                setPreviewOpen(true);
-                router.refresh();
-              } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : 'Could not open preview',
-                );
-              }
-            });
-          }}
-        >
-          <Eye className="mr-2 h-4 w-4" />
-          Preview
-        </Button>
-        <Button asChild variant="outline">
-          <Link href={settingsHref}>Settings</Link>
-        </Button>
-        <Button
-          asChild
-          className={workspaceBtnPrimary}
-          data-test="campaign-content-goto-send"
-        >
-          <Link href={sendHref}>
-            <Send className="mr-2 h-4 w-4" />
-            Send
-          </Link>
-        </Button>
+          <Button
+            asChild
+            className={workspaceBtnPrimary}
+            data-test="campaign-content-goto-send"
+          >
+            <Link href={sendHref}>
+              <Send className="mr-2 h-4 w-4" />
+              Review + Send
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
