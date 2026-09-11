@@ -14,10 +14,7 @@ import {
   getRightmoveChannelStatus,
   getWebsiteChannelStatus,
 } from '~/lib/commercial/channel-publish-status';
-import {
-  listingDetailHref,
-  listingTabHref,
-} from '~/lib/commercial/listing-routes';
+import { listingTabHref } from '~/lib/commercial/listing-routes';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type {
@@ -32,7 +29,11 @@ type ChannelBadge = {
   status: ChannelPublishStatus;
 };
 
-function ChannelStatusIcon({ state }: { state: ChannelPublishStatus['state'] }) {
+function ChannelStatusIcon({
+  state,
+}: {
+  state: ChannelPublishStatus['state'];
+}) {
   if (state === 'live') {
     return <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />;
   }
@@ -67,7 +68,7 @@ export function ListingOverviewChannelStatus({
   publications: CommercialPortalPublication[];
 }) {
   const publishingHref = listingTabHref(accountSlug, listing.id, 'publishing');
-  const interestHref = `${listingDetailHref(accountSlug, listing.id)}/interest`;
+  const interestHref = listingTabHref(accountSlug, listing.id, 'interest');
 
   const channels: ChannelBadge[] = [
     {
@@ -128,10 +129,7 @@ export function ListingOverviewChannelStatus({
   ];
 
   return (
-    <Card
-      className={workspacePanelCard}
-      data-test="overview-channel-status"
-    >
+    <Card className={workspacePanelCard} data-test="overview-channel-status">
       <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle className="text-base text-[var(--workspace-shell-text)]">
           Channels

@@ -6,6 +6,7 @@ export type ListingTabKey =
   | 'management'
   | 'overview'
   | 'publishing'
+  | 'interest'
   | 'edit';
 
 export function listingDetailHref(accountSlug: string, listingId: string) {
