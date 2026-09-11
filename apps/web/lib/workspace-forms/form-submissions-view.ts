@@ -21,6 +21,27 @@ export type BuiltinSubmissionColumn =
 export type SubmissionColumnId = BuiltinSubmissionColumn | `field:${string}`;
 
 const RSVP_FIELD_RE = /attend|rsvp|coming/;
+const GUEST_FIELD_RE = /guest|\+1|plus[_\s-]*one/;
+const GUEST_KEY_EXACT_RE =
+  /^(guests?|guest_count|number_of_guests|plus_?ones?)$/i;
+const ATTENDING_VALUE_RE = /^(yes|y|true|attending|coming)\b/;
+const GUEST_COUNT_RE = /(\d+(?:\.\d+)?)/;
+const NON_GUEST_FIELD_TYPES = new Set<WorkspaceFormField['type']>([
+  'name',
+  'email',
+  'phone',
+  'message',
+  'hidden',
+  'file',
+  'date',
+  'yes_no',
+]);
+
+export type RsvpAttendeeTotals = {
+  invitees: number;
+  guests: number;
+  totalAttendees: number;
+};
 
 export type SubmissionColumnOption = {
   id: SubmissionColumnId;
@@ -130,6 +151,70 @@ export function findAttendanceField(
         RSVP_FIELD_RE.test(`${field.key} ${field.label}`.toLowerCase()),
     ) ?? null
   );
+}
+
+export function findGuestField(
+  fields: WorkspaceFormField[],
+): WorkspaceFormField | null {
+  const attendanceKey = findAttendanceField(fields)?.key;
+  const candidates = publicVisibleFields(fields).filter((field) => {
+    if (field.key === attendanceKey) return false;
+    if (NON_GUEST_FIELD_TYPES.has(field.type)) return false;
+    return GUEST_FIELD_RE.test(`${field.key} ${field.label}`.toLowerCase());
+  });
+
+  if (candidates.length === 0) return null;
+
+  return (
+    candidates.find((field) => GUEST_KEY_EXACT_RE.test(field.key)) ??
+    candidates[0] ??
+    null
+  );
+}
+
+export function isAttendingResponse(value: string): boolean {
+  return ATTENDING_VALUE_RE.test(value.trim().toLowerCase());
+}
+
+export function parseGuestCount(value: string): number {
+  const match = value.trim().match(GUEST_COUNT_RE);
+  if (!match) return 0;
+  const count = Number(match[1]);
+  if (!Number.isFinite(count) || count < 0) return 0;
+  return Math.floor(count);
+}
+
+/**
+ * Attending counts from the latest RSVP per email (same unique set as
+ * the unique-submissions export). Invitees are Yes responses; guests are
+ * the sum of the guest-count field on those Yes rows only.
+ */
+export function countRsvpAttendeeTotals(
+  fields: WorkspaceFormField[],
+  submissions: Array<SubmissionViewRecord & { createdAt: string }>,
+): RsvpAttendeeTotals | null {
+  const attendance = findAttendanceField(fields);
+  if (!attendance) return null;
+
+  const guestField = findGuestField(fields);
+  let invitees = 0;
+  let guests = 0;
+
+  for (const submission of selectUniqueSubmissions(submissions)) {
+    if (!isAttendingResponse(submissionFieldValue(submission, attendance))) {
+      continue;
+    }
+    invitees += 1;
+    if (guestField) {
+      guests += parseGuestCount(submissionFieldValue(submission, guestField));
+    }
+  }
+
+  return {
+    invitees,
+    guests,
+    totalAttendees: invitees + guests,
+  };
 }
 
 export function listSubmissionColumnOptions(

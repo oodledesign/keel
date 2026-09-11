@@ -4,6 +4,7 @@ import { buildCsvDocument } from '~/lib/csv/build-csv';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 import type { WorkspaceFormField } from '~/lib/workspace-forms/form-fields';
 import {
+  type RsvpAttendeeTotals,
   type SubmissionColumnId,
   type SubmissionViewRecord,
   listSubmissionColumnOptions,
@@ -21,6 +22,10 @@ export const SUBMISSION_EXPORT_MODES = ['all', 'unique'] as const;
 export type SubmissionExportMode = (typeof SUBMISSION_EXPORT_MODES)[number];
 
 export const SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT = 6;
+
+export const SUBMISSION_EXPORT_PDF_LAYOUTS = ['list', 'table'] as const;
+export type SubmissionExportPdfLayout =
+  (typeof SUBMISSION_EXPORT_PDF_LAYOUTS)[number];
 
 export type SubmissionExportRecord = SubmissionViewRecord & {
   createdAt: string;
@@ -198,6 +203,15 @@ export function submissionsExportSubtitle(input: {
   return `All submissions · ${input.rowCount} row${input.rowCount === 1 ? '' : 's'}`;
 }
 
+export function submissionsExportAttendeeSummary(
+  totals: RsvpAttendeeTotals,
+): string {
+  const attendees = `${totals.totalAttendees} attendee${totals.totalAttendees === 1 ? '' : 's'}`;
+  const invitees = `${totals.invitees} invitee${totals.invitees === 1 ? '' : 's'}`;
+  const guests = `${totals.guests} guest${totals.guests === 1 ? '' : 's'}`;
+  return `${attendees} · ${invitees} + ${guests}`;
+}
+
 function wrapPdfText(
   text: string,
   font: PDFFont,
@@ -265,6 +279,8 @@ export async function buildSubmissionsExportPdf(input: {
   formName: string;
   mode: SubmissionExportMode;
   table: SubmissionExportTable;
+  pdfLayout?: SubmissionExportPdfLayout;
+  attendeeTotals?: RsvpAttendeeTotals | null;
 }): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const regular = await doc.embedFont(StandardFonts.Helvetica);
@@ -273,30 +289,26 @@ export async function buildSubmissionsExportPdf(input: {
     mode: input.mode,
     rowCount: input.table.rows.length,
   });
+  const extraLines = input.attendeeTotals
+    ? [submissionsExportAttendeeSummary(input.attendeeTotals)]
+    : [];
 
   doc.setTitle(sanitizePdfText(`${input.formName} submissions`));
   doc.setAuthor(PDF_AUTHOR);
 
-  const useTable =
-    input.table.columnIds.length > 0 &&
-    input.table.columnIds.length <= SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT;
+  const header = {
+    formName: input.formName,
+    subtitle,
+    extraLines,
+    table: input.table,
+    regular,
+    bold,
+  };
 
-  if (useTable) {
-    drawTablePdf(doc, {
-      formName: input.formName,
-      subtitle,
-      table: input.table,
-      regular,
-      bold,
-    });
+  if (input.pdfLayout === 'table') {
+    drawTablePdf(doc, header);
   } else {
-    drawSectionPdf(doc, {
-      formName: input.formName,
-      subtitle,
-      table: input.table,
-      regular,
-      bold,
-    });
+    drawSectionPdf(doc, header);
   }
 
   return doc.save();
@@ -307,6 +319,7 @@ function drawHeader(
   input: {
     formName: string;
     subtitle: string;
+    extraLines?: string[];
     width: number;
     height: number;
     margin: number;
@@ -330,7 +343,19 @@ function drawHeader(
     font: input.regular,
     color: PDF.muted,
   });
-  return y - 28;
+  let nextY = y - 30;
+  for (const line of input.extraLines ?? []) {
+    if (!line.trim()) continue;
+    page.drawText(sanitizePdfText(line), {
+      x: input.margin,
+      y: nextY,
+      size: 9,
+      font: input.regular,
+      color: PDF.muted,
+    });
+    nextY -= 14;
+  }
+  return nextY - 8;
 }
 
 function addFooter(
@@ -357,6 +382,7 @@ function drawTablePdf(
   input: {
     formName: string;
     subtitle: string;
+    extraLines?: string[];
     table: SubmissionExportTable;
     regular: PDFFont;
     bold: PDFFont;
@@ -367,7 +393,7 @@ function drawTablePdf(
   const colCount = Math.max(input.table.headers.length, 1);
   const usableWidth = pageSize[0] - margin * 2;
   const colWidth = usableWidth / colCount;
-  const fontSize = colCount > 4 ? 8 : 9;
+  const fontSize = colCount > 8 ? 7 : colCount > 4 ? 8 : 9;
   const lineHeight = fontSize + 3;
   const cellPad = 5;
 
@@ -375,6 +401,7 @@ function drawTablePdf(
   let cursorY = drawHeader(page, {
     formName: input.formName,
     subtitle: input.subtitle,
+    extraLines: input.extraLines,
     width: pageSize[0],
     height: pageSize[1],
     margin,
@@ -438,6 +465,7 @@ function drawTablePdf(
       cursorY = drawHeader(page, {
         formName: input.formName,
         subtitle: input.subtitle,
+        extraLines: input.extraLines,
         width: pageSize[0],
         height: pageSize[1],
         margin,
@@ -496,6 +524,7 @@ function drawSectionPdf(
   input: {
     formName: string;
     subtitle: string;
+    extraLines?: string[];
     table: SubmissionExportTable;
     regular: PDFFont;
     bold: PDFFont;
@@ -512,6 +541,7 @@ function drawSectionPdf(
   let cursorY = drawHeader(page, {
     formName: input.formName,
     subtitle: input.subtitle,
+    extraLines: input.extraLines,
     width: pageSize[0],
     height: pageSize[1],
     margin,
@@ -525,6 +555,7 @@ function drawSectionPdf(
     cursorY = drawHeader(page, {
       formName: input.formName,
       subtitle: input.subtitle,
+      extraLines: input.extraLines,
       width: pageSize[0],
       height: pageSize[1],
       margin,

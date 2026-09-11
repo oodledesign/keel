@@ -23,6 +23,7 @@ import pathsConfig from '~/config/paths.config';
 import type { WorkspaceFormField } from '~/lib/workspace-forms/form-fields';
 import {
   type SubmissionColumnId,
+  countRsvpAttendeeTotals,
   countSubmissionStats,
   defaultSubmissionColumnIds,
   groupSubmissionIdsByEmail,
@@ -152,6 +153,10 @@ export function FormSubmissionsList({
     [submissions],
   );
   const stats = useMemo(() => countSubmissionStats(submissions), [submissions]);
+  const attendeeTotals = useMemo(
+    () => countRsvpAttendeeTotals(fields, submissions),
+    [fields, submissions],
+  );
   const { options, columns, saveColumns, defaults } = useSubmissionColumns(
     formId,
     fields,
@@ -217,16 +222,37 @@ export function FormSubmissionsList({
       </div>
 
       {isRsvp ? (
-        <div
-          className="mt-4 grid gap-3 sm:grid-cols-2"
-          data-test="form-submissions-stats"
-        >
-          <StatCard label="Total submissions" value={stats.total} />
-          <StatCard
-            label="Unique submissions"
-            value={stats.unique}
-            hint="Unique by email when present"
-          />
+        <div className="mt-4 grid gap-3" data-test="form-submissions-stats">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StatCard label="Total submissions" value={stats.total} />
+            <StatCard
+              label="Unique submissions"
+              value={stats.unique}
+              hint="Unique by email when present"
+            />
+          </div>
+          {attendeeTotals ? (
+            <div
+              className="grid gap-3 sm:grid-cols-3"
+              data-test="form-submissions-attendee-stats"
+            >
+              <StatCard
+                label="Total attendees"
+                value={attendeeTotals.totalAttendees}
+                hint="Yes RSVPs plus their guests"
+              />
+              <StatCard
+                label="Invitees"
+                value={attendeeTotals.invitees}
+                hint="Said yes · latest RSVP per email"
+              />
+              <StatCard
+                label="Guests"
+                value={attendeeTotals.guests}
+                hint="Sum of guest counts on Yes RSVPs"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
