@@ -32,10 +32,14 @@ export async function lookupMailingListPublicPreference(
   admin: SupabaseClient,
   token: string,
 ): Promise<PublicMailingPreferenceResult | null> {
-  return (
-    (await lookupWorkspaceMailingListByToken(admin, token)) ??
-    (await lookupCampaignRecipientByToken(admin, token))
-  );
+  try {
+    return (
+      (await lookupWorkspaceMailingListByToken(admin, token)) ??
+      (await lookupCampaignRecipientByToken(admin, token))
+    );
+  } catch (err) {
+    throwMappedPreferenceError(err);
+  }
 }
 
 export async function unsubscribeMailingListPublicPreference(

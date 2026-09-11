@@ -59,7 +59,7 @@ export default async function MailingListUnsubscribePage({
       <div className="w-full max-w-lg rounded-3xl bg-[var(--ozer-surface-panel)] p-8 text-center shadow-sm">
         <h1 className="text-3xl font-bold text-[var(--workspace-shell-text)]">
           {errorKind === 'failed'
-            ? 'Unable to update preference'
+            ? 'Something went wrong'
             : !success
               ? 'Invalid unsubscribe link'
               : subscribed

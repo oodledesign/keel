@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { unsubscribeCampaignRecipientByToken } from '~/lib/campaigns/resolve-campaign-audience';
+import {
+  resubscribeCampaignRecipientByToken,
+  unsubscribeCampaignRecipientByToken,
+} from '~/lib/campaigns/resolve-campaign-audience';
 
 import {
   PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED,
+  resubscribeMailingListPublicPreference,
   unsubscribeMailingListPublicPreference,
 } from './mailing-list-public-preference';
-import { unsubscribeWorkspaceMailingListByToken } from './workspace-mailing-list';
+import {
+  resubscribeWorkspaceMailingListByToken,
+  unsubscribeWorkspaceMailingListByToken,
+} from './workspace-mailing-list';
 
 vi.mock('~/lib/campaigns/campaigns.service', () => ({
   markCampaignRecipientsUnsubscribed: vi.fn(),
@@ -49,6 +56,21 @@ describe('mailing list public preference', () => {
 
     await expect(
       unsubscribeMailingListPublicPreference({} as never, TOKEN),
+    ).rejects.toThrow(PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED);
+  });
+
+  it('maps preference write failures on resubscribe to a calm public error', async () => {
+    vi.mocked(resubscribeWorkspaceMailingListByToken).mockResolvedValueOnce(
+      null,
+    );
+    vi.mocked(resubscribeCampaignRecipientByToken).mockRejectedValueOnce(
+      new Error(
+        'new row for relation "workspace_mailing_preferences" violates check constraint "workspace_mailing_preferences_lawful_basis_check"',
+      ),
+    );
+
+    await expect(
+      resubscribeMailingListPublicPreference({} as never, TOKEN),
     ).rejects.toThrow(PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED);
   });
 });

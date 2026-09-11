@@ -22,7 +22,10 @@ const CONSENT_COPY_VERSION = 'v1';
 
 export const WORKSPACE_MAILING_LIST_PURPOSE = PURPOSE;
 
-/** Allowed by `workspace_mailing_preferences_lawful_basis_check`. */
+/**
+ * Values allowed by DB constraint `workspace_mailing_preferences_lawful_basis_check`.
+ * Update this list whenever that constraint is changed.
+ */
 export const WORKSPACE_MAILING_LAWFUL_BASES = [
   'website_form',
   'imported_historical',
