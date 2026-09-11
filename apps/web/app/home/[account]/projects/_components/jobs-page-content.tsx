@@ -25,6 +25,12 @@ import {
   projectDetailHref,
 } from '~/lib/projects/project-paths';
 import type { ProjectStatus } from '~/lib/projects/project-statuses';
+import {
+  type ProjectsPageView,
+  parseProjectsPageView,
+  readProjectsPageView,
+  writeProjectsPageView,
+} from '~/lib/projects/projects-page-view';
 
 import { listCampaignProjects } from '../_lib/campaign/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
@@ -103,13 +109,9 @@ export function JobsPageContent({
   >(isSimple ? [] : (initialCampaigns ?? []));
   const [loading, setLoading] = useState(initialJobs === undefined);
   const skipInitialFetchRef = useRef(initialJobs !== undefined);
-  const [view, setView] = useState<PageView>(
-    isSimple
-      ? 'table'
-      : searchParams.get('view') === 'kanban'
-        ? 'kanban'
-        : 'table',
-  );
+  const urlView = parseProjectsPageView(searchParams.get('view'));
+  const [view, setView] = useState<PageView>(urlView ?? 'table');
+  const [viewReady, setViewReady] = useState(urlView !== null);
   const [typeFilter, setTypeFilter] = useState<ProjectTypeFilter>(
     isSimple
       ? 'delivery'
@@ -145,6 +147,38 @@ export function JobsPageContent({
     },
     [isSimple],
   );
+
+  const userPickedViewRef = useRef(false);
+
+  const persistView = useCallback(
+    (next: ProjectsPageView) => {
+      userPickedViewRef.current = true;
+      setView(next);
+      setViewReady(true);
+      writeProjectsPageView(accountSlug, next);
+    },
+    [accountSlug],
+  );
+
+  useEffect(() => {
+    if (userPickedViewRef.current) {
+      setViewReady(true);
+      return;
+    }
+
+    if (urlView) {
+      setView(urlView);
+      writeProjectsPageView(accountSlug, urlView);
+      setViewReady(true);
+      return;
+    }
+
+    const stored = readProjectsPageView(accountSlug);
+    if (stored) {
+      setView(stored);
+    }
+    setViewReady(true);
+  }, [accountSlug, urlView]);
 
   useEffect(() => {
     if (isSimple) return;
@@ -473,9 +507,9 @@ export function JobsPageContent({
             <button
               key={key}
               type="button"
-              onClick={() => setView(key)}
+              onClick={() => persistView(key)}
               className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-colors ${
-                view === key
+                viewReady && view === key
                   ? 'border-[var(--ozer-accent)] text-[var(--workspace-shell-text)]'
                   : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
               }`}
@@ -496,7 +530,7 @@ export function JobsPageContent({
         ) : null}
       </div>
 
-      {view === 'table' && (
+      {viewReady && view === 'table' && (
         <JobsPmToolbar
           search={search}
           onSearchChange={setSearch}
@@ -508,7 +542,7 @@ export function JobsPageContent({
         />
       )}
 
-      {loading ? (
+      {loading || !viewReady ? (
         <div className="flex min-h-[320px] flex-1 items-center justify-center">
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             Loading projects…
