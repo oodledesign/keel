@@ -163,7 +163,7 @@ export function parseAskingPriceQualifier(
     return 'offers_in_region_of';
   }
 
-  if (/guide\s+price/.test(s) || /\bguiding\b/.test(s) || /\bgp\b/.test(s)) {
+  if (/guide\s+price/.test(s) || /\bguiding\b/.test(s)) {
     return 'guide_price';
   }
 
