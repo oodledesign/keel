@@ -9,6 +9,7 @@ import { WORKSPACE_FORM_TEMPLATES } from './form-templates';
 import {
   WORKSPACE_FORM_LAYOUTS,
   WORKSPACE_FORM_PAGE_BACKGROUNDS,
+  WORKSPACE_FORM_PRESENTATIONS,
 } from './form-theme';
 
 export const WorkspaceFormFieldSchema = z.object({
@@ -37,6 +38,7 @@ export const WorkspaceFormThemeSchema = z.object({
   pageBackground: z.enum(WORKSPACE_FORM_PAGE_BACKGROUNDS),
   layout: z.enum(WORKSPACE_FORM_LAYOUTS).optional(),
   layoutExplicit: z.boolean().optional(),
+  presentation: z.enum(WORKSPACE_FORM_PRESENTATIONS).optional(),
 });
 
 export const WorkspaceFormEmailTemplateSchema = z.object({

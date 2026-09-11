@@ -77,6 +77,7 @@ async function PublicWorkspaceFormPage({
         eventDate={form.eventDate}
         eventTime={form.eventTime}
         layout={form.theme.layout}
+        presentation={form.theme.presentation}
         submitLabel={form.submitLabel}
         successMessage={form.successMessage}
         fields={form.fields}

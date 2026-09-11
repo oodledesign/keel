@@ -33,6 +33,8 @@ type Props = {
   index: number;
   total: number;
   active: boolean;
+  /** 1-based step number when the form uses steps presentation. */
+  stepIndex?: number | null;
   onActivate: () => void;
   onChange: (patch: Partial<WorkspaceFormField>) => void;
   onChangeType: (type: WorkspaceFormFieldType) => void;
@@ -46,6 +48,7 @@ export function FormQuestionCard({
   index,
   total,
   active,
+  stepIndex = null,
   onActivate,
   onChange,
   onChangeType,
@@ -71,6 +74,15 @@ export function FormQuestionCard({
       >
         <GripHorizontal className="h-4 w-4" />
       </div>
+
+      {stepIndex ? (
+        <p
+          className={`mb-3 text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+          data-test="form-question-step-index"
+        >
+          Step {stepIndex}
+        </p>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
         <div className="grid gap-1.5">
@@ -158,6 +170,21 @@ export function FormQuestionCard({
             onFocus={onActivate}
             onChange={(event) => onChange({ placeholder: event.target.value })}
             placeholder="Shown as empty hint text"
+          />
+        </div>
+      ) : null}
+
+      {field.type !== 'hidden' && field.type !== 'file' ? (
+        <div className="mt-3 grid gap-1.5">
+          <Label>Help text</Label>
+          <Input
+            value={field.helpText ?? ''}
+            onFocus={onActivate}
+            onChange={(event) =>
+              onChange({ helpText: event.target.value || undefined })
+            }
+            placeholder="Optional — shown under the question on the public form"
+            data-test="form-field-help-text"
           />
         </div>
       ) : null}

@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
-import { Calendar, Check, Clock, MapPin } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, Clock, MapPin } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -26,7 +26,16 @@ import {
   type WorkspaceFormField,
   publicVisibleFields,
 } from '~/lib/workspace-forms/form-fields';
-import type { WorkspaceFormLayout } from '~/lib/workspace-forms/form-theme';
+import {
+  type PublicFormStep,
+  buildPublicFormSteps,
+  shouldIncludeWelcomeStep,
+  validatePublicFormStep,
+} from '~/lib/workspace-forms/form-steps';
+import type {
+  WorkspaceFormLayout,
+  WorkspaceFormPresentation,
+} from '~/lib/workspace-forms/form-theme';
 
 const EMPTY_PLACEHOLDER =
   'placeholder:text-neutral-400/70 placeholder:opacity-80';
@@ -40,6 +49,7 @@ type Props = {
   eventDate?: string | null;
   eventTime?: string | null;
   layout: WorkspaceFormLayout;
+  presentation?: WorkspaceFormPresentation;
   submitLabel: string;
   successMessage: string;
   fields: WorkspaceFormField[];
@@ -66,6 +76,7 @@ export function PublicWorkspaceForm({
   eventDate,
   eventTime,
   layout,
+  presentation = 'classic',
   submitLabel,
   successMessage,
   fields,
@@ -80,6 +91,29 @@ export function PublicWorkspaceForm({
   contentShell = false,
 }: Props) {
   const visibleFields = useMemo(() => publicVisibleFields(fields), [fields]);
+  const eventLayout = layout === 'event' && !embed;
+  const stepsMode = presentation === 'steps';
+  const hasIntro = Boolean(
+    description?.trim() ||
+    eventAddress?.trim() ||
+    eventDate?.trim() ||
+    eventTime?.trim(),
+  );
+  const includeWelcome = shouldIncludeWelcomeStep({
+    presentation,
+    layout: eventLayout ? 'event' : 'standard',
+    embed,
+    hasIntro,
+  });
+  const steps = useMemo(
+    () => buildPublicFormSteps({ fields, includeWelcome }),
+    [fields, includeWelcome],
+  );
+  const [stepIndex, setStepIndex] = useState(0);
+  const [stepError, setStepError] = useState<string | null>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const currentStep = steps[Math.min(stepIndex, Math.max(steps.length - 1, 0))];
+  const isLastStep = stepIndex >= steps.length - 1;
   const [values, setValues] = useState<Record<string, string | boolean>>(() => {
     const email = prefillEmail?.trim();
     if (!email) return {};
@@ -93,15 +127,58 @@ export function PublicWorkspaceForm({
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
-  const eventLayout = layout === 'event' && !embed;
   const descriptionHtml = formDescriptionToHtml(description);
+
+  useEffect(() => {
+    if (!stepsMode) return;
+    stepHeadingRef.current?.focus();
+  }, [stepIndex, stepsMode]);
 
   function setField(key: string, value: string | boolean) {
     setValues((current) => ({ ...current, [key]: value }));
+    setStepError(null);
+  }
+
+  function goBack() {
+    setStepError(null);
+    setStepIndex((current) => Math.max(0, current - 1));
+  }
+
+  function goNext() {
+    if (!currentStep) return;
+    const invalid = validatePublicFormStep(currentStep, values);
+    if (invalid) {
+      setStepError(invalid);
+      return false;
+    }
+    setStepError(null);
+    setStepIndex((current) => Math.min(steps.length - 1, current + 1));
+    return true;
+  }
+
+  function onFormKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== 'Enter' || !stepsMode) return;
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') return;
+    if (!isLastStep) {
+      event.preventDefault();
+      goNext();
+    }
   }
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (stepsMode && currentStep) {
+      const invalid = validatePublicFormStep(currentStep, values);
+      if (invalid) {
+        setStepError(invalid);
+        return;
+      }
+      if (!isLastStep) {
+        goNext();
+        return;
+      }
+    }
     const honeypot = String(
       new FormData(event.currentTarget).get('website') ?? '',
     );
@@ -205,18 +282,24 @@ export function PublicWorkspaceForm({
             ? 'public-form-event-layout'
             : 'public-form-standard-layout'
         }
+        data-presentation={presentation}
         data-content-shell={contentShell ? 'true' : undefined}
       >
         {eventLayout ? (
           <aside className="md:sticky md:top-8">{intro}</aside>
-        ) : (
+        ) : stepsMode ? null : (
           intro
         )}
 
         <form
-          className="space-y-4 rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
+          className={cn(
+            'space-y-4 rounded-2xl border border-black/5 bg-white p-6 shadow-sm',
+            stepsMode && 'min-h-[20rem] sm:min-h-[22rem]',
+          )}
           onSubmit={onSubmit}
+          onKeyDown={onFormKeyDown}
           data-test="public-workspace-form"
+          data-presentation={presentation}
         >
           <input
             type="text"
@@ -227,29 +310,236 @@ export function PublicWorkspaceForm({
             className="absolute -left-[9999px] h-0 w-0 opacity-0"
           />
 
-          {visibleFields.map((field) => (
-            <PublicField
-              key={field.id}
-              field={field}
-              value={values[field.key]}
-              disabled={pending}
+          {stepsMode ? (
+            <PublicFormSteps
+              steps={steps}
+              stepIndex={stepIndex}
+              stepError={stepError}
+              currentStep={currentStep}
+              isLastStep={isLastStep}
+              values={values}
+              pending={pending}
               accentColor={accentColor}
-              onChange={(value) => setField(field.key, value)}
+              submitLabel={submitLabel}
+              error={error}
+              stepHeadingRef={stepHeadingRef}
+              eventLayout={eventLayout}
+              intro={intro}
+              accountName={accountName}
+              formName={formName}
+              logoUrl={logoUrl}
+              primaryColor={primaryColor}
+              onChange={setField}
+              onBack={goBack}
+              onNext={goNext}
             />
-          ))}
+          ) : (
+            <>
+              {visibleFields.map((field) => (
+                <PublicField
+                  key={field.id}
+                  field={field}
+                  value={values[field.key]}
+                  disabled={pending}
+                  accentColor={accentColor}
+                  onChange={(value) => setField(field.key, value)}
+                />
+              ))}
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+              {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
+              <Button
+                type="submit"
+                disabled={pending}
+                className="h-11 w-full rounded-full text-white"
+                style={{ backgroundColor: accentColor }}
+                data-test="public-form-submit"
+              >
+                {pending ? 'Sending…' : submitLabel}
+              </Button>
+            </>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PublicFormSteps({
+  steps,
+  stepIndex,
+  stepError,
+  currentStep,
+  isLastStep,
+  values,
+  pending,
+  accentColor,
+  submitLabel,
+  error,
+  stepHeadingRef,
+  eventLayout,
+  intro,
+  accountName,
+  formName,
+  logoUrl,
+  primaryColor,
+  onChange,
+  onBack,
+  onNext,
+}: {
+  steps: PublicFormStep[];
+  stepIndex: number;
+  stepError: string | null;
+  currentStep: PublicFormStep | undefined;
+  isLastStep: boolean;
+  values: Record<string, string | boolean>;
+  pending: boolean;
+  accentColor: string;
+  submitLabel: string;
+  error: string | null;
+  stepHeadingRef: React.RefObject<HTMLHeadingElement | null>;
+  eventLayout: boolean;
+  intro: React.ReactNode;
+  accountName: string;
+  formName: string;
+  logoUrl?: string | null;
+  primaryColor: string;
+  onChange: (key: string, value: string | boolean) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const total = Math.max(steps.length, 1);
+  const progress = ((stepIndex + 1) / total) * 100;
+  const welcome = currentStep?.kind === 'welcome';
+  const fieldTotal = steps.filter((step) => step.kind === 'field').length;
+  const fieldNumber = steps
+    .slice(0, stepIndex + 1)
+    .filter((step) => step.kind === 'field').length;
+
+  return (
+    <div className="flex flex-col gap-5" data-test="public-form-steps">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3 text-xs text-neutral-500">
+          <span data-test="public-form-step-label">
+            {welcome
+              ? 'Welcome'
+              : fieldTotal > 0
+                ? `Question ${fieldNumber} of ${fieldTotal}`
+                : 'Form'}
+          </span>
+          <span data-test="public-form-step-count">
+            {stepIndex + 1} / {total}
+          </span>
+        </div>
+        <div
+          className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={total}
+          aria-valuenow={stepIndex + 1}
+          aria-label="Form progress"
+          data-test="public-form-progress"
+        >
+          <div
+            className="h-full rounded-full transition-[width] duration-300 ease-out"
+            style={{ width: `${progress}%`, backgroundColor: accentColor }}
+          />
+        </div>
+      </div>
+
+      {welcome ? (
+        <div className="space-y-6">
+          <h2 ref={stepHeadingRef} tabIndex={-1} className="sr-only">
+            Welcome
+          </h2>
+          {!eventLayout ? (
+            intro
+          ) : (
+            <p className="text-sm text-neutral-600">
+              A few questions — use Continue to move through them.
+            </p>
+          )}
+        </div>
+      ) : currentStep?.kind === 'field' ? (
+        <div className="space-y-3">
+          {!eventLayout ? (
+            <div className="flex items-center gap-3">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={accountName} className="h-8 w-auto" />
+              ) : null}
+              <p
+                className="font-heading text-sm font-semibold"
+                style={{ color: primaryColor }}
+              >
+                {formName}
+              </p>
+            </div>
+          ) : null}
+          <h2 ref={stepHeadingRef} tabIndex={-1} className="sr-only">
+            {currentStep.field.label}
+          </h2>
+          <PublicField
+            field={currentStep.field}
+            value={values[currentStep.field.key]}
+            disabled={pending}
+            accentColor={accentColor}
+            emphasis
+            onChange={(value) => onChange(currentStep.field.key, value)}
+          />
+        </div>
+      ) : (
+        <p className="text-sm text-neutral-500">
+          This form has no questions yet.
+        </p>
+      )}
+
+      {stepError ? (
+        <p className="text-sm text-red-600" data-test="public-form-step-error">
+          {stepError}
+        </p>
+      ) : null}
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+      <div className="mt-auto flex items-center justify-between gap-3 pt-2">
+        {stepIndex > 0 ? (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={pending}
+            onClick={onBack}
+            className="rounded-full text-neutral-600"
+            data-test="public-form-back"
+          >
+            <ChevronLeft className="size-4" />
+            Back
+          </Button>
+        ) : (
+          <span />
+        )}
+
+        {isLastStep ? (
           <Button
             type="submit"
             disabled={pending}
-            className="h-11 w-full rounded-full text-white"
+            className="h-11 min-w-[8.5rem] rounded-full text-white"
             style={{ backgroundColor: accentColor }}
             data-test="public-form-submit"
           >
             {pending ? 'Sending…' : submitLabel}
           </Button>
-        </form>
+        ) : (
+          <Button
+            type="button"
+            disabled={pending}
+            onClick={onNext}
+            className="h-11 min-w-[8.5rem] rounded-full text-white"
+            style={{ backgroundColor: accentColor }}
+            data-test="public-form-next"
+          >
+            Continue
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -410,25 +700,49 @@ function EventMetaList({
   );
 }
 
+function FieldHelp({ text }: { text?: string }) {
+  if (!text?.trim()) return null;
+  return (
+    <p className="text-sm text-neutral-500" data-test="public-form-field-help">
+      {text}
+    </p>
+  );
+}
+
+function FieldOptionalMark({ required }: { required: boolean }) {
+  if (required) return null;
+  return <span className="ml-1 text-neutral-400">(optional)</span>;
+}
+
 function PublicField({
   field,
   value,
   disabled,
   accentColor,
+  emphasis = false,
   onChange,
 }: {
   field: WorkspaceFormField;
   value: string | boolean | undefined;
   disabled: boolean;
   accentColor: string;
+  emphasis?: boolean;
   onChange: (value: string | boolean) => void;
 }) {
   const inputId = `field-${field.key}`;
   const textValue = typeof value === 'string' ? value : '';
+  const titleClass = emphasis
+    ? 'font-heading text-xl font-semibold text-neutral-800 md:text-2xl'
+    : 'text-sm font-medium text-neutral-700';
 
   if (field.type === 'checkbox') {
     return (
-      <label className="flex items-start gap-3 text-sm text-neutral-800">
+      <label
+        className={cn(
+          'flex items-start gap-3 text-neutral-800',
+          emphasis ? 'text-base' : 'text-sm',
+        )}
+      >
         <input
           id={inputId}
           type="checkbox"
@@ -438,9 +752,12 @@ function PublicField({
           onChange={(event) => onChange(event.target.checked)}
           className="mt-1"
         />
-        <span>
-          {field.label}
-          {field.required ? '' : ' (optional)'}
+        <span className="grid gap-1">
+          <span className={emphasis ? 'font-heading font-semibold' : undefined}>
+            {field.label}
+            <FieldOptionalMark required={field.required} />
+          </span>
+          <FieldHelp text={field.helpText} />
         </span>
       </label>
     );
@@ -454,14 +771,11 @@ function PublicField({
 
     return (
       <fieldset className="space-y-2" data-test={`yes-no-${field.key}`}>
-        <legend className="text-sm font-medium text-neutral-700">
+        <legend className={titleClass}>
           {field.label}
-          {field.required ? (
-            ''
-          ) : (
-            <span className="ml-1 text-neutral-400">(optional)</span>
-          )}
+          <FieldOptionalMark required={field.required} />
         </legend>
+        <FieldHelp text={field.helpText} />
         <div
           role="radiogroup"
           aria-required={field.required}
@@ -518,14 +832,11 @@ function PublicField({
     const options = field.options ?? [];
     return (
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-neutral-700">
+        <legend className={titleClass}>
           {field.label}
-          {field.required ? (
-            ''
-          ) : (
-            <span className="ml-1 text-neutral-400">(optional)</span>
-          )}
+          <FieldOptionalMark required={field.required} />
         </legend>
+        <FieldHelp text={field.helpText} />
         <div role="radiogroup" aria-label={field.label} className="space-y-2">
           {options.map((option) => {
             const optionId = `${inputId}-${option}`;
@@ -556,14 +867,11 @@ function PublicField({
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={inputId} className="text-neutral-700">
+      <Label htmlFor={inputId} className={titleClass}>
         {field.label}
-        {field.required ? (
-          ''
-        ) : (
-          <span className="ml-1 text-neutral-400">(optional)</span>
-        )}
+        <FieldOptionalMark required={field.required} />
       </Label>
+      <FieldHelp text={field.helpText} />
       {field.type === 'select' ? (
         <Select value={textValue} onValueChange={onChange} disabled={disabled}>
           <SelectTrigger id={inputId} className={EMPTY_PLACEHOLDER}>
