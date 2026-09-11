@@ -18,6 +18,7 @@ import {
   CAMPAIGN_AUDIENCE_LIST_REQUIRED,
   campaignAudienceListMissing,
 } from '~/lib/campaigns/campaign-audience';
+import { seriesInstanceMaySend } from '~/lib/campaigns/campaign-series-ready';
 import {
   CAMPAIGN_TIMEZONES,
   formatZonedInstant,
@@ -100,6 +101,7 @@ export function CampaignSendPanel({
     ? `${campaign.fromName.trim()} <${campaign.fromEmail || brand.contact_email || 'workspace'}>`
     : campaign.fromEmail || brand.contact_email || 'workspace default';
 
+  const instanceBlocked = !seriesInstanceMaySend(campaign);
   const insufficientSendUnits =
     editable && audienceCount > 0 && usage.balance < audienceCount;
   const contactsBlocked =
@@ -207,10 +209,20 @@ export function CampaignSendPanel({
                 }
               />
             ) : null}
+            {instanceBlocked ? (
+              <p
+                className={`text-sm ${workspaceTextMuted}`}
+                data-test="campaign-send-not-ready"
+              >
+                Mark this occurrence Ready before it can send. Draft series
+                instances never go out.
+              </p>
+            ) : null}
             <Button
               className={workspaceBtnPrimary}
               disabled={
                 pending ||
+                instanceBlocked ||
                 listAudienceIncomplete ||
                 insufficientSendUnits ||
                 contactsBlocked ||

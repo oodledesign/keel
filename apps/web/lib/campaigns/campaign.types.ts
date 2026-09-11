@@ -44,6 +44,40 @@ export type EmailCampaign = {
   bounceCount: number;
   complaintCount: number;
   lastError: string | null;
+  seriesId: string | null;
+  occurrenceKey: string | null;
+  ready: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EmailCampaignSeriesStatus = 'active' | 'paused' | 'cancelled';
+
+export type EmailCampaignSeries = {
+  id: string;
+  accountId: string;
+  createdBy: string | null;
+  name: string;
+  timezone: string;
+  recurrenceFreq: 'weekly' | 'monthly';
+  recurrenceInterval: number;
+  recurrenceByWeekday: number | null;
+  recurrenceByMonthday: number | null;
+  sendHour: number;
+  sendMinute: number;
+  startsOn: string;
+  endsOn: string | null;
+  generateAhead: number;
+  audienceType: CampaignAudienceType;
+  audienceConfig: CampaignAudienceConfig;
+  subject: string;
+  previewText: string | null;
+  bodyDocument: CampaignDocument | null;
+  htmlBody: string;
+  fromName: string | null;
+  fromEmail: string | null;
+  replyTo: string | null;
+  status: EmailCampaignSeriesStatus;
   createdAt: string;
   updatedAt: string;
 };

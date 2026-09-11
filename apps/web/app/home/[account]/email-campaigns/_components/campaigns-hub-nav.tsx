@@ -23,6 +23,11 @@ const TABS = [
     label: 'Automations',
     path: 'accountEmailCampaignAutomations',
   },
+  {
+    key: 'recurring',
+    label: 'Recurring',
+    path: 'accountEmailCampaignRecurring',
+  },
 ] as const;
 
 export function CampaignsHubNav({ accountSlug }: { accountSlug: string }) {
