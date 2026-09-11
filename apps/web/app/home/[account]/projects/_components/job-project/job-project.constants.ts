@@ -26,30 +26,19 @@ export const PHASE_STATUS_STYLES: Record<PhaseStatus, string> = {
   complete: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
 };
 
-export const TASK_STATUS_LABELS: Record<string, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  client_review: 'Client review',
-  done: 'Done',
-  cancelled: 'Cancelled',
-};
-
-export const TASK_STATUS_STYLES: Record<string, string> = {
-  todo: 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
-  in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
-  client_review:
-    'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-  done: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-  cancelled:
-    'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
-};
+export {
+  TASK_STATUS_LABELS,
+  TASK_STATUS_STYLES,
+  taskStatusBadgeClass,
+  taskStatusLabel,
+} from '~/lib/projects/task-status-badge';
 
 /** Column accent colours for the Progress (status) kanban. */
 export const PROGRESS_STATUS_COLOURS: Record<string, string> = {
-  todo: '#64748B',
+  todo: ozerColors.gold,
   in_progress: ozerColors.info,
   client_review: ozerColors.accent,
-  done: '#16A34A',
+  done: '#059669',
 };
 
 export const PRIORITY_DOT: Record<string, string> = {

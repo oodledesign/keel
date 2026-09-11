@@ -9,6 +9,10 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import {
+  taskStatusBadgeClass,
+  taskStatusLabel,
+} from '~/lib/projects/task-status-badge';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
 import type {
@@ -23,30 +27,11 @@ type ViewMode = 'board' | 'timeline' | 'list';
 type BoardMode = 'phase' | 'progress';
 
 const STATUS_COLUMNS = [
-  { key: 'todo', label: 'To do', colour: '#64748B' },
+  { key: 'todo', label: 'To do', colour: '#F0C14B' },
   { key: 'in_progress', label: 'In progress', colour: '#41606F' },
   { key: 'client_review', label: 'Review', colour: '#FF5C34' },
-  { key: 'done', label: 'Done', colour: '#16A34A' },
+  { key: 'done', label: 'Done', colour: '#059669' },
 ] as const;
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  client_review: 'Review',
-  done: 'Done',
-  completed: 'Done',
-  cancelled: 'Cancelled',
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  todo: 'bg-[var(--workspace-shell-panel-hover)] text-[var(--ozer-text-on-light-muted)]',
-  in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
-  client_review:
-    'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-  done: 'bg-emerald-500/15 text-emerald-700',
-  cancelled:
-    'bg-[var(--workspace-shell-panel-hover)] text-[var(--ozer-text-on-light-muted)]',
-};
 
 const PRIORITY_DOT: Record<string, string> = {
   low: 'bg-[var(--ozer-text-on-light-muted)]',
@@ -57,16 +42,13 @@ const PRIORITY_DOT: Record<string, string> = {
 };
 
 function TaskCardMeta({ task }: { task: PortalProjectTask }) {
-  const status = normalizeStatus(task.status);
   const dueLabel = formatPortalDueLabel(task.dueDate);
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2">
       <span
-        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-          STATUS_STYLES[status] ?? STATUS_STYLES.todo
-        }`}
+        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${taskStatusBadgeClass(task.status)}`}
       >
-        {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+        {taskStatusLabel(task.status)}
       </span>
       {task.assigneeName ? (
         <span className="max-w-full truncate text-[11px] text-[var(--ozer-text-on-light-muted)]">
@@ -254,7 +236,6 @@ function PortalProjectListView({
       <ul>
         {sorted.map((task) => {
           const open = expandedTaskId === task.id;
-          const status = normalizeStatus(task.status);
           const comments = commentsByTask.get(task.id) ?? [];
           const dueLabel = formatPortalDueLabel(task.dueDate);
           const priorityKey = task.priority || 'none';
@@ -285,11 +266,11 @@ function PortalProjectListView({
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                          STATUS_STYLES[status] ?? STATUS_STYLES.todo
-                        }`}
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${taskStatusBadgeClass(
+                          task.status,
+                        )}`}
                       >
-                        {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                        {taskStatusLabel(task.status)}
                       </span>
                       {task.assigneeName ? (
                         <span className="truncate text-[11px] text-[var(--ozer-text-on-light-muted)]">
@@ -316,11 +297,11 @@ function PortalProjectListView({
 
                 <span className="hidden sm:block">
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                      STATUS_STYLES[status] ?? STATUS_STYLES.todo
-                    }`}
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${taskStatusBadgeClass(
+                      task.status,
+                    )}`}
                   >
-                    {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                    {taskStatusLabel(task.status)}
                   </span>
                 </span>
 
@@ -575,7 +556,6 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
               </div>
               <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
                 {group.items.map((task) => {
-                  const status = normalizeStatus(task.status);
                   return (
                     <li
                       key={task.id}
@@ -592,11 +572,11 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
                         ) : null}
                       </div>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                          STATUS_STYLES[status] ?? STATUS_STYLES.todo
-                        }`}
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${taskStatusBadgeClass(
+                          task.status,
+                        )}`}
                       >
-                        {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                        {taskStatusLabel(task.status)}
                       </span>
                     </li>
                   );
@@ -624,7 +604,6 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
           </div>
           <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
             {undated.map((task) => {
-              const status = normalizeStatus(task.status);
               return (
                 <li
                   key={task.id}
@@ -641,11 +620,11 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
                     ) : null}
                   </div>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                      STATUS_STYLES[status] ?? STATUS_STYLES.todo
-                    }`}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${taskStatusBadgeClass(
+                      task.status,
+                    )}`}
                   >
-                    {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                    {taskStatusLabel(task.status)}
                   </span>
                 </li>
               );

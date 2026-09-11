@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
@@ -25,6 +26,8 @@ import {
   PRIORITY_DOT,
   TASK_STATUS_LABELS,
   formatShortDate,
+  taskStatusBadgeClass,
+  taskStatusLabel,
   toDateInputValue,
 } from '../job-project/job-project.constants';
 
@@ -170,7 +173,12 @@ export function PhaseTasksPanel({
                     value={task.status}
                     onValueChange={(status) => patchTask(task, { status })}
                   >
-                    <SelectTrigger className="h-7 w-[130px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)]">
+                    <SelectTrigger
+                      className={cn(
+                        'h-7 w-[130px] border-0 text-xs font-medium shadow-none',
+                        taskStatusBadgeClass(task.status),
+                      )}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -204,8 +212,15 @@ export function PhaseTasksPanel({
                   />
                 </>
               ) : (
-                <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  {TASK_STATUS_LABELS[task.status] ?? task.status} ·{' '}
+                <span className="inline-flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                  <span
+                    className={cn(
+                      'inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase',
+                      taskStatusBadgeClass(task.status),
+                    )}
+                  >
+                    {taskStatusLabel(task.status)}
+                  </span>
                   {formatShortDate(task.due_date)}
                   {task.duration_minutes
                     ? ` · ${formatDurationMinutes(task.duration_minutes)}`

@@ -62,9 +62,10 @@ import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
   PRIORITY_DOT,
-  TASK_STATUS_STYLES,
   UNPHASED_KEY,
   formatShortDate,
+  taskStatusBadgeClass,
+  taskStatusLabel,
 } from './job-project.constants';
 
 type MemberLookup = Map<
@@ -156,11 +157,9 @@ function TaskCard({
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                TASK_STATUS_STYLES[task.status] ?? TASK_STATUS_STYLES.todo
-              }`}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${taskStatusBadgeClass(task.status)}`}
             >
-              {task.status.replace('_', ' ')}
+              {taskStatusLabel(task.status)}
             </span>
             {task.due_date && (
               <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">

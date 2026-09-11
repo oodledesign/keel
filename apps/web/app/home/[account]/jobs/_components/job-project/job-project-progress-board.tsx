@@ -17,8 +17,9 @@ import {
   PRIORITY_DOT,
   PROGRESS_STATUS_COLOURS,
   TASK_STATUS_LABELS,
-  TASK_STATUS_STYLES,
   formatShortDate,
+  taskStatusBadgeClass,
+  taskStatusLabel,
 } from './job-project.constants';
 
 const STATUS_COLUMNS = [
@@ -122,9 +123,7 @@ function ProgressTaskCard({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {canEditJobs ? (
               <select
-                className={`rounded-full border-0 px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase outline-none ${
-                  TASK_STATUS_STYLES[status] ?? TASK_STATUS_STYLES.todo
-                }`}
+                className={`rounded-full border-0 px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase outline-none ${taskStatusBadgeClass(task.status)}`}
                 value={status}
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
@@ -141,11 +140,9 @@ function ProgressTaskCard({
               </select>
             ) : (
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                  TASK_STATUS_STYLES[status] ?? TASK_STATUS_STYLES.todo
-                }`}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${taskStatusBadgeClass(task.status)}`}
               >
-                {TASK_STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                {taskStatusLabel(task.status)}
               </span>
             )}
             {task.due_date ? (

@@ -34,6 +34,7 @@ import {
 } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
 import pathsConfig from '~/config/paths.config';
@@ -42,6 +43,7 @@ import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspa
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
 import { deleteJobTask, updateJobTask } from '../../_lib/server/server-actions';
+import { taskStatusBadgeClass } from './job-project.constants';
 
 type TaskLinkDraft = { url: string; label: string };
 type NoteRefDraft = { id: string; title: string };
@@ -273,7 +275,12 @@ export function JobProjectTaskSheet({
                   onValueChange={setStatus}
                   disabled={!canEditJobs || pending}
                 >
-                  <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
+                  <SelectTrigger
+                    className={cn(
+                      'mt-1 border-0 font-medium shadow-none',
+                      taskStatusBadgeClass(status),
+                    )}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

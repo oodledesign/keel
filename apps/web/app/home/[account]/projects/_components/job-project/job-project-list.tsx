@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
@@ -51,6 +52,8 @@ import {
   TASK_STATUS_LABELS,
   UNPHASED_KEY,
   formatShortDate,
+  taskStatusBadgeClass,
+  taskStatusLabel,
   toDateInputValue,
 } from './job-project.constants';
 
@@ -171,7 +174,12 @@ function TaskRow({
             value={task.status}
             onValueChange={(status) => patch({ status })}
           >
-            <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text)]">
+            <SelectTrigger
+              className={cn(
+                'h-8 border-0 text-xs font-medium shadow-none',
+                taskStatusBadgeClass(task.status),
+              )}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -183,8 +191,13 @@ function TaskRow({
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-            {TASK_STATUS_LABELS[task.status] ?? task.status}
+          <span
+            className={cn(
+              'inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase',
+              taskStatusBadgeClass(task.status),
+            )}
+          >
+            {taskStatusLabel(task.status)}
           </span>
         )}
       </div>
