@@ -17,6 +17,7 @@ import {
 } from '~/lib/jobs/project-notifications';
 import { isBuiltinPhaseTemplateName } from '~/lib/projects/phase-template-builtins';
 import { PROJECT_BOARD_TEMPLATE } from '~/lib/projects/project-board-phase-template';
+import { computeTaskProgress } from '~/lib/tasks/compute-task-progress';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
 
@@ -55,6 +56,23 @@ import {
   type UpdatePhaseNoteInput,
 } from '../schema/project-phases.schema';
 
+type ProgressTaskRow = {
+  id?: string | null;
+  phase_id?: string | null;
+  status: string;
+  parent_task_id?: string | null;
+  duration_minutes?: number | null;
+};
+
+function toProgressInput(task: ProgressTaskRow, fallbackId: string) {
+  return {
+    id: task.id ?? fallbackId,
+    status: task.status,
+    parent_task_id: task.parent_task_id ?? null,
+    duration_minutes: task.duration_minutes ?? null,
+  };
+}
+
 const STANDARD_DELIVERY_TEMPLATE = {
   name: 'Standard delivery',
   description: 'Discovery → Design → Build → Launch → Care',
@@ -91,14 +109,6 @@ const STANDARD_DELIVERY_TEMPLATE = {
     },
   ] satisfies PhaseTemplatePhase[],
 };
-
-const TASK_STATUSES = [
-  'todo',
-  'in_progress',
-  'client_review',
-  'done',
-  'cancelled',
-] as const;
 
 const JOB_BOARD_TASK_SELECT =
   'id, title, status, priority, due_date, duration_minutes, sort_order, phase_id, project_id, user_id, parent_task_id, notes, links, note_refs' as const;
@@ -262,24 +272,14 @@ class ProjectPhasesService {
     return data as Record<string, unknown>;
   }
 
-  private computeProgressPct(counts: TaskStatusCount): number {
-    const total = TASK_STATUSES.reduce(
-      (sum, status) => sum + counts[status],
-      0,
-    );
-    if (total === 0) return 0;
-    const active = total - counts.cancelled;
-    if (active === 0) return 0;
-    return Math.round((counts.done / active) * 100);
-  }
-
   private buildPhaseListItems(
     phases: Array<Record<string, unknown>>,
-    tasks: Array<{ phase_id: string | null; status: string }>,
+    tasks: ProgressTaskRow[],
     pageDocByPhase: Map<string, string>,
     noteCountByPhase: Map<string, number>,
   ): PhaseListItem[] {
     const countsByPhase = new Map<string, TaskStatusCount>();
+    const tasksByPhase = new Map<string, ProgressTaskRow[]>();
 
     for (const task of tasks) {
       if (!task.phase_id) continue;
@@ -291,11 +291,16 @@ class ProjectPhasesService {
         counts.todo += 1;
       }
       countsByPhase.set(task.phase_id, counts);
+
+      const list = tasksByPhase.get(task.phase_id) ?? [];
+      list.push(task);
+      tasksByPhase.set(task.phase_id, list);
     }
 
     return phases.map((phase) => {
       const id = phase.id as string;
       const taskCountsByStatus = countsByPhase.get(id) ?? EMPTY_TASK_COUNTS();
+      const phaseTasks = tasksByPhase.get(id) ?? [];
       return {
         id,
         account_id: phase.account_id as string,
@@ -312,7 +317,11 @@ class ProjectPhasesService {
         created_at: phase.created_at as string,
         updated_at: phase.updated_at as string,
         taskCountsByStatus,
-        progressPct: this.computeProgressPct(taskCountsByStatus),
+        progressPct: computeTaskProgress(
+          phaseTasks.map((task, index) =>
+            toProgressInput(task, `${id}-${index}`),
+          ),
+        ).progressPct,
         pageDocId: pageDocByPhase.get(id) ?? null,
         noteCount: noteCountByPhase.get(id) ?? 0,
       };
@@ -515,7 +524,7 @@ class ProjectPhasesService {
       await Promise.all([
         this.db
           .from('tasks')
-          .select('phase_id, status')
+          .select('id, phase_id, status, parent_task_id, duration_minutes')
           .eq('project_id', input.jobId),
         phaseIds.length > 0
           ? this.db
@@ -551,7 +560,7 @@ class ProjectPhasesService {
 
     return this.buildPhaseListItems(
       phaseRows,
-      (tasks ?? []) as Array<{ phase_id: string | null; status: string }>,
+      (tasks ?? []) as ProgressTaskRow[],
       pageDocByPhase,
       noteCountByPhase,
     );
@@ -664,7 +673,7 @@ class ProjectPhasesService {
       const fallback = await this.db
         .from('tasks')
         .select(
-          'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes',
+          'id, title, status, priority, due_date, duration_minutes, sort_order, phase_id, project_id, user_id, parent_task_id, notes',
         )
         .eq('project_id', input.jobId)
         .order('sort_order', { ascending: true, nullsFirst: false })
@@ -715,7 +724,7 @@ class ProjectPhasesService {
 
     const phases = this.buildPhaseListItems(
       (phaseRows ?? []) as Array<Record<string, unknown>>,
-      (taskRows ?? []) as Array<{ phase_id: string | null; status: string }>,
+      (taskRows ?? []) as ProgressTaskRow[],
       pageDocByPhase,
       noteCountByPhase,
     );
@@ -742,20 +751,12 @@ class ProjectPhasesService {
     );
 
     const tasksByPhase: Record<string, JobBoardTask[]> = {};
-    const jobTaskCounts = EMPTY_TASK_COUNTS();
 
     for (const row of taskRows ?? []) {
       const task = mapJobBoardTask(row as Record<string, unknown>);
       const key = task.phase_id ?? '__unphased__';
       if (!tasksByPhase[key]) tasksByPhase[key] = [];
       tasksByPhase[key].push(task);
-
-      const status = task.status as keyof TaskStatusCount;
-      if (status in jobTaskCounts) {
-        jobTaskCounts[status] += 1;
-      } else {
-        jobTaskCounts.todo += 1;
-      }
     }
 
     return {
@@ -767,7 +768,11 @@ class ProjectPhasesService {
       tasksByPhase,
       valuePence: (job.value_pence as number | null) ?? null,
       costPence: (job.cost_pence as number | null) ?? null,
-      progressPct: this.computeProgressPct(jobTaskCounts),
+      progressPct: computeTaskProgress(
+        ((taskRows ?? []) as ProgressTaskRow[]).map((task, index) =>
+          toProgressInput(task, `job-${index}`),
+        ),
+      ).progressPct,
     };
   }
 
