@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyAudienceFilters,
+  audienceListContactSummary,
+  audienceListKind,
+  audienceListTypeLabel,
+  formatAudienceListUpdatedAt,
   parseAudienceListFilters,
 } from './campaign-audience-filters';
 
@@ -158,5 +162,32 @@ describe('campaign audience filters', () => {
       }),
     );
     expect(matched.map((row) => row.email)).toEqual(['ada@agency.com']);
+  });
+
+  it('summarises list type and contacts for the hub', () => {
+    expect(audienceListKind('subscribers')).toBe('logic');
+    expect(audienceListKind({ source: 'manual' })).toBe('manual');
+    expect(audienceListTypeLabel('manual')).toBe('Manual');
+    expect(audienceListTypeLabel('clients')).toBe('Logic · Clients');
+    expect(
+      audienceListContactSummary({
+        source: 'manual',
+        memberCount: 1,
+        filters: [],
+      }),
+    ).toBe('1 contact');
+    expect(
+      audienceListContactSummary({
+        source: 'subscribers',
+        filters: [{ field: 'email_domain', op: 'eq', value: 'agency.com' }],
+      }),
+    ).toBe('Dynamic · 1 rule');
+    expect(formatAudienceListUpdatedAt('2026-09-11T12:00:00.000Z')).toMatch(
+      /Sep/,
+    );
+    expect(formatAudienceListUpdatedAt('2026-09-11T12:00:00.000Z')).toMatch(
+      /2026/,
+    );
+    expect(formatAudienceListUpdatedAt('not-a-date')).toBe('—');
   });
 });

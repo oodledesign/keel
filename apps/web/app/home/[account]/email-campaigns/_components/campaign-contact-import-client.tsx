@@ -30,15 +30,27 @@ export function CampaignContactImportClient({
 }) {
   const searchParams = useSearchParams();
   const existingListId = searchParams.get('listId') ?? '';
+  const fromAudiences = searchParams.get('from') === 'audiences';
   const listName = useMemo(
     () => lists.find((list) => list.id === existingListId)?.name,
     [existingListId, lists],
   );
 
-  const backHref = pathsConfig.app.accountEmailCampaignContacts.replace(
+  const contactsHref = pathsConfig.app.accountEmailCampaignContacts.replace(
     '[account]',
     accountSlug,
   );
+  const audiencesHref = pathsConfig.app.accountEmailCampaignAudiences.replace(
+    '[account]',
+    accountSlug,
+  );
+  const listDetailHref = existingListId
+    ? pathsConfig.app.accountEmailCampaignAudienceDetail
+        .replace('[account]', accountSlug)
+        .replace('[listId]', existingListId)
+    : null;
+  const backHref =
+    listDetailHref ?? (fromAudiences ? audiencesHref : contactsHref);
 
   const onSuggestMapping = useCallback(
     async (input: { headers: string[]; sampleRows: string[][] }) => {

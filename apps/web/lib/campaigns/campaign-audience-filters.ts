@@ -93,6 +93,44 @@ export const AUDIENCE_LIST_SOURCE_LABEL: Record<AudienceListSource, string> = {
   manual: 'Manual list',
 };
 
+export type AudienceListKind = 'logic' | 'manual';
+
+export function audienceListKind(
+  source: AudienceListSource | { source: AudienceListSource },
+): AudienceListKind {
+  const value = typeof source === 'string' ? source : source.source;
+  return value === 'manual' ? 'manual' : 'logic';
+}
+
+export function audienceListTypeLabel(source: AudienceListSource): string {
+  if (source === 'manual') return 'Manual';
+  return `Logic · ${AUDIENCE_LIST_SOURCE_LABEL[source]}`;
+}
+
+export function audienceListContactSummary(list: {
+  source: AudienceListSource;
+  memberCount?: number;
+  filters: unknown;
+}): string {
+  if (list.source === 'manual') {
+    const count = list.memberCount ?? 0;
+    return `${count} ${count === 1 ? 'contact' : 'contacts'}`;
+  }
+
+  const rules = Array.isArray(list.filters) ? list.filters.length : 0;
+  return `Dynamic · ${rules} ${rules === 1 ? 'rule' : 'rules'}`;
+}
+
+export function formatAudienceListUpdatedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
+
 export type AudienceFilterSubject = {
   email: string;
   displayName: string | null;
