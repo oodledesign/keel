@@ -27,6 +27,7 @@ import type {
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import { resolveBrochureLinkButtons } from '~/lib/commercial/brochure-pdf/brochure-links';
+import { brochureContactShopfrontBox } from '~/lib/commercial/brochure-pdf/contact-layout';
 import {
   brochureSashHex,
   parseCoverPriceLines,
@@ -40,7 +41,6 @@ import {
   isThinNearbyAmenityList,
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
-import { brochureContactShopfrontBox } from '~/lib/commercial/brochure-pdf/contact-layout';
 import {
   type PublicBrochureData,
   resolveBrochurePlateLogo,
