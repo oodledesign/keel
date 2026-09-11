@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN,
   campaignTestSubject,
+  isUsableMailingListUnsubscribeToken,
   normalizeCampaignTestEmails,
   parseCampaignTestEmailInput,
 } from './campaign-test-send';
@@ -23,6 +25,15 @@ describe('campaign test send helpers', () => {
     expect(
       parseCampaignTestEmailInput('ada@example.com, bob@x.test; carol@y.test'),
     ).toEqual(['ada@example.com', 'bob@x.test', 'carol@y.test']);
+  });
+
+  it('rejects short and test-preview unsubscribe tokens', () => {
+    expect(isUsableMailingListUnsubscribeToken('')).toBe(false);
+    expect(isUsableMailingListUnsubscribeToken('short-token')).toBe(false);
+    expect(
+      isUsableMailingListUnsubscribeToken(CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN),
+    ).toBe(false);
+    expect(isUsableMailingListUnsubscribeToken('a'.repeat(16))).toBe(true);
   });
 
   it('prefixes subject with [Test] once', () => {

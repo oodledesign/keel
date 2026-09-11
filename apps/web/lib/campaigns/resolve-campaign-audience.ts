@@ -6,7 +6,11 @@ import { randomBytes } from 'crypto';
 
 import { getLogger } from '@kit/shared/logger';
 
-import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
+import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
+import {
+  type PublicMailingPreferenceResult,
+  listWorkspaceMailingListSubscribers,
+} from '~/lib/workspace-forms/workspace-mailing-list';
 
 import {
   type CampaignAudienceConfig,
@@ -590,17 +594,11 @@ export async function listAudiencePickerOptions(
   };
 }
 
-/**
- * Unsubscribe via a campaign recipient token (clients/custom without preference).
- * Creates/updates a mailing preference as unsubscribed so future sends skip them.
- */
-export async function unsubscribeCampaignRecipientByToken(
+async function findCampaignRecipientByToken(
   client: SupabaseClient,
   token: string,
 ): Promise<{ email: string; accountId: string } | null> {
-  if (!token || token.length < 16 || token === 'campaign-test-preview') {
-    return null;
-  }
+  if (!isUsableMailingListUnsubscribeToken(token)) return null;
 
   const { data: recipient } = await fromTable(
     client,
@@ -613,31 +611,106 @@ export async function unsubscribeCampaignRecipientByToken(
 
   if (!recipient) return null;
 
-  const email = String(recipient.email).trim().toLowerCase();
-  const accountId = String(recipient.account_id);
+  return {
+    email: String(recipient.email).trim().toLowerCase(),
+    accountId: String(recipient.account_id),
+  };
+}
 
-  await fromTable(client, 'workspace_email_campaign_recipients')
-    .update({ unsubscribed_at: new Date().toISOString() })
-    .eq('unsubscribe_token', token)
-    .is('unsubscribed_at', null);
-
-  const prefs = fromTable(client, 'workspace_mailing_preferences');
-  const { data: existing } = await prefs
-    .select('id')
+async function findPreferenceForRecipient(
+  client: SupabaseClient,
+  accountId: string,
+  email: string,
+): Promise<{ id: string; marketingStatus: string } | null> {
+  const { data: existing } = await fromTable(
+    client,
+    'workspace_mailing_preferences',
+  )
+    .select('id, marketing_status')
     .eq('account_id', accountId)
     .eq('email', email)
     .eq('purpose', 'workspace_mailing_list')
     .maybeSingle();
 
+  if (!existing) return null;
+
+  return {
+    id: String(existing.id),
+    marketingStatus: String(existing.marketing_status),
+  };
+}
+
+/**
+ * Look up a campaign recipient token without mutating preference state.
+ */
+export async function lookupCampaignRecipientByToken(
+  client: SupabaseClient,
+  token: string,
+): Promise<PublicMailingPreferenceResult | null> {
+  const recipient = await findCampaignRecipientByToken(client, token);
+  if (!recipient) return null;
+
+  const preference = await findPreferenceForRecipient(
+    client,
+    recipient.accountId,
+    recipient.email,
+  );
+
+  return {
+    email: recipient.email,
+    accountId: recipient.accountId,
+    // No preference row means they are not blocked from future list/campaign mail.
+    marketingStatus:
+      preference?.marketingStatus === 'unsubscribed' ||
+      preference?.marketingStatus === 'suppressed'
+        ? preference.marketingStatus
+        : 'subscribed',
+  };
+}
+
+/**
+ * Unsubscribe via a campaign recipient token (clients/custom without preference).
+ * Creates/updates a mailing preference as unsubscribed so future sends skip them.
+ */
+export async function unsubscribeCampaignRecipientByToken(
+  client: SupabaseClient,
+  token: string,
+): Promise<PublicMailingPreferenceResult | null> {
+  const recipient = await findCampaignRecipientByToken(client, token);
+  if (!recipient) return null;
+
+  const { email, accountId } = recipient;
+
+  const { error: recipientError } = await fromTable(
+    client,
+    'workspace_email_campaign_recipients',
+  )
+    .update({ unsubscribed_at: new Date().toISOString() })
+    .eq('unsubscribe_token', token)
+    .is('unsubscribed_at', null);
+
+  if (recipientError) throw new Error(recipientError.message);
+
+  const prefs = fromTable(client, 'workspace_mailing_preferences');
+  const existing = await findPreferenceForRecipient(client, accountId, email);
+
+  if (existing?.marketingStatus === 'suppressed') {
+    return { email, accountId, marketingStatus: 'suppressed' };
+  }
+
   if (existing) {
-    await prefs
-      .update({
-        marketing_status: 'unsubscribed',
-        unsubscribed_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id);
+    if (existing.marketingStatus !== 'unsubscribed') {
+      const { error } = await prefs
+        .update({
+          marketing_status: 'unsubscribed',
+          unsubscribed_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
+      if (error) throw new Error(error.message);
+    }
   } else {
-    await prefs.insert({
+    const { error } = await prefs.insert({
       account_id: accountId,
       email,
       purpose: 'workspace_mailing_list',
@@ -648,7 +721,60 @@ export async function unsubscribeCampaignRecipientByToken(
       unsubscribe_token: token,
       unsubscribed_at: new Date().toISOString(),
     });
+
+    if (error) throw new Error(error.message);
   }
 
-  return { email, accountId };
+  return { email, accountId, marketingStatus: 'unsubscribed' };
+}
+
+/**
+ * Restore mailing preference so later campaigns include this address again.
+ * Does not rewrite historical recipient `unsubscribed_at` rows.
+ */
+export async function resubscribeCampaignRecipientByToken(
+  client: SupabaseClient,
+  token: string,
+): Promise<PublicMailingPreferenceResult | null> {
+  const recipient = await findCampaignRecipientByToken(client, token);
+  if (!recipient) return null;
+
+  const { email, accountId } = recipient;
+  const prefs = fromTable(client, 'workspace_mailing_preferences');
+  const existing = await findPreferenceForRecipient(client, accountId, email);
+
+  if (existing?.marketingStatus === 'suppressed') {
+    return { email, accountId, marketingStatus: 'suppressed' };
+  }
+
+  if (existing) {
+    if (existing.marketingStatus !== 'subscribed') {
+      const { error } = await prefs
+        .update({
+          marketing_status: 'subscribed',
+          unsubscribed_at: null,
+          consented_at: new Date().toISOString(),
+          consent_source: 'unsubscribe_page_resubscribe',
+        })
+        .eq('id', existing.id);
+
+      if (error) throw new Error(error.message);
+    }
+  } else {
+    const { error } = await prefs.insert({
+      account_id: accountId,
+      email,
+      purpose: 'workspace_mailing_list',
+      marketing_status: 'subscribed',
+      lawful_basis: 'manual_opt_in',
+      consent_source: 'unsubscribe_page_resubscribe',
+      consent_copy_version: 'v1',
+      unsubscribe_token: token,
+      consented_at: new Date().toISOString(),
+    });
+
+    if (error) throw new Error(error.message);
+  }
+
+  return { email, accountId, marketingStatus: 'subscribed' };
 }
