@@ -93,6 +93,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/dynamics-contact-sync",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/media-credits-expire",
       "schedule": "30 3 * * *"
     },

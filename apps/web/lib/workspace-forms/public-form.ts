@@ -10,6 +10,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { processDueDynamicsSyncJobs } from '~/lib/dynamics/sync.service';
 import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 
 import {
@@ -405,15 +406,22 @@ export async function submitPublicWorkspaceForm(
   // Plain `void` is frozen/killed on Vercel and shows up as delayed
   // Access Denied / TLS disconnect in platform_email_log.
   after(() =>
-    dispatchWorkspaceFormEmails({
-      admin,
-      form,
-      contact,
-      values: input.values,
-      submissionId,
-    }).catch(() => {
-      // Logged inside dispatch — never fail the public submit.
-    }),
+    Promise.all([
+      dispatchWorkspaceFormEmails({
+        admin,
+        form,
+        contact,
+        values: input.values,
+        submissionId,
+      }).catch(() => {
+        // Logged inside dispatch — never fail the public submit.
+      }),
+      form.destination === 'mailing_list'
+        ? processDueDynamicsSyncJobs(admin, {
+            accountId: form.accountId,
+          }).catch(() => undefined)
+        : Promise.resolve(),
+    ]),
   );
 
   return {

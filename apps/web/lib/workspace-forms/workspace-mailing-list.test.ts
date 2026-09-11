@@ -8,6 +8,15 @@ import {
   unsubscribeWorkspaceMailingListByToken,
 } from './workspace-mailing-list';
 
+vi.mock('~/lib/dynamics/sync.service', () => ({
+  scheduleDynamicsMailingListSync: vi.fn(async () => ({ enqueued: false })),
+  processDueDynamicsSyncJobs: vi.fn(async () => ({
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+  })),
+}));
+
 const TOKEN = 'a'.repeat(32);
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
 

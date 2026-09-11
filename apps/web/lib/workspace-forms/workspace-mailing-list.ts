@@ -13,6 +13,7 @@ import {
   type RequirementFormSubmission,
   upsertRequirementFromPublicForm,
 } from '~/lib/commercial/circulation/public-requirement-form';
+import { scheduleDynamicsMailingListSync } from '~/lib/dynamics/sync.service';
 
 import type { FormContactValues } from './form-fields';
 import type { MailingListSpec } from './mailing-list-fields';
@@ -493,6 +494,19 @@ export async function submitMailingListSignup(input: {
       .eq('account_id', input.accountId);
 
     if (patchError) throw new Error(patchError.message);
+  }
+
+  if (preference.marketingStatus === 'subscribed') {
+    void scheduleDynamicsMailingListSync({
+      client: input.admin,
+      accountId: input.accountId,
+      email,
+      preferenceId: preference.id,
+      clientId,
+      contactName: input.contact.contactName,
+      companyName: input.contact.companyName ?? input.spec.companyName,
+      marketingOptedIn: true,
+    }).catch(() => undefined);
   }
 
   return {

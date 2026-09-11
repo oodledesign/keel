@@ -9,6 +9,7 @@ import {
   unsubscribeCampaignRecipientByToken,
 } from '~/lib/campaigns/resolve-campaign-audience';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
+import { scheduleDynamicsMailingListSync } from '~/lib/dynamics/sync.service';
 import {
   type PublicMailingPreferenceResult,
   lookupWorkspaceMailingListByToken,
@@ -68,6 +69,13 @@ export async function unsubscribeMailingListPublicPreference(
       } catch {
         // Business workspaces have no circulation rows; ignore.
       }
+
+      void scheduleDynamicsMailingListSync({
+        client: admin,
+        accountId: result.accountId,
+        email: result.email,
+        marketingOptedIn: false,
+      }).catch(() => undefined);
     }
 
     return result;
@@ -97,6 +105,15 @@ export async function resubscribeMailingListPublicPreference(
       } catch {
         // Best-effort: missing circulation rows are a no-op; ignore DB errors
         // so business workspaces can still resubscribe to the mailing list.
+      }
+
+      if (result.marketingStatus === 'subscribed') {
+        void scheduleDynamicsMailingListSync({
+          client: admin,
+          accountId: result.accountId,
+          email: result.email,
+          marketingOptedIn: true,
+        }).catch(() => undefined);
       }
     }
 
