@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
 import {
   PUBLIC_MAILING_PREFERENCE_INVALID_LINK,
   resubscribeMailingListPublicPreference,
@@ -14,7 +15,13 @@ import {
 } from '~/lib/workspace-forms/mailing-list-public-preference';
 
 const MailingListPreferenceTokenSchema = z.object({
-  token: z.string().min(16).max(64),
+  token: z
+    .string()
+    .min(16)
+    .max(64)
+    .refine((value) => isUsableMailingListUnsubscribeToken(value), {
+      message: 'This is a test email — unsubscribe is disabled.',
+    }),
 });
 
 function parseToken(formData: FormData) {
