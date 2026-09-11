@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import {
   type ClientNameRow,
+  assertClientInWorkspace,
   clientDisplayName,
   filterNamedByQuery,
   loadLinkedNames,
@@ -56,7 +57,7 @@ const searchProjectsSchema = z.object({
   limit: z.number().int().min(1).max(50).optional().default(20),
 });
 
-const createProjectSchema = z.object({
+export const createProjectSchema = z.object({
   name: z.string().trim().min(1),
   account_id: z.string().uuid().describe('Workspace to create the project in.'),
   client_id: z.string().uuid().optional(),
@@ -64,9 +65,16 @@ const createProjectSchema = z.object({
   description: z.string().optional(),
   start_date: z.string().trim().optional(),
   due_date: z.string().trim().optional(),
+  is_phased: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe(
+      'Set is_phased=true for a phased delivery project (Phase board). Default false matches the web app (progress-only board). Switching on does not invent phases — create them with create_project_phase and assign tasks via phase_id.',
+    ),
 });
 
-const updateProjectSchema = z.object({
+export const updateProjectSchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(1).optional(),
   status: projectStatusSchema.optional(),
@@ -74,9 +82,15 @@ const updateProjectSchema = z.object({
   client_id: z.string().uuid().nullable().optional(),
   start_date: z.string().trim().nullable().optional(),
   due_date: z.string().trim().nullable().optional(),
+  is_phased: z
+    .boolean()
+    .optional()
+    .describe(
+      'Set is_phased=true to switch a delivery project to phased structure; then create phases and assign tasks via phase_id. Set false to return to the progress-only board. Does not invent or delete phases — same as the web app toggle.',
+    ),
 });
 
-type ProjectRow = {
+export type ProjectRow = {
   id: string;
   name: string | null;
   title?: string | null;
@@ -89,6 +103,7 @@ type ProjectRow = {
   end_date?: string | null;
   account_id?: string | null;
   project_type?: string | null;
+  is_phased?: boolean | null;
 };
 
 type TaskRow = {
@@ -98,14 +113,15 @@ type TaskRow = {
   priority: string | null;
   due_date: string | null;
   project_id: string | null;
+  phase_id?: string | null;
   client_id?: string | null;
   account_id?: string | null;
 };
 
-const PROJECT_SELECT =
-  'id, name, title, status, description, business_id, account_id, client_id, start_date, due_date, project_type';
+export const PROJECT_SELECT =
+  'id, name, title, status, description, business_id, account_id, client_id, start_date, due_date, project_type, is_phased';
 
-function mapProject(
+export function mapProject(
   row: ProjectRow,
   extras?: {
     client_name?: string | null;
@@ -127,7 +143,41 @@ function mapProject(
     workspace_name: extras?.workspace_name ?? null,
     workspace_slug: extras?.workspace_slug ?? null,
     project_type: row.project_type ?? null,
+    is_phased: Boolean(row.is_phased),
   };
+}
+
+export function buildCreateProjectInsert(
+  input: z.infer<typeof createProjectSchema>,
+  userId: string,
+) {
+  return {
+    account_id: input.account_id,
+    client_id: input.client_id ?? null,
+    project_type: 'delivery',
+    name: input.name,
+    title: input.name,
+    description: input.description ?? null,
+    status: input.status ?? null,
+    start_date: input.start_date ?? null,
+    due_date: input.due_date ?? null,
+    is_phased: input.is_phased ?? false,
+    created_by: userId,
+  };
+}
+
+export function buildUpdateProjectPatch(
+  input: z.infer<typeof updateProjectSchema>,
+) {
+  return pickDefined({
+    status: input.status,
+    description: input.description,
+    client_id: input.client_id,
+    start_date: input.start_date,
+    due_date: input.due_date,
+    is_phased: input.is_phased,
+    ...(input.name ? { name: input.name, title: input.name } : {}),
+  });
 }
 
 async function enrichProjects(
@@ -155,7 +205,7 @@ async function enrichProjects(
   );
 }
 
-async function loadProjectRow(
+export async function loadProjectRow(
   supabase: SupabaseClient,
   id: string,
 ): Promise<ProjectRow> {
@@ -172,25 +222,6 @@ async function loadProjectRow(
   }
 
   return data as ProjectRow;
-}
-
-async function assertClientInWorkspace(
-  supabase: SupabaseClient,
-  clientId: string,
-  accountId: string,
-): Promise<void> {
-  const { data, error } = await supabase
-    .from('clients')
-    .select('id')
-    .eq('id', clientId)
-    .eq('account_id', accountId)
-    .maybeSingle();
-
-  assertSupabaseOk(data, error, 'resolve client');
-
-  if (!data) {
-    throw new Error('Client not found in this workspace');
-  }
 }
 
 export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
@@ -314,6 +345,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
             account_id: match.account_id,
             workspace_name: workspace?.name ?? null,
             workspace_slug: workspace?.slug ?? null,
+            is_phased: Boolean(match.row.is_phased),
           };
         }),
       });
@@ -324,7 +356,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
     'get_project',
     {
       description:
-        'Get a project by id with outstanding tasks and client/workspace names.',
+        'Get a project by id with outstanding tasks, is_phased, and client/workspace names. When is_phased is true, use list_project_phases and task phase_id to inspect structure.',
       inputSchema: getProjectSchema,
     },
     async (input) => {
@@ -341,7 +373,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select(
-          'id, title, status, priority, due_date, project_id, client_id, account_id',
+          'id, title, status, priority, due_date, project_id, phase_id, client_id, account_id',
         )
         .eq('project_id', input.id)
         .in('status', [...OPEN_TASK_STATUSES])
@@ -362,7 +394,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
     'create_project',
     {
       description:
-        'Create a delivery project in a workspace (account_id required). Optional client_id, status, description, start_date, due_date. Does not delete anything. Use search_clients if the user named a client.',
+        'Create a delivery project in a workspace (account_id required). Optional client_id, status, description, start_date, due_date, is_phased (default false). Set is_phased=true to switch a delivery project to phased structure; then create phases and assign tasks via phase_id. Does not invent phases or delete anything. Use search_clients if the user named a client.',
       inputSchema: createProjectSchema,
     },
     async (input) => {
@@ -379,18 +411,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
         );
       }
 
-      const insertRow = {
-        account_id: input.account_id,
-        client_id: input.client_id ?? null,
-        project_type: 'delivery',
-        name: input.name,
-        title: input.name,
-        description: input.description ?? null,
-        status: input.status ?? null,
-        start_date: input.start_date ?? null,
-        due_date: input.due_date ?? null,
-        created_by: userId,
-      };
+      const insertRow = buildCreateProjectInsert(input, userId);
 
       let result = await supabase
         .from('projects')
@@ -423,7 +444,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
     'update_project',
     {
       description:
-        'Patch a project the user can access: name, status, dates, description, or client_id. Only provided fields change. Cannot delete a project.',
+        'Patch a project the user can access: name, status, dates, description, client_id, or is_phased. Set is_phased=true to switch a delivery project to phased structure; then create phases and assign tasks via phase_id. Flipping the flag does not invent or delete phases (same as the web app). Only provided fields change. Cannot delete a project.',
       inputSchema: updateProjectSchema,
     },
     async (input) => {
@@ -441,14 +462,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
         await assertClientInWorkspace(supabase, input.client_id, accountId);
       }
 
-      const updates: Record<string, unknown> = pickDefined({
-        status: input.status,
-        description: input.description,
-        client_id: input.client_id,
-        start_date: input.start_date,
-        due_date: input.due_date,
-        ...(input.name ? { name: input.name, title: input.name } : {}),
-      });
+      const updates: Record<string, unknown> = buildUpdateProjectPatch(input);
 
       if (Object.keys(updates).length === 0) {
         throw new Error('Provide at least one field to update');

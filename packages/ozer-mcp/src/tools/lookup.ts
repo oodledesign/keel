@@ -17,6 +17,7 @@ export type ProjectNameRow = {
   start_date?: string | null;
   due_date?: string | null;
   end_date?: string | null;
+  is_phased?: boolean | null;
 };
 
 export type ClientNameRow = {
@@ -239,7 +240,7 @@ export async function loadSearchableProjects(
 
   const { data, error } = await supabase
     .from('projects')
-    .select('id, name, title, status, client_id, account_id')
+    .select('id, name, title, status, client_id, account_id, is_phased')
     .in('account_id', accountIds);
 
   assertSupabaseOk(data, error, 'load projects for search');
