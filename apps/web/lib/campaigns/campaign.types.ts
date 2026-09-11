@@ -168,9 +168,16 @@ export type CampaignAutomation = {
   name: string;
   triggerType: 'new_subscriber';
   campaignId: string | null;
+  formId: string | null;
+  audienceListId: string | null;
   status: 'active' | 'paused';
   createdAt: string;
   updatedAt: string;
+};
+
+export type CampaignAutomationScopeOption = {
+  id: string;
+  name: string;
 };
 
 export type CampaignAutomationRun = {

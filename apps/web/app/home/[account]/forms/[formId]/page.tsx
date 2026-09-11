@@ -50,7 +50,7 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
     redirect(getDefaultAccountPath(accountSlug));
   }
 
-  const { form, submissions, listings, members } =
+  const { form, submissions, listings, members, audienceLists } =
     await loadWorkspaceFormDetail(workspace.account.id, formId, accountSlug);
 
   if (!form) {
@@ -69,6 +69,7 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
           accountSlug={accountSlug}
           form={form}
           listings={listings}
+          audienceLists={audienceLists}
           submissions={submissions}
           members={members}
           showListingDestination={isCommercialPropertyProfile(

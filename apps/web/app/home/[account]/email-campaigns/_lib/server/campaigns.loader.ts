@@ -210,24 +210,49 @@ async function listPublishedFormsForCampaigns(accountId: string) {
     .filter((row) => row.shareToken.length >= 16);
 }
 
+async function listMailingListFormsForAutomations(accountId: string) {
+  const admin = getSupabaseServerAdminClient();
+  // Table may be ahead of generated types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (admin as any)
+    .from('workspace_forms')
+    .select('id, name, destination, status')
+    .eq('account_id', accountId)
+    .eq('destination', 'mailing_list')
+    .neq('status', 'archived')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.warn('[campaigns] list mailing-list forms failed', error.message);
+    return [];
+  }
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    id: String(row.id),
+    name: String(row.name ?? 'Untitled form'),
+  }));
+}
+
 export async function loadCampaignsGrowthHub(accountId: string) {
   const client = getSupabaseServerClient();
   const admin = getSupabaseServerAdminClient();
-  const [lists, automations, campaigns, subscribers] = await Promise.all([
-    createAudienceListsService(client)
-      .list(accountId)
-      .catch(() => []),
-    createCampaignAutomationsService(client)
-      .list(accountId)
-      .catch(() => []),
-    createCampaignsService(client).list(accountId),
-    listWorkspaceMailingListSubscribers(admin, accountId),
-  ]);
+  const [lists, automations, campaigns, subscribers, mailingForms] =
+    await Promise.all([
+      createAudienceListsService(client)
+        .list(accountId)
+        .catch(() => []),
+      createCampaignAutomationsService(client)
+        .list(accountId)
+        .catch(() => []),
+      createCampaignsService(client).list(accountId),
+      listWorkspaceMailingListSubscribers(admin, accountId),
+      listMailingListFormsForAutomations(accountId).catch(() => []),
+    ]);
   const snapshot = await loadCampaignUsageSnapshot({
     accountId,
     contactsUsed: subscribers.length,
   });
-  return { lists, automations, campaigns, snapshot };
+  return { lists, automations, campaigns, snapshot, mailingForms };
 }
 
 export async function loadCampaignAudienceWorkspace(accountId: string) {

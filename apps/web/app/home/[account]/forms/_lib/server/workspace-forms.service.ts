@@ -51,6 +51,7 @@ export type WorkspaceFormRecord = {
   status: WorkspaceFormStatus;
   destination: WorkspaceFormDestination;
   listingId: string | null;
+  audienceListId: string | null;
   shareToken: string;
   embedKey: string;
   enabled: boolean;
@@ -97,6 +98,7 @@ type FormRow = {
   status: WorkspaceFormStatus;
   destination: WorkspaceFormDestination;
   listing_id: string | null;
+  audience_list_id?: string | null;
   share_token: string;
   embed_key: string;
   enabled: boolean;
@@ -123,6 +125,7 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     status: row.status,
     destination: row.destination,
     listingId: row.listing_id,
+    audienceListId: row.audience_list_id ?? null,
     shareToken: row.share_token,
     embedKey: row.embed_key,
     enabled: row.enabled,
@@ -346,6 +349,26 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
     async updateForm(
       input: UpdateWorkspaceFormInput,
     ): Promise<WorkspaceFormRecord> {
+      const audienceListId =
+        input.destination === 'mailing_list'
+          ? input.audienceListId || null
+          : null;
+
+      if (audienceListId) {
+        const { data: list, error: listError } = await fromTable(
+          client,
+          'campaign_audience_lists',
+        )
+          .select('id')
+          .eq('account_id', input.accountId)
+          .eq('id', audienceListId)
+          .maybeSingle();
+        if (listError) throw new Error(listError.message);
+        if (!list) {
+          throw new Error('Audience list not found in this workspace');
+        }
+      }
+
       const commercial = await isCommercialAccount(client, input.accountId);
       const fields =
         input.destination === 'mailing_list'
@@ -359,6 +382,7 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         description: input.description?.trim() || null,
         destination: input.destination,
         listing_id: input.listingId || null,
+        audience_list_id: audienceListId,
         submit_label: input.submitLabel?.trim() || 'Submit',
         success_message: input.successMessage?.trim() || null,
         event_address: input.eventAddress?.trim() || null,

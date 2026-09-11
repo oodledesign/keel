@@ -528,6 +528,8 @@ export const saveAutomationAction = enhanceAction(
           automationId: data.automationId,
           name: data.name,
           campaignId: data.campaignId,
+          formId: data.formId,
+          audienceListId: data.audienceListId,
           status: data.status,
         })
       : await service.create({
@@ -535,6 +537,8 @@ export const saveAutomationAction = enhanceAction(
           userId: user.id,
           name: data.name,
           campaignId: data.campaignId,
+          formId: data.formId ?? null,
+          audienceListId: data.audienceListId ?? null,
         });
     revalidatePath(
       pathsConfig.app.accountEmailCampaignAutomations.replace(

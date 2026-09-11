@@ -74,6 +74,7 @@ export const UpdateWorkspaceFormSchema = z.object({
   eventTime: z.string().max(120).optional().nullable(),
   destination: z.enum(WORKSPACE_FORM_DESTINATIONS),
   listingId: z.string().uuid().optional().nullable(),
+  audienceListId: z.string().uuid().optional().nullable(),
   status: z.enum(WORKSPACE_FORM_STATUSES).optional(),
   enabled: z.boolean().optional(),
   submitLabel: z.string().min(1).max(60).optional(),

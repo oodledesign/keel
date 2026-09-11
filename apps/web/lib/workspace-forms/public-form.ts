@@ -56,6 +56,7 @@ export type PublicWorkspaceForm = {
   eventTime: string | null;
   destination: WorkspaceFormDestination;
   listingId: string | null;
+  audienceListId: string | null;
   shareToken: string;
   embedKey: string;
   submitLabel: string;
@@ -74,6 +75,7 @@ type FormRow = {
   description: string | null;
   destination: WorkspaceFormDestination;
   listing_id: string | null;
+  audience_list_id?: string | null;
   share_token: string;
   embed_key: string;
   enabled: boolean;
@@ -104,7 +106,7 @@ export async function loadPublicWorkspaceFormByToken(
   if (!token || token.length < 16) return null;
 
   const selectColumns =
-    'id, account_id, name, description, event_address, event_date, event_time, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
+    'id, account_id, name, description, event_address, event_date, event_time, destination, listing_id, audience_list_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
 
   const byShare = await fromTable(admin, 'workspace_forms')
     .select(selectColumns)
@@ -155,6 +157,7 @@ export async function loadPublicWorkspaceFormByToken(
     eventTime: row.event_time?.trim() || null,
     destination: row.destination,
     listingId: row.listing_id,
+    audienceListId: row.audience_list_id ?? null,
     shareToken: row.share_token,
     embedKey: row.embed_key,
     submitLabel: row.submit_label?.trim() || 'Submit',
@@ -343,6 +346,8 @@ export async function submitPublicWorkspaceForm(
       contact,
       spec,
       commercial: form.commercialProperty,
+      formId: form.id,
+      audienceListId: form.audienceListId,
     });
     clientId = mailing.clientId;
     requirementId = mailing.requirementId;
