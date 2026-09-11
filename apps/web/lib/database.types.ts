@@ -5200,6 +5200,7 @@ export type Database = {
           address_line_2: string | null
           amenities: Json
           asking_price_pence: number | null
+          asking_price_qualifier: string
           asking_rent_pence: number | null
           asking_rent_to_pence: number | null
           assigned_to: string | null
@@ -5288,6 +5289,7 @@ export type Database = {
           address_line_2?: string | null
           amenities?: Json
           asking_price_pence?: number | null
+          asking_price_qualifier?: string
           asking_rent_pence?: number | null
           asking_rent_to_pence?: number | null
           assigned_to?: string | null
@@ -5376,6 +5378,7 @@ export type Database = {
           address_line_2?: string | null
           amenities?: Json
           asking_price_pence?: number | null
+          asking_price_qualifier?: string
           asking_rent_pence?: number | null
           asking_rent_to_pence?: number | null
           assigned_to?: string | null

@@ -27,6 +27,7 @@ type ListingRow = {
   asking_rent_pence: number | null;
   asking_rent_to_pence: number | null;
   asking_price_pence: number | null;
+  asking_price_qualifier: string | null;
   rent_frequency: string | null;
   hide_rent_from_marketing: boolean | null;
   hide_price_from_marketing: boolean | null;
@@ -78,7 +79,7 @@ export async function processDueLinkedInPosts(admin: SupabaseClient): Promise<{
       const { data: listing } = await admin
         .from('commercial_listings')
         .select(
-          'id, status, disposal_type, town, asking_rent_pence, asking_rent_to_pence, asking_price_pence, rent_frequency, hide_rent_from_marketing, hide_price_from_marketing, size_min_sqft, size_max_sqft',
+          'id, status, disposal_type, town, asking_rent_pence, asking_rent_to_pence, asking_price_pence, asking_price_qualifier, rent_frequency, hide_rent_from_marketing, hide_price_from_marketing, size_min_sqft, size_max_sqft',
         )
         .eq('id', row.listing_id)
         .maybeSingle();
@@ -129,6 +130,7 @@ export async function processDueLinkedInPosts(admin: SupabaseClient): Promise<{
           askingRentPence: listingRow.asking_rent_pence,
           askingRentToPence: listingRow.asking_rent_to_pence,
           askingPricePence: listingRow.asking_price_pence,
+          askingPriceQualifier: listingRow.asking_price_qualifier,
           rentFrequency: listingRow.rent_frequency,
           hideRentFromMarketing: Boolean(listingRow.hide_rent_from_marketing),
           hidePriceFromMarketing: Boolean(listingRow.hide_price_from_marketing),

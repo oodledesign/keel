@@ -22,17 +22,21 @@ import { toast } from '@kit/ui/sonner';
 
 import type { WorkspaceFormField } from '~/lib/workspace-forms/form-fields';
 import {
+  SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT,
   type SubmissionExportFormat,
   type SubmissionExportMode,
+  type SubmissionExportPdfLayout,
   buildSubmissionExportTable,
   buildSubmissionsExportPdf,
   listAnsweredSubmissionColumnIds,
   selectSubmissionsForExport,
+  submissionsExportAttendeeSummary,
   submissionsExportFilename,
   submissionsExportToCsv,
 } from '~/lib/workspace-forms/form-submissions-export';
 import {
   type SubmissionColumnId,
+  countRsvpAttendeeTotals,
   countSubmissionStats,
   listSubmissionColumnOptions,
 } from '~/lib/workspace-forms/form-submissions-view';
@@ -57,6 +61,7 @@ type Props = {
 type ExportDraft = {
   format: SubmissionExportFormat;
   mode: SubmissionExportMode;
+  pdfLayout: SubmissionExportPdfLayout;
   columns: SubmissionColumnId[];
   pending: boolean;
 };
@@ -107,9 +112,14 @@ function FormSubmissionsExportDialogBody({
 }: Omit<Props, 'open'>) {
   const options = useMemo(() => listSubmissionColumnOptions(fields), [fields]);
   const stats = useMemo(() => countSubmissionStats(submissions), [submissions]);
+  const attendeeTotals = useMemo(
+    () => countRsvpAttendeeTotals(fields, submissions),
+    [fields, submissions],
+  );
   const [draft, setDraft] = useState<ExportDraft>(() => ({
     format: 'csv',
     mode: 'all',
+    pdfLayout: 'list',
     columns:
       tableColumns.length > 0
         ? tableColumns
@@ -171,6 +181,8 @@ function FormSubmissionsExportDialogBody({
           formName,
           mode: draft.mode,
           table,
+          pdfLayout: draft.pdfLayout,
+          attendeeTotals,
         });
         downloadBlob(filename, pdfBytesToBlob(bytes));
       }
@@ -237,13 +249,56 @@ function FormSubmissionsExportDialogBody({
               <span className="grid gap-0.5">
                 <span className={`font-medium ${workspaceText}`}>PDF</span>
                 <span className={`text-xs ${workspaceTextMuted}`}>
-                  Table for a few columns, one section per submission when there
-                  are more
+                  Choose table or list layout below
                 </span>
               </span>
             </RadioGroupItemLabel>
           </RadioGroup>
         </div>
+
+        {draft.format === 'pdf' ? (
+          <div className="grid gap-2">
+            <Label>PDF layout</Label>
+            <RadioGroup
+              value={draft.pdfLayout}
+              onValueChange={(value) =>
+                setDraft((current) => ({
+                  ...current,
+                  pdfLayout: value as SubmissionExportPdfLayout,
+                }))
+              }
+              className="grid gap-2 sm:grid-cols-2"
+              data-test="submission-export-pdf-layout"
+            >
+              <RadioGroupItemLabel
+                selected={draft.pdfLayout === 'list'}
+                className="h-full items-start gap-3 space-x-0"
+              >
+                <RadioGroupItem value="list" className="mt-0.5" />
+                <span className="grid gap-0.5">
+                  <span className={`font-medium ${workspaceText}`}>List</span>
+                  <span className={`text-xs ${workspaceTextMuted}`}>
+                    One section per submission, fields stacked
+                  </span>
+                </span>
+              </RadioGroupItemLabel>
+              <RadioGroupItemLabel
+                selected={draft.pdfLayout === 'table'}
+                className="h-full items-start gap-3 space-x-0"
+              >
+                <RadioGroupItem value="table" className="mt-0.5" />
+                <span className="grid gap-0.5">
+                  <span className={`font-medium ${workspaceText}`}>Table</span>
+                  <span className={`text-xs ${workspaceTextMuted}`}>
+                    {draft.columns.length > SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT
+                      ? `Spreadsheet rows and columns. Best with ${SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT} or fewer fields.`
+                      : 'Spreadsheet rows and columns, matching the submissions table'}
+                  </span>
+                </span>
+              </RadioGroupItemLabel>
+            </RadioGroup>
+          </div>
+        ) : null}
 
         <div className="grid gap-2">
           <Label>Rows</Label>
@@ -367,6 +422,9 @@ function FormSubmissionsExportDialogBody({
         <p className={`mr-auto text-xs ${workspaceTextMuted}`}>
           {exportRows.length} row{exportRows.length === 1 ? '' : 's'} ·{' '}
           {draft.columns.length} field{draft.columns.length === 1 ? '' : 's'}
+          {attendeeTotals
+            ? ` · ${submissionsExportAttendeeSummary(attendeeTotals)} (latest RSVP per email)`
+            : ''}
         </p>
         <Button
           type="button"

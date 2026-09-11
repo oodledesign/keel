@@ -53,7 +53,7 @@ JSON-RPC notifications such as `notifications/initialized` correctly return
 **202 Accepted** with an empty body. `initialize`, `tools/list`, and `tools/call`
 return **200** JSON.
 
-MCP tools never delete rows.
+MCP tools do not delete projects, clients, contacts, tasks, or notes. `delete_project_phase` is the exception: it removes a phase and unphases its tasks (`phase_id` SET NULL), matching the web app.
 
 ## Workspace tools
 
@@ -70,8 +70,8 @@ OAuth is user-level (not bound to one workspace). `list_tasks` defaults to outst
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `list_tasks`     | List current outstanding tasks across authorized workspaces (all clients/projects unless filtered). Defaults: `status=outstanding`, `sort=updated`, root tasks only, `limit=100`. Returns names plus `meta` (`total_count`, `truncated`). |
 | `get_task`       | Fetch one task by id with notes, project/client/workspace/area names, and a subtasks summary.                                                                                                                                             |
-| `create_task`    | Create a root task. Optional `project_id`, `client_id`, `duration_minutes`. Use `search_*` when the user names a client/project.                                                                                                          |
-| `update_task`    | Patch a task: title, status, priority, due date, duration, notes, `project_id`, `client_id`, `area_id`.                                                                                                                                   |
+| `create_task`    | Create a root task. Optional `project_id`, `phase_id`, `client_id`, `duration_minutes`. Use `search_*` / `list_project_phases` when the user names a client/project/phase.                                                                |
+| `update_task`    | Patch a task: title, status, priority, due date, duration, notes, `project_id`, `phase_id`, `client_id`, `area_id`. Pass `phase_id=null` to unphase.                                                                                      |
 | `list_subtasks`  | List children of a parent task (`tasks.parent_task_id`).                                                                                                                                                                                  |
 | `create_subtask` | Create a child under a root parent. Inherits project/client/area.                                                                                                                                                                         |
 | `update_subtask` | Patch a subtask with the same fields as `update_task`.                                                                                                                                                                                    |
@@ -85,20 +85,24 @@ Subtasks are the same `tasks` rows as the web app: `parent_task_id` points at th
 
 CRM `clients` are workspace companies/people. Portal `client_orgs` are a separate membership model. Use CRM tools unless the user is talking about the client portal.
 
-| Tool               | Purpose                                                                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `search_clients`   | Fuzzy CRM client search (id + name + email + workspace). Not portal `client_orgs`. Search before `create_client` / `create_contact`. |
-| `list_clients`     | CRM clients in authorized workspaces (names + workspace). Optional `account_id` only when the user names a workspace.                |
-| `get_client`       | One CRM client with contacts, outstanding tasks, and workspace name.                                                                 |
-| `create_client`    | Create a CRM client (`account_id` required). Business needs `company_name`; individual needs `first_name`.                           |
-| `update_client`    | Patch CRM client fields (name, email, website, address, `commercial_role`). Cannot delete.                                           |
-| `list_client_orgs` | Portal organizations via `client_members`. Prefer `list_clients` / `search_clients` for CRM.                                         |
-| `get_client_org`   | One portal org with open tasks and pipeline deals.                                                                                   |
-| `search_projects`  | Fuzzy project search (id + name + client + workspace).                                                                               |
-| `list_projects`    | Projects in authorized workspaces. Optional `account_id` / `client_id` / `status`.                                                   |
-| `get_project`      | One project with outstanding tasks and names.                                                                                        |
-| `create_project`   | Create a delivery project (`name` + `account_id`, optional client/status/dates).                                                     |
-| `update_project`   | Patch name, status, dates, description, or client link.                                                                              |
+| Tool                   | Purpose                                                                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `search_clients`       | Fuzzy CRM client search (id + name + email + workspace). Not portal `client_orgs`. Search before `create_client` / `create_contact`. |
+| `list_clients`         | CRM clients in authorized workspaces (names + workspace). Optional `account_id` only when the user names a workspace.                |
+| `get_client`           | One CRM client with contacts, outstanding tasks, and workspace name.                                                                 |
+| `create_client`        | Create a CRM client (`account_id` required). Business needs `company_name`; individual needs `first_name`.                           |
+| `update_client`        | Patch CRM client fields (name, email, website, address, `commercial_role`). Cannot delete.                                           |
+| `list_client_orgs`     | Portal organizations via `client_members`. Prefer `list_clients` / `search_clients` for CRM.                                         |
+| `get_client_org`       | One portal org with open tasks and pipeline deals.                                                                                   |
+| `search_projects`      | Fuzzy project search (id + name + client + workspace + `is_phased`).                                                                 |
+| `list_projects`        | Projects in authorized workspaces. Optional `account_id` / `client_id` / `status`. Includes `is_phased`.                             |
+| `get_project`          | One project with outstanding tasks and names. Includes `is_phased` and task `phase_id`.                                              |
+| `create_project`       | Create a delivery project (`name` + `account_id`, optional client/status/dates/`is_phased`, default `false`).                        |
+| `update_project`       | Patch name, status, dates, description, client link, or `is_phased`. Flipping the flag does not invent or delete phases.             |
+| `list_project_phases`  | Phases for a project, ordered by `sort_order`. Account-scoped like other tools.                                                      |
+| `create_project_phase` | Create a phase (`project_id` + `name`). Optional description/status/dates/order. Does not flip `is_phased`.                          |
+| `update_project_phase` | Patch phase name, description, status, dates, colour, milestone, or `sort_order`.                                                    |
+| `delete_project_phase` | Delete a phase. Tasks become unphased (`phase_id` null), same as the web app. Does not delete the project.                           |
 
 ## Contacts
 

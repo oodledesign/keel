@@ -11,11 +11,13 @@ import {
   selectSubmissionsForExport,
   slugifySubmissionExportName,
   submissionExportCellValue,
+  submissionsExportAttendeeSummary,
   submissionsExportFilename,
   submissionsExportSubtitle,
   submissionsExportToCsv,
 } from './form-submissions-export';
 import {
+  countRsvpAttendeeTotals,
   countSubmissionStats,
   selectUniqueSubmissions,
 } from './form-submissions-view';
@@ -231,11 +233,48 @@ describe('filename and subtitle', () => {
     expect(submissionsExportSubtitle({ mode: 'all', rowCount: 12 })).toBe(
       'All submissions · 12 rows',
     );
+    expect(
+      submissionsExportAttendeeSummary({
+        invitees: 8,
+        guests: 4,
+        totalAttendees: 12,
+      }),
+    ).toBe('12 attendees · 8 invitees + 4 guests');
+    expect(
+      submissionsExportAttendeeSummary({
+        invitees: 1,
+        guests: 0,
+        totalAttendees: 1,
+      }),
+    ).toBe('1 attendee · 1 invitee + 0 guests');
   });
 });
 
 describe('PDF export', () => {
-  it('builds a landscape table PDF for a few columns', async () => {
+  it('defaults to a portrait list even with a few columns', async () => {
+    const table = buildSubmissionExportTable({
+      fields: rsvpFields,
+      submissions: [
+        row('1', 'ada@example.com', '2026-09-09T15:04:00.000Z', {
+          contactName: 'Ada',
+        }),
+      ],
+      columns: ['received', 'name', 'email', 'field:attendance'],
+      submissionsOnly: true,
+    });
+    const bytes = await buildSubmissionsExportPdf({
+      formName: 'Breakfast Meeting',
+      mode: 'all',
+      table,
+    });
+    expect(Buffer.from(bytes.slice(0, 5)).toString('utf8')).toBe('%PDF-');
+    const loaded = await PDFDocument.load(bytes);
+    expect(loaded.getTitle()).toBe('Breakfast Meeting submissions');
+    const { width, height } = loaded.getPage(0).getSize();
+    expect(height).toBeGreaterThan(width);
+  });
+
+  it('builds a landscape table PDF when table layout is chosen', async () => {
     const table = buildSubmissionExportTable({
       fields: rsvpFields,
       submissions: Array.from({ length: 40 }, (_, index) =>
@@ -253,8 +292,8 @@ describe('PDF export', () => {
       formName: 'Summer Party',
       mode: 'all',
       table,
+      pdfLayout: 'table',
     });
-    expect(Buffer.from(bytes.slice(0, 5)).toString('utf8')).toBe('%PDF-');
     const loaded = await PDFDocument.load(bytes);
     expect(loaded.getTitle()).toBe('Summer Party submissions');
     expect(loaded.getPageCount()).toBeGreaterThan(1);
@@ -262,7 +301,7 @@ describe('PDF export', () => {
     expect(width).toBeGreaterThan(height);
   });
 
-  it('uses stacked sections when many columns are selected', async () => {
+  it('keeps a table landscape when many columns are selected', async () => {
     const table = buildSubmissionExportTable({
       fields: rsvpFields,
       submissions: [
@@ -285,6 +324,43 @@ describe('PDF export', () => {
       formName: 'RSVP',
       mode: 'unique',
       table,
+      pdfLayout: 'table',
+    });
+    const loaded = await PDFDocument.load(bytes);
+    const { width, height } = loaded.getPage(0).getSize();
+    expect(width).toBeGreaterThan(height);
+    expect(loaded.getPageCount()).toBe(1);
+  });
+
+  it('uses stacked portrait sections for the list layout', async () => {
+    const table = buildSubmissionExportTable({
+      fields: rsvpFields,
+      submissions: [
+        row('1', 'ada@example.com', '2026-09-09T15:04:00.000Z', {
+          contactName: 'Ada',
+        }),
+      ],
+      columns: [
+        'received',
+        'name',
+        'email',
+        'phone',
+        'record',
+        'field:attendance',
+        'field:guests',
+      ],
+      submissionsOnly: true,
+    });
+    const bytes = await buildSubmissionsExportPdf({
+      formName: 'RSVP',
+      mode: 'unique',
+      table,
+      pdfLayout: 'list',
+      attendeeTotals: countRsvpAttendeeTotals(rsvpFields, [
+        row('1', 'ada@example.com', '2026-09-09T15:04:00.000Z', {
+          payload: { attendance: 'Yes', guests: '2' },
+        }),
+      ]),
     });
     const loaded = await PDFDocument.load(bytes);
     const { width, height } = loaded.getPage(0).getSize();

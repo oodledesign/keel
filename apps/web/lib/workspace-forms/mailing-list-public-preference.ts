@@ -18,54 +18,92 @@ import {
 
 export type { PublicMailingPreferenceResult };
 
+export const PUBLIC_MAILING_PREFERENCE_INVALID_LINK =
+  'This unsubscribe link is missing or invalid.';
+
+export const PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED =
+  'We could not update your email preference. Please try again.';
+
+function throwMappedPreferenceError(err: unknown): never {
+  throw new Error(PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED, { cause: err });
+}
+
 export async function lookupMailingListPublicPreference(
   admin: SupabaseClient,
   token: string,
 ): Promise<PublicMailingPreferenceResult | null> {
-  return (
-    (await lookupWorkspaceMailingListByToken(admin, token)) ??
-    (await lookupCampaignRecipientByToken(admin, token))
-  );
+  try {
+    return (
+      (await lookupWorkspaceMailingListByToken(admin, token)) ??
+      (await lookupCampaignRecipientByToken(admin, token))
+    );
+  } catch (err) {
+    throwMappedPreferenceError(err);
+  }
 }
 
 export async function unsubscribeMailingListPublicPreference(
   admin: SupabaseClient,
   token: string,
 ): Promise<PublicMailingPreferenceResult | null> {
-  const result =
-    (await unsubscribeWorkspaceMailingListByToken(admin, token)) ??
-    (await unsubscribeCampaignRecipientByToken(admin, token));
+  try {
+    const result =
+      (await unsubscribeWorkspaceMailingListByToken(admin, token)) ??
+      (await unsubscribeCampaignRecipientByToken(admin, token));
 
-  if (!result) return null;
+    if (!result) return null;
 
-  if (result.marketingStatus !== 'suppressed') {
-    await markCampaignRecipientsUnsubscribed(
-      admin,
-      result.accountId,
-      result.email,
-    );
-
-    try {
-      await createCommercialCirculationService(admin).unsubscribe(
+    if (result.marketingStatus !== 'suppressed') {
+      await markCampaignRecipientsUnsubscribed(
+        admin,
         result.accountId,
         result.email,
       );
-    } catch {
-      // Business workspaces have no circulation rows; ignore.
-    }
-  }
 
-  return result;
+      try {
+        await createCommercialCirculationService(admin).unsubscribe(
+          result.accountId,
+          result.email,
+        );
+      } catch {
+        // Business workspaces have no circulation rows; ignore.
+      }
+    }
+
+    return result;
+  } catch (err) {
+    throwMappedPreferenceError(err);
+  }
 }
 
 export async function resubscribeMailingListPublicPreference(
   admin: SupabaseClient,
   token: string,
 ): Promise<PublicMailingPreferenceResult | null> {
-  return (
-    (await resubscribeWorkspaceMailingListByToken(admin, token)) ??
-    (await resubscribeCampaignRecipientByToken(admin, token))
-  );
+  try {
+    const result =
+      (await resubscribeWorkspaceMailingListByToken(admin, token)) ??
+      (await resubscribeCampaignRecipientByToken(admin, token));
+
+    if (!result) return null;
+
+    if (result.marketingStatus !== 'suppressed') {
+      try {
+        await createCommercialCirculationService(admin).resubscribe(
+          result.accountId,
+          result.email,
+          { consentSource: 'unsubscribe_page_resubscribe' },
+        );
+      } catch {
+        // Best-effort: missing circulation rows are a no-op; ignore DB errors
+        // so business workspaces can still resubscribe to the mailing list.
+      }
+    }
+
+    return result;
+  } catch (err) {
+    throwMappedPreferenceError(err);
+  }
 }
 
 export async function loadWorkspaceNameForPreference(

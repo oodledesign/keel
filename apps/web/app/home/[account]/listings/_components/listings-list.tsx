@@ -57,12 +57,12 @@ import {
 
 import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
   LISTING_STATUSES,
   LISTING_STATUS_LABELS,
-  type ListingStatus,
   listingStatusPublishHint,
 } from '~/lib/commercial/commercial-constants';
 import {
@@ -193,15 +193,6 @@ function formatUpdatedAt(iso: string | null | undefined) {
   });
 }
 
-function formatMoney(pence: number | null) {
-  if (pence == null) return null;
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(pence / 100);
-}
-
 /** Rent and/or sale price for list/card — show both when dual. */
 function formatListingMoneyParts(listing: CommercialListing): {
   rent: string | null;
@@ -215,7 +206,11 @@ function formatListingMoneyParts(listing: CommercialListing): {
   return {
     rent,
     rentSuffix: rent ? rentFrequencySuffix(listing.rentFrequency) : null,
-    price: formatMoney(listing.askingPricePence),
+    price: formatAskingPrice({
+      askingPricePence: listing.askingPricePence,
+      askingPriceQualifier: listing.askingPriceQualifier,
+      hidePriceFromMarketing: listing.hidePriceFromMarketing,
+    }),
   };
 }
 

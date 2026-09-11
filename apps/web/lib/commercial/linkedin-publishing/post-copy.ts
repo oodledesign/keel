@@ -29,6 +29,7 @@ export type LinkedInCopyListing = Pick<
   | 'askingRentPence'
   | 'askingRentToPence'
   | 'askingPricePence'
+  | 'askingPriceQualifier'
   | 'rentFrequency'
   | 'hideRentFromMarketing'
   | 'hidePriceFromMarketing'
@@ -159,6 +160,7 @@ function asBrochureListing(listing: LinkedInCopyListing): BrochureListing {
     askingRentPence: listing.askingRentPence,
     askingRentToPence: listing.askingRentToPence,
     askingPricePence: listing.askingPricePence,
+    askingPriceQualifier: listing.askingPriceQualifier,
     rentFrequency: listing.rentFrequency,
     hideRentFromMarketing: listing.hideRentFromMarketing,
     hidePriceFromMarketing: listing.hidePriceFromMarketing,

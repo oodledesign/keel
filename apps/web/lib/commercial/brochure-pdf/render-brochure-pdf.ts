@@ -42,6 +42,7 @@ import {
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 };
 const A4_LANDSCAPE = { width: 841.89, height: 595.28 };
@@ -163,32 +164,94 @@ function isSafeRemoteImageUrl(url: string): boolean {
   }
 }
 
+function isWorkspaceSupabaseHost(url: string): boolean {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return false;
+  try {
+    return new URL(url).hostname === new URL(base).hostname;
+  } catch {
+    return false;
+  }
+}
+
+function brandAssetsObjectPath(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(
+      /\/storage\/v1\/object\/(?:public\/)?brand-assets\/(.+)$/i,
+    );
+    return match?.[1] ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function downloadBrandAssetBytes(
+  url: string,
+): Promise<Uint8Array | null> {
+  if (!isWorkspaceSupabaseHost(url)) return null;
+  const path = brandAssetsObjectPath(url);
+  if (!path) return null;
+
+  try {
+    // Dynamic import so the admin client is only loaded when HTTP fetch fails.
+    const { getSupabaseServerAdminClient } =
+      await import('@kit/supabase/server-admin-client');
+    const admin = getSupabaseServerAdminClient();
+    const { data, error } = await admin.storage
+      .from('brand-assets')
+      .download(path);
+    if (error || !data) return null;
+    return new Uint8Array(await data.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
 async function fetchImageBytes(url: string | null): Promise<Uint8Array | null> {
   if (!url) return null;
-  if (!isSafeRemoteImageUrl(url)) {
+  const normalized = toSupabasePublicStorageUrl(url) ?? url;
+  if (!isSafeRemoteImageUrl(normalized)) {
+    const fromStorage = await downloadBrandAssetBytes(normalized);
+    if (fromStorage) return fromStorage;
     console.error('[brochure-pdf] blocked unsafe image url host');
     return null;
   }
   try {
-    const res = await fetch(url, {
+    const res = await fetch(normalized, {
       cache: 'no-store',
       headers: { Accept: 'image/png,image/jpeg,image/webp,image/*,*/*' },
       signal: AbortSignal.timeout(12000),
     });
-    if (!res.ok) return null;
-    const contentType = res.headers.get('content-type') ?? '';
-    if (
-      contentType &&
-      !contentType.startsWith('image/') &&
-      !contentType.includes('octet-stream')
-    ) {
-      console.error(
-        '[brochure-pdf] blocked non-image content-type:',
-        contentType,
-      );
-      return null;
+    if (res.ok) {
+      const contentType = res.headers.get('content-type') ?? '';
+      if (
+        contentType &&
+        !contentType.startsWith('image/') &&
+        !contentType.includes('octet-stream')
+      ) {
+        console.error(
+          '[brochure-pdf] blocked non-image content-type:',
+          contentType,
+        );
+      } else {
+        return new Uint8Array(await res.arrayBuffer());
+      }
     }
-    return new Uint8Array(await res.arrayBuffer());
+  } catch {
+    // Fall through to brand-assets storage download.
+  }
+
+  return downloadBrandAssetBytes(normalized);
+}
+
+async function convertImageBytesToJpeg(
+  bytes: Uint8Array,
+): Promise<Uint8Array | null> {
+  try {
+    const sharp = (await import('sharp')).default;
+    const jpeg = await sharp(bytes).rotate().jpeg({ quality: 88 }).toBuffer();
+    return new Uint8Array(jpeg);
   } catch {
     return null;
   }
@@ -206,6 +269,14 @@ async function embedImage(
     try {
       return await pdf.embedJpg(bytes);
     } catch {
+      const converted = await convertImageBytesToJpeg(bytes);
+      if (converted) {
+        try {
+          return await pdf.embedJpg(converted);
+        } catch {
+          // handled below
+        }
+      }
       console.error('[brochure-pdf] failed to embed image bytes');
       return null;
     }
@@ -1460,6 +1531,12 @@ async function renderContact(
     shopfront,
     ctx.data.branch?.shopfrontUrl ?? null,
   );
+  if (
+    !shopfrontImg &&
+    (shopfront?.url?.trim() || ctx.data.branch?.shopfrontUrl?.trim())
+  ) {
+    console.error('[brochure-pdf] shopfront photo could not be embedded');
+  }
 
   const branchCardW = landscape
     ? Math.min(320, width * 0.38)

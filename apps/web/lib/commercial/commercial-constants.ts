@@ -161,6 +161,55 @@ export function disposalIncludesForSale(type: DisposalType): boolean {
   );
 }
 
+/**
+ * Sale asking-price prefixes. Labels are portal-canonical (Rightmove / Kato),
+ * not spoken shorthand such as "Guiding" or "In region of".
+ */
+export const ASKING_PRICE_QUALIFIERS = [
+  'none',
+  'offers_in_excess_of',
+  'offers_in_region_of',
+  'guide_price',
+] as const;
+
+export type AskingPriceQualifier = (typeof ASKING_PRICE_QUALIFIERS)[number];
+
+/** Select labels — `none` is the default bare asking price. */
+export const ASKING_PRICE_QUALIFIER_LABELS: Record<
+  AskingPriceQualifier,
+  string
+> = {
+  none: 'Asking price',
+  offers_in_excess_of: 'Offers in Excess of',
+  offers_in_region_of: 'Offers in Region of',
+  guide_price: 'Guide Price',
+};
+
+/** Prefix text used in formatted prices and Kato `<qualifier>`. */
+export const ASKING_PRICE_QUALIFIER_PREFIXES: Record<
+  AskingPriceQualifier,
+  string | null
+> = {
+  none: null,
+  offers_in_excess_of: 'Offers in Excess of',
+  offers_in_region_of: 'Offers in Region of',
+  guide_price: 'Guide Price',
+};
+
+export function isAskingPriceQualifier(
+  value: string | null | undefined,
+): value is AskingPriceQualifier {
+  return (
+    !!value && (ASKING_PRICE_QUALIFIERS as readonly string[]).includes(value)
+  );
+}
+
+export function normalizeAskingPriceQualifier(
+  value: string | null | undefined,
+): AskingPriceQualifier {
+  return isAskingPriceQualifier(value) ? value : 'none';
+}
+
 export const TERMS_OF_ENGAGEMENT = ['yes', 'no', 'pending'] as const;
 
 export type TermsOfEngagement = (typeof TERMS_OF_ENGAGEMENT)[number];

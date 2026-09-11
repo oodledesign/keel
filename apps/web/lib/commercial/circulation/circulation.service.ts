@@ -172,7 +172,50 @@ class CommercialCirculationService {
       })
       .eq('account_id', accountId)
       .eq('email', normalized)
-      .eq('purpose', PURPOSE);
+      .eq('purpose', PURPOSE)
+      .neq('marketing_status', 'suppressed');
+
+    if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Reverse an unsubscribe pause for matching_disposals.
+   * Leaves bounce/complaint suppressions untouched. No-op when no row exists.
+   */
+  async resubscribe(
+    accountId: string,
+    email: string,
+    options?: { consentSource?: string },
+  ) {
+    const normalized = normalizeEmail(email);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+
+    const { data: existing } = await db
+      .from('commercial_marketing_preferences')
+      .select('id, marketing_status')
+      .eq('account_id', accountId)
+      .eq('email', normalized)
+      .eq('purpose', PURPOSE)
+      .maybeSingle();
+
+    if (!existing || existing.marketing_status !== 'unsubscribed') {
+      return;
+    }
+
+    const patch: Record<string, unknown> = {
+      marketing_status: 'subscribed',
+      unsubscribed_at: null,
+      consented_at: new Date().toISOString(),
+    };
+    if (options?.consentSource) {
+      patch.consent_source = options.consentSource;
+    }
+
+    const { error } = await db
+      .from('commercial_marketing_preferences')
+      .update(patch)
+      .eq('id', existing.id);
 
     if (error) throw new Error(error.message);
   }
@@ -525,25 +568,7 @@ class CommercialCirculationService {
     if (input.unsubscribed) {
       await this.unsubscribe(input.accountId, email);
     } else if (input.unsubscribed === false) {
-      const { data: existing } = await db
-        .from('commercial_marketing_preferences')
-        .select('id, marketing_status')
-        .eq('account_id', input.accountId)
-        .eq('email', email)
-        .eq('purpose', PURPOSE)
-        .maybeSingle();
-
-      if (existing && existing.marketing_status !== 'suppressed') {
-        const { error } = await db
-          .from('commercial_marketing_preferences')
-          .update({
-            marketing_status: 'subscribed',
-            unsubscribed_at: null,
-            consented_at: new Date().toISOString(),
-          })
-          .eq('id', existing.id);
-        if (error) throw new Error(error.message);
-      }
+      await this.resubscribe(input.accountId, email);
     }
 
     if (input.notifyOnNewMatch != null) {

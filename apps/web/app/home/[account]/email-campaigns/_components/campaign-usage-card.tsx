@@ -60,10 +60,12 @@ export function CampaignUsageCard({
   snapshot,
   accountSlug,
   fromEmail,
+  layout = 'row',
 }: {
   snapshot: CampaignUsageSnapshot;
   accountSlug: string;
   fromEmail: string | null;
+  layout?: 'row' | 'stack';
 }) {
   const sendHint = snapshot.sendsBlocked
     ? 'No send units left — upgrade or buy a pack before sending.'
@@ -75,7 +77,9 @@ export function CampaignUsageCard({
 
   return (
     <div className="space-y-3">
-      <div className={`grid gap-3 sm:grid-cols-3 ${workspacePanelCard} p-4`}>
+      <div
+        className={`grid gap-3 ${layout === 'stack' ? 'grid-cols-1' : 'sm:grid-cols-3'} ${workspacePanelCard} p-4`}
+      >
         <Meter
           label="Contacts used"
           value={snapshot.contactsUsed.toLocaleString()}

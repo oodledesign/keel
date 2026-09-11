@@ -111,6 +111,60 @@ function ContactSlide({ data }: { data: PublicBrochureData }) {
               </motion.p>
             ) : null}
 
+            {data.branch?.shopfrontUrl ||
+            data.branch?.address ||
+            data.branch?.name ? (
+              <motion.div
+                className="mt-6 space-y-3"
+                {...brochureFadeProps(reduced, 0.12)}
+              >
+                {data.branch.shopfrontUrl ? (
+                  <div className="relative aspect-[16/10] max-w-sm overflow-hidden rounded-2xl border border-white/15 bg-black/20">
+                    <Image
+                      src={data.branch.shopfrontUrl}
+                      alt={
+                        data.branch.name
+                          ? `${data.branch.name} shopfront`
+                          : 'Office shopfront'
+                      }
+                      fill
+                      unoptimized
+                      sizes="(max-width: 1024px) 80vw, 24rem"
+                      className="object-cover"
+                    />
+                  </div>
+                ) : null}
+                {data.branch.name && data.branch.name !== data.accountName ? (
+                  <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-dark)]">
+                    {data.branch.name}
+                  </p>
+                ) : null}
+                {data.branch.address ? (
+                  <p className="text-sm whitespace-pre-line text-[var(--ozer-text-on-dark-muted)] sm:text-base">
+                    {data.branch.address}
+                  </p>
+                ) : null}
+                <div className="flex flex-col gap-1 text-sm text-[var(--ozer-text-on-dark-muted)]">
+                  {data.branch.phone ? (
+                    <a
+                      href={`tel:${data.branch.phone.replace(/\s+/g, '')}`}
+                      className="hover:text-[var(--brochure-accent)]"
+                    >
+                      {data.branch.phone}
+                    </a>
+                  ) : null}
+                  {data.branch.email ? (
+                    <a
+                      href={`mailto:${data.branch.email}`}
+                      className="hover:text-[var(--brochure-accent)]"
+                    >
+                      {data.branch.email}
+                    </a>
+                  ) : null}
+                </div>
+              </motion.div>
+            ) : null}
+
             <motion.div
               className="mt-8 space-y-3"
               {...brochureFadeProps(reduced, 0.14)}

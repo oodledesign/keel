@@ -136,7 +136,7 @@ async function loadListingForRightmove(
       `
       id, name, address_line_1, address_line_2, town, postcode,
       latitude, longitude, sector, tenure, disposal_type, status,
-      asking_rent_pence, asking_price_pence, rent_frequency,
+      asking_rent_pence, asking_price_pence, asking_price_qualifier, rent_frequency,
       hide_rent_from_marketing, hide_price_from_marketing, size_min_sqft, size_max_sqft,
       measurement_standard, use_class, available_from, epc_rating,
       breeam_rating, summary, description, key_points, reference_number,
@@ -179,6 +179,8 @@ async function loadListingForRightmove(
     status: (data.status as ListingStatus) ?? 'draft',
     askingRentPence: asOptionalNumber(data.asking_rent_pence),
     askingPricePence: asOptionalNumber(data.asking_price_pence),
+    askingPriceQualifier:
+      (data.asking_price_qualifier as string | null) ?? 'none',
     rentFrequency: (data.rent_frequency as string | null) ?? null,
     hideRentFromMarketing: Boolean(data.hide_rent_from_marketing),
     hidePriceFromMarketing: Boolean(data.hide_price_from_marketing),

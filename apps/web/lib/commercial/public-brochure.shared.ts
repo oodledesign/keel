@@ -1,4 +1,6 @@
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
+  type AskingPriceQualifier,
   DISPOSAL_TYPE_LABELS,
   type DisposalType,
   disposalIncludesForSale,
@@ -30,6 +32,48 @@ export type BrochureBranch = {
   shopfrontUrl?: string | null;
 };
 
+export type BrochureBranchSource = {
+  id: string;
+  name: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  shopfrontUrl: string | null;
+  isDefault: boolean;
+};
+
+/**
+ * Listing office if set, otherwise the workspace default (or first) branch.
+ * Shopfront comes only from the picked branch — no brand-logo fallback.
+ */
+export function resolveBrochureBranch(input: {
+  branches: BrochureBranchSource[];
+  listingBranchId: string | null;
+  accountName: string | null;
+  fallback?: {
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  };
+}): BrochureBranch {
+  const listingBranch = input.listingBranchId
+    ? (input.branches.find((item) => item.id === input.listingBranchId) ?? null)
+    : null;
+  const picked =
+    listingBranch ??
+    input.branches.find((item) => item.isDefault) ??
+    input.branches[0] ??
+    null;
+
+  return {
+    name: picked?.name?.trim() || input.accountName,
+    address: picked?.address?.trim() || input.fallback?.address || null,
+    phone: picked?.phone?.trim() || input.fallback?.phone || null,
+    email: picked?.email?.trim() || input.fallback?.email || null,
+    shopfrontUrl: picked?.shopfrontUrl?.trim() || null,
+  };
+}
+
 export type BrochureAmenity = {
   label: string;
   index: number;
@@ -52,6 +96,7 @@ export type BrochureListing = {
   askingRentPence: number | null;
   askingRentToPence: number | null;
   askingPricePence: number | null;
+  askingPriceQualifier?: AskingPriceQualifier | string | null;
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
   hidePriceFromMarketing: boolean;
@@ -141,8 +186,13 @@ export function formatBrochureRent(listing: BrochureListing): string | null {
 
 export function formatBrochurePrice(listing: BrochureListing): string | null {
   if (!disposalIncludesForSale(listing.disposalType)) return null;
-  if (listing.hidePriceFromMarketing) return 'POA';
-  return formatBrochureMoney(listing.askingPricePence) ?? 'POA';
+  return (
+    formatAskingPrice({
+      askingPricePence: listing.askingPricePence,
+      askingPriceQualifier: listing.askingPriceQualifier,
+      hidePriceFromMarketing: listing.hidePriceFromMarketing,
+    }) ?? 'POA'
+  );
 }
 
 export function formatBrochureSize(listing: BrochureListing): string | null {

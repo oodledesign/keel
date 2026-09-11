@@ -4,6 +4,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getAppSiteOrigin } from '~/lib/app-host-routing';
+import { loadAccountBranchesUncached } from '~/lib/brand/account-branches';
 import {
   DEFAULT_BRAND_ACCENT,
   DEFAULT_BRAND_PRIMARY,
@@ -14,12 +15,13 @@ import { fetchNearbyBrochureAmenities } from '~/lib/commercial/brochure-pdf/near
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
-import type {
-  BrochureAgent,
-  BrochureBranch,
-  BrochureListing,
-  BrochureMediaItem,
-  PublicBrochureData,
+import {
+  type BrochureAgent,
+  type BrochureBranch,
+  type BrochureListing,
+  type BrochureMediaItem,
+  type PublicBrochureData,
+  resolveBrochureBranch,
 } from '~/lib/commercial/public-brochure.shared';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -89,6 +91,8 @@ function mapListingRow(listingRow: Record<string, unknown>): BrochureListing {
     askingRentPence: asNum(listingRow.asking_rent_pence),
     askingRentToPence: asNum(listingRow.asking_rent_to_pence),
     askingPricePence: asNum(listingRow.asking_price_pence),
+    askingPriceQualifier:
+      (listingRow.asking_price_qualifier as string | null) ?? 'none',
     rentFrequency: (listingRow.rent_frequency as string | null) ?? null,
     hideRentFromMarketing: Boolean(listingRow.hide_rent_from_marketing),
     hidePriceFromMarketing: Boolean(listingRow.hide_price_from_marketing),
@@ -131,6 +135,7 @@ const LISTING_SELECT = [
   'asking_rent_pence',
   'asking_rent_to_pence',
   'asking_price_pence',
+  'asking_price_qualifier',
   'rent_frequency',
   'hide_rent_from_marketing',
   'hide_price_from_marketing',
@@ -187,7 +192,7 @@ export async function loadListingBrochureData(
     { data: accountRow, error: accountErr },
     { data: agentRows, error: agentErr },
     { data: mediaRows, error: mediaErr },
-    { data: branchRows, error: branchErr },
+    branches,
     nearbyAmenities,
   ] = await Promise.all([
     client
@@ -212,13 +217,15 @@ export async function loadListingBrochureData(
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true }),
-    client
-      .from('account_branches')
-      .select(
-        'id, name, address, phone, email, is_default, sort_order, shopfront_url',
-      )
-      .eq('account_id', listing.accountId)
-      .order('sort_order', { ascending: true }),
+    // Admin read is safe: listing.accountId is already scoped by the RLS
+    // listing query above.
+    loadAccountBranchesUncached(listing.accountId).catch((err: unknown) => {
+      console.error(
+        '[brochure-pdf] branches load error:',
+        err instanceof Error ? err.message : err,
+      );
+      return [];
+    }),
     listing.latitude != null && listing.longitude != null
       ? fetchNearbyBrochureAmenities({
           latitude: listing.latitude,
@@ -236,9 +243,6 @@ export async function loadListingBrochureData(
   }
   if (mediaErr) {
     console.error('[brochure-pdf] media load error:', mediaErr.message);
-  }
-  if (branchErr) {
-    console.error('[brochure-pdf] branches load error:', branchErr.message);
   }
 
   const userIds = (
@@ -399,31 +403,15 @@ export async function loadListingBrochureData(
     );
   }
 
-  const branches = (branchRows ?? []) as Array<{
-    id: string;
-    name: string | null;
-    address: string | null;
-    phone: string | null;
-    email: string | null;
-    is_default: boolean | null;
-    shopfront_url?: string | null;
-  }>;
-  const listingBranch = listingBranchId
-    ? branches.find((item) => item.id === listingBranchId)
-    : null;
-  const defaultBranch =
-    branches.find((item) => item.is_default) ?? branches[0] ?? null;
-  const pickedBranch = listingBranch ?? defaultBranch;
   const accountName =
     (accountRow?.name as string | null | undefined)?.trim() || null;
 
-  const branch: BrochureBranch = {
-    name: pickedBranch?.name?.trim() || accountName,
-    address: pickedBranch?.address?.trim() || brandContact.address,
-    phone: pickedBranch?.phone?.trim() || brandContact.phone,
-    email: pickedBranch?.email?.trim() || brandContact.email,
-    shopfrontUrl: pickedBranch?.shopfront_url?.trim() || null,
-  };
+  const branch: BrochureBranch = resolveBrochureBranch({
+    branches,
+    listingBranchId,
+    accountName,
+    fallback: brandContact,
+  });
 
   const listingRow = row as unknown as Record<string, unknown>;
   const websiteListingUrl =

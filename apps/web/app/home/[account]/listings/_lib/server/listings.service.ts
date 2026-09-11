@@ -10,11 +10,13 @@ import { getLogger } from '@kit/shared/logger';
 
 import { listingBecameLiveForCirculation } from '~/lib/commercial/circulation/digest-fingerprint';
 import { scheduleCirculationOnListingPublished } from '~/lib/commercial/circulation/trigger-on-publish';
-import type {
-  DisposalType,
-  ListingLetType,
-  ListingPartyRole,
-  ListingStatus,
+import {
+  type AskingPriceQualifier,
+  type DisposalType,
+  type ListingLetType,
+  type ListingPartyRole,
+  type ListingStatus,
+  normalizeAskingPriceQualifier,
 } from '~/lib/commercial/commercial-constants';
 import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
 import {
@@ -226,6 +228,7 @@ export type CommercialListing = {
   askingRentPence: number | null;
   askingRentToPence: number | null;
   askingPricePence: number | null;
+  askingPriceQualifier: AskingPriceQualifier;
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
   hidePriceFromMarketing: boolean;
@@ -563,6 +566,9 @@ function mapListing(row: ListingRow): CommercialListing {
     askingRentPence: num(row.asking_rent_pence),
     askingRentToPence: num(row.asking_rent_to_pence),
     askingPricePence: num(row.asking_price_pence),
+    askingPriceQualifier: normalizeAskingPriceQualifier(
+      row.asking_price_qualifier as string | null,
+    ),
     rentFrequency: (row.rent_frequency as string | null) ?? null,
     hideRentFromMarketing: Boolean(row.hide_rent_from_marketing),
     hidePriceFromMarketing: Boolean(row.hide_price_from_marketing),
@@ -869,6 +875,9 @@ function writeColumns(input: Partial<CreateListingInput>) {
     }),
     ...(input.askingPricePence !== undefined && {
       asking_price_pence: input.askingPricePence,
+    }),
+    ...(input.askingPriceQualifier !== undefined && {
+      asking_price_qualifier: input.askingPriceQualifier,
     }),
     ...(input.rentFrequency !== undefined && {
       rent_frequency: input.rentFrequency,
@@ -1564,6 +1573,7 @@ export function createListingsService(client: SupabaseClient) {
           asking_rent_pence: input.askingRentPence ?? null,
           asking_rent_to_pence: input.askingRentToPence ?? null,
           asking_price_pence: input.askingPricePence ?? null,
+          asking_price_qualifier: input.askingPriceQualifier ?? 'none',
           rent_frequency: input.rentFrequency ?? 'per_annum',
           hide_rent_from_marketing: input.hideRentFromMarketing ?? false,
           hide_price_from_marketing: input.hidePriceFromMarketing ?? false,
@@ -1912,6 +1922,7 @@ export function createListingsService(client: SupabaseClient) {
         askingRentPence: source.askingRentPence,
         askingRentToPence: source.askingRentToPence,
         askingPricePence: source.askingPricePence,
+        askingPriceQualifier: source.askingPriceQualifier,
         rentFrequency: source.rentFrequency,
         hideRentFromMarketing: source.hideRentFromMarketing,
         hidePriceFromMarketing: source.hidePriceFromMarketing,

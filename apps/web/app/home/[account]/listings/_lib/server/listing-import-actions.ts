@@ -60,6 +60,12 @@ function coalesceDualDisposalDrafts(
       primary.askingRentPence ??= other.askingRentPence;
       primary.askingRentToPence ??= other.askingRentToPence;
       primary.askingPricePence ??= other.askingPricePence;
+      if (
+        primary.askingPriceQualifier === 'none' &&
+        other.askingPriceQualifier !== 'none'
+      ) {
+        primary.askingPriceQualifier = other.askingPriceQualifier;
+      }
       primary.serviceChargePerSqft ??= other.serviceChargePerSqft;
       primary.ratesPayablePerSqft ??= other.ratesPayablePerSqft;
       primary.estateChargePerSqft ??= other.estateChargePerSqft;
@@ -266,6 +272,7 @@ export const commitListingImportAction = enhanceAction(
           askingRentPence: draft.askingRentPence,
           askingRentToPence: draft.askingRentToPence,
           askingPricePence: draft.askingPricePence,
+          askingPriceQualifier: draft.askingPriceQualifier,
           rentFrequency: draft.rentFrequency,
           serviceChargePerSqft: draft.serviceChargePerSqft,
           ratesPayablePerSqft: draft.ratesPayablePerSqft,

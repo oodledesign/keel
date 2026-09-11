@@ -180,7 +180,10 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_MEDIA_TOPUP_LARGE',
     'price_ozer_media_topup_large',
   ),
-  /** Campaigns add-on — placeholders until live Stripe prices exist. */
+  /**
+   * Campaigns add-on — create via `pnpm stripe:setup-catalog` then set these env vars.
+   * See docs/stripe-setup.md (Campaigns add-on).
+   */
   addon_campaigns_starter_monthly: price(
     'STRIPE_PRICE_ADDON_CAMPAIGNS_STARTER_MONTHLY',
     'price_ozer_addon_campaigns_starter_monthly',

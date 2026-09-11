@@ -7,6 +7,7 @@ import { unstable_cache } from 'next/cache';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { accountBranchesTag } from '~/lib/cache/disposals-cache-tags';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 export type AccountBranch = {
   id: string;
@@ -43,7 +44,7 @@ function mapBranch(row: AccountBranchRow): AccountBranch {
     phone: row.phone?.trim() || null,
     email: row.email?.trim() || null,
     rightmoveBranchId: row.rightmove_branch_id?.trim() || null,
-    shopfrontUrl: row.shopfront_url?.trim() || null,
+    shopfrontUrl: toSupabasePublicStorageUrl(row.shopfront_url?.trim()) || null,
     isDefault: Boolean(row.is_default),
     sortOrder: row.sort_order ?? 0,
   };
