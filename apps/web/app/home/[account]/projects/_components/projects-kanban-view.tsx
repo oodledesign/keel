@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -28,6 +28,10 @@ import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import {
+  applyItemStatus,
+  mergePendingStatuses,
+} from '~/lib/projects/project-board-status';
 import { projectDetailHref } from '~/lib/projects/project-paths';
 import {
   type ProjectStatus,
@@ -96,7 +100,7 @@ export function ProjectsKanbanView({
   canEditJobs = false,
   personalScope = false,
   projectDetailPathBuilder,
-  onStatusUpdated,
+  onJobStatusChange,
   statuses: statusesProp,
 }: {
   accountSlug: string;
@@ -105,7 +109,11 @@ export function ProjectsKanbanView({
   canEditJobs?: boolean;
   personalScope?: boolean;
   projectDetailPathBuilder?: (id: string) => string;
-  onStatusUpdated?: () => void;
+  /**
+   * Patch the parent list in place. Do not refetch or remount the board —
+   * that flashes a loading state and can snap the card back to a stale column.
+   */
+  onJobStatusChange?: (jobId: string, status: string) => void;
   statuses?: ProjectStatus[];
 }) {
   const statuses = statusesProp?.length
@@ -120,9 +128,14 @@ export function ProjectsKanbanView({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overColumn, setOverColumn] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const pendingMovesRef = useRef(new Map<string, string>());
+  const moveSeqRef = useRef(0);
+  const inFlightSeqRef = useRef(new Map<string, number>());
 
+  // Keep in-flight drops when the parent list re-renders with stale statuses
+  // (new array identity, filter refetch). Pending slugs win until save settles.
   useEffect(() => {
-    setLocalItems(items);
+    setLocalItems(mergePendingStatuses(items, pendingMovesRef.current));
   }, [items]);
 
   const detailPath = (id: string) =>
@@ -151,17 +164,32 @@ export function ProjectsKanbanView({
     ? (localItems.find((item) => item.id === activeId) ?? null)
     : null;
 
-  const persistStatus = (itemId: string, status: string) => {
+  const persistStatus = (
+    itemId: string,
+    status: string,
+    previousStatus: string,
+    seq: number,
+  ) => {
     if (itemId.startsWith('shared:')) {
       return;
     }
     startTransition(async () => {
       try {
         await updateJob({ accountId, jobId: itemId, status });
-        onStatusUpdated?.();
+        if (inFlightSeqRef.current.get(itemId) === seq) {
+          pendingMovesRef.current.delete(itemId);
+          inFlightSeqRef.current.delete(itemId);
+        }
         toast.success('Status updated');
       } catch (err) {
-        setLocalItems(items);
+        if (inFlightSeqRef.current.get(itemId) === seq) {
+          pendingMovesRef.current.delete(itemId);
+          inFlightSeqRef.current.delete(itemId);
+          setLocalItems((prev) =>
+            applyItemStatus(prev, itemId, previousStatus),
+          );
+          onJobStatusChange?.(itemId, previousStatus);
+        }
         toast.error(getErrorMessage(err));
       }
     });
@@ -232,12 +260,13 @@ export function ProjectsKanbanView({
     const currentColumn = columnForItem(item, columns, fallbackStatus);
     if (currentColumn === nextStatus) return;
 
-    setLocalItems((prev) =>
-      prev.map((row) =>
-        row.id === itemId ? { ...row, status: nextStatus } : row,
-      ),
-    );
-    persistStatus(itemId, nextStatus);
+    const previousStatus = item.status;
+    const seq = ++moveSeqRef.current;
+    pendingMovesRef.current.set(itemId, nextStatus);
+    inFlightSeqRef.current.set(itemId, seq);
+    setLocalItems((prev) => applyItemStatus(prev, itemId, nextStatus));
+    onJobStatusChange?.(itemId, nextStatus);
+    persistStatus(itemId, nextStatus, previousStatus, seq);
   };
 
   const handleDragCancel = () => {
