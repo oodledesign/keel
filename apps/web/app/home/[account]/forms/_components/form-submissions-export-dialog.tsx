@@ -290,10 +290,9 @@ function FormSubmissionsExportDialogBody({
                 <span className="grid gap-0.5">
                   <span className={`font-medium ${workspaceText}`}>Table</span>
                   <span className={`text-xs ${workspaceTextMuted}`}>
-                    Spreadsheet rows and columns, matching the submissions table
                     {draft.columns.length > SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT
-                      ? `. Best with ${SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT} or fewer fields`
-                      : ''}
+                      ? `Spreadsheet rows and columns. Best with ${SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT} or fewer fields.`
+                      : 'Spreadsheet rows and columns, matching the submissions table'}
                   </span>
                 </span>
               </RadioGroupItemLabel>
@@ -424,7 +423,7 @@ function FormSubmissionsExportDialogBody({
           {exportRows.length} row{exportRows.length === 1 ? '' : 's'} ·{' '}
           {draft.columns.length} field{draft.columns.length === 1 ? '' : 's'}
           {attendeeTotals
-            ? ` · ${submissionsExportAttendeeSummary(attendeeTotals)}`
+            ? ` · ${submissionsExportAttendeeSummary(attendeeTotals)} (latest RSVP per email)`
             : ''}
         </p>
         <Button

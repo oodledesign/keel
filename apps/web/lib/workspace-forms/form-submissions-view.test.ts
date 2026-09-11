@@ -198,6 +198,17 @@ describe('RSVP attendee totals', () => {
     expect(
       findGuestField(workspaceFormFieldsForTemplate('contact')),
     ).toBeNull();
+    expect(
+      findGuestField([
+        {
+          id: 'notes',
+          type: 'textarea',
+          key: 'guest_notes',
+          label: 'Tell us about your plus ones',
+          required: false,
+        },
+      ]),
+    ).toBeNull();
   });
 
   it('treats Yes-like attendance values as attending', () => {

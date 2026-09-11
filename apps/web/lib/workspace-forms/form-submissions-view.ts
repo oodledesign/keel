@@ -31,6 +31,7 @@ const NON_GUEST_FIELD_TYPES = new Set<WorkspaceFormField['type']>([
   'email',
   'phone',
   'message',
+  'textarea',
   'hidden',
   'file',
   'date',

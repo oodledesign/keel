@@ -21,6 +21,7 @@ export type SubmissionExportFormat = (typeof SUBMISSION_EXPORT_FORMATS)[number];
 export const SUBMISSION_EXPORT_MODES = ['all', 'unique'] as const;
 export type SubmissionExportMode = (typeof SUBMISSION_EXPORT_MODES)[number];
 
+/** Hint-only: table PDFs stay readable around this many columns. */
 export const SUBMISSION_EXPORT_TABLE_COLUMN_LIMIT = 6;
 
 export const SUBMISSION_EXPORT_PDF_LAYOUTS = ['list', 'table'] as const;
@@ -465,7 +466,6 @@ function drawTablePdf(
       cursorY = drawHeader(page, {
         formName: input.formName,
         subtitle: input.subtitle,
-        extraLines: input.extraLines,
         width: pageSize[0],
         height: pageSize[1],
         margin,
@@ -555,7 +555,6 @@ function drawSectionPdf(
     cursorY = drawHeader(page, {
       formName: input.formName,
       subtitle: input.subtitle,
-      extraLines: input.extraLines,
       width: pageSize[0],
       height: pageSize[1],
       margin,
