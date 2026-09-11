@@ -127,6 +127,7 @@ function mapCampaign(row: Record<string, unknown>): EmailCampaign {
     abEnabled: Boolean(row.ab_enabled),
     abSplitPercent: clampAbSplitPercent(Number(row.ab_split_percent ?? 50)),
     previewText: (row.preview_text as string | null) ?? null,
+    // list() omits html_body — only get() / send paths populate this.
     htmlBody: String(row.html_body ?? ''),
     bodyDocument: parseCampaignDocument(row.body_document),
     fromName: (row.from_name as string | null) ?? null,

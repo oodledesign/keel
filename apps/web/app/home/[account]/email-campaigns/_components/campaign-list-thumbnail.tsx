@@ -40,6 +40,7 @@ export function CampaignListThumbnail({
           <img
             src={logo}
             alt=""
+            loading="lazy"
             className="h-2.5 w-auto max-w-full object-contain object-left"
           />
         ) : (

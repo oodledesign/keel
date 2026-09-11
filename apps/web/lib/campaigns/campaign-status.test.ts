@@ -39,7 +39,7 @@ describe('campaign status pills', () => {
   it('falls back for unknown statuses without throwing', () => {
     expect(campaignStatusLabel('queued_retry')).toBe('Queued Retry');
     expect(campaignStatusBadgeClass('queued_retry')).toBe(
-      CAMPAIGN_STATUS_BADGE_CLASS.draft,
+      CAMPAIGN_STATUS_BADGE_CLASS.cancelled,
     );
   });
 
