@@ -1,6 +1,8 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
+  PUBLIC_MAILING_PREFERENCE_INVALID_LINK,
+  PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED,
   loadWorkspaceNameForPreference,
   lookupMailingListPublicPreference,
   unsubscribeMailingListPublicPreference,
@@ -20,7 +22,7 @@ export default async function MailingListUnsubscribePage({
   searchParams: Promise<{ token?: string; status?: string }>;
 }) {
   const { token, status } = await searchParams;
-  let error: string | null = null;
+  let errorKind: 'invalid' | 'failed' | null = token ? null : 'invalid';
   let email: string | null = null;
   let workspaceName = 'this workspace';
   let subscribed = false;
@@ -35,7 +37,7 @@ export default async function MailingListUnsubscribePage({
           : await unsubscribeMailingListPublicPreference(admin, token);
 
       if (!result) {
-        error = 'This unsubscribe link is missing or invalid.';
+        errorKind = 'invalid';
       } else {
         email = result.email;
         subscribed = result.marketingStatus === 'subscribed';
@@ -45,32 +47,33 @@ export default async function MailingListUnsubscribePage({
           result.accountId,
         );
       }
-    } catch (err) {
-      error =
-        err instanceof Error ? err.message : 'Unable to update preference';
+    } catch {
+      errorKind = 'failed';
     }
-  } else {
-    error = 'This unsubscribe link is missing or invalid.';
   }
 
-  const success = Boolean(email && !error);
+  const success = Boolean(email && !errorKind);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--ozer-surface-canvas)] px-6 py-12">
       <div className="w-full max-w-lg rounded-3xl bg-[var(--ozer-surface-panel)] p-8 text-center shadow-sm">
         <h1 className="text-3xl font-bold text-[var(--workspace-shell-text)]">
-          {!success
-            ? 'Invalid unsubscribe link'
-            : subscribed
-              ? "You're subscribed again"
-              : 'You have been unsubscribed'}
+          {errorKind === 'failed'
+            ? 'Something went wrong'
+            : !success
+              ? 'Invalid unsubscribe link'
+              : subscribed
+                ? "You're subscribed again"
+                : 'You have been unsubscribed'}
         </h1>
         <p className="mt-4 text-sm leading-6 text-[var(--workspace-shell-text-muted)]">
-          {!success
-            ? error
-            : subscribed
-              ? `${email} will receive mailing-list emails from ${workspaceName} again.`
-              : `${email} will no longer receive mailing-list emails from ${workspaceName}.`}
+          {errorKind === 'failed'
+            ? PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED
+            : errorKind === 'invalid'
+              ? PUBLIC_MAILING_PREFERENCE_INVALID_LINK
+              : subscribed
+                ? `${email} will receive mailing-list emails from ${workspaceName} again.`
+                : `${email} will no longer receive mailing-list emails from ${workspaceName}.`}
         </p>
         {success && token && (subscribed || canResubscribe) ? (
           <MailingListPreferenceForm token={token} subscribed={subscribed} />

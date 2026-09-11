@@ -9,6 +9,7 @@ import { getLogger } from '@kit/shared/logger';
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
 import {
   type PublicMailingPreferenceResult,
+  type WorkspaceMailingLawfulBasis,
   listWorkspaceMailingListSubscribers,
 } from '~/lib/workspace-forms/workspace-mailing-list';
 
@@ -715,7 +716,8 @@ export async function unsubscribeCampaignRecipientByToken(
       email,
       purpose: 'workspace_mailing_list',
       marketing_status: 'unsubscribed',
-      lawful_basis: 'legitimate_interest',
+      // Historic campaign tokens have no recorded consent — do not invent one.
+      lawful_basis: 'imported_historical' satisfies WorkspaceMailingLawfulBasis,
       consent_source: 'campaign_unsubscribe',
       consent_copy_version: 'v1',
       unsubscribe_token: token,
@@ -766,7 +768,7 @@ export async function resubscribeCampaignRecipientByToken(
       email,
       purpose: 'workspace_mailing_list',
       marketing_status: 'subscribed',
-      lawful_basis: 'manual_opt_in',
+      lawful_basis: 'manual_opt_in' satisfies WorkspaceMailingLawfulBasis,
       consent_source: 'unsubscribe_page_resubscribe',
       consent_copy_version: 'v1',
       unsubscribe_token: token,
