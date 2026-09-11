@@ -57,6 +57,10 @@ import {
   parseCampaignAudienceConfig,
   parseCampaignAudienceType,
 } from './campaign-audience';
+import {
+  type CampaignSendProgressSnapshot,
+  buildCampaignSendProgress,
+} from './campaign-send-progress';
 import type {
   EmailCampaign,
   EmailCampaignRecipient,
@@ -421,6 +425,68 @@ class CampaignsService {
           ? row.ab_variant
           : null,
     }));
+  }
+
+  /**
+   * Live send progress from campaign counters + recipient-row status.
+   * Recipient rows update per email; campaign sent_count updates per batch.
+   */
+  async getSendProgress(
+    accountId: string,
+    campaignId: string,
+  ): Promise<CampaignSendProgressSnapshot> {
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
+      .select(
+        'status, audience_count, sent_count, failed_count, skipped_count, last_error',
+      )
+      .eq('account_id', accountId)
+      .eq('id', campaignId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Campaign not found');
+
+    const row = data as Record<string, unknown>;
+    const [sent, failed, skipped, pending] = await Promise.all([
+      this.countRecipientsByStatus(accountId, campaignId, 'sent'),
+      this.countRecipientsByStatus(accountId, campaignId, 'failed'),
+      this.countRecipientsByStatus(accountId, campaignId, 'skipped'),
+      this.countRecipientsByStatus(accountId, campaignId, 'pending'),
+    ]);
+    const hasRecipients = sent + failed + skipped + pending > 0;
+
+    return buildCampaignSendProgress({
+      status: row.status as EmailCampaignStatus,
+      audienceCount: Number(row.audience_count ?? 0),
+      sentCount: Number(row.sent_count ?? 0),
+      failedCount: Number(row.failed_count ?? 0),
+      skippedCount: Number(row.skipped_count ?? 0),
+      lastError: (row.last_error as string | null) ?? null,
+      recipientCounts: hasRecipients
+        ? { sent, failed, skipped, pending }
+        : null,
+    });
+  }
+
+  private async countRecipientsByStatus(
+    accountId: string,
+    campaignId: string,
+    status: EmailCampaignRecipient['status'],
+  ): Promise<number> {
+    const { count, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
+    )
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .eq('campaign_id', campaignId)
+      .eq('status', status);
+
+    if (error) throw new Error(error.message);
+    return count ?? 0;
   }
 
   async schedule(input: {

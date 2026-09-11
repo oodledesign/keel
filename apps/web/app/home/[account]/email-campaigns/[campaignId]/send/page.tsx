@@ -4,7 +4,10 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { CampaignSendPanel } from '../../_components/campaign-send-panel';
-import { loadCampaignDetail } from '../../_lib/server/campaigns.loader';
+import {
+  loadCampaignDetail,
+  loadCampaignLinkedFormSubmissions,
+} from '../../_lib/server/campaigns.loader';
 
 interface CampaignSendPageProps {
   params: Promise<{ account: string; campaignId: string }>;
@@ -25,6 +28,11 @@ async function CampaignSendPage({ params }: CampaignSendPageProps) {
     notFound();
   }
 
+  const linkedForm = await loadCampaignLinkedFormSubmissions(
+    workspace.account.id,
+    data.campaign.bodyDocument?.formLink?.formId,
+  );
+
   return (
     <CampaignSendPanel
       accountId={workspace.account.id}
@@ -36,6 +44,7 @@ async function CampaignSendPage({ params }: CampaignSendPageProps) {
       analytics={data.analytics}
       brand={data.brand}
       clients={data.audienceOptions.clients}
+      linkedForm={linkedForm}
     />
   );
 }

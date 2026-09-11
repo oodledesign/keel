@@ -189,6 +189,10 @@ export const sendCampaignAction = enhanceAction(
         success: true as const,
         remaining: result.remaining,
         status: result.campaign.status,
+        audienceCount: result.campaign.audienceCount,
+        sentCount: result.campaign.sentCount,
+        failedCount: result.campaign.failedCount,
+        skippedCount: result.campaign.skippedCount,
       };
     } catch (error) {
       if (isCampaignQuotaError(error)) {

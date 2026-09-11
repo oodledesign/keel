@@ -88,6 +88,14 @@ export const DeleteWorkspaceFormSchema = z.object({
   formId: z.string().uuid(),
 });
 
+export const DeleteWorkspaceFormSubmissionSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  formId: z.string().uuid(),
+  submissionId: z.string().uuid(),
+  campaignId: z.string().uuid().optional(),
+});
+
 export const PublishWorkspaceFormSchema = z.object({
   accountId: z.string().uuid(),
   formId: z.string().uuid(),
@@ -113,6 +121,9 @@ export type UpdateWorkspaceFormInput = z.infer<
 >;
 export type DeleteWorkspaceFormInput = z.infer<
   typeof DeleteWorkspaceFormSchema
+>;
+export type DeleteWorkspaceFormSubmissionInput = z.infer<
+  typeof DeleteWorkspaceFormSubmissionSchema
 >;
 export type PublishWorkspaceFormInput = z.infer<
   typeof PublishWorkspaceFormSchema
