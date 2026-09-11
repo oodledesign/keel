@@ -7,6 +7,7 @@ import { convertMinorUnits, getUnitsPerGbp } from '~/lib/currency/estimate-fx';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { addDaysIso, clampDueDays } from '~/lib/invoices/invoice-due-date';
 import { notifyInvoiceViewedInApp } from '~/lib/invoices/invoice-in-app-notifications';
+import { endOfZonedDay } from '~/lib/invoices/zoned-local-datetime';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
 import {
@@ -640,12 +641,14 @@ function addFrequency(date: Date, frequency: string) {
 
 export async function processDueRecurringSeries() {
   const admin = adminDb();
-  const now = new Date().toISOString();
+  // Due if next_issue_at's Europe/London calendar date is today or earlier.
+  // Time-of-day must not delay issue past the 08:15 UTC daily cron.
+  const dueCutoffIso = endOfZonedDay(new Date(), 'Europe/London').toISOString();
   const { data: seriesList, error } = await admin
     .from('invoice_recurring_series')
     .select('*')
     .eq('status', 'active')
-    .lte('next_issue_at', now);
+    .lte('next_issue_at', dueCutoffIso);
   if (error) throw new Error(error.message);
 
   const service = createInvoicesService(admin);
