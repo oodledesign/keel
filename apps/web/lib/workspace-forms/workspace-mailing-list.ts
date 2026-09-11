@@ -264,21 +264,35 @@ export async function unsubscribeWorkspaceMailingListByToken(
 
   const db = fromTable(admin, 'workspace_mailing_preferences');
   const { data } = await db
-    .select('id, account_id, email')
+    .select('id, account_id, email, marketing_status')
     .eq('unsubscribe_token', token)
     .eq('purpose', PURPOSE)
     .maybeSingle();
 
   if (!data) return null;
 
-  const { error } = await db
-    .update({
-      marketing_status: 'unsubscribed',
-      unsubscribed_at: new Date().toISOString(),
-    })
-    .eq('id', data.id);
+  const current =
+    data.marketing_status as WorkspaceMailingPreference['marketingStatus'];
 
-  if (error) throw new Error(error.message);
+  // Public token links must not clear a suppression (bounce / complaint).
+  if (current === 'suppressed') {
+    return {
+      email: String(data.email),
+      accountId: String(data.account_id),
+      marketingStatus: 'suppressed',
+    };
+  }
+
+  if (current !== 'unsubscribed') {
+    const { error } = await db
+      .update({
+        marketing_status: 'unsubscribed',
+        unsubscribed_at: new Date().toISOString(),
+      })
+      .eq('id', data.id);
+
+    if (error) throw new Error(error.message);
+  }
 
   return {
     email: String(data.email),

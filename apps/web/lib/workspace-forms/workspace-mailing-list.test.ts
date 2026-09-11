@@ -107,6 +107,26 @@ describe('workspace mailing list preference tokens', () => {
     });
   });
 
+  it('does not overwrite a suppressed preference on unsubscribe', async () => {
+    const { client, updates } = createPreferenceClient({
+      row: {
+        id: 'pref-1',
+        account_id: ACCOUNT_ID,
+        email: 'dan@example.com',
+        marketing_status: 'suppressed',
+      },
+    });
+
+    await expect(
+      unsubscribeWorkspaceMailingListByToken(client as never, TOKEN),
+    ).resolves.toEqual({
+      email: 'dan@example.com',
+      accountId: ACCOUNT_ID,
+      marketingStatus: 'suppressed',
+    });
+    expect(updates).toHaveLength(0);
+  });
+
   it('does not flip a suppressed preference back to subscribed', async () => {
     const { client, updates } = createPreferenceClient({
       row: {

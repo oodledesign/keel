@@ -38,19 +38,21 @@ export async function unsubscribeMailingListPublicPreference(
 
   if (!result) return null;
 
-  await markCampaignRecipientsUnsubscribed(
-    admin,
-    result.accountId,
-    result.email,
-  );
-
-  try {
-    await createCommercialCirculationService(admin).unsubscribe(
+  if (result.marketingStatus !== 'suppressed') {
+    await markCampaignRecipientsUnsubscribed(
+      admin,
       result.accountId,
       result.email,
     );
-  } catch {
-    // Business workspaces have no circulation rows; ignore.
+
+    try {
+      await createCommercialCirculationService(admin).unsubscribe(
+        result.accountId,
+        result.email,
+      );
+    } catch {
+      // Business workspaces have no circulation rows; ignore.
+    }
   }
 
   return result;

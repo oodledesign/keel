@@ -13,7 +13,7 @@ import {
 } from '~/lib/workspace-forms/mailing-list-public-preference';
 
 const MailingListPreferenceTokenSchema = z.object({
-  token: z.string().min(16).max(200),
+  token: z.string().min(16).max(64),
 });
 
 function parseToken(formData: FormData) {

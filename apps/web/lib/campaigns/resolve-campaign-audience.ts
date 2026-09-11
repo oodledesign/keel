@@ -659,6 +659,7 @@ export async function lookupCampaignRecipientByToken(
   return {
     email: recipient.email,
     accountId: recipient.accountId,
+    // No preference row means they are not blocked from future list/campaign mail.
     marketingStatus:
       preference?.marketingStatus === 'unsubscribed' ||
       preference?.marketingStatus === 'suppressed'
@@ -680,23 +681,36 @@ export async function unsubscribeCampaignRecipientByToken(
 
   const { email, accountId } = recipient;
 
-  await fromTable(client, 'workspace_email_campaign_recipients')
+  const { error: recipientError } = await fromTable(
+    client,
+    'workspace_email_campaign_recipients',
+  )
     .update({ unsubscribed_at: new Date().toISOString() })
     .eq('unsubscribe_token', token)
     .is('unsubscribed_at', null);
 
+  if (recipientError) throw new Error(recipientError.message);
+
   const prefs = fromTable(client, 'workspace_mailing_preferences');
   const existing = await findPreferenceForRecipient(client, accountId, email);
 
+  if (existing?.marketingStatus === 'suppressed') {
+    return { email, accountId, marketingStatus: 'suppressed' };
+  }
+
   if (existing) {
-    await prefs
-      .update({
-        marketing_status: 'unsubscribed',
-        unsubscribed_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id);
+    if (existing.marketingStatus !== 'unsubscribed') {
+      const { error } = await prefs
+        .update({
+          marketing_status: 'unsubscribed',
+          unsubscribed_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
+      if (error) throw new Error(error.message);
+    }
   } else {
-    await prefs.insert({
+    const { error } = await prefs.insert({
       account_id: accountId,
       email,
       purpose: 'workspace_mailing_list',
@@ -707,6 +721,8 @@ export async function unsubscribeCampaignRecipientByToken(
       unsubscribe_token: token,
       unsubscribed_at: new Date().toISOString(),
     });
+
+    if (error) throw new Error(error.message);
   }
 
   return { email, accountId, marketingStatus: 'unsubscribed' };

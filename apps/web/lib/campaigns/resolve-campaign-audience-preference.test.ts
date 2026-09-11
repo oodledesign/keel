@@ -118,6 +118,42 @@ describe('campaign recipient unsubscribe tokens', () => {
     );
   });
 
+  it('does not overwrite a suppressed preference on campaign unsubscribe', async () => {
+    const { client, updates } = createCampaignClient({
+      recipient: {
+        id: 'rec-1',
+        account_id: ACCOUNT_ID,
+        email: 'dana@example.com',
+      },
+      preference: {
+        id: 'pref-1',
+        marketing_status: 'suppressed',
+      },
+    });
+
+    await expect(
+      unsubscribeCampaignRecipientByToken(client as never, TOKEN),
+    ).resolves.toEqual({
+      email: 'dana@example.com',
+      accountId: ACCOUNT_ID,
+      marketingStatus: 'suppressed',
+    });
+    expect(updates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: 'workspace_email_campaign_recipients',
+        }),
+      ]),
+    );
+    expect(updates).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: 'workspace_mailing_preferences',
+        }),
+      ]),
+    );
+  });
+
   it('creates a subscribed preference when a campaign token has none', async () => {
     const { client, inserts } = createCampaignClient({
       recipient: {
