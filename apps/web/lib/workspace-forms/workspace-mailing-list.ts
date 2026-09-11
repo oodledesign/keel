@@ -6,6 +6,7 @@ import { randomBytes } from 'crypto';
 
 import { fireNewSubscriberAutomations } from '~/lib/campaigns/campaign-automations.service';
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
+import { scheduleDynamicsMailingListSync } from '~/lib/dynamics/sync.service';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { normalizeCirculationEmail } from '~/lib/commercial/circulation/circulation-eligibility';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
@@ -493,6 +494,19 @@ export async function submitMailingListSignup(input: {
       .eq('account_id', input.accountId);
 
     if (patchError) throw new Error(patchError.message);
+  }
+
+  if (preference.marketingStatus === 'subscribed') {
+    void scheduleDynamicsMailingListSync({
+      client: input.admin,
+      accountId: input.accountId,
+      email,
+      preferenceId: preference.id,
+      clientId,
+      contactName: input.contact.contactName,
+      companyName: input.contact.companyName ?? input.spec.companyName,
+      marketingOptedIn: true,
+    }).catch(() => undefined);
   }
 
   return {

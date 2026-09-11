@@ -42,6 +42,13 @@ vi.mock('~/lib/commercial/circulation/circulation.service', () => ({
   }),
 }));
 
+const scheduleDynamicsMailingListSync = vi.fn();
+
+vi.mock('~/lib/dynamics/sync.service', () => ({
+  scheduleDynamicsMailingListSync: (...args: unknown[]) =>
+    scheduleDynamicsMailingListSync(...args),
+}));
+
 const TOKEN = 'a'.repeat(32);
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
 const EMAIL = 'dan@example.com';
@@ -55,6 +62,7 @@ describe('mailing list public preference', () => {
     markCampaignRecipientsUnsubscribed.mockResolvedValue(undefined);
     circulationUnsubscribe.mockResolvedValue(undefined);
     circulationResubscribe.mockResolvedValue(undefined);
+    scheduleDynamicsMailingListSync.mockResolvedValue({ enqueued: true });
   });
 
   it('maps preference write failures to a calm public error', async () => {
@@ -105,6 +113,13 @@ describe('mailing list public preference', () => {
       EMAIL,
     );
     expect(circulationResubscribe).not.toHaveBeenCalled();
+    expect(scheduleDynamicsMailingListSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: ACCOUNT_ID,
+        email: EMAIL,
+        marketingOptedIn: false,
+      }),
+    );
   });
 
   it('restores commercial circulation for the same account and email on resubscribe', async () => {
@@ -126,6 +141,13 @@ describe('mailing list public preference', () => {
       consentSource: 'unsubscribe_page_resubscribe',
     });
     expect(circulationUnsubscribe).not.toHaveBeenCalled();
+    expect(scheduleDynamicsMailingListSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: ACCOUNT_ID,
+        email: EMAIL,
+        marketingOptedIn: true,
+      }),
+    );
   });
 
   it('does not pause or restore circulation when the mailing preference is suppressed', async () => {
@@ -150,5 +172,6 @@ describe('mailing list public preference', () => {
     expect(circulationUnsubscribe).not.toHaveBeenCalled();
     expect(circulationResubscribe).not.toHaveBeenCalled();
     expect(markCampaignRecipientsUnsubscribed).not.toHaveBeenCalled();
+    expect(scheduleDynamicsMailingListSync).not.toHaveBeenCalled();
   });
 });
