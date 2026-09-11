@@ -3,14 +3,14 @@
  * Same visual language as campaign status chips (Ozer gold / sage / info / coral).
  */
 
-export const TASK_STATUS_LABELS: Record<string, string> = {
+export const TASK_STATUS_LABELS = {
   todo: 'To do',
   in_progress: 'In progress',
   client_review: 'Client review',
   done: 'Done',
   cancelled: 'Cancelled',
   blocked: 'Blocked',
-};
+} as const;
 
 const SOFT_PILL = {
   gold: 'bg-[color-mix(in_srgb,var(--ozer-gold-500)_20%,transparent)] text-[var(--ozer-plum-800)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-gold-500)_42%,transparent)] dark:text-[var(--ozer-gold-500)]',
@@ -84,7 +84,7 @@ export function taskStatusBadgeClass(
 export function taskStatusLabel(status: string | null | undefined): string {
   const key = resolveTaskStatusBadgeKey(status);
   if (key !== 'unknown') {
-    return TASK_STATUS_LABELS[key] ?? TASK_STATUS_LABELS.todo;
+    return TASK_STATUS_LABELS[key];
   }
 
   const raw = (status ?? '').trim();
