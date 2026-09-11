@@ -22,6 +22,13 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
@@ -29,6 +36,13 @@ import { Textarea } from '@kit/ui/textarea';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import pathsConfig from '~/config/paths.config';
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
+import {
+  ASKING_PRICE_QUALIFIERS,
+  ASKING_PRICE_QUALIFIER_LABELS,
+  type AskingPriceQualifier,
+  disposalIncludesForSale,
+} from '~/lib/commercial/commercial-constants';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -109,6 +123,11 @@ export function ListingMarketingEditor({
     sections: initial.marketingSections,
     hideRent: initial.hideRentFromMarketing,
     hidePrice: initial.hidePriceFromMarketing,
+    askingPrice:
+      initial.askingPricePence != null
+        ? String(initial.askingPricePence / 100)
+        : '',
+    askingPriceQualifier: initial.askingPriceQualifier,
   });
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [customAmenity, setCustomAmenity] = useState('');
@@ -127,6 +146,8 @@ export function ListingMarketingEditor({
     sections,
     hideRent,
     hidePrice,
+    askingPrice,
+    askingPriceQualifier,
   } = form;
 
   const availabilityHref = pathsConfig.app.accountListingDetail
@@ -154,6 +175,8 @@ export function ListingMarketingEditor({
     marketingSections?: MarketingSection[];
     hideRentFromMarketing?: boolean;
     hidePriceFromMarketing?: boolean;
+    askingPricePence?: number | null;
+    askingPriceQualifier?: AskingPriceQualifier;
   }) => {
     startTransition(async () => {
       try {
@@ -176,6 +199,11 @@ export function ListingMarketingEditor({
           sections: updated.marketingSections,
           hideRent: updated.hideRentFromMarketing,
           hidePrice: updated.hidePriceFromMarketing,
+          askingPrice:
+            updated.askingPricePence != null
+              ? String(updated.askingPricePence / 100)
+              : '',
+          askingPriceQualifier: updated.askingPriceQualifier,
         }));
         toast.success('Marketing saved');
         router.refresh();
@@ -836,6 +864,79 @@ export function ListingMarketingEditor({
                 }}
               />
             </div>
+
+            {disposalIncludesForSale(listing.disposalType) ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-[var(--workspace-shell-text)]/70">
+                    Asking price (£)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={askingPrice}
+                    disabled={pending || readOnly}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setForm((current) => ({
+                        ...current,
+                        askingPrice: value,
+                      }));
+                    }}
+                    onBlur={() => {
+                      saveMarketing({
+                        askingPricePence: askingPrice
+                          ? Math.round(parseFloat(askingPrice) * 100)
+                          : null,
+                      });
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-[var(--workspace-shell-text)]/70">
+                    Sale price qualifier
+                  </Label>
+                  <Select
+                    value={askingPriceQualifier}
+                    disabled={pending || readOnly || hidePrice}
+                    onValueChange={(value) => {
+                      const qualifier = value as AskingPriceQualifier;
+                      setForm((current) => ({
+                        ...current,
+                        askingPriceQualifier: qualifier,
+                      }));
+                      saveMarketing({ askingPriceQualifier: qualifier });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASKING_PRICE_QUALIFIERS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {ASKING_PRICE_QUALIFIER_LABELS[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <p className="text-sm text-[var(--workspace-shell-text)]">
+                  {formatAskingPrice({
+                    askingPricePence: askingPrice
+                      ? Math.round(parseFloat(askingPrice) * 100)
+                      : null,
+                    askingPriceQualifier,
+                    hidePriceFromMarketing: hidePrice,
+                  }) ??
+                    (askingPriceQualifier !== 'none'
+                      ? ASKING_PRICE_QUALIFIER_LABELS[askingPriceQualifier]
+                      : '—')}
+                </p>
+              </>
+            ) : null}
 
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-[var(--workspace-shell-text)]/70">

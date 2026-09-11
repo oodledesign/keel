@@ -29,18 +29,21 @@ import { AddressSearchField } from '~/components/commercial/address-search-field
 import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
 import type { AddressSuggestion } from '~/lib/commercial/address-suggest.types';
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
+  ASKING_PRICE_QUALIFIERS,
+  ASKING_PRICE_QUALIFIER_LABELS,
+  type AskingPriceQualifier,
   COMMERCIAL_PROPERTY_TYPES,
   COMMERCIAL_USE_CLASSES,
   COMMERCIAL_USE_CLASS_LABELS,
   DISPOSAL_TYPES,
   DISPOSAL_TYPE_LABELS,
-  type DisposalType,
   LISTING_LET_TYPES,
   LISTING_LET_TYPE_LABELS,
   LISTING_STATUSES,
   type ListingLetType,
-  type ListingStatus,
+  disposalIncludesForSale,
   disposalIncludesToLet,
   listingStatusPublishHint,
 } from '~/lib/commercial/commercial-constants';
@@ -388,7 +391,11 @@ function ListingFormFields({
               </SelectTrigger>
               <SelectContent>
                 {LISTING_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status} className="py-2 pr-10">
+                  <SelectItem
+                    key={status}
+                    value={status}
+                    className="py-2 pr-10"
+                  >
                     <span className="flex w-full items-center justify-between gap-3">
                       <ListingStatusBadge status={status} size="md" />
                       <span className="text-muted-foreground shrink-0 text-xs">
@@ -500,6 +507,51 @@ function ListingFormFields({
             />
           </div>
         </div>
+
+        {disposalIncludesForSale(form.disposalType) ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Sale price qualifier
+              </Label>
+              <Select
+                value={form.askingPriceQualifier}
+                onValueChange={(v) =>
+                  field('askingPriceQualifier', v as AskingPriceQualifier)
+                }
+                disabled={form.hidePriceFromMarketing}
+              >
+                <SelectTrigger className={inputClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASKING_PRICE_QUALIFIERS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {ASKING_PRICE_QUALIFIER_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[var(--workspace-shell-text)]/70">
+                Price preview
+              </Label>
+              <p className="flex min-h-9 items-center text-sm text-[var(--workspace-shell-text)]">
+                {formatAskingPrice({
+                  askingPricePence: form.askingPrice
+                    ? Math.round(parseFloat(form.askingPrice) * 100)
+                    : null,
+                  askingPriceQualifier: form.askingPriceQualifier,
+                  hidePriceFromMarketing: form.hidePriceFromMarketing,
+                }) ??
+                  (form.askingPriceQualifier !== 'none'
+                    ? ASKING_PRICE_QUALIFIER_LABELS[form.askingPriceQualifier]
+                    : '—')}
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">

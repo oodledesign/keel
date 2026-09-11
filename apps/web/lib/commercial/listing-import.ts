@@ -1,4 +1,9 @@
+import {
+  parseAskingPriceField,
+  parseAskingPriceQualifier,
+} from '~/lib/commercial/asking-price';
 import type {
+  AskingPriceQualifier,
   DisposalType,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
@@ -20,6 +25,7 @@ export type ListingImportDraft = {
   askingRentPence: number | null;
   askingRentToPence: number | null;
   askingPricePence: number | null;
+  askingPriceQualifier: AskingPriceQualifier;
   rentFrequency: string | null;
   serviceChargePerSqft: number | null;
   ratesPayablePerSqft: number | null;
@@ -50,7 +56,7 @@ export function emptyToNull(value: string | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-/** Parse GBP-ish strings (£34,500.00 / Offers in excess of £200,000) to pence. */
+/** Parse GBP-ish strings (£34,500.00 / Offers in Excess of £200,000) to pence. */
 export function parseGbpToPence(raw: string | null | undefined): number | null {
   if (!raw?.trim()) return null;
   const normalized = raw.replace(/,/g, '');
@@ -236,7 +242,11 @@ export function recordToListingDraft(
   const sizeMax = sizeToSqft(parseNumber(record.size_max_sqft), metric);
   const askingRentPence = parseGbpToPence(record.asking_rent);
   const askingRentToPence = parseGbpToPence(record.asking_rent_to);
-  const askingPricePence = parseGbpToPence(record.asking_price);
+  const parsedSalePrice = parseAskingPriceField(record.asking_price);
+  const askingPricePence = parsedSalePrice.pence;
+  const askingPriceQualifier = record.asking_price_qualifier?.trim()
+    ? parseAskingPriceQualifier(record.asking_price_qualifier)
+    : parsedSalePrice.qualifier;
 
   const base: Omit<ListingImportDraft, 'errors'> = {
     rowIndex,
@@ -261,6 +271,7 @@ export function recordToListingDraft(
     askingRentPence,
     askingRentToPence,
     askingPricePence,
+    askingPriceQualifier,
     rentFrequency: mapRentFrequency(emptyToNull(record.rent_frequency)),
     serviceChargePerSqft: parseNumber(record.service_charge),
     ratesPayablePerSqft: parseNumber(record.rates_payable),

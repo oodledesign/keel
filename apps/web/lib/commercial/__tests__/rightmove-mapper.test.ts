@@ -383,6 +383,91 @@ describe('mapListingToRightmovePayload', () => {
     expect(payload.building.letContractLength).toBe(60);
   });
 
+  it('sends sale displayQualifier for portal-canonical prefixes', () => {
+    const excess = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'for_sale',
+        askingRentPence: null,
+        askingPricePence: 20_000_000,
+        askingPriceQualifier: 'offers_in_excess_of',
+        hideRentFromMarketing: false,
+        hidePriceFromMarketing: false,
+      }),
+      agentId: 283634,
+    });
+    expect(excess.payload.building.pricing).toEqual({
+      price: 200000,
+      displayQualifier: 'OFFERS_IN_EXCESS_OF',
+    });
+
+    const region = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'investment',
+        askingRentPence: null,
+        askingPricePence: 20_000_000,
+        askingPriceQualifier: 'offers_in_region_of',
+        hideRentFromMarketing: false,
+        hidePriceFromMarketing: false,
+      }),
+      agentId: 283634,
+    });
+    expect(region.payload.building.pricing).toEqual({
+      price: 200000,
+      displayQualifier: 'OFFERS_IN_REGION_OF',
+    });
+
+    const guide = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'for_sale',
+        askingRentPence: null,
+        askingPricePence: 20_000_000,
+        askingPriceQualifier: 'guide_price',
+        hideRentFromMarketing: false,
+        hidePriceFromMarketing: false,
+      }),
+      agentId: 283634,
+    });
+    expect(guide.payload.building.pricing).toEqual({
+      price: 200000,
+      displayQualifier: 'GUIDE_PRICE',
+    });
+  });
+
+  it('omits displayQualifier for a bare asking price', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'for_sale',
+        askingRentPence: null,
+        askingPricePence: 20_000_000,
+        askingPriceQualifier: 'none',
+        hideRentFromMarketing: false,
+        hidePriceFromMarketing: false,
+      }),
+      agentId: 283634,
+    });
+    expect(payload.building.pricing).toEqual({
+      price: 200000,
+    });
+  });
+
+  it('keeps dual to-let+for-sale on lettings pricing without a sale qualifier', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'to_let_and_for_sale',
+        askingRentPence: 2_550_000,
+        askingPricePence: 20_000_000,
+        askingPriceQualifier: 'guide_price',
+        hideRentFromMarketing: false,
+        hidePriceFromMarketing: false,
+      }),
+      agentId: 283634,
+    });
+    expect(payload.building.pricing).toEqual({
+      price: 25500,
+      frequency: 'YEARLY',
+    });
+  });
+
   it('omits let terms for sale-only disposals', () => {
     const { payload } = mapListingToRightmovePayload({
       listing: baseListing({

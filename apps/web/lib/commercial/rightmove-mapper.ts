@@ -10,6 +10,7 @@ import {
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 
+import { rightmoveSaleDisplayQualifier } from './asking-price';
 import { sortListingMedia } from './listing-media-order';
 import { RIGHTMOVE_MEDIA_URL_MAX_LENGTH } from './listing-media-public-url';
 import type {
@@ -44,6 +45,7 @@ export type RightmoveMapperListing = {
   status: ListingStatus;
   askingRentPence: number | null;
   askingPricePence: number | null;
+  askingPriceQualifier?: string | null;
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
   hidePriceFromMarketing: boolean;
@@ -597,8 +599,14 @@ function buildBuildingPricing(listing: RightmoveMapperListing): {
     };
   }
 
+  const displayQualifier = rightmoveSaleDisplayQualifier({
+    hidePriceFromMarketing: false,
+    askingPriceQualifier: listing.askingPriceQualifier,
+  });
+
   return {
     price: price ?? 0,
+    ...(displayQualifier ? { displayQualifier } : {}),
   };
 }
 

@@ -6,6 +6,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { buildPropertyHiveAskingPrice } from '~/lib/commercial/asking-price';
 import {
   type DisposalType,
   disposalIncludesForSale,
@@ -64,6 +65,7 @@ type ListingRow = {
   asking_rent_pence: number | null;
   asking_rent_to_pence: number | null;
   asking_price_pence: number | null;
+  asking_price_qualifier: string | null;
   rent_frequency: string | null;
   hide_rent_from_marketing: boolean;
   hide_price_from_marketing: boolean;
@@ -364,7 +366,6 @@ function renderPropertyXml(
   const rentFromPounds = penceToPounds(listing.asking_rent_pence);
   const rentToPounds =
     penceToPounds(listing.asking_rent_to_pence) ?? rentFromPounds;
-  const pricePounds = penceToPounds(listing.asking_price_pence);
   const sizeFrom = listing.size_min_sqft;
   const sizeTo = listing.size_max_sqft ?? listing.size_min_sqft;
   const points = keyPoints(listing.key_points);
@@ -378,10 +379,12 @@ function renderPropertyXml(
     includesToLet &&
     rentFromPounds != null &&
     !listing.hide_rent_from_marketing;
-  const showPrice =
-    includesForSale &&
-    pricePounds != null &&
-    !listing.hide_price_from_marketing;
+  const salePrice = buildPropertyHiveAskingPrice({
+    includesForSale,
+    askingPricePence: listing.asking_price_pence,
+    askingPriceQualifier: listing.asking_price_qualifier,
+    hidePriceFromMarketing: listing.hide_price_from_marketing,
+  });
 
   const rentInner = showRent
     ? [
@@ -409,21 +412,18 @@ function renderPropertyXml(
         ].join('')
       : '';
 
-  const priceInner = showPrice
+  const priceInner = salePrice.hasSalePriceBlock
     ? [
-        el('value', pricePounds),
-        '<qualifier/>',
+        salePrice.valuePounds != null
+          ? el('value', salePrice.valuePounds)
+          : '<value/>',
+        salePrice.qualifier
+          ? el('qualifier', salePrice.qualifier)
+          : '<qualifier/>',
         '<comment/>',
-        el('on_application', '0'),
+        el('on_application', salePrice.onApplication ? '1' : '0'),
       ].join('')
-    : includesForSale && listing.hide_price_from_marketing
-      ? [
-          '<value/>',
-          '<qualifier/>',
-          '<comment/>',
-          el('on_application', '1'),
-        ].join('')
-      : '';
+    : '';
 
   const rentLabel = showRent
     ? formatMoneyLabel(
@@ -438,11 +438,7 @@ function renderPropertyXml(
       ? 'POA'
       : '';
 
-  const priceLabel = showPrice
-    ? `£${pricePounds!.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`
-    : includesForSale && listing.hide_price_from_marketing
-      ? 'POA'
-      : '';
+  const priceLabel = salePrice.price;
 
   const imagesXml = images.length
     ? `<images>${images

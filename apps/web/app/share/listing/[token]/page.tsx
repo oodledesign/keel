@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
+import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
   DISPOSAL_TYPE_LABELS,
   type DisposalType,
@@ -31,6 +32,7 @@ type SharedListing = {
   asking_rent_pence: number | null;
   asking_rent_to_pence: number | null;
   asking_price_pence: number | null;
+  asking_price_qualifier: string | null;
   size_min_sqft: number | null;
   size_max_sqft: number | null;
   hide_rent_from_marketing: boolean;
@@ -80,7 +82,7 @@ async function loadSharedListing(
   const { data: listing, error } = await admin
     .from('commercial_listings')
     .select(
-      'id, name, address_line_1, address_line_2, town, postcode, status, disposal_type, asking_rent_pence, asking_rent_to_pence, asking_price_pence, size_min_sqft, size_max_sqft, hide_rent_from_marketing, hide_price_from_marketing',
+      'id, name, address_line_1, address_line_2, town, postcode, status, disposal_type, asking_rent_pence, asking_rent_to_pence, asking_price_pence, asking_price_qualifier, size_min_sqft, size_max_sqft, hide_rent_from_marketing, hide_price_from_marketing',
     )
     .eq('landlord_share_token', token)
     .eq('landlord_share_enabled', true)
@@ -183,8 +185,13 @@ async function LandlordSharePage({ params }: LandlordSharePageProps) {
 
   const priceLabel = (() => {
     if (!disposalIncludesForSale(disposalType)) return '—';
-    if (listing.hide_price_from_marketing) return 'On application';
-    return formatMoney(listing.asking_price_pence);
+    return (
+      formatAskingPrice({
+        askingPricePence: listing.asking_price_pence,
+        askingPriceQualifier: listing.asking_price_qualifier,
+        hidePriceFromMarketing: listing.hide_price_from_marketing,
+      }) ?? '—'
+    );
   })();
 
   return (

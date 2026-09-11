@@ -26,6 +26,7 @@ export type OverlayListing = {
   askingRentPence: number | null;
   askingRentToPence: number | null;
   askingPricePence: number | null;
+  askingPriceQualifier?: string | null;
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
   hidePriceFromMarketing: boolean;
@@ -57,6 +58,7 @@ function asBrochureListing(listing: OverlayListing): BrochureListing {
     askingRentPence: listing.askingRentPence,
     askingRentToPence: listing.askingRentToPence,
     askingPricePence: listing.askingPricePence,
+    askingPriceQualifier: listing.askingPriceQualifier,
     rentFrequency: listing.rentFrequency,
     hideRentFromMarketing: listing.hideRentFromMarketing,
     hidePriceFromMarketing: listing.hidePriceFromMarketing,

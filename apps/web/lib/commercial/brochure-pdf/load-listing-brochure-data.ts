@@ -91,6 +91,8 @@ function mapListingRow(listingRow: Record<string, unknown>): BrochureListing {
     askingRentPence: asNum(listingRow.asking_rent_pence),
     askingRentToPence: asNum(listingRow.asking_rent_to_pence),
     askingPricePence: asNum(listingRow.asking_price_pence),
+    askingPriceQualifier:
+      (listingRow.asking_price_qualifier as string | null) ?? 'none',
     rentFrequency: (listingRow.rent_frequency as string | null) ?? null,
     hideRentFromMarketing: Boolean(listingRow.hide_rent_from_marketing),
     hidePriceFromMarketing: Boolean(listingRow.hide_price_from_marketing),
@@ -133,6 +135,7 @@ const LISTING_SELECT = [
   'asking_rent_pence',
   'asking_rent_to_pence',
   'asking_price_pence',
+  'asking_price_qualifier',
   'rent_frequency',
   'hide_rent_from_marketing',
   'hide_price_from_marketing',
