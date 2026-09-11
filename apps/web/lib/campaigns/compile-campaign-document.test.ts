@@ -273,9 +273,74 @@ describe('compileCampaignDocument', () => {
     );
 
     expect(html).toContain('background:#FFF4E8');
+    expect(html).toContain('background-color:#FFF4E8');
+    expect(html).toContain('bgcolor="#FFF4E8"');
     expect(html).toContain('padding:8px 16px 8px 16px');
     expect(html).toContain('padding:20px 28px 20px 28px');
     expect(html).not.toMatch(/logo[\s\S]*background:#0D2344/);
+  });
+
+  it('emits light color-scheme, filled surfaces, nested logos, and a hairline divider', () => {
+    const branded = {
+      ...brand,
+      logo_on_light_url: 'https://cdn.example.com/on-light.png',
+      logo_on_dark_url: 'https://cdn.example.com/on-dark.png',
+    };
+
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          { id: 'logo-light', type: 'logo', logoVariant: 'on_light' },
+          { id: 'logo-dark', type: 'logo', logoVariant: 'on_dark' },
+          { id: 'div', type: 'divider' },
+          { id: 't1', type: 'text', html: '<p>Hello</p>' },
+        ],
+      },
+      branded,
+    );
+
+    expect(html).toContain('name="color-scheme"');
+    expect(html).toContain('name="supported-color-schemes"');
+    expect(html).toContain('content="light only"');
+    expect(html).toContain('bgcolor="#f4f1ec"');
+    expect(html).toContain('background-color:#f4f1ec');
+    expect(html).toContain('bgcolor="#FFFFFF"');
+    expect(html).toContain('background-color:#FFFFFF');
+    expect(html).toContain('bgcolor="#0D2344"');
+    expect(html).toContain('background-color:#0D2344');
+    expect(html).toContain('color:#333333');
+    expect(html).toMatch(
+      /<td[^>]*bgcolor="#FFFFFF"[^>]*>\s*<img src="https:\/\/cdn\.example\.com\/on-light\.png"/,
+    );
+    expect(html).toMatch(
+      /<td[^>]*bgcolor="#0D2344"[^>]*>\s*<img src="https:\/\/cdn\.example\.com\/on-dark\.png"/,
+    );
+    expect(html).toContain('height="1"');
+    expect(html).toContain('bgcolor="#B8AFA6"');
+    expect(html).toContain('background-color:#B8AFA6');
+    expect(html).not.toContain('border-top:1px solid');
+    expect(html).not.toContain('#e4ddd6');
+  });
+
+  it('lets an explicit logo background win over variant pairing', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 'logo',
+            type: 'logo',
+            logoVariant: 'on_light',
+            backgroundColor: '#351E28',
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain('bgcolor="#351E28"');
+    expect(html).toMatch(/<td[^>]*bgcolor="#351E28"[^>]*>\s*<img /);
   });
 
   it('renders image alignment, presets, and full width', () => {

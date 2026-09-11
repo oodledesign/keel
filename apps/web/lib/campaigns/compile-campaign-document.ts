@@ -24,11 +24,13 @@ import { isCampaignFormUrlToken } from './form-link';
 const DEFAULT_PRIMARY = '#0D2344';
 const DEFAULT_SECONDARY = '#FFFFFF';
 const DEFAULT_ACCENT = '#57C87F';
-const CONTENT_COLOR = '#09111F';
+/** Mid-contrast body text — survives Gmail/Spark invert better than near-black. */
+const CONTENT_COLOR = '#333333';
 const MUTED_COLOR = '#6b5c63';
 const INFO_COLOR = '#41606F';
 const PAGE_BG = '#f4f1ec';
-const DIVIDER_COLOR = '#e4ddd6';
+/** Mid-contrast hairline — `border-top` vanishes when clients invert. */
+const DIVIDER_COLOR = '#B8AFA6';
 
 const ALLOWED_RICH_TAGS = new Set([
   'p',
@@ -76,8 +78,11 @@ ${CAMPAIGN_DOCUMENT_MARKER}
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="x-apple-disable-message-reformatting" />
+<meta name="color-scheme" content="light only" />
+<meta name="supported-color-schemes" content="light only" />
 <title></title>
 <style type="text/css">
+  :root { color-scheme: light only; }
   @media only screen and (max-width: 620px) {
     .ozer-email-col { display: block !important; width: 100% !important; max-width: 100% !important; }
     .ozer-email-col + .ozer-email-col { padding-top: 16px !important; }
@@ -93,11 +98,11 @@ ${CAMPAIGN_DOCUMENT_MARKER}
 </noscript>
 <![endif]-->
 </head>
-<body style="margin:0;padding:0;background:${PAGE_BG};">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;background:${PAGE_BG};">
+<body bgcolor="${PAGE_BG}" style="margin:0;padding:0;${fillCss(PAGE_BG)}">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"${fillBgcolor(PAGE_BG)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${fillCss(PAGE_BG)}">
   <tr>
-    <td align="center" style="padding:24px 12px;background:${PAGE_BG};">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;width:600px;max-width:600px;background:${colors.secondary};">
+    <td align="center"${fillBgcolor(PAGE_BG)} style="padding:24px 12px;${fillCss(PAGE_BG)}">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600"${fillBgcolor(colors.secondary)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;width:600px;max-width:600px;${fillCss(colors.secondary)}">
         ${rows.join('\n')}
       </table>
     </td>
@@ -123,7 +128,7 @@ function renderBlock(
 ): string {
   switch (block.type) {
     case 'logo':
-      return renderLogoRow(block, brand);
+      return renderLogoRow(block, brand, colors);
     case 'heading':
       return renderHeadingRow(block, brand);
     case 'text':
@@ -148,18 +153,52 @@ function renderBlock(
 function renderLogoRow(
   block: Extract<CampaignBlock, { type: 'logo' }>,
   brand: CampaignBrand,
+  colors: ReturnType<typeof resolveCompileColors>,
 ): string {
   const variant = (block.logoVariant ?? 'primary') as BrandLogoChoice;
   const src = resolveBrandLogoChoice(brand, variant);
-  const logo = src
+  const background = resolveLogoRowBackground(block, brand, colors, variant);
+  const surface = background ?? colors.secondary;
+  const image = src
     ? `<img src="${escapeAttr(src)}" alt="" height="40" style="display:block;max-height:40px;width:auto;border:0;" />`
+    : '';
+  const logo = image
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td${fillBgcolor(surface)} style="${fillCss(surface)}">${image}</td></tr></table>`
     : '';
 
   return styledRow(logo, {
     align: block.align ?? 'left',
-    background: resolveCampaignBlockBackground(block, brand),
+    background,
     padding: resolveCampaignBlockPadding(block),
   });
+}
+
+/**
+ * Pair logo variants with a filled surface when the block has no explicit colour.
+ * `on_light` sits on the card; `on_dark` / primary keep the brand primary plate.
+ */
+function resolveLogoRowBackground(
+  block: Extract<CampaignBlock, { type: 'logo' }>,
+  brand: CampaignBrand,
+  colors: ReturnType<typeof resolveCompileColors>,
+  variant: BrandLogoChoice,
+): string | null {
+  const explicit = resolveCampaignBlockBackground(block, brand);
+  const raw = block.backgroundColor;
+
+  if (raw === 'transparent' || raw === '' || raw === null) {
+    return null;
+  }
+
+  if (isCampaignHexColor(raw)) {
+    return raw;
+  }
+
+  if (variant === 'on_light') {
+    return colors.secondary;
+  }
+
+  return explicit;
 }
 
 function renderHeadingRow(
@@ -243,7 +282,7 @@ function renderButtonRow(
   return styledRow(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${align}" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
       <tr>
-        <td align="center" bgcolor="${accent}" style="background:${accent};border-radius:6px;">
+        <td align="center"${fillBgcolor(accent)} style="${fillCss(accent)}border-radius:6px;">
           <a href="${escapeAttr(href)}" style="display:inline-block;padding:12px 24px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.2;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;">${label}</a>
         </td>
       </tr>
@@ -261,7 +300,7 @@ function renderDividerRow(
   brand: CampaignBrand,
 ) {
   return styledRow(
-    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td style="border-top:1px solid ${DIVIDER_COLOR};font-size:0;line-height:0;">&nbsp;</td></tr></table>`,
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"><tr><td height="1"${fillBgcolor(DIVIDER_COLOR)} style="${fillCss(DIVIDER_COLOR)}font-size:0;line-height:0;height:1px;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>`,
     {
       background: resolveCampaignBlockBackground(block, brand),
       padding: resolveCampaignBlockPadding(block),
@@ -368,6 +407,14 @@ function renderHtmlRow(
   );
 }
 
+function fillCss(color: string): string {
+  return `background:${color};background-color:${color};`;
+}
+
+function fillBgcolor(color: string): string {
+  return ` bgcolor="${color}"`;
+}
+
 function styledRow(
   inner: string,
   options: {
@@ -378,13 +425,12 @@ function styledRow(
   },
 ): string {
   const align = options.align ?? 'left';
-  const background = options.background
-    ? `background:${options.background};`
-    : '';
+  const background = options.background ? fillCss(options.background) : '';
+  const bgcolor = options.background ? fillBgcolor(options.background) : '';
   const extra = options.extraTdStyle ?? '';
 
   return row(
-    `<td align="${align}" style="${background}padding:${paddingCss(options.padding)};font-family:Arial,Helvetica,sans-serif;color:${CONTENT_COLOR};${extra}">${inner}</td>`,
+    `<td align="${align}"${bgcolor} style="${background}padding:${paddingCss(options.padding)};font-family:Arial,Helvetica,sans-serif;color:${CONTENT_COLOR};${extra}">${inner}</td>`,
   );
 }
 
