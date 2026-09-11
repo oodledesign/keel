@@ -62,10 +62,25 @@ export async function resubscribeMailingListPublicPreference(
   admin: SupabaseClient,
   token: string,
 ): Promise<PublicMailingPreferenceResult | null> {
-  return (
+  const result =
     (await resubscribeWorkspaceMailingListByToken(admin, token)) ??
-    (await resubscribeCampaignRecipientByToken(admin, token))
-  );
+    (await resubscribeCampaignRecipientByToken(admin, token));
+
+  if (!result) return null;
+
+  if (result.marketingStatus !== 'suppressed') {
+    try {
+      await createCommercialCirculationService(admin).resubscribe(
+        result.accountId,
+        result.email,
+        { consentSource: 'unsubscribe_page_resubscribe' },
+      );
+    } catch {
+      // Business workspaces have no circulation rows; ignore.
+    }
+  }
+
+  return result;
 }
 
 export async function loadWorkspaceNameForPreference(
