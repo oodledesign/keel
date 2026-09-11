@@ -85,6 +85,16 @@ export function formatSeriesTime(hour: number, minute: number): string {
   return `${padTimePart(hour)}:${padTimePart(minute)}`;
 }
 
+/** Campaign names are capped at 160 chars. */
+export function formatInstanceCampaignName(
+  seriesName: string,
+  occurrenceLabel: string,
+): string {
+  const raw = `${seriesName} · ${occurrenceLabel}`;
+  if (raw.length <= 160) return raw;
+  return `${raw.slice(0, 159)}…`;
+}
+
 function parseYmd(value: string): { year: number; month: number; day: number } {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!match) {
@@ -138,7 +148,11 @@ export function isoWeekdayInZone(ymd: string, timeZone: string): number {
     Sat: 6,
     Sun: 7,
   };
-  return map[label] ?? 1;
+  const weekday = map[label];
+  if (!weekday) {
+    throw new Error(`Could not resolve weekday for ${ymd}`);
+  }
+  return weekday;
 }
 
 function lastDayOfMonth(year: number, month: number): number {

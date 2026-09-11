@@ -61,5 +61,5 @@ export const CampaignSeriesInstanceActionSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),
   campaignId: z.string().uuid(),
-  seriesId: z.string().uuid().optional(),
+  seriesId: z.string().uuid(),
 });

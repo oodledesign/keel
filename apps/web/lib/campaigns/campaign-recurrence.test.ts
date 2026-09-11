@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addCalendarDays,
   addCalendarMonths,
+  formatInstanceCampaignName,
   formatSeriesTime,
   isoWeekdayInZone,
   planSeriesInstanceGeneration,
@@ -14,6 +15,15 @@ describe('campaign recurrence planner', () => {
   it('labels ISO weekdays', () => {
     expect(weekdayLabel(5)).toBe('Friday');
     expect(formatSeriesTime(12, 0)).toBe('12:00');
+  });
+
+  it('keeps generated instance names within 160 characters', () => {
+    const name = formatInstanceCampaignName(
+      'A'.repeat(160),
+      'Fri, 11 Sep 2026',
+    );
+    expect(name.length).toBeLessThanOrEqual(160);
+    expect(name.endsWith('…')).toBe(true);
   });
 
   it('adds calendar months and clamps day-of-month', () => {

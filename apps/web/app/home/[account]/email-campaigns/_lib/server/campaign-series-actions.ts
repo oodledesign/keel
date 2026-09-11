@@ -144,11 +144,7 @@ export const markCampaignInstanceReadyAction = enhanceAction(
       accountId: data.accountId,
       campaignId: data.campaignId,
     });
-    revalidateSeriesPaths(
-      data.accountSlug,
-      data.seriesId ?? 'series',
-      data.campaignId,
-    );
+    revalidateSeriesPaths(data.accountSlug, data.seriesId, data.campaignId);
     return { success: true as const };
   },
   { auth: true, schema: CampaignSeriesInstanceActionSchema },
@@ -162,11 +158,7 @@ export const markCampaignInstanceUnreadyAction = enhanceAction(
       accountId: data.accountId,
       campaignId: data.campaignId,
     });
-    revalidateSeriesPaths(
-      data.accountSlug,
-      data.seriesId ?? 'series',
-      data.campaignId,
-    );
+    revalidateSeriesPaths(data.accountSlug, data.seriesId, data.campaignId);
     return { success: true as const };
   },
   { auth: true, schema: CampaignSeriesInstanceActionSchema },
@@ -180,11 +172,7 @@ export const skipCampaignInstanceAction = enhanceAction(
       accountId: data.accountId,
       campaignId: data.campaignId,
     });
-    revalidateSeriesPaths(
-      data.accountSlug,
-      data.seriesId ?? 'series',
-      data.campaignId,
-    );
+    revalidateSeriesPaths(data.accountSlug, data.seriesId, data.campaignId);
     return { success: true as const };
   },
   { auth: true, schema: CampaignSeriesInstanceActionSchema },

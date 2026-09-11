@@ -214,8 +214,9 @@ export function CampaignSendPanel({
                 className={`text-sm ${workspaceTextMuted}`}
                 data-test="campaign-send-not-ready"
               >
-                Mark this occurrence Ready before it can send. Draft series
-                instances never go out.
+                Send now is blocked until this week is Ready. Mark Ready on the
+                planner, or confirm a schedule below — that also marks it Ready.
+                Drafts never go out on their own.
               </p>
             ) : null}
             <Button

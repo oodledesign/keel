@@ -16,6 +16,7 @@ import {
 import {
   type SeriesRecurrenceFreq,
   seriesRecurrenceSummary as describeSeriesRecurrence,
+  formatInstanceCampaignName,
   formatOccurrenceLabel,
   planSeriesInstanceGeneration,
 } from '~/lib/campaigns/campaign-recurrence';
@@ -211,7 +212,15 @@ class CampaignSeriesService {
     }
 
     const series = mapSeries(data as Record<string, unknown>);
-    await this.generateMissing(series);
+    try {
+      await this.generateMissing(series);
+    } catch (error) {
+      console.error(
+        '[campaigns] generate series instances after create failed',
+        series.id,
+        error instanceof Error ? error.message : error,
+      );
+    }
     return series;
   }
 
@@ -340,7 +349,10 @@ class CampaignSeriesService {
     const rows = planned.map((occurrence) => ({
       account_id: series.accountId,
       created_by: series.createdBy,
-      name: `${series.name} · ${formatOccurrenceLabel(occurrence.occurrenceKey, series.timezone)}`,
+      name: formatInstanceCampaignName(
+        series.name,
+        formatOccurrenceLabel(occurrence.occurrenceKey, series.timezone),
+      ),
       subject: series.subject,
       preview_text: series.previewText,
       html_body: series.htmlBody,
@@ -388,6 +400,7 @@ class CampaignSeriesService {
       throw new Error('This occurrence has no send time');
     }
 
+    // Past occurrence times stay scheduled so the next cron tick can catch up.
     const { error } = await fromTable(this.client, CAMPAIGNS_TABLE)
       .update({
         ready: true,

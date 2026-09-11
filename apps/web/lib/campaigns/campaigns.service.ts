@@ -448,6 +448,7 @@ class CampaignsService {
     }
 
     this.assertReadyToSend(campaign);
+    // Scheduling a series instance is an explicit Ready path (same as Mark ready).
 
     const when = new Date(input.scheduledAt);
     if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
