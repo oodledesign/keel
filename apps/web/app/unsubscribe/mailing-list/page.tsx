@@ -46,7 +46,8 @@ export default async function MailingListUnsubscribePage({
         );
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Unable to update preference';
+      error =
+        err instanceof Error ? err.message : 'Unable to update preference';
     }
   } else {
     error = 'This unsubscribe link is missing or invalid.';

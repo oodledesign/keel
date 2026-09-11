@@ -10,8 +10,8 @@ import {
 } from '~/lib/campaigns/resolve-campaign-audience';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
 import {
-  lookupWorkspaceMailingListByToken,
   type PublicMailingPreferenceResult,
+  lookupWorkspaceMailingListByToken,
   resubscribeWorkspaceMailingListByToken,
   unsubscribeWorkspaceMailingListByToken,
 } from '~/lib/workspace-forms/workspace-mailing-list';

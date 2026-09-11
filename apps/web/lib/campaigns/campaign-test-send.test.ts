@@ -33,9 +33,7 @@ describe('campaign test send helpers', () => {
     expect(
       isUsableMailingListUnsubscribeToken(CAMPAIGN_TEST_UNSUBSCRIBE_TOKEN),
     ).toBe(false);
-    expect(
-      isUsableMailingListUnsubscribeToken('a'.repeat(16)),
-    ).toBe(true);
+    expect(isUsableMailingListUnsubscribeToken('a'.repeat(16))).toBe(true);
   });
 
   it('prefixes subject with [Test] once', () => {

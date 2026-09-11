@@ -8,8 +8,8 @@ import { getLogger } from '@kit/shared/logger';
 
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
 import {
-  listWorkspaceMailingListSubscribers,
   type PublicMailingPreferenceResult,
+  listWorkspaceMailingListSubscribers,
 } from '~/lib/workspace-forms/workspace-mailing-list';
 
 import {
