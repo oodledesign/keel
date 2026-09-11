@@ -219,6 +219,49 @@ describe('compileCampaignDocument', () => {
     expect(html).not.toContain('<p style="margin:0 0 12px;">Coffee</p>');
   });
 
+  it('restores default paragraph margin after a closed list', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 't-mixed',
+            type: 'text',
+            html: '<ul><li><p>In list</p></li></ul><p>After list</p>',
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain('<p style="margin:0;">In list</p>');
+    expect(html).toContain('<p style="margin:0 0 12px;">After list</p>');
+  });
+
+  it('collapses TipTap paragraph wrappers inside ordered list items', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 't-ol',
+            type: 'text',
+            html: '<ol><li><p>First</p></li><li><p>Second</p></li></ol>',
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain(
+      '<ol style="margin:0 0 6px;padding-left:20px;list-style-type:decimal;">',
+    );
+    expect(html).toContain(
+      '<li style="margin:0 0 2px;padding:0;"><p style="margin:0;">First</p></li>',
+    );
+    expect(html).not.toContain('<p style="margin:0 0 12px;">First</p>');
+  });
+
   it('appends an unsubscribe footer when the document has none', () => {
     const html = compileCampaignDocument(
       {
@@ -340,8 +383,9 @@ describe('compileCampaignDocument', () => {
     expect(html).toContain('bgcolor="#FFFFFF"');
     expect(html).toContain('background-color:#FFFFFF');
     expect(html).toMatch(
-      /<body[^>]*bgcolor="#FFFFFF"[\s\S]*?<table[^>]*width="100%"[^>]*bgcolor="#FFFFFF"[\s\S]*?<td[^>]*bgcolor="#FFFFFF"[^>]*style="[^"]*background-color:#FFFFFF[\s\S]*?<table[^>]*width="600"[^>]*bgcolor="#FFFFFF"/,
+      /<body[^>]*bgcolor="#FFFFFF"[\s\S]*?<table[^>]*width="100%"[^>]*bgcolor="#FFFFFF"[\s\S]*?<td[^>]*bgcolor="#FFFFFF"[^>]*style="[^"]*background-color:#FFFFFF[\s\S]*?<table[^>]*align="center"[^>]*width="600"[^>]*bgcolor="#FFFFFF"/,
     );
+    expect(html).toContain('margin:0 auto');
     expect(html).not.toContain('padding:24px 12px');
     expect(html).not.toContain('#f4f1ec');
     expect(html).toContain('bgcolor="#0D2344"');
@@ -405,6 +449,24 @@ describe('compileCampaignDocument', () => {
     expect(html).toContain('height="2"');
     expect(html).toContain('bgcolor="#C4BBB3"');
     expect(html).not.toContain('border-top:');
+  });
+
+  it('passes through divider padding values larger than the inset minimum', () => {
+    const html = compileCampaignDocument(
+      {
+        version: 1,
+        blocks: [
+          {
+            id: 'div',
+            type: 'divider',
+            padding: { top: 16, right: 48, bottom: 16, left: 48 },
+          },
+        ],
+      },
+      brand,
+    );
+
+    expect(html).toContain('padding:16px 48px 16px 48px');
   });
 
   it('recompiles from body_document on send instead of stale html_body', () => {

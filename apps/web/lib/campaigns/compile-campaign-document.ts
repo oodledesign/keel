@@ -114,7 +114,7 @@ ${CAMPAIGN_DOCUMENT_MARKER}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"${fillBgcolor(surface)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${fillCss(surface)}">
   <tr>
     <td align="center"${fillBgcolor(surface)} style="${fillCss(surface)}">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600"${fillBgcolor(surface)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;width:600px;max-width:600px;${fillCss(surface)}">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" width="600"${fillBgcolor(surface)} style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;width:600px;max-width:600px;margin:0 auto;${fillCss(surface)}">
         ${rows.join('\n')}
       </table>
     </td>
