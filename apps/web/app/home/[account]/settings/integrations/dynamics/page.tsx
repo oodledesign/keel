@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { Trans } from '@kit/ui/trans';
+
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { workspaceLinkAccent, workspaceTextMuted } from '~/lib/workspace-ui';
@@ -55,14 +57,13 @@ async function DynamicsSettingsPage({ params }: DynamicsSettingsPageProps) {
           href={integrationsHref}
           className={`text-sm font-medium ${workspaceLinkAccent}`}
         >
-          ← Integrations
+          ← <Trans i18nKey="common:routes.integrations" />
         </Link>
         <h2 className="mt-3 text-lg font-semibold text-[var(--workspace-shell-text)]">
-          Dynamics 365
+          <Trans i18nKey="common:routes.dynamics" />
         </h2>
         <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-          Connect Dataverse so mailing-list signups upsert Contacts with
-          marketing consent. Ozer stays the emailable source of truth.
+          <Trans i18nKey="common:workspaceIntegrationsDynamicsDescription" />
         </p>
       </div>
       <DynamicsSettingsPanel

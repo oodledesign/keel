@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { Trans } from '@kit/ui/trans';
+
 import pathsConfig from '~/config/paths.config';
 import type { DynamicsConnectionPublic } from '~/lib/dynamics/types';
 import {
@@ -30,11 +32,10 @@ export function WorkspaceIntegrationsHome({
     >
       <div>
         <h2 className={`text-lg font-semibold ${workspaceText}`}>
-          Integrations
+          <Trans i18nKey="common:routes.integrations" />
         </h2>
         <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-          Connect third-party tools to this workspace. More integrations will
-          land here using the same card pattern.
+          <Trans i18nKey="common:workspaceIntegrationsDescription" />
         </p>
       </div>
 
@@ -47,12 +48,10 @@ export function WorkspaceIntegrationsHome({
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className={`text-sm font-semibold ${workspaceText}`}>
-                Dynamics 365
+                <Trans i18nKey="common:routes.dynamics" />
               </h3>
               <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-                Sync mailing-list signups to Dataverse Contacts with
-                marketing-consent flags. Ozer stays the emailable source of
-                truth.
+                <Trans i18nKey="common:workspaceIntegrationsDynamicsBlurb" />
               </p>
             </div>
             <span
@@ -62,13 +61,17 @@ export function WorkspaceIntegrationsHome({
                   : `${workspaceTextMuted} border border-[color:var(--workspace-shell-border)]`
               }`}
             >
-              {dynamics.connected ? 'Connected' : 'Not connected'}
+              {dynamics.connected ? (
+                <Trans i18nKey="common:workspaceIntegrationsConnected" />
+              ) : (
+                <Trans i18nKey="common:workspaceIntegrationsNotConnected" />
+              )}
             </span>
           </div>
           <p
             className={`mt-4 text-sm font-medium text-[var(--workspace-shell-accent-text)]`}
           >
-            Configure
+            <Trans i18nKey="common:workspaceIntegrationsConfigure" />
           </p>
         </Link>
       </div>

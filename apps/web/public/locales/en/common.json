@@ -87,6 +87,12 @@
     "rankly": "Rankly",
     "messages": "Messages"
   },
+  "workspaceIntegrationsDescription": "Connect third-party tools to this workspace. More integrations will land here using the same card pattern.",
+  "workspaceIntegrationsDynamicsBlurb": "Sync mailing-list signups to Dataverse Contacts with marketing-consent flags. Ozer stays the emailable source of truth.",
+  "workspaceIntegrationsDynamicsDescription": "Connect Dataverse so mailing-list signups upsert Contacts with marketing consent. Ozer stays the emailable source of truth.",
+  "workspaceIntegrationsConnected": "Connected",
+  "workspaceIntegrationsNotConnected": "Not connected",
+  "workspaceIntegrationsConfigure": "Configure",
   "roles": {
     "owner": {
       "label": "Owner",

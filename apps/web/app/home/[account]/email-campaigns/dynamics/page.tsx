@@ -10,6 +10,7 @@ export const generateMetadata = async () => ({
   title: 'Dynamics 365',
 });
 
+/** Client-side / RSC navigations skip next.config redirects; keep this page. */
 export default async function LegacyCampaignsDynamicsRedirect({
   params,
 }: LegacyDynamicsPageProps) {
