@@ -49,19 +49,26 @@ const getTaskSchema = z.object({
   id: z.string().uuid(),
 });
 
-const createTaskSchema = z.object({
+export const createTaskSchema = z.object({
   title: z.string().trim().min(1),
   status: taskStatusSchema.optional().default('todo'),
   priority: taskPrioritySchema.optional().default('medium'),
   due_date: z.string().trim().optional(),
   duration_minutes: durationMinutesCreateSchema,
   project_id: z.string().uuid().optional(),
+  phase_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'Optional phase on a phased project. The phase must belong to project_id (or the phase’s project is used when project_id is omitted).',
+    ),
   client_id: z.string().uuid().optional(),
   area_id: z.string().uuid().optional(),
   notes: z.string().optional(),
 });
 
-const updateTaskSchema = z.object({
+export const updateTaskSchema = z.object({
   id: z.string().uuid(),
   title: z.string().trim().min(1).optional(),
   status: taskStatusSchema.optional(),
@@ -69,6 +76,14 @@ const updateTaskSchema = z.object({
   due_date: z.string().trim().nullable().optional(),
   duration_minutes: durationMinutesUpdateSchema,
   project_id: z.string().uuid().nullable().optional(),
+  phase_id: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .describe(
+      'Set to assign the task to a phase on its project. Pass null to unphase. The phase must belong to the task’s project.',
+    ),
   client_id: z.string().uuid().nullable().optional(),
   area_id: z.string().uuid().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -89,7 +104,7 @@ const createSubtaskSchema = z.object({
 });
 
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, duration_minutes, updated_at, project_id, client_id, area_id, account_id, parent_task_id';
+  'id, title, status, priority, due_date, duration_minutes, updated_at, project_id, phase_id, client_id, area_id, account_id, parent_task_id';
 const TASK_DETAIL_SELECT = `${TASK_LIST_SELECT}, notes, user_id`;
 
 type TaskRow = {
@@ -101,6 +116,7 @@ type TaskRow = {
   duration_minutes: number | null;
   updated_at?: string | null;
   project_id: string | null;
+  phase_id?: string | null;
   client_id?: string | null;
   area_id: string | null;
   parent_task_id?: string | null;
@@ -127,6 +143,7 @@ function mapTask(row: TaskRow, extras?: TaskListExtras) {
     duration_minutes: row.duration_minutes,
     updated_at: row.updated_at ?? null,
     project_id: row.project_id,
+    phase_id: row.phase_id ?? null,
     project_name: extras?.project_name ?? null,
     client_id: row.client_id ?? null,
     client_name: extras?.client_name ?? null,
@@ -189,6 +206,72 @@ function buildTaskUpdates(input: {
     area_id: input.area_id,
     notes: input.notes === undefined ? undefined : input.notes?.trim() || null,
   });
+}
+
+export type TaskPhaseAssignment = {
+  phase_id?: string | null;
+  inferred_project_id?: string;
+  inferred_account_id?: string;
+};
+
+export async function resolveTaskPhaseAssignment(
+  supabase: SupabaseClient,
+  input: {
+    phase_id?: string | null;
+    project_id?: string | null;
+    existing_project_id?: string | null;
+    existing_phase_id?: string | null;
+  },
+): Promise<TaskPhaseAssignment> {
+  if (input.phase_id === undefined) {
+    if (input.project_id === null && input.existing_phase_id) {
+      return { phase_id: null };
+    }
+
+    if (
+      input.project_id &&
+      input.existing_project_id &&
+      input.project_id !== input.existing_project_id &&
+      input.existing_phase_id
+    ) {
+      return { phase_id: null };
+    }
+
+    return {};
+  }
+
+  if (input.phase_id === null) {
+    return { phase_id: null };
+  }
+
+  const { data, error } = await supabase
+    .from('project_phases')
+    .select('id, project_id, account_id')
+    .eq('id', input.phase_id)
+    .maybeSingle();
+
+  assertSupabaseOk(data, error, 'resolve phase');
+
+  const phase = data as {
+    id: string;
+    project_id?: string | null;
+    account_id?: string | null;
+  } | null;
+
+  if (!phase?.id || !phase.project_id) {
+    throw new Error('Phase not found');
+  }
+
+  const targetProjectId = input.project_id ?? input.existing_project_id ?? null;
+  if (targetProjectId && targetProjectId !== phase.project_id) {
+    throw new Error('Phase does not belong to this project');
+  }
+
+  return {
+    phase_id: phase.id,
+    inferred_project_id: phase.project_id,
+    inferred_account_id: phase.account_id ?? undefined,
+  };
 }
 
 async function loadTaskRow(
@@ -271,6 +354,12 @@ async function applyTaskFieldUpdates(
   input: z.infer<typeof updateTaskSchema>,
   options?: { requireSubtask?: boolean },
 ) {
+  const existing = await loadTaskRow(supabase, input.id, 'load task to update');
+
+  if (options?.requireSubtask && !existing.parent_task_id) {
+    throw new Error('Task is not a subtask. Use update_task for root tasks.');
+  }
+
   const updates: Record<string, unknown> = buildTaskUpdates(input);
 
   if (input.project_id) {
@@ -346,14 +435,30 @@ async function applyTaskFieldUpdates(
     }
   }
 
-  if (Object.keys(updates).length === 0) {
-    throw new Error('Provide at least one field to update');
+  const assignment = await resolveTaskPhaseAssignment(supabase, {
+    phase_id: input.phase_id,
+    project_id: input.project_id,
+    existing_project_id: existing.project_id,
+    existing_phase_id: existing.phase_id,
+  });
+
+  if (assignment.phase_id !== undefined) {
+    updates.phase_id = assignment.phase_id;
   }
 
-  const existing = await loadTaskRow(supabase, input.id, 'load task to update');
+  if (
+    assignment.inferred_project_id &&
+    input.project_id === undefined &&
+    !existing.project_id
+  ) {
+    updates.project_id = assignment.inferred_project_id;
+    if (assignment.inferred_account_id && !updates.account_id) {
+      updates.account_id = assignment.inferred_account_id;
+    }
+  }
 
-  if (options?.requireSubtask && !existing.parent_task_id) {
-    throw new Error('Task is not a subtask. Use update_task for root tasks.');
+  if (Object.keys(updates).length === 0) {
+    throw new Error('Provide at least one field to update');
   }
 
   const { data, error } = await supabase
@@ -367,6 +472,15 @@ async function applyTaskFieldUpdates(
 
   if (!data) {
     throw new Error('Task not found');
+  }
+
+  if (assignment.phase_id !== undefined && !existing.parent_task_id) {
+    const { error: cascadeError } = await supabase
+      .from('tasks')
+      .update({ phase_id: assignment.phase_id })
+      .eq('parent_task_id', input.id);
+
+    assertSupabaseOk(null, cascadeError, 'cascade task phase');
   }
 
   return data as TaskRow;
@@ -520,17 +634,30 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'create_task',
     {
       description:
-        'Create a root task for the authenticated user. Optional project_id and client_id link it to a project/client (use search_projects / search_clients). duration_minutes is optional estimated effort (max 10080). To add children, use create_subtask with the returned id as parent_task_id.',
+        'Create a root task for the authenticated user. Optional project_id, phase_id, and client_id link it to a project/phase/client (use search_projects / list_project_phases / search_clients). phase_id must belong to that project. duration_minutes is optional estimated effort (max 10080). To add children, use create_subtask with the returned id as parent_task_id.',
       inputSchema: createTaskSchema,
     },
     async (input) => {
+      let projectId = input.project_id;
+      let phaseId: string | undefined;
+
+      if (input.phase_id) {
+        const assignment = await resolveTaskPhaseAssignment(supabase, {
+          phase_id: input.phase_id,
+          project_id: input.project_id,
+        });
+        phaseId = assignment.phase_id ?? undefined;
+        projectId = input.project_id ?? assignment.inferred_project_id;
+      }
+
       const result = await createTaskForUser(supabase, userId, {
         title: input.title,
         status: input.status,
         priority: input.priority,
         dueDate: input.due_date,
         durationMinutes: input.duration_minutes,
-        projectId: input.project_id,
+        projectId,
+        phaseId,
         clientId: input.client_id,
         areaId: input.area_id,
         notes: input.notes,
@@ -550,7 +677,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'update_task',
     {
       description:
-        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, client_id, and area_id. Use create_subtask / list_subtasks / update_subtask for child tasks.',
+        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, phase_id, client_id, and area_id. Set phase_id to assign a task on a phased project; pass null to unphase. The phase must belong to the task’s project. Moving project_id without a new phase_id clears the old phase. Use create_subtask / list_subtasks / update_subtask for child tasks.',
       inputSchema: updateTaskSchema,
     },
     async (input) => {
@@ -612,6 +739,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         durationMinutes: input.duration_minutes,
         notes: input.notes,
         parentTaskId: parent.id,
+        phaseId: parent.phase_id ?? undefined,
         parentTaskContext: {
           projectId: parent.project_id,
           clientId: parent.client_id,
