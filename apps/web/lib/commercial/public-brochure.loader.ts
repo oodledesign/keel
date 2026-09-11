@@ -4,6 +4,7 @@ import { cache } from 'react';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { loadAccountBranchesUncached } from '~/lib/brand/account-branches';
 import {
   DEFAULT_BRAND_ACCENT,
   DEFAULT_BRAND_PRIMARY,
@@ -13,11 +14,13 @@ import {
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
-import type {
-  BrochureAgent,
-  BrochureListing,
-  BrochureMediaItem,
-  PublicBrochureData,
+import {
+  type BrochureAgent,
+  type BrochureBranch,
+  type BrochureListing,
+  type BrochureMediaItem,
+  type PublicBrochureData,
+  resolveBrochureBranch,
 } from '~/lib/commercial/public-brochure.shared';
 
 export type {
@@ -132,6 +135,7 @@ async function loadPublicBrochureByTokenUncached(
         'description',
         'location_copy',
         'key_points',
+        'account_branch_id',
       ].join(', '),
     )
     .eq('brochure_share_token', token)
@@ -180,31 +184,45 @@ async function loadPublicBrochureByTokenUncached(
     keyPoints: mapKeyPoints(listingRow.key_points),
   };
 
-  const [{ data: accountRow }, { data: agentRows }, { data: mediaRows }] =
-    await Promise.all([
-      admin
-        .from('accounts')
-        .select('name')
-        .eq('id', listing.accountId)
-        .maybeSingle(),
-      admin
-        .from('commercial_listing_agents')
-        .select('user_id, sort_order')
-        .eq('listing_id', listing.id)
-        .eq('account_id', listing.accountId)
-        .order('sort_order', { ascending: true }),
-      admin
-        .from('commercial_listing_media')
-        .select(
-          'id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at',
-        )
-        .eq('listing_id', listing.id)
-        .eq('is_private', false)
-        .in('media_type', ['image', 'floorplan'])
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true })
-        .order('id', { ascending: true }),
-    ]);
+  const listingBranchId =
+    (listingRow.account_branch_id as string | null | undefined) ?? null;
+
+  const [
+    { data: accountRow },
+    { data: agentRows },
+    { data: mediaRows },
+    branches,
+  ] = await Promise.all([
+    admin
+      .from('accounts')
+      .select('name')
+      .eq('id', listing.accountId)
+      .maybeSingle(),
+    admin
+      .from('commercial_listing_agents')
+      .select('user_id, sort_order')
+      .eq('listing_id', listing.id)
+      .eq('account_id', listing.accountId)
+      .order('sort_order', { ascending: true }),
+    admin
+      .from('commercial_listing_media')
+      .select(
+        'id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at',
+      )
+      .eq('listing_id', listing.id)
+      .eq('is_private', false)
+      .in('media_type', ['image', 'floorplan'])
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
+    loadAccountBranchesUncached(listing.accountId).catch((err: unknown) => {
+      console.error(
+        '[brochure] branches load error:',
+        err instanceof Error ? err.message : err,
+      );
+      return [];
+    }),
+  ]);
 
   const userIds = (
     (agentRows ?? []) as Array<{ user_id: string; sort_order: number }>
@@ -299,6 +317,11 @@ async function loadPublicBrochureByTokenUncached(
     secondaryColor: DEFAULT_BRAND_SECONDARY,
     accentColor: DEFAULT_BRAND_ACCENT,
   };
+  let brandContact: Pick<BrochureBranch, 'address' | 'phone' | 'email'> = {
+    address: null,
+    phone: null,
+    email: null,
+  };
 
   try {
     const resolved = await loadAccountBrandResolved(listing.accountId);
@@ -308,6 +331,11 @@ async function loadPublicBrochureByTokenUncached(
       secondaryColor: resolved.secondary_color,
       accentColor: resolved.accent_color,
     };
+    brandContact = {
+      address: resolved.address,
+      phone: resolved.phone,
+      email: resolved.contact_email,
+    };
   } catch (err) {
     console.error(
       '[brochure] brand load error:',
@@ -315,15 +343,24 @@ async function loadPublicBrochureByTokenUncached(
     );
   }
 
+  const accountName =
+    (accountRow?.name as string | null | undefined)?.trim() || null;
+  const branch = resolveBrochureBranch({
+    branches,
+    listingBranchId,
+    accountName,
+    fallback: brandContact,
+  });
+
   return {
     token,
     listing,
-    accountName:
-      (accountRow?.name as string | null | undefined)?.trim() || null,
+    accountName,
     brand,
     agents,
     images: media.filter((m) => m.mediaType === 'image'),
     floorplans: media.filter((m) => m.mediaType === 'floorplan'),
+    branch,
   };
 }
 

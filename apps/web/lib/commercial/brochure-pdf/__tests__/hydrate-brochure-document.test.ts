@@ -229,4 +229,120 @@ describe('hydrateBrochureDocument', () => {
       'https://cdn.example.com/cover.jpg',
     );
   });
+
+  it('fills an empty contact shopfront from branch settings', () => {
+    const data = brochureData();
+    const saved: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'contact',
+          layoutId: 'contact',
+          slots: {
+            shopfront: { type: 'image', mediaId: null, url: null },
+          },
+        },
+      ],
+    };
+
+    const hydrated = hydrateBrochureDocument(saved, data);
+    expect(imageUrl(hydrated.pages[0]!.slots, 'shopfront')).toBe(
+      'https://cdn.example.com/shopfront.jpg',
+    );
+  });
+
+  it('refreshes a stale shopfront URL from current branch settings', () => {
+    const data = brochureData();
+    const saved: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'contact',
+          layoutId: 'contact',
+          slots: {
+            shopfront: {
+              type: 'image',
+              mediaId: null,
+              url: 'https://cdn.example.com/old-shopfront.jpg',
+            },
+          },
+        },
+      ],
+    };
+
+    const hydrated = hydrateBrochureDocument(saved, data);
+    expect(imageUrl(hydrated.pages[0]!.slots, 'shopfront')).toBe(
+      'https://cdn.example.com/shopfront.jpg',
+    );
+  });
+
+  it('leaves a listing-media shopfront pick in place', () => {
+    const data = brochureData();
+    const saved: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'contact',
+          layoutId: 'contact',
+          slots: {
+            shopfront: {
+              type: 'image',
+              mediaId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+              url: 'https://cdn.example.com/int-1.jpg',
+            },
+          },
+        },
+      ],
+    };
+
+    const hydrated = hydrateBrochureDocument(saved, data);
+    expect(hydrated.pages[0]!.slots.shopfront).toEqual({
+      type: 'image',
+      mediaId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      url: 'https://cdn.example.com/int-1.jpg',
+    });
+  });
+
+  it('clears shopfront when the branch photo is unset', () => {
+    const data = brochureData({
+      branch: {
+        name: 'Tunbridge Wells',
+        address: '27/29 High Street',
+        phone: '01892 526111',
+        email: 'info@bracketts.co.uk',
+        shopfrontUrl: null,
+      },
+    });
+    const saved: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'contact',
+          layoutId: 'contact',
+          slots: {
+            shopfront: {
+              type: 'image',
+              mediaId: null,
+              url: 'https://cdn.example.com/old-shopfront.jpg',
+            },
+          },
+        },
+      ],
+    };
+
+    const hydrated = hydrateBrochureDocument(saved, data);
+    expect(imageUrl(hydrated.pages[0]!.slots, 'shopfront')).toBeNull();
+  });
 });
