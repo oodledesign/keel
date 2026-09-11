@@ -214,6 +214,8 @@ export async function loadListingBrochureData(
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true }),
+    // Admin read is safe: listing.accountId is already scoped by the RLS
+    // listing query above.
     loadAccountBranchesUncached(listing.accountId).catch((err: unknown) => {
       console.error(
         '[brochure-pdf] branches load error:',

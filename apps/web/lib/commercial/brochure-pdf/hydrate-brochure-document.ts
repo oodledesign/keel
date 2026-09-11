@@ -21,7 +21,6 @@ const PHOTO_SLOT_KEYS: Record<string, string[]> = {
   photo_grid_2: ['photo1', 'photo2'],
   photo_grid_3: ['photo1', 'photo2', 'photo3'],
   floorplan: ['plan'],
-  contact: ['shopfront'],
 };
 
 function isImageSlot(

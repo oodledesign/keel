@@ -194,6 +194,7 @@ async function downloadBrandAssetBytes(
   if (!path) return null;
 
   try {
+    // Dynamic import so the admin client is only loaded when HTTP fetch fails.
     const { getSupabaseServerAdminClient } =
       await import('@kit/supabase/server-admin-client');
     const admin = getSupabaseServerAdminClient();
