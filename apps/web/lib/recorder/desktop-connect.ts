@@ -31,9 +31,10 @@ export function buildDesktopConnectRedirectURL(input: {
   return `${DESKTOP_CONNECT_SCHEME}://connect?${params.toString()}`;
 }
 
-export async function createDesktopConnectSession(input: {
+export async function createRecorderConnectCode(input: {
   userId: string;
   state: string;
+  tokenName: string;
 }) {
   const state = input.state.trim();
   if (!state || state.length > 128) {
@@ -49,7 +50,7 @@ export async function createDesktopConnectSession(input: {
   const { rawToken } = await createApiToken({
     accountId: personalAccountId,
     userId: input.userId,
-    name: 'Ozer Assistant (Mac)',
+    name: input.tokenName,
   });
 
   const code = randomBytes(32).toString('hex');
@@ -66,6 +67,19 @@ export async function createDesktopConnectSession(input: {
   if (error) {
     throw new Error(error.message);
   }
+
+  return { code, state };
+}
+
+export async function createDesktopConnectSession(input: {
+  userId: string;
+  state: string;
+}) {
+  const { code, state } = await createRecorderConnectCode({
+    userId: input.userId,
+    state: input.state,
+    tokenName: 'Ozer Assistant (Mac)',
+  });
 
   return {
     code,

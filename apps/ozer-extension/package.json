@@ -1,0 +1,27 @@
+{
+  "name": "ozer-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "git clean -xdf dist .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,json}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "prettier": "@kit/prettier-config",
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@types/chrome": "^0.1.24",
+    "@types/node": "catalog:",
+    "esbuild": "^0.25.11",
+    "eslint": "catalog:",
+    "happy-dom": "^20.0.10",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

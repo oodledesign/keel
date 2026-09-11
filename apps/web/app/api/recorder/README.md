@@ -33,3 +33,7 @@ Mac Assistant also polls these cookie-free aliases (same `keel_` bearer token as
 `GET /api/recorder/messages/threads`
 
 Both return `{ "items": [thread…] }` using the native messages thread list. Optional query: `workspace` or `account_id` (defaults to the token account), `limit`, `client`. Write/send stays on `/api/native/v1/messages`.
+
+## Chrome extension
+
+The unpacked Chrome extension (`apps/ozer-extension`) uses the same `keel_` tokens. Companion routes live at `/api/extension/v1` (capture, speaker-event buffer, extract-tasks). Live speaker stamps into the current transcript still need the local Assistant HTTP endpoint documented in `apps/ozer-extension/README.md`.

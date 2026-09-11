@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "Ozer",
+  "version": "0.1.0",
+  "description": "Meet speaker names for Ozer Assistant, plus capture to tasks, notes, and contacts.",
+  "action": {
+    "default_title": "Ozer",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "https://app.ozer.so/*",
+    "https://ozer.so/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:18791/*",
+    "http://localhost:18791/*",
+    "http://127.0.0.1:17834/*",
+    "http://localhost:17834/*"
+  ],
+  "optional_host_permissions": ["https://*.ozer.so/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["content/meet.js"],
+      "css": ["content/meet.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "capture-to-ozer": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+O",
+        "mac": "Command+Shift+O"
+      },
+      "description": "Capture the current page or selection to Ozer"
+    }
+  }
+}

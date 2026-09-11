@@ -14,6 +14,7 @@
 | `apps/web` | Main Next.js app | See `apps/web/AGENTS.md` |
 | `apps/web/supabase` | Database schemas & migrations | See `apps/web/supabase/AGENTS.md` |
 | `apps/ios` | Native SwiftUI iPhone app (Ozer) | Xcode project — **not** a pnpm/turbo package. See `apps/ios/README.md` |
+| `apps/ozer-extension` | Ozer Chrome extension (MV3) | Meet speaker bridge + capture-to-Ozer. See `apps/ozer-extension/README.md` |
 | `apps/e2e` | Playwright E2E tests | See `apps/e2e/AGENTS.md` |
 | `packages/ui` | UI components (@kit/ui) | See `packages/ui/AGENTS.md` |
 | `packages/supabase` | Supabase clients | See `packages/supabase/AGENTS.md` |

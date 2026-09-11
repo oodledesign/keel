@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ozer extension options</title>
+    <link rel="stylesheet" href="shared.css" />
+  </head>
+  <body>
+    <h1>Ozer extension</h1>
+    <p class="muted">Minimal permissions. Meet names come from the page you already see. No WebRTC tap, no ASR in the browser.</p>
+
+    <div class="card">
+      <div id="signed-in" class="status"></div>
+      <div id="assistant" class="status"></div>
+      <div class="row">
+        <button id="connect" type="button">Connect workspace</button>
+        <button id="disconnect" class="secondary" type="button">Disconnect</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>
+        <input id="meet-bridge" type="checkbox" />
+        Enable Google Meet speaker bridge
+      </label>
+      <label for="workspace">Connected workspace</label>
+      <select id="workspace"></select>
+      <label for="origin">Ozer origin</label>
+      <input id="origin" placeholder="https://app.ozer.so" />
+      <label for="assistant">Local Assistant origin</label>
+      <input id="assistant-origin" placeholder="http://127.0.0.1:18791" />
+      <p class="muted">Canonical: http://127.0.0.1:18791 — POST /v1/meet/speaker-stamps. Older 17834 builds still work as an alias.</p>
+      <label for="kind">Capture shortcut default</label>
+      <select id="kind">
+        <option value="task">Task</option>
+        <option value="note">Note</option>
+        <option value="contact">Contact stub</option>
+      </select>
+      <p class="muted">Shortcut: Ctrl/⌘ + Shift + O. Change it in chrome://extensions/shortcuts.</p>
+      <button id="save" type="button">Save options</button>
+    </div>
+
+    <div class="card">
+      <label for="token">Paste keel_ token</label>
+      <input id="token" type="password" autocomplete="off" />
+      <label for="code">Or paste a connect code</label>
+      <input id="code" />
+      <label for="state">Connect state</label>
+      <input id="state" />
+      <div class="row">
+        <button id="save-token" class="secondary" type="button">Save token</button>
+        <button id="exchange" class="secondary" type="button">Exchange code</button>
+      </div>
+      <p id="message" class="muted"></p>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>
