@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { type ReactNode, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { ArrowLeft } from 'lucide-react';
-
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
+import { Spinner } from '@kit/ui/spinner';
 
 import pathsConfig from '~/config/paths.config';
 import type { CampaignAnalyticsBundle } from '~/lib/campaigns/campaign-analytics';
@@ -18,6 +17,11 @@ import {
   CAMPAIGN_AUDIENCE_LIST_REQUIRED,
   campaignAudienceListMissing,
 } from '~/lib/campaigns/campaign-audience';
+import type { CampaignLinkedFormSubmissions } from '~/lib/campaigns/campaign-form-submissions';
+import {
+  type CampaignSendProgressSnapshot,
+  buildCampaignSendProgress,
+} from '~/lib/campaigns/campaign-send-progress';
 import {
   CAMPAIGN_TIMEZONES,
   formatZonedInstant,
@@ -45,10 +49,31 @@ import {
 } from '../_lib/server/server-actions';
 import { CampaignAnalyticsSummary } from './campaign-analytics-summary';
 import type { AudiencePickerOption } from './campaign-audience-picker';
+import { CampaignFormSubmissions } from './campaign-form-submissions';
 import { CampaignRecipientLog } from './campaign-recipient-log';
+import { CampaignSendProgress } from './campaign-send-progress';
 import { CampaignSendTestDialog } from './campaign-send-test-dialog';
+import { CampaignStatusBadge } from './campaign-status-badge';
 import { CampaignUpgradeCta } from './campaign-upgrade-cta';
-import { CampaignUsageCard } from './campaign-usage-card';
+
+function SummaryRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:gap-4">
+      <dt
+        className={`w-28 shrink-0 text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+      >
+        {label}
+      </dt>
+      <dd className={`min-w-0 text-sm ${workspaceText}`}>{children}</dd>
+    </div>
+  );
+}
 
 export function CampaignSendPanel({
   accountId,
@@ -60,6 +85,7 @@ export function CampaignSendPanel({
   analytics,
   brand,
   clients,
+  linkedForm,
 }: {
   accountId: string;
   accountSlug: string;
@@ -70,6 +96,7 @@ export function CampaignSendPanel({
   analytics: CampaignAnalyticsBundle;
   brand: { contact_email: string | null };
   clients: AudiencePickerOption[];
+  linkedForm: CampaignLinkedFormSubmissions | null;
 }) {
   const router = useRouter();
   const editable =
@@ -79,18 +106,25 @@ export function CampaignSendPanel({
   );
   const [scheduledAt, setScheduledAt] = useState('');
   const [sendTestOpen, setSendTestOpen] = useState(false);
+  const [sendBusy, setSendBusy] = useState(false);
+  const [progressSeed, setProgressSeed] =
+    useState<CampaignSendProgressSnapshot | null>(null);
   const [pending, startTransition] = useTransition();
+  const busy = pending || sendBusy;
+  const showSendProgress = sendBusy || campaign.status === 'sending';
 
-  const settingsHref = pathsConfig.app.accountEmailCampaignDetail
-    .replace('[account]', accountSlug)
-    .replace('[campaignId]', campaign.id);
-  const contentHref = pathsConfig.app.accountEmailCampaignContent
-    .replace('[account]', accountSlug)
-    .replace('[campaignId]', campaign.id);
   const audiencesHref = pathsConfig.app.accountEmailCampaignAudiences.replace(
     '[account]',
     accountSlug,
   );
+  const formHref = campaign.bodyDocument?.formLink
+    ? `${pathsConfig.app.accountFormDetail
+        .replace('[account]', accountSlug)
+        .replace(
+          '[formId]',
+          campaign.bodyDocument.formLink.formId,
+        )}?tab=submissions`
+    : null;
   const listAudienceIncomplete = campaignAudienceListMissing(
     campaign.audienceType,
     campaign.audienceConfig,
@@ -107,58 +141,88 @@ export function CampaignSendPanel({
 
   return (
     <div className="space-y-6">
-      <CampaignUsageCard
-        snapshot={usage}
-        accountSlug={accountSlug}
-        fromEmail={campaign.fromEmail || brand.contact_email}
-      />
-      <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline" size="sm">
-          <Link href={settingsHref}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Settings
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="sm">
-          <Link href={contentHref}>Edit content</Link>
-        </Button>
-      </div>
+      <div className={`${workspacePanelCard} p-4 sm:p-5`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className={`font-semibold ${workspaceText}`}>Send summary</h3>
+            <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+              Review audience, sender, and status before you send.
+            </p>
+          </div>
+          <CampaignStatusBadge status={campaign.status} />
+        </div>
 
-      <div className={`${workspacePanelCard} space-y-3 p-4`}>
-        <h3 className={`font-semibold ${workspaceText}`}>Send summary</h3>
-        <p className={`text-sm ${workspaceTextMuted}`}>
-          Audience: {AUDIENCE_TYPE_LABEL[campaign.audienceType]} ·{' '}
-          <span data-test="campaign-send-audience-count">
-            {audienceCount.toLocaleString()}
-          </span>{' '}
-          recipients · {usage.balance.toLocaleString()} send units left
-        </p>
-        <p className={`text-sm ${workspaceTextMuted}`}>From {fromLabel}</p>
-        {campaign.replyTo ? (
-          <p className={`text-sm ${workspaceTextMuted}`}>
-            Reply-To {campaign.replyTo}
-          </p>
-        ) : null}
-        {campaign.bodyDocument?.formLink ? (
-          <p className={`text-sm ${workspaceTextMuted}`}>
-            Form link: {campaign.bodyDocument.formLink.formName}
-            {campaign.bodyDocument.formLink.prefillEmail
-              ? ' (email prefilled per recipient)'
-              : ''}
-          </p>
-        ) : null}
-        {campaign.scheduledAt ? (
-          <p className={`text-sm ${workspaceTextMuted}`}>
-            Scheduled for{' '}
-            {formatZonedInstant(
-              campaign.scheduledAt,
-              campaign.scheduledTimezone,
-            )}
-          </p>
+        <dl className="mt-4 divide-y divide-[color:var(--workspace-shell-border)] border-y border-[color:var(--workspace-shell-border)]">
+          {campaign.status === 'failed' && campaign.lastError ? (
+            <SummaryRow label="Error">{campaign.lastError}</SummaryRow>
+          ) : null}
+          <SummaryRow label="Audience">
+            {AUDIENCE_TYPE_LABEL[campaign.audienceType]} ·{' '}
+            <span data-test="campaign-send-audience-count">
+              {audienceCount.toLocaleString()}
+            </span>{' '}
+            recipients
+          </SummaryRow>
+          <SummaryRow label="From">{fromLabel}</SummaryRow>
+          {campaign.replyTo ? (
+            <SummaryRow label="Reply-To">{campaign.replyTo}</SummaryRow>
+          ) : null}
+          {campaign.bodyDocument?.formLink ? (
+            <SummaryRow label="Form">
+              {formHref ? (
+                <Link
+                  href={formHref}
+                  className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                >
+                  {campaign.bodyDocument.formLink.formName}
+                </Link>
+              ) : (
+                campaign.bodyDocument.formLink.formName
+              )}
+              {campaign.bodyDocument.formLink.prefillEmail
+                ? ' · email prefilled per recipient'
+                : ''}
+            </SummaryRow>
+          ) : null}
+          {campaign.scheduledAt ? (
+            <SummaryRow label="Scheduled">
+              {formatZonedInstant(
+                campaign.scheduledAt,
+                campaign.scheduledTimezone,
+              )}
+            </SummaryRow>
+          ) : null}
+        </dl>
+
+        {showSendProgress ? (
+          <div className="pt-4">
+            <CampaignSendProgress
+              accountId={accountId}
+              campaignId={campaign.id}
+              active={showSendProgress}
+              initial={
+                campaign.status === 'sending'
+                  ? buildCampaignSendProgress({
+                      status: campaign.status,
+                      audienceCount: campaign.audienceCount || audienceCount,
+                      sentCount: campaign.sentCount,
+                      failedCount: campaign.failedCount,
+                      skippedCount: campaign.skippedCount,
+                      lastError: campaign.lastError,
+                    })
+                  : null
+              }
+              seed={progressSeed}
+              expectedAudienceCount={audienceCount}
+              onTerminal={() => {
+                router.refresh();
+              }}
+            />
+          </div>
         ) : null}
 
         {editable ? (
-          <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-4">
             {listAudienceIncomplete ? (
               <p
                 className={`text-sm ${workspaceTextMuted}`}
@@ -176,7 +240,7 @@ export function CampaignSendPanel({
             <Button
               type="button"
               variant="outline"
-              disabled={pending || listAudienceIncomplete}
+              disabled={busy || listAudienceIncomplete}
               data-test="campaign-send-test"
               onClick={() => setSendTestOpen(true)}
             >
@@ -210,7 +274,7 @@ export function CampaignSendPanel({
             <Button
               className={workspaceBtnPrimary}
               disabled={
-                pending ||
+                busy ||
                 listAudienceIncomplete ||
                 insufficientSendUnits ||
                 contactsBlocked ||
@@ -218,6 +282,10 @@ export function CampaignSendPanel({
               }
               data-test="campaign-send"
               onClick={() => {
+                if (busy) {
+                  return;
+                }
+                setSendBusy(true);
                 startTransition(async () => {
                   try {
                     const result = await sendCampaignAction({
@@ -226,9 +294,21 @@ export function CampaignSendPanel({
                       campaignId: campaign.id,
                     });
                     if ('success' in result && result.success === false) {
+                      setSendBusy(false);
+                      setProgressSeed(null);
                       toast.error(result.message);
                       return;
                     }
+                    setProgressSeed(
+                      buildCampaignSendProgress({
+                        status: result.status,
+                        audienceCount: result.audienceCount,
+                        sentCount: result.sentCount,
+                        failedCount: result.failedCount,
+                        skippedCount: result.skippedCount,
+                        lastError: null,
+                      }),
+                    );
                     toast.success(
                       result.remaining > 0
                         ? `Sending… ${result.remaining} left in the queue`
@@ -236,6 +316,8 @@ export function CampaignSendPanel({
                     );
                     router.refresh();
                   } catch (error) {
+                    setSendBusy(false);
+                    setProgressSeed(null);
                     toast.error(
                       error instanceof Error ? error.message : 'Could not send',
                     );
@@ -243,13 +325,20 @@ export function CampaignSendPanel({
                 });
               }}
             >
-              {pending ? 'Working…' : 'Send now'}
+              {busy ? (
+                <>
+                  <Spinner className="mr-2 size-4 text-current" />
+                  Sending…
+                </>
+              ) : (
+                'Send now'
+              )}
             </Button>
             <div className="flex flex-wrap gap-2">
               <select
                 className="border-input bg-background h-9 rounded-md border px-3 text-sm"
                 value={scheduledTimezone}
-                disabled={pending}
+                disabled={busy}
                 onChange={(event) => setScheduledTimezone(event.target.value)}
               >
                 {CAMPAIGN_TIMEZONES.map((zone) => (
@@ -261,12 +350,12 @@ export function CampaignSendPanel({
               <Input
                 type="datetime-local"
                 value={scheduledAt}
-                disabled={pending}
+                disabled={busy}
                 onChange={(event) => setScheduledAt(event.target.value)}
               />
               <Button
                 variant="outline"
-                disabled={pending || listAudienceIncomplete || !scheduledAt}
+                disabled={busy || listAudienceIncomplete || !scheduledAt}
                 data-test="campaign-schedule"
                 onClick={() => {
                   startTransition(async () => {
@@ -304,7 +393,7 @@ export function CampaignSendPanel({
             {campaign.status === 'scheduled' ? (
               <Button
                 variant="ghost"
-                disabled={pending}
+                disabled={busy}
                 onClick={() => {
                   startTransition(async () => {
                     try {
@@ -329,15 +418,20 @@ export function CampaignSendPanel({
               </Button>
             ) : null}
           </div>
-        ) : (
-          <p className={`text-sm ${workspaceTextMuted}`}>
-            This campaign is {campaign.status}.
-            {campaign.scheduledAt
-              ? ` Scheduled for ${formatZonedInstant(campaign.scheduledAt, campaign.scheduledTimezone)}.`
-              : ''}
-          </p>
-        )}
+        ) : null}
       </div>
+
+      {linkedForm ? (
+        <CampaignFormSubmissions
+          accountId={accountId}
+          accountSlug={accountSlug}
+          campaignId={campaign.id}
+          formId={linkedForm.formId}
+          formName={linkedForm.formName}
+          isRsvp={linkedForm.isRsvp}
+          submissions={linkedForm.submissions}
+        />
+      ) : null}
 
       {campaign.status === 'sent' ||
       campaign.status === 'sending' ||

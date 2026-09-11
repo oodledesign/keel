@@ -5,11 +5,13 @@ import { cache } from 'react';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { createWorkspaceFormsService } from '~/home/[account]/forms/_lib/server/workspace-forms.service';
 import { hasCampaignsProFeatures } from '~/lib/billing/campaign-pricing';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
 import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
 import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
+import type { CampaignLinkedFormSubmissions } from '~/lib/campaigns/campaign-form-submissions';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
 import {
   loadCampaignAnalyticsBundle,
@@ -24,6 +26,7 @@ import {
   isSendingDomainVerified,
   loadAccountSendingDomain,
 } from '~/lib/sending-domains/server';
+import { isRsvpLikeWorkspaceForm } from '~/lib/workspace-forms/form-theme';
 import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
 
 export async function loadCampaignsPage(accountId: string) {
@@ -244,3 +247,41 @@ export async function loadCampaignContactsPage(
     contacts,
   };
 }
+
+export const loadCampaignLinkedFormSubmissions = cache(
+  async function loadCampaignLinkedFormSubmissions(
+    accountId: string,
+    formId: string | null | undefined,
+  ): Promise<CampaignLinkedFormSubmissions | null> {
+    if (!formId) return null;
+
+    const client = getSupabaseServerClient();
+    const forms = createWorkspaceFormsService(client);
+    const form = await forms.getForm(accountId, formId).catch(() => null);
+    if (!form) return null;
+
+    const submissions = await forms
+      .listSubmissions(accountId, form.id)
+      .catch(() => []);
+
+    return {
+      formId: form.id,
+      formName: form.name,
+      isRsvp: isRsvpLikeWorkspaceForm({
+        name: form.name,
+        destination: form.destination,
+        eventAddress: form.eventAddress,
+        eventDate: form.eventDate,
+        eventTime: form.eventTime,
+        submitLabel: form.submitLabel,
+        fields: form.fields,
+      }),
+      submissions: submissions.map((row) => ({
+        id: row.id,
+        contactName: row.contactName,
+        contactEmail: row.contactEmail,
+        createdAt: row.createdAt,
+      })),
+    };
+  },
+);

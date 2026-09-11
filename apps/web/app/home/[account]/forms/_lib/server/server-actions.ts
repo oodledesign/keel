@@ -10,6 +10,7 @@ import pathsConfig from '~/config/paths.config';
 import {
   CreateWorkspaceFormSchema,
   DeleteWorkspaceFormSchema,
+  DeleteWorkspaceFormSubmissionSchema,
   PublishWorkspaceFormSchema,
   UpdateWorkspaceFormSchema,
 } from '~/lib/workspace-forms/form.schema';
@@ -90,6 +91,48 @@ export const publishWorkspaceFormAction = enhanceAction(
   {
     auth: true,
     schema: PublishWorkspaceFormSchema,
+  },
+);
+
+export const deleteWorkspaceFormSubmissionAction = enhanceAction(
+  async function (data, user) {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'delete-workspace-form-submission',
+        userId: user.id,
+        formId: data.formId,
+        submissionId: data.submissionId,
+      },
+      'Deleting workspace form submission',
+    );
+
+    const client = getSupabaseServerClient();
+    const service = createWorkspaceFormsService(client);
+    await service.deleteSubmission(
+      data.accountId,
+      data.formId,
+      data.submissionId,
+    );
+
+    revalidatePath(
+      pathsConfig.app.accountFormDetail
+        .replace('[account]', data.accountSlug)
+        .replace('[formId]', data.formId),
+    );
+    if (data.campaignId) {
+      revalidatePath(
+        pathsConfig.app.accountEmailCampaignSend
+          .replace('[account]', data.accountSlug)
+          .replace('[campaignId]', data.campaignId),
+      );
+    }
+
+    return { success: true as const };
+  },
+  {
+    auth: true,
+    schema: DeleteWorkspaceFormSubmissionSchema,
   },
 );
 

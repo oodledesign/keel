@@ -1,4 +1,7 @@
-import type { EmailCampaignStatus } from './campaign.types';
+import type {
+  EmailCampaignRecipient,
+  EmailCampaignStatus,
+} from './campaign.types';
 
 export const CAMPAIGN_STATUS_LABEL: Record<EmailCampaignStatus, string> = {
   draft: 'Draft',
@@ -45,6 +48,50 @@ export function campaignStatusBadgeClass(
 ): string {
   if (status in CAMPAIGN_STATUS_BADGE_CLASS) {
     return CAMPAIGN_STATUS_BADGE_CLASS[status as EmailCampaignStatus];
+  }
+
+  return CAMPAIGN_STATUS_BADGE_CLASS.cancelled;
+}
+
+export const CAMPAIGN_RECIPIENT_STATUS_LABEL: Record<
+  EmailCampaignRecipient['status'],
+  string
+> = {
+  pending: 'Pending',
+  sent: 'Sent',
+  failed: 'Failed',
+  skipped: 'Skipped',
+};
+
+export const CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS: Record<
+  EmailCampaignRecipient['status'],
+  string
+> = {
+  pending: CAMPAIGN_STATUS_BADGE_CLASS.scheduled,
+  sent: CAMPAIGN_STATUS_BADGE_CLASS.sent,
+  failed: CAMPAIGN_STATUS_BADGE_CLASS.failed,
+  skipped: CAMPAIGN_STATUS_BADGE_CLASS.cancelled,
+};
+
+export function campaignRecipientStatusLabel(
+  status: EmailCampaignRecipient['status'] | string,
+): string {
+  if (status in CAMPAIGN_RECIPIENT_STATUS_LABEL) {
+    return CAMPAIGN_RECIPIENT_STATUS_LABEL[
+      status as EmailCampaignRecipient['status']
+    ];
+  }
+
+  return campaignStatusLabel(status);
+}
+
+export function campaignRecipientStatusBadgeClass(
+  status: EmailCampaignRecipient['status'] | string,
+): string {
+  if (status in CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS) {
+    return CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS[
+      status as EmailCampaignRecipient['status']
+    ];
   }
 
   return CAMPAIGN_STATUS_BADGE_CLASS.cancelled;

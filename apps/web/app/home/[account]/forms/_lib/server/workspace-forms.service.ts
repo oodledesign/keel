@@ -431,5 +431,25 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
 
       if (error) throw new Error(error.message);
     },
+
+    async deleteSubmission(
+      accountId: string,
+      formId: string,
+      submissionId: string,
+    ): Promise<void> {
+      const { error, count } = await fromTable(
+        client,
+        'workspace_form_submissions',
+      )
+        .delete({ count: 'exact' })
+        .eq('id', submissionId)
+        .eq('form_id', formId)
+        .eq('account_id', accountId);
+
+      if (error) throw new Error(error.message);
+      if (!count) {
+        throw new Error('Submission not found');
+      }
+    },
   };
 }
