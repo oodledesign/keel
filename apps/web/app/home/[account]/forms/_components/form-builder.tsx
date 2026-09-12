@@ -46,6 +46,11 @@ import {
   publicVisibleFields,
 } from '~/lib/workspace-forms/form-fields';
 import {
+  fieldHasStepBreakAfter,
+  setFieldStepBreakAfter,
+  visibleFieldStepNumberById,
+} from '~/lib/workspace-forms/form-steps';
+import {
   WORKSPACE_FORM_LAYOUTS,
   WORKSPACE_FORM_LAYOUT_LABELS,
   WORKSPACE_FORM_PAGE_BACKGROUNDS,
@@ -148,9 +153,9 @@ export function FormBuilder({
   const [activeFieldId, setActiveFieldId] = useState<string | null>(
     form.fields[0]?.id ?? null,
   );
-  const visibleStepById = new Map(
-    publicVisibleFields(fields).map((field, index) => [field.id, index + 1]),
-  );
+  const visibleStepById = visibleFieldStepNumberById(fields);
+  const visibleFields = publicVisibleFields(fields);
+  const lastVisibleId = visibleFields.at(-1)?.id ?? null;
 
   function setTab(next: string) {
     const resolved = parseFormEditorTab(next);
@@ -311,8 +316,8 @@ export function FormBuilder({
               </h2>
               {presentation === 'steps' ? (
                 <p className={`text-xs ${workspaceTextMuted}`}>
-                  Steps mode uses this order — one question per step on the
-                  public form.
+                  New questions start on their own step. Use “Keep next question
+                  on this step” to show more than one field at a time.
                 </p>
               ) : null}
             </div>
@@ -339,6 +344,27 @@ export function FormBuilder({
               stepIndex={
                 presentation === 'steps'
                   ? (visibleStepById.get(field.id) ?? null)
+                  : null
+              }
+              stepAction={
+                presentation === 'steps' &&
+                field.type !== 'hidden' &&
+                field.id !== lastVisibleId
+                  ? fieldHasStepBreakAfter(field)
+                    ? {
+                        kind: 'merge',
+                        onClick: () =>
+                          setFields((current) =>
+                            setFieldStepBreakAfter(current, field.id, false),
+                          ),
+                      }
+                    : {
+                        kind: 'split',
+                        onClick: () =>
+                          setFields((current) =>
+                            setFieldStepBreakAfter(current, field.id, true),
+                          ),
+                      }
                   : null
               }
               onActivate={() => setActiveFieldId(field.id)}
@@ -588,10 +614,11 @@ export function FormBuilder({
             <div className="grid gap-2">
               <Label>Presentation</Label>
               <p className={`text-xs ${workspaceTextMuted}`}>
-                Classic keeps every question on one page. Steps shows one
-                question at a time with Next, Back, and progress. RSVP
-                two-column layout still works in steps — event details stay on
-                the left.
+                Classic keeps every question on one page. Steps shows one step
+                at a time with Next, Back, and progress. New steps start as one
+                question; group fields in the builder when you want more than
+                one on a step. RSVP two-column layout still works — event
+                details stay on the left.
               </p>
               <RadioGroup
                 value={presentation}

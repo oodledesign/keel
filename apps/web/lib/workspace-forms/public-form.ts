@@ -13,6 +13,7 @@ import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { processDueDynamicsSyncJobs } from '~/lib/dynamics/sync.service';
 import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 
+import { consumePublicFormDraft } from './form-draft.server';
 import {
   type WorkspaceFormEmailSettings,
   parseWorkspaceFormEmailSettings,
@@ -90,10 +91,23 @@ type FormRow = {
 
 export function parseFormFields(raw: unknown): WorkspaceFormField[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((item): item is WorkspaceFormField => {
-    if (!item || typeof item !== 'object') return false;
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
     const row = item as Partial<WorkspaceFormField>;
-    return Boolean(row.id && row.type && row.key && row.label);
+    if (!row.id || !row.type || !row.key || !row.label) return [];
+    const field: WorkspaceFormField = {
+      id: String(row.id),
+      type: row.type,
+      key: String(row.key),
+      label: String(row.label),
+      required: Boolean(row.required),
+    };
+    if (row.placeholder) field.placeholder = row.placeholder;
+    if (row.helpText) field.helpText = row.helpText;
+    if (Array.isArray(row.options)) field.options = row.options;
+    if (row.stepBreakAfter === false) field.stepBreakAfter = false;
+    if (row.stepBreakAfter === true) field.stepBreakAfter = true;
+    return [field];
   });
 }
 
@@ -401,6 +415,11 @@ export async function submitPublicWorkspaceForm(
   }
 
   const submissionId = String((data as { id: string }).id);
+
+  await consumePublicFormDraft(admin, {
+    formId: form.id,
+    resumeToken: input.resumeToken,
+  });
 
   // Keep the isolate alive after the JSON response so Zepto can finish.
   // Plain `void` is frozen/killed on Vercel and shows up as delayed

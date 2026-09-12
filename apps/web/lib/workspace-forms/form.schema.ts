@@ -25,6 +25,7 @@ export const WorkspaceFormFieldSchema = z.object({
   placeholder: z.string().max(160).optional(),
   helpText: z.string().max(240).optional(),
   options: z.array(z.string().min(1).max(80)).max(40).optional(),
+  stepBreakAfter: z.boolean().optional(),
 });
 
 export const CreateWorkspaceFormSchema = z.object({
@@ -104,13 +105,29 @@ export const PublishWorkspaceFormSchema = z.object({
   enabled: z.boolean(),
 });
 
+const PublicFormValuesSchema = z
+  .record(z.string().max(80), z.union([z.string().max(2000), z.boolean()]))
+  .default({});
+
 export const PublicWorkspaceFormSubmitSchema = z.object({
   token: z.string().min(16).max(128),
-  values: z
-    .record(z.string().max(80), z.union([z.string().max(2000), z.boolean()]))
-    .default({}),
+  values: PublicFormValuesSchema,
   listingId: z.string().uuid().optional().nullable(),
   propertyId: z.string().uuid().optional().nullable(),
+  /** Resume-later draft token — consumed after a successful submit. */
+  resumeToken: z.string().min(16).max(128).optional(),
+  /** Honeypot — bots fill this; humans leave empty. */
+  website: z.string().max(200).optional().or(z.literal('')),
+});
+
+export const PublicWorkspaceFormDraftSchema = z.object({
+  token: z.string().min(16).max(128),
+  values: PublicFormValuesSchema,
+  stepIndex: z.number().int().min(0).max(80).optional().default(0),
+  listingId: z.string().uuid().optional().nullable(),
+  propertyId: z.string().uuid().optional().nullable(),
+  resumeToken: z.string().min(16).max(128).optional(),
+  embed: z.boolean().optional(),
   /** Honeypot — bots fill this; humans leave empty. */
   website: z.string().max(200).optional().or(z.literal('')),
 });
@@ -132,4 +149,7 @@ export type PublishWorkspaceFormInput = z.infer<
 >;
 export type PublicWorkspaceFormSubmitInput = z.infer<
   typeof PublicWorkspaceFormSubmitSchema
+>;
+export type PublicWorkspaceFormDraftInput = z.infer<
+  typeof PublicWorkspaceFormDraftSchema
 >;

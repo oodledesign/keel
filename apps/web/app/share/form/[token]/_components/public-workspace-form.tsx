@@ -8,7 +8,14 @@ import {
   useTransition,
 } from 'react';
 
-import { Calendar, Check, ChevronLeft, Clock, MapPin } from 'lucide-react';
+import {
+  Calendar,
+  Check,
+  ChevronLeft,
+  Clock,
+  Copy,
+  MapPin,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -28,6 +35,7 @@ import {
   formDescriptionHasHeading,
   formDescriptionToHtml,
 } from '~/lib/workspace-forms/form-description';
+import { FORM_DRAFT_TTL_DAYS } from '~/lib/workspace-forms/form-draft';
 import {
   type WorkspaceFormField,
   publicVisibleFields,
@@ -64,6 +72,9 @@ type Props = {
   embed?: boolean;
   /** Prefills the form email field from ?email= on the public share URL. */
   prefillEmail?: string | null;
+  resumeToken?: string | null;
+  initialValues?: Record<string, string | boolean>;
+  initialStepIndex?: number;
   logoUrl?: string | null;
   accentColor: string;
   primaryColor: string;
@@ -90,6 +101,9 @@ export function PublicWorkspaceForm({
   propertyId,
   embed,
   prefillEmail,
+  resumeToken: initialResumeToken,
+  initialValues,
+  initialStepIndex,
   logoUrl,
   accentColor,
   primaryColor,
@@ -115,21 +129,37 @@ export function PublicWorkspaceForm({
     () => buildPublicFormSteps({ fields, includeWelcome }),
     [fields, includeWelcome],
   );
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(() => {
+    if (!stepsMode || initialStepIndex == null) return 0;
+    return Math.min(
+      Math.max(0, initialStepIndex),
+      Math.max(steps.length - 1, 0),
+    );
+  });
   const [stepError, setStepError] = useState<string | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const currentStep = steps[Math.min(stepIndex, Math.max(steps.length - 1, 0))];
   const isLastStep = stepIndex >= steps.length - 1;
   const [values, setValues] = useState<Record<string, string | boolean>>(() => {
+    const restored = { ...(initialValues ?? {}) };
     const email = prefillEmail?.trim();
-    if (!email) return {};
+    if (!email) return restored;
     const emailField = fields.find(
       (field) => field.type === 'email' || field.key === 'email',
     );
-    if (!emailField) return {};
-    return { [emailField.key]: email };
+    if (!emailField || restored[emailField.key]) return restored;
+    return { ...restored, [emailField.key]: email };
+  });
+  const [resume, setResume] = useState({
+    token: initialResumeToken ?? '',
+    url: null as string | null,
+    email: null as string | null,
+    emailed: false,
+    error: null as string | null,
+    copied: false,
   });
   const [pending, startTransition] = useTransition();
+  const [savingDraft, startDraftTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
@@ -172,6 +202,76 @@ export function PublicWorkspaceForm({
     }
   }
 
+  function rememberResumeInUrl(nextToken: string) {
+    if (typeof window === 'undefined' || embed) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('resume', nextToken);
+    window.history.replaceState({}, '', url);
+  }
+
+  function saveDraft() {
+    setResume((current) => ({ ...current, error: null, copied: false }));
+    startDraftTransition(async () => {
+      try {
+        const response = await fetch('/api/workspace-forms/draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token,
+            values,
+            stepIndex,
+            listingId: listingId || null,
+            propertyId: propertyId || null,
+            resumeToken: resume.token || undefined,
+            embed: Boolean(embed),
+          }),
+        });
+        const payload = (await response.json().catch(() => null)) as {
+          ok?: boolean;
+          error?: string;
+          resumeToken?: string;
+          resumeUrl?: string;
+          emailed?: boolean;
+          email?: string | null;
+        } | null;
+
+        if (!response.ok || !payload?.ok || !payload.resumeUrl) {
+          throw new Error(payload?.error || 'Could not save your answers.');
+        }
+
+        setResume((current) => ({
+          ...current,
+          token: payload.resumeToken ?? current.token,
+          url: payload.resumeUrl ?? current.url,
+          emailed: current.emailed || Boolean(payload.emailed),
+          email: payload.email ?? current.email,
+          error: null,
+        }));
+        if (payload.resumeToken) {
+          rememberResumeInUrl(payload.resumeToken);
+        }
+      } catch (err) {
+        setResume((current) => ({
+          ...current,
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Could not save your answers. Please try again.',
+        }));
+      }
+    });
+  }
+
+  async function copyResumeUrl() {
+    if (!resume.url) return;
+    try {
+      await navigator.clipboard.writeText(resume.url);
+      setResume((current) => ({ ...current, copied: true }));
+    } catch {
+      setResume((current) => ({ ...current, copied: false }));
+    }
+  }
+
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (stepsMode && currentStep) {
@@ -200,6 +300,7 @@ export function PublicWorkspaceForm({
             values,
             listingId: listingId || null,
             propertyId: propertyId || null,
+            resumeToken: resume.token || undefined,
             website: honeypot,
           }),
         });
@@ -338,6 +439,19 @@ export function PublicWorkspaceForm({
               onChange={setField}
               onBack={goBack}
               onNext={goNext}
+              resume={
+                <ResumeLaterControls
+                  saving={savingDraft}
+                  disabled={pending}
+                  resumeUrl={resume.url}
+                  emailed={resume.emailed}
+                  email={resume.email}
+                  error={resume.error}
+                  copied={resume.copied}
+                  onSave={saveDraft}
+                  onCopy={copyResumeUrl}
+                />
+              }
             />
           ) : (
             <>
@@ -367,6 +481,18 @@ export function PublicWorkspaceForm({
               >
                 {pending ? 'Sending…' : submitLabel}
               </Button>
+
+              <ResumeLaterControls
+                saving={savingDraft}
+                disabled={pending}
+                resumeUrl={resume.url}
+                emailed={resume.emailed}
+                email={resume.email}
+                error={resume.error}
+                copied={resume.copied}
+                onSave={saveDraft}
+                onCopy={copyResumeUrl}
+              />
             </>
           )}
         </form>
@@ -396,6 +522,7 @@ function PublicFormSteps({
   onChange,
   onBack,
   onNext,
+  resume,
 }: {
   steps: PublicFormStep[];
   stepIndex: number;
@@ -417,14 +544,19 @@ function PublicFormSteps({
   onChange: (key: string, value: string | boolean) => void;
   onBack: () => void;
   onNext: () => void;
+  resume: React.ReactNode;
 }) {
   const total = Math.max(steps.length, 1);
   const progress = ((stepIndex + 1) / total) * 100;
   const welcome = currentStep?.kind === 'welcome';
-  const fieldTotal = steps.filter((step) => step.kind === 'field').length;
+  const fieldSteps = steps.filter((step) => step.kind === 'fields');
+  const fieldTotal = fieldSteps.length;
   const fieldNumber = steps
     .slice(0, stepIndex + 1)
-    .filter((step) => step.kind === 'field').length;
+    .filter((step) => step.kind === 'fields').length;
+  const currentFields =
+    currentStep?.kind === 'fields' ? currentStep.fields : [];
+  const singleField = currentFields.length === 1 ? currentFields[0] : null;
 
   return (
     <div className="flex flex-col gap-5" data-test="public-form-steps">
@@ -434,7 +566,7 @@ function PublicFormSteps({
             {welcome
               ? 'Welcome'
               : fieldTotal > 0
-                ? `Question ${fieldNumber} of ${fieldTotal}`
+                ? `Step ${fieldNumber} of ${fieldTotal}`
                 : 'Form'}
           </span>
           <span data-test="public-form-step-count">
@@ -470,7 +602,7 @@ function PublicFormSteps({
             </p>
           )}
         </div>
-      ) : currentStep?.kind === 'field' ? (
+      ) : currentFields.length > 0 ? (
         <div className="space-y-3">
           {!eventLayout ? (
             <div className="flex items-center gap-3">
@@ -487,16 +619,21 @@ function PublicFormSteps({
             </div>
           ) : null}
           <h2 ref={stepHeadingRef} tabIndex={-1} className="sr-only">
-            {currentStep.field.label}
+            {singleField?.label ?? `Step ${fieldNumber}`}
           </h2>
-          <PublicField
-            field={currentStep.field}
-            value={values[currentStep.field.key]}
-            disabled={pending}
-            accentColor={accentColor}
-            emphasis
-            onChange={(value) => onChange(currentStep.field.key, value)}
-          />
+          <div className="space-y-5">
+            {currentFields.map((field) => (
+              <PublicField
+                key={field.id}
+                field={field}
+                value={values[field.key]}
+                disabled={pending}
+                accentColor={accentColor}
+                emphasis={Boolean(singleField)}
+                onChange={(value) => onChange(field.key, value)}
+              />
+            ))}
+          </div>
         </div>
       ) : (
         <p className="text-sm text-neutral-500">
@@ -559,6 +696,93 @@ function PublicFormSteps({
           </Button>
         )}
       </div>
+
+      {resume}
+    </div>
+  );
+}
+
+function ResumeLaterControls({
+  saving,
+  disabled,
+  resumeUrl,
+  emailed,
+  email,
+  error,
+  copied,
+  onSave,
+  onCopy,
+}: {
+  saving: boolean;
+  disabled: boolean;
+  resumeUrl: string | null;
+  emailed: boolean;
+  email: string | null;
+  error: string | null;
+  copied: boolean;
+  onSave: () => void;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="space-y-2 pt-1" data-test="public-form-resume">
+      <button
+        type="button"
+        disabled={saving || disabled}
+        onClick={onSave}
+        className="text-sm font-medium text-neutral-600 underline-offset-2 hover:underline disabled:opacity-60"
+        data-test="public-form-save-later"
+      >
+        {saving ? 'Saving…' : 'Save & continue later'}
+      </button>
+
+      {error ? (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
+
+      {resumeUrl ? (
+        <div
+          className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-600"
+          data-test="public-form-resume-link"
+        >
+          {emailed && email ? (
+            <p className="mb-2">
+              We emailed a resume link to{' '}
+              <span className="font-medium text-neutral-800">{email}</span>.
+            </p>
+          ) : (
+            <p className="mb-2">
+              Copy this link to come back to your answers. It is not a submitted
+              response.
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <Input
+              readOnly
+              value={resumeUrl}
+              className="h-9 bg-white text-xs"
+              onFocus={(event) => event.currentTarget.select()}
+              data-test="public-form-resume-url"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-full"
+              onClick={onCopy}
+              data-test="public-form-copy-resume"
+            >
+              <Copy className="size-3.5" />
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-neutral-500">
+            This link expires in {FORM_DRAFT_TTL_DAYS} days. Submitting the form
+            finishes this draft.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

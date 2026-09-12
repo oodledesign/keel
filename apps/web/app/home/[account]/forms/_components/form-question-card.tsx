@@ -35,6 +35,10 @@ type Props = {
   active: boolean;
   /** 1-based step number when the form uses steps presentation. */
   stepIndex?: number | null;
+  stepAction?: {
+    kind: 'merge' | 'split';
+    onClick: () => void;
+  } | null;
   onActivate: () => void;
   onChange: (patch: Partial<WorkspaceFormField>) => void;
   onChangeType: (type: WorkspaceFormFieldType) => void;
@@ -49,6 +53,7 @@ export function FormQuestionCard({
   total,
   active,
   stepIndex = null,
+  stepAction = null,
   onActivate,
   onChange,
   onChangeType,
@@ -76,12 +81,33 @@ export function FormQuestionCard({
       </div>
 
       {stepIndex ? (
-        <p
-          className={`mb-3 text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
-          data-test="form-question-step-index"
-        >
-          Step {stepIndex}
-        </p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p
+            className={`text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+            data-test="form-question-step-index"
+          >
+            Step {stepIndex}
+          </p>
+          {stepAction ? (
+            <button
+              type="button"
+              className={`text-xs font-medium ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
+              data-test={
+                stepAction.kind === 'merge'
+                  ? 'form-question-merge-step'
+                  : 'form-question-split-step'
+              }
+              onClick={(event) => {
+                event.stopPropagation();
+                stepAction.onClick();
+              }}
+            >
+              {stepAction.kind === 'merge'
+                ? 'Keep next question on this step'
+                : 'Start new step after this'}
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">

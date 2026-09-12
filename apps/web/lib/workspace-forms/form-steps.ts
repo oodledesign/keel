@@ -1,6 +1,7 @@
 /**
  * Client-safe helpers for Typeform-style public form steps.
- * Field order is the step order. Hidden fields are skipped.
+ * Visible field order is the step order. Hidden fields are skipped.
+ * `stepBreakAfter !== false` (the default) starts a new step after that field.
  */
 import { type WorkspaceFormField, publicVisibleFields } from './form-fields';
 import type { WorkspaceFormLayout } from './form-theme';
@@ -9,12 +10,59 @@ export type PublicFormWelcomeStep = {
   kind: 'welcome';
 };
 
-export type PublicFormFieldStep = {
-  kind: 'field';
-  field: WorkspaceFormField;
+export type PublicFormFieldsStep = {
+  kind: 'fields';
+  fields: WorkspaceFormField[];
 };
 
-export type PublicFormStep = PublicFormWelcomeStep | PublicFormFieldStep;
+export type PublicFormStep = PublicFormWelcomeStep | PublicFormFieldsStep;
+
+export function fieldHasStepBreakAfter(field: WorkspaceFormField): boolean {
+  return field.stepBreakAfter !== false;
+}
+
+export function groupVisibleFieldsIntoSteps(
+  fields: WorkspaceFormField[],
+): WorkspaceFormField[][] {
+  const groups: WorkspaceFormField[][] = [];
+  let current: WorkspaceFormField[] = [];
+
+  for (const field of publicVisibleFields(fields)) {
+    current.push(field);
+    if (fieldHasStepBreakAfter(field)) {
+      groups.push(current);
+      current = [];
+    }
+  }
+
+  if (current.length > 0) {
+    groups.push(current);
+  }
+
+  return groups;
+}
+
+export function visibleFieldStepNumberById(
+  fields: WorkspaceFormField[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+  groupVisibleFieldsIntoSteps(fields).forEach((group, index) => {
+    for (const field of group) {
+      map.set(field.id, index + 1);
+    }
+  });
+  return map;
+}
+
+export function setFieldStepBreakAfter(
+  fields: WorkspaceFormField[],
+  fieldId: string,
+  stepBreakAfter: boolean,
+): WorkspaceFormField[] {
+  return fields.map((field) =>
+    field.id === fieldId ? { ...field, stepBreakAfter } : field,
+  );
+}
 
 export function shouldIncludeWelcomeStep(input: {
   presentation: 'classic' | 'steps';
@@ -37,8 +85,8 @@ export function buildPublicFormSteps(input: {
   if (input.includeWelcome) {
     steps.push({ kind: 'welcome' });
   }
-  for (const field of publicVisibleFields(input.fields)) {
-    steps.push({ kind: 'field', field });
+  for (const group of groupVisibleFieldsIntoSteps(input.fields)) {
+    steps.push({ kind: 'fields', fields: group });
   }
   return steps;
 }
@@ -64,9 +112,14 @@ export function validatePublicFormStep(
   values: Record<string, string | boolean>,
 ): string | null {
   if (step.kind === 'welcome') return null;
-  if (!step.field.required) return null;
-  if (isWorkspaceFormFieldAnswered(step.field, values[step.field.key])) {
-    return null;
+
+  for (const field of step.fields) {
+    if (!field.required) continue;
+    if (isWorkspaceFormFieldAnswered(field, values[field.key])) continue;
+    return step.fields.length > 1
+      ? `Please answer ${field.label}.`
+      : 'Please answer this question.';
   }
-  return 'Please answer this question.';
+
+  return null;
 }

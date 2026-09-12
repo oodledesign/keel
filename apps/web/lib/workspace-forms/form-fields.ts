@@ -44,6 +44,11 @@ export type WorkspaceFormField = {
   placeholder?: string;
   helpText?: string;
   options?: string[];
+  /**
+   * Steps mode only. When true (the default if omitted), the next visible
+   * field starts a new step. Set false to keep the next question on this step.
+   */
+  stepBreakAfter?: boolean;
 };
 
 export const WORKSPACE_FORM_DESTINATION_LABELS: Record<

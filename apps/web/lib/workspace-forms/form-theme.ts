@@ -61,9 +61,9 @@ export const WORKSPACE_FORM_PRESENTATION_LABELS: Record<
       'Show every question on one page. Keeps the current RSVP two-column and standard layouts.',
   },
   steps: {
-    label: 'Steps (one question at a time)',
+    label: 'Steps (grouped questions)',
     description:
-      'Typeform-style: respondents move through questions with Next / Back and a progress bar. Field order in the builder is the step order.',
+      'Typeform-style: respondents move through steps with Next / Back and a progress bar. New steps start as one question each; you can keep several questions on the same step.',
   },
 };
 
