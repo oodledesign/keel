@@ -102,6 +102,7 @@ export type EmailActionItemRow = {
   status: string;
   task_id: string | null;
   created_at: string;
+  retainerMatch?: import('~/lib/retainers/types').RetainerMatchSuggestion | null;
 };
 
 export type EmailDraftRow = {
@@ -160,4 +161,5 @@ export type EmailThreadDetail = {
   messages: EmailMessageRow[];
   actionItems: EmailActionItemRow[];
   draft: EmailDraftRow | null;
+  retainerServices?: import('~/lib/retainers/types').RetainerServiceRecord[];
 };

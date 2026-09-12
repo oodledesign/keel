@@ -391,6 +391,12 @@ export const dismissSuggestedEmailTaskAction = enhanceAction(
       throw new Error(error.message);
     }
 
+    await (client as any)
+      .from('retainer_match_suggestions')
+      .update({ status: 'skipped' })
+      .eq('email_action_item_id', data.actionItemId)
+      .eq('status', 'pending');
+
     revalidateSuggestedEmailPaths(data.accountSlug);
     return { ok: true as const };
   },

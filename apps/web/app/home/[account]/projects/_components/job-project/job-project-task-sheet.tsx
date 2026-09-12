@@ -37,6 +37,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
+import { TaskRetainerStamp } from '~/lib/retainers/task-retainer-stamp';
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
@@ -317,6 +318,26 @@ export function JobProjectTaskSheet({
           </SheetHeader>
 
           <div className="flex flex-1 flex-col gap-4 py-4">
+            {task ? (
+              <TaskRetainerStamp
+                accountId={accountId}
+                accountSlug={accountSlug}
+                taskId={task.id}
+                serviceName={task.retainer_service_name ?? null}
+                creditsBurned={task.credits_burned ?? null}
+                creditsBurnedAt={task.credits_burned_at ?? null}
+                canUndo={canEditJobs}
+                onUndone={() =>
+                  onUpdated({
+                    ...task,
+                    retainer_service_id: null,
+                    retainer_service_name: null,
+                    credits_burned: null,
+                    credits_burned_at: null,
+                  })
+                }
+              />
+            ) : null}
             <div>
               <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Title

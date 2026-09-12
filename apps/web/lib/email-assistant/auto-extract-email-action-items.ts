@@ -261,6 +261,17 @@ export async function autoExtractEmailActionItems(params: {
     throw new Error(insertError.message);
   }
 
+  if (inserted?.length && threadLink.projectId) {
+    const { suggestRetainerMatchesForInsertedItems } = await import(
+      '~/lib/retainers/suggest-match'
+    );
+    await suggestRetainerMatchesForInsertedItems({
+      admin,
+      actionItemIds: inserted.map((row) => String((row as { id: string }).id)),
+      actorUserId: userId,
+    });
+  }
+
   return {
     itemsInserted: inserted?.length ?? 0,
     attempted: true,

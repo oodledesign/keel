@@ -82,6 +82,7 @@ export const OzerAIFeature = {
   video_summary: 'video_summary',
   instagram_reply_draft: 'instagram_reply_draft',
   instagram_reply_enhanced: 'instagram_reply_enhanced',
+  retainer_service_match: 'retainer_service_match',
 } as const;
 
 export type OzerAIFeatureKey =
@@ -555,6 +556,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     maxOutputTokens: 512,
     structuredOutput: false,
   },
+  retainer_service_match: {
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 0.5,
+    batchable: false,
+    maxOutputTokens: 512,
+    structuredOutput: true,
+  },
 };
 
 export type AiCreditBalanceRow = {
@@ -638,7 +647,9 @@ export function resolveFeatureConfig(feature: OzerAIFeatureKey): FeatureConfig {
   if (
     config.provider === 'google' &&
     !hasGoogleAiApiKey() &&
-    (feature === 'task_extract' || feature === 'email_triage')
+    (feature === 'task_extract' ||
+      feature === 'email_triage' ||
+      feature === 'retainer_service_match')
   ) {
     return {
       ...config,

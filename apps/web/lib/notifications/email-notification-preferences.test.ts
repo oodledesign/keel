@@ -31,6 +31,7 @@ describe('email notification preferences', () => {
       commercial_match_digest: false,
       email_stuck_thread_digest: true,
       email_follow_up_reminders: true,
+      project_retainer_digest: true,
     });
   });
 });

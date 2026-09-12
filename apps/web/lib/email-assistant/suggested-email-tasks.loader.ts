@@ -2,6 +2,15 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  loadPendingRetainerSuggestions,
+  loadRetainerCatalogue,
+} from '~/lib/retainers/load-suggestions';
+import type {
+  RetainerMatchSuggestion,
+  RetainerServiceRecord,
+} from '~/lib/retainers/types';
+
 import { extractEmailAddress } from './address-utils';
 import { extractEmailDomain } from './ignored-senders';
 
@@ -21,13 +30,20 @@ export type SuggestedEmailTaskItem = {
   clientId: string | null;
   clientName: string | null;
   clientPictureUrl: string | null;
+  projectId: string | null;
+  accountId: string | null;
+  retainerMatch: RetainerMatchSuggestion | null;
 };
 
 export async function loadSuggestedEmailActionItems(
   client: SupabaseClient,
   userId: string,
   options?: { accountId?: string | null; limit?: number },
-): Promise<{ items: SuggestedEmailTaskItem[]; totalCount: number }> {
+): Promise<{
+  items: SuggestedEmailTaskItem[];
+  totalCount: number;
+  retainerServices: RetainerServiceRecord[];
+}> {
   const limit = options?.limit ?? 8;
   let query = client
     .from('email_action_items')
@@ -42,6 +58,8 @@ export async function loadSuggestedEmailActionItems(
       created_at,
       message_id,
       client_id,
+      project_id,
+      account_id,
       clients:client_id (
         id,
         display_name,
@@ -68,7 +86,7 @@ export async function loadSuggestedEmailActionItems(
 
   if (error) {
     console.error('[email] suggested action items', error.message);
-    return { items: [], totalCount: 0 };
+    return { items: [], totalCount: 0, retainerServices: [] };
   }
 
   const rows = data ?? [];
@@ -168,6 +186,9 @@ export async function loadSuggestedEmailActionItems(
       clientId,
       clientName,
       clientPictureUrl,
+      projectId: (row.project_id as string | null) ?? null,
+      accountId: (row.account_id as string | null) ?? null,
+      retainerMatch: null,
     };
   });
 
@@ -214,7 +235,27 @@ export async function loadSuggestedEmailActionItems(
     }
   }
 
-  return { items, totalCount: count ?? items.length };
+  const matches = await loadPendingRetainerSuggestions(
+    client,
+    items.map((item) => item.id),
+  );
+  for (const item of items) {
+    item.retainerMatch = matches.get(item.id) ?? null;
+  }
+
+  const catalogueAccountId =
+    options?.accountId ??
+    items.find((item) => item.accountId)?.accountId ??
+    null;
+  const retainerServices = catalogueAccountId
+    ? await loadRetainerCatalogue(client, catalogueAccountId)
+    : [];
+
+  return {
+    items,
+    totalCount: count ?? items.length,
+    retainerServices,
+  };
 }
 
 function unwrapOne(value: unknown): Record<string, unknown> | null {

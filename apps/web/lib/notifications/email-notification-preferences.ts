@@ -2,6 +2,7 @@ export const EMAIL_NOTIFICATION_KEYS = [
   'commercial_match_digest',
   'email_stuck_thread_digest',
   'email_follow_up_reminders',
+  'project_retainer_digest',
 ] as const;
 
 export type EmailNotificationKey = (typeof EMAIL_NOTIFICATION_KEYS)[number];
@@ -13,6 +14,7 @@ export const EMAIL_NOTIFICATION_DEFAULTS: Record<
   commercial_match_digest: true,
   email_stuck_thread_digest: true,
   email_follow_up_reminders: true,
+  project_retainer_digest: true,
 };
 
 export const EMAIL_NOTIFICATION_COPY: Record<
@@ -33,6 +35,11 @@ export const EMAIL_NOTIFICATION_COPY: Record<
     title: 'Email follow-up reminders',
     description:
       'Daily reminders when a thread you snoozed is due for follow-up.',
+  },
+  project_retainer_digest: {
+    title: 'Project retainer digest',
+    description:
+      'Weekly summary of project credit burns and balance changes. Only sent when a project has the digest switch on and activity that week.',
   },
 };
 
