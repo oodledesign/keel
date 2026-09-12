@@ -50,6 +50,12 @@ function audiencesPath(accountSlug: string) {
   );
 }
 
+function audienceDetailPath(accountSlug: string, listId: string) {
+  return pathsConfig.app.accountEmailCampaignAudienceDetail
+    .replace('[account]', accountSlug)
+    .replace('[listId]', listId);
+}
+
 function contactsPath(accountSlug: string) {
   return pathsConfig.app.accountEmailCampaignContacts.replace(
     '[account]',
@@ -57,10 +63,13 @@ function contactsPath(accountSlug: string) {
   );
 }
 
-function revalidateAudiencePaths(accountSlug: string) {
+function revalidateAudiencePaths(accountSlug: string, listId?: string) {
   revalidatePath(campaignsPath(accountSlug));
   revalidatePath(audiencesPath(accountSlug));
   revalidatePath(contactsPath(accountSlug));
+  if (listId) {
+    revalidatePath(audienceDetailPath(accountSlug, listId));
+  }
 }
 
 function campaignPath(accountSlug: string, campaignId: string) {
@@ -324,7 +333,7 @@ export const saveAudienceListAction = enhanceAction(
         contactIds: data.contactIds,
       });
     }
-    revalidateAudiencePaths(data.accountSlug);
+    revalidateAudiencePaths(data.accountSlug, list.id);
     return { success: true as const, listId: list.id };
   },
   { auth: true, schema: SaveAudienceListSchema },
@@ -338,7 +347,7 @@ export const deleteAudienceListAction = enhanceAction(
       data.accountId,
       data.listId,
     );
-    revalidateAudiencePaths(data.accountSlug);
+    revalidateAudiencePaths(data.accountSlug, data.listId);
     return { success: true as const };
   },
   { auth: true, schema: DeleteAudienceListSchema },
@@ -353,7 +362,7 @@ export const addAudienceListMembersAction = enhanceAction(
       listId: data.listId,
       contactIds: data.contactIds,
     });
-    revalidateAudiencePaths(data.accountSlug);
+    revalidateAudiencePaths(data.accountSlug, data.listId);
     return { success: true as const, added };
   },
   { auth: true, schema: AudienceListMembersSchema },
@@ -368,7 +377,7 @@ export const removeAudienceListMembersAction = enhanceAction(
       listId: data.listId,
       contactIds: data.contactIds,
     });
-    revalidateAudiencePaths(data.accountSlug);
+    revalidateAudiencePaths(data.accountSlug, data.listId);
     return { success: true as const };
   },
   { auth: true, schema: AudienceListMembersSchema },
@@ -409,7 +418,7 @@ export const createListFromCategoryAction = enhanceAction(
             ),
           });
 
-    revalidateAudiencePaths(data.accountSlug);
+    revalidateAudiencePaths(data.accountSlug, list.id);
     return { success: true as const, listId: list.id };
   },
   { auth: true, schema: CreateListFromCategorySchema },
@@ -503,7 +512,7 @@ export const bulkAddContactsToListAction = enhanceAction(
         filters: { source: 'manual', matchMode: 'all', rules: [] },
         contactIds: data.contactIds,
       });
-      revalidateAudiencePaths(data.accountSlug);
+      revalidateAudiencePaths(data.accountSlug, created.id);
       return { success: true as const, listId: created.id, created: true };
     }
 
@@ -512,7 +521,7 @@ export const bulkAddContactsToListAction = enhanceAction(
       listId,
       contactIds: data.contactIds,
     });
-    revalidateAudiencePaths(data.accountSlug);
+    revalidateAudiencePaths(data.accountSlug, listId);
     return { success: true as const, listId, created: false };
   },
   { auth: true, schema: BulkAddContactsToListSchema },

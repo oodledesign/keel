@@ -255,43 +255,57 @@ export async function loadCampaignsGrowthHub(accountId: string) {
   return { lists, automations, campaigns, snapshot, mailingForms };
 }
 
-export async function loadCampaignAudienceWorkspace(accountId: string) {
+export async function loadCampaignAudienceEditor(accountId: string) {
   const client = getSupabaseServerClient();
+  const admin = getSupabaseServerAdminClient();
   const contacts = createCampaignContactsService(client);
-  const listsService = createAudienceListsService(client);
-  const [hub, categories, workspaceContacts] = await Promise.all([
-    loadCampaignsGrowthHub(accountId),
+  const [categories, workspaceContacts, subscribers] = await Promise.all([
     contacts.listCategories(accountId).catch(() => []),
     contacts.listContacts(accountId, { limit: 400 }).catch(() => []),
+    listWorkspaceMailingListSubscribers(admin, accountId),
   ]);
-
-  const membersByList: Record<
-    string,
-    Awaited<ReturnType<typeof listsService.listMembers>>
-  > = {};
-
-  await Promise.all(
-    hub.lists
-      .filter((row) => row.source === 'manual')
-      .map(async (list) => {
-        try {
-          membersByList[list.id] = await listsService.listMembers(
-            accountId,
-            list.id,
-          );
-        } catch {
-          membersByList[list.id] = [];
-        }
-      }),
-  );
+  const snapshot = await loadCampaignUsageSnapshot({
+    accountId,
+    contactsUsed: subscribers.length,
+  });
 
   return {
-    ...hub,
+    snapshot,
     categories,
     contacts: workspaceContacts,
-    membersByList,
   };
 }
+
+export const loadCampaignAudienceListDetail = cache(
+  async function loadCampaignAudienceListDetail(
+    accountId: string,
+    listId: string,
+  ) {
+    const client = getSupabaseServerClient();
+    const listsService = createAudienceListsService(client);
+    const [editor, list] = await Promise.all([
+      loadCampaignAudienceEditor(accountId),
+      listsService.get(accountId, listId),
+    ]);
+
+    if (!list) return null;
+
+    const members =
+      list.source === 'manual'
+        ? await listsService.listMembers(accountId, list.id).catch(() => [])
+        : [];
+
+    return {
+      ...editor,
+      list: {
+        ...list,
+        memberCount:
+          list.source === 'manual' ? members.length : list.memberCount,
+      },
+      members,
+    };
+  },
+);
 
 export async function loadCampaignContactsPage(
   accountId: string,

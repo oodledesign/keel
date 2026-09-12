@@ -42,7 +42,7 @@ async function requireGrowthImport(userId: string, accountId: string) {
   return client;
 }
 
-function revalidateImportPaths(accountSlug: string) {
+function revalidateImportPaths(accountSlug: string, listId?: string) {
   revalidatePath(
     pathsConfig.app.accountEmailCampaignContacts.replace(
       '[account]',
@@ -55,6 +55,13 @@ function revalidateImportPaths(accountSlug: string) {
       accountSlug,
     ),
   );
+  if (listId) {
+    revalidatePath(
+      pathsConfig.app.accountEmailCampaignAudienceDetail
+        .replace('[account]', accountSlug)
+        .replace('[listId]', listId),
+    );
+  }
 }
 
 const suggestSchema = z.object({
@@ -173,7 +180,7 @@ export const commitCampaignContactImportAction = enhanceAction(
       });
     }
 
-    revalidateImportPaths(data.accountSlug);
+    revalidateImportPaths(data.accountSlug, listId ?? undefined);
 
     const rejected = summary.errorCount + failed.length;
     const parts = [
