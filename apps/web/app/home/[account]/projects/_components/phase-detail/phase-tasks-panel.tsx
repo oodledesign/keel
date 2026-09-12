@@ -23,8 +23,11 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
+import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
+import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
@@ -218,7 +221,12 @@ export function PhaseTasksPanel({
                     value={task.status}
                     onValueChange={(status) => patchTask(task, { status })}
                   >
-                    <SelectTrigger className="h-7 w-[130px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)]">
+                    <SelectTrigger
+                      className={cn(
+                        'h-7 w-[130px] border-0 text-xs font-medium shadow-none',
+                        taskStatusBadgeClass(task.status),
+                      )}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -242,8 +250,11 @@ export function PhaseTasksPanel({
                   />
                 </>
               ) : (
-                <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  {TASK_STATUS_LABELS[task.status] ?? task.status} ·{' '}
+                <span className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                  <TaskStatusBadge
+                    status={task.status}
+                    className="normal-case tracking-normal"
+                  />
                   {formatShortDate(task.due_date)}
                 </span>
               )}
