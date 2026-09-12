@@ -15,12 +15,19 @@ import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
+import {
+  CAMPAIGN_CONTACT_LIST_CHIP_LIMIT,
+  visibleNamedChips,
+} from '~/lib/campaigns/campaign-contact-display';
+import { CAMPAIGN_STATUS_BADGE_CLASS } from '~/lib/campaigns/campaign-status';
 import type {
   CampaignAudienceList,
   CampaignContactCategory,
+  CampaignContactListMembership,
   CampaignWorkspaceContact,
 } from '~/lib/campaigns/campaign.types';
 import {
@@ -37,6 +44,7 @@ import {
   saveCampaignContactAction,
   saveContactCategoryAction,
 } from '../_lib/server/server-actions';
+import { CampaignSubscriberStatusBadge } from './campaign-status-badge';
 import { CampaignUpgradeCta } from './campaign-upgrade-cta';
 
 export function CampaignContactsPage({
@@ -102,7 +110,8 @@ export function CampaignContactsPage({
         (contact.email ?? '').toLowerCase().includes(q) ||
         (contact.phone ?? '').toLowerCase().includes(q) ||
         (contact.companyName ?? '').toLowerCase().includes(q) ||
-        (contact.industry ?? '').toLowerCase().includes(q)
+        (contact.industry ?? '').toLowerCase().includes(q) ||
+        contact.lists.some((list) => list.name.toLowerCase().includes(q))
       );
     });
   }, [contacts, query, categoryFilter, industryFilter]);
@@ -372,6 +381,8 @@ export function CampaignContactsPage({
                 <th className="px-3 py-2 font-medium">Email</th>
                 <th className="px-3 py-2 font-medium">Company</th>
                 <th className="px-3 py-2 font-medium">Industry</th>
+                <th className="px-3 py-2 font-medium">Lists</th>
+                <th className="px-3 py-2 font-medium">Subscriber status</th>
                 <th className="px-3 py-2 font-medium">Categories</th>
                 <th className="px-3 py-2 font-medium" />
               </tr>
@@ -379,7 +390,7 @@ export function CampaignContactsPage({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className={`px-3 py-6 ${workspaceTextMuted}`}>
+                  <td colSpan={9} className={`px-3 py-6 ${workspaceTextMuted}`}>
                     No contacts match. Create one or upload a CSV.
                   </td>
                 </tr>
@@ -413,6 +424,14 @@ export function CampaignContactsPage({
                     </td>
                     <td className={`px-3 py-2 ${workspaceTextMuted}`}>
                       {contact.industry || '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      <ContactListChips lists={contact.lists} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <CampaignSubscriberStatusBadge
+                        status={contact.subscriberStatus}
+                      />
                     </td>
                     <td className={`px-3 py-2 ${workspaceTextMuted}`}>
                       {contact.categoryIds
@@ -469,6 +488,53 @@ export function CampaignContactsPage({
           }}
           startTransition={startTransition}
         />
+      ) : null}
+    </div>
+  );
+}
+
+function ContactListChips({
+  lists,
+}: {
+  lists: CampaignContactListMembership[];
+}) {
+  if (lists.length === 0) {
+    return <span className={workspaceTextMuted}>—</span>;
+  }
+
+  const { visible, overflow } = visibleNamedChips(lists);
+  const allNames = lists.map((list) => list.name).join(', ');
+
+  return (
+    <div
+      className="flex flex-wrap items-center gap-1"
+      title={allNames}
+      data-test="campaign-contact-lists"
+    >
+      {visible.map((list) => (
+        <span
+          key={list.id}
+          className={cn(
+            'inline-flex max-w-[9rem] shrink-0 items-center truncate rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+            CAMPAIGN_STATUS_BADGE_CLASS.draft,
+          )}
+        >
+          {list.name}
+        </span>
+      ))}
+      {overflow > 0 ? (
+        <span
+          className={cn(
+            'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+            CAMPAIGN_STATUS_BADGE_CLASS.cancelled,
+          )}
+          aria-label={`${overflow} more lists: ${lists
+            .slice(CAMPAIGN_CONTACT_LIST_CHIP_LIMIT)
+            .map((list) => list.name)
+            .join(', ')}`}
+        >
+          +{overflow}
+        </span>
       ) : null}
     </div>
   );

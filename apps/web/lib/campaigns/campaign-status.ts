@@ -1,4 +1,5 @@
 import type {
+  CampaignSubscriberStatus,
   EmailCampaignRecipient,
   EmailCampaignStatus,
 } from './campaign.types';
@@ -110,4 +111,66 @@ export function campaignRecipientStatusBadgeClass(
   }
 
   return CAMPAIGN_STATUS_BADGE_CLASS.cancelled;
+}
+
+export const CAMPAIGN_SUBSCRIBER_STATUSES = [
+  'subscribed',
+  'unsubscribed',
+  'suppressed',
+  'none',
+] as const satisfies readonly CampaignSubscriberStatus[];
+
+export const CAMPAIGN_SUBSCRIBER_STATUS_LABEL: Record<
+  CampaignSubscriberStatus,
+  string
+> = {
+  subscribed: 'Subscribed',
+  unsubscribed: 'Unsubscribed',
+  suppressed: 'Suppressed',
+  none: 'No preference',
+};
+
+export const CAMPAIGN_SUBSCRIBER_STATUS_BADGE_CLASS: Record<
+  CampaignSubscriberStatus,
+  string
+> = {
+  subscribed: CAMPAIGN_STATUS_BADGE_CLASS.sent,
+  unsubscribed: CAMPAIGN_STATUS_BADGE_CLASS.cancelled,
+  suppressed: CAMPAIGN_STATUS_BADGE_CLASS.failed,
+  none: CAMPAIGN_STATUS_BADGE_CLASS.draft,
+};
+
+export function parseCampaignSubscriberStatus(
+  value: unknown,
+): CampaignSubscriberStatus {
+  if (
+    typeof value === 'string' &&
+    (CAMPAIGN_SUBSCRIBER_STATUSES as readonly string[]).includes(value)
+  ) {
+    return value as CampaignSubscriberStatus;
+  }
+
+  return 'none';
+}
+
+export function campaignSubscriberStatusLabel(
+  status: CampaignSubscriberStatus | string,
+): string {
+  if (status in CAMPAIGN_SUBSCRIBER_STATUS_LABEL) {
+    return CAMPAIGN_SUBSCRIBER_STATUS_LABEL[status as CampaignSubscriberStatus];
+  }
+
+  return campaignStatusLabel(status);
+}
+
+export function campaignSubscriberStatusBadgeClass(
+  status: CampaignSubscriberStatus | string,
+): string {
+  if (status in CAMPAIGN_SUBSCRIBER_STATUS_BADGE_CLASS) {
+    return CAMPAIGN_SUBSCRIBER_STATUS_BADGE_CLASS[
+      status as CampaignSubscriberStatus
+    ];
+  }
+
+  return CAMPAIGN_STATUS_BADGE_CLASS.draft;
 }

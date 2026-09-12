@@ -4,10 +4,15 @@ import {
   CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS,
   CAMPAIGN_STATUS_BADGE_CLASS,
   CAMPAIGN_STATUS_LABEL,
+  CAMPAIGN_SUBSCRIBER_STATUS_BADGE_CLASS,
+  CAMPAIGN_SUBSCRIBER_STATUS_LABEL,
   campaignRecipientStatusBadgeClass,
   campaignRecipientStatusLabel,
   campaignStatusBadgeClass,
   campaignStatusLabel,
+  campaignSubscriberStatusBadgeClass,
+  campaignSubscriberStatusLabel,
+  parseCampaignSubscriberStatus,
 } from './campaign-status';
 import type { EmailCampaignStatus } from './campaign.types';
 
@@ -69,5 +74,44 @@ describe('campaign status pills', () => {
     expect(
       new Set(Object.values(CAMPAIGN_RECIPIENT_STATUS_BADGE_CLASS)).size,
     ).toBe(4);
+  });
+
+  it('labels mailing-preference subscriber states', () => {
+    expect(campaignSubscriberStatusLabel('subscribed')).toBe('Subscribed');
+    expect(campaignSubscriberStatusLabel('unsubscribed')).toBe('Unsubscribed');
+    expect(campaignSubscriberStatusLabel('suppressed')).toBe('Suppressed');
+    expect(campaignSubscriberStatusLabel('none')).toBe('No preference');
+    expect(Object.keys(CAMPAIGN_SUBSCRIBER_STATUS_LABEL).sort()).toEqual([
+      'none',
+      'subscribed',
+      'suppressed',
+      'unsubscribed',
+    ]);
+  });
+
+  it('colours subscriber states with distinct soft pills', () => {
+    expect(campaignSubscriberStatusBadgeClass('subscribed')).toBe(
+      CAMPAIGN_STATUS_BADGE_CLASS.sent,
+    );
+    expect(campaignSubscriberStatusBadgeClass('unsubscribed')).toBe(
+      CAMPAIGN_STATUS_BADGE_CLASS.cancelled,
+    );
+    expect(campaignSubscriberStatusBadgeClass('suppressed')).toBe(
+      CAMPAIGN_STATUS_BADGE_CLASS.failed,
+    );
+    expect(campaignSubscriberStatusBadgeClass('none')).toBe(
+      CAMPAIGN_STATUS_BADGE_CLASS.draft,
+    );
+    expect(
+      new Set(Object.values(CAMPAIGN_SUBSCRIBER_STATUS_BADGE_CLASS)).size,
+    ).toBe(4);
+  });
+
+  it('parses preference rows and unknown values to none', () => {
+    expect(parseCampaignSubscriberStatus('subscribed')).toBe('subscribed');
+    expect(parseCampaignSubscriberStatus('unsubscribed')).toBe('unsubscribed');
+    expect(parseCampaignSubscriberStatus('suppressed')).toBe('suppressed');
+    expect(parseCampaignSubscriberStatus('paused')).toBe('none');
+    expect(parseCampaignSubscriberStatus(null)).toBe('none');
   });
 });
