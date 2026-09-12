@@ -2,6 +2,8 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
+
 import { createWorkspaceFormsService } from './workspace-forms.service';
 
 export async function loadWorkspaceFormsPage(accountId: string) {
@@ -18,12 +20,16 @@ export async function loadWorkspaceFormDetail(
 ) {
   const client = getSupabaseServerClient();
   const service = createWorkspaceFormsService(client);
-  const [form, submissions, listings, members] = await Promise.all([
-    service.getForm(accountId, formId),
-    service.listSubmissions(accountId, formId),
-    service.listListingOptions(accountId),
-    service.listNotifyMembers(accountSlug),
-  ]);
+  const [form, submissions, listings, members, audienceLists] =
+    await Promise.all([
+      service.getForm(accountId, formId),
+      service.listSubmissions(accountId, formId),
+      service.listListingOptions(accountId),
+      service.listNotifyMembers(accountSlug),
+      createAudienceListsService(client)
+        .list(accountId)
+        .catch(() => []),
+    ]);
 
-  return { form, submissions, listings, members };
+  return { form, submissions, listings, members, audienceLists };
 }

@@ -114,6 +114,8 @@ export const SaveAutomationSchema = z.object({
   automationId: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(120),
   campaignId: z.string().uuid(),
+  formId: z.string().uuid().nullable().optional(),
+  audienceListId: z.string().uuid().nullable().optional(),
   status: z.enum(['active', 'paused']).optional(),
 });
 

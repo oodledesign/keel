@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 
 import { fireNewSubscriberAutomations } from '~/lib/campaigns/campaign-automations.service';
+import { composeCampaignContactName } from '~/lib/campaigns/campaign-contact-csv';
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { normalizeCirculationEmail } from '~/lib/commercial/circulation/circulation-eligibility';
@@ -168,13 +169,18 @@ export async function upsertWorkspaceContactFromForm(
   return String((data as { id: string }).id);
 }
 
+export type EnsureWorkspaceMailingPreferenceResult = {
+  preference: WorkspaceMailingPreference;
+  created: boolean;
+};
+
 export async function ensureWorkspaceMailingPreference(input: {
   admin: SupabaseClient;
   accountId: string;
   email: string;
   clientId?: string | null;
   consentSource?: string;
-}): Promise<WorkspaceMailingPreference> {
+}): Promise<EnsureWorkspaceMailingPreferenceResult> {
   const email = normalizeCirculationEmail(input.email);
   const db = fromTable(input.admin, 'workspace_mailing_preferences');
 
@@ -190,7 +196,10 @@ export async function ensureWorkspaceMailingPreference(input: {
       existing.marketing_status === 'unsubscribed' ||
       existing.marketing_status === 'suppressed'
     ) {
-      return mapPreference(existing as Record<string, unknown>);
+      return {
+        preference: mapPreference(existing as Record<string, unknown>),
+        created: false,
+      };
     }
 
     const { data, error } = await db
@@ -208,7 +217,10 @@ export async function ensureWorkspaceMailingPreference(input: {
       );
     }
 
-    return mapPreference(data as Record<string, unknown>);
+    return {
+      preference: mapPreference(data as Record<string, unknown>),
+      created: false,
+    };
   }
 
   const { data, error } = await db
@@ -231,15 +243,10 @@ export async function ensureWorkspaceMailingPreference(input: {
     throw new Error(error?.message ?? 'Could not subscribe to mailing list');
   }
 
-  const preference = mapPreference(data as Record<string, unknown>);
-  void fireNewSubscriberAutomations({
-    client: input.admin,
-    accountId: input.accountId,
-    email: preference.email,
-    unsubscribeToken: preference.unsubscribeToken,
-  }).catch(() => undefined);
-
-  return preference;
+  return {
+    preference: mapPreference(data as Record<string, unknown>),
+    created: true,
+  };
 }
 
 export type PublicMailingPreferenceResult = {
@@ -411,12 +418,72 @@ export async function listWorkspaceMailingListSubscribers(
   });
 }
 
+async function addMailingSignupToAudienceList(input: {
+  admin: SupabaseClient;
+  accountId: string;
+  listId: string;
+  email: string;
+  contactName: string;
+  companyName?: string | null;
+  phone?: string | null;
+}): Promise<void> {
+  const { data: list } = await fromTable(input.admin, 'campaign_audience_lists')
+    .select('id, source')
+    .eq('account_id', input.accountId)
+    .eq('id', input.listId)
+    .maybeSingle();
+
+  if (!list || list.source !== 'manual') return;
+
+  const { data: existing } = await fromTable(input.admin, 'contacts')
+    .select('id')
+    .eq('account_id', input.accountId)
+    .ilike('email', input.email)
+    .limit(1)
+    .maybeSingle();
+
+  let contactId = existing?.id ? String(existing.id) : null;
+
+  if (!contactId) {
+    const names = composeCampaignContactName({
+      fullName: input.contactName,
+      email: input.email,
+    });
+    const { data, error } = await fromTable(input.admin, 'contacts')
+      .insert({
+        account_id: input.accountId,
+        email: input.email,
+        first_name: names.firstName,
+        last_name: names.lastName,
+        full_name: names.fullName,
+        phone: input.phone?.trim() || null,
+        company_name: input.companyName?.trim() || null,
+      })
+      .select('id')
+      .single();
+
+    if (error || !data) return;
+    contactId = String((data as { id: string }).id);
+  }
+
+  await fromTable(input.admin, 'campaign_audience_list_members').upsert(
+    {
+      account_id: input.accountId,
+      list_id: input.listId,
+      contact_id: contactId,
+    },
+    { onConflict: 'list_id,contact_id', ignoreDuplicates: true },
+  );
+}
+
 export async function submitMailingListSignup(input: {
   admin: SupabaseClient;
   accountId: string;
   contact: FormContactValues;
   spec: MailingListSpec;
   commercial: boolean;
+  formId?: string | null;
+  audienceListId?: string | null;
 }): Promise<{
   clientId: string;
   requirementId: string | null;
@@ -430,7 +497,7 @@ export async function submitMailingListSignup(input: {
     input.contact,
   );
 
-  const preference = await ensureWorkspaceMailingPreference({
+  const { preference, created } = await ensureWorkspaceMailingPreference({
     admin: input.admin,
     accountId: input.accountId,
     email,
@@ -497,6 +564,33 @@ export async function submitMailingListSignup(input: {
   }
 
   if (preference.marketingStatus === 'subscribed') {
+    if (input.audienceListId) {
+      try {
+        await addMailingSignupToAudienceList({
+          admin: input.admin,
+          accountId: input.accountId,
+          listId: input.audienceListId,
+          email,
+          contactName: input.contact.contactName,
+          companyName: input.contact.companyName ?? input.spec.companyName,
+          phone: input.contact.contactPhone,
+        });
+      } catch {
+        // List membership must not fail the public signup.
+      }
+    }
+
+    void fireNewSubscriberAutomations({
+      client: input.admin,
+      accountId: input.accountId,
+      email: preference.email,
+      displayName: input.contact.contactName,
+      unsubscribeToken: preference.unsubscribeToken,
+      formId: input.formId ?? null,
+      audienceListId: input.audienceListId ?? null,
+      includeUnscoped: created,
+    }).catch(() => undefined);
+
     void scheduleDynamicsMailingListSync({
       client: input.admin,
       accountId: input.accountId,

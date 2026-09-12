@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
+import type { CampaignAudienceList } from '~/lib/campaigns/campaign.types';
 import {
   type FormEditorTab,
   formEditorTabHref,
@@ -100,6 +101,7 @@ type Props = {
   accountSlug: string;
   form: WorkspaceFormRecord;
   listings: ListingOption[];
+  audienceLists: CampaignAudienceList[];
   members: FormNotifyMemberOption[];
   submissions: WorkspaceFormSubmissionRecord[];
   showListingDestination: boolean;
@@ -110,6 +112,7 @@ export function FormBuilder({
   accountSlug,
   form,
   listings,
+  audienceLists,
   members,
   submissions,
   showListingDestination,
@@ -127,6 +130,9 @@ export function FormBuilder({
   const [eventTime, setEventTime] = useState(form.eventTime ?? '');
   const [destination, setDestination] = useState(form.destination);
   const [listingId, setListingId] = useState(form.listingId ?? '');
+  const [audienceListId, setAudienceListId] = useState(
+    form.audienceListId ?? '',
+  );
   const [submitLabel, setSubmitLabel] = useState(form.submitLabel);
   const [successMessage, setSuccessMessage] = useState(
     form.successMessage ?? '',
@@ -184,6 +190,7 @@ export function FormBuilder({
           eventTime: eventTime.trim() || null,
           destination,
           listingId: listingId || null,
+          audienceListId: audienceListId || null,
           submitLabel: submitLabel.trim() || 'Submit',
           successMessage: successMessage.trim() || null,
           fields,
@@ -437,6 +444,8 @@ export function FormBuilder({
                           commercial: showListingDestination,
                         }),
                       );
+                    } else {
+                      setAudienceListId('');
                     }
                     if (next === 'listing_enquiry') {
                       setFields((current) => ensureListingField(current));
@@ -474,6 +483,36 @@ export function FormBuilder({
                 />
               </div>
             </div>
+
+            {destination === 'mailing_list' ? (
+              <div className="grid gap-1.5">
+                <Label>Add subscribers to audience list</Label>
+                <Select
+                  value={audienceListId || 'none'}
+                  onValueChange={(value) =>
+                    setAudienceListId(value === 'none' ? '' : value)
+                  }
+                >
+                  <SelectTrigger data-test="form-audience-list">
+                    <SelectValue placeholder="Workspace mailing list only" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      Workspace mailing list only
+                    </SelectItem>
+                    {audienceLists.map((list) => (
+                      <SelectItem key={list.id} value={list.id}>
+                        {list.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  Optional. Manual lists get this person as a member. Welcome
+                  automations scoped to the list can fire from this form.
+                </p>
+              </div>
+            ) : null}
 
             {destination === 'listing_enquiry' ||
             (destination === 'mailing_list' && showListingDestination) ? (

@@ -24,7 +24,7 @@ async function AutomationsPage({ params }: AutomationsPageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Automations"
-        description="Welcome new mailing-list subscribers with a campaign email. Included on every Campaigns plan."
+        description="Welcome new mailing-list subscribers with a campaign email. Scope to a form or audience list, or keep it workspace-wide."
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
         <CampaignsHubNav accountSlug={accountSlug} />
@@ -33,6 +33,8 @@ async function AutomationsPage({ params }: AutomationsPageProps) {
           accountSlug={accountSlug}
           automations={data.automations}
           campaigns={data.campaigns}
+          mailingForms={data.mailingForms}
+          lists={data.lists}
         />
       </PageBody>
     </>
