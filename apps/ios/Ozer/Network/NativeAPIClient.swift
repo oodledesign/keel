@@ -361,6 +361,36 @@ actor NativeAPIClient {
         }
     }
 
+    func meeting(id: String, workspace: String, accessToken: String) async throws -> MeetingItem {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/meetings/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(MeetingItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func task(id: String, workspace: String, accessToken: String) async throws -> TaskItem {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/tasks/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(TaskItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func notes(workspace: String, accessToken: String) async throws -> NotesPayload {
         let data = try await send(
             method: "GET",
@@ -1506,15 +1536,17 @@ struct ClientItem: Decodable, Identifiable, Equatable, Hashable {
 
 struct MeetingsPayload: Decodable, Equatable {
     var items: [MeetingItem]
+    var upcoming: [UpcomingMeetingItem]
 
-    static let empty = MeetingsPayload(items: [])
+    static let empty = MeetingsPayload(items: [], upcoming: [])
 
     enum CodingKeys: String, CodingKey {
-        case items, meetings
+        case items, meetings, upcoming
     }
 
-    init(items: [MeetingItem]) {
+    init(items: [MeetingItem], upcoming: [UpcomingMeetingItem] = []) {
         self.items = items
+        self.upcoming = upcoming
     }
 
     init(from decoder: Decoder) throws {
@@ -1526,6 +1558,100 @@ struct MeetingsPayload: Decodable, Equatable {
         } else {
             items = []
         }
+        upcoming = try container.decodeIfPresent([UpcomingMeetingItem].self, forKey: .upcoming) ?? []
+    }
+}
+
+struct UpcomingMeetingItem: Decodable, Identifiable, Equatable, Hashable {
+    var id: String
+    var title: String
+    var startAt: String
+    var inviteeName: String?
+    var conferencingUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title
+        case startAt = "start_at"
+        case inviteeName = "invitee_name"
+        case conferencingUrl = "conferencing_url"
+    }
+
+    var whenLabel: String? {
+        MeetingDisplay.upcomingWhen(startAt)
+    }
+
+    var httpsConferencingURL: URL? {
+        guard let raw = conferencingUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let url = URL(string: raw),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https"
+        else {
+            return nil
+        }
+        return url
+    }
+}
+
+struct MeetingNotes: Decodable, Equatable, Hashable {
+    var text: String
+    var generatedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case text
+        case generatedAt = "generated_at"
+    }
+
+    var trimmedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+struct MeetingTaskItem: Decodable, Identifiable, Equatable, Hashable {
+    var id: String
+    var title: String
+    var due: String?
+    var status: String?
+    var assigneeName: String?
+    var plannerTaskId: String?
+    var clientId: String?
+    var clientName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, due, status
+        case assigneeName = "assignee_name"
+        case plannerTaskId = "planner_task_id"
+        case clientId = "client_id"
+        case clientName = "client_name"
+    }
+
+    var canOpenTask: Bool {
+        let planner = plannerTaskId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !planner.isEmpty
+    }
+
+    var asTaskItem: TaskItem {
+        let planner = plannerTaskId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return TaskItem(
+            id: planner.isEmpty ? id : planner,
+            title: title,
+            status: status,
+            due: due,
+            subtitle: assigneeName,
+            clientId: clientId,
+            clientName: clientName
+        )
+    }
+
+    var displaySubtitle: String? {
+        var parts: [String] = []
+        if let due = TaskItem.dueLabel(due) {
+            parts.append(due)
+        }
+        let assignee = assigneeName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !assignee.isEmpty {
+            parts.append(assignee)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 
@@ -1538,14 +1664,20 @@ struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
     var clientName: String?
     var meetingDate: String?
     var source: String?
+    var durationSeconds: Int?
+    var hasExtractedTasks: Bool
     var createdAt: String?
     var updatedAt: String?
+    var notes: MeetingNotes?
+    var tasks: [MeetingTaskItem]
 
     enum CodingKeys: String, CodingKey {
-        case id, title, content, workspace, source
+        case id, title, content, workspace, source, notes, tasks
         case clientId = "client_id"
         case clientName = "client_name"
         case meetingDate = "meeting_date"
+        case durationSeconds = "duration_seconds"
+        case hasExtractedTasks = "has_extracted_tasks"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -1559,8 +1691,12 @@ struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
         clientName: String? = nil,
         meetingDate: String? = nil,
         source: String? = nil,
+        durationSeconds: Int? = nil,
+        hasExtractedTasks: Bool = false,
         createdAt: String? = nil,
-        updatedAt: String? = nil
+        updatedAt: String? = nil,
+        notes: MeetingNotes? = nil,
+        tasks: [MeetingTaskItem] = []
     ) {
         self.id = id
         self.title = title
@@ -1570,8 +1706,12 @@ struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
         self.clientName = clientName
         self.meetingDate = meetingDate
         self.source = source
+        self.durationSeconds = durationSeconds
+        self.hasExtractedTasks = hasExtractedTasks
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.notes = notes
+        self.tasks = tasks
     }
 
     init(from decoder: Decoder) throws {
@@ -1588,8 +1728,18 @@ struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
         clientName = try container.decodeIfPresent(String.self, forKey: .clientName)
         meetingDate = try container.decodeIfPresent(String.self, forKey: .meetingDate)
         source = try container.decodeIfPresent(String.self, forKey: .source)
+        if let value = try? container.decodeIfPresent(Int.self, forKey: .durationSeconds) {
+            durationSeconds = value
+        } else if let value = try? container.decodeIfPresent(Double.self, forKey: .durationSeconds) {
+            durationSeconds = Int(value.rounded())
+        } else {
+            durationSeconds = nil
+        }
+        hasExtractedTasks = try container.decodeIfPresent(Bool.self, forKey: .hasExtractedTasks) ?? false
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        notes = try container.decodeIfPresent(MeetingNotes.self, forKey: .notes)
+        tasks = try container.decodeIfPresent([MeetingTaskItem].self, forKey: .tasks) ?? []
     }
 
     var displayTitle: String {
@@ -1598,14 +1748,34 @@ struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
         return SpeakerTurnSplitter.title(from: content, fallback: "Meeting transcript")
     }
 
-    var displaySubtitle: String? {
+    var displayClientName: String? {
         let client = clientName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let date = NoteItem.relativeDateLabel(updatedAt ?? createdAt)
-        if !client.isEmpty, let date {
-            return "\(client) · \(date)"
+        return client.isEmpty ? nil : client
+    }
+
+    var dateTimeLabel: String? {
+        MeetingDisplay.dateTimeLabel(meetingDate: meetingDate, instant: createdAt ?? updatedAt)
+    }
+
+    var durationLabel: String? {
+        MeetingDisplay.durationLabel(seconds: durationSeconds ?? 0)
+    }
+
+    var displaySubtitle: String? {
+        var parts: [String] = []
+        if let client = displayClientName {
+            parts.append(client)
         }
-        if !client.isEmpty { return client }
-        return date
+        if let date = dateTimeLabel {
+            parts.append(date)
+        }
+        if let duration = durationLabel {
+            parts.append(duration)
+        }
+        if !parts.isEmpty {
+            return parts.joined(separator: " · ")
+        }
+        return NoteItem.relativeDateLabel(updatedAt ?? createdAt)
     }
 
     func asLocalMeeting() -> LocalMeeting {
@@ -1615,7 +1785,7 @@ struct MeetingItem: Decodable, Identifiable, Equatable, Hashable {
             title: displayTitle,
             transcript: content,
             createdAt: createdAt ?? updatedAt ?? OfflineNoteQueue.isoString(from: Date()),
-            durationSeconds: 0,
+            durationSeconds: max(0, durationSeconds ?? 0),
             audioFileName: nil,
             remoteNoteId: id,
             turns: [],

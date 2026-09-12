@@ -202,7 +202,13 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "content", "workspace", "client_id", "client_name", "meeting_date", "source", "created_at", "updated_at" }] }`.
+The list is `{ "items": [{ "id", "title", "content", "workspace", "client_id", "client_name", "meeting_date", "source", "duration_seconds", "has_extracted_tasks", "created_at", "updated_at" }], "upcoming": [{ "id", "title", "start_at", "invitee_name", "conferencing_url" }] }`.
+
+```
+GET {OZER_API_BASE}/api/native/v1/meetings/{id}?workspace=<slug-or-uuid>
+```
+
+Detail adds `notes` (`{ text, generated_at }` from the Mac/web summary, or null) and `tasks` (approved meeting action items, with `planner_task_id` when a planner task exists).
 
 ```
 POST {OZER_API_BASE}/api/native/v1/meetings
@@ -227,7 +233,7 @@ Surveyor, studio (`work_design` / `work_property`), and commercial property work
 - On-device Speech sessions are ended and restarted around 50s so live captions continue; the m4a/caf recording is not restarted. If a restart fails, the meeting screen shows an error and keeps retrying — the timer is not a silent freeze. A rewritten shorter hypothesis does not duplicate a committed paragraph.
 - On Stop a save sheet picks **Meeting** or **Note**. Surveyor (`building_surveyor`) defaults to Note; studio / commercial / `work_design` / `work_property` default to Meeting; personal and family are Note only. Meeting requires a client. Note keeps optional `client_id` + `category: meeting_transcript`.
 - Meeting syncs `POST /api/native/v1/meetings`. Note syncs `POST /api/native/v1/notes`. Flush errors stay visible; a 400 is not swallowed. Audio stays on the device.
-- The Meetings list shows local recordings plus remote `meeting_transcripts`
+- The Meetings hub matches the Mac Meetings page: **Start a new meeting**, **Upcoming** booked meetings, and **Recent** transcripts (client, date/time, duration). Tap a recent meeting for notes, transcript, and extracted tasks. Start uses the existing in-room recorder — not the Mac Whisper pipeline.
 
 Linux cannot compile this Xcode project. Open `apps/ios/Ozer.xcodeproj` on a Mac to build.
 
