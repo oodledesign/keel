@@ -35,15 +35,18 @@ export async function loadFinanceDashboardSummary(
   client: SupabaseClient,
   accountId: string,
 ): Promise<FinanceDashboardSummary> {
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-  const monthStartDate = monthStart.toISOString().slice(0, 10);
+  const now = new Date();
+  const monthStartDate = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+  )
+    .toISOString()
+    .slice(0, 10);
 
-  const financeTrendStart = new Date();
-  financeTrendStart.setMonth(financeTrendStart.getMonth() - 5);
-  financeTrendStart.setDate(1);
-  const financeTrendStartIso = financeTrendStart.toISOString().slice(0, 10);
+  const financeTrendStartIso = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1),
+  )
+    .toISOString()
+    .slice(0, 10);
 
   const [financeMonthResult, financeTrendResult] = await Promise.all([
     client

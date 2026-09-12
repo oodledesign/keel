@@ -28,6 +28,7 @@ struct HomeTodayView: View {
     @State private var invoiceItems: [InvoiceItem] = []
     @State private var overviewTab: HomeOverviewTab = .tasks
     @State private var loadError: NativeAPIError?
+    @State private var financesError: NativeAPIError?
     @State private var isLoading = false
     @State private var editorTask: TaskItem?
     @State private var showTaskEditor = false
@@ -129,8 +130,8 @@ struct HomeTodayView: View {
                 if let review = payload?.taskReview, review.pendingCount > 0 {
                     reviewCard(review)
                 }
-                if workspace?.showsInvoices == true, let finances {
-                    moneyCard(finances)
+                if workspace?.showsInvoices == true {
+                    financeSection
                 }
                 overviewCard
             }
@@ -249,45 +250,188 @@ struct HomeTodayView: View {
         .accessibilityLabel("Task review, \(review.pendingCount) waiting")
     }
 
-    private func moneyCard(_ finances: FinancesPayload) -> some View {
-        Button {
-            onOpen(.invoices)
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Outstanding")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(OzerPalette.plumMuted)
-                        .textCase(.uppercase)
-                    Spacer()
+    @ViewBuilder
+    private var financeSection: some View {
+        if let finances {
+            financeCard(finances)
+        } else if isLoading {
+            financeLoadingCard
+        } else {
+            financeUnavailableCard
+        }
+    }
+
+    private func financeCard(_ finances: FinancesPayload) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(finances.periodLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plumMuted)
+                    .textCase(.uppercase)
+                Spacer()
+                Button {
+                    onOpen(.invoices)
+                } label: {
                     Text("Invoices")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(OzerPalette.plumMuted)
                 }
-                Text(finances.outstandingBalance.isEmpty ? "—" : finances.outstandingBalance)
-                    .font(.title.weight(.semibold))
-                    .foregroundStyle(OzerPalette.plum)
+                .buttonStyle(.plain)
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                financeTotal(
+                    label: "In",
+                    value: finances.displayIncome,
+                    color: OzerPalette.coral
+                )
+                financeTotal(
+                    label: "Out",
+                    value: finances.displayOutgoings,
+                    color: OzerPalette.info
+                )
+            }
+
+            if finances.hasFinanceData {
+                Text("Net \(finances.displayNet)")
+                    .font(.subheadline)
+                    .foregroundStyle(finances.netPence < 0 ? OzerPalette.coral : OzerPalette.plumMuted)
+            }
+
+            if !finances.chartMonths.isEmpty {
+                FinanceTrendChart(months: finances.chartMonths)
+            } else {
+                financeEmptyChart
+            }
+
+            outstandingRow(finances)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(finances.periodLabel). In \(finances.displayIncome), out \(finances.displayOutgoings)"
+        )
+    }
+
+    private func financeTotal(label: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(OzerPalette.plumMuted)
+                .textCase(.uppercase)
+            Text(value)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(color)
+                .frame(width: 16, height: 3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var financeEmptyChart: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "chart.bar.xaxis")
+                .font(.title3)
+                .foregroundStyle(OzerPalette.plumSoft)
+            Text("No transactions yet")
+                .font(.subheadline)
+                .foregroundStyle(OzerPalette.plumMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 22)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                .foregroundStyle(OzerPalette.border)
+        )
+    }
+
+    private var financeLoadingCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("This month")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(OzerPalette.plumMuted)
+                .textCase(.uppercase)
+            ProgressView()
+                .tint(OzerPalette.coral)
+                .frame(maxWidth: .infinity, minHeight: 120)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+        .accessibilityLabel("Loading finances")
+    }
+
+    private var financeUnavailableCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("This month")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(OzerPalette.plumMuted)
+                .textCase(.uppercase)
+            Text(financesError == nil ? "Finances aren’t available yet." : "Couldn’t load finances")
+                .font(.body.weight(.medium))
+                .foregroundStyle(OzerPalette.plum)
+            if let financesError {
+                Text(financesError.localizedDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(OzerPalette.plumMuted)
+            }
+            Button("Try again") {
+                Task { await load() }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(OzerPalette.coral)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+    }
+
+    private func outstandingRow(_ finances: FinancesPayload) -> some View {
+        Button {
+            onOpen(.invoices)
+        } label: {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Outstanding")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OzerPalette.plumMuted)
+                    Text(finances.outstandingBalance.isEmpty ? "—" : finances.outstandingBalance)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(OzerPalette.plum)
+                }
+                Spacer()
                 if finances.overdueCount > 0 {
                     Text(
                         finances.overdueCount == 1
-                            ? "1 overdue · \(finances.overdueAmount)"
-                            : "\(finances.overdueCount) overdue · \(finances.overdueAmount)"
+                            ? "1 overdue"
+                            : "\(finances.overdueCount) overdue"
                     )
-                    .font(.subheadline.weight(.medium))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(OzerPalette.coral)
-                } else {
-                    Text("Nothing overdue")
-                        .font(.subheadline)
-                        .foregroundStyle(OzerPalette.plumMuted)
                 }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plumSoft)
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
-                    .stroke(OzerPalette.border, lineWidth: 1)
-            }
+            .padding(.top, 4)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Outstanding \(finances.outstandingBalance)")
@@ -583,6 +727,7 @@ struct HomeTodayView: View {
                 recentNotes = []
                 invoiceItems = []
                 loadError = nil
+                financesError = nil
                 return
             }
             async let todayCall = client.today(workspace: workspace, accessToken: token)
@@ -603,16 +748,33 @@ struct HomeTodayView: View {
             }
 
             if session.selectedWorkspace?.showsInvoices == true {
+                financesError = nil
                 if let pocket = today.finances {
                     extraFinances = pocket
                     invoiceItems = Array(pocket.recent.prefix(5))
                 }
-                if invoiceItems.isEmpty, let pocket = try? await client.finances(
-                    workspace: workspace,
-                    accessToken: token
-                ) {
-                    extraFinances = extraFinances ?? pocket
-                    invoiceItems = Array(pocket.recent.prefix(5))
+                let needsDashboard = extraFinances == nil
+                    || (extraFinances?.hasFinanceData == true
+                        && extraFinances?.months.isEmpty == true)
+                if needsDashboard {
+                    do {
+                        let pocket = try await client.finances(
+                            workspace: workspace,
+                            accessToken: token
+                        )
+                        extraFinances = pocket
+                        if invoiceItems.isEmpty {
+                            invoiceItems = Array(pocket.recent.prefix(5))
+                        }
+                    } catch let error as NativeAPIError {
+                        if extraFinances == nil {
+                            financesError = error
+                        }
+                    } catch {
+                        if extraFinances == nil {
+                            financesError = .transport(error.localizedDescription)
+                        }
+                    }
                 }
                 if invoiceItems.isEmpty, let list = try? await client.invoices(
                     workspace: workspace,
@@ -623,6 +785,7 @@ struct HomeTodayView: View {
             } else {
                 extraFinances = nil
                 invoiceItems = []
+                financesError = nil
             }
         } catch is CancellationError {
             return

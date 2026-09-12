@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { loadFinanceDashboardSummary } from '~/home/[account]/_lib/server/finance-dashboard-summary.loader';
 
 import { NativeHttpError } from './http';
 import {
@@ -21,6 +23,13 @@ import {
   workspaceShowsNativeInvoices,
 } from './invoices-shared';
 import type { NativeWorkspace } from './workspace-shared';
+
+vi.mock(
+  '~/home/[account]/_lib/server/finance-dashboard-summary.loader',
+  () => ({
+    loadFinanceDashboardSummary: vi.fn(),
+  }),
+);
 
 const studio: NativeWorkspace = {
   id: '22222222-2222-4222-8222-222222222222',
@@ -46,7 +55,7 @@ const openRow = {
   id: 'inv-1',
   invoice_number: 'INV-0042',
   status: 'sent',
-  due_at: '2026-09-10T12:00:00.000Z',
+  due_at: '2026-12-31T12:00:00.000Z',
   issued_at: '2026-08-20T12:00:00.000Z',
   paid_at: null,
   total_pence: 12500,
@@ -108,7 +117,7 @@ describe('invoice money and status', () => {
     ).toBe(true);
     expect(
       isNativeInvoiceOverdue(
-        { status: 'sent', due_at: '2026-09-10T12:00:00.000Z' },
+        { status: 'sent', due_at: '2026-12-31T12:00:00.000Z' },
         now,
       ),
     ).toBe(false);
@@ -142,7 +151,7 @@ describe('mapNativeInvoice', () => {
       number: 'INV-0042',
       client_name: 'Hope and Wonder',
       status: 'sent',
-      due: '2026-09-10',
+      due: '2026-12-31',
       total: '£125.00',
       total_pence: 12500,
       balance: '£125.00',
@@ -210,6 +219,11 @@ describe('summariseNativeFinances', () => {
     expect(summary.overdue_count).toBe(1);
     expect(summary.overdue_amount_pence).toBe(5000);
     expect(summary.paid_this_month_pence).toBe(2000);
+    expect(summary.income_pence).toBe(0);
+    expect(summary.outgoings_pence).toBe(0);
+    expect(summary.has_finance_data).toBe(false);
+    expect(summary.period).toBe('this_month');
+    expect(summary.months).toEqual([]);
     expect(summary.recent.map((row) => row.id)).toEqual([
       'inv-1',
       'inv-2',
@@ -321,11 +335,56 @@ describe('getNativeInvoice', () => {
 });
 
 describe('getNativeFinances', () => {
+  beforeEach(() => {
+    vi.mocked(loadFinanceDashboardSummary).mockReset();
+  });
+
   it('returns a zeroed pocket on personal without querying', async () => {
     const from = vi.fn();
     await expect(
       getNativeFinances({ from } as never, personal),
     ).resolves.toEqual(summariseNativeFinances([]));
     expect(from).not.toHaveBeenCalled();
+    expect(loadFinanceDashboardSummary).not.toHaveBeenCalled();
+  });
+
+  it('attaches this-month income and outgoings for a studio workspace', async () => {
+    const chain = createInvoiceListQuery();
+    const from = vi.fn(() => chain);
+    vi.mocked(loadFinanceDashboardSummary).mockResolvedValue({
+      financeIncomePence: 120_000,
+      financeExpensePence: 40_000,
+      financeNetPence: 80_000,
+      hasFinanceData: true,
+      financeTrend: [
+        {
+          month: 'Sep',
+          monthKey: '2026-09',
+          income: 1200,
+          expenses: 400,
+          net: 800,
+          isCurrent: true,
+        },
+      ],
+    } as unknown as Awaited<ReturnType<typeof loadFinanceDashboardSummary>>);
+
+    const result = await getNativeFinances({ from } as never, studio);
+
+    expect(from).toHaveBeenCalledWith('invoices');
+    expect(result.income_pence).toBe(120_000);
+    expect(result.outgoings_pence).toBe(40_000);
+    expect(result.net_pence).toBe(80_000);
+    expect(result.has_finance_data).toBe(true);
+    expect(result.period).toBe('this_month');
+    expect(result.months).toEqual([
+      {
+        month: 'Sep',
+        month_key: '2026-09',
+        income: 1200,
+        outgoings: 400,
+        net: 800,
+        is_current: true,
+      },
+    ]);
   });
 });

@@ -134,7 +134,7 @@ curl -sS -X POST "$ORIGIN/api/native/v1/messages/threads/THREAD_ID/messages" \
 - `tasks_due_today` / `overdue_tasks` (same task objects as `/tasks`)
 - `recent_notes` (same note objects as `/notes`)
 - `meetings_today` (`id`, `title`, `created_at`) on workspaces that record meetings
-- `finances` on studio / surveyor / commercial workspaces (or `null`)
+- `finances` on studio / surveyor / commercial workspaces (or `null`) — invoice outstanding plus this-month in/out and the last 6 months chart series (same as web Home)
 - `task_review` — `{ pending_count, meeting_count, email_count }` for the in-app review badge
 - `items` — flat due-today then overdue, for older clients that still read a list
 
@@ -188,7 +188,7 @@ List fields: `id`, `number`, `client_name`, `status`, `due`, `total`, `total_pen
 
 `GET /invoices/:id` adds `issued`, `paid`, `lines` (`description` + `amount`), `url` (hosted portal when `public_token` exists), and `web_path` (`/home/{slug}/invoices/{id}`).
 
-`GET /finances` is the pocket overview: outstanding balance, overdue count + amount, paid this month when any paid invoices fall in the current UTC month, and the 5 most recent invoices.
+`GET /finances` is the pocket overview: outstanding invoices plus the same **this calendar month** income / outgoings totals as the web business Home dashboard (`finance_transactions`, transfers excluded). `months` is the last 6 months including the current month (major currency units, `outgoings` = web `expenses`). Also: overdue count + amount, paid this month when any paid invoices fall in the current UTC month, and the 5 most recent invoices.
 
 There is no create / edit / PDF / Stripe checkout on this API.
 

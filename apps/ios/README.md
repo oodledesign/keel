@@ -125,7 +125,7 @@ Accept creates a planner task. Meeting items assign to the signed-in user. Dismi
 
 The iPhone list searches the loaded rows (title and client name) as you type, and filters by due (All / Today / Overdue / Upcoming / No date) and status (Open / Done / All). Business workspaces add a client chip (all, no client, or one client from `/clients`). `?client=` is sent only for a specific client. Completing a task still works; Add stays in the toolbar. Filter state resets when the workspace changes.
 
-Home is a pocket dashboard (greeting, date, outstanding money, tasks due / overdue, recent notes, meetings, quick actions). It reads the expanded `/today` payload — not a flat dump of Mac Assistant items. “See all” and the money card switch Menu screens the same way the Menu does.
+Home is a pocket dashboard (greeting, date, this-month in/out + 6-month chart, outstanding invoices, tasks due / overdue, recent notes, meetings, quick actions). It reads the expanded `/today` payload — not a flat dump of Mac Assistant items. “See all” and the finance card switch Menu screens the same way the Menu does. Totals use the current calendar month; the chart is the last 6 months — the same windows as the web business Home dashboard.
 
 ## Invoices
 
@@ -136,6 +136,8 @@ GET {OZER_API_BASE}/api/native/v1/invoices?workspace=<slug-or-uuid>&status=open|
 GET {OZER_API_BASE}/api/native/v1/invoices/{id}?workspace=<slug-or-uuid>
 GET {OZER_API_BASE}/api/native/v1/finances?workspace=<slug-or-uuid>
 ```
+
+`/today` and `/finances` include dashboard metrics (read-only): `period` (`this_month`), `income` / `outgoings` / `net` (formatted + `_pence`), `has_finance_data`, and `months` (`month`, `month_key`, `income`, `outgoings`, `net`, `is_current`). Outstanding invoice fields stay as they were.
 
 ## Messages API
 

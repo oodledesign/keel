@@ -235,6 +235,25 @@ describe('buildNativeTodayHomePayload', () => {
         paid_this_month_pence: null,
         currency: 'gbp',
         recent: [],
+        period: 'this_month',
+        period_label: 'This month',
+        income: '£1,200.00',
+        income_pence: 120000,
+        outgoings: '£400.00',
+        outgoings_pence: 40000,
+        net: '£800.00',
+        net_pence: 80000,
+        has_finance_data: true,
+        months: [
+          {
+            month: 'Sep',
+            month_key: '2026-09',
+            income: 1200,
+            outgoings: 400,
+            net: 800,
+            is_current: true,
+          },
+        ],
       },
     });
 
@@ -245,6 +264,8 @@ describe('buildNativeTodayHomePayload', () => {
       { id: 'late', title: 'Send invoice', subtitle: '2026-08-30' },
     ]);
     expect(payload.finances?.outstanding_balance_pence).toBe(12500);
+    expect(payload.finances?.income_pence).toBe(120000);
+    expect(payload.finances?.months).toHaveLength(1);
     expect(payload.task_review).toEqual({
       meeting_count: 0,
       email_count: 0,
