@@ -352,7 +352,7 @@ struct TaskReviewListView: View {
                 source: item.source,
                 workspace: workspace,
                 title: draft?.title,
-                detail: draft?.detail,
+                detail: draft == nil ? nil : (draft?.detail ?? ""),
                 due: draft?.due,
                 clearDue: draft?.clearDue ?? false,
                 durationMinutes: draft?.durationMinutes,

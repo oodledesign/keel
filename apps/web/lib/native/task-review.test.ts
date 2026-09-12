@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { NativeHttpError } from './http';
 import {
@@ -10,11 +10,7 @@ import {
   toNativeEmailReviewItem,
   toNativeMeetingReviewItem,
   unwrapJoinedRow,
-} from './task-review';
-
-vi.mock('~/lib/recorder/publish-meeting-task', () => ({
-  publishMeetingTaskToPlanner: vi.fn(),
-}));
+} from './task-review-shared';
 
 describe('parseNativeTaskReviewSource', () => {
   it('defaults to all and accepts aliases', () => {

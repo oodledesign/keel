@@ -133,9 +133,9 @@ export function toNativeMeetingReviewItem(
   row: Record<string, unknown>,
 ): NativeTaskReviewItem {
   const transcript = unwrapJoinedRow(row.meeting_transcripts);
-  const clientRow = unwrapJoinedRow(transcript?.clients) as
-    | NativeTaskClientRow
-    | null;
+  const clientRow = unwrapJoinedRow(
+    transcript?.clients,
+  ) as NativeTaskClientRow | null;
   const clientId =
     textOrNull(transcript?.client_id) ?? textOrNull(clientRow?.id) ?? null;
 
@@ -161,7 +161,9 @@ export function toNativeEmailReviewItem(
   row: Record<string, unknown>,
 ): NativeTaskReviewItem {
   const thread = unwrapJoinedRow(row.email_threads);
-  const linkedClient = unwrapJoinedRow(row.clients) as NativeTaskClientRow | null;
+  const linkedClient = unwrapJoinedRow(
+    row.clients,
+  ) as NativeTaskClientRow | null;
   const project = unwrapJoinedRow(row.projects);
   const clientId =
     textOrNull(row.client_id) ??

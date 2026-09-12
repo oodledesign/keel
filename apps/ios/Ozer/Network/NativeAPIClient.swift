@@ -690,7 +690,7 @@ actor NativeAPIClient {
             body["title"] = title
         }
         if let detail {
-            body["detail"] = detail
+            body["detail"] = detail.isEmpty ? NSNull() : detail
         }
         if clearDue {
             body["due"] = NSNull()

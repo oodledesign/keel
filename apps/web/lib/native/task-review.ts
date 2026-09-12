@@ -26,6 +26,7 @@ import {
 } from './task-review-shared';
 import type { NativeWorkspace } from './workspace-shared';
 
+/** Cap per source. `source=all` can therefore return up to 100 items. */
 export const NATIVE_TASK_REVIEW_LIST_LIMIT = 50;
 
 function textOrNull(value: unknown): string | null {
@@ -110,19 +111,18 @@ const MEETING_LIST_SELECT = `
   )
 `;
 
-function applyEmailAccountFilter<
-  T extends {
-    or: (filter: string) => T;
-    eq: (column: string, value: string) => T;
-  },
->(query: T, workspace: NativeWorkspace): T {
+type EmailAccountFilterable = {
+  or: (filter: string) => EmailAccountFilterable;
+  eq: (column: string, value: string) => EmailAccountFilterable;
+};
+
+function applyEmailAccountFilter<T>(query: T, workspace: NativeWorkspace): T {
+  const next = query as EmailAccountFilterable;
   if (isPersonalNativeWorkspace(workspace)) {
-    return query.or(
-      `account_id.is.null,account_id.eq.${workspace.id}`,
-    ) as T;
+    return next.or(`account_id.is.null,account_id.eq.${workspace.id}`) as T;
   }
 
-  return query.eq('account_id', workspace.id) as T;
+  return next.eq('account_id', workspace.id) as T;
 }
 
 async function requireClientInWorkspace(
@@ -422,7 +422,10 @@ async function acceptMeetingReview(input: {
       reviewedByUserId: input.userId,
       publishSource: 'manual',
       title: input.patch?.title,
-      description: input.patch?.detail,
+      description:
+        input.patch?.detail === undefined
+          ? undefined
+          : textOrNull(input.patch.detail),
       dueDate: input.patch?.due,
       durationMinutes: input.patch?.durationMinutes,
     });
@@ -452,16 +455,17 @@ async function acceptEmailReview(input: {
   id: string;
   patch?: NativeTaskReviewAcceptInput;
 }): Promise<{ ok: true; task_id: string }> {
-  const { data: actionItem, error: actionError } = await applyEmailAccountFilter(
-    input.client
-      .from('email_action_items')
-      .select(
-        'id, title, detail, source_excerpt, suggested_due_date, suggested_duration_minutes, client_id, project_id, status, account_id',
-      )
-      .eq('id', input.id)
-      .eq('user_id', input.userId),
-    input.workspace,
-  ).maybeSingle();
+  const { data: actionItem, error: actionError } =
+    await applyEmailAccountFilter(
+      input.client
+        .from('email_action_items')
+        .select(
+          'id, title, detail, source_excerpt, suggested_due_date, suggested_duration_minutes, client_id, project_id, status, account_id',
+        )
+        .eq('id', input.id)
+        .eq('user_id', input.userId),
+      input.workspace,
+    ).maybeSingle();
 
   if (actionError) {
     throw new Error(actionError.message);
@@ -480,12 +484,10 @@ async function acceptEmailReview(input: {
   );
 
   const title =
-    input.patch?.title?.trim() ||
-    textOrNull(actionItem.title) ||
-    'Task';
+    input.patch?.title?.trim() || textOrNull(actionItem.title) || 'Task';
   const detail =
     input.patch?.detail !== undefined
-      ? input.patch.detail
+      ? textOrNull(input.patch.detail)
       : ((actionItem.detail as string | null) ?? null);
   const due =
     input.patch?.due !== undefined
@@ -525,6 +527,7 @@ async function acceptEmailReview(input: {
     .select('id')
     .single();
 
+  // Older tasks schemas omit `source`; retry without it (same as web accept).
   if (taskResult.error?.message?.includes('source')) {
     const { source: _source, ...withoutSource } = insertRow;
     void _source;
@@ -556,6 +559,7 @@ async function acceptEmailReview(input: {
     .eq('status', 'suggested');
 
   if (updateError) {
+    await input.client.from('tasks').delete().eq('id', taskId);
     throw new Error(updateError.message);
   }
 
