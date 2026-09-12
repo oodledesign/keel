@@ -4,7 +4,15 @@
  * `stepBreakAfter !== false` (the default) starts a new step after that field.
  */
 import { type WorkspaceFormField, publicVisibleFields } from './form-fields';
+import { type PublicFormValues } from './form-file';
+import { visibleFieldsForValues } from './form-logic';
 import type { WorkspaceFormLayout } from './form-theme';
+import {
+  isWorkspaceFormFieldAnswered,
+  validateWorkspaceFormField,
+} from './form-validate';
+
+export { isWorkspaceFormFieldAnswered };
 
 export type PublicFormWelcomeStep = {
   kind: 'welcome';
@@ -80,45 +88,40 @@ export function shouldIncludeWelcomeStep(input: {
 export function buildPublicFormSteps(input: {
   fields: WorkspaceFormField[];
   includeWelcome?: boolean;
+  values?: PublicFormValues;
 }): PublicFormStep[] {
   const steps: PublicFormStep[] = [];
   if (input.includeWelcome) {
     steps.push({ kind: 'welcome' });
   }
-  for (const group of groupVisibleFieldsIntoSteps(input.fields)) {
+  const groups = input.values
+    ? groupVisibleFieldsIntoSteps(
+        visibleFieldsForValues(input.fields, input.values),
+      )
+    : groupVisibleFieldsIntoSteps(input.fields);
+  for (const group of groups) {
     steps.push({ kind: 'fields', fields: group });
   }
   return steps;
 }
 
-export function isWorkspaceFormFieldAnswered(
-  field: WorkspaceFormField,
-  value: string | boolean | undefined,
-): boolean {
-  if (field.type === 'hidden' || field.type === 'file') {
-    return true;
-  }
-  if (field.type === 'checkbox') {
-    return value === true;
-  }
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  return Boolean(value?.toString().trim());
-}
-
 export function validatePublicFormStep(
   step: PublicFormStep,
-  values: Record<string, string | boolean>,
+  values: PublicFormValues,
 ): string | null {
   if (step.kind === 'welcome') return null;
 
   for (const field of step.fields) {
-    if (!field.required) continue;
-    if (isWorkspaceFormFieldAnswered(field, values[field.key])) continue;
-    return step.fields.length > 1
-      ? `Please answer ${field.label}.`
-      : 'Please answer this question.';
+    const error = validateWorkspaceFormField(field, values[field.key]);
+    if (!error) continue;
+    if (
+      step.fields.length === 1 &&
+      step.fields[0]?.type !== 'file' &&
+      error.startsWith('Please answer')
+    ) {
+      return 'Please answer this question.';
+    }
+    return error;
   }
 
   return null;

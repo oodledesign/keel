@@ -15,6 +15,8 @@ import {
   Clock,
   Copy,
   MapPin,
+  Upload,
+  X,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -36,10 +38,21 @@ import {
   formDescriptionToHtml,
 } from '~/lib/workspace-forms/form-description';
 import { FORM_DRAFT_TTL_DAYS } from '~/lib/workspace-forms/form-draft';
+import { type WorkspaceFormField } from '~/lib/workspace-forms/form-fields';
 import {
-  type WorkspaceFormField,
-  publicVisibleFields,
-} from '~/lib/workspace-forms/form-fields';
+  type PublicFormValue,
+  type PublicFormValues,
+  WORKSPACE_FORM_UPLOAD_ACCEPT,
+  type WorkspaceFormFileValue,
+  formatBytes,
+  parseFormFileValue,
+} from '~/lib/workspace-forms/form-file';
+import {
+  FORM_LOGIC_SUBMIT_TARGET,
+  findVisibleFieldStepIndex,
+  resolveStepJumpTarget,
+  visibleFieldsForValues,
+} from '~/lib/workspace-forms/form-logic';
 import {
   type PublicFormStep,
   buildPublicFormSteps,
@@ -50,6 +63,7 @@ import type {
   WorkspaceFormLayout,
   WorkspaceFormPresentation,
 } from '~/lib/workspace-forms/form-theme';
+import { validateVisibleFormFields } from '~/lib/workspace-forms/form-validate';
 
 const EMPTY_PLACEHOLDER =
   'placeholder:text-neutral-400/70 placeholder:opacity-80';
@@ -73,7 +87,7 @@ type Props = {
   /** Prefills the form email field from ?email= on the public share URL. */
   prefillEmail?: string | null;
   resumeToken?: string | null;
-  initialValues?: Record<string, string | boolean>;
+  initialValues?: PublicFormValues;
   initialStepIndex?: number;
   logoUrl?: string | null;
   accentColor: string;
@@ -110,7 +124,20 @@ export function PublicWorkspaceForm({
   chromeOnDark = false,
   contentShell = false,
 }: Props) {
-  const visibleFields = useMemo(() => publicVisibleFields(fields), [fields]);
+  const [values, setValues] = useState<PublicFormValues>(() => {
+    const restored = { ...(initialValues ?? {}) };
+    const email = prefillEmail?.trim();
+    if (!email) return restored;
+    const emailField = fields.find(
+      (field) => field.type === 'email' || field.key === 'email',
+    );
+    if (!emailField || restored[emailField.key]) return restored;
+    return { ...restored, [emailField.key]: email };
+  });
+  const visibleFields = useMemo(
+    () => visibleFieldsForValues(fields, values),
+    [fields, values],
+  );
   const eventLayout = layout === 'event' && !embed;
   const stepsMode = presentation === 'steps';
   const hasIntro = Boolean(
@@ -126,8 +153,8 @@ export function PublicWorkspaceForm({
     hasIntro,
   });
   const steps = useMemo(
-    () => buildPublicFormSteps({ fields, includeWelcome }),
-    [fields, includeWelcome],
+    () => buildPublicFormSteps({ fields, includeWelcome, values }),
+    [fields, includeWelcome, values],
   );
   const [stepIndex, setStepIndex] = useState(() => {
     if (!stepsMode || initialStepIndex == null) return 0;
@@ -136,20 +163,21 @@ export function PublicWorkspaceForm({
       Math.max(steps.length - 1, 0),
     );
   });
+  const [stepHistory, setStepHistory] = useState<number[]>([]);
   const [stepError, setStepError] = useState<string | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
-  const currentStep = steps[Math.min(stepIndex, Math.max(steps.length - 1, 0))];
-  const isLastStep = stepIndex >= steps.length - 1;
-  const [values, setValues] = useState<Record<string, string | boolean>>(() => {
-    const restored = { ...(initialValues ?? {}) };
-    const email = prefillEmail?.trim();
-    if (!email) return restored;
-    const emailField = fields.find(
-      (field) => field.type === 'email' || field.key === 'email',
-    );
-    if (!emailField || restored[emailField.key]) return restored;
-    return { ...restored, [emailField.key]: email };
-  });
+  const safeStepIndex = Math.min(stepIndex, Math.max(steps.length - 1, 0));
+  const currentStep = steps[safeStepIndex];
+  const jumpTarget =
+    stepsMode && currentStep?.kind === 'fields'
+      ? resolveStepJumpTarget({
+          stepFields: currentStep.fields,
+          values,
+        })
+      : null;
+  const isLastStep =
+    jumpTarget === FORM_LOGIC_SUBMIT_TARGET ||
+    safeStepIndex >= steps.length - 1;
   const [resume, setResume] = useState({
     token: initialResumeToken ?? '',
     url: null as string | null,
@@ -170,13 +198,19 @@ export function PublicWorkspaceForm({
     stepHeadingRef.current?.focus();
   }, [stepIndex, stepsMode]);
 
-  function setField(key: string, value: string | boolean) {
+  function setField(key: string, value: PublicFormValue) {
     setValues((current) => ({ ...current, [key]: value }));
     setStepError(null);
   }
 
   function goBack() {
     setStepError(null);
+    const previous = stepHistory.at(-1);
+    if (previous != null) {
+      setStepHistory((history) => history.slice(0, -1));
+      setStepIndex(previous);
+      return;
+    }
     setStepIndex((current) => Math.max(0, current - 1));
   }
 
@@ -188,7 +222,16 @@ export function PublicWorkspaceForm({
       return false;
     }
     setStepError(null);
-    setStepIndex((current) => Math.min(steps.length - 1, current + 1));
+    if (jumpTarget === FORM_LOGIC_SUBMIT_TARGET) {
+      return 'submit';
+    }
+    let nextIndex = Math.min(steps.length - 1, safeStepIndex + 1);
+    if (jumpTarget && jumpTarget !== FORM_LOGIC_SUBMIT_TARGET) {
+      const jumped = findVisibleFieldStepIndex(steps, jumpTarget);
+      if (jumped != null) nextIndex = jumped;
+    }
+    setStepHistory((history) => [...history, safeStepIndex]);
+    setStepIndex(nextIndex);
     return true;
   }
 
@@ -282,6 +325,12 @@ export function PublicWorkspaceForm({
       }
       if (!isLastStep) {
         goNext();
+        return;
+      }
+    } else if (!stepsMode) {
+      const invalid = validateVisibleFormFields(fields, values);
+      if (invalid) {
+        setError(invalid);
         return;
       }
     }
@@ -425,6 +474,7 @@ export function PublicWorkspaceForm({
               currentStep={currentStep}
               isLastStep={isLastStep}
               values={values}
+              token={token}
               pending={pending}
               accentColor={accentColor}
               submitLabel={submitLabel}
@@ -460,6 +510,7 @@ export function PublicWorkspaceForm({
                   key={field.id}
                   field={field}
                   value={values[field.key]}
+                  token={token}
                   disabled={pending}
                   accentColor={accentColor}
                   onChange={(value) => setField(field.key, value)}
@@ -508,6 +559,7 @@ function PublicFormSteps({
   currentStep,
   isLastStep,
   values,
+  token,
   pending,
   accentColor,
   submitLabel,
@@ -529,7 +581,8 @@ function PublicFormSteps({
   stepError: string | null;
   currentStep: PublicFormStep | undefined;
   isLastStep: boolean;
-  values: Record<string, string | boolean>;
+  values: PublicFormValues;
+  token: string;
   pending: boolean;
   accentColor: string;
   submitLabel: string;
@@ -541,7 +594,7 @@ function PublicFormSteps({
   formName: string;
   logoUrl?: string | null;
   primaryColor: string;
-  onChange: (key: string, value: string | boolean) => void;
+  onChange: (key: string, value: PublicFormValue) => void;
   onBack: () => void;
   onNext: () => void;
   resume: React.ReactNode;
@@ -627,6 +680,7 @@ function PublicFormSteps({
                 key={field.id}
                 field={field}
                 value={values[field.key]}
+                token={token}
                 disabled={pending}
                 accentColor={accentColor}
                 emphasis={Boolean(singleField)}
@@ -959,17 +1013,19 @@ function FieldOptionalMark({ required }: { required: boolean }) {
 function PublicField({
   field,
   value,
+  token,
   disabled,
   accentColor,
   emphasis = false,
   onChange,
 }: {
   field: WorkspaceFormField;
-  value: string | boolean | undefined;
+  value: PublicFormValue | undefined;
+  token: string;
   disabled: boolean;
   accentColor: string;
   emphasis?: boolean;
-  onChange: (value: string | boolean) => void;
+  onChange: (value: PublicFormValue) => void;
 }) {
   const inputId = `field-${field.key}`;
   const textValue = typeof value === 'string' ? value : '';
@@ -1149,10 +1205,14 @@ function PublicField({
           onChange={(event) => onChange(event.target.value)}
         />
       ) : field.type === 'file' ? (
-        <p className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-500">
-          File upload is not collected on this form yet. The workspace can
-          follow up by email if they need an attachment.
-        </p>
+        <PublicFileField
+          field={field}
+          token={token}
+          value={parseFormFileValue(value)}
+          disabled={disabled}
+          accentColor={accentColor}
+          onChange={onChange}
+        />
       ) : (
         <Input
           id={inputId}
@@ -1180,6 +1240,111 @@ function PublicField({
           onChange={(event) => onChange(event.target.value)}
         />
       )}
+    </div>
+  );
+}
+
+function PublicFileField({
+  field,
+  token,
+  value,
+  disabled,
+  accentColor,
+  onChange,
+}: {
+  field: WorkspaceFormField;
+  token: string;
+  value: WorkspaceFormFileValue | null;
+  disabled: boolean;
+  accentColor: string;
+  onChange: (value: PublicFormValue) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputId = `field-${field.key}`;
+
+  async function onPick(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.set('token', token);
+      body.set('fieldKey', field.key);
+      body.set('file', file);
+      const response = await fetch('/api/workspace-forms/upload', {
+        method: 'POST',
+        body,
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        file?: WorkspaceFormFileValue;
+      } | null;
+      if (!response.ok || !payload?.ok || !payload.file) {
+        throw new Error(payload?.error || 'Could not upload that file.');
+      }
+      onChange(payload.file);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not upload that file.',
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2" data-test={`file-upload-${field.key}`}>
+      {value ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-neutral-800">
+              {value.name}
+            </p>
+            <p className="text-xs text-neutral-500">
+              {formatBytes(value.size)}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={disabled || uploading}
+            className="rounded-full p-1 text-neutral-500 hover:bg-white hover:text-neutral-800"
+            aria-label="Remove file"
+            onClick={() => onChange('')}
+            data-test="public-form-file-remove"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      ) : (
+        <label
+          htmlFor={inputId}
+          className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-200 bg-[var(--ozer-cream-50,#FBF6EC)] px-3 py-3 text-sm font-medium text-neutral-700"
+        >
+          <Upload className="size-4" style={{ color: accentColor }} />
+          {uploading ? 'Uploading…' : 'Choose file'}
+        </label>
+      )}
+      <input
+        id={inputId}
+        type="file"
+        accept={WORKSPACE_FORM_UPLOAD_ACCEPT}
+        required={field.required && !value}
+        disabled={disabled || uploading}
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          void onPick(file);
+        }}
+        data-test="public-form-file-input"
+      />
+      {error ? (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

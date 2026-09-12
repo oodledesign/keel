@@ -6,6 +6,7 @@ import pathsConfig from '~/config/paths.config';
 
 import { isValidFormNotifyEmail, normalizeFormNotifyEmail } from './form-email';
 import type { WorkspaceFormField } from './form-fields';
+import { type PublicFormValues, parseFormFileValue } from './form-file';
 
 export const FORM_DRAFT_TTL_DAYS = 30;
 export const FORM_RESUME_QUERY_PARAM = 'resume';
@@ -30,12 +31,18 @@ export function isLikelyResumeToken(value: string | null | undefined): boolean {
 export function sanitizeFormDraftValues(
   fields: WorkspaceFormField[],
   values: Record<string, unknown>,
-): Record<string, string | boolean> {
-  const allowed = new Set(fields.map((field) => field.key));
-  const next: Record<string, string | boolean> = {};
+): PublicFormValues {
+  const allowed = new Map(fields.map((field) => [field.key, field]));
+  const next: PublicFormValues = {};
 
   for (const [key, raw] of Object.entries(values)) {
-    if (!allowed.has(key)) continue;
+    const field = allowed.get(key);
+    if (!field) continue;
+    if (field.type === 'file') {
+      const file = parseFormFileValue(raw);
+      if (file) next[key] = file;
+      continue;
+    }
     if (typeof raw === 'boolean') {
       next[key] = raw;
       continue;
@@ -53,7 +60,7 @@ export function sanitizeFormDraftValues(
 
 export function resumeEmailFromValues(
   fields: WorkspaceFormField[],
-  values: Record<string, string | boolean>,
+  values: PublicFormValues,
 ): string | null {
   const emailField = fields.find(
     (field) => field.type === 'email' || field.key === 'email',

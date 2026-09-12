@@ -165,18 +165,35 @@ describe('isWorkspaceFormFieldAnswered', () => {
     expect(isWorkspaceFormFieldAnswered(checkbox, false)).toBe(false);
   });
 
-  it('treats file and hidden as answered', () => {
+  it('treats hidden as answered and files only when a file ref exists', () => {
+    const fileField = {
+      id: 'file',
+      type: 'file' as const,
+      key: 'file',
+      label: 'File',
+      required: true,
+    };
     expect(
       isWorkspaceFormFieldAnswered(
         {
-          id: 'file',
-          type: 'file',
-          key: 'file',
-          label: 'File',
-          required: true,
+          id: 'hidden',
+          type: 'hidden',
+          key: 'listing_id',
+          label: 'Listing',
+          required: false,
         },
         undefined,
       ),
+    ).toBe(true);
+    expect(isWorkspaceFormFieldAnswered(fileField, undefined)).toBe(false);
+    expect(
+      isWorkspaceFormFieldAnswered(fileField, {
+        name: 'brief.pdf',
+        url: 'https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf',
+        path: 'acct/form/brief.pdf',
+        mimeType: 'application/pdf',
+        size: 1200,
+      }),
     ).toBe(true);
   });
 });

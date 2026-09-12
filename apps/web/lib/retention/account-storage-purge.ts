@@ -29,6 +29,7 @@ const PURGE_BUCKETS = [
   'video-masters',
   'media-generation',
   'commercial-listing-media',
+  'workspace-form-uploads',
 ] as const;
 
 const REMOVE_BATCH = 100;

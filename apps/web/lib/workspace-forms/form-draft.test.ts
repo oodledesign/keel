@@ -63,6 +63,26 @@ describe('sanitizeFormDraftValues', () => {
       2000,
     );
   });
+
+  it('keeps uploaded file refs on a draft', () => {
+    const fileField = {
+      id: 'brief',
+      type: 'file' as const,
+      key: 'brief',
+      label: 'Brief',
+      required: false,
+    };
+    const file = {
+      name: 'brief.pdf',
+      url: 'https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf',
+      path: 'acct/form/brief.pdf',
+      mimeType: 'application/pdf',
+      size: 900,
+    };
+    expect(sanitizeFormDraftValues([fileField], { brief: file })).toEqual({
+      brief: file,
+    });
+  });
 });
 
 describe('resumeEmailFromValues', () => {

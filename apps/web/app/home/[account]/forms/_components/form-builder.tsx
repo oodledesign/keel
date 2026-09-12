@@ -367,6 +367,12 @@ export function FormBuilder({
                       }
                   : null
               }
+              priorFields={fields
+                .slice(0, index)
+                .filter((item) => item.type !== 'hidden')}
+              laterFields={fields
+                .slice(index + 1)
+                .filter((item) => item.type !== 'hidden')}
               onActivate={() => setActiveFieldId(field.id)}
               onChange={(patch) => updateField(field.id, patch)}
               onChangeType={(type) =>

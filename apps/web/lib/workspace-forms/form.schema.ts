@@ -5,12 +5,24 @@ import {
   WORKSPACE_FORM_FIELD_TYPES,
   WORKSPACE_FORM_STATUSES,
 } from './form-fields';
+import { WORKSPACE_FORM_UPLOAD_MAX_BYTES } from './form-file';
+import { WORKSPACE_FORM_LOGIC_OPS } from './form-logic';
 import { WORKSPACE_FORM_TEMPLATES } from './form-templates';
 import {
   WORKSPACE_FORM_LAYOUTS,
   WORKSPACE_FORM_PAGE_BACKGROUNDS,
   WORKSPACE_FORM_PRESENTATIONS,
 } from './form-theme';
+
+const WorkspaceFormLogicConditionSchema = z.object({
+  fieldKey: z
+    .string()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  op: z.enum(WORKSPACE_FORM_LOGIC_OPS),
+  value: z.string().max(80).optional(),
+});
 
 export const WorkspaceFormFieldSchema = z.object({
   id: z.string().min(1).max(80),
@@ -26,6 +38,22 @@ export const WorkspaceFormFieldSchema = z.object({
   helpText: z.string().max(240).optional(),
   options: z.array(z.string().min(1).max(80)).max(40).optional(),
   stepBreakAfter: z.boolean().optional(),
+  visibleWhen: WorkspaceFormLogicConditionSchema.optional(),
+  jumpRules: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(80),
+        op: z.enum(WORKSPACE_FORM_LOGIC_OPS),
+        value: z.string().max(80).optional(),
+        targetKey: z
+          .string()
+          .min(1)
+          .max(60)
+          .regex(/^(_submit|[a-z][a-z0-9_]*)$/),
+      }),
+    )
+    .max(10)
+    .optional(),
 });
 
 export const CreateWorkspaceFormSchema = z.object({
@@ -105,8 +133,19 @@ export const PublishWorkspaceFormSchema = z.object({
   enabled: z.boolean(),
 });
 
+export const WorkspaceFormFileValueSchema = z.object({
+  name: z.string().min(1).max(240),
+  url: z.string().url().max(2000),
+  path: z.string().min(1).max(500),
+  mimeType: z.string().min(1).max(120),
+  size: z.number().int().min(1).max(WORKSPACE_FORM_UPLOAD_MAX_BYTES),
+});
+
 const PublicFormValuesSchema = z
-  .record(z.string().max(80), z.union([z.string().max(2000), z.boolean()]))
+  .record(
+    z.string().max(80),
+    z.union([z.string().max(2000), z.boolean(), WorkspaceFormFileValueSchema]),
+  )
   .default({});
 
 export const PublicWorkspaceFormSubmitSchema = z.object({

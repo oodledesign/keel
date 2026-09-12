@@ -23,6 +23,7 @@ import {
   sanitizeFormDraftValues,
 } from './form-draft';
 import type { WorkspaceFormField } from './form-fields';
+import type { PublicFormValues } from './form-file';
 import { buildPublicFormSteps } from './form-steps';
 import type { PublicWorkspaceForm } from './public-form';
 
@@ -48,7 +49,7 @@ type DraftRow = {
 
 export type PublicFormDraft = {
   resumeToken: string;
-  values: Record<string, string | boolean>;
+  values: PublicFormValues;
   stepIndex: number;
   contactEmail: string | null;
 };

@@ -122,6 +122,43 @@ describe('workspace form fields', () => {
     expect(next.options).toEqual(['Yes', 'No', 'Maybe']);
   });
 
+  it('stores uploaded file refs as extras', () => {
+    const fields = [
+      ...defaultWorkspaceFormFields(),
+      {
+        id: 'brief',
+        type: 'file' as const,
+        key: 'brief',
+        label: 'Brief',
+        required: false,
+      },
+    ];
+    const contact = extractContactFromValues(fields, {
+      name: 'Ada',
+      email: 'ada@example.com',
+      brief: {
+        name: 'brief.pdf',
+        url: 'https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf',
+        path: 'acct/form/brief.pdf',
+        mimeType: 'application/pdf',
+        size: 900,
+      },
+    });
+    expect(contact.extras.brief).toBe(
+      'brief.pdf https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf',
+    );
+  });
+
+  it('drops options when switching away from a choice field', () => {
+    const select = createWorkspaceFormField(
+      'select',
+      defaultWorkspaceFormFields(),
+    );
+    const next = applyWorkspaceFormFieldType(select, 'file');
+    expect(next.type).toBe('file');
+    expect(next.options).toBeUndefined();
+  });
+
   it('formats pipeline notes with contact details and extras', () => {
     expect(
       formatPipelineNotes({

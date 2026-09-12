@@ -3,6 +3,7 @@ import {
   type WorkspaceFormField,
   publicVisibleFields,
 } from '~/lib/workspace-forms/form-fields';
+import { parseFormFileValue } from '~/lib/workspace-forms/form-file';
 
 export const SUBMISSION_COLUMN_STORAGE_PREFIX =
   'ozer.form-submissions.columns.';
@@ -330,12 +331,17 @@ export function submissionFieldValue(
 export function listFilledSubmissionAnswers(
   fields: WorkspaceFormField[],
   submission: SubmissionViewRecord,
-): Array<{ key: string; label: string; value: string }> {
+): Array<{ key: string; label: string; value: string; href?: string }> {
   return publicVisibleFields(fields)
-    .map((field) => ({
-      key: field.key,
-      label: field.label,
-      value: submissionFieldValue(submission, field),
-    }))
+    .map((field) => {
+      const raw = submission.payload[field.key] ?? submission.payload[field.id];
+      const file = parseFormFileValue(raw);
+      return {
+        key: field.key,
+        label: field.label,
+        value: file ? file.name : submissionFieldValue(submission, field),
+        ...(file?.url ? { href: file.url } : {}),
+      };
+    })
     .filter((item) => item.value);
 }

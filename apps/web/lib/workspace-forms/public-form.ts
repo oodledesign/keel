@@ -28,10 +28,19 @@ import {
   resolveBoundListingId,
 } from './form-fields';
 import {
+  parseJumpRules,
+  parseVisibleWhen,
+  visibleFieldsForValues,
+} from './form-logic';
+import {
   type WorkspaceFormTheme,
   parseWorkspaceFormTheme,
   withResolvedFormLayout,
 } from './form-theme';
+import {
+  sanitizePublicFormValues,
+  validateVisibleFormFields,
+} from './form-validate';
 import type { PublicWorkspaceFormSubmitInput } from './form.schema';
 import {
   extractMailingListSpec,
@@ -107,6 +116,10 @@ export function parseFormFields(raw: unknown): WorkspaceFormField[] {
     if (Array.isArray(row.options)) field.options = row.options;
     if (row.stepBreakAfter === false) field.stepBreakAfter = false;
     if (row.stepBreakAfter === true) field.stepBreakAfter = true;
+    const visibleWhen = parseVisibleWhen(row.visibleWhen);
+    if (visibleWhen) field.visibleWhen = visibleWhen;
+    const jumpRules = parseJumpRules(row.jumpRules);
+    if (jumpRules) field.jumpRules = jumpRules;
     return [field];
   });
 }
@@ -306,7 +319,18 @@ export async function submitPublicWorkspaceForm(
   form: PublicWorkspaceForm,
   input: PublicWorkspaceFormSubmitInput,
 ): Promise<PublicFormSubmitResult> {
-  const contact = extractContactFromValues(form.fields, input.values);
+  const values = sanitizePublicFormValues({
+    fields: form.fields,
+    values: input.values,
+    accountId: form.accountId,
+    formId: form.id,
+  });
+  const invalid = validateVisibleFormFields(form.fields, values);
+  if (invalid) {
+    throw new FormSubmitError(invalid);
+  }
+
+  const contact = extractContactFromValues(form.fields, values);
   const boundListingId = resolveBoundListingId({
     queryListingId: input.listingId,
     hiddenListingId: contact.listingId,
@@ -326,7 +350,15 @@ export async function submitPublicWorkspaceForm(
     );
   }
 
-  if (!contact.contactName && !contact.contactEmail) {
+  const visible = visibleFieldsForValues(form.fields, values);
+  const asksContact = visible.some(
+    (field) =>
+      field.type === 'name' ||
+      field.type === 'email' ||
+      field.key === 'name' ||
+      field.key === 'email',
+  );
+  if (asksContact && !contact.contactName && !contact.contactEmail) {
     throw new FormSubmitError('Please enter your name or email.');
   }
 
@@ -385,7 +417,7 @@ export async function submitPublicWorkspaceForm(
     .insert({
       account_id: form.accountId,
       form_id: form.id,
-      payload: input.values,
+      payload: values,
       contact_name: contact.contactName || null,
       contact_email: contact.contactEmail || null,
       contact_phone: contact.contactPhone,
@@ -430,7 +462,7 @@ export async function submitPublicWorkspaceForm(
         admin,
         form,
         contact,
-        values: input.values,
+        values,
         submissionId,
       }).catch(() => {
         // Logged inside dispatch — never fail the public submit.

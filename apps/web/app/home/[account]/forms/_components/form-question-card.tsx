@@ -27,6 +27,7 @@ import {
 } from '~/lib/workspace-ui';
 
 import { FormFieldTypePicker } from './form-field-type-picker';
+import { FormQuestionLogic } from './form-question-logic';
 
 type Props = {
   field: WorkspaceFormField;
@@ -39,6 +40,8 @@ type Props = {
     kind: 'merge' | 'split';
     onClick: () => void;
   } | null;
+  priorFields?: WorkspaceFormField[];
+  laterFields?: WorkspaceFormField[];
   onActivate: () => void;
   onChange: (patch: Partial<WorkspaceFormField>) => void;
   onChangeType: (type: WorkspaceFormFieldType) => void;
@@ -54,6 +57,8 @@ export function FormQuestionCard({
   active,
   stepIndex = null,
   stepAction = null,
+  priorFields = [],
+  laterFields = [],
   onActivate,
   onChange,
   onChangeType,
@@ -178,8 +183,8 @@ export function FormQuestionCard({
 
       {field.type === 'file' ? (
         <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
-          Public visitors see a note that files are not collected yet. Storage
-          upload is a follow-up.
+          Accepts PDF, images, and common documents (Word, Excel, PowerPoint,
+          text). Max 10MB. Uploads are stored with the submission.
         </p>
       ) : null}
 
@@ -200,7 +205,7 @@ export function FormQuestionCard({
         </div>
       ) : null}
 
-      {field.type !== 'hidden' && field.type !== 'file' ? (
+      {field.type !== 'hidden' ? (
         <div className="mt-3 grid gap-1.5">
           <Label>Help text</Label>
           <Input
@@ -214,6 +219,14 @@ export function FormQuestionCard({
           />
         </div>
       ) : null}
+
+      <FormQuestionLogic
+        field={field}
+        priorFields={priorFields}
+        laterFields={laterFields}
+        stepsMode={stepIndex != null}
+        onChange={onChange}
+      />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <label className={`flex items-center gap-2 text-sm ${workspaceText}`}>
