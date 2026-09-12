@@ -65,36 +65,27 @@ export async function runProjectRetainerWeeklyDigest(
     const transactions = txRows ?? [];
     if (transactions.length === 0) continue;
 
-    const burns = transactions.filter(
-      (row: { type: string }) => row.type === 'burn',
-    );
-    const undos = transactions.filter(
-      (row: { type: string }) => row.type === 'undo',
-    );
-    const grants = transactions.filter(
-      (row: { type: string }) => row.type === 'grant',
-    );
+    const burns = transactions.filter((row) => row.type === 'burn');
+    const undos = transactions.filter((row) => row.type === 'undo');
+    const grants = transactions.filter((row) => row.type === 'grant');
     const debits = transactions.filter(
-      (row: { type: string }) => row.type === 'debit' || row.type === 'adjust',
+      (row) => row.type === 'debit' || row.type === 'adjust',
     );
 
     const burned = burns.reduce(
-      (sum: number, row: { amount: number }) =>
-        sum + Math.abs(Number(row.amount ?? 0)),
+      (sum, row) => sum + Math.abs(Number(row.amount ?? 0)),
       0,
     );
     const restored = undos.reduce(
-      (sum: number, row: { amount: number }) =>
-        sum + Math.abs(Number(row.amount ?? 0)),
+      (sum, row) => sum + Math.abs(Number(row.amount ?? 0)),
       0,
     );
     const granted = grants.reduce(
-      (sum: number, row: { amount: number }) => sum + Number(row.amount ?? 0),
+      (sum, row) => sum + Number(row.amount ?? 0),
       0,
     );
     const debited = debits.reduce(
-      (sum: number, row: { amount: number }) =>
-        sum + Math.abs(Number(row.amount ?? 0)),
+      (sum, row) => sum + Math.abs(Number(row.amount ?? 0)),
       0,
     );
 

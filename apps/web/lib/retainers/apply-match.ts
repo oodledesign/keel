@@ -119,12 +119,12 @@ export async function applyRetainerMatch(input: {
     : { data: null, error: null };
 
   if (actionError) throw new Error(actionError.message);
-  if (!actionItem || actionItem.status !== 'suggested') {
+  if (!actionItem || String(actionItem.status) !== 'suggested') {
     throw new Error('The email suggestion is no longer available');
   }
 
-  const projectId = suggestion.projectId ?? actionItem.project_id;
-  const accountId = suggestion.accountId ?? actionItem.account_id;
+  const projectId = String(suggestion.projectId ?? actionItem.project_id ?? '');
+  const accountId = String(suggestion.accountId ?? actionItem.account_id ?? '');
   if (!projectId || !accountId) {
     throw new Error(
       'Link this email to a project before applying a retainer service',
@@ -206,33 +206,45 @@ export async function applyRetainerMatch(input: {
     (matchKind === 'project_service' || addToProject) &&
     (creditCost ?? 0) >= 1;
 
-  const assigneeUserId =
+  const assigneeUserId = String(
     service?.defaultAssigneeId ??
-    actionItem.suggested_assignee_id ??
-    actionItem.user_id ??
-    input.actorUserId;
+      actionItem.suggested_assignee_id ??
+      actionItem.user_id ??
+      input.actorUserId,
+  );
 
   const status = service?.defaultStatus ?? 'todo';
   const durationMinutes =
-    service?.defaultDurationMinutes ?? actionItem.suggested_duration_minutes;
+    service?.defaultDurationMinutes ??
+    (typeof actionItem.suggested_duration_minutes === 'number'
+      ? actionItem.suggested_duration_minutes
+      : null);
   const nowIso = new Date().toISOString();
 
   const taskId = await insertEmailTask(input.admin, {
-    userId: actionItem.user_id,
-    title: actionItem.title,
-    detail: actionItem.detail,
-    sourceExcerpt: actionItem.source_excerpt,
-    dueDate: actionItem.suggested_due_date,
+    userId: String(actionItem.user_id ?? assigneeUserId),
+    title: String(actionItem.title ?? 'Task'),
+    detail: actionItem.detail == null ? null : String(actionItem.detail),
+    sourceExcerpt:
+      actionItem.source_excerpt == null
+        ? null
+        : String(actionItem.source_excerpt),
+    dueDate:
+      actionItem.suggested_due_date == null
+        ? null
+        : String(actionItem.suggested_due_date),
     durationMinutes,
     projectId,
-    clientId: actionItem.client_id ?? suggestion.clientId,
+    clientId: actionItem.client_id
+      ? String(actionItem.client_id)
+      : suggestion.clientId,
     accountId,
     status,
     assigneeUserId,
     retainerServiceId: null,
     creditsBurned: null,
     creditsBurnedAt: null,
-    emailThreadId: actionItem.thread_id,
+    emailThreadId: actionItem.thread_id ? String(actionItem.thread_id) : null,
   });
 
   let burned = 0;

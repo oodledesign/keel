@@ -165,9 +165,9 @@ export async function suggestRetainerMatchForActionItem(input: {
   let ai;
   try {
     ai = await matchRetainerServiceWithFlash({
-      accountId: item.account_id,
+      accountId: String(item.account_id),
       supabase: input.admin,
-      subject,
+      subject: String(subject),
       emailText,
       pools,
     });
@@ -273,7 +273,7 @@ export async function suggestRetainerMatchForActionItem(input: {
         admin: input.admin,
         suggestionId: suggestion.id,
         mode: 'auto',
-        actorUserId: input.actorUserId ?? item.user_id,
+        actorUserId: input.actorUserId ?? String(item.user_id),
       });
     } catch (error) {
       console.warn('[retainer] auto-apply failed', {

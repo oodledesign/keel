@@ -30,7 +30,7 @@ export type LooseQuery = {
   limit: (count: number) => LooseQuery;
   maybeSingle: () => Promise<LooseQueryResult<Record<string, unknown> | null>>;
   single: () => Promise<LooseQueryResult<Record<string, unknown> | null>>;
-  then: Promise<LooseQueryResult<unknown[] | null>>['then'];
+  then: Promise<LooseQueryResult<Record<string, unknown>[] | null>>['then'];
 };
 
 export type LooseClient = {

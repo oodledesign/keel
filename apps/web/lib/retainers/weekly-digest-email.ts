@@ -9,7 +9,7 @@ export function buildProjectRetainerDigestBodyHtml(input: {
   debited?: number;
   weekStart: string;
 }): string {
-  const rows = [
+  const rows: Array<[string, string]> = [
     ['Credits used', String(input.burned)],
     ['Credits restored', String(input.restored)],
     ['Credits added', String(input.granted)],
