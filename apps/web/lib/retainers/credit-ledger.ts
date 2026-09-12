@@ -2,6 +2,8 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { looseClient } from './loose-client';
+
 export type AdjustProjectRetainerResult = {
   ok: boolean;
   balance?: number;
@@ -30,7 +32,7 @@ export type RestoreProjectRetainerResult = {
 };
 
 function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+  return looseClient(getSupabaseServerAdminClient());
 }
 
 export async function ensureProjectRetainer(input: {

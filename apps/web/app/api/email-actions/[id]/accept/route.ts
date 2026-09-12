@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { skipPendingRetainerMatch } from '~/lib/retainers/skip-pending';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
@@ -154,6 +155,8 @@ export async function POST(request: Request, context: RouteContext) {
   if (updateError) {
     return jsonErr('UPDATE_FAILED', updateError.message, 500);
   }
+
+  await skipPendingRetainerMatch(actionId);
 
   return jsonOk({ actionItem: updated, taskId });
 }

@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { skipPendingRetainerMatches } from '~/lib/retainers/skip-pending';
+
 import { extractEmailAddress } from './address-utils';
 
 export type IgnoreEmailScope = 'sender' | 'domain';
@@ -460,6 +462,8 @@ async function dismissSuggestedItemsMatchingIgnore(
       throw new Error(dismissError.message);
     }
   }
+
+  await skipPendingRetainerMatches(dismissIds);
 
   return dismissIds.length;
 }

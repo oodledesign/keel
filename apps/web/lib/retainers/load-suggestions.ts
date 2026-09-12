@@ -2,11 +2,12 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { looseClient } from './loose-client';
 import { mapMatchSuggestion, mapRetainerService } from './map-records';
 import type { RetainerMatchSuggestion, RetainerServiceRecord } from './types';
 
 function db(client: SupabaseClient) {
-  return client as any;
+  return looseClient(client);
 }
 
 export async function loadPendingRetainerSuggestions(

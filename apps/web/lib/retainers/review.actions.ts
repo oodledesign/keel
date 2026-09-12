@@ -10,6 +10,7 @@ import {
   applyRetainerMatch,
   createProposedRetainerService,
 } from './apply-match';
+import { looseClient } from './loose-client';
 import {
   AddProposedRetainerServiceSchema,
   ApplyRetainerMatchSchema,
@@ -17,7 +18,7 @@ import {
 } from './review.schema';
 
 async function requireAccessibleSuggestion(suggestionId: string) {
-  const client = getSupabaseServerClient() as any;
+  const client = looseClient(getSupabaseServerClient());
   const { data, error } = await client
     .from('retainer_match_suggestions')
     .select('id, account_id')
@@ -79,7 +80,7 @@ export const addProposedRetainerServiceAction = enhanceAction(
   async (input, user) => {
     await requireAccessibleSuggestion(input.suggestionId);
     const admin = getSupabaseServerAdminClient();
-    const { data: suggestion, error } = await (admin as any)
+    const { data: suggestion, error } = await looseClient(admin)
       .from('retainer_match_suggestions')
       .select('id, account_id, project_id, status')
       .eq('id', input.suggestionId)
@@ -102,7 +103,7 @@ export const addProposedRetainerServiceAction = enhanceAction(
     });
 
     if (!input.applyAfter) {
-      await (admin as any)
+      await looseClient(admin)
         .from('retainer_match_suggestions')
         .update({
           service_id: created.serviceId,

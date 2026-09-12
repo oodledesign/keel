@@ -5,13 +5,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 
 import { RETAINER_WORKSPACE_ROLES } from '~/lib/retainers/constants';
+import { looseClient } from '~/lib/retainers/loose-client';
 import { mapRetainerService } from '~/lib/retainers/map-records';
 import type { RetainerServiceRecord } from '~/lib/retainers/types';
 
 import type { UpsertRetainerServiceInput } from '../schema/retainer-services.schema';
 
 function db(client: SupabaseClient) {
-  return client as any;
+  return looseClient(client);
 }
 
 export function createRetainerServicesService(client: SupabaseClient) {

@@ -6,6 +6,7 @@ import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 
 import { applyRetainerMatch } from './apply-match';
+import { looseClient } from './loose-client';
 import { mapRetainerService } from './map-records';
 import { mapMatchSuggestion } from './map-records';
 import { matchRetainerServiceWithFlash } from './match-ai';
@@ -18,7 +19,7 @@ import {
 import type { LadderService, RetainerMatchSuggestion } from './types';
 
 function db(client: SupabaseClient) {
-  return client as any;
+  return looseClient(client);
 }
 
 function toLadderService(

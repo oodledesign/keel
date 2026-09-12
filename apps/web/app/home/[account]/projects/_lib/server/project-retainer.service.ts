@@ -9,6 +9,7 @@ import {
   adjustProjectRetainerCredits,
   ensureProjectRetainer,
 } from '~/lib/retainers/credit-ledger';
+import { looseClient } from '~/lib/retainers/loose-client';
 import {
   mapProjectRetainer,
   mapRetainerBurn,
@@ -21,7 +22,7 @@ import type {
 } from '~/lib/retainers/types';
 
 function db(client: SupabaseClient) {
-  return client as any;
+  return looseClient(client);
 }
 
 export function createProjectRetainerService(client: SupabaseClient) {

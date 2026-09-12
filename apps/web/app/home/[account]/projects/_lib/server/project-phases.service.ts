@@ -17,6 +17,7 @@ import {
 } from '~/lib/jobs/project-notifications';
 import { isBuiltinPhaseTemplateName } from '~/lib/projects/phase-template-builtins';
 import { PROJECT_BOARD_TEMPLATE } from '~/lib/projects/project-board-phase-template';
+import { looseClient } from '~/lib/retainers/loose-client';
 import { computeTaskProgress } from '~/lib/tasks/compute-task-progress';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
@@ -780,7 +781,7 @@ class ProjectPhasesService {
       ),
     ];
     if (retainerServiceIds.length > 0) {
-      const { data: serviceRows } = await (this.db as any)
+      const { data: serviceRows } = await looseClient(this.db)
         .from('retainer_services')
         .select('id, name')
         .in('id', retainerServiceIds);

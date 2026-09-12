@@ -12,10 +12,11 @@ import {
   restoreProjectRetainerCredits,
 } from './credit-ledger';
 import { isUndoWindowOpen } from './credit-rules';
+import { looseClient } from './loose-client';
 import { mapMatchSuggestion, mapRetainerService } from './map-records';
 
 function db(client: SupabaseClient) {
-  return client as any;
+  return looseClient(client);
 }
 
 async function insertEmailTask(

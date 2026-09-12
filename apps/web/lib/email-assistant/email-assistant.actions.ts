@@ -27,6 +27,7 @@ import {
   setEmailThreadCategory,
 } from '~/lib/email-assistant/set-thread-category';
 import { syncCategoryToGmail } from '~/lib/email-assistant/sync-category-to-gmail';
+import { skipPendingRetainerMatch } from '~/lib/retainers/skip-pending';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
@@ -368,6 +369,8 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
       throw new Error(updateError.message);
     }
 
+    await skipPendingRetainerMatch(data.actionItemId);
+
     revalidateSuggestedEmailPaths(data.accountSlug);
     return {
       ok: true as const,
@@ -391,11 +394,7 @@ export const dismissSuggestedEmailTaskAction = enhanceAction(
       throw new Error(error.message);
     }
 
-    await (client as any)
-      .from('retainer_match_suggestions')
-      .update({ status: 'skipped' })
-      .eq('email_action_item_id', data.actionItemId)
-      .eq('status', 'pending');
+    await skipPendingRetainerMatch(data.actionItemId);
 
     revalidateSuggestedEmailPaths(data.accountSlug);
     return { ok: true as const };

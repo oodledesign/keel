@@ -11,10 +11,11 @@ import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import { RETAINER_TIMEZONE } from './constants';
 import { londonWeekRangeUtc, londonWeekStartYmd } from './credit-rules';
+import { looseClient } from './loose-client';
 import { buildProjectRetainerDigestBodyHtml } from './weekly-digest-email';
 
 function db(client: SupabaseClient) {
-  return client as any;
+  return looseClient(client);
 }
 
 export async function runProjectRetainerWeeklyDigest(
