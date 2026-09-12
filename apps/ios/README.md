@@ -83,7 +83,7 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The server still accepts the legacy aliases `personal`, `family`, and `business`. The iPhone client sends a real slug or UUID. Home decodes `tasks_due_today` then `overdue_tasks` (title + subtitle). A 403 is shown as an error, not an empty day.
+The server still accepts the legacy aliases `personal`, `family`, and `business`. The iPhone client sends a real slug or UUID. Home decodes `tasks_due_today` then `overdue_tasks` (title + subtitle), and `task_review` counts for the review card. A 403 is shown as an error, not an empty day.
 
 No cookies. A 404 is shown as a calm empty state. Reloads when the selected workspace **id** changes, and when the membership list first arrives.
 
@@ -100,6 +100,28 @@ Accept: application/json
 Optional query flags: `status=open|done|all` (default `open`), `client=<uuid>` for one client, `q` for a title `ilike`. Portal assignee rows stay off the list. Personal still hides other people’s life tasks.
 
 The list is `{ "items": [{ "id", "title", "status", "due", "duration_minutes", "client_id", "client_name" }] }`. Default is open tasks for the workspace (due today, overdue, later). Business lists include workspace tasks even when `user_id` is null. Title plus due, optional duration, and client name. Empty only when `items` is empty. A 403 is an error, not an empty list.
+
+## Task review
+
+Pending extracted tasks from meetings and email — accept, edit then accept, or dismiss. Same workspace + Bearer JSON as Tasks. Entry from Home (card + badge when anything is waiting), Tasks (toolbar tray + banner), and Menu.
+
+```
+GET {OZER_API_BASE}/api/native/v1/task-review?workspace=<slug-or-uuid>&source=all|meeting|email
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+The list is `{ "items": [{ "id", "source": "meeting"|"email", "title", "detail", "snippet", "due", "duration_minutes", "client_id", "client_name", "project_id", "project_name", "context_title", "context_date", "created_at" }], "meeting_count", "email_count", "pending_count" }`. `GET /today` also includes `task_review` counts for the Home badge.
+
+```
+POST {OZER_API_BASE}/api/native/v1/task-review/{id}/accept
+{ "workspace", "source": "meeting"|"email", "title?", "detail?", "due?", "duration_minutes?", "client_id?" }
+
+POST {OZER_API_BASE}/api/native/v1/task-review/{id}/dismiss
+{ "workspace", "source": "meeting"|"email" }
+```
+
+Accept creates a planner task. Meeting items assign to the signed-in user. Dismiss marks email `dismissed` and meeting `rejected`. The phone does not open full email or meeting editors.
 
 The iPhone list searches the loaded rows (title and client name) as you type, and filters by due (All / Today / Overdue / Upcoming / No date) and status (Open / Done / All). Business workspaces add a client chip (all, no client, or one client from `/clients`). `?client=` is sent only for a specific client. Completing a task still works; Add stays in the toolbar. Filter state resets when the workspace changes.
 

@@ -18,8 +18,20 @@ struct MenuView: View {
                         Button {
                             onOpen(screen)
                         } label: {
-                            Label(screen.title, systemImage: screen.symbol)
-                                .foregroundStyle(OzerPalette.plum)
+                            HStack {
+                                Label(screen.title, systemImage: screen.symbol)
+                                    .foregroundStyle(OzerPalette.plum)
+                                Spacer()
+                                if screen == .taskReview, session.pendingTaskReviewCount > 0 {
+                                    Text("\(session.pendingTaskReviewCount)")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color.white)
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 2)
+                                        .background(OzerPalette.coral, in: Capsule())
+                                        .accessibilityLabel("\(session.pendingTaskReviewCount) waiting")
+                                }
+                            }
                         }
                         .listRowBackground(OzerPalette.panel)
                     }
@@ -54,12 +66,28 @@ struct MenuView: View {
                 if !session.workspacesLoaded {
                     await session.refreshWorkspaces()
                 }
+                await refreshReviewCount()
             }
         }
     }
 
+    private func refreshReviewCount() async {
+        do {
+            let token = try await session.validAccessToken()
+            let workspace = session.workspaceQueryValue
+            guard !workspace.isEmpty else { return }
+            let payload = try await NativeAPIClient().taskReview(
+                workspace: workspace,
+                accessToken: token
+            )
+            session.setPendingTaskReviewCount(payload.counts.pendingCount)
+        } catch {
+            return
+        }
+    }
+
     private var menuScreens: [AppScreen] {
-        session.selectedWorkspace?.menuScreens ?? [.home, .tasks, .notes, .messages, .shopping]
+        session.selectedWorkspace?.menuScreens ?? [.home, .tasks, .taskReview, .notes, .messages, .shopping]
     }
 
     @ViewBuilder

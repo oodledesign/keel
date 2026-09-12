@@ -32,6 +32,19 @@ curl -sS "$ORIGIN/api/native/v1/tasks?workspace=YOUR_SLUG&day=2026-08-31" \
 curl -sS "$ORIGIN/api/native/v1/tasks?workspace=YOUR_SLUG&status=done&client=CLIENT_UUID&q=invoice" \
   -H "Authorization: Bearer $TOKEN"
 
+curl -sS "$ORIGIN/api/native/v1/task-review?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS -X POST "$ORIGIN/api/native/v1/task-review/ITEM_ID/accept" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"workspace":"YOUR_SLUG","source":"meeting","title":"Send the quote"}'
+
+curl -sS -X POST "$ORIGIN/api/native/v1/task-review/ITEM_ID/dismiss" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"workspace":"YOUR_SLUG","source":"email"}'
+
 curl -sS -X POST "$ORIGIN/api/native/v1/tasks" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -119,7 +132,36 @@ curl -sS -X POST "$ORIGIN/api/native/v1/messages/threads/THREAD_ID/messages" \
 - `recent_notes` (same note objects as `/notes`)
 - `meetings_today` (`id`, `title`, `created_at`) on workspaces that record meetings
 - `finances` on studio / surveyor / commercial workspaces (or `null`)
+- `task_review` — `{ pending_count, meeting_count, email_count }` for the in-app review badge
 - `items` — flat due-today then overdue, for older clients that still read a list
+
+## Task review
+
+Pending extracted tasks from **meetings** (`meeting_action_items.status = pending_review`) and **email** (`email_action_items.status = suggested`). Same accept / edit / dismiss idea as the web review queues. Cookie-free Bearer JSON.
+
+```
+GET /api/native/v1/task-review?workspace=<slug-or-uuid>&source=all|meeting|email
+→ {
+  "items": [{
+    "id", "source": "meeting"|"email", "title", "detail", "snippet",
+    "due", "duration_minutes", "client_id", "client_name",
+    "project_id", "project_name", "context_title", "context_date", "created_at"
+  }],
+  "meeting_count", "email_count", "pending_count"
+}
+
+POST /api/native/v1/task-review/{id}/accept
+{ "workspace", "source": "meeting"|"email", "title?", "detail?", "due?", "duration_minutes?", "client_id?" }
+→ { "ok": true, "task_id" }
+
+POST /api/native/v1/task-review/{id}/dismiss
+{ "workspace", "source": "meeting"|"email" }
+→ { "ok": true, "id" }
+```
+
+`source` on GET defaults to `all`. Accept creates a planner task (meeting items use the signed-in user as assignee). Optional fields on accept override the suggestion before publish. Dismiss marks email items `dismissed` and meeting items `rejected`. Personal email items include rows with a null `account_id` or this personal account; team workspaces only show that account’s rows.
+
+Email items are scoped to the signed-in user. Meeting items are scoped to the workspace. A 404 means the suggestion is gone or already reviewed.
 
 ## Invoices / finances
 

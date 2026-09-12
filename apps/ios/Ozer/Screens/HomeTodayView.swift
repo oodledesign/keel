@@ -126,6 +126,9 @@ struct HomeTodayView: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 quickActions
+                if let review = payload?.taskReview, review.pendingCount > 0 {
+                    reviewCard(review)
+                }
                 if workspace?.showsInvoices == true, let finances {
                     moneyCard(finances)
                 }
@@ -200,6 +203,50 @@ struct HomeTodayView: View {
                 }
         }
         .buttonStyle(.plain)
+    }
+
+    private func reviewCard(_ review: TaskReviewCounts) -> some View {
+        Button {
+            onOpen(.taskReview)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Task review")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OzerPalette.plumMuted)
+                        .textCase(.uppercase)
+                    Text(
+                        review.pendingCount == 1
+                            ? "1 suggested task"
+                            : "\(review.pendingCount) suggested tasks"
+                    )
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plum)
+                    Text(review.sourceSummary)
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+                Spacer(minLength: 0)
+                Text("\(review.pendingCount)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(OzerPalette.coral, in: Capsule())
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plumSoft)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                    .stroke(OzerPalette.border, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Task review, \(review.pendingCount) waiting")
     }
 
     private func moneyCard(_ finances: FinancesPayload) -> some View {
@@ -543,6 +590,9 @@ struct HomeTodayView: View {
             let today = try await todayCall
             payload = today
             loadError = nil
+            if let review = today.taskReview {
+                session.setPendingTaskReviewCount(review.pendingCount)
+            }
 
             if !today.recentNotes.isEmpty {
                 recentNotes = Array(today.recentNotes.prefix(5))

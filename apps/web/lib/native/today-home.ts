@@ -1,6 +1,10 @@
 import type { NativeFinances } from './invoices-shared';
 import { type NativeNote, isNativeMeetingNote } from './notes-shared';
 import type { NativeTask } from './task-map';
+import {
+  type NativeTaskReviewCounts,
+  emptyNativeTaskReviewCounts,
+} from './task-review-shared';
 
 export type NativeTodayCompatItem = {
   id: string;
@@ -24,6 +28,8 @@ export type NativeTodayHomePayload = {
   recent_notes: NativeNote[];
   meetings_today: NativeTodayMeeting[];
   finances: NativeFinances | null;
+  /** Pending meeting + email suggestions for the review queue. */
+  task_review: NativeTaskReviewCounts;
   /** Flat merge of due-today then overdue for older clients. */
   items: NativeTodayCompatItem[];
 };
@@ -150,6 +156,7 @@ export function buildNativeTodayHomePayload(input: {
   recentNotes: NativeNote[];
   meetingsToday: NativeTodayMeeting[];
   finances: NativeFinances | null;
+  taskReview?: NativeTaskReviewCounts;
 }): NativeTodayHomePayload {
   return {
     greeting: input.greeting,
@@ -164,6 +171,7 @@ export function buildNativeTodayHomePayload(input: {
     recent_notes: input.recentNotes,
     meetings_today: input.meetingsToday,
     finances: input.finances,
+    task_review: input.taskReview ?? emptyNativeTaskReviewCounts(),
     items: mergeNativeTodayItems(input.dueToday, input.overdue),
   };
 }

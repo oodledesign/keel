@@ -12,7 +12,9 @@ struct MainTabView: View {
             case .home:
                 HomeTodayView(onOpen: { screen = $0 })
             case .tasks:
-                TasksListView()
+                TasksListView(onOpen: { screen = $0 })
+            case .taskReview:
+                TaskReviewListView()
             case .notes:
                 NotesListView()
             case .messages:
