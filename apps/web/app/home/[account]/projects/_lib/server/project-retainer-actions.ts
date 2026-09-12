@@ -22,7 +22,7 @@ function getService() {
 
 export const loadProjectRetainerAction = enhanceAction(
   async (input) => getService().load(input.accountId, input.projectId),
-  { schema: LoadProjectRetainerSchema },
+  { auth: true, schema: LoadProjectRetainerSchema },
 );
 
 export const updateProjectRetainerSettingsAction = enhanceAction(
@@ -31,7 +31,7 @@ export const updateProjectRetainerSettingsAction = enhanceAction(
     revalidatePath('/home/[account]/projects/[id]', 'page');
     return result;
   },
-  { schema: UpdateProjectRetainerSettingsSchema },
+  { auth: true, schema: UpdateProjectRetainerSettingsSchema },
 );
 
 export const adjustProjectRetainerBalanceAction = enhanceAction(
@@ -40,11 +40,20 @@ export const adjustProjectRetainerBalanceAction = enhanceAction(
     revalidatePath('/home/[account]/projects/[id]', 'page');
     return result;
   },
-  { schema: AdjustProjectRetainerBalanceSchema },
+  { auth: true, schema: AdjustProjectRetainerBalanceSchema },
 );
 
 export const undoTaskRetainerBurnAction = enhanceAction(
   async (input, user) => {
+    const userClient = getSupabaseServerClient();
+    const { data: task, error } = await userClient
+      .from('tasks')
+      .select('id')
+      .eq('id', input.taskId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!task) throw new Error('Task not found or access denied');
+
     const result = await undoRetainerBurn({
       admin: getSupabaseServerAdminClient(),
       taskId: input.taskId,

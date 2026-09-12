@@ -1,11 +1,11 @@
 import { TASK_STATUS_VALUES, type TaskStatusValue } from './constants';
+import type { RetainerMatchKind, RetainerSuggestionStatus } from './constants';
 import type {
   ProjectRetainerBurn,
   ProjectRetainerRecord,
   RetainerMatchSuggestion,
   RetainerServiceRecord,
 } from './types';
-import type { RetainerMatchKind, RetainerSuggestionStatus } from './constants';
 
 function asTaskStatus(value: unknown): TaskStatusValue | null {
   if (typeof value !== 'string') return null;
@@ -81,15 +81,9 @@ export function mapMatchSuggestion(
         : row.proposed_credit_cost
           ? Number(row.proposed_credit_cost)
           : null,
-    confidence:
-      row.confidence == null
-        ? null
-        : Number(row.confidence),
+    confidence: row.confidence == null ? null : Number(row.confidence),
     rationale: row.rationale ? String(row.rationale) : null,
-    creditCost:
-      row.credit_cost == null
-        ? null
-        : Number(row.credit_cost),
+    creditCost: row.credit_cost == null ? null : Number(row.credit_cost),
     status: String(row.status ?? 'pending') as RetainerSuggestionStatus,
     taskId: row.task_id ? String(row.task_id) : null,
     appliedAt: row.applied_at ? String(row.applied_at) : null,

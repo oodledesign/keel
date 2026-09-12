@@ -6,13 +6,13 @@ import { notifyJobTaskAssigned } from '~/lib/jobs/project-notifications';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
+import type { RetainerMatchKind } from './constants';
 import {
   consumeProjectRetainerCredits,
   restoreProjectRetainerCredits,
 } from './credit-ledger';
 import { isUndoWindowOpen } from './credit-rules';
 import { mapMatchSuggestion, mapRetainerService } from './map-records';
-import type { RetainerMatchKind } from './constants';
 
 function db(client: SupabaseClient) {
   return client as any;
@@ -60,17 +60,20 @@ async function insertEmailTask(
     retainer_email_thread_id: input.emailThreadId,
   };
 
-  let result = await db(client).from('tasks').insert(insertRow).select('id').single();
+  let result = await db(client)
+    .from('tasks')
+    .insert(insertRow)
+    .select('id')
+    .single();
 
-  if (result.error) {
-    const { retainer_service_id, credits_burned, credits_burned_at, retainer_email_thread_id, source, ...fallback } =
-      insertRow;
-    void retainer_service_id;
-    void credits_burned;
-    void credits_burned_at;
-    void retainer_email_thread_id;
-    void source;
-    result = await db(client).from('tasks').insert(fallback).select('id').single();
+  if (result.error?.message?.includes('source')) {
+    const { source: _source, ...withoutSource } = insertRow;
+    void _source;
+    result = await db(client)
+      .from('tasks')
+      .insert(withoutSource)
+      .select('id')
+      .single();
   }
 
   if (result.error || !result.data) {
@@ -97,7 +100,9 @@ export async function applyRetainerMatch(input: {
   if (error) throw new Error(error.message);
   if (!suggestionRow) throw new Error('Match suggestion not found');
 
-  const suggestion = mapMatchSuggestion(suggestionRow as Record<string, unknown>);
+  const suggestion = mapMatchSuggestion(
+    suggestionRow as Record<string, unknown>,
+  );
   if (suggestion.status !== 'pending') {
     throw new Error('This match is no longer pending');
   }
@@ -120,7 +125,19 @@ export async function applyRetainerMatch(input: {
   const projectId = suggestion.projectId ?? actionItem.project_id;
   const accountId = suggestion.accountId ?? actionItem.account_id;
   if (!projectId || !accountId) {
-    throw new Error('Link this email to a project before applying a retainer service');
+    throw new Error(
+      'Link this email to a project before applying a retainer service',
+    );
+  }
+
+  const { data: projectRow } = await db(input.admin)
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('account_id', accountId)
+    .maybeSingle();
+  if (!projectRow) {
+    throw new Error('Project not found for this workspace');
   }
 
   let matchKind: RetainerMatchKind = suggestion.matchKind;
@@ -152,7 +169,9 @@ export async function applyRetainerMatch(input: {
 
   const addToProject =
     Boolean(input.addServiceToProject) ||
-    (input.mode !== 'skip' && matchKind === 'workspace_service' && Boolean(serviceId));
+    (input.mode !== 'skip' &&
+      matchKind === 'workspace_service' &&
+      Boolean(serviceId));
 
   if (addToProject && serviceId) {
     await db(input.admin)
@@ -162,7 +181,9 @@ export async function applyRetainerMatch(input: {
   }
 
   if (matchKind === 'propose_new' && input.mode !== 'skip') {
-    throw new Error('Add the proposed service to the catalogue before applying');
+    throw new Error(
+      'Add the proposed service to the catalogue before applying',
+    );
   }
 
   const { data: serviceRow } =
@@ -238,7 +259,7 @@ export async function applyRetainerMatch(input: {
       throw new Error(
         consume.error === 'insufficient_balance'
           ? `Not enough project credits (need ${consume.requested}, have ${consume.available})`
-          : consume.error ?? 'Could not burn credits',
+          : (consume.error ?? 'Could not burn credits'),
       );
     }
 
@@ -256,10 +277,15 @@ export async function applyRetainerMatch(input: {
   await db(input.admin)
     .from('retainer_match_suggestions')
     .update({
-      status: input.mode === 'auto' ? 'auto_applied' : input.mode === 'skip' ? 'skipped' : 'applied',
+      status:
+        input.mode === 'auto'
+          ? 'auto_applied'
+          : input.mode === 'skip'
+            ? 'skipped'
+            : 'applied',
       task_id: taskId,
       applied_at: nowIso,
-      service_id: shouldBurn ? service?.id ?? null : null,
+      service_id: shouldBurn ? (service?.id ?? null) : null,
       match_kind: matchKind,
       credit_cost: shouldBurn ? creditCost : null,
     })

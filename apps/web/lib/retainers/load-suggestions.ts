@@ -50,7 +50,7 @@ export async function loadPendingRetainerSuggestions(
       actionItemId,
       mapMatchSuggestion(
         row,
-        row.service_id ? names.get(String(row.service_id)) ?? null : null,
+        row.service_id ? (names.get(String(row.service_id)) ?? null) : null,
       ),
     );
   }

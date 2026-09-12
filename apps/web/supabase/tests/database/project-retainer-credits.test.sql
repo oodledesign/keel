@@ -110,6 +110,58 @@ BEGIN
   IF v_balance <> 5 THEN
     RAISE EXCEPTION 'expected restored balance 5, got %', v_balance;
   END IF;
+
+  v_grant := public.adjust_project_retainer_credits(
+    v_project_id,
+    v_account_id,
+    -2,
+    NULL,
+    'debit_test'
+  );
+
+  IF coalesce((v_grant->>'ok')::boolean, false) IS NOT TRUE THEN
+    RAISE EXCEPTION 'debit failed: %', v_grant;
+  END IF;
+
+  SELECT credit_balance INTO v_balance
+  FROM public.project_retainers
+  WHERE project_id = v_project_id;
+
+  IF v_balance <> 3 THEN
+    RAISE EXCEPTION 'expected balance 3 after debit, got %', v_balance;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.project_retainer_transactions
+    WHERE project_id = v_project_id
+      AND type = 'debit'
+      AND amount = -2
+  ) THEN
+    RAISE EXCEPTION 'expected debit ledger row';
+  END IF;
+
+  v_insuf := public.adjust_project_retainer_credits(
+    v_project_id,
+    v_account_id,
+    -10,
+    NULL,
+    'too_much_debit'
+  );
+
+  IF coalesce(v_insuf->>'error', '') <> 'insufficient_balance' THEN
+    RAISE EXCEPTION 'expected insufficient_balance on debit, got %', v_insuf;
+  END IF;
+
+  BEGIN
+    PERFORM public.ensure_project_retainer(v_project_id, gen_random_uuid());
+    RAISE EXCEPTION 'expected project_account_mismatch';
+  EXCEPTION
+    WHEN others THEN
+      IF SQLERRM NOT LIKE '%project_account_mismatch%' THEN
+        RAISE;
+      END IF;
+  END;
 END $$;
 
 select * from finish();

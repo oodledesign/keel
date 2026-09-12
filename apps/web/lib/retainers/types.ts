@@ -38,7 +38,7 @@ export type ProjectRetainerBurn = {
   taskId: string | null;
   taskTitle: string | null;
   createdAt: string;
-  type: 'grant' | 'burn' | 'undo' | 'adjust';
+  type: 'grant' | 'burn' | 'undo' | 'adjust' | 'debit';
 };
 
 export type RetainerMatchSuggestion = {

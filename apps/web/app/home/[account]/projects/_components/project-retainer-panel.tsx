@@ -188,7 +188,9 @@ export function ProjectRetainerPanel({
             disabled={pending || !Number.isFinite(step) || step < 1}
             onClick={() => adjust(Math.round(step))}
           >
-            {pending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+            {pending ? (
+              <Loader2 className="mr-1 size-3.5 animate-spin" />
+            ) : null}
             Add
           </Button>
           <Button

@@ -57,7 +57,9 @@ class RetainerServicesService {
     );
   }
 
-  async upsert(input: UpsertRetainerServiceInput): Promise<RetainerServiceRecord> {
+  async upsert(
+    input: UpsertRetainerServiceInput,
+  ): Promise<RetainerServiceRecord> {
     await this.ensureMember(input.accountId);
 
     const payload = {

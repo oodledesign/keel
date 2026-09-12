@@ -116,28 +116,60 @@ DROP POLICY IF EXISTS project_retainers_select ON public.project_retainers;
 CREATE POLICY project_retainers_select ON public.project_retainers
   FOR SELECT TO authenticated
   USING (
-    public.has_role_on_account (account_id)
-    OR public.is_super_admin ()
+    EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = project_id
+        AND p.account_id = account_id
+        AND (
+          public.has_role_on_account (p.account_id)
+          OR public.is_super_admin ()
+        )
+    )
   );
 
 DROP POLICY IF EXISTS project_retainers_insert ON public.project_retainers;
 CREATE POLICY project_retainers_insert ON public.project_retainers
   FOR INSERT TO authenticated
   WITH CHECK (
-    public.has_role_on_account (account_id)
-    OR public.is_super_admin ()
+    EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = project_id
+        AND p.account_id = account_id
+        AND (
+          public.has_role_on_account (p.account_id)
+          OR public.is_super_admin ()
+        )
+    )
   );
 
 DROP POLICY IF EXISTS project_retainers_update ON public.project_retainers;
 CREATE POLICY project_retainers_update ON public.project_retainers
   FOR UPDATE TO authenticated
   USING (
-    public.has_role_on_account (account_id)
-    OR public.is_super_admin ()
+    EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = project_id
+        AND p.account_id = account_id
+        AND (
+          public.has_role_on_account (p.account_id)
+          OR public.is_super_admin ()
+        )
+    )
   )
   WITH CHECK (
-    public.has_role_on_account (account_id)
-    OR public.is_super_admin ()
+    EXISTS (
+      SELECT 1
+      FROM public.projects p
+      WHERE p.id = project_id
+        AND p.account_id = account_id
+        AND (
+          public.has_role_on_account (p.account_id)
+          OR public.is_super_admin ()
+        )
+    )
   );
 
 GRANT SELECT, INSERT, UPDATE ON public.project_retainers TO authenticated;
@@ -183,7 +215,9 @@ CREATE POLICY project_retainer_services_insert ON public.project_retainer_servic
     EXISTS (
       SELECT 1
       FROM public.projects p
+      JOIN public.retainer_services rs ON rs.id = service_id
       WHERE p.id = project_id
+        AND rs.account_id = p.account_id
         AND (
           public.has_role_on_account (p.account_id)
           OR public.is_super_admin ()
@@ -198,7 +232,9 @@ CREATE POLICY project_retainer_services_delete ON public.project_retainer_servic
     EXISTS (
       SELECT 1
       FROM public.projects p
+      JOIN public.retainer_services rs ON rs.id = service_id
       WHERE p.id = project_id
+        AND rs.account_id = p.account_id
         AND (
           public.has_role_on_account (p.account_id)
           OR public.is_super_admin ()
@@ -225,7 +261,7 @@ CREATE TABLE IF NOT EXISTS public.project_retainer_transactions (
   reason text,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT project_retainer_transactions_type_check CHECK (
-    type IN ('grant', 'burn', 'undo', 'adjust')
+    type IN ('grant', 'burn', 'undo', 'adjust', 'debit')
   )
 );
 
@@ -328,13 +364,6 @@ CREATE POLICY retainer_match_suggestions_select
 
 DROP POLICY IF EXISTS retainer_match_suggestions_insert
   ON public.retainer_match_suggestions;
-CREATE POLICY retainer_match_suggestions_insert
-  ON public.retainer_match_suggestions
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    public.has_role_on_account (account_id)
-    OR public.is_super_admin ()
-  );
 
 DROP POLICY IF EXISTS retainer_match_suggestions_update
   ON public.retainer_match_suggestions;
@@ -350,8 +379,23 @@ CREATE POLICY retainer_match_suggestions_update
     OR public.is_super_admin ()
   );
 
-GRANT SELECT, INSERT, UPDATE ON public.retainer_match_suggestions TO authenticated;
+GRANT SELECT, UPDATE ON public.retainer_match_suggestions TO authenticated;
 GRANT ALL ON public.retainer_match_suggestions TO service_role;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'project_retainer_transactions_suggestion_fk'
+  ) THEN
+    ALTER TABLE public.project_retainer_transactions
+      ADD CONSTRAINT project_retainer_transactions_suggestion_fk
+      FOREIGN KEY (suggestion_id)
+      REFERENCES public.retainer_match_suggestions (id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- 6) tasks — service stamp + undo window
@@ -426,11 +470,25 @@ AS $$
 DECLARE
   v_row public.project_retainers;
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.projects p
+    WHERE p.id = p_project_id
+      AND p.account_id = p_account_id
+  ) THEN
+    RAISE EXCEPTION 'project_account_mismatch';
+  END IF;
+
   INSERT INTO public.project_retainers (project_id, account_id)
   VALUES (p_project_id, p_account_id)
-  ON CONFLICT (project_id) DO UPDATE
-    SET account_id = EXCLUDED.account_id
+  ON CONFLICT (project_id) DO NOTHING
   RETURNING * INTO v_row;
+
+  IF v_row.project_id IS NULL THEN
+    SELECT * INTO v_row
+    FROM public.project_retainers
+    WHERE project_id = p_project_id;
+  END IF;
 
   RETURN v_row;
 END;
@@ -450,31 +508,34 @@ SET search_path = ''
 AS $$
 DECLARE
   v_row public.project_retainers;
-  v_next integer;
   v_type text;
 BEGIN
   IF p_delta = 0 THEN
     RETURN jsonb_build_object('ok', false, 'error', 'zero_delta');
   END IF;
 
-  v_row := public.ensure_project_retainer(p_project_id, p_account_id);
+  PERFORM public.ensure_project_retainer(p_project_id, p_account_id);
 
-  v_next := v_row.credit_balance + p_delta;
-  IF v_next < 0 THEN
+  UPDATE public.project_retainers
+  SET credit_balance = credit_balance + p_delta
+  WHERE project_id = p_project_id
+    AND credit_balance + p_delta >= 0
+  RETURNING * INTO v_row;
+
+  IF NOT FOUND THEN
+    SELECT * INTO v_row
+    FROM public.project_retainers
+    WHERE project_id = p_project_id;
+
     RETURN jsonb_build_object(
       'ok', false,
       'error', 'insufficient_balance',
-      'available', v_row.credit_balance,
+      'available', coalesce(v_row.credit_balance, 0),
       'requested', abs(p_delta)
     );
   END IF;
 
-  UPDATE public.project_retainers
-  SET credit_balance = v_next
-  WHERE project_id = p_project_id
-  RETURNING * INTO v_row;
-
-  v_type := CASE WHEN p_delta > 0 THEN 'grant' ELSE 'adjust' END;
+  v_type := CASE WHEN p_delta > 0 THEN 'grant' ELSE 'debit' END;
 
   INSERT INTO public.project_retainer_transactions (
     project_id, account_id, type, amount, actor_id, reason

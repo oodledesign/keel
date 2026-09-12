@@ -10,7 +10,13 @@ export const UpsertRetainerServiceSchema = z.object({
   creditCost: z.number().int().min(1).max(1_000_000),
   defaultStatus: z.enum(TASK_STATUS_VALUES).nullable().optional(),
   defaultAssigneeId: z.string().uuid().nullable().optional(),
-  defaultDurationMinutes: z.number().int().min(1).max(10080).nullable().optional(),
+  defaultDurationMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(10080)
+    .nullable()
+    .optional(),
   sortOrder: z.number().int().min(0).max(10_000).default(0),
   isActive: z.boolean().default(true),
 });

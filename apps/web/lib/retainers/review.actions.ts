@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   applyRetainerMatch,
@@ -14,6 +15,19 @@ import {
   ApplyRetainerMatchSchema,
   SkipRetainerMatchSchema,
 } from './review.schema';
+
+async function requireAccessibleSuggestion(suggestionId: string) {
+  const client = getSupabaseServerClient() as any;
+  const { data, error } = await client
+    .from('retainer_match_suggestions')
+    .select('id, account_id')
+    .eq('id', suggestionId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Match suggestion not found or access denied');
+  return data as { id: string; account_id: string };
+}
 
 function revalidateReviewPaths(accountSlug?: string) {
   revalidatePath('/home/email');
@@ -31,6 +45,7 @@ function revalidateReviewPaths(accountSlug?: string) {
 
 export const applyRetainerMatchAction = enhanceAction(
   async (input, user) => {
+    await requireAccessibleSuggestion(input.suggestionId);
     const result = await applyRetainerMatch({
       admin: getSupabaseServerAdminClient(),
       suggestionId: input.suggestionId,
@@ -47,6 +62,7 @@ export const applyRetainerMatchAction = enhanceAction(
 
 export const skipRetainerMatchAction = enhanceAction(
   async (input, user) => {
+    await requireAccessibleSuggestion(input.suggestionId);
     const result = await applyRetainerMatch({
       admin: getSupabaseServerAdminClient(),
       suggestionId: input.suggestionId,
@@ -61,6 +77,7 @@ export const skipRetainerMatchAction = enhanceAction(
 
 export const addProposedRetainerServiceAction = enhanceAction(
   async (input, user) => {
+    await requireAccessibleSuggestion(input.suggestionId);
     const admin = getSupabaseServerAdminClient();
     const { data: suggestion, error } = await (admin as any)
       .from('retainer_match_suggestions')

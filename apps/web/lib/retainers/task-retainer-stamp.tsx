@@ -35,9 +35,7 @@ export function TaskRetainerStamp({
   if (!serviceName && !creditsBurned) return null;
 
   const undoable =
-    canUndo &&
-    Boolean(creditsBurned) &&
-    isUndoWindowOpen(creditsBurnedAt);
+    canUndo && Boolean(creditsBurned) && isUndoWindowOpen(creditsBurnedAt);
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2">

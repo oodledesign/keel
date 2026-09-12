@@ -34,8 +34,8 @@ describe('london week helpers', () => {
     expect(londonWeekStartYmd(new Date('2026-09-12T21:00:00.000Z'))).toBe(
       '2026-09-07',
     );
-    expect(previousLondonWeekStartYmd(new Date('2026-09-12T21:00:00.000Z'))).toBe(
-      '2026-08-31',
-    );
+    expect(
+      previousLondonWeekStartYmd(new Date('2026-09-12T21:00:00.000Z')),
+    ).toBe('2026-08-31');
   });
 });

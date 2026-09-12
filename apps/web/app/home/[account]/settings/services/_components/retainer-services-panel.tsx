@@ -7,6 +7,13 @@ import { Loader2, Plus } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
@@ -232,18 +239,21 @@ export function RetainerServicesPanel({
             </div>
             <div className="space-y-1.5">
               <Label>Default task status</Label>
-              <select
-                value={draft.defaultStatus}
-                onChange={(event) =>
-                  setDraft({ ...draft, defaultStatus: event.target.value })
+              <Select
+                value={draft.defaultStatus || 'todo'}
+                onValueChange={(value) =>
+                  setDraft({ ...draft, defaultStatus: value })
                 }
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
               >
-                <option value="">To do</option>
-                <option value="todo">To do</option>
-                <option value="in_progress">In progress</option>
-                <option value="client_review">Client review</option>
-              </select>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="To do" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">To do</SelectItem>
+                  <SelectItem value="in_progress">In progress</SelectItem>
+                  <SelectItem value="client_review">Client review</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
               <Label htmlFor="rs-active">Active</Label>

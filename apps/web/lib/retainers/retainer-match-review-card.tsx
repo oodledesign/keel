@@ -7,15 +7,22 @@ import { Check, Plus, X } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
-import type { RetainerMatchSuggestion, RetainerServiceRecord } from './types';
 import {
   addProposedRetainerServiceAction,
   applyRetainerMatchAction,
   skipRetainerMatchAction,
 } from './review.actions';
+import type { RetainerMatchSuggestion, RetainerServiceRecord } from './types';
 
 export function RetainerMatchReviewCard({
   suggestion,
@@ -74,7 +81,11 @@ export function RetainerMatchReviewCard({
           toast.success('Task created without using credits');
         } else if (kind === 'propose') {
           const creditCost = Number(proposedCost);
-          if (!proposedName.trim() || !Number.isFinite(creditCost) || creditCost < 1) {
+          if (
+            !proposedName.trim() ||
+            !Number.isFinite(creditCost) ||
+            creditCost < 1
+          ) {
             toast.error('Name and a credit cost of at least 1 are required');
             return;
           }
@@ -95,7 +106,9 @@ export function RetainerMatchReviewCard({
             addServiceToProject: suggestion.matchKind === 'workspace_service',
           });
           toast.success(
-            cost ? `Task created · ${cost} credit${cost === 1 ? '' : 's'} used` : 'Task created',
+            cost
+              ? `Task created · ${cost} credit${cost === 1 ? '' : 's'} used`
+              : 'Task created',
           );
         }
         onResolved();
@@ -135,22 +148,26 @@ export function RetainerMatchReviewCard({
       {activeServices.length > 0 ? (
         <div className="space-y-1">
           <Label className="text-xs">Change service</Label>
-          <select
-            value={serviceId}
-            onChange={(event) => {
-              setServiceId(event.target.value);
+          <Select
+            value={serviceId || 'uncategorised'}
+            onValueChange={(value) => {
+              setServiceId(value === 'uncategorised' ? '' : value);
               setShowPropose(false);
             }}
-            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
             disabled={pending}
           >
-            <option value="">Uncategorised</option>
-            {activeServices.map((service) => (
-              <option key={service.id} value={service.id}>
-                {service.name} · {service.creditCost}c
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue placeholder="Uncategorised" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="uncategorised">Uncategorised</SelectItem>
+              {activeServices.map((service) => (
+                <SelectItem key={service.id} value={service.id}>
+                  {service.name} · {service.creditCost}c
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
 
@@ -198,7 +215,10 @@ export function RetainerMatchReviewCard({
           <Button
             type="button"
             size="sm"
-            disabled={pending || (!serviceId && suggestion.matchKind !== 'uncategorised')}
+            disabled={
+              pending ||
+              (!serviceId && suggestion.matchKind !== 'uncategorised')
+            }
             onClick={() => run('apply')}
           >
             <Check className="mr-1 h-3.5 w-3.5" />

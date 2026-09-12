@@ -1,9 +1,9 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { authorizeCron } from '~/lib/email-assistant/cron-auth';
 import { cronSkippedResponse, isCronDisabled } from '~/lib/cron/cron-guards';
-import { runProjectRetainerWeeklyDigest } from '~/lib/retainers/weekly-digest';
+import { authorizeCron } from '~/lib/email-assistant/cron-auth';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { runProjectRetainerWeeklyDigest } from '~/lib/retainers/weekly-digest';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;

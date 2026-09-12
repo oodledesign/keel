@@ -25,6 +25,8 @@ export async function runProjectRetainerWeeklyDigest(
   const { startIso, endIso } = londonWeekRangeUtc(weekStart);
   const origin = getAppSiteOrigin();
 
+  const sender = process.env.EMAIL_SENDER?.trim();
+
   const { data: retainers, error } = await db(admin)
     .from('project_retainers')
     .select('project_id, account_id, credit_balance')
@@ -62,22 +64,36 @@ export async function runProjectRetainerWeeklyDigest(
     const transactions = txRows ?? [];
     if (transactions.length === 0) continue;
 
-    const burns = transactions.filter((row: { type: string }) => row.type === 'burn');
-    const undos = transactions.filter((row: { type: string }) => row.type === 'undo');
+    const burns = transactions.filter(
+      (row: { type: string }) => row.type === 'burn',
+    );
+    const undos = transactions.filter(
+      (row: { type: string }) => row.type === 'undo',
+    );
     const grants = transactions.filter(
-      (row: { type: string }) => row.type === 'grant' || row.type === 'adjust',
+      (row: { type: string }) => row.type === 'grant',
+    );
+    const debits = transactions.filter(
+      (row: { type: string }) => row.type === 'debit' || row.type === 'adjust',
     );
 
     const burned = burns.reduce(
-      (sum: number, row: { amount: number }) => sum + Math.abs(Number(row.amount ?? 0)),
+      (sum: number, row: { amount: number }) =>
+        sum + Math.abs(Number(row.amount ?? 0)),
       0,
     );
     const restored = undos.reduce(
-      (sum: number, row: { amount: number }) => sum + Math.abs(Number(row.amount ?? 0)),
+      (sum: number, row: { amount: number }) =>
+        sum + Math.abs(Number(row.amount ?? 0)),
       0,
     );
     const granted = grants.reduce(
       (sum: number, row: { amount: number }) => sum + Number(row.amount ?? 0),
+      0,
+    );
+    const debited = debits.reduce(
+      (sum: number, row: { amount: number }) =>
+        sum + Math.abs(Number(row.amount ?? 0)),
       0,
     );
 
@@ -87,7 +103,11 @@ export async function runProjectRetainerWeeklyDigest(
         .select('id, name, title, created_by')
         .eq('id', projectId)
         .maybeSingle(),
-      admin.from('accounts').select('id, slug, name').eq('id', accountId).maybeSingle(),
+      admin
+        .from('accounts')
+        .select('id, slug, name')
+        .eq('id', accountId)
+        .maybeSingle(),
     ]);
 
     if (!project || !account?.slug) continue;
@@ -131,7 +151,6 @@ export async function runProjectRetainerWeeklyDigest(
 
       const { data: authUser } = await admin.auth.admin.getUserById(userId);
       const email = authUser.user?.email?.trim();
-      const sender = process.env.EMAIL_SENDER?.trim();
 
       if (
         !email ||
@@ -151,6 +170,7 @@ export async function runProjectRetainerWeeklyDigest(
           burned,
           restored,
           granted,
+          debited,
           weekStart,
         }),
         {

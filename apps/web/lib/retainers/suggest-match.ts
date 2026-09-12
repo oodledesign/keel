@@ -5,18 +5,25 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 
-import { canAutoApply, resolveMatchKind, splitServicePools, suggestedCreditCost } from './match-ladder';
-import { matchRetainerServiceWithFlash } from './match-ai';
-import { mapRetainerService } from './map-records';
 import { applyRetainerMatch } from './apply-match';
-import type { LadderService, RetainerMatchSuggestion } from './types';
+import { mapRetainerService } from './map-records';
 import { mapMatchSuggestion } from './map-records';
+import { matchRetainerServiceWithFlash } from './match-ai';
+import {
+  canAutoApply,
+  resolveMatchKind,
+  splitServicePools,
+  suggestedCreditCost,
+} from './match-ladder';
+import type { LadderService, RetainerMatchSuggestion } from './types';
 
 function db(client: SupabaseClient) {
   return client as any;
 }
 
-function toLadderService(row: ReturnType<typeof mapRetainerService>): LadderService {
+function toLadderService(
+  row: ReturnType<typeof mapRetainerService>,
+): LadderService {
   return {
     id: row.id,
     name: row.name,
@@ -42,7 +49,12 @@ export async function suggestRetainerMatchForActionItem(input: {
     throw new Error(itemError.message);
   }
 
-  if (!item || item.status !== 'suggested' || !item.project_id || !item.account_id) {
+  if (
+    !item ||
+    item.status !== 'suggested' ||
+    !item.project_id ||
+    !item.account_id
+  ) {
     return null;
   }
 
@@ -83,9 +95,7 @@ export async function suggestRetainerMatchForActionItem(input: {
       item.thread_id
         ? db(input.admin)
             .from('email_messages')
-            .select(
-              'from_address, subject, body_text, snippet, internal_date',
-            )
+            .select('from_address, subject, body_text, snippet, internal_date')
             .eq('thread_id', item.thread_id)
             .order('internal_date', { ascending: true, nullsFirst: false })
         : Promise.resolve({ data: [] }),
@@ -101,13 +111,15 @@ export async function suggestRetainerMatchForActionItem(input: {
 
   if (!project) return null;
 
-  const catalogue = ((catalogueRows.data ?? []) as Array<Record<string, unknown>>)
+  const catalogue = (
+    (catalogueRows.data ?? []) as Array<Record<string, unknown>>
+  )
     .map(mapRetainerService)
     .map(toLadderService);
 
-  const allowlistIds = ((allowRows.data ?? []) as Array<{ service_id: string }>).map(
-    (row) => row.service_id,
-  );
+  const allowlistIds = (
+    (allowRows.data ?? []) as Array<{ service_id: string }>
+  ).map((row) => row.service_id);
   const previouslyUsedIds = [
     ...new Set(
       ((usedRows.data ?? []) as Array<{ service_id: string | null }>)
@@ -130,23 +142,20 @@ export async function suggestRetainerMatchForActionItem(input: {
         .maybeSingle()
     : { data: null };
 
-  const subject =
-    (thread?.subject as string | null) ??
-    item.title ??
-    '';
+  const subject = (thread?.subject as string | null) ?? item.title ?? '';
 
   const emailText = [
     item.title,
     item.detail,
     item.source_excerpt,
     buildThreadText(
-      ((messages.data ?? []) as Array<{
+      (messages.data ?? []) as Array<{
         from_address: string | null;
         subject: string | null;
         body_text: string | null;
         snippet: string | null;
         internal_date: string | null;
-      }>),
+      }>,
     ),
   ]
     .filter(Boolean)
@@ -189,7 +198,7 @@ export async function suggestRetainerMatchForActionItem(input: {
 
   const matchedService =
     matchKind === 'project_service' || matchKind === 'workspace_service'
-      ? catalogue.find((row) => row.id === ai.serviceId) ?? null
+      ? (catalogue.find((row) => row.id === ai.serviceId) ?? null)
       : null;
 
   const creditCost = suggestedCreditCost({
@@ -214,8 +223,7 @@ export async function suggestRetainerMatchForActionItem(input: {
         matchKind === 'propose_new'
           ? ai.proposedDescription?.trim() || null
           : null,
-      proposed_credit_cost:
-        matchKind === 'propose_new' ? creditCost : null,
+      proposed_credit_cost: matchKind === 'propose_new' ? creditCost : null,
       confidence: ai.confidence,
       rationale: ai.rationale,
       credit_cost: creditCost,
@@ -282,18 +290,20 @@ export async function suggestRetainerMatchesForInsertedItems(input: {
   actionItemIds: string[];
   actorUserId?: string | null;
 }) {
-  for (const actionItemId of input.actionItemIds) {
-    try {
-      await suggestRetainerMatchForActionItem({
-        admin: input.admin,
-        actionItemId,
-        actorUserId: input.actorUserId,
-      });
-    } catch (error) {
-      console.warn('[retainer] match failed', {
-        actionItemId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
+  await Promise.all(
+    input.actionItemIds.map(async (actionItemId) => {
+      try {
+        await suggestRetainerMatchForActionItem({
+          admin: input.admin,
+          actionItemId,
+          actorUserId: input.actorUserId,
+        });
+      } catch (error) {
+        console.warn('[retainer] match failed', {
+          actionItemId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }),
+  );
 }

@@ -46,12 +46,27 @@ class ProjectRetainerService {
     return { userId: auth.data.id };
   }
 
-  async load(accountId: string, projectId: string): Promise<{
+  private async requireProject(accountId: string, projectId: string) {
+    const { data: project, error } = await this.client
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!project) throw new Error('Project not found or access denied');
+  }
+
+  async load(
+    accountId: string,
+    projectId: string,
+  ): Promise<{
     retainer: ProjectRetainerRecord;
     catalogue: RetainerServiceRecord[];
     recent: ProjectRetainerBurn[];
   }> {
     await this.ensureMember(accountId);
+    await this.requireProject(accountId, projectId);
     await ensureProjectRetainer({ projectId, accountId });
 
     const [retainerRes, allowRes, catalogueRes, txRes] = await Promise.all([
@@ -86,8 +101,9 @@ class ProjectRetainerService {
       (allowRes.data ?? []) as Array<{ service_id: string }>
     ).map((row) => row.service_id);
 
-    const catalogue = ((catalogueRes.data ?? []) as Array<Record<string, unknown>>)
-      .map(mapRetainerService);
+    const catalogue = (
+      (catalogueRes.data ?? []) as Array<Record<string, unknown>>
+    ).map(mapRetainerService);
 
     const serviceNames = new Map(catalogue.map((row) => [row.id, row.name]));
     const taskIds = [
@@ -114,10 +130,10 @@ class ProjectRetainerService {
         mapRetainerBurn({
           ...row,
           service_name: row.service_id
-            ? serviceNames.get(String(row.service_id)) ?? null
+            ? (serviceNames.get(String(row.service_id)) ?? null)
             : null,
           task_title: row.task_id
-            ? taskTitles.get(String(row.task_id)) ?? null
+            ? (taskTitles.get(String(row.task_id)) ?? null)
             : null,
         }),
     );
@@ -141,6 +157,7 @@ class ProjectRetainerService {
   }) {
     const { userId } = await this.ensureMember(input.accountId);
     void userId;
+    await this.requireProject(input.accountId, input.projectId);
     await ensureProjectRetainer({
       projectId: input.projectId,
       accountId: input.accountId,
@@ -193,6 +210,7 @@ class ProjectRetainerService {
     reason?: string;
   }) {
     const { userId } = await this.ensureMember(input.accountId);
+    await this.requireProject(input.accountId, input.projectId);
     const result = await adjustProjectRetainerCredits({
       projectId: input.projectId,
       accountId: input.accountId,
@@ -204,7 +222,7 @@ class ProjectRetainerService {
       throw new Error(
         result.error === 'insufficient_balance'
           ? 'Balance cannot go below zero'
-          : result.error ?? 'Could not update balance',
+          : (result.error ?? 'Could not update balance'),
       );
     }
     return this.load(input.accountId, input.projectId);

@@ -6,12 +6,14 @@ export function buildProjectRetainerDigestBodyHtml(input: {
   burned: number;
   restored: number;
   granted: number;
+  debited?: number;
   weekStart: string;
 }): string {
   const rows = [
     ['Credits used', String(input.burned)],
     ['Credits restored', String(input.restored)],
     ['Credits added', String(input.granted)],
+    ['Credits removed', String(input.debited ?? 0)],
     ['Current balance', String(input.balance)],
   ];
 

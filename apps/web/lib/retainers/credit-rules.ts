@@ -38,22 +38,11 @@ export function londonWeekStartYmd(
   const year = Number(read('year'));
   const month = Number(read('month'));
   const day = Number(read('day'));
-  const weekday = read('weekday');
-
-  const weekdayOffset: Record<string, number> = {
-    Mon: 0,
-    Tue: 1,
-    Wed: 2,
-    Thu: 3,
-    Fri: 4,
-    Sat: 5,
-    Sun: 6,
-  };
-
   const utcNoon = Date.UTC(year, month - 1, day, 12);
-  const monday = new Date(
-    utcNoon - (weekdayOffset[weekday] ?? 0) * 24 * 60 * 60 * 1000,
-  );
+  // Civil weekday in the target zone: 0=Sun … 6=Sat, independent of locale labels.
+  const weekday = new Date(utcNoon).getUTCDay();
+  const daysFromMonday = weekday === 0 ? 6 : weekday - 1;
+  const monday = new Date(utcNoon - daysFromMonday * 24 * 60 * 60 * 1000);
 
   const y = monday.getUTCFullYear();
   const m = String(monday.getUTCMonth() + 1).padStart(2, '0');

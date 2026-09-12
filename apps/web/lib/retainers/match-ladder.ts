@@ -1,7 +1,7 @@
 import {
   AUTO_MATCH_CONFIDENCE,
-  WEAK_MATCH_CONFIDENCE,
   type RetainerMatchKind,
+  WEAK_MATCH_CONFIDENCE,
 } from './constants';
 import type { LadderPools, LadderService } from './types';
 
@@ -23,7 +23,9 @@ export function splitServicePools(input: {
       : input.previouslyUsedIds.filter((id) => byId.has(id)),
   );
 
-  const projectServices = active.filter((service) => projectIds.has(service.id));
+  const projectServices = active.filter((service) =>
+    projectIds.has(service.id),
+  );
   const workspaceOnlyServices = active.filter(
     (service) => !projectIds.has(service.id),
   );

@@ -77,7 +77,10 @@ export async function adjustProjectRetainerCredits(input: {
     throw new Error(error.message || 'adjust_project_retainer_credits failed');
   }
 
-  return (data ?? { ok: false, error: 'empty_response' }) as AdjustProjectRetainerResult;
+  return (data ?? {
+    ok: false,
+    error: 'empty_response',
+  }) as AdjustProjectRetainerResult;
 }
 
 export async function consumeProjectRetainerCredits(input: {
@@ -108,7 +111,10 @@ export async function consumeProjectRetainerCredits(input: {
     throw new Error(error.message || 'consume_project_retainer_credits failed');
   }
 
-  return (data ?? { ok: false, error: 'empty_response' }) as ConsumeProjectRetainerResult;
+  return (data ?? {
+    ok: false,
+    error: 'empty_response',
+  }) as ConsumeProjectRetainerResult;
 }
 
 export async function restoreProjectRetainerCredits(input: {

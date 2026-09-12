@@ -19,7 +19,7 @@ function getService() {
 export const listRetainerServicesAction = enhanceAction(
   async (input) =>
     getService().list(input.accountId, { activeOnly: input.activeOnly }),
-  { schema: ListRetainerServicesSchema },
+  { auth: true, schema: ListRetainerServicesSchema },
 );
 
 export const upsertRetainerServiceAction = enhanceAction(
@@ -28,7 +28,7 @@ export const upsertRetainerServiceAction = enhanceAction(
     revalidatePath('/home/[account]/settings/services', 'page');
     return result;
   },
-  { schema: UpsertRetainerServiceSchema },
+  { auth: true, schema: UpsertRetainerServiceSchema },
 );
 
 export const deleteRetainerServiceAction = enhanceAction(
@@ -37,5 +37,5 @@ export const deleteRetainerServiceAction = enhanceAction(
     revalidatePath('/home/[account]/settings/services', 'page');
     return result;
   },
-  { schema: DeleteRetainerServiceSchema },
+  { auth: true, schema: DeleteRetainerServiceSchema },
 );
