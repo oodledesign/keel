@@ -228,9 +228,9 @@ export async function applyRetainerMatch(input: {
     accountId,
     status,
     assigneeUserId,
-    retainerServiceId: shouldBurn ? service!.id : null,
-    creditsBurned: shouldBurn ? creditCost : null,
-    creditsBurnedAt: shouldBurn ? nowIso : null,
+    retainerServiceId: null,
+    creditsBurned: null,
+    creditsBurnedAt: null,
     emailThreadId: actionItem.thread_id,
   });
 
@@ -248,14 +248,6 @@ export async function applyRetainerMatch(input: {
     });
 
     if (!consume.ok) {
-      await db(input.admin)
-        .from('tasks')
-        .update({
-          retainer_service_id: null,
-          credits_burned: null,
-          credits_burned_at: null,
-        })
-        .eq('id', taskId);
       throw new Error(
         consume.error === 'insufficient_balance'
           ? `Not enough project credits (need ${consume.requested}, have ${consume.available})`
@@ -264,6 +256,23 @@ export async function applyRetainerMatch(input: {
     }
 
     burned = consume.consumed ?? creditCost;
+    const { error: stampError } = await db(input.admin)
+      .from('tasks')
+      .update({
+        retainer_service_id: service!.id,
+        credits_burned: burned,
+        credits_burned_at: nowIso,
+      })
+      .eq('id', taskId);
+
+    if (stampError) {
+      await restoreProjectRetainerCredits({
+        taskId,
+        actorId: input.actorUserId,
+        reason: 'stamp_failed',
+      });
+      throw new Error(stampError.message);
+    }
   }
 
   await db(input.admin)
@@ -352,7 +361,11 @@ export async function undoRetainerBurn(input: {
   });
 
   if (!restored.ok) {
-    throw new Error(restored.error ?? 'Could not restore credits');
+    throw new Error(
+      restored.error === 'undo_window_expired'
+        ? 'The 24-hour undo window has closed'
+        : (restored.error ?? 'Could not restore credits'),
+    );
   }
 
   const { error: updateError } = await db(input.admin)

@@ -367,19 +367,8 @@ DROP POLICY IF EXISTS retainer_match_suggestions_insert
 
 DROP POLICY IF EXISTS retainer_match_suggestions_update
   ON public.retainer_match_suggestions;
-CREATE POLICY retainer_match_suggestions_update
-  ON public.retainer_match_suggestions
-  FOR UPDATE TO authenticated
-  USING (
-    public.has_role_on_account (account_id)
-    OR public.is_super_admin ()
-  )
-  WITH CHECK (
-    public.has_role_on_account (account_id)
-    OR public.is_super_admin ()
-  );
 
-GRANT SELECT, UPDATE ON public.retainer_match_suggestions TO authenticated;
+GRANT SELECT ON public.retainer_match_suggestions TO authenticated;
 GRANT ALL ON public.retainer_match_suggestions TO service_role;
 
 DO $$
@@ -671,6 +660,10 @@ BEGIN
       AND created_at > v_burn.created_at
   ) THEN
     RETURN jsonb_build_object('ok', true, 'idempotent', true, 'refunded', 0);
+  END IF;
+
+  IF v_burn.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'undo_window_expired', 'refunded', 0);
   END IF;
 
   v_amount := abs(v_burn.amount);

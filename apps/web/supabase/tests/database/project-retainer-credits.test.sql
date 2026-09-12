@@ -162,6 +162,36 @@ BEGIN
         RAISE;
       END IF;
   END;
+
+  INSERT INTO public.tasks (id, title, account_id, project_id, status, priority)
+  VALUES (gen_random_uuid(), 'Expired undo', v_account_id, v_project_id, 'todo', 'medium')
+  RETURNING id INTO v_task_id;
+
+  v_consume := public.consume_project_retainer_credits(
+    v_project_id,
+    v_account_id,
+    1,
+    NULL,
+    v_task_id,
+    NULL,
+    NULL,
+    'expired_undo_burn'
+  );
+
+  IF coalesce((v_consume->>'ok')::boolean, false) IS NOT TRUE THEN
+    RAISE EXCEPTION 'expired-undo seed burn failed: %', v_consume;
+  END IF;
+
+  UPDATE public.project_retainer_transactions
+  SET created_at = now() - interval '25 hours'
+  WHERE task_id = v_task_id
+    AND type = 'burn';
+
+  v_undo := public.restore_project_retainer_credits(v_task_id, NULL, 'late');
+
+  IF coalesce(v_undo->>'error', '') <> 'undo_window_expired' THEN
+    RAISE EXCEPTION 'expected undo_window_expired, got %', v_undo;
+  END IF;
 END $$;
 
 select * from finish();

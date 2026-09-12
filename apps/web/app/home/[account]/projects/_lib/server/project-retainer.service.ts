@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 
+import { RETAINER_WORKSPACE_ROLES } from '~/lib/retainers/constants';
 import {
   adjustProjectRetainerCredits,
   ensureProjectRetainer,
@@ -40,7 +41,7 @@ class ProjectRetainerService {
       .eq('user_id', auth.data.id)
       .maybeSingle();
     const role = membership?.account_role as string | undefined;
-    if (!role || role === 'client' || role === 'contractor') {
+    if (!role || !RETAINER_WORKSPACE_ROLES.has(role)) {
       throw new Error('Forbidden');
     }
     return { userId: auth.data.id };
@@ -155,8 +156,7 @@ class ProjectRetainerService {
     weeklyDigestEnabled?: boolean;
     allowedServiceIds?: string[];
   }) {
-    const { userId } = await this.ensureMember(input.accountId);
-    void userId;
+    await this.ensureMember(input.accountId);
     await this.requireProject(input.accountId, input.projectId);
     await ensureProjectRetainer({
       projectId: input.projectId,

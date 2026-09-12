@@ -29,6 +29,13 @@ export const RETAINER_SUGGESTION_STATUSES = [
 export type RetainerSuggestionStatus =
   (typeof RETAINER_SUGGESTION_STATUSES)[number];
 
+export const RETAINER_WORKSPACE_ROLES = new Set([
+  'owner',
+  'admin',
+  'member',
+  'staff',
+]);
+
 export const TASK_STATUS_VALUES = [
   'todo',
   'in_progress',
