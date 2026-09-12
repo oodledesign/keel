@@ -30,6 +30,7 @@ struct MeetingDetailView: View {
     @State private var isLoadingDetail = false
     @State private var detailError: NativeAPIError?
     @State private var selectedTab: MeetingDetailTab = .transcript
+    @State private var userPickedTab = false
     @State private var editorTask: TaskItem?
     @State private var showTaskEditor = false
     @State private var showNoteEditor = false
@@ -192,6 +193,7 @@ struct MeetingDetailView: View {
             ForEach(MeetingDetailTab.allCases) { tab in
                 Button {
                     selectedTab = tab
+                    userPickedTab = true
                 } label: {
                     Text(tab.title)
                         .font(.subheadline.weight(.semibold))
@@ -354,7 +356,6 @@ struct MeetingDetailView: View {
     private func loadDetail() async {
         guard let remoteMeetingId, !remoteMeetingId.isEmpty else {
             detail = remote
-            applyLoadedTab()
             return
         }
         isLoadingDetail = true
@@ -391,9 +392,10 @@ struct MeetingDetailView: View {
     }
 
     private func applyLoadedTab() {
-        if notesText != nil, selectedTab == .transcript, remote?.notes == nil {
-            selectedTab = .notes
+        guard !userPickedTab, notesText != nil, selectedTab == .transcript else {
+            return
         }
+        selectedTab = .notes
     }
 
     private func togglePlayback() {

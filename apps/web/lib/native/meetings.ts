@@ -39,6 +39,7 @@ export {
 
 const LIST_LIMIT = 100;
 
+/** Keep `content` so existing phones can open a transcript from the hub payload. */
 const LIST_SELECT =
   'id, title, content, client_id, meeting_date, source, duration_seconds, created_at, updated_at';
 
@@ -346,6 +347,39 @@ export async function createNativeMeeting(input: {
   );
 }
 
+async function loadWorkspaceMemberNames(
+  client: SupabaseClient,
+  workspace: NativeWorkspace,
+  assigneeIds: Set<string>,
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const slug = workspace.slug.trim();
+  if (assigneeIds.size === 0 || !slug) {
+    return names;
+  }
+
+  const { data, error } = await client.rpc('get_account_members', {
+    account_slug: slug,
+  });
+
+  if (error || !data) {
+    return names;
+  }
+
+  for (const row of data as Array<{
+    user_id?: string | null;
+    name?: string | null;
+  }>) {
+    const userId = row.user_id?.trim();
+    const name = row.name?.trim();
+    if (userId && name && assigneeIds.has(userId)) {
+      names.set(userId, name);
+    }
+  }
+
+  return names;
+}
+
 async function loadNativeMeetingTasks(
   client: SupabaseClient,
   workspace: NativeWorkspace,
@@ -412,24 +446,11 @@ async function loadNativeMeetingTasks(
     if (assigneeUserId) assigneeIds.add(assigneeUserId);
   }
 
-  const assigneeNameById = new Map<string, string>();
-  if (assigneeIds.size > 0) {
-    const { data: accountRows } = await client
-      .from('accounts')
-      .select('id, name, email')
-      .in('id', [...assigneeIds]);
-
-    for (const row of (accountRows ?? []) as Array<{
-      id: string;
-      name?: string | null;
-      email?: string | null;
-    }>) {
-      assigneeNameById.set(
-        row.id,
-        row.name?.trim() || row.email?.trim() || 'Team member',
-      );
-    }
-  }
+  const assigneeNameById = await loadWorkspaceMemberNames(
+    client,
+    workspace,
+    assigneeIds,
+  );
 
   return actionItemRows.map((row) => {
     const plannerTaskId = (row.planner_task_id as string | null) ?? null;

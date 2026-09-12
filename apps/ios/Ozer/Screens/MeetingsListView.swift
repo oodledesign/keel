@@ -246,8 +246,6 @@ struct MeetingsListView: View {
                                 meetingRow(row)
                             }
                             .buttonStyle(.plain)
-                        } else {
-                            meetingRow(row)
                         }
                     }
                 }

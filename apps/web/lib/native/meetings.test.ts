@@ -462,13 +462,17 @@ describe('getNativeMeeting', () => {
             id: 'task-1',
             title: 'Send survey pack',
             due_date: '2026-09-04',
-            user_id: null,
+            user_id: 'user-dan',
             status: 'todo',
           },
         ],
         error: null,
       }),
     };
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{ user_id: 'user-dan', name: 'Dan Potter' }],
+      error: null,
+    });
     const from = vi.fn((table: string) => {
       if (table === 'clients') return clientChain;
       if (table === 'meeting_action_items') return actionChain;
@@ -476,7 +480,11 @@ describe('getNativeMeeting', () => {
       return meetingLookup;
     });
 
-    const detail = await getNativeMeeting({ from } as never, studio, meetingId);
+    const detail = await getNativeMeeting(
+      { from, rpc } as never,
+      studio,
+      meetingId,
+    );
 
     expect(detail.id).toBe(meetingId);
     expect(detail.client_name).toBe('Hope and Wonder');
@@ -485,13 +493,16 @@ describe('getNativeMeeting', () => {
       text: 'Follow up on the site visit.',
       generated_at: '2026-09-01T11:00:00Z',
     });
+    expect(rpc).toHaveBeenCalledWith('get_account_members', {
+      account_slug: studio.slug,
+    });
     expect(detail.tasks).toEqual([
       {
         id: 'task-1',
         title: 'Send survey pack',
         due: '2026-09-04',
         status: 'todo',
-        assignee_name: null,
+        assignee_name: 'Dan Potter',
         planner_task_id: 'task-1',
         client_id: clientId,
         client_name: 'Hope and Wonder',
