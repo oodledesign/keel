@@ -302,6 +302,10 @@ export type JobBoardTask = {
   notes: string | null;
   links: Array<{ url: string; label?: string | null }>;
   note_refs: Array<{ id: string; title: string }>;
+  retainer_service_id?: string | null;
+  retainer_service_name?: string | null;
+  credits_burned?: number | null;
+  credits_burned_at?: string | null;
   subtasks?: JobBoardTask[];
 };
 

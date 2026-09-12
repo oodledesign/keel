@@ -74,6 +74,7 @@ import { ProjectGuestsPanel } from './project-guests-panel';
 import { ProjectImageUploader } from './project-image-uploader';
 import { ProjectPortalAccessPanel } from './project-portal-access-panel';
 import { ProjectPortalAccessToggle } from './project-portal-access-toggle';
+import { ProjectRetainerPanel } from './project-retainer-panel';
 
 type Job = {
   id: string;
@@ -703,6 +704,13 @@ export function JobDetailContent({
             </div>
 
             <div className="space-y-4">
+              {!isContractorView ? (
+                <ProjectRetainerPanel
+                  accountId={accountId}
+                  projectId={jobId}
+                  canEdit={canEditJobs}
+                />
+              ) : null}
               {client && (
                 <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 p-4">
                   <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">

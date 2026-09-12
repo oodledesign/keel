@@ -17,6 +17,7 @@ import {
 } from '~/lib/jobs/project-notifications';
 import { isBuiltinPhaseTemplateName } from '~/lib/projects/phase-template-builtins';
 import { PROJECT_BOARD_TEMPLATE } from '~/lib/projects/project-board-phase-template';
+import { looseClient } from '~/lib/retainers/loose-client';
 import { computeTaskProgress } from '~/lib/tasks/compute-task-progress';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
@@ -111,7 +112,7 @@ const STANDARD_DELIVERY_TEMPLATE = {
 };
 
 const JOB_BOARD_TASK_SELECT =
-  'id, title, status, priority, due_date, duration_minutes, sort_order, phase_id, project_id, user_id, assignee_contact_id, parent_task_id, notes, links, note_refs' as const;
+  'id, title, status, priority, due_date, duration_minutes, sort_order, phase_id, project_id, user_id, assignee_contact_id, parent_task_id, notes, links, note_refs, retainer_service_id, credits_burned, credits_burned_at' as const;
 
 function normalizeTaskLinks(
   value: unknown,
@@ -173,6 +174,11 @@ function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
     notes: (row.notes as string | null) ?? null,
     links: normalizeTaskLinks(row.links),
     note_refs: normalizeTaskNoteRefs(row.note_refs),
+    retainer_service_id: (row.retainer_service_id as string | null) ?? null,
+    retainer_service_name: (row.retainer_service_name as string | null) ?? null,
+    credits_burned:
+      typeof row.credits_burned === 'number' ? row.credits_burned : null,
+    credits_burned_at: (row.credits_burned_at as string | null) ?? null,
   };
 }
 
@@ -669,7 +675,9 @@ class ProjectPhasesService {
     if (
       tasksErr &&
       isMissingColumnError(tasksErr) &&
-      /links|note_refs/.test(`${tasksErr.message ?? ''}`.toLowerCase())
+      /links|note_refs|retainer_service|credits_burned/.test(
+        `${tasksErr.message ?? ''}`.toLowerCase(),
+      )
     ) {
       const fallback = await this.db
         .from('tasks')
@@ -762,6 +770,34 @@ class ProjectPhasesService {
       const key = task.phase_id ?? '__unphased__';
       if (!tasksByPhase[key]) tasksByPhase[key] = [];
       tasksByPhase[key].push(task);
+    }
+
+    const retainerServiceIds = [
+      ...new Set(
+        Object.values(tasksByPhase)
+          .flat()
+          .map((task) => task.retainer_service_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (retainerServiceIds.length > 0) {
+      const { data: serviceRows } = await looseClient(this.db)
+        .from('retainer_services')
+        .select('id, name')
+        .in('id', retainerServiceIds);
+      const names = new Map(
+        ((serviceRows ?? []) as Array<{ id: string; name: string }>).map(
+          (row) => [row.id, row.name],
+        ),
+      );
+      for (const list of Object.values(tasksByPhase)) {
+        for (const task of list) {
+          if (task.retainer_service_id) {
+            task.retainer_service_name =
+              names.get(task.retainer_service_id) ?? null;
+          }
+        }
+      }
     }
 
     let contactAssignees: Array<{

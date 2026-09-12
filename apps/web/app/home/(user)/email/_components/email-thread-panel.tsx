@@ -70,6 +70,7 @@ import {
   previewEmailBody,
   splitEmailQuotedHistory,
 } from '~/lib/email-assistant/message-body-display';
+import { RetainerMatchReviewCard } from '~/lib/retainers/retainer-match-review-card';
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
 import { EMAIL_CATEGORY_STYLES } from '../_lib/email-category-styles';
@@ -1072,8 +1073,17 @@ export function EmailThreadPanel({
                             ) : null}
                           </p>
                         ) : null}
+                        {item.retainerMatch ? (
+                          <RetainerMatchReviewCard
+                            suggestion={item.retainerMatch}
+                            services={detail.retainerServices ?? []}
+                            accountSlug={accountSlug ?? undefined}
+                            onResolved={refreshDetail}
+                          />
+                        ) : null}
                       </div>
                       <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap">
+                        {item.retainerMatch ? null : (
                         <Button
                           type="button"
                           size="sm"
@@ -1087,6 +1097,7 @@ export function EmailThreadPanel({
                           <Check className="mr-1 h-3.5 w-3.5" />
                           Accept
                         </Button>
+                        )}
                         <Button
                           type="button"
                           size="sm"

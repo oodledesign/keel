@@ -139,5 +139,28 @@ export async function updateEmailThreadLink(
     projectId: projectId ?? null,
   });
 
+  if (projectId) {
+    const { data: pendingItems } = await client
+      .from('email_action_items')
+      .select('id')
+      .eq('thread_id', threadId)
+      .eq('user_id', userId)
+      .eq('status', 'suggested');
+
+    if (pendingItems?.length) {
+      const { getSupabaseServerAdminClient } = await import(
+        '@kit/supabase/server-admin-client'
+      );
+      const { suggestRetainerMatchesForInsertedItems } = await import(
+        '~/lib/retainers/suggest-match'
+      );
+      await suggestRetainerMatchesForInsertedItems({
+        admin: getSupabaseServerAdminClient(),
+        actionItemIds: pendingItems.map((row) => String(row.id)),
+        actorUserId: userId,
+      });
+    }
+  }
+
   queueEmailThreadBrainSync(threadId);
 }

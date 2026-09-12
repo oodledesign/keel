@@ -36,6 +36,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'form_autoresponder',
   'form_notification',
   'form_resume',
+  'project_retainer_digest',
 ] as const;
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];

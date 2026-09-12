@@ -25,6 +25,8 @@ import {
 } from '~/lib/email-assistant/email-assistant.actions';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 import type { SuggestedEmailTaskItem } from '~/lib/email-assistant/suggested-email-tasks.loader';
+import { RetainerMatchReviewCard } from '~/lib/retainers/retainer-match-review-card';
+import type { RetainerServiceRecord } from '~/lib/retainers/types';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
 type Props = {
@@ -32,6 +34,7 @@ type Props = {
   accountId?: string;
   initialItems: SuggestedEmailTaskItem[];
   totalCount: number;
+  retainerServices?: RetainerServiceRecord[];
 };
 
 export function SuggestedEmailTasksClient({
@@ -39,6 +42,7 @@ export function SuggestedEmailTasksClient({
   accountId,
   initialItems,
   totalCount,
+  retainerServices = [],
 }: Props) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
@@ -241,9 +245,22 @@ export function SuggestedEmailTasksClient({
                         : 'From unknown sender'}
                       {sentLabel ? ` · sent ${sentLabel}` : ''}
                     </p>
+                    {item.retainerMatch ? (
+                      <RetainerMatchReviewCard
+                        suggestion={item.retainerMatch}
+                        services={retainerServices}
+                        accountSlug={accountSlug}
+                        onResolved={() =>
+                          setItems((prev) =>
+                            prev.filter((row) => row.id !== item.id),
+                          )
+                        }
+                      />
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {item.retainerMatch ? null : (
                   <button
                     type="button"
                     disabled={busy}
@@ -253,6 +270,7 @@ export function SuggestedEmailTasksClient({
                     <Check className="h-3.5 w-3.5" />
                     Accept
                   </button>
+                  )}
                   <button
                     type="button"
                     disabled={busy}
