@@ -11,6 +11,8 @@ enum OzerPalette {
     static let coral = Color(red: 255 / 255.0, green: 92 / 255.0, blue: 52 / 255.0)
     static let coralHover = Color(red: 255 / 255.0, green: 122 / 255.0, blue: 92 / 255.0)
     static let info = Color(red: 65 / 255.0, green: 96 / 255.0, blue: 111 / 255.0)
+    /// Web Home grouped-bar outgoings (`#94A3B8`).
+    static let chartOut = Color(red: 148 / 255.0, green: 163 / 255.0, blue: 184 / 255.0)
     static let creamOnDark = Color(red: 251 / 255.0, green: 246 / 255.0, blue: 236 / 255.0)
     static let border = Color(red: 42 / 255.0, green: 23 / 255.0, blue: 32 / 255.0).opacity(0.10)
     static let shadow = Color(red: 42 / 255.0, green: 23 / 255.0, blue: 32 / 255.0).opacity(0.12)

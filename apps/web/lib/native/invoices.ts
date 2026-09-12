@@ -2,8 +2,10 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { loadFinanceDashboardSummary } from '~/home/[account]/_lib/server/finance-dashboard-summary.loader';
 import { buildAppSiteUrl } from '~/lib/app-host-routing';
 
+import { withNativeFinanceDashboard } from './finances-dashboard';
 import { NativeHttpError } from './http';
 import {
   type NativeFinances,
@@ -116,10 +118,17 @@ export async function getNativeFinances(
     return emptyFinances();
   }
 
-  const rows = await loadNativeInvoiceRows(client, workspace.id, 'all', {
-    limit: null,
-  });
-  return summariseNativeFinances(rows);
+  const [rows, dashboard] = await Promise.all([
+    loadNativeInvoiceRows(client, workspace.id, 'all', {
+      limit: null,
+    }),
+    loadFinanceDashboardSummary(client, workspace.id).catch((error) => {
+      console.error('[native/finances] dashboard', workspace.id, error);
+      return null;
+    }),
+  ]);
+
+  return withNativeFinanceDashboard(summariseNativeFinances(rows), dashboard);
 }
 
 async function loadNativeInvoiceRows(

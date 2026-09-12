@@ -76,6 +76,22 @@ export type NativeInvoiceDetail = NativeInvoice & {
   web_path: string | null;
 };
 
+export type NativeFinanceMonth = {
+  month: string;
+  month_key: string;
+  /** Major currency units — same as the web Home chart. */
+  income: number;
+  /** Major currency units — web chart `expenses`. */
+  outgoings: number;
+  net: number;
+  is_current: boolean;
+};
+
+export const NATIVE_FINANCE_PERIOD = 'this_month' as const;
+export const NATIVE_FINANCE_PERIOD_LABEL = 'This month';
+
+export type NativeFinancePeriod = typeof NATIVE_FINANCE_PERIOD;
+
 export type NativeFinances = {
   outstanding_balance: string;
   outstanding_balance_pence: number;
@@ -86,7 +102,51 @@ export type NativeFinances = {
   paid_this_month_pence: number | null;
   currency: string;
   recent: NativeInvoice[];
+  /**
+   * Bank/import totals for the current calendar month — same window as the
+   * web business Home dashboard (`loadFinanceDashboardSummary`).
+   */
+  period: NativeFinancePeriod;
+  period_label: string;
+  income: string;
+  income_pence: number;
+  outgoings: string;
+  outgoings_pence: number;
+  net: string;
+  net_pence: number;
+  has_finance_data: boolean;
+  /** Last 6 months including the current month (web Home trend). */
+  months: NativeFinanceMonth[];
 };
+
+export function emptyNativeFinanceDashboard(
+  currency = 'gbp',
+): Pick<
+  NativeFinances,
+  | 'period'
+  | 'period_label'
+  | 'income'
+  | 'income_pence'
+  | 'outgoings'
+  | 'outgoings_pence'
+  | 'net'
+  | 'net_pence'
+  | 'has_finance_data'
+  | 'months'
+> {
+  return {
+    period: NATIVE_FINANCE_PERIOD,
+    period_label: NATIVE_FINANCE_PERIOD_LABEL,
+    income: formatWorkspaceMoney(0, currency),
+    income_pence: 0,
+    outgoings: formatWorkspaceMoney(0, currency),
+    outgoings_pence: 0,
+    net: formatWorkspaceMoney(0, currency),
+    net_pence: 0,
+    has_finance_data: false,
+    months: [],
+  };
+}
 
 export function workspaceShowsNativeInvoices(
   profile: string | null | undefined,
@@ -306,6 +366,7 @@ export function summariseNativeFinances(
     paid_this_month_pence: hasPaidThisMonth ? paidThisMonth : null,
     currency,
     recent,
+    ...emptyNativeFinanceDashboard(currency),
   };
 }
 
