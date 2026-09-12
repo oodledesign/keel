@@ -174,6 +174,7 @@ export function workspaceFormCreateDefaultsForTemplate(
       pageBackground: 'light',
       layout: isRsvp ? 'event' : 'standard',
       layoutExplicit: false,
+      presentation: 'classic',
     },
     eventAddress: null,
     eventDate: null,

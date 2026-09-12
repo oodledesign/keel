@@ -6,6 +6,7 @@ import {
   isRsvpLikeWorkspaceForm,
   parseWorkspaceFormTheme,
   resolveWorkspaceFormLayout,
+  serializeWorkspaceFormTheme,
 } from './form-theme';
 
 describe('darkenHex', () => {
@@ -31,11 +32,12 @@ describe('brandPageGradientCss', () => {
 });
 
 describe('parseWorkspaceFormTheme', () => {
-  it('defaults to light standard', () => {
+  it('defaults to light standard classic', () => {
     expect(parseWorkspaceFormTheme(null)).toEqual({
       pageBackground: 'light',
       layout: 'standard',
       layoutExplicit: false,
+      presentation: 'classic',
     });
   });
 
@@ -49,6 +51,7 @@ describe('parseWorkspaceFormTheme', () => {
       pageBackground: 'brand_gradient',
       layout: 'event',
       layoutExplicit: false,
+      presentation: 'classic',
     });
   });
 
@@ -72,6 +75,40 @@ describe('parseWorkspaceFormTheme', () => {
       pageBackground: 'brand_gradient',
       layout: 'standard',
       layoutExplicit: true,
+      presentation: 'classic',
+    });
+  });
+
+  it('reads steps presentation and typeform aliases', () => {
+    expect(
+      parseWorkspaceFormTheme({ presentation: 'steps' }).presentation,
+    ).toBe('steps');
+    expect(
+      parseWorkspaceFormTheme({ presentationMode: 'typeform' }).presentation,
+    ).toBe('steps');
+    expect(
+      parseWorkspaceFormTheme({ layoutMode: 'multi_step' }).presentation,
+    ).toBe('steps');
+    expect(
+      parseWorkspaceFormTheme({ presentation: 'classic' }).presentation,
+    ).toBe('classic');
+  });
+});
+
+describe('serializeWorkspaceFormTheme', () => {
+  it('persists presentation with other theme keys', () => {
+    expect(
+      serializeWorkspaceFormTheme({
+        pageBackground: 'brand_gradient',
+        layout: 'event',
+        layoutExplicit: true,
+        presentation: 'steps',
+      }),
+    ).toEqual({
+      pageBackground: 'brand_gradient',
+      layout: 'event',
+      layoutExplicit: true,
+      presentation: 'steps',
     });
   });
 });

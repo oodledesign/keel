@@ -148,6 +148,38 @@ describe('workspace form email settings', () => {
       value: 'Yes',
     });
 
+    const withFile = listFormSubmittedAnswers({
+      fields: [
+        {
+          id: 'brief',
+          type: 'file',
+          key: 'brief',
+          label: 'Brief',
+          required: false,
+        },
+      ],
+      values: {
+        brief: {
+          name: 'brief.pdf',
+          url: 'https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf',
+          path: 'acct/form/brief.pdf',
+          mimeType: 'application/pdf',
+          size: 900,
+        },
+      },
+    });
+    expect(withFile[0]).toMatchObject({
+      key: 'brief',
+      value:
+        'brief.pdf (https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf)',
+      href: 'https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf',
+    });
+    expect(
+      renderFormAnswersHtml(withFile).includes(
+        'href="https://proj.supabase.co/storage/v1/object/public/workspace-form-uploads/acct/form/brief.pdf"',
+      ),
+    ).toBe(true);
+
     const block = renderFormAnswersHtml(
       answers,
       'https://ozer.so/app/studio/forms/form-1',

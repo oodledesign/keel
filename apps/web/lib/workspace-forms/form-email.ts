@@ -6,6 +6,7 @@
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
 
 import type { WorkspaceFormField } from './form-fields';
+import { formatFormFileValue, parseFormFileValue } from './form-file';
 
 export const WORKSPACE_FORM_EMAIL_KINDS = [
   'autoresponder',
@@ -151,6 +152,7 @@ export type FormSubmittedAnswer = {
   key: string;
   label: string;
   value: string;
+  href?: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -319,6 +321,8 @@ export function formEmailHasAnswersToken(template: string): boolean {
 }
 
 export function formatFormFieldValue(raw: unknown): string {
+  const file = parseFormFileValue(raw);
+  if (file) return formatFormFileValue(file);
   if (typeof raw === 'boolean') return raw ? 'Yes' : 'No';
   if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw);
   if (typeof raw === 'string') return raw.trim();
@@ -329,6 +333,7 @@ export function formatFormFieldValue(raw: unknown): string {
       .join(', ');
   }
   if (raw == null) return '';
+  if (typeof raw === 'object') return '';
   return String(raw);
 }
 
@@ -338,13 +343,16 @@ export function listFormSubmittedAnswers(input: {
 }): FormSubmittedAnswer[] {
   return input.fields
     .filter((field) => field.type !== 'hidden')
-    .map((field) => ({
-      key: field.key,
-      label: field.label,
-      value: formatFormFieldValue(
-        input.values[field.key] ?? input.values[field.id],
-      ),
-    }));
+    .map((field) => {
+      const raw = input.values[field.key] ?? input.values[field.id];
+      const file = parseFormFileValue(raw);
+      return {
+        key: field.key,
+        label: field.label,
+        value: formatFormFieldValue(raw),
+        ...(file?.url ? { href: file.url } : {}),
+      };
+    });
 }
 
 export function renderFormAnswersText(answers: FormSubmittedAnswer[]): string {
@@ -359,8 +367,10 @@ export function renderFormAnswersHtml(
 ): string {
   const rows = answers
     .map((answer) => {
-      const value = escapeFormEmailHtml(answer.value).replace(/\n/g, '<br />');
-      return `<tr><td style="padding:6px 16px 6px 0;vertical-align:top;font-weight:600;color:#09111F;">${escapeFormEmailHtml(answer.label)}</td><td style="padding:6px 0;vertical-align:top;color:#09111F;">${value || '—'}</td></tr>`;
+      const display = answer.href
+        ? `<a href="${escapeFormEmailHtml(answer.href)}">${escapeFormEmailHtml(answer.value.split(' (')[0] || answer.value)}</a>`
+        : escapeFormEmailHtml(answer.value).replace(/\n/g, '<br />');
+      return `<tr><td style="padding:6px 16px 6px 0;vertical-align:top;font-weight:600;color:#09111F;">${escapeFormEmailHtml(answer.label)}</td><td style="padding:6px 0;vertical-align:top;color:#09111F;">${display || '—'}</td></tr>`;
     })
     .join('');
 

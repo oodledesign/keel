@@ -44,14 +44,23 @@ import {
   createWorkspaceFormField,
   duplicateWorkspaceFormField,
   ensureListingField,
+  publicVisibleFields,
 } from '~/lib/workspace-forms/form-fields';
+import {
+  fieldHasStepBreakAfter,
+  setFieldStepBreakAfter,
+  visibleFieldStepNumberById,
+} from '~/lib/workspace-forms/form-steps';
 import {
   WORKSPACE_FORM_LAYOUTS,
   WORKSPACE_FORM_LAYOUT_LABELS,
   WORKSPACE_FORM_PAGE_BACKGROUNDS,
   WORKSPACE_FORM_PAGE_BACKGROUND_LABELS,
+  WORKSPACE_FORM_PRESENTATIONS,
+  WORKSPACE_FORM_PRESENTATION_LABELS,
   type WorkspaceFormLayout,
   type WorkspaceFormPageBackground,
+  type WorkspaceFormPresentation,
   isRsvpLikeWorkspaceForm,
 } from '~/lib/workspace-forms/form-theme';
 import { ensureMailingListFields } from '~/lib/workspace-forms/mailing-list-fields';
@@ -142,11 +151,17 @@ export function FormBuilder({
   const [pageBackground, setPageBackground] =
     useState<WorkspaceFormPageBackground>(form.theme.pageBackground);
   const [layout, setLayout] = useState<WorkspaceFormLayout>(form.theme.layout);
+  const [presentation, setPresentation] = useState<WorkspaceFormPresentation>(
+    form.theme.presentation,
+  );
   const [emailSettings, setEmailSettings] =
     useState<WorkspaceFormEmailSettings>(form.emailSettings);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(
     form.fields[0]?.id ?? null,
   );
+  const visibleStepById = visibleFieldStepNumberById(fields);
+  const visibleFields = publicVisibleFields(fields);
+  const lastVisibleId = visibleFields.at(-1)?.id ?? null;
 
   function setTab(next: string) {
     const resolved = parseFormEditorTab(next);
@@ -195,7 +210,12 @@ export function FormBuilder({
           successMessage: successMessage.trim() || null,
           fields,
           enabled,
-          theme: { pageBackground, layout, layoutExplicit: true },
+          theme: {
+            pageBackground,
+            layout,
+            layoutExplicit: true,
+            presentation,
+          },
           emailSettings,
         });
         toast.success('Form saved');
@@ -297,9 +317,17 @@ export function FormBuilder({
 
         <TabsContent value="builder" className="mt-0 space-y-3">
           <div className="flex items-center justify-between gap-3 px-1">
-            <h2 className={`text-base font-semibold ${workspaceText}`}>
-              Questions
-            </h2>
+            <div className="grid gap-0.5">
+              <h2 className={`text-base font-semibold ${workspaceText}`}>
+                Questions
+              </h2>
+              {presentation === 'steps' ? (
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  New questions start on their own step. Use “Keep next question
+                  on this step” to show more than one field at a time.
+                </p>
+              ) : null}
+            </div>
             <FormFieldTypePicker
               placeholder="Add question"
               testId="add-form-field"
@@ -320,6 +348,38 @@ export function FormBuilder({
               index={index}
               total={fields.length}
               active={activeFieldId === field.id}
+              stepIndex={
+                presentation === 'steps'
+                  ? (visibleStepById.get(field.id) ?? null)
+                  : null
+              }
+              stepAction={
+                presentation === 'steps' &&
+                field.type !== 'hidden' &&
+                field.id !== lastVisibleId
+                  ? fieldHasStepBreakAfter(field)
+                    ? {
+                        kind: 'merge',
+                        onClick: () =>
+                          setFields((current) =>
+                            setFieldStepBreakAfter(current, field.id, false),
+                          ),
+                      }
+                    : {
+                        kind: 'split',
+                        onClick: () =>
+                          setFields((current) =>
+                            setFieldStepBreakAfter(current, field.id, true),
+                          ),
+                      }
+                  : null
+              }
+              priorFields={fields
+                .slice(0, index)
+                .filter((item) => item.type !== 'hidden')}
+              laterFields={fields
+                .slice(index + 1)
+                .filter((item) => item.type !== 'hidden')}
               onActivate={() => setActiveFieldId(field.id)}
               onChange={(patch) => updateField(field.id, patch)}
               onChangeType={(type) =>
@@ -575,6 +635,47 @@ export function FormBuilder({
                 {WORKSPACE_FORM_PAGE_BACKGROUNDS.map((value) => {
                   const meta = WORKSPACE_FORM_PAGE_BACKGROUND_LABELS[value];
                   const selected = pageBackground === value;
+                  return (
+                    <RadioGroupItemLabel
+                      key={value}
+                      selected={selected}
+                      className="h-full items-start gap-3 space-x-0"
+                    >
+                      <RadioGroupItem value={value} className="mt-0.5" />
+                      <span className="grid gap-0.5">
+                        <span className={`font-medium ${workspaceText}`}>
+                          {meta.label}
+                        </span>
+                        <span className={`text-xs ${workspaceTextMuted}`}>
+                          {meta.description}
+                        </span>
+                      </span>
+                    </RadioGroupItemLabel>
+                  );
+                })}
+              </RadioGroup>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Presentation</Label>
+              <p className={`text-xs ${workspaceTextMuted}`}>
+                Classic keeps every question on one page. Steps shows one step
+                at a time with Next, Back, and progress. New steps start as one
+                question; group fields in the builder when you want more than
+                one on a step. RSVP two-column layout still works — event
+                details stay on the left.
+              </p>
+              <RadioGroup
+                value={presentation}
+                onValueChange={(value) =>
+                  setPresentation(value as WorkspaceFormPresentation)
+                }
+                className="grid gap-2 sm:grid-cols-2"
+                data-test="form-presentation"
+              >
+                {WORKSPACE_FORM_PRESENTATIONS.map((value) => {
+                  const meta = WORKSPACE_FORM_PRESENTATION_LABELS[value];
+                  const selected = presentation === value;
                   return (
                     <RadioGroupItemLabel
                       key={value}

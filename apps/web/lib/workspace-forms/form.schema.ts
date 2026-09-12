@@ -5,11 +5,24 @@ import {
   WORKSPACE_FORM_FIELD_TYPES,
   WORKSPACE_FORM_STATUSES,
 } from './form-fields';
+import { WORKSPACE_FORM_UPLOAD_MAX_BYTES } from './form-file';
+import { WORKSPACE_FORM_LOGIC_OPS } from './form-logic';
 import { WORKSPACE_FORM_TEMPLATES } from './form-templates';
 import {
   WORKSPACE_FORM_LAYOUTS,
   WORKSPACE_FORM_PAGE_BACKGROUNDS,
+  WORKSPACE_FORM_PRESENTATIONS,
 } from './form-theme';
+
+const WorkspaceFormLogicConditionSchema = z.object({
+  fieldKey: z
+    .string()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  op: z.enum(WORKSPACE_FORM_LOGIC_OPS),
+  value: z.string().max(80).optional(),
+});
 
 export const WorkspaceFormFieldSchema = z.object({
   id: z.string().min(1).max(80),
@@ -24,6 +37,23 @@ export const WorkspaceFormFieldSchema = z.object({
   placeholder: z.string().max(160).optional(),
   helpText: z.string().max(240).optional(),
   options: z.array(z.string().min(1).max(80)).max(40).optional(),
+  stepBreakAfter: z.boolean().optional(),
+  visibleWhen: WorkspaceFormLogicConditionSchema.optional(),
+  jumpRules: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(80),
+        op: z.enum(WORKSPACE_FORM_LOGIC_OPS),
+        value: z.string().max(80).optional(),
+        targetKey: z
+          .string()
+          .min(1)
+          .max(60)
+          .regex(/^(_submit|[a-z][a-z0-9_]*)$/),
+      }),
+    )
+    .max(10)
+    .optional(),
 });
 
 export const CreateWorkspaceFormSchema = z.object({
@@ -37,6 +67,7 @@ export const WorkspaceFormThemeSchema = z.object({
   pageBackground: z.enum(WORKSPACE_FORM_PAGE_BACKGROUNDS),
   layout: z.enum(WORKSPACE_FORM_LAYOUTS).optional(),
   layoutExplicit: z.boolean().optional(),
+  presentation: z.enum(WORKSPACE_FORM_PRESENTATIONS).optional(),
 });
 
 export const WorkspaceFormEmailTemplateSchema = z.object({
@@ -103,13 +134,40 @@ export const PublishWorkspaceFormSchema = z.object({
   enabled: z.boolean(),
 });
 
+export const WorkspaceFormFileValueSchema = z.object({
+  name: z.string().min(1).max(240),
+  url: z.string().url().max(2000),
+  path: z.string().min(1).max(500),
+  mimeType: z.string().min(1).max(120),
+  size: z.number().int().min(1).max(WORKSPACE_FORM_UPLOAD_MAX_BYTES),
+});
+
+const PublicFormValuesSchema = z
+  .record(
+    z.string().max(80),
+    z.union([z.string().max(2000), z.boolean(), WorkspaceFormFileValueSchema]),
+  )
+  .default({});
+
 export const PublicWorkspaceFormSubmitSchema = z.object({
   token: z.string().min(16).max(128),
-  values: z
-    .record(z.string().max(80), z.union([z.string().max(2000), z.boolean()]))
-    .default({}),
+  values: PublicFormValuesSchema,
   listingId: z.string().uuid().optional().nullable(),
   propertyId: z.string().uuid().optional().nullable(),
+  /** Resume-later draft token — consumed after a successful submit. */
+  resumeToken: z.string().min(16).max(128).optional(),
+  /** Honeypot — bots fill this; humans leave empty. */
+  website: z.string().max(200).optional().or(z.literal('')),
+});
+
+export const PublicWorkspaceFormDraftSchema = z.object({
+  token: z.string().min(16).max(128),
+  values: PublicFormValuesSchema,
+  stepIndex: z.number().int().min(0).max(80).optional().default(0),
+  listingId: z.string().uuid().optional().nullable(),
+  propertyId: z.string().uuid().optional().nullable(),
+  resumeToken: z.string().min(16).max(128).optional(),
+  embed: z.boolean().optional(),
   /** Honeypot — bots fill this; humans leave empty. */
   website: z.string().max(200).optional().or(z.literal('')),
 });
@@ -131,4 +189,7 @@ export type PublishWorkspaceFormInput = z.infer<
 >;
 export type PublicWorkspaceFormSubmitInput = z.infer<
   typeof PublicWorkspaceFormSubmitSchema
+>;
+export type PublicWorkspaceFormDraftInput = z.infer<
+  typeof PublicWorkspaceFormDraftSchema
 >;
