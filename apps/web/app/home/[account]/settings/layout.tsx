@@ -59,7 +59,14 @@ async function WorkspaceSettingsLayout({
       <TeamAccountLayoutPageHeader
         account={account}
         title={<Trans i18nKey={'teams:settings.pageTitle'} />}
-        description={<AppBreadcrumbs />}
+        description={
+          <AppBreadcrumbs
+            values={{
+              integrations: 'Integrations',
+              dynamics: 'Dynamics 365',
+            }}
+          />
+        }
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">

@@ -19,6 +19,7 @@ describe('buildWorkspaceSettingsNav', () => {
 
     const ids = items.map((item) => item.id);
     expect(ids).toContain('general');
+    expect(ids).toContain('integrations');
     expect(ids).toContain('payments');
     expect(ids).toContain('services');
     expect(ids).toContain('project-statuses');
@@ -43,6 +44,7 @@ describe('buildWorkspaceSettingsNav', () => {
       'notifications',
       'focus',
       'activity',
+      'integrations',
       'brand',
       'sending-domain',
       'brand-voice',
@@ -104,6 +106,44 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).not.toContain('services');
     expect(ids).not.toContain('templates');
     expect(ids).not.toContain('knowledge');
+  });
+
+  it('includes Integrations for every workspace profile', () => {
+    const profiles = [
+      'work_design',
+      'work_property',
+      'commercial_property',
+      'building_surveyor',
+      'family',
+    ] as const;
+
+    for (const workspaceProfile of profiles) {
+      const items = buildWorkspaceSettingsNav({
+        accountSlug: 'oodle',
+        workspaceProfile,
+        moduleSettings: {},
+        access: ownerAccess,
+      });
+
+      expect(items.map((item) => item.id)).toContain('integrations');
+      expect(items.find((item) => item.id === 'integrations')?.href).toBe(
+        '/app/oodle/settings/integrations',
+      );
+    }
+  });
+
+  it('keeps Integrations active on the Dynamics settings page', () => {
+    expect(
+      isWorkspaceSettingsNavActive(
+        '/app/oodle/settings/integrations/dynamics',
+        {
+          id: 'integrations',
+          label: 'Integrations',
+          href: '/app/oodle/settings/integrations',
+        },
+        'oodle',
+      ),
+    ).toBe(true);
   });
 
   it('marks general as exact match only', () => {

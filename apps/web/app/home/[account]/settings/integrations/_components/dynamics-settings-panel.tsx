@@ -34,7 +34,7 @@ function parseConsentFields(value: string): string[] {
     .filter(Boolean);
 }
 
-export function CampaignDynamicsPanel({
+export function DynamicsSettingsPanel({
   accountId,
   accountSlug,
   connection,
@@ -167,7 +167,7 @@ export function CampaignDynamicsPanel({
   };
 
   return (
-    <div className="space-y-6" data-test="campaigns-dynamics-panel">
+    <div className="space-y-6" data-test="dynamics-settings-panel">
       <div className={`${workspacePanelCard} space-y-4 p-4`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

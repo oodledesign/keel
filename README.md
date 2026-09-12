@@ -24,7 +24,7 @@ Ozer includes a **Signatures** workspace module for Microsoft 365–connected em
 
 Ozer owns the marketing list. After a public mailing-list signup, Ozer upserts a **Dataverse Contact** (or Lead) with marketing-consent flags. Dynamics is not consent source of truth.
 
-- **Workspace UI**: Campaigns → Dynamics (tenant ID, environment URL, app registration client ID + secret, field mapping, test connection).
+- **Workspace UI**: Settings → Integrations → Dynamics 365 (tenant ID, environment URL, app registration client ID + secret, field mapping, test connection).
 - **Secrets**: AES-256-GCM via `TOKEN_ENCRYPTION_KEY` (same pattern as Bunny / Feedflow). Paste the Azure **client secret value** in settings — do not put it in env or git.
 - **Setup + field map**: [apps/web/lib/dynamics/README.md](./apps/web/lib/dynamics/README.md).
 - **Retry**: `GET /api/cron/dynamics-contact-sync` (Bearer `CRON_SECRET`). Public signup never fails if Dynamics is down.

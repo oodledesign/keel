@@ -27,7 +27,7 @@
 | Video hosting | title, description, filename, Bunny IDs | Host/play videos | Supabase metadata + Bunny Stream binary | Bunny.net | Live |
 | MCP (`/api/mcp`) | Tasks, projects, deals, clients, notes (RLS-scoped) — **not** email bodies | External AI clients | Same Supabase | Customer’s MCP client | Live |
 | Product analytics | Page views, in-product events, device/browser metadata, user/account IDs; session replay of UI (inputs masked, 30-day retention) | Product improvement / diagnostics | PostHog EU Cloud | **PostHog** (consent-gated) | Live (SDK wiring) |
-| Campaigns → Dynamics 365 | Mailing-list name, company, email, marketing opt-in; Azure tenant/app IDs; encrypted client secret | Upsert Dataverse Contact/Lead + consent flags (Ozer remains emailable source of truth) | Supabase `workspace_dynamics_connections` / `_sync_jobs`; Dataverse | **Dataverse Web API** (`{env}/.default` client credentials, application user) | MVP |
+| Settings → Integrations → Dynamics 365 | Mailing-list name, company, email, marketing opt-in; Azure tenant/app IDs; encrypted client secret | Upsert Dataverse Contact/Lead + consent flags (Ozer remains emailable source of truth) | Supabase `workspace_dynamics_connections` / `_sync_jobs`; Dataverse | **Dataverse Web API** (`{env}/.default` client credentials, application user) | MVP |
 | Composio | — | — | — | — | **Not built** |
 
 ---
