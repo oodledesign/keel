@@ -21,6 +21,7 @@ import {
 } from '~/lib/sending-domains/server';
 import { buildWorkspaceMailingListUnsubscribeUrl } from '~/lib/workspace-forms/workspace-mailing-list';
 
+import { automationMatchesNewSubscriberScope } from './campaign-automation-scope';
 import type {
   CampaignAutomation,
   CampaignAutomationRun,
@@ -40,6 +41,8 @@ function mapAutomation(row: Record<string, unknown>): CampaignAutomation {
     name: String(row.name),
     triggerType: 'new_subscriber',
     campaignId: (row.campaign_id as string | null) ?? null,
+    formId: (row.form_id as string | null) ?? null,
+    audienceListId: (row.audience_list_id as string | null) ?? null,
     status: row.status === 'active' ? 'active' : 'paused',
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -97,7 +100,13 @@ class CampaignAutomationsService {
     userId: string;
     name: string;
     campaignId: string;
+    formId?: string | null;
+    audienceListId?: string | null;
   }): Promise<CampaignAutomation> {
+    const formId = input.formId ?? null;
+    const audienceListId = input.audienceListId ?? null;
+    await this.assertScope(input.accountId, formId, audienceListId);
+
     const { data, error } = await fromTable(this.client, 'campaign_automations')
       .insert({
         account_id: input.accountId,
@@ -105,6 +114,8 @@ class CampaignAutomationsService {
         name: input.name.trim() || 'Welcome new subscribers',
         trigger_type: 'new_subscriber',
         campaign_id: input.campaignId,
+        form_id: formId,
+        audience_list_id: audienceListId,
         status: 'paused',
       })
       .select('*')
@@ -120,12 +131,26 @@ class CampaignAutomationsService {
     automationId: string;
     name?: string;
     campaignId?: string | null;
+    formId?: string | null;
+    audienceListId?: string | null;
     status?: 'active' | 'paused';
   }): Promise<CampaignAutomation> {
     const patch: Record<string, unknown> = {};
     if (input.name !== undefined) patch.name = input.name.trim();
     if (input.campaignId !== undefined) patch.campaign_id = input.campaignId;
+    if (input.formId !== undefined) patch.form_id = input.formId;
+    if (input.audienceListId !== undefined) {
+      patch.audience_list_id = input.audienceListId;
+    }
     if (input.status !== undefined) patch.status = input.status;
+
+    if (input.formId !== undefined || input.audienceListId !== undefined) {
+      await this.assertScope(
+        input.accountId,
+        input.formId ?? null,
+        input.audienceListId ?? null,
+      );
+    }
 
     const { data, error } = await fromTable(this.client, 'campaign_automations')
       .update(patch)
@@ -146,12 +171,45 @@ class CampaignAutomationsService {
       .eq('id', automationId);
     if (error) throw new Error(error.message);
   }
+
+  private async assertScope(
+    accountId: string,
+    formId: string | null,
+    audienceListId: string | null,
+  ) {
+    if (formId) {
+      const { data, error } = await fromTable(this.client, 'workspace_forms')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('id', formId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error('Form not found in this workspace');
+    }
+
+    if (audienceListId) {
+      const { data, error } = await fromTable(
+        this.client,
+        'campaign_audience_lists',
+      )
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('id', audienceListId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error('Audience list not found in this workspace');
+    }
+  }
 }
 
 /**
- * Fire welcome automations for a newly subscribed address.
+ * Fire welcome automations for a mailing-list signup.
  * Available on every Campaigns plan (Starter+). Never throws to the form
  * path — failures are logged as skipped/failed runs.
+ *
+ * Matching: workspace-wide (both scope fields null) when `includeUnscoped`
+ * is not false; plus any automation whose form and/or list matches.
+ * Global and scoped matches both send. `(automation_id, email)` stays unique.
  */
 export async function fireNewSubscriberAutomations(input: {
   client: SupabaseClient;
@@ -159,6 +217,9 @@ export async function fireNewSubscriberAutomations(input: {
   email: string;
   displayName?: string | null;
   unsubscribeToken: string;
+  formId?: string | null;
+  audienceListId?: string | null;
+  includeUnscoped?: boolean;
 }): Promise<void> {
   const logger = await getLogger();
   const { data, error } = await fromTable(input.client, 'campaign_automations')
@@ -175,9 +236,15 @@ export async function fireNewSubscriberAutomations(input: {
     return;
   }
 
-  const automations = ((data ?? []) as Array<Record<string, unknown>>).map(
-    mapAutomation,
-  );
+  const automations = ((data ?? []) as Array<Record<string, unknown>>)
+    .map(mapAutomation)
+    .filter((automation) =>
+      automationMatchesNewSubscriberScope(automation, {
+        formId: input.formId ?? null,
+        audienceListId: input.audienceListId ?? null,
+        includeUnscoped: input.includeUnscoped,
+      }),
+    );
 
   for (const automation of automations) {
     if (!automation.campaignId) continue;

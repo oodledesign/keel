@@ -75,6 +75,7 @@ describe('workspace form templates', () => {
     expect(defaults.successMessage).toMatch(/RSVP/i);
     expect(defaults.fields.map((field) => field.key)).toContain('attendance');
     expect(defaults.theme.layout).toBe('event');
+    expect(defaults.theme.presentation).toBe('classic');
     expect(defaults.eventAddress).toBeNull();
     expect(defaults.eventDate).toBeNull();
     expect(defaults.eventTime).toBeNull();
@@ -91,5 +92,6 @@ describe('workspace form templates', () => {
     const defaults = workspaceFormCreateDefaultsForTemplate('contact');
     expect(defaults.emailSettings.includeSubmittedAnswers).toBe(true);
     expect(defaults.emailSettings.templates).toEqual([]);
+    expect(defaults.theme.presentation).toBe('classic');
   });
 });

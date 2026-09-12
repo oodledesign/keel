@@ -38,11 +38,11 @@ async function SuggestedEmailTasksPage({ params }: PageProps) {
   }
 
   const client = getSupabaseServerClient();
-  const { items, totalCount } = await loadSuggestedEmailActionItems(
-    client,
-    workspace.user.id,
-    { accountId: workspace.account.id, limit: 50 },
-  );
+  const { items, totalCount, retainerServices } =
+    await loadSuggestedEmailActionItems(client, workspace.user.id, {
+      accountId: workspace.account.id,
+      limit: 50,
+    });
 
   return (
     <>
@@ -57,6 +57,7 @@ async function SuggestedEmailTasksPage({ params }: PageProps) {
           accountId={workspace.account.id}
           initialItems={items}
           totalCount={totalCount}
+          retainerServices={retainerServices}
         />
       </PageBody>
     </>

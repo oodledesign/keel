@@ -1,8 +1,16 @@
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import {
   brandLogoSurfaceForPage,
   resolveBrandLogoForSurface,
 } from '~/lib/brand/resolve-brand-logo';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { isLikelyResumeToken } from '~/lib/workspace-forms/form-draft';
+import {
+  loadPublicFormDraft,
+  publicFormStepCount,
+} from '~/lib/workspace-forms/form-draft.server';
+import { shouldIncludeWelcomeStep } from '~/lib/workspace-forms/form-steps';
 import { brandPageGradientCss } from '~/lib/workspace-forms/form-theme';
 import { loadCachedPublicWorkspaceForm } from '~/lib/workspace-forms/public-form';
 
@@ -17,6 +25,7 @@ interface PublicFormPageProps {
     property?: string;
     embed?: string;
     email?: string;
+    resume?: string;
   }>;
 }
 
@@ -63,6 +72,27 @@ async function PublicWorkspaceFormPage({
     logoOnLightShell: useContentShell,
   });
 
+  const includeWelcome = shouldIncludeWelcomeStep({
+    presentation: form.theme.presentation,
+    layout: form.theme.layout,
+    embed,
+    hasIntro: Boolean(
+      form.description?.trim() ||
+      form.eventAddress?.trim() ||
+      form.eventDate?.trim() ||
+      form.eventTime?.trim(),
+    ),
+  });
+  const draft =
+    isLikelyResumeToken(query.resume) && form.id
+      ? await loadPublicFormDraft(getSupabaseServerAdminClient(), {
+          formId: form.id,
+          resumeToken: query.resume,
+          fields: form.fields,
+          stepCount: publicFormStepCount(form, { includeWelcome }),
+        })
+      : null;
+
   return (
     <main
       className={`flex min-h-[100dvh] flex-col px-4 ${embed ? 'py-4' : 'py-10 sm:px-6'}`}
@@ -77,6 +107,7 @@ async function PublicWorkspaceFormPage({
         eventDate={form.eventDate}
         eventTime={form.eventTime}
         layout={form.theme.layout}
+        presentation={form.theme.presentation}
         submitLabel={form.submitLabel}
         successMessage={form.successMessage}
         fields={form.fields}
@@ -84,6 +115,9 @@ async function PublicWorkspaceFormPage({
         propertyId={query.property ?? null}
         embed={embed}
         prefillEmail={query.email ?? null}
+        resumeToken={draft?.resumeToken ?? null}
+        initialValues={draft?.values}
+        initialStepIndex={draft?.stepIndex}
         logoUrl={resolveBrandLogoForSurface(form.brand, logoSurface)}
         accentColor={form.brand.accent_color}
         primaryColor={form.brand.primary_color}

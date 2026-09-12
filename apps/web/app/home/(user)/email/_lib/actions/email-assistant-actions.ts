@@ -9,6 +9,10 @@ import {
   enrichEmailActionItemLinks,
   syncSuggestedActionItemsFromThreadLink,
 } from '~/lib/email-assistant/action-item-links';
+import {
+  loadPendingRetainerSuggestions,
+  loadRetainerCatalogue,
+} from '~/lib/retainers/load-suggestions';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { loadEmailThreadDetailFromDb } from '../server/email-page.loader';
@@ -118,6 +122,18 @@ export async function loadEmailThreadDetail(
 
   // Enrich names after paint-critical payload is ready (usually tiny).
   const enrichedItems = await enrichEmailActionItemLinks(actionItems);
+  const matches = await loadPendingRetainerSuggestions(
+    client,
+    enrichedItems.map((item) => item.id),
+  );
+  for (const item of enrichedItems) {
+    item.retainerMatch = matches.get(item.id) ?? null;
+  }
+
+  const catalogueAccountId =
+    thread.link.accountId ??
+    enrichedItems.find((item) => item.account_id)?.account_id ??
+    null;
 
   return {
     ok: true,
@@ -126,6 +142,9 @@ export async function loadEmailThreadDetail(
       messages: (messagesResult.data ?? []) as EmailMessageRow[],
       actionItems: enrichedItems,
       draft: (draftResult.data as EmailDraftRow | null) ?? null,
+      retainerServices: catalogueAccountId
+        ? await loadRetainerCatalogue(client, catalogueAccountId)
+        : [],
     },
   };
 }

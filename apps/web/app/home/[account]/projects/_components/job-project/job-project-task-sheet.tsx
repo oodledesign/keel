@@ -34,11 +34,14 @@ import {
 } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
+import { TaskRetainerStamp } from '~/lib/retainers/task-retainer-stamp';
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
+import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
 import {
@@ -317,6 +320,26 @@ export function JobProjectTaskSheet({
           </SheetHeader>
 
           <div className="flex flex-1 flex-col gap-4 py-4">
+            {task ? (
+              <TaskRetainerStamp
+                accountId={accountId}
+                accountSlug={accountSlug}
+                taskId={task.id}
+                serviceName={task.retainer_service_name ?? null}
+                creditsBurned={task.credits_burned ?? null}
+                creditsBurnedAt={task.credits_burned_at ?? null}
+                canUndo={canEditJobs}
+                onUndone={() =>
+                  onUpdated({
+                    ...task,
+                    retainer_service_id: null,
+                    retainer_service_name: null,
+                    credits_burned: null,
+                    credits_burned_at: null,
+                  })
+                }
+              />
+            ) : null}
             <div>
               <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Title
@@ -346,7 +369,12 @@ export function JobProjectTaskSheet({
                   onValueChange={setStatus}
                   disabled={!canEditJobs || pending}
                 >
-                  <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
+                  <SelectTrigger
+                    className={cn(
+                      'mt-1 border-0 font-medium shadow-none',
+                      taskStatusBadgeClass(status),
+                    )}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

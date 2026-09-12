@@ -27,6 +27,8 @@ import {
   setEmailThreadCategory,
 } from '~/lib/email-assistant/set-thread-category';
 import { syncCategoryToGmail } from '~/lib/email-assistant/sync-category-to-gmail';
+import { looseClient } from '~/lib/retainers/loose-client';
+import { skipPendingRetainerMatch } from '~/lib/retainers/skip-pending';
 import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
@@ -335,7 +337,7 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
       source: 'email',
     };
 
-    let taskResult = await client
+    let taskResult = await looseClient(client)
       .from('tasks')
       .insert(insertRow)
       .select('id')
@@ -344,7 +346,7 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
     if (taskResult.error?.message?.includes('source')) {
       const { source: _source, ...withoutSource } = insertRow;
       void _source;
-      taskResult = await client
+      taskResult = await looseClient(client)
         .from('tasks')
         .insert(withoutSource)
         .select('id')
@@ -368,6 +370,8 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
       throw new Error(updateError.message);
     }
 
+    await skipPendingRetainerMatch(data.actionItemId);
+
     revalidateSuggestedEmailPaths(data.accountSlug);
     return {
       ok: true as const,
@@ -390,6 +394,8 @@ export const dismissSuggestedEmailTaskAction = enhanceAction(
     if (error) {
       throw new Error(error.message);
     }
+
+    await skipPendingRetainerMatch(data.actionItemId);
 
     revalidateSuggestedEmailPaths(data.accountSlug);
     return { ok: true as const };

@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 
+import Link from 'next/link';
+
+import { CalendarClock } from 'lucide-react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@kit/ui/alert-dialog';
 import { Badge } from '@kit/ui/badge';
+import { Button } from '@kit/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +49,7 @@ export function CampaignTemplateGallery({
   brand,
   workspace,
   requireConfirm,
+  recurringHref,
   onSelect,
 }: {
   open: boolean;
@@ -51,6 +57,8 @@ export function CampaignTemplateGallery({
   brand: CampaignBrand;
   workspace: CampaignTemplateWorkspace;
   requireConfirm?: boolean;
+  /** New-campaign flow only — links into Recurring → new series. */
+  recurringHref?: string;
   onSelect: (input: {
     template: CampaignTemplateDefinition;
     document: CampaignDocument;
@@ -87,10 +95,13 @@ export function CampaignTemplateGallery({
           data-test="campaign-template-gallery"
         >
           <DialogHeader>
-            <DialogTitle>Choose a starting email</DialogTitle>
+            <DialogTitle>
+              {recurringHref ? 'New campaign' : 'Choose a starting email'}
+            </DialogTitle>
             <DialogDescription>
-              Templates use your workspace logo and colours. Every block stays
-              editable after you pick one.
+              {recurringHref
+                ? 'Pick a branded starter for a one-off send, or set up a recurring campaign below.'
+                : 'Templates use your workspace logo and colours. Every block stays editable after you pick one.'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -117,6 +128,35 @@ export function CampaignTemplateGallery({
               </button>
             ))}
           </div>
+          {recurringHref ? (
+            <div
+              className={`${workspacePanelCard} mt-1 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}
+              data-test="campaign-new-recurring"
+            >
+              <div className="flex items-start gap-3">
+                <CalendarClock
+                  className={`mt-0.5 h-5 w-5 shrink-0 ${workspaceTextMuted}`}
+                />
+                <div>
+                  <h3 className={`font-semibold ${workspaceText}`}>
+                    Recurring campaign
+                  </h3>
+                  <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+                    Weekly series with draft instances generated ahead.
+                  </p>
+                </div>
+              </div>
+              <Button asChild variant="outline">
+                <Link
+                  href={recurringHref}
+                  onClick={() => onOpenChange(false)}
+                  data-test="campaign-new-recurring-cta"
+                >
+                  Set up recurring
+                </Link>
+              </Button>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
 

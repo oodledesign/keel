@@ -8,7 +8,10 @@ import {
   nativeBadRequest,
   readJsonBody,
 } from '~/lib/native/http';
-import { createNativeMeeting, listNativeMeetings } from '~/lib/native/meetings';
+import {
+  createNativeMeeting,
+  loadNativeMeetingsHub,
+} from '~/lib/native/meetings';
 import { requireNativeWorkspace } from '~/lib/native/workspace';
 
 export const runtime = 'nodejs';
@@ -43,8 +46,11 @@ export async function GET(request: Request) {
       auth.context.userId,
       new URL(request.url).searchParams.get('workspace'),
     );
-    const items = await listNativeMeetings(auth.context.supabase, workspace);
-    return NextResponse.json({ items });
+    const payload = await loadNativeMeetingsHub(
+      auth.context.supabase,
+      workspace,
+    );
+    return NextResponse.json(payload);
   } catch (error) {
     return handleNativeError(error, 'meetings');
   }

@@ -20,11 +20,8 @@ async function PersonalSuggestedEmailTasksPage() {
   ]);
 
   const client = getSupabaseServerClient();
-  const { items, totalCount } = await loadSuggestedEmailActionItems(
-    client,
-    user.id,
-    { limit: 50 },
-  );
+  const { items, totalCount, retainerServices } =
+    await loadSuggestedEmailActionItems(client, user.id, { limit: 50 });
 
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
@@ -37,7 +34,11 @@ async function PersonalSuggestedEmailTasksPage() {
           become planner tasks.
         </p>
       </div>
-      <SuggestedEmailTasksClient initialItems={items} totalCount={totalCount} />
+      <SuggestedEmailTasksClient
+        initialItems={items}
+        totalCount={totalCount}
+        retainerServices={retainerServices}
+      />
     </PageBody>
   );
 }

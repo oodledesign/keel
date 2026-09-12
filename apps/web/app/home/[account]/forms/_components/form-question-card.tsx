@@ -27,12 +27,21 @@ import {
 } from '~/lib/workspace-ui';
 
 import { FormFieldTypePicker } from './form-field-type-picker';
+import { FormQuestionLogic } from './form-question-logic';
 
 type Props = {
   field: WorkspaceFormField;
   index: number;
   total: number;
   active: boolean;
+  /** 1-based step number when the form uses steps presentation. */
+  stepIndex?: number | null;
+  stepAction?: {
+    kind: 'merge' | 'split';
+    onClick: () => void;
+  } | null;
+  priorFields?: WorkspaceFormField[];
+  laterFields?: WorkspaceFormField[];
   onActivate: () => void;
   onChange: (patch: Partial<WorkspaceFormField>) => void;
   onChangeType: (type: WorkspaceFormFieldType) => void;
@@ -46,6 +55,10 @@ export function FormQuestionCard({
   index,
   total,
   active,
+  stepIndex = null,
+  stepAction = null,
+  priorFields = [],
+  laterFields = [],
   onActivate,
   onChange,
   onChangeType,
@@ -71,6 +84,36 @@ export function FormQuestionCard({
       >
         <GripHorizontal className="h-4 w-4" />
       </div>
+
+      {stepIndex ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p
+            className={`text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+            data-test="form-question-step-index"
+          >
+            Step {stepIndex}
+          </p>
+          {stepAction ? (
+            <button
+              type="button"
+              className={`text-xs font-medium ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
+              data-test={
+                stepAction.kind === 'merge'
+                  ? 'form-question-merge-step'
+                  : 'form-question-split-step'
+              }
+              onClick={(event) => {
+                event.stopPropagation();
+                stepAction.onClick();
+              }}
+            >
+              {stepAction.kind === 'merge'
+                ? 'Keep next question on this step'
+                : 'Start new step after this'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
         <div className="grid gap-1.5">
@@ -140,8 +183,8 @@ export function FormQuestionCard({
 
       {field.type === 'file' ? (
         <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
-          Public visitors see a note that files are not collected yet. Storage
-          upload is a follow-up.
+          Accepts PDF, images, and common documents (Word, Excel, PowerPoint,
+          text). Max 10MB. Uploads are stored with the submission.
         </p>
       ) : null}
 
@@ -161,6 +204,29 @@ export function FormQuestionCard({
           />
         </div>
       ) : null}
+
+      {field.type !== 'hidden' ? (
+        <div className="mt-3 grid gap-1.5">
+          <Label>Help text</Label>
+          <Input
+            value={field.helpText ?? ''}
+            onFocus={onActivate}
+            onChange={(event) =>
+              onChange({ helpText: event.target.value || undefined })
+            }
+            placeholder="Optional — shown under the question on the public form"
+            data-test="form-field-help-text"
+          />
+        </div>
+      ) : null}
+
+      <FormQuestionLogic
+        field={field}
+        priorFields={priorFields}
+        laterFields={laterFields}
+        stepsMode={stepIndex != null}
+        onChange={onChange}
+      />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <label className={`flex items-center gap-2 text-sm ${workspaceText}`}>

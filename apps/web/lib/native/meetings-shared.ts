@@ -36,8 +36,42 @@ export type NativeMeeting = {
   client_name: string | null;
   meeting_date: string | null;
   source: NativeMeetingStoredSource;
+  duration_seconds: number | null;
   created_at: string;
   updated_at: string;
+};
+
+export type NativeMeetingListItem = NativeMeeting & {
+  has_extracted_tasks: boolean;
+};
+
+export type NativeUpcomingMeeting = {
+  id: string;
+  title: string;
+  start_at: string;
+  invitee_name: string;
+  conferencing_url: string | null;
+};
+
+export type NativeMeetingNotes = {
+  text: string;
+  generated_at: string | null;
+};
+
+export type NativeMeetingTask = {
+  id: string;
+  title: string;
+  due: string | null;
+  status: string;
+  assignee_name: string | null;
+  planner_task_id: string | null;
+  client_id: string | null;
+  client_name: string | null;
+};
+
+export type NativeMeetingDetail = NativeMeeting & {
+  notes: NativeMeetingNotes | null;
+  tasks: NativeMeetingTask[];
 };
 
 export type NativeMeetingRow = {
@@ -47,6 +81,7 @@ export type NativeMeetingRow = {
   client_id?: string | null;
   meeting_date?: string | null;
   source?: string | null;
+  duration_seconds?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -149,6 +184,15 @@ export function storedMeetingSource(
   return 'desktop_recorder';
 }
 
+export function parseNativeMeetingDuration(
+  value: number | null | undefined,
+): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return Math.round(value);
+}
+
 export function toNativeMeeting(
   row: NativeMeetingRow,
   workspace: NativeWorkspace,
@@ -164,6 +208,7 @@ export function toNativeMeeting(
     client_name: clientName?.trim() || null,
     meeting_date: row.meeting_date?.trim() || null,
     source,
+    duration_seconds: parseNativeMeetingDuration(row.duration_seconds),
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

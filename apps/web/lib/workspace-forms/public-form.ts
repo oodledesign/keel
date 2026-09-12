@@ -13,6 +13,7 @@ import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { processDueDynamicsSyncJobs } from '~/lib/dynamics/sync.service';
 import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 
+import { consumePublicFormDraft } from './form-draft.server';
 import {
   type WorkspaceFormEmailSettings,
   parseWorkspaceFormEmailSettings,
@@ -27,10 +28,19 @@ import {
   resolveBoundListingId,
 } from './form-fields';
 import {
+  parseJumpRules,
+  parseVisibleWhen,
+  visibleFieldsForValues,
+} from './form-logic';
+import {
   type WorkspaceFormTheme,
   parseWorkspaceFormTheme,
   withResolvedFormLayout,
 } from './form-theme';
+import {
+  sanitizePublicFormValues,
+  validateVisibleFormFields,
+} from './form-validate';
 import type { PublicWorkspaceFormSubmitInput } from './form.schema';
 import {
   extractMailingListSpec,
@@ -56,6 +66,7 @@ export type PublicWorkspaceForm = {
   eventTime: string | null;
   destination: WorkspaceFormDestination;
   listingId: string | null;
+  audienceListId: string | null;
   shareToken: string;
   embedKey: string;
   submitLabel: string;
@@ -74,6 +85,7 @@ type FormRow = {
   description: string | null;
   destination: WorkspaceFormDestination;
   listing_id: string | null;
+  audience_list_id?: string | null;
   share_token: string;
   embed_key: string;
   enabled: boolean;
@@ -90,10 +102,27 @@ type FormRow = {
 
 export function parseFormFields(raw: unknown): WorkspaceFormField[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((item): item is WorkspaceFormField => {
-    if (!item || typeof item !== 'object') return false;
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
     const row = item as Partial<WorkspaceFormField>;
-    return Boolean(row.id && row.type && row.key && row.label);
+    if (!row.id || !row.type || !row.key || !row.label) return [];
+    const field: WorkspaceFormField = {
+      id: String(row.id),
+      type: row.type,
+      key: String(row.key),
+      label: String(row.label),
+      required: Boolean(row.required),
+    };
+    if (row.placeholder) field.placeholder = row.placeholder;
+    if (row.helpText) field.helpText = row.helpText;
+    if (Array.isArray(row.options)) field.options = row.options;
+    if (row.stepBreakAfter === false) field.stepBreakAfter = false;
+    if (row.stepBreakAfter === true) field.stepBreakAfter = true;
+    const visibleWhen = parseVisibleWhen(row.visibleWhen);
+    if (visibleWhen) field.visibleWhen = visibleWhen;
+    const jumpRules = parseJumpRules(row.jumpRules);
+    if (jumpRules) field.jumpRules = jumpRules;
+    return [field];
   });
 }
 
@@ -104,7 +133,7 @@ export async function loadPublicWorkspaceFormByToken(
   if (!token || token.length < 16) return null;
 
   const selectColumns =
-    'id, account_id, name, description, event_address, event_date, event_time, destination, listing_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
+    'id, account_id, name, description, event_address, event_date, event_time, destination, listing_id, audience_list_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
 
   const byShare = await fromTable(admin, 'workspace_forms')
     .select(selectColumns)
@@ -155,6 +184,7 @@ export async function loadPublicWorkspaceFormByToken(
     eventTime: row.event_time?.trim() || null,
     destination: row.destination,
     listingId: row.listing_id,
+    audienceListId: row.audience_list_id ?? null,
     shareToken: row.share_token,
     embedKey: row.embed_key,
     submitLabel: row.submit_label?.trim() || 'Submit',
@@ -292,7 +322,18 @@ export async function submitPublicWorkspaceForm(
   form: PublicWorkspaceForm,
   input: PublicWorkspaceFormSubmitInput,
 ): Promise<PublicFormSubmitResult> {
-  const contact = extractContactFromValues(form.fields, input.values);
+  const values = sanitizePublicFormValues({
+    fields: form.fields,
+    values: input.values,
+    accountId: form.accountId,
+    formId: form.id,
+  });
+  const invalid = validateVisibleFormFields(form.fields, values);
+  if (invalid) {
+    throw new FormSubmitError(invalid);
+  }
+
+  const contact = extractContactFromValues(form.fields, values);
   const boundListingId = resolveBoundListingId({
     queryListingId: input.listingId,
     hiddenListingId: contact.listingId,
@@ -312,7 +353,15 @@ export async function submitPublicWorkspaceForm(
     );
   }
 
-  if (!contact.contactName && !contact.contactEmail) {
+  const visible = visibleFieldsForValues(form.fields, values);
+  const asksContact = visible.some(
+    (field) =>
+      field.type === 'name' ||
+      field.type === 'email' ||
+      field.key === 'name' ||
+      field.key === 'email',
+  );
+  if (asksContact && !contact.contactName && !contact.contactEmail) {
     throw new FormSubmitError('Please enter your name or email.');
   }
 
@@ -343,6 +392,8 @@ export async function submitPublicWorkspaceForm(
       contact,
       spec,
       commercial: form.commercialProperty,
+      formId: form.id,
+      audienceListId: form.audienceListId,
     });
     clientId = mailing.clientId;
     requirementId = mailing.requirementId;
@@ -371,7 +422,7 @@ export async function submitPublicWorkspaceForm(
     .insert({
       account_id: form.accountId,
       form_id: form.id,
-      payload: input.values,
+      payload: values,
       contact_name: contact.contactName || null,
       contact_email: contact.contactEmail || null,
       contact_phone: contact.contactPhone,
@@ -402,6 +453,11 @@ export async function submitPublicWorkspaceForm(
 
   const submissionId = String((data as { id: string }).id);
 
+  await consumePublicFormDraft(admin, {
+    formId: form.id,
+    resumeToken: input.resumeToken,
+  });
+
   // Keep the isolate alive after the JSON response so Zepto can finish.
   // Plain `void` is frozen/killed on Vercel and shows up as delayed
   // Access Denied / TLS disconnect in platform_email_log.
@@ -411,7 +467,7 @@ export async function submitPublicWorkspaceForm(
         admin,
         form,
         contact,
-        values: input.values,
+        values,
         submissionId,
       }).catch(() => {
         // Logged inside dispatch — never fail the public submit.

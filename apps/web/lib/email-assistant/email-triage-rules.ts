@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { skipPendingRetainerMatchesForThreads } from '~/lib/retainers/skip-pending';
+
 import { extractEmailAddress } from './address-utils';
 import { categoryFromTriageRuleAction } from './email-thread-categories';
 import {
@@ -432,6 +434,7 @@ async function applyRuleToMatchingThreads(
         throw new Error(dismissError.message);
       }
     }
+    await skipPendingRetainerMatchesForThreads(matching);
   }
 
   return matching.length;

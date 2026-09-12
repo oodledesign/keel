@@ -1,4 +1,4 @@
-# Dynamics 365 / Dataverse (Campaigns mailing list)
+# Dynamics 365 / Dataverse (mailing-list sync)
 
 Ozer owns the marketing list. On mailing-list subscribe (and unsubscribe / resubscribe), Ozer **upserts a Dataverse Contact or Lead** and writes marketing-consent flags. Dynamics is **not** the source of truth for email consent.
 
@@ -14,7 +14,7 @@ Token audience is the **environment URL**, not Microsoft Graph:
 `scope={environmentUrl}/.default`  
 `{environmentUrl}/api/data/v9.2/contacts`
 
-## What Dan pastes in Campaigns → Dynamics
+## What Dan pastes in Settings → Integrations → Dynamics 365
 
 Create these in **the customer’s Entra ID + Dataverse environment** (not Ozer’s). Do not commit secrets.
 
@@ -49,7 +49,7 @@ Ozer stores the client secret with **AES-256-GCM** using `TOKEN_ENCRYPTION_KEY` 
 | Marketing opted in  | `donotemail = false`, `donotbulkemail = false`                                | same            |
 | Marketing opted out | `donotemail = true`, `donotbulkemail = true`                                  | same            |
 
-Optional **extra consent field**: a custom boolean on Contact/Lead (e.g. `new_ozerconsent` or a publisher prefix). Set it in Campaigns → Dynamics. Customer Insights option-set fields are **not** auto-mapped — create a boolean if Arcanum needs an explicit flag besides `donotemail`.
+Optional **extra consent field**: a custom boolean on Contact/Lead (e.g. `new_ozerconsent` or a publisher prefix). Set it in Settings → Integrations → Dynamics 365. Customer Insights option-set fields are **not** auto-mapped — create a boolean if Arcanum needs an explicit flag besides `donotemail`.
 
 Consent modes:
 

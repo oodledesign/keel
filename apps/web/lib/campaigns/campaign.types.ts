@@ -147,6 +147,18 @@ export type CampaignContactCategory = {
   updatedAt: string;
 };
 
+export type CampaignContactListMembership = {
+  id: string;
+  name: string;
+};
+
+/** Mailing-preference status, plus `none` when no preference row exists. */
+export type CampaignSubscriberStatus =
+  | 'subscribed'
+  | 'unsubscribed'
+  | 'suppressed'
+  | 'none';
+
 export type CampaignWorkspaceContact = {
   id: string;
   accountId: string;
@@ -159,6 +171,8 @@ export type CampaignWorkspaceContact = {
   industry: string | null;
   createdAt: string;
   categoryIds: string[];
+  lists: CampaignContactListMembership[];
+  subscriberStatus: CampaignSubscriberStatus;
 };
 
 export type CampaignAutomation = {
@@ -168,9 +182,16 @@ export type CampaignAutomation = {
   name: string;
   triggerType: 'new_subscriber';
   campaignId: string | null;
+  formId: string | null;
+  audienceListId: string | null;
   status: 'active' | 'paused';
   createdAt: string;
   updatedAt: string;
+};
+
+export type CampaignAutomationScopeOption = {
+  id: string;
+  name: string;
 };
 
 export type CampaignAutomationRun = {

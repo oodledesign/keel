@@ -66,7 +66,7 @@ export function CampaignAudiencePicker({
   }) => void;
 }) {
   const growth = hasCampaignsGrowthFeatures(planTier);
-  const audiencesHref = pathsConfig.app.accountEmailCampaignAudiences.replace(
+  const newListHref = pathsConfig.app.accountEmailCampaignAudienceNew.replace(
     '[account]',
     accountSlug,
   );
@@ -168,7 +168,7 @@ export function CampaignAudiencePicker({
           <p className={`text-sm ${workspaceTextMuted}`}>
             No saved lists yet.{' '}
             <Link
-              href={audiencesHref}
+              href={newListHref}
               className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
               data-test="campaign-create-audience-list-prompt"
             >
@@ -189,7 +189,7 @@ export function CampaignAudiencePicker({
             >
               No saved lists yet.{' '}
               <Link
-                href={audiencesHref}
+                href={newListHref}
                 className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
                 data-test="campaign-create-audience-list-picker"
               >

@@ -162,7 +162,7 @@ extension NativeWorkspace {
 
     /// Menu body for the selected space. Workspaces themselves stay in the picker.
     var menuScreens: [AppScreen] {
-        var screens: [AppScreen] = [.home, .tasks, .notes, .messages]
+        var screens: [AppScreen] = [.home, .tasks, .taskReview, .notes, .messages]
         if showsMeetings {
             screens.append(.meetings)
         }

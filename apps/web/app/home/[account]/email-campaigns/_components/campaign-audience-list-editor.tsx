@@ -16,11 +16,12 @@ import {
   AUDIENCE_FILTER_FIELD_GROUPS,
   AUDIENCE_FILTER_FIELD_LABEL,
   AUDIENCE_FILTER_OP_LABEL,
-  AUDIENCE_LIST_SOURCE_LABEL,
   type AudienceFilterOp,
   type AudienceFilterRule,
   type AudienceListFilters,
+  type AudienceListKind,
   type AudienceListSource,
+  audienceListKind,
   emptyAudienceFilterRule,
   parseAudienceListFilters,
 } from '~/lib/campaigns/campaign-audience-filters';
@@ -44,43 +45,80 @@ import {
   saveAudienceListAction,
 } from '../_lib/server/server-actions';
 
-type ListKind = 'logic' | 'manual';
-
-function listKindOf(list: CampaignAudienceList): ListKind {
-  return list.source === 'manual' ? 'manual' : 'logic';
+function audiencesHref(accountSlug: string) {
+  return pathsConfig.app.accountEmailCampaignAudiences.replace(
+    '[account]',
+    accountSlug,
+  );
 }
 
-export function CampaignAudienceListsPanel({
+function listDetailHref(accountSlug: string, listId: string) {
+  return pathsConfig.app.accountEmailCampaignAudienceDetail
+    .replace('[account]', accountSlug)
+    .replace('[listId]', listId);
+}
+
+function csvImportHref(accountSlug: string, listId?: string) {
+  const base = pathsConfig.app.accountEmailCampaignContactImport.replace(
+    '[account]',
+    accountSlug,
+  );
+  const params = new URLSearchParams({ from: 'audiences' });
+  if (listId) params.set('listId', listId);
+  return `${base}?${params.toString()}`;
+}
+
+export function CampaignAudienceListEditor({
+  mode,
   accountId,
   accountSlug,
-  lists,
   categories,
   contacts,
-  membersByList,
+  list,
+  members = [],
 }: {
+  mode: 'create' | 'edit';
   accountId: string;
   accountSlug: string;
-  lists: CampaignAudienceList[];
   categories: CampaignContactCategory[];
   contacts: CampaignWorkspaceContact[];
-  membersByList: Record<string, CampaignAudienceListMember[]>;
+  list?: CampaignAudienceList;
+  members?: CampaignAudienceListMember[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [kind, setKind] = useState<ListKind>('logic');
-  const [name, setName] = useState('');
-  const [source, setSource] = useState<AudienceListSource>('subscribers');
-  const [matchMode, setMatchMode] =
-    useState<AudienceListFilters['matchMode']>('all');
-  const [rules, setRules] = useState<AudienceFilterRule[]>([
-    emptyAudienceFilterRule(),
-  ]);
-  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [kind, setKind] = useState<AudienceListKind>(
+    list ? audienceListKind(list.source) : 'logic',
+  );
+  const [name, setName] = useState(list?.name ?? '');
+  const parsed = list
+    ? parseAudienceListFilters({
+        source: list.source,
+        matchMode: list.matchMode,
+        rules: list.filters,
+      })
+    : null;
+  const [source, setSource] = useState<AudienceListSource>(
+    parsed?.source === 'manual'
+      ? 'contacts'
+      : (parsed?.source ?? 'subscribers'),
+  );
+  const [matchMode, setMatchMode] = useState<AudienceListFilters['matchMode']>(
+    parsed?.matchMode ?? 'all',
+  );
+  const [rules, setRules] = useState<AudienceFilterRule[]>(
+    parsed && parsed.rules.length > 0
+      ? parsed.rules
+      : [emptyAudienceFilterRule()],
+  );
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>(
+    members.map((member) => member.contactId),
+  );
   const [memberSearch, setMemberSearch] = useState('');
   const [categoryListName, setCategoryListName] = useState('');
   const [categoryListId, setCategoryListId] = useState(categories[0]?.id ?? '');
-  const [categoryListMode, setCategoryListMode] = useState<ListKind>('logic');
+  const [categoryListMode, setCategoryListMode] =
+    useState<AudienceListKind>('logic');
 
   const filters = useMemo<AudienceListFilters>(
     () =>
@@ -92,42 +130,6 @@ export function CampaignAudienceListsPanel({
     [kind, source, matchMode, rules],
   );
 
-  const importHref = `${pathsConfig.app.accountEmailCampaignContactImport.replace(
-    '[account]',
-    accountSlug,
-  )}${editingId ? `?listId=${editingId}` : ''}`;
-
-  const reset = () => {
-    setEditingId(null);
-    setKind('logic');
-    setName('');
-    setSource('subscribers');
-    setMatchMode('all');
-    setRules([emptyAudienceFilterRule()]);
-    setSelectedContactIds([]);
-    setMemberSearch('');
-  };
-
-  const loadList = (list: CampaignAudienceList) => {
-    const parsed = parseAudienceListFilters({
-      source: list.source,
-      matchMode: list.matchMode,
-      rules: list.filters,
-    });
-    setEditingId(list.id);
-    setName(list.name);
-    setKind(listKindOf(list));
-    setSource(parsed.source === 'manual' ? 'contacts' : parsed.source);
-    setMatchMode(parsed.matchMode);
-    setRules(
-      parsed.rules.length > 0 ? parsed.rules : [emptyAudienceFilterRule()],
-    );
-    setSelectedContactIds(
-      (membersByList[list.id] ?? []).map((member) => member.contactId),
-    );
-  };
-
-  const editingMembers = editingId ? (membersByList[editingId] ?? []) : [];
   const selectableContacts = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
     return contacts
@@ -144,174 +146,229 @@ export function CampaignAudienceListsPanel({
       .slice(0, 40);
   }, [contacts, memberSearch]);
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-      <div className="space-y-6">
-        <div className={`${workspacePanelCard} space-y-3 p-4`}>
-          <h2 className={`font-semibold ${workspaceText}`}>
-            {editingId ? 'Edit list' : 'New list'}
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              className={`rounded-md border px-3 py-2 text-left text-sm ${
-                kind === 'logic'
-                  ? 'border-[color:var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
-                  : 'border-[color:var(--workspace-shell-border)]'
-              } ${workspaceText}`}
-              onClick={() => setKind('logic')}
-            >
-              <span className="block font-medium">Logic list</span>
-              <span className={`block text-xs ${workspaceTextMuted}`}>
-                Rules on subscribers, clients, or contacts
-              </span>
-            </button>
-            <button
-              type="button"
-              className={`rounded-md border px-3 py-2 text-left text-sm ${
-                kind === 'manual'
-                  ? 'border-[color:var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
-                  : 'border-[color:var(--workspace-shell-border)]'
-              } ${workspaceText}`}
-              onClick={() => setKind('manual')}
-            >
-              <span className="block font-medium">Manual list</span>
-              <span className={`block text-xs ${workspaceTextMuted}`}>
-                Static membership you add and remove
-              </span>
-            </button>
-          </div>
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
+  const hubHref = audiencesHref(accountSlug);
+  const importHref = csvImportHref(accountSlug, list?.id);
 
-          {kind === 'logic' ? (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Source</Label>
-                  <select
-                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                    value={source}
-                    onChange={(event) =>
-                      setSource(event.target.value as AudienceListSource)
-                    }
-                  >
-                    <option value="subscribers">Subscribers</option>
-                    <option value="clients">Clients</option>
-                    <option value="contacts">Contacts</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Match</Label>
-                  <select
-                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                    value={matchMode}
-                    onChange={(event) =>
-                      setMatchMode(
-                        event.target.value as AudienceListFilters['matchMode'],
-                      )
-                    }
-                  >
-                    <option value="all">All rules</option>
-                    <option value="any">Any rule</option>
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <p className={`text-sm font-medium ${workspaceText}`}>
-                  Categories
-                </p>
-                <p className={`text-xs ${workspaceTextMuted}`}>
-                  Category is listed first. Use “is” or “is one of” against
-                  workspace categories.
-                </p>
-                {rules.map((rule, index) => (
-                  <RuleRow
-                    key={`${rule.field}-${index}`}
-                    rule={rule}
-                    categories={categories}
-                    onChange={(next) => {
-                      const copy = [...rules];
-                      copy[index] = next;
-                      setRules(copy);
-                    }}
-                  />
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setRules([...rules, emptyAudienceFilterRule()])
+  return (
+    <div className="space-y-6">
+      <Link
+        href={hubHref}
+        className={`text-sm ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
+      >
+        ← Audiences
+      </Link>
+
+      <div
+        className={`${workspacePanelCard} space-y-3 p-4`}
+        data-test="audience-list-editor"
+      >
+        <h2 className={`font-semibold ${workspaceText}`}>
+          {mode === 'edit' ? 'Edit list' : 'List details'}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            className={`rounded-md border px-3 py-2 text-left text-sm ${
+              kind === 'logic'
+                ? 'border-[color:var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+                : 'border-[color:var(--workspace-shell-border)]'
+            } ${workspaceText}`}
+            onClick={() => setKind('logic')}
+          >
+            <span className="block font-medium">Logic list</span>
+            <span className={`block text-xs ${workspaceTextMuted}`}>
+              Rules on subscribers, clients, or contacts
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`rounded-md border px-3 py-2 text-left text-sm ${
+              kind === 'manual'
+                ? 'border-[color:var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+                : 'border-[color:var(--workspace-shell-border)]'
+            } ${workspaceText}`}
+            onClick={() => setKind('manual')}
+          >
+            <span className="block font-medium">Manual list</span>
+            <span className={`block text-xs ${workspaceTextMuted}`}>
+              Static membership you add and remove
+            </span>
+          </button>
+        </div>
+        <div className="space-y-2">
+          <Label>Name</Label>
+          <Input
+            value={name}
+            data-test="audience-list-name"
+            onChange={(event) => setName(event.target.value)}
+          />
+        </div>
+
+        {kind === 'logic' ? (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Source</Label>
+                <select
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                  value={source}
+                  onChange={(event) =>
+                    setSource(event.target.value as AudienceListSource)
                   }
                 >
-                  Add rule
-                </Button>
+                  <option value="subscribers">Subscribers</option>
+                  <option value="clients">Clients</option>
+                  <option value="contacts">Contacts</option>
+                </select>
               </div>
-            </>
-          ) : (
-            <ManualMembersEditor
-              contacts={selectableContacts}
-              selectedIds={selectedContactIds}
-              search={memberSearch}
-              onSearchChange={setMemberSearch}
-              onToggle={(id, checked) => {
-                setSelectedContactIds((current) => {
-                  if (checked) return [...new Set([...current, id])];
-                  return current.filter((value) => value !== id);
-                });
-              }}
-              existingMembers={editingMembers}
-            />
-          )}
+              <div className="space-y-2">
+                <Label>Match</Label>
+                <select
+                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                  value={matchMode}
+                  onChange={(event) =>
+                    setMatchMode(
+                      event.target.value as AudienceListFilters['matchMode'],
+                    )
+                  }
+                >
+                  <option value="all">All rules</option>
+                  <option value="any">Any rule</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <p className={`text-sm font-medium ${workspaceText}`}>
+                Categories
+              </p>
+              <p className={`text-xs ${workspaceTextMuted}`}>
+                Category is listed first. Use “is” or “is one of” against
+                workspace categories.
+              </p>
+              {rules.map((rule, index) => (
+                <RuleRow
+                  key={`audience-rule-${index}`}
+                  rule={rule}
+                  categories={categories}
+                  onChange={(next) => {
+                    const copy = [...rules];
+                    copy[index] = next;
+                    setRules(copy);
+                  }}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRules([...rules, emptyAudienceFilterRule()])}
+              >
+                Add rule
+              </Button>
+            </div>
+          </>
+        ) : (
+          <ManualMembersEditor
+            contacts={selectableContacts}
+            selectedIds={selectedContactIds}
+            search={memberSearch}
+            onSearchChange={setMemberSearch}
+            onToggle={(id, checked) => {
+              setSelectedContactIds((current) => {
+                if (checked) return [...new Set([...current, id])];
+                return current.filter((value) => value !== id);
+              });
+            }}
+            existingMembers={members}
+          />
+        )}
 
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            className={workspaceBtnPrimary}
+            data-test="audience-list-save"
+            disabled={pending || !name.trim()}
+            onClick={() => {
+              startTransition(async () => {
+                try {
+                  const result = await saveAudienceListAction({
+                    accountId,
+                    accountSlug,
+                    listId: list?.id,
+                    name,
+                    filters,
+                    contactIds:
+                      kind === 'manual' ? selectedContactIds : undefined,
+                  });
+                  toast.success(
+                    mode === 'edit' ? 'List updated' : 'List saved',
+                  );
+                  if (mode === 'create') {
+                    router.push(listDetailHref(accountSlug, result.listId));
+                    return;
+                  }
+                  router.refresh();
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : 'Could not save list',
+                  );
+                }
+              });
+            }}
+          >
+            {mode === 'edit' ? 'Save list' : 'Create list'}
+          </Button>
+          {mode === 'edit' && list ? (
             <Button
-              className={workspaceBtnPrimary}
-              disabled={pending || !name.trim()}
+              type="button"
+              variant="ghost"
+              disabled={pending}
               onClick={() => {
                 startTransition(async () => {
                   try {
-                    await saveAudienceListAction({
+                    await deleteAudienceListAction({
                       accountId,
                       accountSlug,
-                      listId: editingId ?? undefined,
-                      name,
-                      filters,
-                      contactIds:
-                        kind === 'manual' ? selectedContactIds : undefined,
+                      listId: list.id,
                     });
-                    toast.success(editingId ? 'List updated' : 'List saved');
-                    reset();
-                    router.refresh();
+                    toast.success('List deleted');
+                    router.push(hubHref);
                   } catch (error) {
                     toast.error(
                       error instanceof Error
                         ? error.message
-                        : 'Could not save list',
+                        : 'Could not delete',
                     );
                   }
                 });
               }}
             >
-              {editingId ? 'Save list' : 'Create list'}
+              Delete
             </Button>
-            {editingId ? (
-              <Button type="button" variant="ghost" onClick={reset}>
-                Cancel
-              </Button>
-            ) : null}
-            <Button asChild type="button" variant="outline">
-              <Link href={importHref}>Upload CSV</Link>
-            </Button>
-          </div>
+          ) : null}
+          <Button asChild type="button" variant="outline">
+            <Link href={importHref}>Upload CSV</Link>
+          </Button>
         </div>
+      </div>
 
+      {mode === 'edit' && list?.source === 'manual' ? (
+        <div className={`${workspacePanelCard} space-y-3 p-4`}>
+          <h2 className={`font-semibold ${workspaceText}`}>Members</h2>
+          <ManualMemberActions
+            accountId={accountId}
+            accountSlug={accountSlug}
+            listId={list.id}
+            members={members}
+            pending={pending}
+            startTransition={startTransition}
+          />
+        </div>
+      ) : null}
+
+      {mode === 'create' ? (
         <div className={`${workspacePanelCard} space-y-3 p-4`}>
           <h2 className={`font-semibold ${workspaceText}`}>
             List from a category
@@ -346,7 +403,7 @@ export function CampaignAudienceListsPanel({
                 className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                 value={categoryListMode}
                 onChange={(event) =>
-                  setCategoryListMode(event.target.value as ListKind)
+                  setCategoryListMode(event.target.value as AudienceListKind)
                 }
               >
                 <option value="logic">
@@ -362,7 +419,7 @@ export function CampaignAudienceListsPanel({
                 onClick={() => {
                   startTransition(async () => {
                     try {
-                      await createListFromCategoryAction({
+                      const result = await createListFromCategoryAction({
                         accountId,
                         accountSlug,
                         categoryId: categoryListId,
@@ -370,8 +427,7 @@ export function CampaignAudienceListsPanel({
                         mode: categoryListMode,
                       });
                       toast.success('List created from category');
-                      setCategoryListName('');
-                      router.refresh();
+                      router.push(listDetailHref(accountSlug, result.listId));
                     } catch (error) {
                       toast.error(
                         error instanceof Error
@@ -387,84 +443,7 @@ export function CampaignAudienceListsPanel({
             </>
           )}
         </div>
-      </div>
-
-      <div className="space-y-3">
-        {lists.length === 0 ? (
-          <div className={`${workspacePanelCard} p-6 ${workspaceTextMuted}`}>
-            No saved lists yet. Create a logic list, a manual list, or upload a
-            CSV.
-          </div>
-        ) : (
-          lists.map((list) => (
-            <div
-              key={list.id}
-              className={`${workspacePanelCard} space-y-2 p-4`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className={`font-semibold ${workspaceText}`}>
-                    {list.name}
-                  </p>
-                  <p className={`text-sm ${workspaceTextMuted}`}>
-                    {AUDIENCE_LIST_SOURCE_LABEL[list.source]}
-                    {list.source === 'manual'
-                      ? ` · ${list.memberCount ?? 0} contacts`
-                      : ` · ${list.matchMode} of ${
-                          Array.isArray(list.filters) ? list.filters.length : 0
-                        } rules`}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => loadList(list)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => {
-                      startTransition(async () => {
-                        try {
-                          await deleteAudienceListAction({
-                            accountId,
-                            accountSlug,
-                            listId: list.id,
-                          });
-                          toast.success('List deleted');
-                          router.refresh();
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : 'Could not delete',
-                          );
-                        }
-                      });
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-              {list.source === 'manual' && editingId === list.id ? (
-                <ManualMemberActions
-                  accountId={accountId}
-                  accountSlug={accountSlug}
-                  listId={list.id}
-                  members={membersByList[list.id] ?? []}
-                  pending={pending}
-                  startTransition={startTransition}
-                />
-              ) : null}
-            </div>
-          ))
-        )}
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -707,10 +686,16 @@ function ManualMemberActions({
   startTransition: (fn: () => void) => void;
 }) {
   const router = useRouter();
-  if (members.length === 0) return null;
+  if (members.length === 0) {
+    return (
+      <p className={`text-sm ${workspaceTextMuted}`}>
+        No members yet. Select contacts above or upload a CSV.
+      </p>
+    );
+  }
   return (
-    <ul className="space-y-1 border-t border-[color:var(--workspace-shell-border)] pt-2">
-      {members.slice(0, 12).map((member) => (
+    <ul className="max-h-72 space-y-1 overflow-y-auto">
+      {members.map((member) => (
         <li
           key={member.id}
           className="flex items-center justify-between gap-2 text-sm"
@@ -750,11 +735,6 @@ function ManualMemberActions({
           </Button>
         </li>
       ))}
-      {members.length > 12 ? (
-        <li className={`text-xs ${workspaceTextMuted}`}>
-          +{members.length - 12} more on this list
-        </li>
-      ) : null}
     </ul>
   );
 }

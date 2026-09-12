@@ -5,10 +5,10 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { CampaignAudienceListsPanel } from '../_components/campaign-audience-lists-panel';
+import { CampaignAudienceListsHub } from '../_components/campaign-audience-lists-hub';
 import { CampaignUpgradeCta } from '../_components/campaign-upgrade-cta';
 import { CampaignsHubNav } from '../_components/campaigns-hub-nav';
-import { loadCampaignAudienceWorkspace } from '../_lib/server/campaigns.loader';
+import { loadCampaignsGrowthHub } from '../_lib/server/campaigns.loader';
 
 interface AudiencesPageProps {
   params: Promise<{ account: string }>;
@@ -19,7 +19,7 @@ export const generateMetadata = async () => ({ title: 'Campaign audiences' });
 async function AudiencesPage({ params }: AudiencesPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  const data = await loadCampaignAudienceWorkspace(workspace.account.id);
+  const data = await loadCampaignsGrowthHub(workspace.account.id);
   const growth = hasCampaignsGrowthFeatures(data.snapshot.planTier);
 
   return (
@@ -27,18 +27,14 @@ async function AudiencesPage({ params }: AudiencesPageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Audiences"
-        description="Named lists — logic filters or manual membership. Growth and Pro."
+        description="Mailing lists for campaigns. Open a list to edit members, rules, or CSV."
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
         <CampaignsHubNav accountSlug={accountSlug} />
         {growth ? (
-          <CampaignAudienceListsPanel
-            accountId={workspace.account.id}
+          <CampaignAudienceListsHub
             accountSlug={accountSlug}
             lists={data.lists}
-            categories={data.categories}
-            contacts={data.contacts}
-            membersByList={data.membersByList}
           />
         ) : (
           <CampaignUpgradeCta

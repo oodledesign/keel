@@ -3,6 +3,7 @@ import SwiftUI
 struct MeetingsListView: View {
     @Environment(AppSession.self) private var session
     @State private var remoteMeetings: [MeetingItem] = []
+    @State private var upcoming: [UpcomingMeetingItem] = []
     @State private var loadError: NativeAPIError?
     @State private var isLoading = false
     @State private var isRecording = false
@@ -38,18 +39,16 @@ struct MeetingsListView: View {
             Group {
                 if !showsMeetings && session.workspacesLoaded {
                     unavailableCard
-                } else if isLoading && rows.isEmpty && loadError == nil {
+                } else if isLoading && rows.isEmpty && upcoming.isEmpty && loadError == nil {
                     ProgressView()
                         .tint(OzerPalette.coral)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let loadError, rows.isEmpty {
+                } else if let loadError, rows.isEmpty && upcoming.isEmpty {
                     statusCard(error: loadError)
                 } else if session.workspacesLoaded && workspace.isEmpty {
                     membershipsEmptyCard
-                } else if !rows.isEmpty {
-                    content(rows)
                 } else {
-                    emptyCard
+                    content(rows)
                 }
             }
             .padding(.horizontal, 20)
@@ -69,7 +68,7 @@ struct MeetingsListView: View {
                             Image(systemName: "record.circle")
                                 .foregroundStyle(OzerPalette.coral)
                         }
-                        .accessibilityLabel("Record a meeting")
+                        .accessibilityLabel("Start a new meeting")
                     }
                 }
             }
@@ -95,11 +94,11 @@ struct MeetingsListView: View {
 
     private func content(_ rows: [MeetingListRow]) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 Button {
                     isRecording = true
                 } label: {
-                    Label("Record meeting", systemImage: "record.circle")
+                    Label("Start a new meeting", systemImage: "record.circle")
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -115,40 +114,164 @@ struct MeetingsListView: View {
                         .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
                 }
 
-                ForEach(rows) { row in
-                    if let meeting = row.local {
-                        NavigationLink {
-                            MeetingDetailView(meeting: meeting)
-                        } label: {
-                            meetingRow(row)
-                        }
-                        .buttonStyle(.plain)
-                    } else if let remote = row.remote {
-                        NavigationLink {
-                            MeetingDetailView(meeting: remote.asLocalMeeting())
-                        } label: {
-                            meetingRow(row)
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        meetingRow(row)
+                upcomingSection
+
+                recentSection(rows)
+            }
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private var upcomingSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Upcoming")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+
+            if upcoming.isEmpty {
+                Text("Nothing coming up. Booked meetings from Ozer land here.")
+                    .font(.subheadline)
+                    .foregroundStyle(OzerPalette.plumMuted)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                            .stroke(OzerPalette.border, lineWidth: 1)
+                    }
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(upcoming) { item in
+                        upcomingRow(item)
                     }
                 }
             }
-            .padding(.top, 8)
+        }
+    }
+
+    private func upcomingRow(_ item: UpcomingMeetingItem) -> some View {
+        Group {
+            if let url = item.httpsConferencingURL {
+                Link(destination: url) {
+                    upcomingCard(item, showsJoin: true)
+                }
+                .buttonStyle(.plain)
+            } else {
+                upcomingCard(item, showsJoin: false)
+            }
+        }
+    }
+
+    private func upcomingCard(_ item: UpcomingMeetingItem, showsJoin: Bool) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+                if let when = item.whenLabel {
+                    Text(when)
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+                if let invitee = item.inviteeName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !invitee.isEmpty {
+                    Text(invitee)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(OzerPalette.plum)
+                }
+            }
+            Spacer(minLength: 8)
+            if showsJoin {
+                Text("Join")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.coral)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(upcomingAccessibility(item, showsJoin: showsJoin))
+    }
+
+    private func upcomingAccessibility(_ item: UpcomingMeetingItem, showsJoin: Bool) -> String {
+        var parts = [item.title]
+        if let when = item.whenLabel { parts.append(when) }
+        if let invitee = item.inviteeName, !invitee.isEmpty { parts.append(invitee) }
+        if showsJoin { parts.append("Join") }
+        return parts.joined(separator: ", ")
+    }
+
+    private func recentSection(_ rows: [MeetingListRow]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Recent")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(OzerPalette.plum)
+
+            if rows.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("No recent meetings yet")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(OzerPalette.plum)
+                    Text("Record in this room. Captions stay on this iPhone, and the transcript syncs to Ozer when you’re online.")
+                        .font(.subheadline)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                        .stroke(OzerPalette.border, lineWidth: 1)
+                }
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(rows) { row in
+                        if let meeting = row.local {
+                            NavigationLink {
+                                MeetingDetailView(meeting: meeting)
+                            } label: {
+                                meetingRow(row)
+                            }
+                            .buttonStyle(.plain)
+                        } else if let remote = row.remote {
+                            NavigationLink {
+                                MeetingDetailView(meeting: remote.asLocalMeeting(), remote: remote)
+                            } label: {
+                                meetingRow(row)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
         }
     }
 
     private func meetingRow(_ row: MeetingListRow) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(row.title)
                 .font(.body.weight(.medium))
                 .foregroundStyle(OzerPalette.plum)
-            if let subtitle = row.subtitle {
-                Text(subtitle)
+            if let client = row.clientName {
+                Text(client)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+            }
+            if let meta = row.meta {
+                Text(meta)
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
-                    .lineLimit(2)
+            }
+            if row.hasExtractedTasks {
+                Label("Tasks extracted", systemImage: "checkmark.square")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.coral)
             }
             if row.waiting {
                 Text(meetingQueue.lastFlushError == nil
@@ -214,30 +337,6 @@ struct MeetingsListView: View {
         }
     }
 
-    private var emptyCard: some View {
-        VStack(spacing: 12) {
-            Text("No meetings yet")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(OzerPalette.plum)
-            Text("Record a meeting in this room. Captions stay on this iPhone, and the transcript syncs to Ozer Meetings when you’re online.")
-                .font(.body)
-                .foregroundStyle(OzerPalette.plumMuted)
-                .multilineTextAlignment(.center)
-            Button("Record meeting") {
-                isRecording = true
-            }
-            .buttonStyle(OzerPrimaryButtonStyle())
-            .frame(width: 180)
-        }
-        .padding(28)
-        .frame(maxWidth: .infinity)
-        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
-                .stroke(OzerPalette.border, lineWidth: 1)
-        }
-    }
-
     private func statusCard(error: NativeAPIError) -> some View {
         VStack(spacing: 12) {
             Text(error == .notFound ? "Meetings aren’t available yet" : "Couldn’t load meetings")
@@ -267,6 +366,7 @@ struct MeetingsListView: View {
     private func load() async {
         guard showsMeetings else {
             remoteMeetings = []
+            upcoming = []
             loadError = nil
             return
         }
@@ -280,6 +380,7 @@ struct MeetingsListView: View {
             try Task.checkCancellation()
             guard !workspace.isEmpty else {
                 remoteMeetings = []
+                upcoming = []
                 loadError = nil
                 return
             }
@@ -289,6 +390,7 @@ struct MeetingsListView: View {
                 accessToken: token
             )
             remoteMeetings = payload.items
+            upcoming = payload.upcoming
             loadError = nil
         } catch is CancellationError {
             return
@@ -313,8 +415,11 @@ struct MeetingsListView: View {
             MeetingListRow(
                 id: meeting.id,
                 title: meeting.title,
-                subtitle: Self.subtitle(for: meeting),
+                clientName: Self.clientLabel(meeting.clientName),
+                meta: Self.meta(for: meeting),
                 waiting: meeting.isWaitingToSync,
+                hasExtractedTasks: false,
+                sortDate: MeetingDisplay.sortDate(meetingDate: nil, instant: meeting.createdAt),
                 local: meeting,
                 remote: nil
             )
@@ -324,32 +429,54 @@ struct MeetingsListView: View {
             return MeetingListRow(
                 id: item.id,
                 title: item.displayTitle,
-                subtitle: item.displaySubtitle,
+                clientName: item.displayClientName,
+                meta: Self.meta(for: item),
                 waiting: false,
+                hasExtractedTasks: item.hasExtractedTasks,
+                sortDate: MeetingDisplay.sortDate(meetingDate: item.meetingDate, instant: item.createdAt ?? item.updatedAt),
                 local: nil,
                 remote: item
             )
         }
-        return localRows + remoteRows
+        return (localRows + remoteRows).sorted { $0.sortDate > $1.sortDate }
     }
 
-    static func subtitle(for meeting: LocalMeeting) -> String {
-        var parts: [String] = [meeting.durationLabel]
-        if let client = meeting.clientName?.trimmingCharacters(in: .whitespacesAndNewlines), !client.isEmpty {
-            parts.append(client)
-        }
-        if let date = NoteItem.relativeDateLabel(meeting.createdAt), !date.isEmpty {
+    static func clientLabel(_ value: String?) -> String? {
+        let client = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return client.isEmpty ? nil : client
+    }
+
+    static func meta(for meeting: LocalMeeting) -> String? {
+        var parts: [String] = []
+        if let date = MeetingDisplay.dateTimeLabel(meetingDate: nil, instant: meeting.createdAt) {
             parts.append(date)
         }
-        return parts.joined(separator: " · ")
+        if meeting.durationSeconds > 0 {
+            parts.append(meeting.durationLabel)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    static func meta(for item: MeetingItem) -> String? {
+        var parts: [String] = []
+        if let date = item.dateTimeLabel {
+            parts.append(date)
+        }
+        if let duration = item.durationLabel {
+            parts.append(duration)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 
 struct MeetingListRow: Identifiable, Equatable {
     var id: String
     var title: String
-    var subtitle: String?
+    var clientName: String?
+    var meta: String?
     var waiting: Bool
+    var hasExtractedTasks: Bool
+    var sortDate: Date
     var local: LocalMeeting?
     var remote: MeetingItem?
 }

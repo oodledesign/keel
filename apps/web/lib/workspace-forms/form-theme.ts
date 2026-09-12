@@ -15,17 +15,25 @@ export const WORKSPACE_FORM_LAYOUTS = ['standard', 'event'] as const;
 
 export type WorkspaceFormLayout = (typeof WORKSPACE_FORM_LAYOUTS)[number];
 
+export const WORKSPACE_FORM_PRESENTATIONS = ['classic', 'steps'] as const;
+
+export type WorkspaceFormPresentation =
+  (typeof WORKSPACE_FORM_PRESENTATIONS)[number];
+
 export type WorkspaceFormTheme = {
   pageBackground: WorkspaceFormPageBackground;
   layout: WorkspaceFormLayout;
   /** True after the editor saved a public-layout choice. */
   layoutExplicit: boolean;
+  /** classic = all fields on one page; steps = Typeform-style one question at a time. */
+  presentation: WorkspaceFormPresentation;
 };
 
 export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
   pageBackground: 'light',
   layout: 'standard',
   layoutExplicit: false,
+  presentation: 'classic',
 };
 
 export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
@@ -40,6 +48,22 @@ export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
     label: 'Event / two-column',
     description:
       'RSVP public layout: desktop shows event details on the left and the form on the right. Mobile stays stacked. New RSVPs use this by default.',
+  },
+};
+
+export const WORKSPACE_FORM_PRESENTATION_LABELS: Record<
+  WorkspaceFormPresentation,
+  { label: string; description: string }
+> = {
+  classic: {
+    label: 'Classic (all questions)',
+    description:
+      'Show every question on one page. Keeps the current RSVP two-column and standard layouts.',
+  },
+  steps: {
+    label: 'Steps (grouped questions)',
+    description:
+      'Typeform-style: respondents move through steps with Next / Back and a progress bar. New steps start as one question each; you can keep several questions on the same step.',
   },
 };
 
@@ -104,6 +128,25 @@ function readStoredLayout(raw: object): WorkspaceFormLayout | null {
   return null;
 }
 
+function readStoredPresentation(raw: object): WorkspaceFormPresentation {
+  const row = raw as {
+    presentation?: unknown;
+    presentationMode?: unknown;
+    layoutMode?: unknown;
+  };
+  const value = row.presentation ?? row.presentationMode ?? row.layoutMode;
+  if (
+    value === 'steps' ||
+    value === 'step' ||
+    value === 'typeform' ||
+    value === 'multi_step' ||
+    value === 'multi-step'
+  ) {
+    return 'steps';
+  }
+  return 'classic';
+}
+
 export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ...DEFAULT_WORKSPACE_FORM_THEME };
@@ -117,6 +160,7 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
     layout: readStoredLayout(raw) ?? 'standard',
     layoutExplicit:
       (raw as { layoutExplicit?: unknown }).layoutExplicit === true,
+    presentation: readStoredPresentation(raw),
   };
 }
 
@@ -191,5 +235,6 @@ export function serializeWorkspaceFormTheme(
     pageBackground: parsed.pageBackground,
     layout: parsed.layout,
     layoutExplicit: parsed.layoutExplicit,
+    presentation: parsed.presentation,
   };
 }

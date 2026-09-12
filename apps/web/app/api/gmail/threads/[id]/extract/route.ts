@@ -245,5 +245,17 @@ export async function POST(request: Request, context: RouteContext) {
     return jsonErr('INSERT_FAILED', insertError.message, 500);
   }
 
+  if (inserted?.length && threadLink.projectId) {
+    const { suggestRetainerMatchesForInsertedItems } = await import(
+      '~/lib/retainers/suggest-match'
+    );
+    const admin = getSupabaseServerAdminClient();
+    await suggestRetainerMatchesForInsertedItems({
+      admin,
+      actionItemIds: inserted.map((row) => String((row as { id: string }).id)),
+      actorUserId: auth.user.id,
+    });
+  }
+
   return jsonOk({ items: inserted ?? [] });
 }

@@ -7,11 +7,13 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import {
   TaskDurationFields,
   TaskDurationMeta,
 } from '~/components/task-duration-fields';
 import type { ProjectGuestPermissions } from '~/lib/projects/project-guests.types';
+import { taskStatusSelectClass } from '~/lib/projects/task-status-badge';
 
 type TaskRow = {
   id: string;
@@ -180,7 +182,7 @@ export function GuestProjectBoard(props: {
                   />
                   {props.permissions.edit_own_task ? (
                     <select
-                      className="mt-2 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs text-[var(--workspace-shell-text)]"
+                      className={`mt-2 w-full px-2 py-1 text-xs ${taskStatusSelectClass(task.status)}`}
                       value={
                         COLUMNS.some((c) => c.key === task.status)
                           ? task.status
@@ -232,7 +234,9 @@ export function GuestProjectBoard(props: {
                         </option>
                       ))}
                     </select>
-                  ) : null}
+                  ) : (
+                    <TaskStatusBadge status={task.status} className="mt-2" />
+                  )}
                   {props.permissions.comment ? (
                     <div className="mt-2 space-y-1">
                       <Input

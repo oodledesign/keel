@@ -763,6 +763,7 @@ function SubmissionDetailDialog({
                       key={answer.key}
                       label={answer.label}
                       value={answer.value}
+                      href={answer.href}
                     />
                   ))}
                 </dl>
@@ -799,11 +800,32 @@ function SubmissionDetailDialog({
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: string;
+  href?: string;
+}) {
   return (
     <div>
       <dt className={workspaceTextMuted}>{label}</dt>
-      <dd className={`mt-0.5 whitespace-pre-line ${workspaceText}`}>{value}</dd>
+      <dd className={`mt-0.5 whitespace-pre-line ${workspaceText}`}>
+        {href && /^https?:\/\//i.test(href) ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[var(--workspace-shell-accent-text)] underline-offset-4 hover:underline"
+          >
+            {value}
+          </a>
+        ) : (
+          value
+        )}
+      </dd>
     </div>
   );
 }

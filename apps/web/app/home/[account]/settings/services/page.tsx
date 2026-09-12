@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type { PlanTemplateRecord } from '~/lib/billing/plan-templates-types';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
+import type { RetainerServiceRecord } from '~/lib/retainers/types';
 
 import {
   getDefaultAccountPath,
@@ -15,9 +16,11 @@ import {
   redirectIfProfileNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { RequestTypesPanel } from './_components/request-types-panel';
+import { RetainerServicesPanel } from './_components/retainer-services-panel';
 import { ServicesPlansPanel } from './_components/services-plans-panel';
 import { createPlanTemplatesService } from './_lib/server/plan-templates.service';
 import { createRequestTypesService } from './_lib/server/request-types.service';
+import { createRetainerServicesService } from './_lib/server/retainer-services.service';
 
 export const generateMetadata = async () => ({ title: 'Services' });
 
@@ -57,9 +60,11 @@ export default async function ServicesSettingsPage(
   const client = getSupabaseServerClient();
   const planService = createPlanTemplatesService(client);
   const requestTypesService = createRequestTypesService(client);
+  const retainerServicesService = createRetainerServicesService(client);
 
   let templates: PlanTemplateRecord[] = [];
   let requestTypes: RequestTypeRecord[] = [];
+  let retainerServices: RetainerServiceRecord[] = [];
   try {
     templates = await planService.listTemplates(accountId);
   } catch {
@@ -70,6 +75,11 @@ export default async function ServicesSettingsPage(
   } catch {
     requestTypes = [];
   }
+  try {
+    retainerServices = await retainerServicesService.list(accountId);
+  } catch {
+    retainerServices = [];
+  }
 
   const canEdit = access.isOwner || access.isAdmin;
 
@@ -78,6 +88,11 @@ export default async function ServicesSettingsPage(
       <ServicesPlansPanel
         accountId={accountId}
         initialTemplates={templates}
+        canEdit={canEdit}
+      />
+      <RetainerServicesPanel
+        accountId={accountId}
+        initialServices={retainerServices}
         canEdit={canEdit}
       />
       <RequestTypesPanel

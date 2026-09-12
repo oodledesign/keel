@@ -185,6 +185,16 @@ struct FinancesPayload: Decodable, Equatable {
     var paidThisMonthPence: Int?
     var currency: String
     var recent: [InvoiceItem]
+    var period: String
+    var periodLabel: String
+    var income: String
+    var incomePence: Int
+    var outgoings: String
+    var outgoingsPence: Int
+    var net: String
+    var netPence: Int
+    var hasFinanceData: Bool
+    var months: [FinanceMonthPoint]
 
     static let empty = FinancesPayload(
         outstandingBalance: "",
@@ -195,11 +205,21 @@ struct FinancesPayload: Decodable, Equatable {
         paidThisMonth: nil,
         paidThisMonthPence: nil,
         currency: "gbp",
-        recent: []
+        recent: [],
+        period: "this_month",
+        periodLabel: "This month",
+        income: "",
+        incomePence: 0,
+        outgoings: "",
+        outgoingsPence: 0,
+        net: "",
+        netPence: 0,
+        hasFinanceData: false,
+        months: []
     )
 
     enum CodingKeys: String, CodingKey {
-        case currency, recent
+        case currency, recent, period, income, outgoings, net, months
         case outstandingBalance = "outstanding_balance"
         case outstandingBalancePence = "outstanding_balance_pence"
         case overdueCount = "overdue_count"
@@ -207,6 +227,11 @@ struct FinancesPayload: Decodable, Equatable {
         case overdueAmountPence = "overdue_amount_pence"
         case paidThisMonth = "paid_this_month"
         case paidThisMonthPence = "paid_this_month_pence"
+        case periodLabel = "period_label"
+        case incomePence = "income_pence"
+        case outgoingsPence = "outgoings_pence"
+        case netPence = "net_pence"
+        case hasFinanceData = "has_finance_data"
     }
 
     init(
@@ -218,7 +243,17 @@ struct FinancesPayload: Decodable, Equatable {
         paidThisMonth: String?,
         paidThisMonthPence: Int?,
         currency: String,
-        recent: [InvoiceItem]
+        recent: [InvoiceItem],
+        period: String = "this_month",
+        periodLabel: String = "This month",
+        income: String = "",
+        incomePence: Int = 0,
+        outgoings: String = "",
+        outgoingsPence: Int = 0,
+        net: String = "",
+        netPence: Int = 0,
+        hasFinanceData: Bool = false,
+        months: [FinanceMonthPoint] = []
     ) {
         self.outstandingBalance = outstandingBalance
         self.outstandingBalancePence = outstandingBalancePence
@@ -229,6 +264,16 @@ struct FinancesPayload: Decodable, Equatable {
         self.paidThisMonthPence = paidThisMonthPence
         self.currency = currency
         self.recent = recent
+        self.period = period
+        self.periodLabel = periodLabel
+        self.income = income
+        self.incomePence = incomePence
+        self.outgoings = outgoings
+        self.outgoingsPence = outgoingsPence
+        self.net = net
+        self.netPence = netPence
+        self.hasFinanceData = hasFinanceData
+        self.months = months
     }
 
     init(from decoder: Decoder) throws {
@@ -242,10 +287,36 @@ struct FinancesPayload: Decodable, Equatable {
         paidThisMonthPence = try container.decodeIfPresent(Int.self, forKey: .paidThisMonthPence)
         currency = try container.decodeIfPresent(String.self, forKey: .currency) ?? "gbp"
         recent = try container.decodeIfPresent([InvoiceItem].self, forKey: .recent) ?? []
+        period = try container.decodeIfPresent(String.self, forKey: .period) ?? "this_month"
+        periodLabel = try container.decodeIfPresent(String.self, forKey: .periodLabel) ?? "This month"
+        income = try container.decodeIfPresent(String.self, forKey: .income) ?? ""
+        incomePence = try container.decodeIfPresent(Int.self, forKey: .incomePence) ?? 0
+        outgoings = try container.decodeIfPresent(String.self, forKey: .outgoings) ?? ""
+        outgoingsPence = try container.decodeIfPresent(Int.self, forKey: .outgoingsPence) ?? 0
+        net = try container.decodeIfPresent(String.self, forKey: .net) ?? ""
+        netPence = try container.decodeIfPresent(Int.self, forKey: .netPence) ?? 0
+        hasFinanceData = try container.decodeIfPresent(Bool.self, forKey: .hasFinanceData) ?? false
+        months = try container.decodeIfPresent([FinanceMonthPoint].self, forKey: .months) ?? []
     }
 
     var hasOutstanding: Bool {
         outstandingBalancePence > 0 || overdueCount > 0
+    }
+
+    var displayIncome: String {
+        income.isEmpty ? "—" : income
+    }
+
+    var displayOutgoings: String {
+        outgoings.isEmpty ? "—" : outgoings
+    }
+
+    var displayNet: String {
+        net.isEmpty ? "—" : net
+    }
+
+    var chartMonths: [FinanceMonthPoint] {
+        months.filter(\.hasActivity).isEmpty ? [] : months
     }
 }
 

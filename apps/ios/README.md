@@ -83,7 +83,7 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The server still accepts the legacy aliases `personal`, `family`, and `business`. The iPhone client sends a real slug or UUID. Home decodes `tasks_due_today` then `overdue_tasks` (title + subtitle). A 403 is shown as an error, not an empty day.
+The server still accepts the legacy aliases `personal`, `family`, and `business`. The iPhone client sends a real slug or UUID. Home decodes `tasks_due_today` then `overdue_tasks` (title + subtitle), and `task_review` counts for the review card. A 403 is shown as an error, not an empty day.
 
 No cookies. A 404 is shown as a calm empty state. Reloads when the selected workspace **id** changes, and when the membership list first arrives.
 
@@ -101,9 +101,31 @@ Optional query flags: `status=open|done|all` (default `open`), `client=<uuid>` f
 
 The list is `{ "items": [{ "id", "title", "status", "due", "duration_minutes", "client_id", "client_name" }] }`. Default is open tasks for the workspace (due today, overdue, later). Business lists include workspace tasks even when `user_id` is null. Title plus due, optional duration, and client name. Empty only when `items` is empty. A 403 is an error, not an empty list.
 
+## Task review
+
+Pending extracted tasks from meetings and email — accept, edit then accept, or dismiss. Same workspace + Bearer JSON as Tasks. Entry from Home (card + badge when anything is waiting), Tasks (toolbar tray + banner), and Menu.
+
+```
+GET {OZER_API_BASE}/api/native/v1/task-review?workspace=<slug-or-uuid>&source=all|meeting|email
+Authorization: Bearer <access_token>
+Accept: application/json
+```
+
+The list is `{ "items": [{ "id", "source": "meeting"|"email", "title", "detail", "snippet", "due", "duration_minutes", "client_id", "client_name", "project_id", "project_name", "context_title", "context_date", "created_at" }], "meeting_count", "email_count", "pending_count" }`. `GET /today` also includes `task_review` counts for the Home badge.
+
+```
+POST {OZER_API_BASE}/api/native/v1/task-review/{id}/accept
+{ "workspace", "source": "meeting"|"email", "title?", "detail?", "due?", "duration_minutes?", "client_id?" }
+
+POST {OZER_API_BASE}/api/native/v1/task-review/{id}/dismiss
+{ "workspace", "source": "meeting"|"email" }
+```
+
+Accept creates a planner task. Meeting items assign to the signed-in user. Dismiss marks email `dismissed` and meeting `rejected`. The phone does not open full email or meeting editors.
+
 The iPhone list searches the loaded rows (title and client name) as you type, and filters by due (All / Today / Overdue / Upcoming / No date) and status (Open / Done / All). Business workspaces add a client chip (all, no client, or one client from `/clients`). `?client=` is sent only for a specific client. Completing a task still works; Add stays in the toolbar. Filter state resets when the workspace changes.
 
-Home is a pocket dashboard (greeting, date, outstanding money, tasks due / overdue, recent notes, meetings, quick actions). It reads the expanded `/today` payload — not a flat dump of Mac Assistant items. “See all” and the money card switch Menu screens the same way the Menu does.
+Home is a pocket dashboard (greeting, date, this-month in/out + 6-month chart, outstanding invoices, tasks due / overdue, recent notes, meetings, quick actions). It reads the expanded `/today` payload — not a flat dump of Mac Assistant items. “See all” and the finance card switch Menu screens the same way the Menu does. Totals use the current calendar month; the chart is the last 6 months — the same windows as the web business Home dashboard.
 
 ## Invoices
 
@@ -114,6 +136,8 @@ GET {OZER_API_BASE}/api/native/v1/invoices?workspace=<slug-or-uuid>&status=open|
 GET {OZER_API_BASE}/api/native/v1/invoices/{id}?workspace=<slug-or-uuid>
 GET {OZER_API_BASE}/api/native/v1/finances?workspace=<slug-or-uuid>
 ```
+
+`/today` and `/finances` include dashboard metrics (read-only): `period` (`this_month`), `income` / `outgoings` / `net` (formatted + `_pence`), `has_finance_data`, and `months` (`month`, `month_key`, `income`, `outgoings`, `net`, `is_current`). Outstanding invoice fields stay as they were.
 
 ## Messages API
 
@@ -180,7 +204,13 @@ Authorization: Bearer <access_token>
 Accept: application/json
 ```
 
-The list is `{ "items": [{ "id", "title", "content", "workspace", "client_id", "client_name", "meeting_date", "source", "created_at", "updated_at" }] }`.
+The list is `{ "items": [{ "id", "title", "content", "workspace", "client_id", "client_name", "meeting_date", "source", "duration_seconds", "has_extracted_tasks", "created_at", "updated_at" }], "upcoming": [{ "id", "title", "start_at", "invitee_name", "conferencing_url" }] }`.
+
+```
+GET {OZER_API_BASE}/api/native/v1/meetings/{id}?workspace=<slug-or-uuid>
+```
+
+Detail adds `notes` (`{ text, generated_at }` from the Mac/web summary, or null) and `tasks` (approved meeting action items, with `planner_task_id` when a planner task exists).
 
 ```
 POST {OZER_API_BASE}/api/native/v1/meetings
@@ -205,7 +235,7 @@ Surveyor, studio (`work_design` / `work_property`), and commercial property work
 - On-device Speech sessions are ended and restarted around 50s so live captions continue; the m4a/caf recording is not restarted. If a restart fails, the meeting screen shows an error and keeps retrying — the timer is not a silent freeze. A rewritten shorter hypothesis does not duplicate a committed paragraph.
 - On Stop a save sheet picks **Meeting** or **Note**. Surveyor (`building_surveyor`) defaults to Note; studio / commercial / `work_design` / `work_property` default to Meeting; personal and family are Note only. Meeting requires a client. Note keeps optional `client_id` + `category: meeting_transcript`.
 - Meeting syncs `POST /api/native/v1/meetings`. Note syncs `POST /api/native/v1/notes`. Flush errors stay visible; a 400 is not swallowed. Audio stays on the device.
-- The Meetings list shows local recordings plus remote `meeting_transcripts`
+- The Meetings hub matches the Mac Meetings page: **Start a new meeting**, **Upcoming** booked meetings, and **Recent** transcripts (client, date/time, duration). Tap a recent meeting for notes, transcript, and extracted tasks. Start uses the existing in-room recorder — not the Mac Whisper pipeline.
 
 Linux cannot compile this Xcode project. Open `apps/ios/Ozer.xcodeproj` on a Mac to build.
 

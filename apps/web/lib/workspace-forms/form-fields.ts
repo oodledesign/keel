@@ -1,3 +1,9 @@
+import { parseFormFileValue } from './form-file';
+import type {
+  WorkspaceFormJumpRule,
+  WorkspaceFormVisibleWhen,
+} from './form-logic';
+
 export const WORKSPACE_FORM_FIELD_TYPES = [
   'name',
   'email',
@@ -44,6 +50,15 @@ export type WorkspaceFormField = {
   placeholder?: string;
   helpText?: string;
   options?: string[];
+  /**
+   * Steps mode only. When true (the default if omitted), the next visible
+   * field starts a new step. Set false to keep the next question on this step.
+   */
+  stepBreakAfter?: boolean;
+  /** Show this field only when a prior answer matches. */
+  visibleWhen?: WorkspaceFormVisibleWhen;
+  /** After this field is answered, optionally jump to another field or submit. */
+  jumpRules?: WorkspaceFormJumpRule[];
 };
 
 export const WORKSPACE_FORM_DESTINATION_LABELS: Record<
@@ -264,6 +279,8 @@ export function applyWorkspaceFormFieldType(
           ? field.options.slice(0, 4)
           : field.options
         : defaultOptionsForType(type);
+  } else {
+    delete next.options;
   }
 
   if (type === 'yes_no' && (!next.options || next.options.length < 2)) {
@@ -338,6 +355,12 @@ export function extractContactFromValues(
       const checked =
         raw === true || raw === 'true' || raw === 'on' || raw === '1';
       extras[field.key] = checked;
+      continue;
+    }
+
+    if (field.type === 'file') {
+      const file = parseFormFileValue(raw);
+      if (file) extras[field.key] = `${file.name} ${file.url}`;
       continue;
     }
 

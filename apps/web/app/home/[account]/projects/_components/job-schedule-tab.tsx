@@ -16,6 +16,7 @@ import type {
   CalendarItemNormalized,
 } from '~/components/calendar/OzerCalendar';
 import type { OzerCalendarView } from '~/components/calendar/OzerCalendar';
+import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import pathsConfig from '~/config/paths.config';
 
 import { getErrorMessage } from '../_lib/error-message';
@@ -285,11 +286,12 @@ export function JobScheduleTabContent({
                   Deadline
                 </span>
               )}
-              {details.status && (
-                <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)]">
-                  {(details.status as string).replace('_', ' ')}
-                </span>
-              )}
+              {details.status ? (
+                <TaskStatusBadge
+                  status={String(details.status)}
+                  className="normal-case tracking-normal"
+                />
+              ) : null}
               {details.priority && (
                 <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)] capitalize">
                   {details.priority as string}

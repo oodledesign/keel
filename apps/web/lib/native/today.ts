@@ -7,6 +7,7 @@ import { timeOfDayGreeting } from '~/lib/time-of-day-greeting';
 import { getNativeFinances } from './invoices';
 import { workspaceShowsNativeInvoices } from './invoices-shared';
 import { listNativeNotes } from './notes';
+import { countNativeTaskReview } from './task-review';
 import { listNativeTasks } from './tasks';
 import {
   type NativeTodayHomePayload,
@@ -33,12 +34,13 @@ export async function loadNativeToday(
   workspace: NativeWorkspace,
 ): Promise<NativeTodayHomePayload> {
   const { date, date_label } = nativeTodayDateParts();
-  const [openTasks, notes, finances] = await Promise.all([
+  const [openTasks, notes, finances, taskReview] = await Promise.all([
     listNativeTasks(client, userId, workspace, { status: 'open' }),
     listNativeNotes(userId, workspace),
     workspaceShowsNativeInvoices(workspace.profile)
       ? getNativeFinances(client, workspace)
       : Promise.resolve(null),
+    countNativeTaskReview(client, userId, workspace),
   ]);
 
   const { dueToday, overdue } = splitNativeTodayTasks(openTasks, date);
@@ -53,5 +55,6 @@ export async function loadNativeToday(
     recentNotes,
     meetingsToday,
     finances,
+    taskReview,
   });
 }
