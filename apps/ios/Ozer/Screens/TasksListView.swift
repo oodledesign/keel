@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TasksListView: View {
     @Environment(AppSession.self) private var session
+    var onOpen: (AppScreen) -> Void = { _ in }
     @State private var payload: TasksPayload?
     @State private var loadError: NativeAPIError?
     @State private var isLoading = false
@@ -88,16 +89,40 @@ struct TasksListView: View {
                     WorkspaceChip()
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        editorTask = nil
-                        showEditor = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .fontWeight(.semibold)
+                    HStack(spacing: 12) {
+                        Button {
+                            onOpen(.taskReview)
+                        } label: {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "tray.full")
+                                    .fontWeight(.semibold)
+                                if session.pendingTaskReviewCount > 0 {
+                                    Circle()
+                                        .fill(OzerPalette.coral)
+                                        .frame(width: 8, height: 8)
+                                        .offset(x: 3, y: -3)
+                                }
+                            }
+                        }
+                        .foregroundStyle(OzerPalette.coral)
+                        .accessibilityLabel(
+                            session.pendingTaskReviewCount > 0
+                                ? "Review suggested tasks, \(session.pendingTaskReviewCount) waiting"
+                                : "Review suggested tasks"
+                        )
+                        .disabled(session.workspaceQueryValue.isEmpty)
+
+                        Button {
+                            editorTask = nil
+                            showEditor = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundStyle(OzerPalette.coral)
+                        .accessibilityLabel("Add task")
+                        .disabled(session.workspaceQueryValue.isEmpty)
                     }
-                    .foregroundStyle(OzerPalette.coral)
-                    .accessibilityLabel("Add task")
-                    .disabled(session.workspaceQueryValue.isEmpty)
                 }
             }
             .onChange(of: session.workspaceContentKey) { _, _ in
@@ -202,6 +227,38 @@ struct TasksListView: View {
 
     private func content(_ items: [TaskItem]) -> some View {
         List {
+            if session.pendingTaskReviewCount > 0 {
+                Button {
+                    onOpen(.taskReview)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(
+                                session.pendingTaskReviewCount == 1
+                                    ? "1 suggested task"
+                                    : "\(session.pendingTaskReviewCount) suggested tasks"
+                            )
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OzerPalette.plum)
+                            Text("Review from meetings and email")
+                                .font(.caption)
+                                .foregroundStyle(OzerPalette.plumMuted)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(OzerPalette.plumSoft)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            }
+
             if isShowingStaleCache {
                 Text("Showing saved tasks. Couldn’t refresh just now.")
                     .font(.subheadline)
@@ -333,6 +390,19 @@ struct TasksListView: View {
                     .font(.body)
                     .foregroundStyle(OzerPalette.plumMuted)
                     .multilineTextAlignment(.center)
+                if session.pendingTaskReviewCount > 0 {
+                    Button(
+                        session.pendingTaskReviewCount == 1
+                            ? "Review 1 suggestion"
+                            : "Review \(session.pendingTaskReviewCount) suggestions"
+                    ) {
+                        onOpen(.taskReview)
+                    }
+                    .buttonStyle(OzerSecondaryButtonStyle())
+                    .padding(.vertical, 10)
+                    .frame(width: 220)
+                    .padding(.top, 4)
+                }
                 Button("Add a task") {
                     editorTask = nil
                     showEditor = true
@@ -512,6 +582,12 @@ struct TasksListView: View {
             completingIds = []
             loadError = nil
             isShowingStaleCache = false
+            if let review = try? await client.taskReview(
+                workspace: workspace,
+                accessToken: token
+            ) {
+                session.setPendingTaskReviewCount(review.counts.pendingCount)
+            }
         } catch is CancellationError {
             return
         } catch let error as NativeAPIError {

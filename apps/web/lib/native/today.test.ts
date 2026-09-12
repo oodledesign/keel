@@ -245,6 +245,11 @@ describe('buildNativeTodayHomePayload', () => {
       { id: 'late', title: 'Send invoice', subtitle: '2026-08-30' },
     ]);
     expect(payload.finances?.outstanding_balance_pence).toBe(12500);
+    expect(payload.task_review).toEqual({
+      meeting_count: 0,
+      email_count: 0,
+      pending_count: 0,
+    });
     expect(mergeNativeTodayItems([due], [late])).toHaveLength(2);
     expect(
       nativeTodaySupportingMessage({ dueTodayCount: 0, overdueCount: 0 }),

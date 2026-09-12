@@ -642,6 +642,103 @@ actor NativeAPIClient {
         }
     }
 
+    func taskReview(
+        workspace: String,
+        source: TaskReviewSource? = nil,
+        accessToken: String
+    ) async throws -> TaskReviewPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let source {
+            query.append(URLQueryItem(name: "source", value: source.rawValue))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/task-review",
+            queryItems: query,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(TaskReviewPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func acceptTaskReview(
+        id: String,
+        source: TaskReviewSource,
+        workspace: String,
+        title: String? = nil,
+        detail: String? = nil,
+        due: String? = nil,
+        clearDue: Bool = false,
+        durationMinutes: Int? = nil,
+        clearDuration: Bool = false,
+        clientId: String? = nil,
+        clearClient: Bool = false,
+        accessToken: String
+    ) async throws -> TaskReviewAcceptResult {
+        var body: [String: Any] = [
+            "workspace": workspace,
+            "source": source.rawValue,
+        ]
+        if let title, !title.isEmpty {
+            body["title"] = title
+        }
+        if let detail {
+            body["detail"] = detail.isEmpty ? NSNull() : detail
+        }
+        if clearDue {
+            body["due"] = NSNull()
+        } else if let due, !due.isEmpty {
+            body["due"] = due
+        }
+        if clearDuration {
+            body["duration_minutes"] = NSNull()
+        } else if let durationMinutes = TaskItem.clampDurationMinutes(durationMinutes) {
+            body["duration_minutes"] = durationMinutes
+        }
+        if clearClient {
+            body["client_id"] = NSNull()
+        } else if let clientId, !clientId.isEmpty {
+            body["client_id"] = clientId
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/task-review/\(id)/accept",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(TaskReviewAcceptResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func dismissTaskReview(
+        id: String,
+        source: TaskReviewSource,
+        workspace: String,
+        accessToken: String
+    ) async throws {
+        _ = try await send(
+            method: "POST",
+            path: "api/native/v1/task-review/\(id)/dismiss",
+            queryItems: [],
+            body: [
+                "workspace": workspace,
+                "source": source.rawValue,
+            ],
+            accessToken: accessToken
+        )
+    }
+
     func people(workspace: String, accessToken: String) async throws -> PeoplePayload {
         let data = try await send(
             method: "GET",
@@ -854,6 +951,7 @@ struct TodayPayload: Decodable, Equatable {
     var recentNotes: [NoteItem]
     var meetingsToday: [MeetingTodayItem]
     var finances: FinancesPayload?
+    var taskReview: TaskReviewCounts?
 
     static let empty = TodayPayload(
         title: nil,
@@ -867,7 +965,8 @@ struct TodayPayload: Decodable, Equatable {
         overdueTasks: [],
         recentNotes: [],
         meetingsToday: [],
-        finances: nil
+        finances: nil,
+        taskReview: .empty
     )
 
     enum CodingKeys: String, CodingKey {
@@ -877,6 +976,7 @@ struct TodayPayload: Decodable, Equatable {
         case overdueTasks = "overdue_tasks"
         case recentNotes = "recent_notes"
         case meetingsToday = "meetings_today"
+        case taskReview = "task_review"
     }
 
     init(
@@ -891,7 +991,8 @@ struct TodayPayload: Decodable, Equatable {
         overdueTasks: [TaskItem] = [],
         recentNotes: [NoteItem] = [],
         meetingsToday: [MeetingTodayItem] = [],
-        finances: FinancesPayload? = nil
+        finances: FinancesPayload? = nil,
+        taskReview: TaskReviewCounts? = nil
     ) {
         self.title = title
         self.greeting = greeting
@@ -905,6 +1006,7 @@ struct TodayPayload: Decodable, Equatable {
         self.recentNotes = recentNotes
         self.meetingsToday = meetingsToday
         self.finances = finances
+        self.taskReview = taskReview
     }
 
     init(from decoder: Decoder) throws {
@@ -920,6 +1022,7 @@ struct TodayPayload: Decodable, Equatable {
         recentNotes = try container.decodeIfPresent([NoteItem].self, forKey: .recentNotes) ?? []
         meetingsToday = try container.decodeIfPresent([MeetingTodayItem].self, forKey: .meetingsToday) ?? []
         finances = try container.decodeIfPresent(FinancesPayload.self, forKey: .finances)
+        taskReview = try container.decodeIfPresent(TaskReviewCounts.self, forKey: .taskReview)
 
         if !tasksDueToday.isEmpty || !overdueTasks.isEmpty {
             items = Self.mergeHomeItems(

@@ -22,6 +22,7 @@ final class AppSession {
     private(set) var pendingScreen: AppScreen?
     private(set) var pendingInvoiceId: String?
     private(set) var pendingThreadId: String?
+    private(set) var pendingTaskReviewCount = 0
 
     var lastError: String?
 
@@ -221,6 +222,7 @@ final class AppSession {
         workspaces = []
         workspacesLoaded = false
         selectedWorkspace = nil
+        pendingTaskReviewCount = 0
         phase = .signedOut
         try? KeychainStore.deleteAll()
         if let token {
@@ -229,8 +231,15 @@ final class AppSession {
     }
 
     func selectWorkspace(_ workspace: NativeWorkspace) {
+        if selectedWorkspace?.id != workspace.id {
+            pendingTaskReviewCount = 0
+        }
         selectedWorkspace = workspace
         WorkspaceSelection.persist(workspace)
+    }
+
+    func setPendingTaskReviewCount(_ count: Int) {
+        pendingTaskReviewCount = max(0, count)
     }
 
     func flushOfflineWork() async {

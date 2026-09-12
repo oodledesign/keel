@@ -3,6 +3,8 @@ import Foundation
 enum AppScreen: Hashable {
     case home
     case tasks
+    /// Menu / Home / Tasks entry — not a tab-bar pin.
+    case taskReview
     case notes
     case messages
     case people
@@ -28,6 +30,7 @@ enum AppScreen: Hashable {
         switch self {
         case .home: nil
         case .tasks: .tasks
+        case .taskReview: nil
         case .notes: .notes
         case .messages: .messages
         case .people: .people
@@ -42,6 +45,7 @@ enum AppScreen: Hashable {
         switch self {
         case .home: "Home"
         case .tasks: "Tasks"
+        case .taskReview: "Review"
         case .notes: "Notes"
         case .messages: "Messages"
         case .people: "People"
@@ -56,6 +60,7 @@ enum AppScreen: Hashable {
         switch self {
         case .home: "house"
         case .tasks: "checkmark.square"
+        case .taskReview: "tray.full"
         case .notes: "note.text"
         case .messages: "bubble.left.and.bubble.right"
         case .people: "person.2"
