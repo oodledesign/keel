@@ -703,7 +703,9 @@ struct HomeTodayView: View {
                     extraFinances = pocket
                     invoiceItems = Array(pocket.recent.prefix(5))
                 }
-                let needsDashboard = extraFinances == nil || extraFinances?.months.isEmpty == true
+                let needsDashboard = extraFinances == nil
+                    || (extraFinances?.hasFinanceData == true
+                        && extraFinances?.months.isEmpty == true)
                 if needsDashboard {
                     do {
                         let pocket = try await client.finances(

@@ -94,9 +94,16 @@ struct FinanceTrendChart: View {
 
     private var chartAccessibilityLabel: String {
         let parts = months.map { point in
-            "\(point.month): in \(Self.compactAxis(point.income)), out \(Self.compactAxis(point.outgoings))"
+            "\(point.month): in \(Self.spokenAmount(point.income)), out \(Self.spokenAmount(point.outgoings))"
         }
         return parts.joined(separator: ". ")
+    }
+
+    static func spokenAmount(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = value.rounded() == value ? 0 : 2
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.0f", value)
     }
 
     static func compactAxis(_ value: Double) -> String {
