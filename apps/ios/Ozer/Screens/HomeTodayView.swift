@@ -400,7 +400,7 @@ struct HomeTodayView: View {
             Button {
                 onOpen(.meetings)
             } label: {
-                emptyRow("Record a meeting")
+                emptyRow("Start a new meeting")
             }
             .buttonStyle(.plain)
         } else {

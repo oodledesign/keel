@@ -1,4 +1,5 @@
 import Foundation
+@testable import OzerMeetings
 @testable import OzerNotes
 @testable import OzerSpeech
 
@@ -367,6 +368,7 @@ struct SpeakerTranscriptTests {
         }
 
         NoteMarkdownTests.run(check: check)
+        MeetingDisplayTests.run(check: check)
 
 
         if failed > 0 {

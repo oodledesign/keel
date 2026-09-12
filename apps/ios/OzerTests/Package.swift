@@ -26,9 +26,16 @@ let package = Package(
                 "NoteMarkdown.swift",
             ]
         ),
+        .target(
+            name: "OzerMeetings",
+            path: "../Ozer/Meetings",
+            sources: [
+                "MeetingDisplay.swift",
+            ]
+        ),
         .executableTarget(
             name: "OzerSpeechTests",
-            dependencies: ["OzerSpeech", "OzerNotes"],
+            dependencies: ["OzerSpeech", "OzerNotes", "OzerMeetings"],
             path: "Sources"
         ),
     ]

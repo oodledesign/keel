@@ -1,7 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
 import { NativeHttpError } from './http';
-import { createNativeMeeting, listNativeMeetings } from './meetings';
+import {
+  createNativeMeeting,
+  getNativeMeeting,
+  listNativeMeetings,
+  listNativeUpcomingMeetings,
+} from './meetings';
 import {
   normalizeNativeMeetingContent,
   parseNativeMeetingDate,
@@ -13,6 +20,10 @@ import type { NativeWorkspace } from './workspace-shared';
 
 vi.mock('~/lib/brain/sync', () => ({
   queueBrainIndexSource: vi.fn(),
+}));
+
+vi.mock('~/lib/recorder/meeting-summary', () => ({
+  loadMeetingSummary: vi.fn(),
 }));
 
 const studio: NativeWorkspace = {
@@ -101,9 +112,30 @@ describe('toNativeMeeting', () => {
       client_name: 'Hope and Wonder',
       meeting_date: '2026-09-01',
       source: 'desktop_recorder',
+      duration_seconds: null,
       created_at: '2026-09-01T10:00:00Z',
       updated_at: '2026-09-01T10:00:00Z',
     });
+  });
+
+  it('maps duration_seconds when present', () => {
+    expect(
+      toNativeMeeting(
+        {
+          id: 'm1',
+          title: 'Site visit',
+          content: 'Me: Hello',
+          client_id: clientId,
+          meeting_date: '2026-09-01',
+          source: 'desktop_recorder',
+          duration_seconds: 1500,
+          created_at: '2026-09-01T10:00:00Z',
+          updated_at: '2026-09-01T10:00:00Z',
+        },
+        studio,
+        'Hope and Wonder',
+      ).duration_seconds,
+    ).toBe(1500);
   });
 
   it('falls back unknown stored sources to desktop_recorder', () => {
@@ -113,7 +145,7 @@ describe('toNativeMeeting', () => {
 });
 
 describe('listNativeMeetings', () => {
-  it('lists workspace transcripts with client names', async () => {
+  it('lists workspace transcripts with client names and task flags', async () => {
     const meetingChain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -127,6 +159,7 @@ describe('listNativeMeetings', () => {
             client_id: clientId,
             meeting_date: '2026-09-01',
             source: 'desktop_recorder',
+            duration_seconds: 1500,
             created_at: '2026-09-01T10:00:00Z',
             updated_at: '2026-09-01T10:00:00Z',
           },
@@ -150,9 +183,23 @@ describe('listNativeMeetings', () => {
         error: null,
       }),
     };
-    const from = vi.fn((table: string) =>
-      table === 'clients' ? clientChain : meetingChain,
-    );
+    const actionChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockImplementation(() => actionChain),
+    };
+    actionChain.in = vi
+      .fn()
+      .mockReturnValueOnce(actionChain)
+      .mockResolvedValueOnce({
+        data: [{ meeting_transcript_id: 'm1' }],
+        error: null,
+      });
+    const from = vi.fn((table: string) => {
+      if (table === 'clients') return clientChain;
+      if (table === 'meeting_action_items') return actionChain;
+      return meetingChain;
+    });
 
     const items = await listNativeMeetings({ from } as never, studio);
 
@@ -168,10 +215,70 @@ describe('listNativeMeetings', () => {
         client_name: 'Hope and Wonder',
         meeting_date: '2026-09-01',
         source: 'desktop_recorder',
+        duration_seconds: 1500,
+        has_extracted_tasks: true,
         created_at: '2026-09-01T10:00:00Z',
         updated_at: '2026-09-01T10:00:00Z',
       },
     ]);
+  });
+});
+
+describe('listNativeUpcomingMeetings', () => {
+  it('returns confirmed future bookings', async () => {
+    const bookingChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'b1',
+            start_at: '2099-01-02T10:00:00Z',
+            invitee_name: 'Alex Example',
+            conferencing_url: 'https://meet.google.com/abc',
+            status: 'confirmed',
+            event_types: { name: 'Discovery call' },
+            booking_pages: { title: 'Studio' },
+          },
+        ],
+        error: null,
+      }),
+    };
+    const from = vi.fn((table: string) => {
+      expect(table).toBe('bookings');
+      return bookingChain;
+    });
+
+    await expect(
+      listNativeUpcomingMeetings({ from } as never, studio),
+    ).resolves.toEqual([
+      {
+        id: 'b1',
+        title: 'Discovery call',
+        start_at: '2099-01-02T10:00:00Z',
+        invitee_name: 'Alex Example',
+        conferencing_url: 'https://meet.google.com/abc',
+      },
+    ]);
+  });
+
+  it('returns an empty list when bookings fail', async () => {
+    const bookingChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'relation missing' },
+      }),
+    };
+
+    await expect(
+      listNativeUpcomingMeetings({ from: () => bookingChain } as never, studio),
+    ).resolves.toEqual([]);
   });
 });
 
@@ -277,6 +384,127 @@ describe('createNativeMeeting', () => {
     ).rejects.toMatchObject({
       status: 400,
       message: 'client_id must belong to this workspace',
+    } satisfies Partial<NativeHttpError>);
+  });
+});
+
+describe('getNativeMeeting', () => {
+  const meetingId = '11111111-1111-4111-8111-111111111111';
+
+  beforeEach(() => {
+    vi.mocked(loadMeetingSummary).mockResolvedValue({
+      summaryText: 'Follow up on the site visit.',
+      attendeeEmails: [],
+      generatedAt: '2026-09-01T11:00:00Z',
+    });
+  });
+
+  it('returns transcript, notes, and published tasks', async () => {
+    const meetingLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: meetingId,
+          title: 'Site visit',
+          content: 'Me: Hello',
+          client_id: clientId,
+          meeting_date: '2026-09-01',
+          source: 'desktop_recorder',
+          duration_seconds: 1500,
+          created_at: '2026-09-01T10:00:00Z',
+          updated_at: '2026-09-01T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const clientChain = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: clientId,
+            display_name: 'Hope and Wonder',
+            first_name: null,
+            last_name: null,
+            company_name: null,
+            client_type: 'individual',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const actionChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'ai-1',
+            suggested_title: 'Send survey',
+            suggested_description: null,
+            suggested_due_date: '2026-09-03',
+            suggested_assignee_id: null,
+            status: 'approved',
+            planner_task_id: 'task-1',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const plannerChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'task-1',
+            title: 'Send survey pack',
+            due_date: '2026-09-04',
+            user_id: null,
+            status: 'todo',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === 'clients') return clientChain;
+      if (table === 'meeting_action_items') return actionChain;
+      if (table === 'tasks') return plannerChain;
+      return meetingLookup;
+    });
+
+    const detail = await getNativeMeeting({ from } as never, studio, meetingId);
+
+    expect(detail.id).toBe(meetingId);
+    expect(detail.client_name).toBe('Hope and Wonder');
+    expect(detail.duration_seconds).toBe(1500);
+    expect(detail.notes).toEqual({
+      text: 'Follow up on the site visit.',
+      generated_at: '2026-09-01T11:00:00Z',
+    });
+    expect(detail.tasks).toEqual([
+      {
+        id: 'task-1',
+        title: 'Send survey pack',
+        due: '2026-09-04',
+        status: 'todo',
+        assignee_name: null,
+        planner_task_id: 'task-1',
+        client_id: clientId,
+        client_name: 'Hope and Wonder',
+      },
+    ]);
+  });
+
+  it('404s for a junk id', async () => {
+    await expect(
+      getNativeMeeting({ from: vi.fn() } as never, studio, 'not-a-uuid'),
+    ).rejects.toMatchObject({
+      status: 404,
+      message: 'Meeting not found',
     } satisfies Partial<NativeHttpError>);
   });
 });

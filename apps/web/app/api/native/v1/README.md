@@ -53,6 +53,9 @@ curl -sS -X PATCH "$ORIGIN/api/native/v1/notes/NOTE_ID" \
 curl -sS "$ORIGIN/api/native/v1/meetings?workspace=YOUR_SLUG" \
   -H "Authorization: Bearer $TOKEN"
 
+curl -sS "$ORIGIN/api/native/v1/meetings/MEETING_ID?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
 curl -sS -X POST "$ORIGIN/api/native/v1/meetings" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -120,6 +123,18 @@ curl -sS -X POST "$ORIGIN/api/native/v1/messages/threads/THREAD_ID/messages" \
 - `meetings_today` (`id`, `title`, `created_at`) on workspaces that record meetings
 - `finances` on studio / surveyor / commercial workspaces (or `null`)
 - `items` — flat due-today then overdue, for older clients that still read a list
+
+## Meetings
+
+`GET /meetings` returns recent `meeting_transcripts` plus upcoming confirmed bookings for the workspace:
+
+```
+{ "items": [meeting…], "upcoming": [booking…] }
+```
+
+List items add `duration_seconds` and `has_extracted_tasks` on top of the existing transcript fields (`id`, `title`, `content`, `client_id`, `client_name`, `meeting_date`, `source`, timestamps). `upcoming` is calendar-style: `id`, `title`, `start_at`, `invitee_name`, `conferencing_url` (max 8, soonest first). A missing bookings table is an empty `upcoming` list, not an error.
+
+`GET /meetings/:id` is the phone detail: the same meeting object plus `notes` (`{ text, generated_at }` from the Mac/web summary, or `null`) and `tasks` (approved / auto-published action items, with `planner_task_id` when a planner task exists).
 
 ## Invoices / finances
 
