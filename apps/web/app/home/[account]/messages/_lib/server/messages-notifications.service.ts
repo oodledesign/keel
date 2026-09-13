@@ -221,7 +221,9 @@ class MessagesNotificationsService {
       clientIds.length
         ? this.client
             .from('clients')
-            .select('id, display_name, company_name, first_name, last_name')
+            .select(
+              'id, display_name, company_name, first_name, last_name, email',
+            )
             .in('id', clientIds)
             .then((res: { data: any }) => res.data ?? [])
         : Promise.resolve([]),
@@ -244,11 +246,28 @@ class MessagesNotificationsService {
         email: contactDisplay.get(p.participant_contact_id)?.email ?? null,
       }));
 
+    // Client-wide rows usually have no user account (email only). Keep
+    // participant_user_id if present so a linked user still gets in-app.
+    const clientById = new Map<string, any>(
+      clientRows.map((row: any) => [row.id, row]),
+    );
+    const clientRecipients = (participants ?? [])
+      .filter((p: any) => p.participant_kind === 'client')
+      .map((p: any) => ({
+        userId: (p.participant_user_id as string | null) ?? null,
+        email:
+          (clientById.get(p.participant_client_id)?.email as
+            | string
+            | null
+            | undefined) ?? null,
+      }));
+
     const collected = collectMessageNotifyRecipients({
       senderUserId: params.senderUserId,
       senderEmail: userById.get(params.senderUserId)?.email ?? null,
       members: memberRecipients,
       contacts: contactRecipients,
+      clients: clientRecipients,
     });
 
     const recipientUserIds = collected.inAppUserIds;
