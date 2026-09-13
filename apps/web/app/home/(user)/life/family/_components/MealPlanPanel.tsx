@@ -48,7 +48,7 @@ import {
 import { generateShoppingListAction } from '../_lib/shopping-actions';
 import { MealDayEditDialog } from './MealDayEditDialog';
 import { MealPlanGenerateDialog } from './MealPlanGenerateDialog';
-import { ACCENT, panelClass, titleCase } from './meal-ui';
+import { ACCENT, isLeftoversMeal, panelClass, titleCase } from './meal-ui';
 
 type Props = {
   view: MealPlanView;
@@ -582,6 +582,16 @@ export function MealPlanPanel({
                             shopping.
                           </p>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDraftRecipeId(null);
+                            setDraftTitle('Leftovers');
+                          }}
+                          className="text-xs font-medium text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:text-[var(--workspace-shell-text)] hover:underline"
+                        >
+                          Use leftovers (no shopping items)
+                        </button>
                         <Input
                           autoFocus
                           value={draftTitle}
@@ -637,6 +647,15 @@ export function MealPlanPanel({
                               <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                                 {entry.title}
                               </p>
+                              {isLeftoversMeal(entry.title) ? (
+                                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                                  Leftovers — not added to shopping
+                                </p>
+                              ) : recipe ? null : (
+                                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                                  Typed meal — add a recipe for shopping
+                                </p>
+                              )}
                               {entry.notes ? (
                                 <p className="mt-0.5 line-clamp-1 text-xs text-[var(--workspace-shell-text-muted)]">
                                   {entry.notes}

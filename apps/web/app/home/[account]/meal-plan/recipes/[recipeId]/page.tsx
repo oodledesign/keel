@@ -4,6 +4,7 @@ import { PageBody } from '@kit/ui/page';
 
 import { RecipeDetailPage } from '~/home/(user)/life/family/_components/RecipeDetailPage';
 import {
+  loadFamilyMealData,
   loadFamilyRecipeById,
   loadFamilyRecipeCookLogs,
   loadFamilyRecipePopularity,
@@ -59,13 +60,15 @@ async function WorkspaceRecipeDetailPage({
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 
-  const [recipe, scope, popularity, recentLogs, structure] = await Promise.all([
-    loadFamilyRecipeById(recipeId, slug),
-    resolveMealPlanScope(slug),
-    loadFamilyRecipePopularity(recipeId),
-    loadFamilyRecipeCookLogs(recipeId),
-    loadFamilyRecipeStructure(recipeId),
-  ]);
+  const [recipe, scope, popularity, recentLogs, structure, mealData] =
+    await Promise.all([
+      loadFamilyRecipeById(recipeId, slug),
+      resolveMealPlanScope(slug),
+      loadFamilyRecipePopularity(recipeId),
+      loadFamilyRecipeCookLogs(recipeId),
+      loadFamilyRecipeStructure(recipeId),
+      loadFamilyMealData({ accountSlug: slug, view: 'week' }),
+    ]);
 
   if (!recipe) {
     redirect(getDefaultAccountPath(slug, workspace.account));
@@ -80,6 +83,8 @@ async function WorkspaceRecipeDetailPage({
         popularity={popularity}
         recentLogs={recentLogs}
         structure={structure}
+        weekDates={mealData.weekDates}
+        weekEntries={mealData.entries}
       />
     </PageBody>
   );

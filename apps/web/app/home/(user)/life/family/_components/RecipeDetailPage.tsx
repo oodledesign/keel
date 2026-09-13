@@ -5,15 +5,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import {
-  ArrowLeft,
-  CalendarDays,
-  Clock,
-  Pencil,
-  Star,
-  Trash2,
-  Users,
-} from 'lucide-react';
+import { ArrowLeft, Clock, Pencil, Star, Trash2, Users } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -32,6 +24,7 @@ import {
   setRecipePublicShareAction,
 } from '../_lib/recipe-share-actions';
 import type {
+  MealEntryRow,
   RecipeCookLogRow,
   RecipePopularityStats,
   RecipeRow,
@@ -41,6 +34,7 @@ import { RecipeBadges } from './RecipeBadges';
 import { RecipeCookLogPanel } from './RecipeCookLogPanel';
 import { RecipeDialog } from './RecipeDialog';
 import { RecipeMethodPanel } from './RecipeMethodPanel';
+import { RecipePlanAssignDialog } from './RecipePlanAssignDialog';
 import { RecipeSharePanel } from './RecipeSharePanel';
 import { RecipeSourceLink } from './RecipeSourceLink';
 import { panelClass, totalTimeLabel } from './meal-ui';
@@ -52,6 +46,8 @@ type Props = {
   popularity?: RecipePopularityStats;
   recentLogs?: RecipeCookLogRow[];
   structure?: RecipeStructure;
+  weekDates?: string[];
+  weekEntries?: MealEntryRow[];
 };
 
 function formatMacro(value: number | null | undefined, unit: string) {
@@ -67,6 +63,8 @@ export function RecipeDetailPage({
   popularity = { times_cooked: 0, avg_rating: null, popularity_score: 0 },
   recentLogs = [],
   structure = { ingredients: [], steps: [] },
+  weekDates,
+  weekEntries,
 }: Props) {
   const router = useRouter();
   const scopeFields = accountSlug ? { accountSlug } : {};
@@ -140,12 +138,13 @@ export function RecipeDetailPage({
         </Link>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-8" asChild>
-            <Link href={basePath}>
-              <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
-              Use on meal plan
-            </Link>
-          </Button>
+          <RecipePlanAssignDialog
+            recipe={recipe}
+            weekDates={weekDates}
+            weekEntries={weekEntries}
+            accountSlug={accountSlug}
+            planHref={basePath}
+          />
           <Button
             variant="outline"
             size="sm"

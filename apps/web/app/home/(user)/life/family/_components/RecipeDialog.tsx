@@ -287,7 +287,7 @@ function RecipeForm({
         <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
           {isImportReview
             ? 'Check the details below, then save to your library. Nothing is saved until you confirm.'
-            : 'Build your library so the planner can reuse meals you love.'}
+            : 'Save it to the library, then add it to a dinner on the meal plan. Servings help scale the shopping list.'}
         </DialogDescription>
       </DialogHeader>
 
@@ -362,6 +362,9 @@ function RecipeForm({
           onChange={(next) => setForm((f) => ({ ...f, ...next }))}
         />
 
+        <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+          Time and servings
+        </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor="recipe-prep">Prep (min)</Label>
@@ -421,7 +424,14 @@ function RecipeForm({
             </select>
           </div>
         </div>
+        <p className="-mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
+          Serves is the recipe as written. Shopping scales it to household size
+          in Preferences.
+        </p>
 
+        <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+          Ingredients and method
+        </p>
         <div className="space-y-1.5">
           <Label htmlFor="recipe-ingredients">Ingredients</Label>
           <Textarea

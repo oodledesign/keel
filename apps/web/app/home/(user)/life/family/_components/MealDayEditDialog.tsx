@@ -176,6 +176,21 @@ function MealDayEditForm({
             recipes later if you want ingredients on the shopping list.
           </p>
         )}
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setRecipeId(null);
+              setTitle('Leftovers');
+            }}
+            className="rounded-full border border-[color:var(--workspace-shell-border)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          >
+            Leftovers
+          </button>
+          <span className="self-center text-[11px] text-[var(--workspace-shell-text-muted)]">
+            Skips the shopping list
+          </span>
+        </div>
         <Input
           autoFocus
           value={title}

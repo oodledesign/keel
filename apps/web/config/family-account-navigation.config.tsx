@@ -73,7 +73,7 @@ export function buildFamilySpaceNavChildren(
     meal_plan: () =>
       access.canViewDashboard && isFamilyNavModuleEnabled(ms, 'meal_plan')
         ? {
-            label: 'Meal Plan',
+            label: 'Meal plan',
             path: createPath(pathsConfig.app.accountMealPlan, account),
             Icon: <UtensilsCrossed className={iconClasses} />,
           }

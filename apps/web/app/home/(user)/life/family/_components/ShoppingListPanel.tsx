@@ -109,8 +109,8 @@ export function ShoppingListPanel({
             No shopping list yet
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Generate one from this week&apos;s meal plan to merge every
-            ingredient and how much you need.
+            On the meal plan, tap Make shopping list after dinners are linked to
+            recipes. Typed meals and leftovers do not add ingredients.
           </p>
           <Button
             asChild
@@ -147,6 +147,9 @@ export function ShoppingListPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={mealPlanHref}>Meal plan</Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -170,7 +173,8 @@ export function ShoppingListPanel({
 
       {list.skipped_meals.length > 0 ? (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          No ingredients for: {list.skipped_meals.join(', ')}
+          Skipped (no recipe ingredients): {list.skipped_meals.join(', ')}. Link
+          a recipe on those days, or leave leftovers as typed meals.
         </p>
       ) : null}
 
@@ -256,8 +260,8 @@ export function ShoppingListPanel({
       </div>
 
       <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-        Tick items as you shop. Regenerating from the meal plan replaces this
-        week&apos;s list.
+        Tick items as you shop. Amounts scale to household size in Preferences.
+        Rebuild list on the meal plan replaces this week&apos;s items.
       </p>
     </div>
   );

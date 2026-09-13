@@ -188,7 +188,8 @@ function MealPreferencesForm({ preferences, accountSlug, onSaved }: Props) {
               Household size
             </h3>
             <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              How many people you usually cook for.
+              How many people you usually cook for. Shopping lists scale recipe
+              amounts to this number.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -276,9 +277,13 @@ function MealPreferencesForm({ preferences, accountSlug, onSaved }: Props) {
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Anything else? e.g. 'fish on Fridays', 'leftovers for lunch', 'kids hate spice'"
+          placeholder="e.g. fish on Fridays, leftovers for lunch, kids hate spice"
           className="mt-2"
         />
+        <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
+          For leftovers on a specific night, mark that day as Leftovers on the
+          plan so it stays off the shopping list.
+        </p>
       </div>
 
       <div className="flex justify-end">

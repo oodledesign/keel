@@ -23,7 +23,8 @@ async function PersonalFamilyShoppingPage({
           Shopping
         </h1>
         <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-          Merged groceries from this week&apos;s meal plan.
+          Groceries from this week&apos;s planned recipes. Open the meal plan to
+          rebuild the list.
         </p>
       </div>
       <ShoppingListPanel
