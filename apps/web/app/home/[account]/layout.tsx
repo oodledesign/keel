@@ -22,6 +22,10 @@ import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { listUserClientPortalMemberships } from '~/home/(user)/_lib/server/list-user-client-portal-memberships';
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  WORKSPACE_SHELL_PAGE_CLASS,
+  WORKSPACE_SHELL_VIEWPORT_CLASS,
+} from '~/lib/mobile-nav/mobile-floating-chrome';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import type { CompletedProductTours } from '~/lib/product-tour/types';
 import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
@@ -344,10 +348,10 @@ function TeamWorkspaceSidebarShell({
         oooWorkspaces={oooWorkspaces}
         oooDefaultAccountId={accountId}
       >
-        <SidebarProvider defaultOpen={layoutState.open}>
+        <SidebarProvider defaultOpen={layoutState.open} className="h-full">
           <Page
             style={'sidebar'}
-            contentContainerClassName="mx-auto flex h-dvh max-h-dvh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
+            contentContainerClassName={WORKSPACE_SHELL_VIEWPORT_CLASS}
           >
             <PageNavigation>
               <TeamAccountLayoutSidebar
@@ -561,7 +565,7 @@ function HeaderLayoutShell({
       >
         <Page
           style={'header'}
-          className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col"
+          className={WORKSPACE_SHELL_PAGE_CLASS}
         >
           <PageNavigation>
             <TeamAccountNavigationMenu

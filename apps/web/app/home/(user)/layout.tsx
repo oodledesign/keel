@@ -31,6 +31,10 @@ import { enrichPersonalShortcutsWithWorkspaceAvatars } from '~/lib/dashboard-sho
 import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  WORKSPACE_SHELL_PAGE_CLASS,
+  WORKSPACE_SHELL_VIEWPORT_CLASS,
+} from '~/lib/mobile-nav/mobile-floating-chrome';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { loadCompletedProductTours } from '~/lib/product-tour/product-tour.actions';
 import type { CompletedProductTours } from '~/lib/product-tour/types';
@@ -222,10 +226,10 @@ async function SidebarLayout({
           oooWorkspaces={oooWorkspaces}
           oooDefaultAccountId={oooWorkspaces[0]?.id ?? null}
         >
-          <SidebarProvider defaultOpen={layoutState.open}>
+          <SidebarProvider defaultOpen={layoutState.open} className="h-full">
             <Page
               style={'sidebar'}
-              contentContainerClassName="mx-auto flex h-dvh max-h-dvh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
+              contentContainerClassName={WORKSPACE_SHELL_VIEWPORT_CLASS}
             >
               <PageNavigation>
                 <HomeSidebar
@@ -324,7 +328,7 @@ function HeaderLayout({ children }: React.PropsWithChildren) {
       <UserWorkspaceContextProvider value={workspace}>
         <Page
           style={'header'}
-          className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col"
+          className={WORKSPACE_SHELL_PAGE_CLASS}
         >
           <PageNavigation>
             <HomeMenuNavigation workspace={workspace} />

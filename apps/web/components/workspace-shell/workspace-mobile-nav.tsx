@@ -267,6 +267,7 @@ export function WorkspaceMobileBottomNav({
   if (menuOpen) {
     return (
       <nav
+        data-mobile-nav="bottom"
         className={cn(
           'pointer-events-none fixed inset-x-0 bottom-0 z-[110] flex justify-center lg:hidden',
           MOBILE_FLOATING_CHROME_PX,
@@ -307,6 +308,7 @@ export function WorkspaceMobileBottomNav({
 
   return (
     <nav
+      data-mobile-nav="bottom"
       className={cn(
         'pointer-events-none fixed inset-x-0 bottom-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center lg:hidden',
         MOBILE_FLOATING_CHROME_PX,
