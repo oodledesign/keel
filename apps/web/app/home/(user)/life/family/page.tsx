@@ -1,11 +1,16 @@
 import { FamilyPageClient } from './_components/FamilyPageClient';
-import { loadFamilyMealData } from './_lib/server/family-meal.loader';
 import type { MealPlanView } from './_lib/schema/family-meal.schema';
+import { loadFamilyMealData } from './_lib/server/family-meal.loader';
 
 export const dynamic = 'force-dynamic';
 
 type FamilyPageProps = {
-  searchParams: Promise<{ week?: string; month?: string; view?: string }>;
+  searchParams: Promise<{
+    week?: string;
+    month?: string;
+    view?: string;
+    tab?: string;
+  }>;
 };
 
 function parseView(value: string | undefined): MealPlanView {

@@ -19,7 +19,12 @@ import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 
 interface FamilyMealPlanPageProps {
   params: Promise<{ account: string }>;
-  searchParams: Promise<{ week?: string; month?: string; view?: string }>;
+  searchParams: Promise<{
+    week?: string;
+    month?: string;
+    view?: string;
+    tab?: string;
+  }>;
 }
 
 export const dynamic = 'force-dynamic';
@@ -79,7 +84,7 @@ async function FamilyMealPlanPage({
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Meal plan"
-        description="Plan meals together in your family space."
+        description="Shared recipes, a weekly dinner plan, shopping lists, and public recipe books."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-0 text-[var(--workspace-shell-text)] lg:px-0">
         <FamilyPageClient

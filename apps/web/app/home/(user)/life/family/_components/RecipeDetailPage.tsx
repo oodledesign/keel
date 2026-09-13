@@ -5,7 +5,15 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { ArrowLeft, Clock, Pencil, Star, Trash2, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock,
+  Pencil,
+  Star,
+  Trash2,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -132,6 +140,12 @@ export function RecipeDetailPage({
         </Link>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8" asChild>
+            <Link href={basePath}>
+              <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+              Use on meal plan
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"

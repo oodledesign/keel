@@ -74,7 +74,7 @@ export function RecipeBookDetailPage({
           className="inline-flex items-center gap-1.5 text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-text)]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to books
+          Back to recipe books
         </Link>
 
         <div className="flex items-center gap-2">

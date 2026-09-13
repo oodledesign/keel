@@ -259,7 +259,11 @@ export function RecipeBookDialog({
             style={{ backgroundColor: ACCENT }}
             className="text-[var(--workspace-shell-text)] hover:opacity-90"
           >
-            {isPending ? 'Saving…' : book ? 'Save changes' : 'Create book'}
+            {isPending
+              ? 'Saving…'
+              : book
+                ? 'Save changes'
+                : 'Create recipe book'}
           </Button>
         </DialogFooter>
       </DialogContent>

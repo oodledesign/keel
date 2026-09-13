@@ -76,7 +76,11 @@ export function RecipeBookLibrary({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <p className="max-w-xl text-sm text-[var(--workspace-shell-text-muted)]">
+          A recipe book is a curated list you can share. Tick recipes on the
+          Recipes tab, or start an empty book and add them here.
+        </p>
         <Button
           onClick={openNew}
           style={{ backgroundColor: ACCENT }}
@@ -91,8 +95,8 @@ export function RecipeBookLibrary({
         <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-16 text-center">
           <BookOpen className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            No recipe books yet. Group favourites into a collection you can
-            share.
+            No recipe books yet. On the Recipes tab, tick a few recipes and tap
+            Create recipe book — or start an empty book here.
           </p>
         </div>
       ) : (

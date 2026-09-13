@@ -175,8 +175,8 @@ export function RecipeLibrary({
             >
               <BookPlus className="mr-1.5 h-4 w-4" />
               {selectedIds.length > 0
-                ? `Create book (${selectedIds.length})`
-                : 'Create book'}
+                ? `Create recipe book (${selectedIds.length})`
+                : 'Create recipe book'}
             </Button>
           ) : null}
           <Button
@@ -189,6 +189,13 @@ export function RecipeLibrary({
           </Button>
         </div>
       </div>
+
+      {recipes.length > 0 && onCreateBook ? (
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Tick recipes to collect them into a book you can share as one link.
+          Open a recipe to share that recipe on its own.
+        </p>
+      ) : null}
 
       {allTags.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">

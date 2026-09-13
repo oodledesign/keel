@@ -158,7 +158,7 @@ function MealDayEditForm({
             className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
           >
             <option value="" className="bg-[var(--ozer-surface-panel)]">
-              Pick from library or type below
+              Pick a recipe, or type a custom meal below
             </option>
             {recipes.map((recipe) => (
               <option
@@ -170,7 +170,12 @@ function MealDayEditForm({
               </option>
             ))}
           </select>
-        ) : null}
+        ) : (
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Your recipe library is empty. Type a dinner name for now — add
+            recipes later if you want ingredients on the shopping list.
+          </p>
+        )}
         <Input
           autoFocus
           value={title}

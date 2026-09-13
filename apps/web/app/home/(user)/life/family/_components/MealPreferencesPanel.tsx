@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 import { Minus, Plus, X } from 'lucide-react';
 
@@ -27,11 +27,11 @@ type Props = {
   onSaved: () => void;
 };
 
-export function MealPreferencesPanel({
-  preferences,
-  accountSlug,
-  onSaved,
-}: Props) {
+export function MealPreferencesPanel(props: Props) {
+  return <MealPreferencesForm key={props.preferences.updated_at} {...props} />;
+}
+
+function MealPreferencesForm({ preferences, accountSlug, onSaved }: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [dietary, setDietary] = useState<string[]>(
     preferences.dietary_requirements,
@@ -49,21 +49,6 @@ export function MealPreferencesPanel({
   const [customDietary, setCustomDietary] = useState('');
   const [dislikeInput, setDislikeInput] = useState('');
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setDietary(preferences.dietary_requirements);
-    setPriorities(preferences.priorities);
-    setDislikes(preferences.disliked_ingredients);
-    setHouseholdSize(preferences.household_size);
-    setNotes(preferences.notes ?? '');
-  }, [
-    preferences.updated_at,
-    preferences.dietary_requirements,
-    preferences.priorities,
-    preferences.disliked_ingredients,
-    preferences.household_size,
-    preferences.notes,
-  ]);
 
   function toggle(
     value: string,
@@ -110,6 +95,10 @@ export function MealPreferencesPanel({
 
   return (
     <div className="max-w-2xl space-y-5">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+        These steer Generate plan and new AI recipes. Save before you switch
+        tabs.
+      </p>
       <div className={cn(panelClass, 'p-5')}>
         <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Dietary requirements
