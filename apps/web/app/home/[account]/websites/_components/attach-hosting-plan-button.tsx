@@ -25,11 +25,14 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { PlanBillingCollectionChoice } from '~/home/[account]/_components/plan-billing-collection-choice';
+import { notifyClientSubscriptionsChanged } from '~/home/[account]/_lib/client-subscriptions-events';
 import {
   attachHostingPlanAction,
   listPlanTemplatesAction,
 } from '~/home/[account]/settings/services/_lib/server/plan-templates-actions';
 import {
+  type ClientSubscriptionBillingCollection,
   type PlanTemplateRecord,
   formatMinorUnits,
 } from '~/lib/billing/plan-templates-types';
@@ -50,6 +53,9 @@ export function AttachHostingPlanButton({
   const [name, setName] = useState('Managed hosting');
   const [amountPounds, setAmountPounds] = useState('45');
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [activatedOffline, setActivatedOffline] = useState(false);
+  const [collection, setCollection] =
+    useState<ClientSubscriptionBillingCollection>('stripe');
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -87,11 +93,20 @@ export function AttachHostingPlanButton({
                 active: true,
               }
             : undefined,
+          collection,
         });
-        setCheckoutUrl(result.checkoutUrl);
-        toast.success(
-          'Hosting plan attached — send the payment link to your client',
-        );
+        notifyClientSubscriptionsChanged();
+        if (result.checkoutUrl) {
+          setCheckoutUrl(result.checkoutUrl);
+          toast.success(
+            'Hosting plan attached — send the payment link to your client',
+          );
+        } else {
+          setActivatedOffline(true);
+          toast.success(
+            'Hosting plan activated — billed offline (no Stripe collection)',
+          );
+        }
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not attach',
@@ -101,7 +116,16 @@ export function AttachHostingPlanButton({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setCheckoutUrl(null);
+          setActivatedOffline(false);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button type="button" size="sm" variant="outline">
           Add hosting plan
@@ -111,13 +135,21 @@ export function AttachHostingPlanButton({
         <DialogHeader>
           <DialogTitle>Add hosting plan</DialogTitle>
           <DialogDescription>
-            Creates an incomplete Stripe subscription on your connected account.
-            The client completes Checkout to activate. To change price later,
-            cancel and create a new subscription (no prorations yet).
+            Attach a recurring hosting plan. Collect via Stripe Checkout, or
+            activate now if you invoice the client outside Stripe. To change
+            price later, cancel and create a new subscription (no prorations
+            yet).
           </DialogDescription>
         </DialogHeader>
 
-        {checkoutUrl ? (
+        {activatedOffline ? (
+          <div className="space-y-2 text-sm text-[var(--workspace-shell-text)]">
+            <p>This hosting plan is Active and billed offline.</p>
+            <p className="text-[var(--workspace-shell-text-muted)]">
+              No Stripe collection — invoice the client as you usually do.
+            </p>
+          </div>
+        ) : checkoutUrl ? (
           <div className="space-y-3 text-sm">
             <p className="text-[var(--workspace-shell-text)]">
               Payment link ready. Copy and email it to the client, or they can
@@ -200,16 +232,22 @@ export function AttachHostingPlanButton({
                 </Select>
               </div>
             )}
+            <PlanBillingCollectionChoice
+              value={collection}
+              onChange={setCollection}
+            />
           </div>
         )}
 
-        {!checkoutUrl ? (
+        {!checkoutUrl && !activatedOffline ? (
           <DialogFooter>
             <Button type="button" disabled={pending} onClick={submit}>
               {pending ? (
                 <Loader2 className="mr-1 size-4 animate-spin" />
               ) : null}
-              Create payment link
+              {collection === 'offline'
+                ? 'Activate now'
+                : 'Create payment link'}
             </Button>
           </DialogFooter>
         ) : null}

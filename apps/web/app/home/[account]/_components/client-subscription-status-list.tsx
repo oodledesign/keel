@@ -8,6 +8,7 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import {
+  activateOfflineClientSubscriptionAction,
   listClientSubscriptionsAction,
   resendClientSubscriptionPaymentLinkAction,
 } from '~/home/[account]/settings/services/_lib/server/plan-templates-actions';
@@ -18,8 +19,14 @@ import {
 import {
   type ClientSubscriptionRecord,
   type ClientSubscriptionStatus,
+  canActivateClientSubscriptionOffline,
+  canResendClientSubscriptionPaymentLink,
+  clientSubscriptionBillingLabel,
   formatMinorUnits,
 } from '~/lib/billing/plan-templates-types';
+import { workspaceTextMuted } from '~/lib/workspace-ui';
+
+import { CLIENT_SUBSCRIPTIONS_CHANGED_EVENT } from '../_lib/client-subscriptions-events';
 
 function SubscriptionStatusPill({ status }: { status: string }) {
   const key = (
@@ -69,9 +76,53 @@ function ResendPaymentLinkButton({
       variant="outline"
       disabled={pending}
       onClick={onResend}
+      data-test="resend-subscription-payment-link"
     >
       {pending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
       Resend payment link
+    </Button>
+  );
+}
+
+function ActivateOfflineButton({
+  accountId,
+  subscriptionId,
+  onActivated,
+}: {
+  accountId: string;
+  subscriptionId: string;
+  onActivated: (row: ClientSubscriptionRecord) => void;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  function onActivate() {
+    startTransition(async () => {
+      try {
+        const result = await activateOfflineClientSubscriptionAction({
+          accountId,
+          subscriptionId,
+        });
+        onActivated(result);
+        toast.success('Plan activated — billed offline (no Stripe collection)');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not activate',
+        );
+      }
+    });
+  }
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={pending}
+      onClick={onActivate}
+      data-test="activate-subscription-offline"
+    >
+      {pending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+      Activate offline
     </Button>
   );
 }
@@ -92,34 +143,43 @@ export function ClientSubscriptionStatusList({
 
   useEffect(() => {
     let cancelled = false;
-    void listClientSubscriptionsAction({
-      accountId,
-      clientId,
-      websiteId,
-    })
-      .then((data) => {
-        if (!cancelled) {
-          setRows(
-            data.filter(
-              (row) =>
-                row.status === 'active' ||
-                row.status === 'overdue' ||
-                row.status === 'cancelled' ||
-                row.status === 'incomplete' ||
-                row.status === 'pending',
-            ),
-          );
-          setLoaded(true);
-        }
+
+    function applyRows(data: ClientSubscriptionRecord[]) {
+      setRows(
+        data.filter(
+          (row) =>
+            row.status === 'active' ||
+            row.status === 'overdue' ||
+            row.status === 'cancelled' ||
+            row.status === 'incomplete' ||
+            row.status === 'pending',
+        ),
+      );
+      setLoaded(true);
+    }
+
+    function load() {
+      void listClientSubscriptionsAction({
+        accountId,
+        clientId,
+        websiteId,
       })
-      .catch(() => {
-        if (!cancelled) {
-          setRows([]);
-          setLoaded(true);
-        }
-      });
+        .then((data) => {
+          if (!cancelled) applyRows(data);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setRows([]);
+            setLoaded(true);
+          }
+        });
+    }
+
+    load();
+    window.addEventListener(CLIENT_SUBSCRIPTIONS_CHANGED_EVENT, load);
     return () => {
       cancelled = true;
+      window.removeEventListener(CLIENT_SUBSCRIPTIONS_CHANGED_EVENT, load);
     };
   }, [accountId, clientId, websiteId]);
 
@@ -131,10 +191,12 @@ export function ClientSubscriptionStatusList({
     <ul className="mt-3 space-y-2">
       {rows.map((sub) => {
         const showResend =
-          canEdit &&
-          (sub.status === 'overdue' ||
-            sub.status === 'incomplete' ||
-            sub.status === 'pending');
+          canEdit && canResendClientSubscriptionPaymentLink(sub);
+        const showActivateOffline =
+          canEdit && canActivateClientSubscriptionOffline(sub);
+        const billingLabel = clientSubscriptionBillingLabel(
+          sub.billingCollection,
+        );
 
         return (
           <li
@@ -148,15 +210,33 @@ export function ClientSubscriptionStatusList({
                 </p>
                 <SubscriptionStatusPill status={sub.status} />
               </div>
-              <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+              <p className={`mt-0.5 text-xs ${workspaceTextMuted}`}>
                 {formatMinorUnits(sub.monthlyAmount, sub.currency, 'month')}
+                {billingLabel ? ` · ${billingLabel}` : null}
               </p>
             </div>
-            {showResend ? (
-              <ResendPaymentLinkButton
-                accountId={accountId}
-                subscriptionId={sub.id}
-              />
+            {showResend || showActivateOffline ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {showActivateOffline ? (
+                  <ActivateOfflineButton
+                    accountId={accountId}
+                    subscriptionId={sub.id}
+                    onActivated={(updated) => {
+                      setRows((current) =>
+                        current.map((row) =>
+                          row.id === updated.id ? updated : row,
+                        ),
+                      );
+                    }}
+                  />
+                ) : null}
+                {showResend ? (
+                  <ResendPaymentLinkButton
+                    accountId={accountId}
+                    subscriptionId={sub.id}
+                  />
+                ) : null}
+              </div>
             ) : null}
           </li>
         );

@@ -33,9 +33,18 @@ export async function GET(request: Request) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- G2 columns pending typegen
       const { data: row } = await (admin as any)
         .from('client_subscriptions')
-        .select('id, account_id, stripe_checkout_session_id')
+        .select(
+          'id, account_id, stripe_checkout_session_id, billing_collection',
+        )
         .eq('id', subscriptionId)
         .maybeSingle();
+
+      if (row?.billing_collection === 'offline') {
+        return NextResponse.json(
+          { error: 'This plan is billed offline' },
+          { status: 400 },
+        );
+      }
 
       if (
         row?.stripe_checkout_session_id &&
@@ -73,9 +82,16 @@ export async function GET(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- G2 columns pending typegen
     const { data: row } = await (admin as any)
       .from('client_subscriptions')
-      .select('stripe_payment_link, account_id')
+      .select('stripe_payment_link, account_id, billing_collection')
       .eq('id', subscriptionId)
       .maybeSingle();
+
+    if (row?.billing_collection === 'offline') {
+      return NextResponse.json(
+        { error: 'This plan is billed offline' },
+        { status: 400 },
+      );
+    }
 
     if (row?.stripe_payment_link && row?.account_id) {
       return NextResponse.redirect(String(row.stripe_payment_link), {

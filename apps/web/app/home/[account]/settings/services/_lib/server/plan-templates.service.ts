@@ -8,11 +8,17 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type {
+  ClientSubscriptionBillingCollection,
   ClientSubscriptionRecord,
   PlanBillingInterval,
   PlanTemplateKind,
   PlanTemplateRecord,
   SubscriptionLineItemRecord,
+} from '~/lib/billing/plan-templates-types';
+import {
+  isOfflineBillingCollection,
+  nextBillingDateFromInterval,
+  parseBillingCollection,
 } from '~/lib/billing/plan-templates-types';
 import {
   getSiteOrigin,
@@ -70,6 +76,7 @@ function mapSubscription(
     monthlyAmount: Number(row.monthly_amount ?? 0),
     currency: String(row.currency ?? 'gbp').toLowerCase(),
     status: (row.status as ClientSubscriptionRecord['status']) ?? 'pending',
+    billingCollection: parseBillingCollection(row.billing_collection),
     stripeSubscriptionId: row.stripe_subscription_id
       ? String(row.stripe_subscription_id)
       : null,
@@ -481,25 +488,28 @@ class PlanTemplatesService {
   }
 
   /**
-   * Attach a plan → incomplete subscription + Checkout URL on the connected account.
+   * Attach a plan as Stripe Checkout (pending) or activate immediately (offline / invoiced).
    */
   async attachPlan(input: {
     accountId: string;
     planTemplateId: string;
     clientId: string;
     websiteId?: string | null;
+    collection?: ClientSubscriptionBillingCollection;
   }): Promise<{
     subscription: ClientSubscriptionRecord;
-    checkoutUrl: string;
+    checkoutUrl: string | null;
     lineItem: SubscriptionLineItemRecord;
   }> {
     await this.ensureMember(input.accountId);
 
-    const template = await this.ensureStripePrice(
-      input.accountId,
-      input.planTemplateId,
-    );
-    if (!template.stripePriceId) {
+    const collection = parseBillingCollection(input.collection);
+    const template =
+      collection === 'stripe'
+        ? await this.ensureStripePrice(input.accountId, input.planTemplateId)
+        : await this.getTemplate(input.accountId, input.planTemplateId);
+    if (!template) throw new Error('Plan template not found');
+    if (collection === 'stripe' && !template.stripePriceId) {
       throw new Error('Could not create Stripe price for this plan');
     }
 
@@ -512,19 +522,38 @@ class PlanTemplatesService {
     if (clientError) throw clientError;
     if (!clientRow) throw new Error('Client not found');
 
-    const recipient = await resolveClientRecipientEmail(
-      this.db,
-      input.clientId,
-      {
-        purpose: 'invoice',
-        fallbackEmail: (clientRow as { email?: string | null }).email,
-      },
-    );
-    const email = recipient.email?.trim() || '';
-    if (!email) {
-      throw new Error(
-        'Add a contact email (or client email) before creating a payment link',
+    let stripeCustomerId: string | null = null;
+    let connect: {
+      stripeAccountId: string;
+      applicationFeePercent: number;
+    } | null = null;
+
+    if (collection === 'stripe') {
+      const recipient = await resolveClientRecipientEmail(
+        this.db,
+        input.clientId,
+        {
+          purpose: 'invoice',
+          fallbackEmail: (clientRow as { email?: string | null }).email,
+        },
       );
+      const email = recipient.email?.trim() || '';
+      if (!email) {
+        throw new Error(
+          'Add a contact email (or client email) before creating a payment link',
+        );
+      }
+
+      connect = await this.resolveConnectAccount(input.accountId);
+      stripeCustomerId = await this.ensureConnectCustomer({
+        accountId: input.accountId,
+        clientId: input.clientId,
+        email,
+        name: String(
+          (clientRow as { display_name?: string }).display_name ?? '',
+        ),
+        stripeAccountId: connect.stripeAccountId,
+      });
     }
 
     let clientOrgId =
@@ -542,15 +571,6 @@ class PlanTemplatesService {
         clientOrgId = String(website.client_org_id);
       }
     }
-
-    const connect = await this.resolveConnectAccount(input.accountId);
-    const stripeCustomerId = await this.ensureConnectCustomer({
-      accountId: input.accountId,
-      clientId: input.clientId,
-      email,
-      name: String((clientRow as { display_name?: string }).display_name ?? ''),
-      stripeAccountId: connect.stripeAccountId,
-    });
 
     const businessId = await this.resolveBusinessId(input.accountId);
 
@@ -586,10 +606,21 @@ class PlanTemplatesService {
           subscription_kind: template.kind,
           monthly_amount: template.amount,
           currency: template.currency,
-          status: 'incomplete',
+          status: collection === 'offline' ? 'active' : 'incomplete',
+          billing_collection: collection,
           stripe_price_id: template.stripePriceId,
           stripe_customer_id: stripeCustomerId,
           stripe_customer_id_connect: stripeCustomerId,
+          ...(collection === 'offline'
+            ? {
+                started_at: new Date().toISOString(),
+                next_billing_date: nextBillingDateFromInterval(
+                  template.interval,
+                ),
+                stripe_payment_link: null,
+                stripe_checkout_session_id: null,
+              }
+            : {}),
         })
         .select('*')
         .single();
@@ -648,6 +679,43 @@ class PlanTemplatesService {
       lineRow = insertedLine as Record<string, unknown>;
     }
 
+    const line = lineRow as Record<string, unknown>;
+    const lineItem: SubscriptionLineItemRecord = {
+      id: String(line.id),
+      clientSubscriptionId: subscription.id,
+      accountId: input.accountId,
+      planTemplateId: template.id,
+      kind: template.kind,
+      description: template.name,
+      amount: template.amount,
+      currency: template.currency,
+      interval: template.interval,
+      stripePriceId: template.stripePriceId,
+    };
+
+    if (collection === 'offline') {
+      if (subscription.stripeSubscriptionId) {
+        throw new Error(
+          'This plan already has a Stripe subscription — cancel it before switching to offline billing',
+        );
+      }
+      const activated = await this.markSubscriptionOfflineActive({
+        accountId: input.accountId,
+        subscriptionId: subscription.id,
+        interval: template.interval,
+        checkoutSessionId: subscription.stripeCheckoutSessionId,
+      });
+      return {
+        subscription: activated,
+        checkoutUrl: null,
+        lineItem,
+      };
+    }
+
+    if (!connect || !stripeCustomerId || !template.stripePriceId) {
+      throw new Error('Could not create Stripe price for this plan');
+    }
+
     const origin = getSiteOrigin();
     const successUrl = `${origin}/api/client-subscriptions/checkout?subscriptionId=${encodeURIComponent(subscription.id)}&completed=1&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/api/client-subscriptions/checkout?subscriptionId=${encodeURIComponent(subscription.id)}&cancelled=1`;
@@ -693,30 +761,112 @@ class PlanTemplatesService {
         stripe_payment_link: session.url,
         stripe_checkout_session_id: session.id,
         status: 'incomplete',
+        billing_collection: 'stripe',
       })
       .eq('id', subscription.id)
       .select('*')
       .single();
     if (updateError) throw updateError;
 
-    const line = lineRow as Record<string, unknown>;
-
     return {
       subscription: mapSubscription(updated as Record<string, unknown>),
       checkoutUrl: session.url,
-      lineItem: {
-        id: String(line.id),
-        clientSubscriptionId: subscription.id,
-        accountId: input.accountId,
-        planTemplateId: template.id,
-        kind: template.kind,
-        description: template.name,
-        amount: template.amount,
-        currency: template.currency,
-        interval: template.interval,
-        stripePriceId: template.stripePriceId,
-      },
+      lineItem,
     };
+  }
+
+  /**
+   * Activate a pending/incomplete client plan without Stripe Checkout.
+   * Used for invoiced retainers (e.g. monthly agency invoice, no payment link).
+   */
+  async activateOffline(accountId: string, subscriptionId: string) {
+    await this.ensureMember(accountId);
+
+    const { data: row } = await this.db
+      .from('client_subscriptions')
+      .select('*')
+      .eq('id', subscriptionId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+    if (!row) throw new Error('Subscription not found');
+
+    const sub = mapSubscription(row as Record<string, unknown>);
+    if (sub.billingCollection === 'offline' && sub.status === 'active') {
+      return sub;
+    }
+
+    if (sub.stripeSubscriptionId) {
+      throw new Error(
+        'This plan already has a Stripe subscription — cancel it before switching to offline billing',
+      );
+    }
+
+    if (sub.status !== 'pending' && sub.status !== 'incomplete') {
+      throw new Error('Only pending plans can be activated offline');
+    }
+
+    const { data: line } = await this.db
+      .from('subscription_line_items')
+      .select('billing_interval')
+      .eq('client_subscription_id', subscriptionId)
+      .eq('account_id', accountId)
+      .limit(1)
+      .maybeSingle();
+
+    const interval =
+      (line?.billing_interval as PlanBillingInterval | undefined) ?? 'month';
+
+    return this.markSubscriptionOfflineActive({
+      accountId,
+      subscriptionId,
+      interval,
+      checkoutSessionId: sub.stripeCheckoutSessionId,
+    });
+  }
+
+  private async markSubscriptionOfflineActive(input: {
+    accountId: string;
+    subscriptionId: string;
+    interval: PlanBillingInterval;
+    checkoutSessionId: string | null;
+  }): Promise<ClientSubscriptionRecord> {
+    await this.expireCheckoutSessionIfPossible(
+      input.accountId,
+      input.checkoutSessionId,
+    );
+
+    const now = new Date();
+    const { data, error } = await this.db
+      .from('client_subscriptions')
+      .update({
+        status: 'active',
+        billing_collection: 'offline',
+        started_at: now.toISOString(),
+        next_billing_date: nextBillingDateFromInterval(input.interval, now),
+        stripe_payment_link: null,
+        stripe_checkout_session_id: null,
+      })
+      .eq('id', input.subscriptionId)
+      .eq('account_id', input.accountId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapSubscription(data as Record<string, unknown>);
+  }
+
+  private async expireCheckoutSessionIfPossible(
+    accountId: string,
+    checkoutSessionId: string | null,
+  ) {
+    if (!checkoutSessionId) return;
+    try {
+      const connect = await this.resolveConnectAccount(accountId);
+      await stripe().checkout.sessions.expire(checkoutSessionId, {
+        stripeAccount: connect.stripeAccountId,
+      });
+    } catch {
+      // Best-effort: webhook guards still ignore offline-activated rows.
+    }
   }
 
   async listSubscriptions(
@@ -796,6 +946,11 @@ class PlanTemplatesService {
     if (!row) throw new Error('Subscription not found');
 
     const sub = mapSubscription(row as Record<string, unknown>);
+    if (isOfflineBillingCollection(sub.billingCollection)) {
+      throw new Error(
+        'This plan is billed offline — there is no Stripe payment link',
+      );
+    }
     const connect = await this.resolveConnectAccount(accountId);
 
     // Past-due: prefer open Stripe invoice hosted page, else Billing Portal.
@@ -941,6 +1096,12 @@ class PlanTemplatesService {
 
     const sub = mapSubscription(row as Record<string, unknown>);
     if (!sub.accountId) throw new Error('Subscription missing account');
+    if (isOfflineBillingCollection(sub.billingCollection)) {
+      return {
+        activated: false as const,
+        reason: 'offline_billing' as const,
+      };
+    }
 
     const connect = await this.resolveConnectAccount(sub.accountId);
     const session = await stripe().checkout.sessions.retrieve(
@@ -997,6 +1158,7 @@ class PlanTemplatesService {
             ? session.customer
             : (session.customer?.id ?? sub.stripeCustomerId),
         status: 'active',
+        billing_collection: 'stripe',
         current_period_end: periodEnd,
         next_billing_date: periodEnd,
         started_at: new Date().toISOString(),

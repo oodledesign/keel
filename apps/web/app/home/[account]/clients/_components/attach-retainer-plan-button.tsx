@@ -25,11 +25,14 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { PlanBillingCollectionChoice } from '~/home/[account]/_components/plan-billing-collection-choice';
+import { notifyClientSubscriptionsChanged } from '~/home/[account]/_lib/client-subscriptions-events';
 import {
   attachRetainerPlanAction,
   listPlanTemplatesAction,
 } from '~/home/[account]/settings/services/_lib/server/plan-templates-actions';
 import {
+  type ClientSubscriptionBillingCollection,
   type PlanTemplateRecord,
   formatMinorUnits,
   planTemplateKindLabel,
@@ -51,6 +54,9 @@ export function AttachRetainerPlanButton({
   const [name, setName] = useState('Monthly retainer');
   const [amountPounds, setAmountPounds] = useState('150');
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [activatedOffline, setActivatedOffline] = useState(false);
+  const [collection, setCollection] =
+    useState<ClientSubscriptionBillingCollection>('stripe');
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -87,11 +93,20 @@ export function AttachRetainerPlanButton({
                 active: true,
               }
             : undefined,
+          collection,
         });
-        setCheckoutUrl(result.checkoutUrl);
-        toast.success(
-          'Retainer attached — send the payment link to your client',
-        );
+        notifyClientSubscriptionsChanged();
+        if (result.checkoutUrl) {
+          setCheckoutUrl(result.checkoutUrl);
+          toast.success(
+            'Retainer attached — send the payment link to your client',
+          );
+        } else {
+          setActivatedOffline(true);
+          toast.success(
+            'Retainer activated — billed offline (no Stripe collection)',
+          );
+        }
       } catch (error) {
         const message =
           error instanceof Error
@@ -108,7 +123,16 @@ export function AttachRetainerPlanButton({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setCheckoutUrl(null);
+          setActivatedOffline(false);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button type="button" size="sm" variant="outline">
           Add retainer
@@ -118,14 +142,21 @@ export function AttachRetainerPlanButton({
         <DialogHeader>
           <DialogTitle>Add retainer</DialogTitle>
           <DialogDescription>
-            Creates an incomplete subscription on your connected Stripe account
-            from any active Services plan (hosting, retainer, care plan, or
-            custom). To change amount later, cancel and create a new
-            subscription — no upgrades or prorations in this version.
+            Attach any active Services plan (hosting, retainer, care plan, or
+            custom). Collect via Stripe Checkout, or activate now if you invoice
+            the client outside Stripe. To change amount later, cancel and create
+            a new subscription — no upgrades or prorations in this version.
           </DialogDescription>
         </DialogHeader>
 
-        {checkoutUrl ? (
+        {activatedOffline ? (
+          <div className="space-y-2 text-sm text-[var(--workspace-shell-text)]">
+            <p>This retainer is Active and billed offline.</p>
+            <p className="text-[var(--workspace-shell-text-muted)]">
+              No Stripe collection — invoice the client as you usually do.
+            </p>
+          </div>
+        ) : checkoutUrl ? (
           <div className="space-y-3 text-sm">
             <p>Payment link ready for your client:</p>
             <Input readOnly value={checkoutUrl} />
@@ -210,16 +241,22 @@ export function AttachRetainerPlanButton({
                 </Select>
               </div>
             )}
+            <PlanBillingCollectionChoice
+              value={collection}
+              onChange={setCollection}
+            />
           </div>
         )}
 
-        {!checkoutUrl ? (
+        {!checkoutUrl && !activatedOffline ? (
           <DialogFooter>
             <Button type="button" disabled={pending} onClick={submit}>
               {pending ? (
                 <Loader2 className="mr-1 size-4 animate-spin" />
               ) : null}
-              Create payment link
+              {collection === 'offline'
+                ? 'Activate now'
+                : 'Create payment link'}
             </Button>
           </DialogFooter>
         ) : null}
