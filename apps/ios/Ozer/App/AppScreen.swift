@@ -68,23 +68,6 @@ enum AppScreen: Hashable {
         }
     }
 
-    var pin: FeatureStub? {
-        switch self {
-        case .home: nil
-        case .tasks: .tasks
-        case .taskReview: nil
-        case .notes: .notes
-        case .messages: .messages
-        case .people: .people
-        case .clients: nil
-        case .invoices: nil
-        case .meetings: nil
-        case .shopping: .shopping
-        case .recipes: nil
-        case .mealPlan: nil
-        }
-    }
-
     var title: String {
         switch self {
         case .home: "Home"
@@ -117,25 +100,5 @@ enum AppScreen: Hashable {
         case .recipes: "book"
         case .mealPlan: "calendar"
         }
-    }
-}
-
-enum PinSlot: Int, CaseIterable, Identifiable {
-    case tasks
-    case notes
-    case messages
-
-    var id: Int { rawValue }
-
-    var feature: FeatureStub {
-        switch self {
-        case .tasks: .tasks
-        case .notes: .notes
-        case .messages: .messages
-        }
-    }
-
-    var screen: AppScreen {
-        AppScreen(feature: feature)
     }
 }
