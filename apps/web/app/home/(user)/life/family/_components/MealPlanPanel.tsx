@@ -647,7 +647,7 @@ export function MealPlanPanel({
                               <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                                 {entry.title}
                               </p>
-                              {isLeftoversMeal(entry.title) ? (
+                              {isLeftoversMeal(entry.title) && !recipe ? (
                                 <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
                                   Leftovers — not added to shopping
                                 </p>

@@ -108,12 +108,16 @@ export function RecipePlanAssignDialog({
                 <li key={date}>
                   <button
                     type="button"
-                    disabled={isPending || alreadyThis}
-                    onClick={() => assign(date)}
+                    disabled={isPending}
+                    aria-disabled={alreadyThis}
+                    onClick={() => {
+                      if (alreadyThis) return;
+                      assign(date);
+                    }}
                     className={cn(
                       'flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-opacity hover:opacity-90',
                       alreadyThis
-                        ? 'border-[color:color-mix(in_srgb,var(--ozer-accent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--ozer-accent)_10%,transparent)]'
+                        ? 'pointer-events-none border-[color:color-mix(in_srgb,var(--ozer-accent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--ozer-accent)_10%,transparent)] opacity-60'
                         : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
                     )}
                   >
@@ -125,7 +129,7 @@ export function RecipePlanAssignDialog({
                         {entry?.title
                           ? alreadyThis
                             ? 'Already this recipe'
-                            : isLeftoversMeal(entry.title)
+                            : isLeftoversMeal(entry.title) && !entry.recipe_id
                               ? `Replace leftovers: ${entry.title}`
                               : `Replace ${entry.title}`
                           : 'Empty — add dinner'}
