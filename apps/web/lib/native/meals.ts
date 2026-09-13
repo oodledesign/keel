@@ -2,12 +2,15 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { createFamilyShoppingService } from '~/home/(user)/life/family/_lib/server/family-shopping.service';
-import { mondayWeekStart, weekDatesFrom } from '~/home/(user)/life/family/_lib/server/family-meal.dates';
-import type { MealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import {
-  findHouseholdDietaryConflicts,
+  mondayWeekStart,
+  weekDatesFrom,
+} from '~/home/(user)/life/family/_lib/server/family-meal.dates';
+import type { MealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
+import { createFamilyShoppingService } from '~/home/(user)/life/family/_lib/server/family-shopping.service';
+import {
   type DietaryPerson,
+  findHouseholdDietaryConflicts,
 } from '~/lib/meals/dietary-conflict';
 import { NativeHttpError } from '~/lib/native/http';
 import type { NativeWorkspace } from '~/lib/native/workspace-shared';
@@ -22,13 +25,21 @@ type LooseQuery = {
   lte: (col: string, val: unknown) => LooseQuery;
   order: (col: string, opts?: { ascending?: boolean }) => LooseQuery;
   limit: (count: number) => LooseQuery;
-  maybeSingle: () => Promise<{ data: unknown; error: { message: string } | null }>;
+  maybeSingle: () => Promise<{
+    data: unknown;
+    error: { message: string } | null;
+  }>;
   then: (
-    resolve: (value: { data: unknown; error: { message: string } | null }) => unknown,
+    resolve: (value: {
+      data: unknown;
+      error: { message: string } | null;
+    }) => unknown,
   ) => Promise<unknown>;
 };
 
-function loose(client: SupabaseClient): { from: (table: string) => LooseQuery } {
+function loose(client: SupabaseClient): {
+  from: (table: string) => LooseQuery;
+} {
   return client as unknown as { from: (table: string) => LooseQuery };
 }
 
@@ -72,9 +83,11 @@ export async function listNativeRecipes(
 ) {
   const db = loose(client);
   const { data, error } = (await applyScope(
-    db.from('family_recipes').select(
-      'id, name, description, image_url, meal_type, prep_minutes, cook_minutes, servings, is_favorite, diet_tags, tags, ingredients, updated_at',
-    ),
+    db
+      .from('family_recipes')
+      .select(
+        'id, name, description, image_url, meal_type, prep_minutes, cook_minutes, servings, is_favorite, diet_tags, tags, ingredients, updated_at',
+      ),
     scope,
   )
     .order('is_favorite', { ascending: false })
@@ -101,6 +114,7 @@ export async function listNativeRecipes(
       is_favorite: Boolean(row.is_favorite),
       diet_tags: asStringArray(row.diet_tags),
       tags: asStringArray(row.tags),
+      ingredients: asStringArray(row.ingredients),
       last_cooked_at: stats?.last_cooked_at ?? null,
       times_cooked: stats?.times_cooked ?? 0,
     };
@@ -208,7 +222,7 @@ export async function listNativeMealPlan(
             recipe: {
               name: recipe.name,
               diet_tags: recipe.diet_tags,
-              ingredients: [],
+              ingredients: recipe.ingredients,
               tags: recipe.tags,
             },
             people,

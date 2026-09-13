@@ -36,6 +36,7 @@ export function HouseholdSetupPanel({
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [name, setName] = useState('');
   const [pantryName, setPantryName] = useState('');
+  const [avoidDraft, setAvoidDraft] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
 
   function addMember() {
@@ -57,16 +58,20 @@ export function HouseholdSetupPanel({
     });
   }
 
-  function toggleMemberDiet(member: HouseholdMemberRow, tag: string) {
-    const dietaryTags = member.dietary_tags.includes(tag)
-      ? member.dietary_tags.filter((value) => value !== tag)
-      : [...member.dietary_tags, tag];
+  function saveMember(
+    member: HouseholdMemberRow,
+    patch: {
+      dietaryTags?: string[];
+      excludedIngredients?: string[];
+    },
+  ) {
     startTransition(async () => {
       const result = await upsertHouseholdMemberAction({
         id: member.id,
         displayName: member.display_name,
-        dietaryTags,
-        excludedIngredients: member.excluded_ingredients,
+        dietaryTags: patch.dietaryTags ?? member.dietary_tags,
+        excludedIngredients:
+          patch.excludedIngredients ?? member.excluded_ingredients,
         ...scopeFields,
       });
       if (!result.success) {
@@ -74,6 +79,27 @@ export function HouseholdSetupPanel({
         return;
       }
       onSaved();
+    });
+  }
+
+  function toggleMemberDiet(member: HouseholdMemberRow, tag: string) {
+    const dietaryTags = member.dietary_tags.includes(tag)
+      ? member.dietary_tags.filter((value) => value !== tag)
+      : [...member.dietary_tags, tag];
+    saveMember(member, { dietaryTags });
+  }
+
+  function saveAvoids(member: HouseholdMemberRow) {
+    const raw = avoidDraft[member.id] ?? member.excluded_ingredients.join(', ');
+    const excludedIngredients = raw
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    saveMember(member, { excludedIngredients });
+    setAvoidDraft((current) => {
+      const next = { ...current };
+      delete next[member.id];
+      return next;
     });
   }
 
@@ -165,6 +191,28 @@ export function HouseholdSetupPanel({
                   );
                 })}
               </div>
+              <Input
+                value={
+                  avoidDraft[member.id] ??
+                  member.excluded_ingredients.join(', ')
+                }
+                onChange={(event) =>
+                  setAvoidDraft((current) => ({
+                    ...current,
+                    [member.id]: event.target.value,
+                  }))
+                }
+                onBlur={() => saveAvoids(member)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    saveAvoids(member);
+                  }
+                }}
+                placeholder="Avoids: onion, peanuts"
+                className="mt-2 h-8 text-xs"
+                aria-label={`Ingredients ${member.display_name} avoids`}
+              />
             </div>
           ))}
         </div>

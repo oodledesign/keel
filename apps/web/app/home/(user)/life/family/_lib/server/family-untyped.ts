@@ -1,5 +1,10 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+type LooseFamilyResult = {
+  data: unknown;
+  error: { message: string } | null;
+};
+
 export type LooseFamilyQuery = {
   select: (columns?: string) => LooseFamilyQuery;
   insert: (values: unknown) => LooseFamilyQuery;
@@ -12,14 +17,12 @@ export type LooseFamilyQuery = {
     column: string,
     options?: { ascending?: boolean },
   ) => LooseFamilyQuery;
-  maybeSingle: () => Promise<{
-    data: unknown;
-    error: { message: string } | null;
-  }>;
-  single: () => Promise<{
-    data: unknown;
-    error: { message: string } | null;
-  }>;
+  maybeSingle: () => Promise<LooseFamilyResult>;
+  single: () => Promise<LooseFamilyResult>;
+  then: (
+    resolve: (value: LooseFamilyResult) => unknown,
+    reject?: (reason: unknown) => unknown,
+  ) => Promise<unknown>;
 };
 
 export function fromUntypedTable(table: string): LooseFamilyQuery {

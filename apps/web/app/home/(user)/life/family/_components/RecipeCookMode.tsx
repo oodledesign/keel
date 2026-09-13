@@ -4,7 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
-import { ArrowLeft, ChefHat, Minus, Pause, Play, Plus, Timer } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChefHat,
+  Minus,
+  Pause,
+  Play,
+  Plus,
+  Timer,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -16,7 +24,10 @@ import {
 } from '~/lib/meals/recipe-measurements';
 
 import { buildRecipeDetailPath } from '../_lib/family-meal.paths';
-import type { RecipeRow, RecipeStructure } from '../_lib/schema/family-meal.schema';
+import type {
+  RecipeRow,
+  RecipeStructure,
+} from '../_lib/schema/family-meal.schema';
 import { ACCENT, panelClass } from './meal-ui';
 
 type Props = {
@@ -37,7 +48,7 @@ export function RecipeCookMode({ recipe, structure, basePath }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
-  const [system] = useState<MeasurementSystem>('metric');
+  const system: MeasurementSystem = 'metric';
   const servingsScale = servings / defaultServings;
   const backHref = buildRecipeDetailPath(basePath, recipe.id);
 
@@ -89,7 +100,13 @@ export function RecipeCookMode({ recipe, structure, basePath }: Props) {
         includeAmount: true,
       }),
     }));
-  }, [structure.steps, recipe.instructions, ingredientsById, servingsScale, system]);
+  }, [
+    structure.steps,
+    recipe.instructions,
+    ingredientsById,
+    servingsScale,
+    system,
+  ]);
 
   const current = steps[stepIndex] ?? null;
 
@@ -109,16 +126,20 @@ export function RecipeCookMode({ recipe, structure, basePath }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!running || remaining == null) return;
-    if (remaining <= 0) {
-      setRunning(false);
-      return;
-    }
+    if (!running) return;
     const handle = window.setInterval(() => {
-      setRemaining((value) => (value == null ? value : Math.max(0, value - 1)));
+      setRemaining((value) => {
+        if (value == null || value <= 0) {
+          setRunning(false);
+          return 0;
+        }
+        const next = value - 1;
+        if (next <= 0) setRunning(false);
+        return next;
+      });
     }, 1000);
     return () => window.clearInterval(handle);
-  }, [running, remaining]);
+  }, [running]);
 
   function startTimer(seconds: number) {
     setRemaining(seconds);
@@ -137,7 +158,12 @@ export function RecipeCookMode({ recipe, structure, basePath }: Props) {
             system,
           }),
         )
-      : recipe.ingredients;
+      : servingsScale === 1
+        ? recipe.ingredients
+        : recipe.ingredients.map(
+            (line) =>
+              `${line} (×${servingsScale.toFixed(2).replace(/\.?0+$/, '')})`,
+          );
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col gap-6 px-4 py-6 text-[var(--workspace-shell-text)] md:px-2">

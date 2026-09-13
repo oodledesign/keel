@@ -286,6 +286,7 @@ GET /api/native/v1/recipes/{id}?workspace=<slug-or-uuid>
 
 GET /api/native/v1/meal-plan?workspace=<slug-or-uuid>&week=YYYY-MM-DD
 → { week_start, dates, members, entries: [{ id, plan_date, meal_type, title, recipe_id, cook_member_id, cook_member_name, is_batch_prep, leftover_source_entry_id, dietary_warnings }] }
+Dietary warnings use recipe diet tags plus ingredient text.
 
 GET /api/native/v1/shopping?workspace=<slug-or-uuid>&week=YYYY-MM-DD
 → { week_start, list: { id, skipped_meals, generated_at, items: [{ id, display_text, category, checked, in_pantry, excluded }] } | null }

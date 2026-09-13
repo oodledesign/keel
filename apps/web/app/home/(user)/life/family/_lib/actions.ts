@@ -4,9 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { z } from 'zod';
 
-import type { Database } from '@kit/supabase/database';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import type { Database } from '~/lib/database.types';
 import {
   fetchPublicRecipeImage,
   parseRecipeImageDataUrl,
@@ -110,7 +110,7 @@ async function persistMealPlanEntry(
   client: Client,
   scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
   values: Omit<MealPlanEntryValues, 'user_id' | 'account_id' | 'updated_at'>,
-) {
+): Promise<string> {
   const row: MealPlanEntryValues = {
     user_id: scope.userId,
     account_id: scope.kind === 'workspace' ? scope.accountId : null,
@@ -130,18 +130,23 @@ async function persistMealPlanEntry(
     if (readError) throw readError;
 
     if (existing) {
+      const entryId = (existing as { id: string }).id;
       const { error } = await client
         .from('family_meal_plan_entries')
         .update(row)
-        .eq('id', (existing as { id: string }).id);
+        .eq('id', entryId);
 
       if (error) throw error;
-      return;
+      return entryId;
     }
 
-    const { error } = await client.from('family_meal_plan_entries').insert(row);
+    const { data, error } = await client
+      .from('family_meal_plan_entries')
+      .insert(row)
+      .select('id')
+      .single();
     if (error) throw error;
-    return;
+    return (data as { id: string }).id;
   }
 
   const { data: existing, error: readError } = await client
@@ -156,24 +161,29 @@ async function persistMealPlanEntry(
   if (readError) throw readError;
 
   if (existing) {
+    const entryId = (existing as { id: string }).id;
     const { error } = await client
       .from('family_meal_plan_entries')
       .update(row)
-      .eq('id', (existing as { id: string }).id);
+      .eq('id', entryId);
 
     if (error) throw error;
-    return;
+    return entryId;
   }
 
-  const { error } = await client.from('family_meal_plan_entries').insert(row);
+  const { data, error } = await client
+    .from('family_meal_plan_entries')
+    .insert(row)
+    .select('id')
+    .single();
   if (error) throw error;
+  return (data as { id: string }).id;
 }
 
 async function persistMealPlanEntryExtras(
   scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
   extras: {
-    planDate: string;
-    mealType: string;
+    entryId: string;
     cookMemberId?: string | null;
     isBatchPrep?: boolean;
     leftoverSourceEntryId?: string | null;
@@ -194,9 +204,7 @@ async function persistMealPlanEntryExtras(
   const { error } = await applyMealPlanScope(
     fromUntypedTable('family_meal_plan_entries').update(patch),
     scope,
-  )
-    .eq('plan_date', extras.planDate)
-    .eq('meal_type', extras.mealType);
+  ).eq('id', extras.entryId);
 
   if (error) throw error;
 }
@@ -660,7 +668,7 @@ export async function setMealEntryAction(
     const client = getSupabaseServerClient();
     const scope = await resolveMealPlanScope(parsed.accountSlug);
 
-    await persistMealPlanEntry(client, scope, {
+    const entryId = await persistMealPlanEntry(client, scope, {
       plan_date: parsed.planDate,
       meal_type: parsed.mealType,
       title: parsed.title,
@@ -668,8 +676,7 @@ export async function setMealEntryAction(
       notes: parsed.notes ?? null,
     });
     await persistMealPlanEntryExtras(scope, {
-      planDate: parsed.planDate,
-      mealType: parsed.mealType,
+      entryId,
       cookMemberId: parsed.cookMemberId,
       isBatchPrep: parsed.isBatchPrep,
       leftoverSourceEntryId: parsed.leftoverSourceEntryId,

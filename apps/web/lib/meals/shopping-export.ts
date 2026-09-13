@@ -77,5 +77,5 @@ export function downloadTextFile(filename: string, contents: string) {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 150);
 }

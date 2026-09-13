@@ -120,11 +120,16 @@ struct RecipeCookView: View {
     let detail: NativeRecipeDetail
     @State private var servings: Int
     @State private var stepIndex = 0
+    @State private var remaining: Int?
+    @State private var running = false
 
     init(detail: NativeRecipeDetail) {
         self.detail = detail
         _servings = State(initialValue: max(1, detail.servings ?? 1))
     }
+
+    private var baseServings: Int { max(1, detail.servings ?? 1) }
+    private var scale: Double { Double(servings) / Double(baseServings) }
 
     private var steps: [NativeRecipeStep] {
         if !detail.steps.isEmpty { return detail.steps }
@@ -134,48 +139,121 @@ struct RecipeCookView: View {
         return []
     }
 
+    private var currentStep: NativeRecipeStep? { steps[safe: stepIndex] }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Text("Servings")
-                    .foregroundStyle(OzerPalette.plumMuted)
-                Spacer()
-                Button { servings = max(1, servings - 1) } label: {
-                    Image(systemName: "minus")
-                }
-                Text("\(servings)")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(OzerPalette.plum)
-                    .frame(minWidth: 28)
-                Button { servings = min(50, servings + 1) } label: {
-                    Image(systemName: "plus")
-                }
-            }
-            if let step = steps[safe: stepIndex] {
-                Text("Step \(stepIndex + 1) of \(steps.count)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(OzerPalette.plumMuted)
-                Text(step.content)
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(OzerPalette.plum)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    Button("Previous") { stepIndex = max(0, stepIndex - 1) }
-                        .disabled(stepIndex == 0)
+                    Text("Servings")
+                        .foregroundStyle(OzerPalette.plumMuted)
                     Spacer()
-                    Button("Next") { stepIndex = min(steps.count - 1, stepIndex + 1) }
-                        .disabled(stepIndex >= steps.count - 1)
+                    Button { servings = max(1, servings - 1) } label: {
+                        Image(systemName: "minus")
+                    }
+                    Text("\(servings)")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(OzerPalette.plum)
+                        .frame(minWidth: 28)
+                    Button { servings = min(50, servings + 1) } label: {
+                        Image(systemName: "plus")
+                    }
                 }
-            } else {
-                Text("This recipe has no method yet.")
-                    .foregroundStyle(OzerPalette.plumMuted)
+
+                if !scaledIngredients.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Ingredients")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OzerPalette.plumMuted)
+                        ForEach(scaledIngredients, id: \.self) { line in
+                            Text(line)
+                                .font(.body)
+                                .foregroundStyle(OzerPalette.plum)
+                        }
+                    }
+                }
+
+                if let step = currentStep {
+                    Text("Step \(stepIndex + 1) of \(steps.count)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OzerPalette.plumMuted)
+                    Text(step.title.isEmpty ? "Method" : step.title)
+                        .font(.headline)
+                        .foregroundStyle(OzerPalette.plum)
+                    Text(step.content)
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(OzerPalette.plum)
+
+                    if let timer = step.timerSeconds, timer > 0 {
+                        HStack(spacing: 12) {
+                            Text(formatTimer(remaining ?? timer))
+                                .font(.title.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(OzerPalette.plum)
+                            Button(running ? "Pause" : "Start timer") {
+                                if remaining == nil { remaining = timer }
+                                running.toggle()
+                            }
+                            if remaining != nil {
+                                Button("Reset") {
+                                    running = false
+                                    remaining = timer
+                                }
+                            }
+                        }
+                    }
+
+                    HStack {
+                        Button("Previous") { moveStep(to: stepIndex - 1) }
+                            .disabled(stepIndex == 0)
+                        Spacer()
+                        Button("Next") { moveStep(to: stepIndex + 1) }
+                            .disabled(stepIndex >= steps.count - 1)
+                    }
+                } else {
+                    Text("This recipe has no method yet.")
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
             }
-            Spacer()
+            .padding(20)
         }
-        .padding(20)
         .background(OzerPalette.cream.ignoresSafeArea())
         .navigationTitle("Cook")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            guard running, let value = remaining, value > 0 else { return }
+            let next = value - 1
+            remaining = next
+            if next == 0 { running = false }
+        }
+    }
+
+    private var scaledIngredients: [String] {
+        if !detail.structuredIngredients.isEmpty {
+            return detail.structuredIngredients.map { ingredient in
+                if let amount = ingredient.amount {
+                    let scaled = amount * scale
+                    let amountText = scaled == floor(scaled)
+                        ? String(Int(scaled))
+                        : String(format: "%g", (scaled * 100).rounded() / 100)
+                    let unit = ingredient.unit?.isEmpty == false ? " \(ingredient.unit!)" : ""
+                    return "\(amountText)\(unit) \(ingredient.name)"
+                }
+                return ingredient.originalText
+            }
+        }
+        return detail.ingredients
+    }
+
+    private func moveStep(to index: Int) {
+        stepIndex = min(max(0, index), max(0, steps.count - 1))
+        running = false
+        remaining = currentStep?.timerSeconds
+    }
+
+    private func formatTimer(_ total: Int) -> String {
+        String(format: "%d:%02d", total / 60, total % 60)
     }
 }
 

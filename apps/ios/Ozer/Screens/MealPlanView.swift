@@ -19,28 +19,46 @@ struct MealPlanView: View {
                         .padding()
                 } else if let payload, !payload.dates.isEmpty {
                     List(payload.dates, id: \.self) { date in
-                        let entry = payload.entries.first { $0.planDate == date && $0.mealType == "dinner" }
-                        VStack(alignment: .leading, spacing: 6) {
+                        let dayEntries = payload.entries
+                            .filter { $0.planDate == date }
+                            .sorted { Self.mealOrder($0.mealType) < Self.mealOrder($1.mealType) }
+                        VStack(alignment: .leading, spacing: 8) {
                             Text(Self.weekdayLabel(date))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(OzerPalette.plumMuted)
-                            Text(entry?.title.isEmpty == false ? entry!.title : "No dinner planned")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(OzerPalette.plum)
-                            if let cook = entry?.cookMemberName, !cook.isEmpty {
-                                Text("Cook: \(cook)")
-                                    .font(.caption)
+                            if dayEntries.isEmpty {
+                                Text("Nothing planned")
+                                    .font(.body)
                                     .foregroundStyle(OzerPalette.plumMuted)
-                            }
-                            if entry?.isBatchPrep == true {
-                                Text("Batch prep")
-                                    .font(.caption)
-                                    .foregroundStyle(OzerPalette.info)
-                            }
-                            if let warning = entry?.dietaryWarnings.first {
-                                Text(warning)
-                                    .font(.caption)
-                                    .foregroundStyle(OzerPalette.coral)
+                            } else {
+                                ForEach(dayEntries) { entry in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(Self.mealLabel(entry.mealType))
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(OzerPalette.plumMuted)
+                                        Text(entry.title.isEmpty ? "Untitled" : entry.title)
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(OzerPalette.plum)
+                                        HStack(spacing: 8) {
+                                            if let cook = entry.cookMemberName, !cook.isEmpty {
+                                                Text(cook)
+                                            }
+                                            if entry.isBatchPrep {
+                                                Text("Batch")
+                                            }
+                                            if entry.leftoverSourceEntryId != nil {
+                                                Text("Leftovers")
+                                            }
+                                        }
+                                        .font(.caption)
+                                        .foregroundStyle(OzerPalette.plumMuted)
+                                        if let warning = entry.dietaryWarnings.first {
+                                            Text(warning)
+                                                .font(.caption)
+                                                .foregroundStyle(OzerPalette.coral)
+                                        }
+                                    }
+                                }
                             }
                         }
                         .padding(.vertical, 4)
@@ -81,6 +99,20 @@ struct MealPlanView: View {
         } catch {
             loadError = .transport(error.localizedDescription)
         }
+    }
+
+    private static func mealOrder(_ type: String) -> Int {
+        switch type {
+        case "breakfast": return 0
+        case "lunch": return 1
+        case "dinner": return 2
+        case "snack": return 3
+        default: return 9
+        }
+    }
+
+    private static func mealLabel(_ type: String) -> String {
+        type.replacingOccurrences(of: "_", with: " ").capitalized
     }
 
     private static func weekdayLabel(_ ymd: String) -> String {

@@ -47,6 +47,7 @@ export type RecipeFormDraft = {
   ingredients: string[];
   instructions: string | null;
   tags: string[];
+  diet_tags?: string[];
   meal_type: RecipeMealType;
   prep_minutes: number | null;
   cook_minutes: number | null;
@@ -71,8 +72,6 @@ type Props = {
   onSaved: () => void;
 };
 
-const suggestedTags = [...priorityChoices, ...dietaryChoices];
-
 function toForm(recipe: RecipeRow | null, draft?: RecipeFormDraft | null) {
   const source = recipe ?? draft ?? null;
   const candidates = draft?.image_candidates ?? [];
@@ -82,6 +81,7 @@ function toForm(recipe: RecipeRow | null, draft?: RecipeFormDraft | null) {
     ingredients: (source?.ingredients ?? []).join('\n'),
     instructions: source?.instructions ?? '',
     tags: source?.tags ?? [],
+    diet_tags: recipe?.diet_tags ?? draft?.diet_tags ?? [],
     meal_type: (source?.meal_type ?? 'dinner') as RecipeMealType,
     prep_minutes: source?.prep_minutes?.toString() ?? '',
     cook_minutes: source?.cook_minutes?.toString() ?? '',
@@ -171,6 +171,15 @@ function RecipeForm({
   const coverInputRef = useRef<HTMLInputElement>(null);
   const isImportReview = !recipe && Boolean(draft);
 
+  function toggleDietTag(tag: string) {
+    setForm((f) => ({
+      ...f,
+      diet_tags: f.diet_tags.includes(tag)
+        ? f.diet_tags.filter((value) => value !== tag)
+        : [...f.diet_tags, tag],
+    }));
+  }
+
   function toggleTag(tag: string) {
     setForm((f) => ({
       ...f,
@@ -240,6 +249,7 @@ function RecipeForm({
         .filter(Boolean),
       instructions: form.instructions.trim() || null,
       tags: form.tags,
+      diet_tags: form.diet_tags,
       meal_type: form.meal_type,
       prep_minutes: toNum(form.prep_minutes),
       cook_minutes: toNum(form.cook_minutes),
@@ -459,29 +469,63 @@ function RecipeForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Tags</Label>
+          <Label>Dietary tags</Label>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Used to filter the library and warn on meal-plan conflicts.
+          </p>
           <div className="flex flex-wrap gap-1.5">
-            {Array.from(new Set([...suggestedTags, ...form.tags])).map(
+            {Array.from(new Set([...dietaryChoices, ...form.diet_tags])).map(
               (tag) => {
-                const active = form.tags.includes(tag);
+                const active = form.diet_tags.includes(tag);
                 return (
                   <button
                     key={tag}
                     type="button"
-                    onClick={() => toggleTag(tag)}
+                    onClick={() => toggleDietTag(tag)}
                     className={cn(
                       'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
                       active
-                        ? 'border-transparent text-[var(--workspace-shell-text)]'
+                        ? 'border-transparent bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
                         : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                     )}
-                    style={active ? { backgroundColor: ACCENT } : undefined}
                   >
                     {tag}
                   </button>
                 );
               },
             )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tags</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from(
+              new Set([
+                ...priorityChoices,
+                ...form.tags.filter(
+                  (tag) => !(dietaryChoices as readonly string[]).includes(tag),
+                ),
+              ]),
+            ).map((tag) => {
+              const active = form.tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                    active
+                      ? 'border-transparent text-[var(--workspace-shell-text)]'
+                      : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                  )}
+                  style={active ? { backgroundColor: ACCENT } : undefined}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
           <div className="flex gap-2">
             <Input

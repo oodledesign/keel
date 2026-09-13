@@ -200,7 +200,9 @@ export const loadFamilyMealData = cache(
     );
     const members = ((membersResult.data ?? []) as HouseholdMemberRow[]) ?? [];
     const pantry = ((pantryResult.data ?? []) as PantryItemRow[]) ?? [];
-    const cookStats = await loadRecipeCookStats(recipes.map((recipe) => recipe.id));
+    const cookStats = await loadRecipeCookStats(
+      recipes.map((recipe) => recipe.id),
+    );
 
     if (membersResult.error) {
       console.error('[family-meal] load members:', membersResult.error.message);
@@ -264,7 +266,8 @@ async function attachBookRecipes(
   }
 
   const idsByBook = new Map<string, string[]>();
-  for (const item of data ?? []) {
+  const items = Array.isArray(data) ? data : [];
+  for (const item of items) {
     const row = item as unknown as {
       book_id: string;
       recipe_id: string;
@@ -503,10 +506,7 @@ async function loadRecipeCookStats(
       last_cooked_at: cookedAt,
     };
     current.times_cooked += 1;
-    if (
-      !current.last_cooked_at ||
-      cookedAt > current.last_cooked_at
-    ) {
+    if (!current.last_cooked_at || cookedAt > current.last_cooked_at) {
       current.last_cooked_at = cookedAt;
     }
     stats.set(recipeId, current);
