@@ -40,9 +40,17 @@ let package = Package(
                 "NativeFinanceModels.swift",
             ]
         ),
+        .target(
+            name: "OzerWorkspace",
+            path: "../Ozer",
+            sources: [
+                "App/AppScreen.swift",
+                "Workspace/WorkspaceNavigation.swift",
+            ]
+        ),
         .executableTarget(
             name: "OzerSpeechTests",
-            dependencies: ["OzerSpeech", "OzerNotes", "OzerMeetings", "OzerFinance"],
+            dependencies: ["OzerSpeech", "OzerNotes", "OzerMeetings", "OzerFinance", "OzerWorkspace"],
             path: "Sources"
         ),
     ]

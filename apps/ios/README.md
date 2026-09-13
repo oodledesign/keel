@@ -289,11 +289,25 @@ New chat searches teammates, contacts, clients, and projects. A new-message APNs
 
 ## Menu
 
-Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; Meetings on surveyor / studio / commercial spaces; People, Recipes, and Meal plan on personal / family; Clients and Invoices on business profiles; Shopping is a real list (tick items from this week’s meal-plan list). Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
+Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links follow the selected space’s profile (same idea as the web sidebar, mapped onto screens that exist on iOS):
+
+- **Personal / family:** Home, Tasks, Review, Notes, Messages, People, Recipes, Meal plan, Shopping
+- **Studio (`work_design`):** Home, Tasks, Review, Notes, Messages, Meetings, Clients, Invoices
+- **Property / commercial / surveyor:** same business core, plus Clients and Invoices; Meetings on those capture spaces
+- **Community:** Home, Tasks, Review, Notes, Messages — no shopping, meals, people, or clients
+
+Shopping, recipes, and meal plan never appear on studio, commercial, or surveyor. Switching workspace updates the links, leaves the menu open, and if the current screen is not in the new menu the shell falls back to Home.
 
 ## Tab bar
 
-Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, Messages. People, Recipes, and Meal plan stay in the Menu on personal / family spaces. Shopping is a real native list (tick items against `/api/native/v1/shopping`).
+Matches the web PWA: **Home | 3 pin slots | Menu**. Pins follow the open workspace:
+
+- Personal: Tasks, People, Shopping
+- Family: Tasks, Shopping, Meal plan
+- Studio: Tasks, Notes, Messages
+- Property / commercial: Tasks, Notes, Clients
+- Surveyor: Tasks, Notes, Meetings
+- Community / unknown: Tasks, Notes, Messages
 
 Out of scope: PowerSync, camera, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
 

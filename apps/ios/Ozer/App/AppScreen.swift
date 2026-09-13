@@ -1,5 +1,43 @@
 import Foundation
 
+enum FeatureStub: String, Hashable, CaseIterable {
+    case tasks
+    case notes
+    case messages
+    case people
+    case shopping
+
+    var title: String {
+        switch self {
+        case .tasks: "Tasks"
+        case .notes: "Notes"
+        case .messages: "Messages"
+        case .people: "People"
+        case .shopping: "Shopping"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .tasks: "checkmark.square"
+        case .notes: "note.text"
+        case .messages: "bubble.left.and.bubble.right"
+        case .people: "person.2"
+        case .shopping: "cart"
+        }
+    }
+
+    var blurb: String {
+        switch self {
+        case .tasks: "Your lists will live here. This screen is navigation only for now."
+        case .notes: "Notes stay on the web for the moment. This is a placeholder."
+        case .messages: "Chats with teammates and clients will land here."
+        case .people: "Friends, family, and catch-ups will land here."
+        case .shopping: "Household shopping will open from this tab later."
+        }
+    }
+}
+
 enum AppScreen: Hashable {
     case home
     case tasks
@@ -9,15 +47,15 @@ enum AppScreen: Hashable {
     case messages
     case people
     case clients
-    /// Menu only — not one of the three tab-bar pin slots.
+    /// Menu only — not a default tab-bar pin.
     case invoices
-    /// Menu only — not one of the three tab-bar pin slots.
+    /// Menu on business spaces; surveyor tab-bar pin.
     case meetings
-    /// Menu only — not one of the three tab-bar pin slots.
+    /// Personal / family shopping list. Family also pins it.
     case shopping
     /// Menu only — personal / family meal library.
     case recipes
-    /// Menu only — week meal plan.
+    /// Personal / family week meal plan. Family also pins it.
     case mealPlan
 
     init(feature: FeatureStub) {

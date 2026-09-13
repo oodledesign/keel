@@ -57,6 +57,10 @@ struct MainTabView: View {
                 session.clearPendingScreen()
             }
         }
+        .onChange(of: session.workspaceContentKey) { _, _ in
+            let allowed = session.selectedWorkspace?.menuScreens ?? WorkspaceNavigation.fallbackMenu
+            screen = WorkspaceNavigation.resolvedScreen(screen, allowed: allowed)
+        }
         .task {
             await PushRegistration.registerIfNeeded(session: session)
         }
@@ -84,21 +88,26 @@ struct MainTabView: View {
 }
 
 struct OzerTabBar: View {
+    @Environment(AppSession.self) private var session
     @Binding var screen: AppScreen
     @Binding var menuOpen: Bool
+
+    private var pins: [AppScreen] {
+        session.selectedWorkspace?.tabPins ?? WorkspaceNavigation.fallbackPins
+    }
 
     var body: some View {
         HStack(spacing: 2) {
             tabButton(systemImage: "house", label: "Home", selected: screen == .home) {
                 screen = .home
             }
-            ForEach(PinSlot.allCases) { pin in
+            ForEach(pins, id: \.self) { pin in
                 tabButton(
-                    systemImage: pin.feature.symbol,
-                    label: pin.feature.title,
-                    selected: screen == pin.screen
+                    systemImage: pin.symbol,
+                    label: pin.title,
+                    selected: screen == pin
                 ) {
-                    screen = pin.screen
+                    screen = pin
                 }
             }
             tabButton(systemImage: "line.3.horizontal", label: "Menu", selected: false) {

@@ -1,43 +1,5 @@
 import SwiftUI
 
-enum FeatureStub: String, Hashable, CaseIterable {
-    case tasks
-    case notes
-    case messages
-    case people
-    case shopping
-
-    var title: String {
-        switch self {
-        case .tasks: "Tasks"
-        case .notes: "Notes"
-        case .messages: "Messages"
-        case .people: "People"
-        case .shopping: "Shopping"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .tasks: "checkmark.square"
-        case .notes: "note.text"
-        case .messages: "bubble.left.and.bubble.right"
-        case .people: "person.2"
-        case .shopping: "cart"
-        }
-    }
-
-    var blurb: String {
-        switch self {
-        case .tasks: "Your lists will live here. This screen is navigation only for now."
-        case .notes: "Notes stay on the web for the moment. This is a placeholder."
-        case .messages: "Chats with teammates and clients will land here."
-        case .people: "Friends, family, and catch-ups will land here."
-        case .shopping: "Household shopping will open from this tab later."
-        }
-    }
-}
-
 struct StubFeatureView: View {
     let feature: FeatureStub
 
