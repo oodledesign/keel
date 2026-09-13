@@ -298,13 +298,16 @@ export async function loadPublicRecipeBookByToken(
     ((recipeRows ?? []) as RecipeShareRow[]).map((row) => [row.id, row]),
   );
 
-  const recipes: PublicRecipeView[] = [];
-  for (const recipeId of orderedIds) {
-    const row = byId.get(recipeId);
-    if (!row) continue;
-    const structure = await loadRecipeStructure(admin, row.id);
-    recipes.push(toPublicRecipeView(row, structure));
-  }
+  const recipes = (
+    await Promise.all(
+      orderedIds.map(async (recipeId) => {
+        const row = byId.get(recipeId);
+        if (!row) return null;
+        const structure = await loadRecipeStructure(admin, row.id);
+        return toPublicRecipeView(row, structure);
+      }),
+    )
+  ).filter((recipe): recipe is PublicRecipeView => recipe != null);
 
   return {
     id: bookRow.id,

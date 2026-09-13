@@ -10,6 +10,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS ix_family_recipes_public_share_token
   ON public.family_recipes (public_share_token)
   WHERE public_share_token IS NOT NULL;
 
+ALTER TABLE public.family_recipes
+  DROP CONSTRAINT IF EXISTS family_recipes_share_token_len;
+ALTER TABLE public.family_recipes
+  ADD CONSTRAINT family_recipes_share_token_len
+    CHECK (
+      public_share_token IS NULL OR char_length(public_share_token) >= 16
+    );
+
 COMMENT ON COLUMN public.family_recipes.public_share_enabled IS
   'When true, the recipe is viewable at /share/recipe/[public_share_token] without signing in.';
 
@@ -47,6 +55,14 @@ CREATE INDEX IF NOT EXISTS ix_family_recipe_books_account_id
 CREATE UNIQUE INDEX IF NOT EXISTS ix_family_recipe_books_public_share_token
   ON public.family_recipe_books (public_share_token)
   WHERE public_share_token IS NOT NULL;
+
+ALTER TABLE public.family_recipe_books
+  DROP CONSTRAINT IF EXISTS family_recipe_books_share_token_len;
+ALTER TABLE public.family_recipe_books
+  ADD CONSTRAINT family_recipe_books_share_token_len
+    CHECK (
+      public_share_token IS NULL OR char_length(public_share_token) >= 16
+    );
 
 COMMENT ON TABLE public.family_recipe_books IS
   'Curated recipe collections. Personal when account_id is null; workspace-shared otherwise.';

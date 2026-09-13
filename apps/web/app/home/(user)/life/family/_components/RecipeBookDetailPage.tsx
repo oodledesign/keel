@@ -109,7 +109,7 @@ export function RecipeBookDetailPage({
 
       <RecipeSharePanel
         title="Public link"
-        description="Share a read-only page with this recipe book."
+        description="Share a read-only page with every recipe in this book. Recipes that are not individually shared stay off standalone links, but their content is visible here."
         enabled={book.public_share_enabled}
         token={book.public_share_token}
         buildUrl={buildPublicRecipeBookShareUrl}
