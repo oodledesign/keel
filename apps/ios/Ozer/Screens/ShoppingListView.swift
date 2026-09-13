@@ -118,8 +118,8 @@ struct ShoppingListView: View {
     }
 
     private func toggle(_ item: NativeShoppingItem) async {
-        guard let token = session.accessToken else { return }
         do {
+            let token = try await session.validAccessToken()
             _ = try await client.toggleShoppingItem(
                 id: item.id,
                 checked: !item.checked,
@@ -127,28 +127,36 @@ struct ShoppingListView: View {
                 accessToken: token
             )
             await load()
+        } catch is CancellationError {
+            return
         } catch let error as NativeAPIError {
+            if error == .unauthorized { await session.handleUnauthorized() }
             loadError = error
         } catch {
+            if error.isTaskCancellation { return }
             loadError = .transport(error.localizedDescription)
         }
     }
 
     private func load() async {
-        guard let token = session.accessToken, !session.workspaceQueryValue.isEmpty else { return }
+        guard !session.workspaceQueryValue.isEmpty else { return }
         isLoading = true
         defer { isLoading = false }
         do {
+            let token = try await session.validAccessToken()
             payload = try await client.shopping(
                 workspace: session.workspaceQueryValue,
                 week: nil,
                 accessToken: token
             )
             loadError = nil
+        } catch is CancellationError {
+            return
         } catch let error as NativeAPIError {
-            if error == .unauthorized { await session.signOut() }
+            if error == .unauthorized { await session.handleUnauthorized() }
             loadError = error
         } catch {
+            if error.isTaskCancellation { return }
             loadError = .transport(error.localizedDescription)
         }
     }
