@@ -216,6 +216,47 @@ actor NativeAPIClient {
         }
     }
 
+    func projects(
+        workspace: String,
+        status: String? = nil,
+        accessToken: String
+    ) async throws -> ProjectsPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let status, !status.isEmpty {
+            query.append(URLQueryItem(name: "status", value: status))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/projects",
+            queryItems: query,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return ProjectsPayload.empty
+        }
+        do {
+            return try JSONDecoder().decode(ProjectsPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func project(id: String, workspace: String, accessToken: String) async throws -> ProjectItem {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/projects/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(ProjectItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func client(id: String, workspace: String, accessToken: String) async throws -> ClientItem {
         let data = try await send(
             method: "GET",

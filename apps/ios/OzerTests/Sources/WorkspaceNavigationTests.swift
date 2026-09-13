@@ -7,6 +7,7 @@ enum WorkspaceNavigationTests {
             let screens = WorkspaceNavigation.menuScreens(profile: "personal", isPersonal: true)
             containsAll(screens, [.home, .tasks, .taskReview, .notes, .people, .recipes, .mealPlan, .shopping])
                 && !screens.contains(.clients)
+                && !screens.contains(.projects)
                 && !screens.contains(.invoices)
                 && !screens.contains(.meetings)
         }
@@ -15,13 +16,14 @@ enum WorkspaceNavigationTests {
             let screens = WorkspaceNavigation.menuScreens(profile: "family", isPersonal: false)
             containsAll(screens, [.home, .tasks, .mealPlan, .shopping, .people, .recipes, .notes])
                 && !screens.contains(.clients)
+                && !screens.contains(.projects)
                 && !screens.contains(.invoices)
                 && !screens.contains(.meetings)
         }
 
         check("studio menu hides shopping meals and people") {
             let screens = WorkspaceNavigation.menuScreens(profile: "work_design", isPersonal: false)
-            containsAll(screens, [.home, .tasks, .notes, .messages, .meetings, .clients, .invoices])
+            containsAll(screens, [.home, .tasks, .notes, .messages, .meetings, .projects, .clients, .invoices])
                 && !screens.contains(.shopping)
                 && !screens.contains(.recipes)
                 && !screens.contains(.mealPlan)
@@ -33,7 +35,7 @@ enum WorkspaceNavigationTests {
                 profile: "commercial_property",
                 isPersonal: false
             )
-            containsAll(screens, [.home, .tasks, .notes, .clients, .invoices, .meetings])
+            containsAll(screens, [.home, .tasks, .notes, .projects, .clients, .invoices, .meetings])
                 && !screens.contains(.shopping)
                 && !screens.contains(.recipes)
                 && !screens.contains(.mealPlan)
@@ -45,7 +47,7 @@ enum WorkspaceNavigationTests {
                 profile: "building_surveyor",
                 isPersonal: false
             )
-            containsAll(screens, [.home, .tasks, .notes, .meetings, .clients])
+            containsAll(screens, [.home, .tasks, .notes, .meetings, .projects, .clients])
                 && !screens.contains(.shopping)
                 && !screens.contains(.recipes)
                 && !screens.contains(.mealPlan)
@@ -56,6 +58,7 @@ enum WorkspaceNavigationTests {
             containsAll(screens, [.home, .tasks, .notes, .messages])
                 && !screens.contains(.shopping)
                 && !screens.contains(.clients)
+                && !screens.contains(.projects)
                 && !screens.contains(.invoices)
                 && !screens.contains(.meetings)
                 && !screens.contains(.people)
@@ -122,6 +125,7 @@ enum WorkspaceNavigationTests {
             let studio = WorkspaceNavigation.menuScreens(profile: "work_design", isPersonal: false)
             WorkspaceNavigation.resolvedScreen(.shopping, allowed: studio) == .home
                 && WorkspaceNavigation.resolvedScreen(.clients, allowed: studio) == .clients
+                && WorkspaceNavigation.resolvedScreen(.projects, allowed: studio) == .projects
                 && WorkspaceNavigation.resolvedScreen(
                     .invoices,
                     allowed: WorkspaceNavigation.menuScreens(profile: "personal", isPersonal: true)

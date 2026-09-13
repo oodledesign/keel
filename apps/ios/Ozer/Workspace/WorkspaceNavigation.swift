@@ -70,6 +70,9 @@ enum WorkspaceNavigation {
             }
         }
 
+        /// Delivery projects on the same business-like spaces as Clients.
+        var showsProjects: Bool { showsClients }
+
         /// Invoices / finances on the same business-like spaces as Clients.
         var showsInvoices: Bool { showsClients }
 
@@ -106,6 +109,9 @@ enum WorkspaceNavigation {
         if kind.showsMeals {
             screens.append(.recipes)
             screens.append(.mealPlan)
+        }
+        if kind.showsProjects {
+            screens.append(.projects)
         }
         if kind.showsClients {
             screens.append(.clients)

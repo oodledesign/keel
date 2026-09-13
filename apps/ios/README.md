@@ -267,6 +267,17 @@ GET {OZER_API_BASE}/api/native/v1/clients/{id}?workspace=<slug-or-uuid>
 
 Detail adds `contacts: [{ id, name, role, email, phone, is_primary }]`, scoped to that client and workspace. Email and phone are tappable (`mailto:` / `tel:`). Personal and family still return an empty list (not 403); a missing client is 404.
 
+## Projects
+
+Studio / surveyor / commercial property (`work_design`, `commercial_property`, `building_surveyor`) get a **Projects** item in the Menu. Personal and family do not. Delivery projects only — not campaign boards.
+
+```
+GET {OZER_API_BASE}/api/native/v1/projects?workspace=<slug-or-uuid>&status=open|done|all
+GET {OZER_API_BASE}/api/native/v1/projects/{id}?workspace=<slug-or-uuid>
+```
+
+The hub has **List** and **Board** (status columns, same slugs as web). Open a project for header (status, client, dates, value, progress) plus **List / Timeline / Board**. Phased projects get the web **Phase / Progress** switcher on the board. List groups tasks by phase; timeline shows phase dates then dated tasks; progress board is To do / In progress / Review / Done. Tap a task to edit it in the existing editor, or tick it complete. No create-project wizard, invoice tools, or portal publishing.
+
 ## Messages
 
 WhatsApp-style inbox of threads the signed-in user participates in. Same participant-only `chat_threads` as the web Messages page.
@@ -292,8 +303,8 @@ New chat searches teammates, contacts, clients, and projects. A new-message APNs
 Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links follow the selected space’s profile (same idea as the web sidebar, mapped onto screens that exist on iOS):
 
 - **Personal / family:** Home, Tasks, Review, Notes, Messages, People, Recipes, Meal plan, Shopping
-- **Studio (`work_design`):** Home, Tasks, Review, Notes, Messages, Meetings, Clients, Invoices
-- **Property / commercial / surveyor:** same business core, plus Clients and Invoices; Meetings on those capture spaces
+- **Studio (`work_design`):** Home, Tasks, Review, Notes, Messages, Meetings, Projects, Clients, Invoices
+- **Property / commercial / surveyor:** same business core, plus Projects, Clients and Invoices; Meetings on those capture spaces
 - **Community:** Home, Tasks, Review, Notes, Messages — no shopping, meals, people, or clients
 
 Shopping, recipes, and meal plan never appear on studio, commercial, or surveyor. Switching workspace updates the links, leaves the menu open, and if the current screen is not in the new menu the shell falls back to Home.
