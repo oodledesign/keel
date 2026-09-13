@@ -28,20 +28,30 @@ import {
   toggleRecipeFavoriteAction,
 } from '../_lib/actions';
 import { buildRecipeDetailPath } from '../_lib/family-meal.paths';
+import { recipeMatchesDietaryFilter } from '~/lib/meals/dietary-conflict';
+
 import type {
+  MealEntryRow,
   MealPreferencesRow,
+  RecipeCookStats,
   RecipeRow,
 } from '../_lib/schema/family-meal.schema';
 import { RecipeBadges } from './RecipeBadges';
 import { RecipeDialog, type RecipeFormDraft } from './RecipeDialog';
 import { RecipeGenerateDialog } from './RecipeGenerateDialog';
 import { RecipeImportDialog } from './RecipeImportDialog';
+import { RecipePlanAssignDialog } from './RecipePlanAssignDialog';
 import { RecipeSourceLink } from './RecipeSourceLink';
 import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
+
+type LibraryFilter = 'all' | 'favorites' | 'cook-again';
 
 type Props = {
   recipes: RecipeRow[];
   preferences: MealPreferencesRow;
+  cookStats?: RecipeCookStats[];
+  weekDates?: string[];
+  weekEntries?: MealEntryRow[];
   basePath: string;
   accountSlug?: string;
   onChanged: () => void;
@@ -51,6 +61,9 @@ type Props = {
 export function RecipeLibrary({
   recipes,
   preferences,
+  cookStats = [],
+  weekDates,
+  weekEntries,
   basePath,
   accountSlug,
   onChanged,
@@ -59,6 +72,12 @@ export function RecipeLibrary({
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all');
+  const [dietFilter, setDietFilter] = useState<string | null>(null);
+  const statsById = useMemo(
+    () => new Map(cookStats.map((row) => [row.recipe_id, row])),
+    [cookStats],
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -76,6 +95,14 @@ export function RecipeLibrary({
     return Array.from(set).sort();
   }, [recipes]);
 
+  const dietOptions = useMemo(() => {
+    const set = new Set<string>(preferences.dietary_requirements);
+    for (const recipe of recipes) {
+      for (const tag of recipe.diet_tags) set.add(tag);
+    }
+    return Array.from(set).sort();
+  }, [preferences.dietary_requirements, recipes]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return recipes.filter((r) => {
@@ -85,9 +112,25 @@ export function RecipeLibrary({
         (r.description ?? '').toLowerCase().includes(q) ||
         r.ingredients.some((i) => i.toLowerCase().includes(q));
       const matchesTag = !activeTag || r.tags.includes(activeTag);
-      return matchesQuery && matchesTag;
+      const matchesLibrary =
+        libraryFilter === 'all' ||
+        (libraryFilter === 'favorites' && r.is_favorite) ||
+        (libraryFilter === 'cook-again' &&
+          (statsById.get(r.id)?.times_cooked ?? 0) > 0);
+      const matchesDiet =
+        !dietFilter ||
+        recipeMatchesDietaryFilter(
+          {
+            name: r.name,
+            diet_tags: r.diet_tags,
+            ingredients: r.ingredients,
+            tags: r.tags,
+          },
+          [dietFilter],
+        );
+      return matchesQuery && matchesTag && matchesLibrary && matchesDiet;
     });
-  }, [recipes, query, activeTag]);
+  }, [recipes, query, activeTag, libraryFilter, dietFilter, statsById]);
 
   function openNew() {
     setEditing(null);
@@ -197,6 +240,53 @@ export function RecipeLibrary({
         </p>
       ) : null}
 
+      <div className="flex flex-wrap gap-1.5">
+        {(
+          [
+            ['all', 'All'],
+            ['favorites', 'Favourites'],
+            ['cook-again', 'Cook again'],
+          ] as const
+        ).map(([id, label]) => {
+          const active = libraryFilter === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setLibraryFilter(id)}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                active
+                  ? 'border-transparent text-[var(--workspace-shell-text)]'
+                  : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              )}
+              style={active ? { backgroundColor: ACCENT } : undefined}
+            >
+              {label}
+            </button>
+          );
+        })}
+        {dietOptions.map((tag) => {
+          const active = dietFilter === tag;
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setDietFilter(active ? null : tag)}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                active
+                  ? 'border-transparent text-[var(--workspace-shell-text)]'
+                  : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              )}
+              style={active ? { backgroundColor: ACCENT } : undefined}
+            >
+              {tag}
+            </button>
+          );
+        })}
+      </div>
+
       {allTags.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           <button
@@ -210,7 +300,7 @@ export function RecipeLibrary({
             )}
             style={!activeTag ? { backgroundColor: ACCENT } : undefined}
           >
-            All
+            Tags
           </button>
           {allTags.map((tag) => {
             const active = activeTag === tag;
@@ -250,6 +340,7 @@ export function RecipeLibrary({
               recipe.prep_minutes,
               recipe.cook_minutes,
             );
+            const stats = statsById.get(recipe.id);
             return (
               <div
                 key={recipe.id}
@@ -335,6 +426,14 @@ export function RecipeLibrary({
                           {recipe.servings}
                         </span>
                       ) : null}
+                      {stats?.times_cooked ? (
+                        <span>
+                          Cooked {stats.times_cooked}×
+                          {stats.last_cooked_at
+                            ? ` · last ${new Date(stats.last_cooked_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                            : ''}
+                        </span>
+                      ) : null}
                     </div>
 
                     <RecipeBadges
@@ -355,7 +454,14 @@ export function RecipeLibrary({
                     </div>
                   ) : null}
 
-                  <div className="mt-4 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+                    <RecipePlanAssignDialog
+                      recipe={recipe}
+                      weekDates={weekDates}
+                      weekEntries={weekEntries}
+                      accountSlug={accountSlug}
+                      planHref={basePath}
+                    />
                     <Button
                       variant="ghost"
                       size="sm"

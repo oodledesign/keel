@@ -105,6 +105,21 @@ export function RecipeBookDetailPage({
             {book.description}
           </p>
         ) : null}
+        {book.last_edited_name || book.updated_at ? (
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Last edited
+            {book.last_edited_name ? ` by ${book.last_edited_name}` : ''}
+            {book.updated_at
+              ? ` · ${new Date(book.updated_at).toLocaleString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}`
+              : ''}
+            . Refresh to see another household member&apos;s changes.
+          </p>
+        ) : null}
       </header>
 
       <RecipeSharePanel

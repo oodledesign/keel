@@ -28,9 +28,14 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { findHouseholdDietaryConflicts } from '~/lib/meals/dietary-conflict';
+import { suggestLeftoverDates } from '~/lib/meals/leftover-plan';
+
 import { clearMealEntryAction, setMealEntryAction } from '../_lib/actions';
+import { applyLeftoversAction } from '../_lib/leftover-actions';
 import { buildShoppingPath } from '../_lib/family-meal.paths';
 import type {
+  HouseholdMemberRow,
   MealEntryRow,
   MealPlanView,
   MealPreferencesRow,
@@ -59,6 +64,7 @@ type Props = {
   entries: MealEntryRow[];
   recipes: RecipeRow[];
   preferences: MealPreferencesRow;
+  members?: HouseholdMemberRow[];
   basePath: string;
   accountSlug?: string;
   hasShoppingListForWeek?: boolean;
@@ -96,6 +102,7 @@ export function MealPlanPanel({
   entries,
   recipes,
   preferences,
+  members = [],
   basePath,
   accountSlug,
   hasShoppingListForWeek = false,
@@ -207,6 +214,40 @@ export function MealPlanPanel({
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleApplyLeftovers(date: string) {
+    const occupied = planDates.filter((day) =>
+      Boolean(entriesByDate.get(day)?.title?.trim()),
+    );
+    const targetDates = suggestLeftoverDates({
+      sourceDate: date,
+      weekDates: planDates,
+      occupiedDates: occupied,
+      count: 2,
+    });
+    if (targetDates.length === 0) {
+      toast.info('No empty days left this week for leftovers');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const result = await applyLeftoversAction({
+        sourceDate: date,
+        mealType: 'dinner',
+        targetDates,
+        ...scopeFields,
+      });
+      if (!result.success) throw new Error(result.error);
+      toast.success(`Leftovers added to ${targetDates.length} day(s)`);
+      onChanged();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not add leftovers',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -647,7 +688,13 @@ export function MealPlanPanel({
                               <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                                 {entry.title}
                               </p>
-                              {isLeftoversMeal(entry.title) && !recipe ? (
+                              {entry.is_batch_prep ? (
+                                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                                  Batch prep
+                                </p>
+                              ) : null}
+                              {isLeftoversMeal(entry.title) ||
+                              entry.leftover_source_entry_id ? (
                                 <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
                                   Leftovers — not added to shopping
                                 </p>
@@ -682,6 +729,58 @@ export function MealPlanPanel({
                         </div>
                       </button>
                     )}
+                    {!isEditing && entry?.title ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {entry.cook_member_id ? (
+                          <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                            Cook:{' '}
+                            {members.find(
+                              (member) => member.id === entry.cook_member_id,
+                            )?.display_name ?? 'Assigned'}
+                          </span>
+                        ) : null}
+                        {recipe
+                          ? findHouseholdDietaryConflicts({
+                              recipe: {
+                                name: recipe.name,
+                                diet_tags: recipe.diet_tags,
+                                ingredients: recipe.ingredients,
+                                tags: recipe.tags,
+                              },
+                              people: members.map((member) => ({
+                                name: member.display_name,
+                                dietary_tags: member.dietary_tags,
+                                excluded_ingredients:
+                                  member.excluded_ingredients,
+                              })),
+                              householdDietaryTags:
+                                preferences.dietary_requirements,
+                              householdDislikes:
+                                preferences.disliked_ingredients,
+                            })
+                              .slice(0, 1)
+                              .map((warning) => (
+                                <span
+                                  key={warning.message}
+                                  className="text-[11px] text-amber-300"
+                                >
+                                  {warning.message}
+                                </span>
+                              ))
+                          : null}
+                        {entry.is_batch_prep ||
+                        (!entry.leftover_source_entry_id &&
+                          !isLeftoversMeal(entry.title)) ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleApplyLeftovers(date)}
+                            className="text-[11px] font-medium text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:underline"
+                          >
+                            Use leftovers later
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
 
                   {!isEditing && entry?.title ? (
@@ -710,6 +809,9 @@ export function MealPlanPanel({
         date={editingDate}
         entry={editingDate ? (entriesByDate.get(editingDate) ?? null) : null}
         recipes={recipes}
+        members={members}
+        preferences={preferences}
+        weekEntries={entries}
         accountSlug={accountSlug}
         onSaved={onChanged}
       />

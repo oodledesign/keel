@@ -51,6 +51,7 @@ import {
   revalidateMealPlanPaths,
   revalidateRecipePaths,
 } from './server/family-meal.scope';
+import { applyMealPlanScope, fromUntypedTable } from './server/family-untyped';
 
 type Client = SupabaseClient<Database>;
 
@@ -165,6 +166,38 @@ async function persistMealPlanEntry(
   }
 
   const { error } = await client.from('family_meal_plan_entries').insert(row);
+  if (error) throw error;
+}
+
+async function persistMealPlanEntryExtras(
+  scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
+  extras: {
+    planDate: string;
+    mealType: string;
+    cookMemberId?: string | null;
+    isBatchPrep?: boolean;
+    leftoverSourceEntryId?: string | null;
+  },
+) {
+  const patch: Record<string, unknown> = {};
+  if (extras.cookMemberId !== undefined) {
+    patch.cook_member_id = extras.cookMemberId ?? null;
+  }
+  if (extras.isBatchPrep !== undefined) {
+    patch.is_batch_prep = extras.isBatchPrep;
+  }
+  if (extras.leftoverSourceEntryId !== undefined) {
+    patch.leftover_source_entry_id = extras.leftoverSourceEntryId ?? null;
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await applyMealPlanScope(
+    fromUntypedTable('family_meal_plan_entries').update(patch),
+    scope,
+  )
+    .eq('plan_date', extras.planDate)
+    .eq('meal_type', extras.mealType);
+
   if (error) throw error;
 }
 
@@ -633,6 +666,13 @@ export async function setMealEntryAction(
       title: parsed.title,
       recipe_id: parsed.recipeId ?? null,
       notes: parsed.notes ?? null,
+    });
+    await persistMealPlanEntryExtras(scope, {
+      planDate: parsed.planDate,
+      mealType: parsed.mealType,
+      cookMemberId: parsed.cookMemberId,
+      isBatchPrep: parsed.isBatchPrep,
+      leftoverSourceEntryId: parsed.leftoverSourceEntryId,
     });
     revalidateMealPlanPaths(scope);
     return ok(undefined);

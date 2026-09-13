@@ -5,7 +5,15 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { ArrowLeft, Clock, Pencil, Star, Trash2, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChefHat,
+  Clock,
+  Pencil,
+  Star,
+  Trash2,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -18,7 +26,10 @@ import {
   retryRecipeNutritionAction,
   toggleRecipeFavoriteAction,
 } from '../_lib/actions';
-import { buildRecipesListPath } from '../_lib/family-meal.paths';
+import {
+  buildRecipeCookPath,
+  buildRecipesListPath,
+} from '../_lib/family-meal.paths';
 import {
   rotateRecipeShareTokenAction,
   setRecipePublicShareAction,
@@ -138,6 +149,12 @@ export function RecipeDetailPage({
         </Link>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8" asChild>
+            <Link href={buildRecipeCookPath(basePath, recipe.id)}>
+              <ChefHat className="mr-1.5 h-3.5 w-3.5" />
+              Cook
+            </Link>
+          </Button>
           <RecipePlanAssignDialog
             recipe={recipe}
             weekDates={weekDates}

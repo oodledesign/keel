@@ -12,6 +12,7 @@ import {
   revalidateMealPlanPaths,
   revalidateRecipeBookPaths,
 } from './server/family-meal.scope';
+import { currentEditorDisplayName } from './household-actions';
 import { applyMealPlanScope, fromUntypedTable } from './server/family-untyped';
 
 type ActionResult<T = undefined> =
@@ -98,11 +99,14 @@ export async function upsertRecipeBookAction(
     const parsed = RecipeBookInputSchema.parse(input);
     const scope = await resolveMealPlanScope(parsed.accountSlug);
     const now = new Date().toISOString();
+    const editorName = await currentEditorDisplayName();
     const values = {
       user_id: scope.userId,
       account_id: scope.kind === 'workspace' ? scope.accountId : null,
       name: parsed.name,
       description: parsed.description ?? null,
+      last_edited_by: scope.userId,
+      last_edited_name: editorName,
       updated_at: now,
     };
 

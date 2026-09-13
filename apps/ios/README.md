@@ -289,11 +289,11 @@ New chat searches teammates, contacts, clients, and projects. A new-message APNs
 
 ## Menu
 
-Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; Meetings on surveyor / studio / commercial spaces; People on personal / family; Clients and Invoices on business profiles; Shopping stays a stub. Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
+Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links under the picker follow the selected space: Home, Tasks, Notes always; Meetings on surveyor / studio / commercial spaces; People, Recipes, and Meal plan on personal / family; Clients and Invoices on business profiles; Shopping is a real list (tick items from this week’s meal-plan list). Sign out and the email footer stay at the bottom. Switching workspace updates the links and leaves the menu open.
 
 ## Tab bar
 
-Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, Messages. People stays in the Menu on personal / family spaces. Shopping is in the Menu and is still a navigation stub.
+Matches the web PWA: **Home | 3 pin slots | Menu**. Pins default to Tasks, Notes, Messages. People, Recipes, and Meal plan stay in the Menu on personal / family spaces. Shopping is a real native list (tick items against `/api/native/v1/shopping`).
 
 Out of scope: PowerSync, camera, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
 

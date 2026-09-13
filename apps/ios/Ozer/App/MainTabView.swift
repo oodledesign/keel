@@ -28,7 +28,11 @@ struct MainTabView: View {
             case .meetings:
                 MeetingsListView()
             case .shopping:
-                StubFeatureView(feature: .shopping)
+                ShoppingListView()
+            case .recipes:
+                RecipesListView()
+            case .mealPlan:
+                MealPlanView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

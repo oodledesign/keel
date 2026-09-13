@@ -2,6 +2,10 @@ export function buildRecipeDetailPath(basePath: string, recipeId: string) {
   return `${basePath}/recipes/${recipeId}`;
 }
 
+export function buildRecipeCookPath(basePath: string, recipeId: string) {
+  return `${basePath}/recipes/${recipeId}/cook`;
+}
+
 export function buildRecipesListPath(basePath: string) {
   return `${basePath}?tab=recipes`;
 }

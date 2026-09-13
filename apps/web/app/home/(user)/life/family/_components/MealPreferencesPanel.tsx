@@ -12,7 +12,12 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import { saveMealPreferencesAction } from '../_lib/actions';
-import type { MealPreferencesRow } from '../_lib/schema/family-meal.schema';
+import type {
+  HouseholdMemberRow,
+  MealPreferencesRow,
+  PantryItemRow,
+} from '../_lib/schema/family-meal.schema';
+import { HouseholdSetupPanel } from './HouseholdSetupPanel';
 import {
   ACCENT,
   dietaryChoices,
@@ -23,6 +28,8 @@ import {
 
 type Props = {
   preferences: MealPreferencesRow;
+  members?: HouseholdMemberRow[];
+  pantry?: PantryItemRow[];
   accountSlug?: string;
   onSaved: () => void;
 };
@@ -36,7 +43,13 @@ export function MealPreferencesPanel(props: Props) {
   );
 }
 
-function MealPreferencesForm({ preferences, accountSlug, onSaved }: Props) {
+function MealPreferencesForm({
+  preferences,
+  members = [],
+  pantry = [],
+  accountSlug,
+  onSaved,
+}: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [dietary, setDietary] = useState<string[]>(
     preferences.dietary_requirements,
@@ -180,6 +193,13 @@ function MealPreferencesForm({ preferences, accountSlug, onSaved }: Props) {
           })}
         </div>
       </div>
+
+      <HouseholdSetupPanel
+        members={members}
+        pantry={pantry}
+        accountSlug={accountSlug}
+        onSaved={onSaved}
+      />
 
       <div className={cn(panelClass, 'p-5')}>
         <div className="flex items-center justify-between">

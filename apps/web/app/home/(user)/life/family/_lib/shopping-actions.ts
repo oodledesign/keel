@@ -7,8 +7,12 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   type AddShoppingItemInput,
   AddShoppingItemSchema,
+  type ExcludeShoppingItemInput,
+  ExcludeShoppingItemSchema,
   type GenerateShoppingListInput,
   GenerateShoppingListSchema,
+  type MarkShoppingItemPantryInput,
+  MarkShoppingItemPantrySchema,
   type ShoppingListItemRow,
   type ShoppingListWithItems,
   type ToggleShoppingItemInput,
@@ -89,6 +93,44 @@ export async function toggleShoppingItemAction(
     await service.toggleItem(scope, parsed.itemId, parsed.checked);
     revalidateShoppingPaths(scope);
     return ok(undefined);
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return fail(err);
+  }
+}
+
+export async function markShoppingItemPantryAction(
+  input: MarkShoppingItemPantryInput,
+): Promise<ActionResult<{ item: ShoppingListItemRow }>> {
+  try {
+    const parsed = MarkShoppingItemPantrySchema.parse(input);
+    const client = getSupabaseServerClient();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
+    const service = createFamilyShoppingService(client);
+    const item = await service.updateItemFlags(scope, parsed.itemId, {
+      in_pantry: parsed.inPantry,
+    });
+    revalidateShoppingPaths(scope);
+    return ok({ item });
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    return fail(err);
+  }
+}
+
+export async function excludeShoppingItemAction(
+  input: ExcludeShoppingItemInput,
+): Promise<ActionResult<{ item: ShoppingListItemRow }>> {
+  try {
+    const parsed = ExcludeShoppingItemSchema.parse(input);
+    const client = getSupabaseServerClient();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
+    const service = createFamilyShoppingService(client);
+    const item = await service.updateItemFlags(scope, parsed.itemId, {
+      excluded: parsed.excluded,
+    });
+    revalidateShoppingPaths(scope);
+    return ok({ item });
   } catch (err) {
     if (isRedirectError(err)) throw err;
     return fail(err);

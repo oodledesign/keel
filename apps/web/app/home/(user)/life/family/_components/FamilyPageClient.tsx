@@ -169,6 +169,7 @@ export function FamilyPageClient({
             entries={initialData.entries}
             recipes={initialData.recipes}
             preferences={initialData.preferences}
+            members={initialData.members}
             basePath={initialData.basePath}
             accountSlug={initialData.accountSlug}
             hasShoppingListForWeek={initialData.hasShoppingListForWeek}
@@ -198,6 +199,9 @@ export function FamilyPageClient({
         <RecipeLibrary
           recipes={initialData.recipes}
           preferences={initialData.preferences}
+          cookStats={initialData.cookStats}
+          weekDates={initialData.weekDates}
+          weekEntries={initialData.entries}
           basePath={initialData.basePath}
           accountSlug={initialData.accountSlug}
           onChanged={refresh}
@@ -226,6 +230,8 @@ export function FamilyPageClient({
       {tab === 'preferences' ? (
         <MealPreferencesPanel
           preferences={initialData.preferences}
+          members={initialData.members}
+          pantry={initialData.pantry}
           accountSlug={initialData.accountSlug}
           onSaved={refresh}
         />

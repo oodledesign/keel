@@ -182,7 +182,13 @@ struct HomeTodayView: View {
                         onOpen(.people)
                     }
                 }
-                if workspace?.isPersonalAccount == true || workspace?.profile == "family" {
+                if workspace?.showsMeals == true {
+                    actionChip("Recipes", symbol: "book") {
+                        onOpen(.recipes)
+                    }
+                    actionChip("Meal plan", symbol: "calendar") {
+                        onOpen(.mealPlan)
+                    }
                     actionChip("Shopping", symbol: "cart") {
                         onOpen(.shopping)
                     }

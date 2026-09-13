@@ -6,12 +6,15 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type {
   FamilyMealData,
+  HouseholdMemberRow,
   MealEntryRow,
   MealPlanView,
   MealPreferencesRow,
+  PantryItemRow,
   RecipeBookRow,
   RecipeBookWithRecipes,
   RecipeCookLogRow,
+  RecipeCookStats,
   RecipeIngredientRow,
   RecipePopularityStats,
   RecipeRow,
@@ -84,7 +87,26 @@ function mapBookRow(row: RecipeBookRow): RecipeBookRow {
     ...row,
     public_share_enabled: Boolean(row.public_share_enabled),
     public_share_token: row.public_share_token ?? null,
+    last_edited_by: row.last_edited_by ?? null,
+    last_edited_name: row.last_edited_name ?? null,
   };
+}
+
+function mapMealEntry(row: MealEntryRow): MealEntryRow {
+  return {
+    ...row,
+    cook_member_id: row.cook_member_id ?? null,
+    is_batch_prep: Boolean(row.is_batch_prep),
+    leftover_source_entry_id: row.leftover_source_entry_id ?? null,
+  };
+}
+
+function scopedUntyped(table: string, scope: MealPlanScope) {
+  const base = fromUntypedTable(table).select('*');
+  if (scope.kind === 'workspace') {
+    return base.eq('account_id', scope.accountId);
+  }
+  return base.eq('user_id', scope.userId).is('account_id', null);
 }
 
 function preferencesQuery(scope: MealPlanScope) {
@@ -141,6 +163,8 @@ export const loadFamilyMealData = cache(
       preferencesResult,
       entriesResult,
       shoppingList,
+      membersResult,
+      pantryResult,
     ] = await Promise.all([
       recipesQuery(scope)
         .order('is_favorite', { ascending: false })
@@ -149,6 +173,12 @@ export const loadFamilyMealData = cache(
       preferencesQuery(scope).maybeSingle(),
       entriesQuery(scope, rangeStart, rangeEnd),
       shoppingService.findListForWeek(scope, weekStart).catch(() => null),
+      scopedUntyped('family_household_members', scope).order('sort_order', {
+        ascending: true,
+      }),
+      scopedUntyped('family_pantry_items', scope).order('name', {
+        ascending: true,
+      }),
     ]);
 
     if (booksResult.error) {
@@ -165,12 +195,27 @@ export const loadFamilyMealData = cache(
     const preferences =
       (preferencesResult.data as MealPreferencesRow | null) ??
       defaultPreferences(scope.userId, accountId);
-    const entries = (entriesResult.data ?? []) as MealEntryRow[];
+    const entries = ((entriesResult.data ?? []) as MealEntryRow[]).map(
+      mapMealEntry,
+    );
+    const members = ((membersResult.data ?? []) as HouseholdMemberRow[]) ?? [];
+    const pantry = ((pantryResult.data ?? []) as PantryItemRow[]) ?? [];
+    const cookStats = await loadRecipeCookStats(recipes.map((recipe) => recipe.id));
+
+    if (membersResult.error) {
+      console.error('[family-meal] load members:', membersResult.error.message);
+    }
+    if (pantryResult.error) {
+      console.error('[family-meal] load pantry:', pantryResult.error.message);
+    }
 
     return {
       recipes,
       books,
       preferences,
+      members,
+      pantry,
+      cookStats,
       accountSlug: scope.kind === 'workspace' ? scope.accountSlug : undefined,
       basePath: scope.basePath,
       view,
@@ -429,3 +474,43 @@ export const loadFamilyRecipeStructure = cache(
     return { ingredients, steps };
   },
 );
+
+async function loadRecipeCookStats(
+  recipeIds: string[],
+): Promise<RecipeCookStats[]> {
+  if (recipeIds.length === 0) return [];
+
+  const client = getSupabaseServerClient();
+  const { data, error } = await client
+    .from('family_recipe_logs')
+    .select('recipe_id, cooked_at')
+    .in('recipe_id', recipeIds)
+    .order('cooked_at', { ascending: false })
+    .limit(400);
+
+  if (error) {
+    console.error('[family-meal] loadRecipeCookStats:', error.message);
+    return [];
+  }
+
+  const stats = new Map<string, RecipeCookStats>();
+  for (const row of data ?? []) {
+    const recipeId = String((row as { recipe_id: string }).recipe_id);
+    const cookedAt = String((row as { cooked_at: string }).cooked_at);
+    const current = stats.get(recipeId) ?? {
+      recipe_id: recipeId,
+      times_cooked: 0,
+      last_cooked_at: cookedAt,
+    };
+    current.times_cooked += 1;
+    if (
+      !current.last_cooked_at ||
+      cookedAt > current.last_cooked_at
+    ) {
+      current.last_cooked_at = cookedAt;
+    }
+    stats.set(recipeId, current);
+  }
+
+  return [...stats.values()];
+}
