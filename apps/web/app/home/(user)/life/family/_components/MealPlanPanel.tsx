@@ -28,9 +28,14 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { findHouseholdDietaryConflicts } from '~/lib/meals/dietary-conflict';
+import { suggestLeftoverDates } from '~/lib/meals/leftover-plan';
+
 import { clearMealEntryAction, setMealEntryAction } from '../_lib/actions';
+import { applyLeftoversAction } from '../_lib/leftover-actions';
 import { buildShoppingPath } from '../_lib/family-meal.paths';
 import type {
+  HouseholdMemberRow,
   MealEntryRow,
   MealPlanView,
   MealPreferencesRow,
@@ -48,7 +53,7 @@ import {
 import { generateShoppingListAction } from '../_lib/shopping-actions';
 import { MealDayEditDialog } from './MealDayEditDialog';
 import { MealPlanGenerateDialog } from './MealPlanGenerateDialog';
-import { ACCENT, panelClass, titleCase } from './meal-ui';
+import { ACCENT, isLeftoversMeal, panelClass, titleCase } from './meal-ui';
 
 type Props = {
   view: MealPlanView;
@@ -59,10 +64,13 @@ type Props = {
   entries: MealEntryRow[];
   recipes: RecipeRow[];
   preferences: MealPreferencesRow;
+  members?: HouseholdMemberRow[];
   basePath: string;
   accountSlug?: string;
   hasShoppingListForWeek?: boolean;
   onChanged: () => void;
+  onOpenRecipes?: () => void;
+  onOpenPreferences?: () => void;
 };
 
 const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -94,10 +102,13 @@ export function MealPlanPanel({
   entries,
   recipes,
   preferences,
+  members = [],
   basePath,
   accountSlug,
   hasShoppingListForWeek = false,
   onChanged,
+  onOpenRecipes,
+  onOpenPreferences,
 }: Props) {
   const router = useRouter();
   const scopeFields = accountSlug ? { accountSlug } : {};
@@ -208,6 +219,40 @@ export function MealPlanPanel({
     }
   }
 
+  async function handleApplyLeftovers(date: string) {
+    const occupied = planDates.filter((day) =>
+      Boolean(entriesByDate.get(day)?.title?.trim()),
+    );
+    const targetDates = suggestLeftoverDates({
+      sourceDate: date,
+      weekDates: planDates,
+      occupiedDates: occupied,
+      count: 2,
+    });
+    if (targetDates.length === 0) {
+      toast.info('No empty days left this week for leftovers');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const result = await applyLeftoversAction({
+        sourceDate: date,
+        mealType: 'dinner',
+        targetDates,
+        ...scopeFields,
+      });
+      if (!result.success) throw new Error(result.error);
+      toast.success(`Leftovers added to ${targetDates.length} day(s)`);
+      onChanged();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not add leftovers',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function handleClear(date: string) {
     setIsSaving(true);
     try {
@@ -276,9 +321,13 @@ export function MealPlanPanel({
     }
   }
 
+  function openShoppingList() {
+    router.push(buildShoppingPath(accountSlug, weekStart));
+  }
+
   function requestShoppingList() {
     if (hasShoppingListForWeek) {
-      setReplaceShoppingOpen(true);
+      openShoppingList();
       return;
     }
     void generateShoppingList(false);
@@ -293,14 +342,14 @@ export function MealPlanPanel({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-0.5 text-xs">
+          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setView('week')}
               className={cn(
                 'rounded-md px-3 py-1.5 font-medium transition-colors',
                 view === 'week'
-                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] shadow-sm'
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
@@ -312,7 +361,7 @@ export function MealPlanPanel({
               className={cn(
                 'rounded-md px-3 py-1.5 font-medium transition-colors',
                 view === 'month'
-                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] shadow-sm'
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
@@ -358,8 +407,17 @@ export function MealPlanPanel({
             data-test="generate-shopping-list"
           >
             <ShoppingCart className="mr-1.5 h-4 w-4" />
-            Generate shopping list
+            {hasShoppingListForWeek ? 'Shopping list' : 'Make shopping list'}
           </Button>
+          {hasShoppingListForWeek ? (
+            <Button
+              variant="ghost"
+              onClick={() => setReplaceShoppingOpen(true)}
+              disabled={isGeneratingShopping}
+            >
+              Rebuild list
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             onClick={() => openGenerator('fill')}
@@ -387,7 +445,7 @@ export function MealPlanPanel({
           {preferences.dietary_requirements.map((d) => (
             <span
               key={`d-${d}`}
-              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-emerald-200 capitalize"
+              className="rounded-full border border-[color:color-mix(in_srgb,var(--ozer-accent)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--ozer-accent)_12%,transparent)] px-2 py-0.5 text-[var(--workspace-shell-text)] capitalize"
             >
               {d}
             </span>
@@ -401,12 +459,43 @@ export function MealPlanPanel({
             </span>
           ))}
         </div>
+      ) : onOpenPreferences ? (
+        <button
+          type="button"
+          onClick={onOpenPreferences}
+          className="text-left text-xs text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:text-[var(--workspace-shell-text)] hover:underline"
+        >
+          Set dietary needs and preferences so Generate plan can match your
+          household.
+        </button>
       ) : (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          Tip: set dietary requirements and preferences in the Preferences tab
-          to tailor the generator.
+          Set dietary needs and preferences so Generate plan can match your
+          household.
         </p>
       )}
+
+      {recipes.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3">
+          <p className="text-sm text-[var(--workspace-shell-text)]">
+            No recipes yet
+          </p>
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+            You can still type a dinner name on each day. Add recipes first if
+            you want AI fill, public sharing, or a shopping list from
+            ingredients.
+          </p>
+          {onOpenRecipes ? (
+            <button
+              type="button"
+              onClick={onOpenRecipes}
+              className="mt-2 text-xs font-medium text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+            >
+              Go to Recipes
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {view === 'month' ? (
         <div className={cn(panelClass, 'p-3 sm:p-4')}>
@@ -515,7 +604,7 @@ export function MealPlanPanel({
                               value=""
                               className="bg-[var(--ozer-surface-panel)]"
                             >
-                              Free text / no recipe
+                              Type a custom meal (no recipe)
                             </option>
                             {recipes.map((r) => (
                               <option
@@ -527,7 +616,23 @@ export function MealPlanPanel({
                               </option>
                             ))}
                           </select>
-                        ) : null}
+                        ) : (
+                          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                            No recipes in the library yet — type a dinner name
+                            below, or add recipes first for ingredients and
+                            shopping.
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDraftRecipeId(null);
+                            setDraftTitle('Leftovers');
+                          }}
+                          className="text-xs font-medium text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:text-[var(--workspace-shell-text)] hover:underline"
+                        >
+                          Use leftovers (no shopping items)
+                        </button>
                         <Input
                           autoFocus
                           value={draftTitle}
@@ -583,6 +688,21 @@ export function MealPlanPanel({
                               <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                                 {entry.title}
                               </p>
+                              {entry.is_batch_prep ? (
+                                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                                  Batch prep
+                                </p>
+                              ) : null}
+                              {isLeftoversMeal(entry.title) ||
+                              entry.leftover_source_entry_id ? (
+                                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                                  Leftovers — not added to shopping
+                                </p>
+                              ) : recipe ? null : (
+                                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                                  Typed meal — add a recipe for shopping
+                                </p>
+                              )}
                               {entry.notes ? (
                                 <p className="mt-0.5 line-clamp-1 text-xs text-[var(--workspace-shell-text-muted)]">
                                   {entry.notes}
@@ -602,13 +722,65 @@ export function MealPlanPanel({
                               ) : null}
                             </>
                           ) : (
-                            <span className="text-sm text-[var(--workspace-shell-text-muted)] group-hover:text-[var(--workspace-shell-text-muted)]">
-                              + Add a meal
+                            <span className="text-sm text-[var(--workspace-shell-text-muted)] group-hover:text-[var(--workspace-shell-text)]">
+                              + Add dinner
                             </span>
                           )}
                         </div>
                       </button>
                     )}
+                    {!isEditing && entry?.title ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {entry.cook_member_id ? (
+                          <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                            Cook:{' '}
+                            {members.find(
+                              (member) => member.id === entry.cook_member_id,
+                            )?.display_name ?? 'Assigned'}
+                          </span>
+                        ) : null}
+                        {recipe
+                          ? findHouseholdDietaryConflicts({
+                              recipe: {
+                                name: recipe.name,
+                                diet_tags: recipe.diet_tags,
+                                ingredients: recipe.ingredients,
+                                tags: recipe.tags,
+                              },
+                              people: members.map((member) => ({
+                                name: member.display_name,
+                                dietary_tags: member.dietary_tags,
+                                excluded_ingredients:
+                                  member.excluded_ingredients,
+                              })),
+                              householdDietaryTags:
+                                preferences.dietary_requirements,
+                              householdDislikes:
+                                preferences.disliked_ingredients,
+                            })
+                              .slice(0, 1)
+                              .map((warning) => (
+                                <span
+                                  key={warning.message}
+                                  className="text-[11px] text-amber-300"
+                                >
+                                  {warning.message}
+                                </span>
+                              ))
+                          : null}
+                        {entry.is_batch_prep ||
+                        (!entry.leftover_source_entry_id &&
+                          !isLeftoversMeal(entry.title)) ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleApplyLeftovers(date)}
+                            className="text-[11px] font-medium text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:underline"
+                          >
+                            Use leftovers later
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
 
                   {!isEditing && entry?.title ? (
@@ -637,6 +809,9 @@ export function MealPlanPanel({
         date={editingDate}
         entry={editingDate ? (entriesByDate.get(editingDate) ?? null) : null}
         recipes={recipes}
+        members={members}
+        preferences={preferences}
+        weekEntries={entries}
         accountSlug={accountSlug}
         onSaved={onChanged}
       />

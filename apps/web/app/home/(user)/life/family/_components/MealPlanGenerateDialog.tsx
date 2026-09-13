@@ -255,7 +255,7 @@ export function MealPlanGenerateDialog({
             )}
 
             {mode === 'generate' ? (
-              <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-100/80">
+              <p className="rounded-xl border border-[color:color-mix(in_srgb,var(--ozer-accent)_28%,transparent)] bg-[color:color-mix(in_srgb,var(--ozer-accent)_10%,transparent)] px-3 py-2 text-xs text-[var(--workspace-shell-text)]">
                 Days that already have meals will be replaced if you include
                 them in the preview.
               </p>

@@ -22,6 +22,14 @@ import {
   parseInstagramOembedJson,
 } from '~/lib/ai/recipe-extract-utils';
 import {
+  type RecipeExtractWarning,
+  buildExtractWarnings,
+  canonicalizeSourceUrl,
+  describeHttpFetchError,
+  instagramCaptionLooksThin,
+  looksLikePaywalledHtml,
+} from '~/lib/ai/recipe-import-polish';
+import {
   FEATURE_CONFIG,
   HAIKU_MODEL,
   callAI,
@@ -58,6 +66,7 @@ const RECIPE_FETCH_UA = 'OzerRecipeBot/1.0 (+https://ozer.so; recipe-extract)';
 export type RecipeExtractResult = {
   recipe: ExtractedRecipeDraft;
   method: RecipeExtractMethod;
+  warnings: RecipeExtractWarning[];
 };
 
 const EXTRACTION_SYSTEM_PROMPT = `You extract cookable recipes into structured JSON for a family meal planner.
@@ -105,9 +114,11 @@ export async function extractRecipeFromText(
     supabase: meter.supabase,
   });
 
+  const recipe = parseLlmRecipeJson(text);
   return {
-    recipe: parseLlmRecipeJson(text),
+    recipe,
     method: 'llm_text',
+    warnings: buildExtractWarnings(recipe),
   };
 }
 
@@ -197,15 +208,18 @@ export async function extractRecipeFromImage(
     },
   });
 
+  const recipe = parseLlmRecipeJson(text);
   return {
-    recipe: parseLlmRecipeJson(text),
+    recipe,
     method: 'llm_image',
+    warnings: buildExtractWarnings(recipe),
   };
 }
 
 async function fetchInstagramOembed(url: string): Promise<{
   caption: string | null;
   thumbnailUrl: string | null;
+  status: number | null;
 }> {
   const endpoint = `https://www.instagram.com/api/v1/oembed/?url=${encodeURIComponent(url)}`;
   try {
@@ -216,11 +230,27 @@ async function fetchInstagramOembed(url: string): Promise<{
       },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) return { caption: null, thumbnailUrl: null };
-    return parseInstagramOembedJson(await response.json());
+    if (!response.ok) {
+      return { caption: null, thumbnailUrl: null, status: response.status };
+    }
+    return {
+      ...parseInstagramOembedJson(await response.json()),
+      status: response.status,
+    };
   } catch {
-    return { caption: null, thumbnailUrl: null };
+    return { caption: null, thumbnailUrl: null, status: null };
   }
+}
+
+async function fetchInstagramOembedWithRetry(url: string) {
+  const canonical = canonicalizeSourceUrl(url);
+  const first = await fetchInstagramOembed(canonical);
+  if (first.caption) return { ...first, usedUrl: canonical };
+  if (canonical !== url) {
+    const second = await fetchInstagramOembed(url);
+    if (second.caption) return { ...second, usedUrl: url };
+  }
+  return { ...first, usedUrl: canonical };
 }
 
 async function fetchPageHtml(url: string): Promise<string> {
@@ -254,7 +284,7 @@ async function fetchPageHtml(url: string): Promise<string> {
   }
 
   if (!response.ok) {
-    throw new Error(`Could not fetch URL (HTTP ${response.status})`);
+    throw new Error(describeHttpFetchError(response.status));
   }
 
   const buffer = await response.arrayBuffer();
@@ -268,21 +298,86 @@ async function fetchPageHtml(url: string): Promise<string> {
 function htmlToReadableText(html: string): string {
   const $ = load(html);
   $(
-    'script, style, noscript, iframe, svg, nav, footer, header, .cookie-banner, #cookie-consent',
+    'script, style, noscript, iframe, svg, nav, footer, header, .cookie-banner, #cookie-consent, .ads, .ad, [class*="newsletter"]',
   ).remove();
 
-  const title = $('title').first().text().trim();
-  const metaDesc = $('meta[name="description"]').attr('content')?.trim() ?? '';
+  const title =
+    $('meta[property="og:title"]').attr('content')?.trim() ||
+    $('title').first().text().trim();
+  const heading = $('h1').first().text().trim();
+  const metaDesc =
+    $('meta[property="og:description"]').attr('content')?.trim() ||
+    $('meta[name="twitter:description"]').attr('content')?.trim() ||
+    $('meta[name="description"]').attr('content')?.trim() ||
+    '';
+  const microIngredients = $('[itemprop="recipeIngredient"]')
+    .map((_, el) => $(el).text().replace(/\s+/g, ' ').trim())
+    .get()
+    .filter(Boolean);
+  const microSteps = $('[itemprop="recipeInstructions"]')
+    .map((_, el) => $(el).text().replace(/\s+/g, ' ').trim())
+    .get()
+    .filter(Boolean);
   const body = $('main, article, [itemtype*="Recipe"], [role="main"], body')
     .first()
     .text()
     .replace(/\s+/g, ' ')
     .trim();
 
-  return [title, metaDesc, body]
+  return [
+    title,
+    heading && heading !== title ? heading : '',
+    metaDesc,
+    microIngredients.length
+      ? `Ingredients:\n${microIngredients.join('\n')}`
+      : '',
+    microSteps.length ? `Method:\n${microSteps.join('\n')}` : '',
+    body,
+  ]
     .filter(Boolean)
     .join('\n\n')
     .slice(0, MAX_PAGE_CHARS);
+}
+
+function findMicrodataRecipe(html: string): ExtractedRecipeDraft | null {
+  const $ = load(html);
+  const root = $('[itemtype*="Recipe"]').first();
+  const name =
+    (root.length
+      ? root.find('[itemprop="name"]').first().text()
+      : $('[itemprop="name"]').first().text()
+    ).trim() || $('h1').first().text().trim();
+  const ingredientNodes = root.length
+    ? root.find('[itemprop="recipeIngredient"]')
+    : $('[itemprop="recipeIngredient"]');
+  const instructionNodes = root.length
+    ? root.find('[itemprop="recipeInstructions"]')
+    : $('[itemprop="recipeInstructions"]');
+  const ingredients = ingredientNodes
+    .map((_, el) => $(el).text().replace(/\s+/g, ' ').trim())
+    .get()
+    .filter(Boolean);
+  const instructions = instructionNodes
+    .map((_, el) => $(el).text().replace(/\s+/g, ' ').trim())
+    .get()
+    .filter(Boolean);
+
+  if (!name || (ingredients.length === 0 && instructions.length === 0)) {
+    return null;
+  }
+
+  const description = (
+    root.length
+      ? root.find('[itemprop="description"]').first().text()
+      : $('[itemprop="description"]').first().text()
+  ).trim();
+
+  return normalizeExtractedRecipeDraft({
+    name,
+    description: description || null,
+    ingredients,
+    instructions: instructions.join('\n'),
+  });
 }
 
 function findSchemaOrgRecipe(html: string): ExtractedRecipeDraft | null {
@@ -294,11 +389,6 @@ function findSchemaOrgRecipe(html: string): ExtractedRecipeDraft | null {
     if (mapped && (mapped.ingredients.length > 0 || mapped.instructions)) {
       return mapped;
     }
-  }
-
-  for (const item of schemaObjects) {
-    const mapped = mapSchemaOrgRecipe(item);
-    if (mapped) return mapped;
   }
 
   return null;
@@ -314,21 +404,31 @@ export async function extractRecipeFromUrl(
   }
 
   if (isInstagramRecipeUrl(url)) {
-    const oembed = await fetchInstagramOembed(url);
+    const oembed = await fetchInstagramOembedWithRetry(url);
     if (!oembed.caption) {
+      if (oembed.status === 401 || oembed.status === 403) {
+        throw new Error(
+          'Could not read this Instagram post — it may be private. Paste the caption, or use a screenshot.',
+        );
+      }
       throw new Error(
-        'Could not read this Instagram caption. Paste the recipe text instead, or try a link where the method is written in the caption.',
+        'Could not read this Instagram caption. Paste the recipe text, or try a screenshot — video-only posts often have no method in the caption.',
       );
     }
+    const thinCaption = instagramCaptionLooksThin(oembed.caption);
     const extracted = await extractRecipeFromText(oembed.caption, meter);
     return {
       recipe: attachExtractSource(extracted.recipe, {
-        sourceUrl: url,
+        sourceUrl: oembed.usedUrl,
         candidates: oembed.thumbnailUrl
           ? [{ url: oembed.thumbnailUrl, source: 'oembed' }]
           : [],
       }),
       method: 'instagram_caption',
+      warnings: buildExtractWarnings({
+        ...extracted.recipe,
+        thinCaption,
+      }),
     };
   }
 
@@ -344,12 +444,34 @@ export async function extractRecipeFromUrl(
         siteLabel,
       }),
       method: 'schema_org',
+      warnings: buildExtractWarnings(fromSchema),
     };
+  }
+
+  const fromMicrodata = findMicrodataRecipe(html);
+  if (fromMicrodata) {
+    return {
+      recipe: attachExtractSource(fromMicrodata, {
+        sourceUrl: url,
+        candidates,
+        siteLabel,
+      }),
+      method: 'schema_org',
+      warnings: buildExtractWarnings(fromMicrodata),
+    };
+  }
+
+  if (looksLikePaywalledHtml(html)) {
+    throw new Error(
+      'This page looks paywalled or login-gated. Paste the recipe text or try a screenshot instead.',
+    );
   }
 
   const readable = htmlToReadableText(html);
   if (!readable.trim()) {
-    throw new Error('No readable recipe content found on that page');
+    throw new Error(
+      'No readable recipe content found on that page. Paste the ingredients and method, or try a screenshot.',
+    );
   }
 
   const extracted = await extractRecipeFromText(readable, meter);
@@ -360,6 +482,7 @@ export async function extractRecipeFromUrl(
       siteLabel,
     }),
     method: 'llm_text',
+    warnings: extracted.warnings,
   };
 }
 

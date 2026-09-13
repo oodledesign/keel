@@ -29,6 +29,10 @@ export function titleCase(value: string): string {
     .join(' ');
 }
 
+export function isLeftoversMeal(title: string | null | undefined) {
+  return /^\s*leftovers\b/i.test(title ?? '');
+}
+
 export function totalTimeLabel(
   prep: number | null,
   cook: number | null,

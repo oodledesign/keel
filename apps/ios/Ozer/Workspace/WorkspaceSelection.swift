@@ -120,6 +120,11 @@ extension NativeWorkspace {
         isPersonalAccount || profile == "family"
     }
 
+    /// Recipes and the week meal plan live on personal and family.
+    var showsMeals: Bool {
+        isPersonalAccount || profile == "family"
+    }
+
     /// Clients on studio / surveyor / commercial property — not community.
     var showsClients: Bool {
         switch profile {
@@ -168,6 +173,10 @@ extension NativeWorkspace {
         }
         if showsPeople {
             screens.append(.people)
+        }
+        if showsMeals {
+            screens.append(.recipes)
+            screens.append(.mealPlan)
         }
         if showsClients {
             screens.append(.clients)

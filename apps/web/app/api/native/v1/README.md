@@ -273,6 +273,31 @@ Env (do **not** commit a `.p8`):
 
 If the key is missing, the server logs and skips send.
 
+## Recipes / meal plan / shopping
+
+Cookie-free Bearer JSON for the iPhone family meal surfaces. Personal workspaces read the personal library (`account_id` null). Family team workspaces use that account’s shared recipes, plan, and list.
+
+```
+GET /api/native/v1/recipes?workspace=<slug-or-uuid>
+→ { "items": [{ id, name, description, image_url, meal_type, prep_minutes, cook_minutes, servings, is_favorite, diet_tags, tags, last_cooked_at, times_cooked }] }
+
+GET /api/native/v1/recipes/{id}?workspace=<slug-or-uuid>
+→ recipe plus ingredients, instructions, steps, structured_ingredients
+
+GET /api/native/v1/meal-plan?workspace=<slug-or-uuid>&week=YYYY-MM-DD
+→ { week_start, dates, members, entries: [{ id, plan_date, meal_type, title, recipe_id, cook_member_id, cook_member_name, is_batch_prep, leftover_source_entry_id, dietary_warnings }] }
+Dietary warnings use recipe diet tags plus ingredient text.
+
+GET /api/native/v1/shopping?workspace=<slug-or-uuid>&week=YYYY-MM-DD
+→ { week_start, list: { id, skipped_meals, generated_at, items: [{ id, display_text, category, checked, in_pantry, excluded }] } | null }
+
+PATCH /api/native/v1/shopping/items/{id}
+{ "workspace", "checked": true }
+→ { ok, id, checked }
+```
+
+`week` is Monday `YYYY-MM-DD` and defaults to the current week. Shopping ticks use the same list as the web app. Recipes and meal plan are read-only on the phone in this MVP.
+
 ## Apple Sign In (optional)
 
 Web OAuth shows Apple only when `NEXT_PUBLIC_AUTH_APPLE=true`. Configure the Apple **Services ID** in the Supabase Auth Apple provider (dashboard). Use `NEXT_PUBLIC_APPLE_SERVICE_ID` as the public Services ID if the native app needs it — do not put the Apple secret in this repo. Google OAuth is unchanged.

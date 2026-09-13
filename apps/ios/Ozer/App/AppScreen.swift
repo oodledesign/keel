@@ -15,6 +15,10 @@ enum AppScreen: Hashable {
     case meetings
     /// Menu only — not one of the three tab-bar pin slots.
     case shopping
+    /// Menu only — personal / family meal library.
+    case recipes
+    /// Menu only — week meal plan.
+    case mealPlan
 
     init(feature: FeatureStub) {
         switch feature {
@@ -38,6 +42,8 @@ enum AppScreen: Hashable {
         case .invoices: nil
         case .meetings: nil
         case .shopping: .shopping
+        case .recipes: nil
+        case .mealPlan: nil
         }
     }
 
@@ -53,6 +59,8 @@ enum AppScreen: Hashable {
         case .invoices: "Invoices"
         case .meetings: "Meetings"
         case .shopping: "Shopping"
+        case .recipes: "Recipes"
+        case .mealPlan: "Meal plan"
         }
     }
 
@@ -68,6 +76,8 @@ enum AppScreen: Hashable {
         case .invoices: "doc.text"
         case .meetings: "waveform"
         case .shopping: "cart"
+        case .recipes: "book"
+        case .mealPlan: "calendar"
         }
     }
 }

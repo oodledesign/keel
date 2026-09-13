@@ -5,8 +5,10 @@ import { z } from 'zod';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
-import { extractRecipe } from '~/lib/ai/recipe-extract';
+import type { MealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
+import { extractRecipe } from '~/lib/ai/recipe-extract';
+import { sourceUrlsMatch } from '~/lib/ai/recipe-import-polish';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -113,9 +115,17 @@ export async function POST(request: NextRequest) {
       supabase: client,
     });
 
+    const existing = await findExistingRecipeBySourceUrl(
+      client as never,
+      scope,
+      result.recipe.source_url,
+    );
+
     return NextResponse.json({
       recipe: result.recipe,
       method: result.method,
+      warnings: result.warnings,
+      existing,
     });
   } catch (err) {
     if (isInsufficientCreditsError(err)) {
@@ -126,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     const raw = err instanceof Error ? err.message : '';
     const isSafeMessage =
-      /cannot be fetched|too large|empty or invalid|No recipe|No readable|Could not fetch|Could not read this Instagram/i.test(
+      /cannot be fetched|too large|empty or invalid|No recipe|No readable|Could not fetch|Could not read this Instagram|paywalled|login-gated|could not be found|slow down|Paste the recipe|screenshot|private/i.test(
         raw,
       );
 
@@ -137,4 +147,39 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: message }, { status });
   }
+}
+
+async function findExistingRecipeBySourceUrl(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  scope: MealPlanScope,
+  sourceUrl: string | null,
+): Promise<{ id: string; name: string } | null> {
+  if (!sourceUrl) return null;
+
+  let query = client
+    .from('family_recipes')
+    .select('id, name, source_url')
+    .limit(1_000);
+
+  if (scope.kind === 'workspace') {
+    query = query.eq('account_id', scope.accountId);
+  } else {
+    query = query.eq('user_id', scope.userId).is('account_id', null);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return null;
+
+  for (const row of data) {
+    const record = row as {
+      id: string;
+      name: string;
+      source_url: string | null;
+    };
+    if (sourceUrlsMatch(record.source_url, sourceUrl)) {
+      return { id: record.id, name: record.name };
+    }
+  }
+
+  return null;
 }

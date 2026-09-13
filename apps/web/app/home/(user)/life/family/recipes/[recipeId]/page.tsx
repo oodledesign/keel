@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { RecipeDetailPage } from '~/home/(user)/life/family/_components/RecipeDetailPage';
 import {
+  loadFamilyMealData,
   loadFamilyRecipeById,
   loadFamilyRecipeCookLogs,
   loadFamilyRecipePopularity,
@@ -27,13 +28,15 @@ export async function generateMetadata({ params }: RecipeDetailRouteProps) {
 
 async function PersonalRecipeDetailRoute({ params }: RecipeDetailRouteProps) {
   const { recipeId } = await params;
-  const [recipe, scope, popularity, recentLogs, structure] = await Promise.all([
-    loadFamilyRecipeById(recipeId),
-    resolveMealPlanScope(),
-    loadFamilyRecipePopularity(recipeId),
-    loadFamilyRecipeCookLogs(recipeId),
-    loadFamilyRecipeStructure(recipeId),
-  ]);
+  const [recipe, scope, popularity, recentLogs, structure, mealData] =
+    await Promise.all([
+      loadFamilyRecipeById(recipeId),
+      resolveMealPlanScope(),
+      loadFamilyRecipePopularity(recipeId),
+      loadFamilyRecipeCookLogs(recipeId),
+      loadFamilyRecipeStructure(recipeId),
+      loadFamilyMealData({ view: 'week' }),
+    ]);
 
   if (!recipe) {
     notFound();
@@ -47,6 +50,8 @@ async function PersonalRecipeDetailRoute({ params }: RecipeDetailRouteProps) {
       popularity={popularity}
       recentLogs={recentLogs}
       structure={structure}
+      weekDates={mealData.weekDates}
+      weekEntries={mealData.entries}
     />
   );
 }

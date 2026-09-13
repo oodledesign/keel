@@ -4,9 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { z } from 'zod';
 
-import type { Database } from '@kit/supabase/database';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import type { Database } from '~/lib/database.types';
 import {
   fetchPublicRecipeImage,
   parseRecipeImageDataUrl,
@@ -51,6 +51,7 @@ import {
   revalidateMealPlanPaths,
   revalidateRecipePaths,
 } from './server/family-meal.scope';
+import { applyMealPlanScope, fromUntypedTable } from './server/family-untyped';
 
 type Client = SupabaseClient<Database>;
 
@@ -109,7 +110,7 @@ async function persistMealPlanEntry(
   client: Client,
   scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
   values: Omit<MealPlanEntryValues, 'user_id' | 'account_id' | 'updated_at'>,
-) {
+): Promise<string> {
   const row: MealPlanEntryValues = {
     user_id: scope.userId,
     account_id: scope.kind === 'workspace' ? scope.accountId : null,
@@ -129,18 +130,23 @@ async function persistMealPlanEntry(
     if (readError) throw readError;
 
     if (existing) {
+      const entryId = (existing as { id: string }).id;
       const { error } = await client
         .from('family_meal_plan_entries')
         .update(row)
-        .eq('id', (existing as { id: string }).id);
+        .eq('id', entryId);
 
       if (error) throw error;
-      return;
+      return entryId;
     }
 
-    const { error } = await client.from('family_meal_plan_entries').insert(row);
+    const { data, error } = await client
+      .from('family_meal_plan_entries')
+      .insert(row)
+      .select('id')
+      .single();
     if (error) throw error;
-    return;
+    return (data as { id: string }).id;
   }
 
   const { data: existing, error: readError } = await client
@@ -155,16 +161,51 @@ async function persistMealPlanEntry(
   if (readError) throw readError;
 
   if (existing) {
+    const entryId = (existing as { id: string }).id;
     const { error } = await client
       .from('family_meal_plan_entries')
       .update(row)
-      .eq('id', (existing as { id: string }).id);
+      .eq('id', entryId);
 
     if (error) throw error;
-    return;
+    return entryId;
   }
 
-  const { error } = await client.from('family_meal_plan_entries').insert(row);
+  const { data, error } = await client
+    .from('family_meal_plan_entries')
+    .insert(row)
+    .select('id')
+    .single();
+  if (error) throw error;
+  return (data as { id: string }).id;
+}
+
+async function persistMealPlanEntryExtras(
+  scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
+  extras: {
+    entryId: string;
+    cookMemberId?: string | null;
+    isBatchPrep?: boolean;
+    leftoverSourceEntryId?: string | null;
+  },
+) {
+  const patch: Record<string, unknown> = {};
+  if (extras.cookMemberId !== undefined) {
+    patch.cook_member_id = extras.cookMemberId ?? null;
+  }
+  if (extras.isBatchPrep !== undefined) {
+    patch.is_batch_prep = extras.isBatchPrep;
+  }
+  if (extras.leftoverSourceEntryId !== undefined) {
+    patch.leftover_source_entry_id = extras.leftoverSourceEntryId ?? null;
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await applyMealPlanScope(
+    fromUntypedTable('family_meal_plan_entries').update(patch),
+    scope,
+  ).eq('id', extras.entryId);
+
   if (error) throw error;
 }
 
@@ -627,12 +668,18 @@ export async function setMealEntryAction(
     const client = getSupabaseServerClient();
     const scope = await resolveMealPlanScope(parsed.accountSlug);
 
-    await persistMealPlanEntry(client, scope, {
+    const entryId = await persistMealPlanEntry(client, scope, {
       plan_date: parsed.planDate,
       meal_type: parsed.mealType,
       title: parsed.title,
       recipe_id: parsed.recipeId ?? null,
       notes: parsed.notes ?? null,
+    });
+    await persistMealPlanEntryExtras(scope, {
+      entryId,
+      cookMemberId: parsed.cookMemberId,
+      isBatchPrep: parsed.isBatchPrep,
+      leftoverSourceEntryId: parsed.leftoverSourceEntryId,
     });
     revalidateMealPlanPaths(scope);
     return ok(undefined);

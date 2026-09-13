@@ -106,6 +106,7 @@ export function RecipeImportDialog({
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
 
   function reset() {
     setSource('text');
@@ -114,6 +115,7 @@ export function RecipeImportDialog({
     setImageName(null);
     setImageDataUrl(null);
     setIsExtracting(false);
+    setExtractError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -163,9 +165,12 @@ export function RecipeImportDialog({
         toast.error('Add a recipe link');
         return;
       }
+      if (!/^https?:\/\//i.test(payload)) {
+        payload = `https://${payload}`;
+      }
       try {
         const parsed = new URL(payload);
-        if (!parsed.protocol.startsWith('http')) {
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
           toast.error('That does not look like a valid link');
           return;
         }
@@ -182,6 +187,7 @@ export function RecipeImportDialog({
     }
 
     setIsExtracting(true);
+    setExtractError(null);
     try {
       const response = await fetch('/api/recipes/extract', {
         method: 'POST',
@@ -211,6 +217,9 @@ export function RecipeImportDialog({
           image_url?: string | null;
           image_candidates?: RecipeImageCandidate[];
         };
+        method?: string;
+        warnings?: Array<{ code: string; message: string }>;
+        existing?: { id: string; name: string } | null;
         error?: string;
       } | null;
 
@@ -226,7 +235,11 @@ export function RecipeImportDialog({
       }
 
       if (!response.ok || !body?.recipe) {
-        toast.error(body?.error ?? 'Could not extract recipe');
+        const message =
+          body?.error ??
+          'Could not extract recipe. Paste the text or try a screenshot.';
+        setExtractError(message);
+        toast.error(message);
         return;
       }
 
@@ -245,14 +258,24 @@ export function RecipeImportDialog({
           body.recipe.source_url ?? (source === 'url' ? payload : null),
         image_url: body.recipe.image_url ?? null,
         image_candidates: body.recipe.image_candidates ?? [],
+        warnings: body.warnings ?? [],
+        extractMethod: body.method ?? null,
+        existing: body.existing ?? null,
         ...resolveImportedDraftOrigin(body.recipe, source, payload),
       };
 
-      toast.success('Recipe ready to review');
+      toast.success(
+        body.existing
+          ? `Ready to review — already saved as “${body.existing.name}”`
+          : 'Recipe ready to review',
+      );
       handleOpenChange(false);
       onExtracted(draft);
     } catch {
-      toast.error('Could not extract recipe');
+      const message =
+        'Could not extract recipe. Paste the text or try a screenshot.';
+      setExtractError(message);
+      toast.error(message);
     } finally {
       setIsExtracting(false);
     }
@@ -329,8 +352,9 @@ export function RecipeImportDialog({
                 placeholder="https://… or Instagram post/reel"
               />
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Works best when the recipe is written on the page or in the
-                Instagram caption.
+                Best when the page lists ingredients, or the Instagram caption
+                does. Carousels and video-only posts often need a paste or
+                screenshot.
               </p>
             </div>
           ) : null}
@@ -360,6 +384,15 @@ export function RecipeImportDialog({
               </button>
             </div>
           ) : null}
+
+          {extractError ? (
+            <p
+              role="alert"
+              className="rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2 text-xs text-[var(--workspace-shell-text)]"
+            >
+              {extractError}
+            </p>
+          ) : null}
         </div>
 
         <DialogFooter>
@@ -379,7 +412,11 @@ export function RecipeImportDialog({
             {isExtracting ? (
               <>
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                Extracting…
+                {source === 'url'
+                  ? 'Reading the link…'
+                  : source === 'image'
+                    ? 'Reading the photo…'
+                    : 'Extracting…'}
               </>
             ) : (
               'Extract recipe'

@@ -15,6 +15,7 @@ describe('source_url save round-trip', () => {
     });
 
     const written = toRecipeWriteValues(parsed);
+    expect(written.diet_tags).toEqual([]);
     expect(written.source_url).toBe(
       'https://www.instagram.com/reel/AbCdEf123/',
     );
@@ -50,6 +51,17 @@ describe('source_url save round-trip', () => {
     });
     expect(parsed.source_url ?? null).toBeNull();
     expect(toRecipeWriteValues(parsed).source_url).toBeNull();
+  });
+
+  it('persists dietary tags separately from recipe tags', () => {
+    const parsed = RecipeInputSchema.parse({
+      name: 'Chickpea stew',
+      tags: ['batch-cook'],
+      diet_tags: ['vegan', 'gluten-free'],
+    });
+    const written = toRecipeWriteValues(parsed);
+    expect(written.tags).toEqual(['batch-cook']);
+    expect(written.diet_tags).toEqual(['vegan', 'gluten-free']);
   });
 
   it('rejects non-http source URLs', () => {

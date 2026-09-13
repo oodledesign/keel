@@ -5,19 +5,37 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { ArrowLeft, Clock, Pencil, Star, Trash2, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChefHat,
+  Clock,
+  Pencil,
+  Star,
+  Trash2,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
+
+import { buildPublicRecipeShareUrl } from '~/lib/meals/public-recipe-share';
 
 import {
   deleteRecipeAction,
   retryRecipeNutritionAction,
   toggleRecipeFavoriteAction,
 } from '../_lib/actions';
-import { buildRecipesListPath } from '../_lib/family-meal.paths';
+import {
+  buildRecipeCookPath,
+  buildRecipesListPath,
+} from '../_lib/family-meal.paths';
+import {
+  rotateRecipeShareTokenAction,
+  setRecipePublicShareAction,
+} from '../_lib/recipe-share-actions';
 import type {
+  MealEntryRow,
   RecipeCookLogRow,
   RecipePopularityStats,
   RecipeRow,
@@ -27,6 +45,8 @@ import { RecipeBadges } from './RecipeBadges';
 import { RecipeCookLogPanel } from './RecipeCookLogPanel';
 import { RecipeDialog } from './RecipeDialog';
 import { RecipeMethodPanel } from './RecipeMethodPanel';
+import { RecipePlanAssignDialog } from './RecipePlanAssignDialog';
+import { RecipeSharePanel } from './RecipeSharePanel';
 import { RecipeSourceLink } from './RecipeSourceLink';
 import { panelClass, totalTimeLabel } from './meal-ui';
 
@@ -37,6 +57,8 @@ type Props = {
   popularity?: RecipePopularityStats;
   recentLogs?: RecipeCookLogRow[];
   structure?: RecipeStructure;
+  weekDates?: string[];
+  weekEntries?: MealEntryRow[];
 };
 
 function formatMacro(value: number | null | undefined, unit: string) {
@@ -52,6 +74,8 @@ export function RecipeDetailPage({
   popularity = { times_cooked: 0, avg_rating: null, popularity_score: 0 },
   recentLogs = [],
   structure = { ingredients: [], steps: [] },
+  weekDates,
+  weekEntries,
 }: Props) {
   const router = useRouter();
   const scopeFields = accountSlug ? { accountSlug } : {};
@@ -125,6 +149,19 @@ export function RecipeDetailPage({
         </Link>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8" asChild>
+            <Link href={buildRecipeCookPath(basePath, recipe.id)}>
+              <ChefHat className="mr-1.5 h-3.5 w-3.5" />
+              Cook
+            </Link>
+          </Button>
+          <RecipePlanAssignDialog
+            recipe={recipe}
+            weekDates={weekDates}
+            weekEntries={weekEntries}
+            accountSlug={accountSlug}
+            planHref={basePath}
+          />
           <Button
             variant="outline"
             size="sm"
@@ -217,6 +254,31 @@ export function RecipeDetailPage({
           ) : null}
         </div>
       </header>
+
+      <RecipeSharePanel
+        title="Public link"
+        description="Anyone with the link can view this recipe. It stays private until you enable sharing."
+        enabled={Boolean(recipe.public_share_enabled)}
+        token={recipe.public_share_token}
+        buildUrl={buildPublicRecipeShareUrl}
+        onToggle={async (enabled) => {
+          const result = await setRecipePublicShareAction({
+            recipeId: recipe.id,
+            enabled,
+            ...scopeFields,
+          });
+          if (result.success) router.refresh();
+          return result;
+        }}
+        onRotate={async () => {
+          const result = await rotateRecipeShareTokenAction({
+            recipeId: recipe.id,
+            ...scopeFields,
+          });
+          if (result.success) router.refresh();
+          return result;
+        }}
+      />
 
       <RecipeMethodPanel
         baseServings={recipe.servings}

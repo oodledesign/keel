@@ -90,8 +90,37 @@ export type RecipeRow = {
   nutrition_computed_at: string | null;
   nutrition_pending: boolean;
   prep_ingredients_hash: string | null;
+  public_share_enabled: boolean;
+  public_share_token: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type RecipeBookRow = {
+  id: string;
+  user_id: string;
+  account_id: string | null;
+  name: string;
+  description: string | null;
+  public_share_enabled: boolean;
+  public_share_token: string | null;
+  last_edited_by: string | null;
+  last_edited_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecipeBookItemRow = {
+  id: string;
+  book_id: string;
+  recipe_id: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export type RecipeBookWithRecipes = RecipeBookRow & {
+  recipe_ids: string[];
+  recipe_count: number;
 };
 
 export type MealPreferencesRow = {
@@ -116,8 +145,41 @@ export type MealEntryRow = {
   recipe_id: string | null;
   title: string;
   notes: string | null;
+  cook_member_id: string | null;
+  is_batch_prep: boolean;
+  leftover_source_entry_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type HouseholdMemberRow = {
+  id: string;
+  user_id: string;
+  account_id: string | null;
+  display_name: string;
+  member_user_id: string | null;
+  dietary_tags: string[];
+  excluded_ingredients: string[];
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PantryItemRow = {
+  id: string;
+  user_id: string;
+  account_id: string | null;
+  name: string;
+  normalized_name: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecipeCookStats = {
+  recipe_id: string;
+  times_cooked: number;
+  last_cooked_at: string | null;
 };
 
 export const RecipeInputSchema = AccountSlugFieldSchema.extend({
@@ -127,6 +189,7 @@ export const RecipeInputSchema = AccountSlugFieldSchema.extend({
   ingredients: z.array(z.string().trim().min(1).max(200)).max(80).default([]),
   instructions: z.string().trim().max(8_000).optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
+  diet_tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
   meal_type: z.enum(RECIPE_MEAL_TYPES).default('dinner'),
   prep_minutes: z.number().int().min(0).max(1_440).optional().nullable(),
   cook_minutes: z.number().int().min(0).max(1_440).optional().nullable(),
@@ -152,6 +215,7 @@ export function toRecipeWriteValues(parsed: RecipeInput) {
     ingredients: parsed.ingredients,
     instructions: parsed.instructions ?? null,
     tags: parsed.tags,
+    diet_tags: parsed.diet_tags,
     meal_type: parsed.meal_type,
     prep_minutes: parsed.prep_minutes ?? null,
     cook_minutes: parsed.cook_minutes ?? null,
@@ -183,8 +247,51 @@ export const SetMealEntrySchema = AccountSlugFieldSchema.extend({
   title: z.string().trim().max(200).default(''),
   recipeId: z.string().uuid().optional().nullable(),
   notes: z.string().trim().max(1_000).optional().nullable(),
+  cookMemberId: z.string().uuid().optional().nullable(),
+  isBatchPrep: z.boolean().optional(),
+  leftoverSourceEntryId: z.string().uuid().optional().nullable(),
 });
 export type SetMealEntryInput = z.infer<typeof SetMealEntrySchema>;
+
+export const HouseholdMemberInputSchema = AccountSlugFieldSchema.extend({
+  id: z.string().uuid().optional(),
+  displayName: z.string().trim().min(1).max(80),
+  dietaryTags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  excludedIngredients: z
+    .array(z.string().trim().min(1).max(60))
+    .max(40)
+    .default([]),
+});
+export type HouseholdMemberInput = z.infer<typeof HouseholdMemberInputSchema>;
+
+export const DeleteHouseholdMemberSchema = AccountSlugFieldSchema.extend({
+  memberId: z.string().uuid(),
+});
+export type DeleteHouseholdMemberInput = z.infer<
+  typeof DeleteHouseholdMemberSchema
+>;
+
+export const PantryItemInputSchema = AccountSlugFieldSchema.extend({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(120),
+  notes: z.string().trim().max(400).optional().nullable(),
+});
+export type PantryItemInput = z.infer<typeof PantryItemInputSchema>;
+
+export const DeletePantryItemSchema = AccountSlugFieldSchema.extend({
+  itemId: z.string().uuid(),
+});
+export type DeletePantryItemInput = z.infer<typeof DeletePantryItemSchema>;
+
+export const ApplyLeftoversSchema = AccountSlugFieldSchema.extend({
+  sourceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  mealType: z.enum(MEAL_TYPES).default('dinner'),
+  targetDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .min(1)
+    .max(7),
+});
+export type ApplyLeftoversInput = z.infer<typeof ApplyLeftoversSchema>;
 
 export const ClearMealEntrySchema = AccountSlugFieldSchema.extend({
   planDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -292,9 +399,56 @@ export type BulkAddGeneratedRecipesInput = z.infer<
   typeof BulkAddGeneratedRecipesSchema
 >;
 
+export const SetRecipePublicShareSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+export type SetRecipePublicShareInput = z.infer<
+  typeof SetRecipePublicShareSchema
+>;
+
+export const RotateRecipeShareTokenSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+});
+export type RotateRecipeShareTokenInput = z.infer<
+  typeof RotateRecipeShareTokenSchema
+>;
+
+export const RecipeBookInputSchema = AccountSlugFieldSchema.extend({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1, 'Name is required').max(160),
+  description: z.string().trim().max(2_000).optional().nullable(),
+  recipeIds: z.array(z.string().uuid()).max(80).default([]),
+});
+export type RecipeBookInput = z.infer<typeof RecipeBookInputSchema>;
+
+export const DeleteRecipeBookSchema = AccountSlugFieldSchema.extend({
+  bookId: z.string().uuid(),
+});
+export type DeleteRecipeBookInput = z.infer<typeof DeleteRecipeBookSchema>;
+
+export const SetRecipeBookPublicShareSchema = AccountSlugFieldSchema.extend({
+  bookId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+export type SetRecipeBookPublicShareInput = z.infer<
+  typeof SetRecipeBookPublicShareSchema
+>;
+
+export const RotateRecipeBookShareTokenSchema = AccountSlugFieldSchema.extend({
+  bookId: z.string().uuid(),
+});
+export type RotateRecipeBookShareTokenInput = z.infer<
+  typeof RotateRecipeBookShareTokenSchema
+>;
+
 export type FamilyMealData = {
   recipes: RecipeRow[];
+  books: RecipeBookWithRecipes[];
   preferences: MealPreferencesRow;
+  members: HouseholdMemberRow[];
+  pantry: PantryItemRow[];
+  cookStats: RecipeCookStats[];
   accountSlug?: string;
   basePath: string;
   view: MealPlanView;

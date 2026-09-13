@@ -11,6 +11,9 @@ import {
   scaleShoppingIngredient,
 } from '~/lib/meals/shopping-list-merge';
 
+import { shouldSkipShoppingForMeal } from '~/lib/meals/leftover-plan';
+import { applyPantryToShoppingItems } from '~/lib/meals/shopping-pantry';
+
 import type { MealEntryRow, RecipeRow } from '../schema/family-meal.schema';
 import type {
   ShoppingListCategory,
@@ -85,6 +88,8 @@ function mapItem(row: Record<string, unknown>): ShoppingListItemRow {
     display_text: String(row.display_text),
     is_unparsed: Boolean(row.is_unparsed),
     checked: Boolean(row.checked),
+    in_pantry: Boolean(row.in_pantry),
+    excluded: Boolean(row.excluded),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
@@ -181,9 +186,14 @@ class FamilyShoppingService {
     const collected: ShoppingIngredientInput[] = [];
     const skippedMeals: string[] = [];
 
+    const pantryNames = await this.loadPantryNames(input.scope);
+
     for (const date of weekDates) {
       const dayEntries = entries.filter((entry) => entry.plan_date === date);
       for (const entry of dayEntries) {
+        if (shouldSkipShoppingForMeal(entry)) {
+          continue;
+        }
         if (!entry.recipe_id) {
           continue;
         }
@@ -208,7 +218,10 @@ class FamilyShoppingService {
       }
     }
 
-    const merged = mergeShoppingIngredients(collected);
+    const merged = applyPantryToShoppingItems(
+      mergeShoppingIngredients(collected),
+      pantryNames,
+    );
     if (merged.length === 0) {
       return { status: 'empty', skippedMeals };
     }
@@ -323,6 +336,8 @@ class FamilyShoppingService {
         display_text: parsed.display_text,
         is_unparsed: parsed.is_unparsed,
         checked: false,
+        in_pantry: false,
+        excluded: false,
       })
       .select('*')
       .single();
@@ -337,6 +352,58 @@ class FamilyShoppingService {
       throw error;
     }
     return mapItem(data as Record<string, unknown>);
+  }
+
+  async updateItemFlags(
+    scope: MealPlanScope,
+    itemId: string,
+    flags: { in_pantry?: boolean; excluded?: boolean },
+  ): Promise<ShoppingListItemRow> {
+    const db = loose(this.client);
+    const { data: item, error: itemError } = await db
+      .from('family_shopping_list_items')
+      .select('id, list_id')
+      .eq('id', itemId)
+      .maybeSingle();
+
+    if (itemError) throw itemError;
+    if (!item) throw new Error('Item not found');
+
+    const listId = String((item as { list_id: string }).list_id);
+    await this.requireListInScope(scope, listId);
+
+    const patch: Record<string, unknown> = {};
+    if (flags.in_pantry !== undefined) patch.in_pantry = flags.in_pantry;
+    if (flags.excluded !== undefined) patch.excluded = flags.excluded;
+
+    const { data, error } = await db
+      .from('family_shopping_list_items')
+      .update(patch)
+      .eq('id', itemId)
+      .eq('list_id', listId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return mapItem(data as Record<string, unknown>);
+  }
+
+  private async loadPantryNames(scope: MealPlanScope): Promise<string[]> {
+    const db = loose(this.client);
+    const { data, error } = await applyScope(
+      db.from('family_pantry_items').select('name, normalized_name'),
+      scope,
+    );
+
+    if (error) {
+      console.error('[family-shopping] load pantry:', error.message);
+      return [];
+    }
+
+    return ((data as Array<{ name?: string; normalized_name?: string }> | null) ??
+      [])
+      .flatMap((row) => [row.name, row.normalized_name])
+      .filter((name): name is string => Boolean(name));
   }
 
   private async requireListInScope(
@@ -469,6 +536,8 @@ class FamilyShoppingService {
       category: ShoppingListCategory;
       display_text: string;
       is_unparsed: boolean;
+      in_pantry?: boolean;
+      excluded?: boolean;
     }>;
   }): Promise<ShoppingListWithItems> {
     const db = loose(this.client);
@@ -519,6 +588,8 @@ class FamilyShoppingService {
           display_text: item.display_text,
           is_unparsed: item.is_unparsed,
           checked: false,
+          in_pantry: Boolean(item.in_pantry),
+          excluded: Boolean(item.excluded),
         })),
       )
       .select('*');

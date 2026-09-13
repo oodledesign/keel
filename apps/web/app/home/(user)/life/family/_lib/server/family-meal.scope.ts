@@ -8,7 +8,10 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-import { buildRecipeDetailPath } from '../family-meal.paths';
+import {
+  buildRecipeBookDetailPath,
+  buildRecipeDetailPath,
+} from '../family-meal.paths';
 
 export type MealPlanScope =
   | {
@@ -47,6 +50,8 @@ export function revalidateShoppingPaths(scope: MealPlanScope) {
 }
 
 export {
+  buildRecipeBookDetailPath,
+  buildRecipeBooksListPath,
   buildRecipeDetailPath,
   buildRecipesListPath,
 } from '../family-meal.paths';
@@ -55,6 +60,15 @@ export function revalidateRecipePaths(scope: MealPlanScope, recipeId: string) {
   revalidateMealPlanPaths(scope);
   revalidatePath(buildRecipeDetailPath(scope.basePath, recipeId));
   revalidatePath(buildRecipeDetailPath(scope.revalidatePath, recipeId));
+}
+
+export function revalidateRecipeBookPaths(
+  scope: MealPlanScope,
+  bookId: string,
+) {
+  revalidateMealPlanPaths(scope);
+  revalidatePath(buildRecipeBookDetailPath(scope.basePath, bookId));
+  revalidatePath(buildRecipeBookDetailPath(scope.revalidatePath, bookId));
 }
 
 export async function resolveMealPlanScope(

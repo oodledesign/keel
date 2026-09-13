@@ -769,6 +769,97 @@ actor NativeAPIClient {
         )
     }
 
+    func recipes(workspace: String, accessToken: String) async throws -> NativeRecipesPayload {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/recipes",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty { return .empty }
+        do {
+            return try JSONDecoder().decode(NativeRecipesPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func recipe(id: String, workspace: String, accessToken: String) async throws -> NativeRecipeDetail {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/recipes/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NativeRecipeDetail.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func mealPlan(workspace: String, week: String?, accessToken: String) async throws -> NativeMealPlanPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let week, !week.isEmpty {
+            query.append(URLQueryItem(name: "week", value: week))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/meal-plan",
+            queryItems: query,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty { return .empty }
+        do {
+            return try JSONDecoder().decode(NativeMealPlanPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func shopping(workspace: String, week: String?, accessToken: String) async throws -> NativeShoppingPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let week, !week.isEmpty {
+            query.append(URLQueryItem(name: "week", value: week))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/shopping",
+            queryItems: query,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty { return .empty }
+        do {
+            return try JSONDecoder().decode(NativeShoppingPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func toggleShoppingItem(
+        id: String,
+        checked: Bool,
+        workspace: String,
+        accessToken: String
+    ) async throws -> NativeShoppingToggleResult {
+        let data = try await send(
+            method: "PATCH",
+            path: "api/native/v1/shopping/items/\(id)",
+            queryItems: [],
+            body: ["workspace": workspace, "checked": checked],
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NativeShoppingToggleResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func people(workspace: String, accessToken: String) async throws -> PeoplePayload {
         let data = try await send(
             method: "GET",

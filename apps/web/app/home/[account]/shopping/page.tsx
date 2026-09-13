@@ -63,7 +63,7 @@ async function FamilyShoppingPage({
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Shopping"
-        description="Merged groceries from this week's meal plan."
+        description="Groceries from this week's planned recipes. Rebuild the list from the meal plan."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <ShoppingListPanel

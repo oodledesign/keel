@@ -17,6 +17,8 @@ export type ShoppingOfflineItem = {
   display_text: string;
   is_unparsed: boolean;
   checked: boolean;
+  in_pantry?: boolean;
+  excluded?: boolean;
   created_at: string;
   updated_at: string;
 };

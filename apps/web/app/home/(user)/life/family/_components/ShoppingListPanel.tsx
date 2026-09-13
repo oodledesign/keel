@@ -3,8 +3,9 @@
 import { useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-import { Copy, Plus, ShoppingCart } from 'lucide-react';
+import { Copy, Download, Plus, Share2, ShoppingCart } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -13,11 +14,20 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
+  downloadTextFile,
+  formatShoppingListCsv,
+  formatShoppingListPlainText,
+} from '~/lib/meals/shopping-export';
+import {
   SHOPPING_CATEGORY_LABELS,
   SHOPPING_CATEGORY_ORDER,
 } from '~/lib/meals/shopping-list-merge';
 import { shoppingSyncStatusLabel } from '~/lib/meals/shopping-offline';
 
+import {
+  excludeShoppingItemAction,
+  markShoppingItemPantryAction,
+} from '../_lib/shopping-actions';
 import type { ShoppingListWithItems } from '../_lib/schema/family-shopping.schema';
 import { useShoppingListOffline } from '../_lib/use-shopping-list-offline';
 import { ACCENT, panelClass } from './meal-ui';
@@ -61,6 +71,7 @@ export function ShoppingListPanel({
   accountSlug,
   startAdding = false,
 }: Props) {
+  const router = useRouter();
   const { list, status, toggleItem, addItem } = useShoppingListOffline({
     list: serverList,
     weekStart,
@@ -75,9 +86,12 @@ export function ShoppingListPanel({
     items: (list?.items ?? []).filter((item) => item.category === category),
   })).filter((group) => group.items.length > 0);
 
-  const remaining = list?.items.filter((item) => !item.checked).length ?? 0;
-  const total = list?.items.length ?? 0;
+  const remaining =
+    list?.items.filter((item) => !item.checked && !item.excluded && !item.in_pantry)
+      .length ?? 0;
+  const total = list?.items.filter((item) => !item.excluded).length ?? 0;
   const statusLabel = shoppingSyncStatusLabel(status);
+  const scopeFields = accountSlug ? { accountSlug } : {};
 
   async function handleAdd() {
     const added = await addItem(draft);
@@ -89,15 +103,35 @@ export function ShoppingListPanel({
 
   async function handleCopy() {
     if (!list || list.items.length === 0) return;
-    const text = list.items
-      .map((item) => `${item.checked ? '☑' : '☐'} ${item.display_text}`)
-      .join('\n');
+    const text = formatShoppingListPlainText(list.items);
     try {
       await navigator.clipboard.writeText(text);
       toast.success('Copied shopping list');
     } catch {
       toast.error('Could not copy the list');
     }
+  }
+
+  async function handleShare() {
+    if (!list || list.items.length === 0) return;
+    const text = formatShoppingListPlainText(list.items);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Shopping list', text });
+        return;
+      } catch {
+        // Fall through to copy if the share sheet is cancelled.
+      }
+    }
+    await handleCopy();
+  }
+
+  function handleCsv() {
+    if (!list || list.items.length === 0) return;
+    downloadTextFile(
+      `shopping-${list.week_start}.csv`,
+      formatShoppingListCsv(list.items),
+    );
   }
 
   if (!list) {
@@ -109,8 +143,8 @@ export function ShoppingListPanel({
             No shopping list yet
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Generate one from this week&apos;s meal plan to merge every
-            ingredient and how much you need.
+            On the meal plan, tap Make shopping list after dinners are linked to
+            recipes. Typed meals and leftovers do not add ingredients.
           </p>
           <Button
             asChild
@@ -147,6 +181,9 @@ export function ShoppingListPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={mealPlanHref}>Meal plan</Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -155,6 +192,18 @@ export function ShoppingListPanel({
           >
             <Copy className="mr-1.5 h-4 w-4" />
             Copy list
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleShare()}
+          >
+            <Share2 className="mr-1.5 h-4 w-4" />
+            Share
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleCsv}>
+            <Download className="mr-1.5 h-4 w-4" />
+            CSV
           </Button>
           <Button
             variant="outline"
@@ -170,7 +219,8 @@ export function ShoppingListPanel({
 
       {list.skipped_meals.length > 0 ? (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          No ingredients for: {list.skipped_meals.join(', ')}
+          Skipped (no recipe ingredients): {list.skipped_meals.join(', ')}. Link
+          a recipe on those days, or leave leftovers as typed meals.
         </p>
       ) : null}
 
@@ -222,31 +272,77 @@ export function ShoppingListPanel({
             <ul className="space-y-1.5">
               {group.items.map((item) => {
                 const checked = item.checked;
+                const dimmed = checked || item.in_pantry || item.excluded;
                 return (
                   <li key={item.id}>
-                    <label
+                    <div
                       className={cn(
-                        'flex cursor-pointer items-start gap-3 rounded-lg px-1 py-1.5',
-                        checked && 'opacity-60',
+                        'flex items-start gap-3 rounded-lg px-1 py-1.5',
+                        dimmed && 'opacity-50',
                       )}
                     >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(value) =>
-                          void toggleItem(item.id, value === true)
-                        }
-                        className="mt-0.5"
-                        data-test={`shopping-item-${item.id}`}
-                      />
-                      <span
-                        className={cn(
-                          'text-sm text-[var(--workspace-shell-text)]',
-                          checked && 'line-through',
-                        )}
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            void toggleItem(item.id, value === true)
+                          }
+                          className="mt-0.5"
+                          data-test={`shopping-item-${item.id}`}
+                        />
+                        <span
+                          className={cn(
+                            'text-sm text-[var(--workspace-shell-text)]',
+                            checked && 'line-through',
+                          )}
+                        >
+                          {item.display_text}
+                          {item.in_pantry ? (
+                            <span className="ml-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                              We have this
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        className="shrink-0 text-[11px] text-[var(--workspace-shell-text-muted)] hover:underline"
+                        onClick={() => {
+                          void markShoppingItemPantryAction({
+                            itemId: item.id,
+                            inPantry: !item.in_pantry,
+                            ...scopeFields,
+                          }).then((result) => {
+                            if (!result.success) {
+                              toast.error(result.error);
+                              return;
+                            }
+                            router.refresh();
+                          });
+                        }}
                       >
-                        {item.display_text}
-                      </span>
-                    </label>
+                        {item.in_pantry ? 'Need' : 'Have'}
+                      </button>
+                      <button
+                        type="button"
+                        className="shrink-0 text-[11px] text-[var(--workspace-shell-text-muted)] hover:underline"
+                        onClick={() => {
+                          void excludeShoppingItemAction({
+                            itemId: item.id,
+                            excluded: !item.excluded,
+                            ...scopeFields,
+                          }).then((result) => {
+                            if (!result.success) {
+                              toast.error(result.error);
+                              return;
+                            }
+                            router.refresh();
+                          });
+                        }}
+                      >
+                        {item.excluded ? 'Include' : 'Skip'}
+                      </button>
+                    </div>
                   </li>
                 );
               })}
@@ -256,8 +352,8 @@ export function ShoppingListPanel({
       </div>
 
       <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-        Tick items as you shop. Regenerating from the meal plan replaces this
-        week&apos;s list.
+        Tick items as you shop. Amounts scale to household size in Preferences.
+        Rebuild list on the meal plan replaces this week&apos;s items.
       </p>
     </div>
   );

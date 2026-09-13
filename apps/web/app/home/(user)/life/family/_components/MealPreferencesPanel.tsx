@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 import { Minus, Plus, X } from 'lucide-react';
 
@@ -12,7 +12,12 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import { saveMealPreferencesAction } from '../_lib/actions';
-import type { MealPreferencesRow } from '../_lib/schema/family-meal.schema';
+import type {
+  HouseholdMemberRow,
+  MealPreferencesRow,
+  PantryItemRow,
+} from '../_lib/schema/family-meal.schema';
+import { HouseholdSetupPanel } from './HouseholdSetupPanel';
 import {
   ACCENT,
   dietaryChoices,
@@ -23,12 +28,25 @@ import {
 
 type Props = {
   preferences: MealPreferencesRow;
+  members?: HouseholdMemberRow[];
+  pantry?: PantryItemRow[];
   accountSlug?: string;
   onSaved: () => void;
 };
 
-export function MealPreferencesPanel({
+export function MealPreferencesPanel(props: Props) {
+  return (
+    <MealPreferencesForm
+      key={props.preferences.updated_at ?? 'new'}
+      {...props}
+    />
+  );
+}
+
+function MealPreferencesForm({
   preferences,
+  members = [],
+  pantry = [],
   accountSlug,
   onSaved,
 }: Props) {
@@ -49,21 +67,6 @@ export function MealPreferencesPanel({
   const [customDietary, setCustomDietary] = useState('');
   const [dislikeInput, setDislikeInput] = useState('');
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setDietary(preferences.dietary_requirements);
-    setPriorities(preferences.priorities);
-    setDislikes(preferences.disliked_ingredients);
-    setHouseholdSize(preferences.household_size);
-    setNotes(preferences.notes ?? '');
-  }, [
-    preferences.updated_at,
-    preferences.dietary_requirements,
-    preferences.priorities,
-    preferences.disliked_ingredients,
-    preferences.household_size,
-    preferences.notes,
-  ]);
 
   function toggle(
     value: string,
@@ -110,6 +113,10 @@ export function MealPreferencesPanel({
 
   return (
     <div className="max-w-2xl space-y-5">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+        These steer Generate plan and new AI recipes. Save before you switch
+        tabs.
+      </p>
       <div className={cn(panelClass, 'p-5')}>
         <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Dietary requirements
@@ -187,6 +194,13 @@ export function MealPreferencesPanel({
         </div>
       </div>
 
+      <HouseholdSetupPanel
+        members={members}
+        pantry={pantry}
+        accountSlug={accountSlug}
+        onSaved={onSaved}
+      />
+
       <div className={cn(panelClass, 'p-5')}>
         <div className="flex items-center justify-between">
           <div>
@@ -194,7 +208,8 @@ export function MealPreferencesPanel({
               Household size
             </h3>
             <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              How many people you usually cook for.
+              How many people you usually cook for. Shopping lists scale recipe
+              amounts to this number.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -282,9 +297,13 @@ export function MealPreferencesPanel({
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Anything else? e.g. 'fish on Fridays', 'leftovers for lunch', 'kids hate spice'"
+          placeholder="e.g. fish on Fridays, leftovers for lunch, kids hate spice"
           className="mt-2"
         />
+        <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
+          For leftovers on a specific night, mark that day as Leftovers on the
+          plan so it stays off the shopping list.
+        </p>
       </div>
 
       <div className="flex justify-end">

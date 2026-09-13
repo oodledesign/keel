@@ -23,6 +23,8 @@ export type ShoppingListItemRow = {
   display_text: string;
   is_unparsed: boolean;
   checked: boolean;
+  in_pantry: boolean;
+  excluded: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -66,3 +68,19 @@ export const AddShoppingItemSchema = AccountSlugFieldSchema.extend({
   clientItemId: z.string().uuid().optional(),
 });
 export type AddShoppingItemInput = z.infer<typeof AddShoppingItemSchema>;
+
+export const MarkShoppingItemPantrySchema = AccountSlugFieldSchema.extend({
+  itemId: z.string().uuid(),
+  inPantry: z.boolean(),
+});
+export type MarkShoppingItemPantryInput = z.infer<
+  typeof MarkShoppingItemPantrySchema
+>;
+
+export const ExcludeShoppingItemSchema = AccountSlugFieldSchema.extend({
+  itemId: z.string().uuid(),
+  excluded: z.boolean(),
+});
+export type ExcludeShoppingItemInput = z.infer<
+  typeof ExcludeShoppingItemSchema
+>;

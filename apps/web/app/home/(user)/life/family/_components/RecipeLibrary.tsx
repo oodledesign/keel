@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 
 import {
+  BookPlus,
   Clock,
   Link2,
   Pencil,
@@ -27,48 +28,80 @@ import {
   toggleRecipeFavoriteAction,
 } from '../_lib/actions';
 import { buildRecipeDetailPath } from '../_lib/family-meal.paths';
+import { recipeMatchesDietaryFilter } from '~/lib/meals/dietary-conflict';
+
 import type {
+  MealEntryRow,
   MealPreferencesRow,
+  RecipeCookStats,
   RecipeRow,
 } from '../_lib/schema/family-meal.schema';
 import { RecipeBadges } from './RecipeBadges';
 import { RecipeDialog, type RecipeFormDraft } from './RecipeDialog';
 import { RecipeGenerateDialog } from './RecipeGenerateDialog';
 import { RecipeImportDialog } from './RecipeImportDialog';
+import { RecipePlanAssignDialog } from './RecipePlanAssignDialog';
 import { RecipeSourceLink } from './RecipeSourceLink';
 import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
+
+type LibraryFilter = 'all' | 'favorites' | 'cook-again';
 
 type Props = {
   recipes: RecipeRow[];
   preferences: MealPreferencesRow;
+  cookStats?: RecipeCookStats[];
+  weekDates?: string[];
+  weekEntries?: MealEntryRow[];
   basePath: string;
   accountSlug?: string;
   onChanged: () => void;
+  onCreateBook?: (recipeIds: string[]) => void;
 };
 
 export function RecipeLibrary({
   recipes,
   preferences,
+  cookStats = [],
+  weekDates,
+  weekEntries,
   basePath,
   accountSlug,
   onChanged,
+  onCreateBook,
 }: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>('all');
+  const [dietFilter, setDietFilter] = useState<string | null>(null);
+  const statsById = useMemo(
+    () => new Map(cookStats.map((row) => [row.recipe_id, row])),
+    [cookStats],
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<RecipeRow | null>(null);
   const [draft, setDraft] = useState<RecipeFormDraft | null>(null);
   const [draftKey, setDraftKey] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [, startTransition] = useTransition();
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
     for (const r of recipes) for (const t of r.tags) set.add(t);
     return Array.from(set).sort();
   }, [recipes]);
+
+  const dietOptions = useMemo(() => {
+    const set = new Set<string>(preferences.dietary_requirements);
+    for (const recipe of recipes) {
+      for (const tag of recipe.diet_tags) set.add(tag);
+    }
+    return Array.from(set).sort();
+  }, [preferences.dietary_requirements, recipes]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -79,9 +112,25 @@ export function RecipeLibrary({
         (r.description ?? '').toLowerCase().includes(q) ||
         r.ingredients.some((i) => i.toLowerCase().includes(q));
       const matchesTag = !activeTag || r.tags.includes(activeTag);
-      return matchesQuery && matchesTag;
+      const matchesLibrary =
+        libraryFilter === 'all' ||
+        (libraryFilter === 'favorites' && r.is_favorite) ||
+        (libraryFilter === 'cook-again' &&
+          (statsById.get(r.id)?.times_cooked ?? 0) > 0);
+      const matchesDiet =
+        !dietFilter ||
+        recipeMatchesDietaryFilter(
+          {
+            name: r.name,
+            diet_tags: r.diet_tags,
+            ingredients: r.ingredients,
+            tags: r.tags,
+          },
+          [dietFilter],
+        );
+      return matchesQuery && matchesTag && matchesLibrary && matchesDiet;
     });
-  }, [recipes, query, activeTag]);
+  }, [recipes, query, activeTag, libraryFilter, dietFilter, statsById]);
 
   function openNew() {
     setEditing(null);
@@ -161,6 +210,18 @@ export function RecipeLibrary({
             <Sparkles className="mr-1.5 h-4 w-4" />
             Generate with AI
           </Button>
+          {onCreateBook ? (
+            <Button
+              variant="outline"
+              disabled={selectedIds.length === 0}
+              onClick={() => onCreateBook(selectedIds)}
+            >
+              <BookPlus className="mr-1.5 h-4 w-4" />
+              {selectedIds.length > 0
+                ? `Create recipe book (${selectedIds.length})`
+                : 'Create recipe book'}
+            </Button>
+          ) : null}
           <Button
             onClick={openNew}
             style={{ backgroundColor: ACCENT }}
@@ -170,6 +231,60 @@ export function RecipeLibrary({
             Add recipe
           </Button>
         </div>
+      </div>
+
+      {recipes.length > 0 && onCreateBook ? (
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Tick recipes to collect them into a book you can share as one link.
+          Open a recipe to share that recipe on its own.
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-1.5">
+        {(
+          [
+            ['all', 'All'],
+            ['favorites', 'Favourites'],
+            ['cook-again', 'Cook again'],
+          ] as const
+        ).map(([id, label]) => {
+          const active = libraryFilter === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setLibraryFilter(id)}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                active
+                  ? 'border-transparent text-[var(--workspace-shell-text)]'
+                  : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              )}
+              style={active ? { backgroundColor: ACCENT } : undefined}
+            >
+              {label}
+            </button>
+          );
+        })}
+        {dietOptions.map((tag) => {
+          const active = dietFilter === tag;
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setDietFilter(active ? null : tag)}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                active
+                  ? 'border-transparent text-[var(--workspace-shell-text)]'
+                  : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              )}
+              style={active ? { backgroundColor: ACCENT } : undefined}
+            >
+              {tag}
+            </button>
+          );
+        })}
       </div>
 
       {allTags.length > 0 ? (
@@ -185,7 +300,7 @@ export function RecipeLibrary({
             )}
             style={!activeTag ? { backgroundColor: ACCENT } : undefined}
           >
-            All
+            Tags
           </button>
           {allTags.map((tag) => {
             const active = activeTag === tag;
@@ -225,6 +340,7 @@ export function RecipeLibrary({
               recipe.prep_minutes,
               recipe.cook_minutes,
             );
+            const stats = statsById.get(recipe.id);
             return (
               <div
                 key={recipe.id}
@@ -245,6 +361,23 @@ export function RecipeLibrary({
                 ) : null}
                 <div className="flex flex-1 flex-col p-4">
                   <div className="flex items-start justify-between gap-2">
+                    {onCreateBook ? (
+                      <label className="mt-0.5 flex shrink-0 items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedSet.has(recipe.id)}
+                          onChange={() => {
+                            setSelectedIds((current) =>
+                              current.includes(recipe.id)
+                                ? current.filter((id) => id !== recipe.id)
+                                : [...current, recipe.id],
+                            );
+                          }}
+                          aria-label={`Select ${recipe.name}`}
+                          className="h-4 w-4 accent-[var(--ozer-accent)]"
+                        />
+                      </label>
+                    ) : null}
                     <Link
                       href={buildRecipeDetailPath(basePath, recipe.id)}
                       className="min-w-0 flex-1 transition-opacity hover:opacity-90"
@@ -293,6 +426,14 @@ export function RecipeLibrary({
                           {recipe.servings}
                         </span>
                       ) : null}
+                      {stats?.times_cooked ? (
+                        <span>
+                          Cooked {stats.times_cooked}×
+                          {stats.last_cooked_at
+                            ? ` · last ${new Date(stats.last_cooked_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                            : ''}
+                        </span>
+                      ) : null}
                     </div>
 
                     <RecipeBadges
@@ -313,7 +454,14 @@ export function RecipeLibrary({
                     </div>
                   ) : null}
 
-                  <div className="mt-4 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+                    <RecipePlanAssignDialog
+                      recipe={recipe}
+                      weekDates={weekDates}
+                      weekEntries={weekEntries}
+                      accountSlug={accountSlug}
+                      planHref={basePath}
+                    />
                     <Button
                       variant="ghost"
                       size="sm"

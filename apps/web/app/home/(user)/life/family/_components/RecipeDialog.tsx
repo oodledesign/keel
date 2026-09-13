@@ -20,6 +20,12 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import type { RecipeImageCandidate } from '~/lib/ai/recipe-extract-utils';
+import {
+  canonicalizeSourceUrl,
+  extractMethodLabel,
+  tidyIngredientLines,
+  tidyInstructionText,
+} from '~/lib/ai/recipe-import-polish';
 import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
 
 import { upsertRecipeAction } from '../_lib/actions';
@@ -47,6 +53,7 @@ export type RecipeFormDraft = {
   ingredients: string[];
   instructions: string | null;
   tags: string[];
+  diet_tags?: string[];
   meal_type: RecipeMealType;
   prep_minutes: number | null;
   cook_minutes: number | null;
@@ -57,6 +64,9 @@ export type RecipeFormDraft = {
   source_url?: string | null;
   image_url?: string | null;
   image_candidates?: RecipeImageCandidate[];
+  warnings?: Array<{ code: string; message: string }>;
+  extractMethod?: string | null;
+  existing?: { id: string; name: string } | null;
 };
 
 type Props = {
@@ -71,8 +81,6 @@ type Props = {
   onSaved: () => void;
 };
 
-const suggestedTags = [...priorityChoices, ...dietaryChoices];
-
 function toForm(recipe: RecipeRow | null, draft?: RecipeFormDraft | null) {
   const source = recipe ?? draft ?? null;
   const candidates = draft?.image_candidates ?? [];
@@ -82,6 +90,7 @@ function toForm(recipe: RecipeRow | null, draft?: RecipeFormDraft | null) {
     ingredients: (source?.ingredients ?? []).join('\n'),
     instructions: source?.instructions ?? '',
     tags: source?.tags ?? [],
+    diet_tags: recipe?.diet_tags ?? draft?.diet_tags ?? [],
     meal_type: (source?.meal_type ?? 'dinner') as RecipeMealType,
     prep_minutes: source?.prep_minutes?.toString() ?? '',
     cook_minutes: source?.cook_minutes?.toString() ?? '',
@@ -171,6 +180,15 @@ function RecipeForm({
   const coverInputRef = useRef<HTMLInputElement>(null);
   const isImportReview = !recipe && Boolean(draft);
 
+  function toggleDietTag(tag: string) {
+    setForm((f) => ({
+      ...f,
+      diet_tags: f.diet_tags.includes(tag)
+        ? f.diet_tags.filter((value) => value !== tag)
+        : [...f.diet_tags, tag],
+    }));
+  }
+
   function toggleTag(tag: string) {
     setForm((f) => ({
       ...f,
@@ -192,6 +210,17 @@ function RecipeForm({
   function handleSave() {
     if (!form.name.trim()) {
       toast.error('Give the recipe a name');
+      return;
+    }
+
+    if (
+      isImportReview &&
+      !form.ingredients.trim() &&
+      !form.instructions.trim()
+    ) {
+      toast.error(
+        'Couldn’t read ingredients or steps — paste them from the original, or retry the import.',
+      );
       return;
     }
 
@@ -240,12 +269,13 @@ function RecipeForm({
         .filter(Boolean),
       instructions: form.instructions.trim() || null,
       tags: form.tags,
+      diet_tags: form.diet_tags,
       meal_type: form.meal_type,
       prep_minutes: toNum(form.prep_minutes),
       cook_minutes: toNum(form.cook_minutes),
       servings: toNum(form.servings),
       is_favorite: form.is_favorite,
-      source_url: sourceUrl,
+      source_url: sourceUrl ? canonicalizeSourceUrl(sourceUrl) : null,
       ...coverPayload,
       ...(isImportReview
         ? {
@@ -287,9 +317,30 @@ function RecipeForm({
         <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
           {isImportReview
             ? 'Check the details below, then save to your library. Nothing is saved until you confirm.'
-            : 'Build your library so the planner can reuse meals you love.'}
+            : 'Save it to the library, then add it to a dinner on the meal plan. Servings help scale the shopping list.'}
         </DialogDescription>
       </DialogHeader>
+
+      {isImportReview && extractMethodLabel(draft?.extractMethod) ? (
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {extractMethodLabel(draft?.extractMethod)}
+        </p>
+      ) : null}
+
+      {isImportReview && draft?.existing ? (
+        <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-xs text-[var(--workspace-shell-text)]">
+          Already in this library as “{draft.existing.name}”. You can still save
+          another copy.
+        </p>
+      ) : null}
+
+      {isImportReview && (draft?.warnings?.length ?? 0) > 0 ? (
+        <div className="space-y-1 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2 text-xs text-[var(--workspace-shell-text-muted)]">
+          {draft?.warnings?.map((warning) => (
+            <p key={warning.code}>{warning.message}</p>
+          ))}
+        </div>
+      ) : null}
 
       {isImportReview ||
       recipe?.source === 'instagram' ||
@@ -362,6 +413,9 @@ function RecipeForm({
           onChange={(next) => setForm((f) => ({ ...f, ...next }))}
         />
 
+        <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+          Time and servings
+        </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor="recipe-prep">Prep (min)</Label>
@@ -421,7 +475,46 @@ function RecipeForm({
             </select>
           </div>
         </div>
+        <p className="-mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
+          Serves is the recipe as written. Shopping scales it to household size
+          in Preferences.
+        </p>
 
+        <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+          Ingredients and method
+        </p>
+        {isImportReview ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  ingredients: tidyIngredientLines(
+                    current.ingredients.split('\n'),
+                  ).join('\n'),
+                }))
+              }
+            >
+              Tidy ingredients
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  instructions: tidyInstructionText(current.instructions) ?? '',
+                }))
+              }
+            >
+              Drop junk steps
+            </Button>
+          </div>
+        ) : null}
         <div className="space-y-1.5">
           <Label htmlFor="recipe-ingredients">Ingredients</Label>
           <Textarea
@@ -449,29 +542,63 @@ function RecipeForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Tags</Label>
+          <Label>Dietary tags</Label>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Used to filter the library and warn on meal-plan conflicts.
+          </p>
           <div className="flex flex-wrap gap-1.5">
-            {Array.from(new Set([...suggestedTags, ...form.tags])).map(
+            {Array.from(new Set([...dietaryChoices, ...form.diet_tags])).map(
               (tag) => {
-                const active = form.tags.includes(tag);
+                const active = form.diet_tags.includes(tag);
                 return (
                   <button
                     key={tag}
                     type="button"
-                    onClick={() => toggleTag(tag)}
+                    onClick={() => toggleDietTag(tag)}
                     className={cn(
                       'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
                       active
-                        ? 'border-transparent text-[var(--workspace-shell-text)]'
+                        ? 'border-transparent bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
                         : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                     )}
-                    style={active ? { backgroundColor: ACCENT } : undefined}
                   >
                     {tag}
                   </button>
                 );
               },
             )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tags</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from(
+              new Set([
+                ...priorityChoices,
+                ...form.tags.filter(
+                  (tag) => !(dietaryChoices as readonly string[]).includes(tag),
+                ),
+              ]),
+            ).map((tag) => {
+              const active = form.tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                    active
+                      ? 'border-transparent text-[var(--workspace-shell-text)]'
+                      : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                  )}
+                  style={active ? { backgroundColor: ACCENT } : undefined}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
           <div className="flex gap-2">
             <Input
