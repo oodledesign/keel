@@ -111,4 +111,17 @@ describe('collectMessageNotifyRecipients', () => {
     expect(result.inAppUserIds).toEqual(['client-user']);
     expect(result.emails).toEqual(['hello@ozer-os.com']);
   });
+
+  it('does not notify a client participant who is the sender', () => {
+    const result = collectMessageNotifyRecipients({
+      senderUserId: 'client-user',
+      senderEmail: 'hello@ozer-os.com',
+      members: [{ userId: 'member-2', email: 'alex@ozer.so' }],
+      contacts: [],
+      clients: [{ userId: 'client-user', email: 'hello@ozer-os.com' }],
+    });
+
+    expect(result.inAppUserIds).toEqual(['member-2']);
+    expect(result.emails).toEqual(['alex@ozer.so']);
+  });
 });

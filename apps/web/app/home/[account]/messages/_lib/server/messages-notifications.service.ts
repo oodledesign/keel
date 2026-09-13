@@ -246,17 +246,21 @@ class MessagesNotificationsService {
         email: contactDisplay.get(p.participant_contact_id)?.email ?? null,
       }));
 
+    // Client-wide rows usually have no user account (email only). Keep
+    // participant_user_id if present so a linked user still gets in-app.
+    const clientById = new Map<string, any>(
+      clientRows.map((row: any) => [row.id, row]),
+    );
     const clientRecipients = (participants ?? [])
       .filter((p: any) => p.participant_kind === 'client')
-      .map((p: any) => {
-        const client = clientRows.find(
-          (row: any) => row.id === p.participant_client_id,
-        );
-        return {
-          userId: (p.participant_user_id as string | null) ?? null,
-          email: (client?.email as string | null | undefined) ?? null,
-        };
-      });
+      .map((p: any) => ({
+        userId: (p.participant_user_id as string | null) ?? null,
+        email:
+          (clientById.get(p.participant_client_id)?.email as
+            | string
+            | null
+            | undefined) ?? null,
+      }));
 
     const collected = collectMessageNotifyRecipients({
       senderUserId: params.senderUserId,
