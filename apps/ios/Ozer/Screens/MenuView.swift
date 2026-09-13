@@ -87,7 +87,7 @@ struct MenuView: View {
     }
 
     private var menuScreens: [AppScreen] {
-        session.selectedWorkspace?.menuScreens ?? [.home, .tasks, .taskReview, .notes, .messages, .shopping]
+        session.selectedWorkspace?.menuScreens ?? WorkspaceNavigation.fallbackMenu
     }
 
     @ViewBuilder

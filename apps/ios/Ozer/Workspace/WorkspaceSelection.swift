@@ -115,39 +115,27 @@ extension NativeWorkspace {
         }
     }
 
-    /// People lives on personal and family, matching the web sidebar.
-    var showsPeople: Bool {
-        isPersonalAccount || profile == "family"
+    private var navigationKind: WorkspaceNavigation.Kind {
+        WorkspaceNavigation.kind(profile: profile, isPersonal: isPersonalAccount)
     }
+
+    /// People lives on personal and family, matching the web sidebar.
+    var showsPeople: Bool { navigationKind.showsPeople }
 
     /// Recipes and the week meal plan live on personal and family.
-    var showsMeals: Bool {
-        isPersonalAccount || profile == "family"
-    }
+    var showsMeals: Bool { navigationKind.showsMeals }
+
+    /// Shopping list — personal / family only. Never on business or commercial.
+    var showsShopping: Bool { navigationKind.showsShopping }
 
     /// Clients on studio / surveyor / commercial property — not community.
-    var showsClients: Bool {
-        switch profile {
-        case "work_design", "work_property", "commercial_property", "building_surveyor":
-            return true
-        default:
-            return false
-        }
-    }
+    var showsClients: Bool { navigationKind.showsClients }
 
     /// Invoices / finances on the same business-like spaces as Clients.
-    var showsInvoices: Bool { showsClients }
+    var showsInvoices: Bool { navigationKind.showsInvoices }
 
     /// In-room meetings on business / work / commercial / surveyor. Not personal or family.
-    var showsMeetings: Bool {
-        if isPersonalAccount { return false }
-        switch profile {
-        case "work_design", "work_property", "commercial_property", "building_surveyor":
-            return true
-        default:
-            return false
-        }
-    }
+    var showsMeetings: Bool { navigationKind.showsMeetings }
 
     var isSurveyorWorkspace: Bool {
         profile == "building_surveyor"
@@ -167,25 +155,12 @@ extension NativeWorkspace {
 
     /// Menu body for the selected space. Workspaces themselves stay in the picker.
     var menuScreens: [AppScreen] {
-        var screens: [AppScreen] = [.home, .tasks, .taskReview, .notes, .messages]
-        if showsMeetings {
-            screens.append(.meetings)
-        }
-        if showsPeople {
-            screens.append(.people)
-        }
-        if showsMeals {
-            screens.append(.recipes)
-            screens.append(.mealPlan)
-        }
-        if showsClients {
-            screens.append(.clients)
-        }
-        if showsInvoices {
-            screens.append(.invoices)
-        }
-        screens.append(.shopping)
-        return screens
+        WorkspaceNavigation.menuScreens(profile: profile, isPersonal: isPersonalAccount)
+    }
+
+    /// Three tab-bar pins for this space. Home and Menu stay fixed.
+    var tabPins: [AppScreen] {
+        WorkspaceNavigation.tabPins(profile: profile, isPersonal: isPersonalAccount)
     }
 
     /// Secondary type label only. Hidden when it repeats the name.
