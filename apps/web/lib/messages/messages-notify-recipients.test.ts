@@ -47,4 +47,68 @@ describe('collectMessageNotifyRecipients', () => {
     expect(result.inAppUserIds).toEqual([]);
     expect(result.emails).toEqual([]);
   });
+
+  it('emails a client participant from clients.email', () => {
+    const result = collectMessageNotifyRecipients({
+      senderUserId: 'member-1',
+      senderEmail: 'dan@ozer.so',
+      members: [{ userId: 'member-1', email: 'dan@ozer.so' }],
+      contacts: [],
+      clients: [{ userId: null, email: 'hello@ozer-os.com' }],
+    });
+
+    expect(result.inAppUserIds).toEqual([]);
+    expect(result.emails).toEqual(['hello@ozer-os.com']);
+  });
+
+  it('does not email a client participant without email', () => {
+    const result = collectMessageNotifyRecipients({
+      senderUserId: 'member-1',
+      senderEmail: 'dan@ozer.so',
+      members: [{ userId: 'member-1', email: 'dan@ozer.so' }],
+      contacts: [],
+      clients: [{ userId: null, email: null }],
+    });
+
+    expect(result.inAppUserIds).toEqual([]);
+    expect(result.emails).toEqual([]);
+  });
+
+  it('does not double-send when a client and contact share an email', () => {
+    const result = collectMessageNotifyRecipients({
+      senderUserId: 'member-1',
+      senderEmail: 'dan@ozer.so',
+      members: [{ userId: 'member-1', email: 'dan@ozer.so' }],
+      contacts: [{ userId: null, email: 'hello@ozer-os.com' }],
+      clients: [{ userId: null, email: 'hello@ozer-os.com' }],
+    });
+
+    expect(result.emails).toEqual(['hello@ozer-os.com']);
+  });
+
+  it('never emails the sender even when a client record uses the same address', () => {
+    const result = collectMessageNotifyRecipients({
+      senderUserId: 'member-1',
+      senderEmail: 'dan@ozer.so',
+      members: [{ userId: 'member-1', email: 'dan@ozer.so' }],
+      contacts: [],
+      clients: [{ userId: null, email: 'dan@ozer.so' }],
+    });
+
+    expect(result.inAppUserIds).toEqual([]);
+    expect(result.emails).toEqual([]);
+  });
+
+  it('adds in-app for a client participant with a user account', () => {
+    const result = collectMessageNotifyRecipients({
+      senderUserId: 'member-1',
+      senderEmail: 'dan@ozer.so',
+      members: [{ userId: 'member-1', email: 'dan@ozer.so' }],
+      contacts: [],
+      clients: [{ userId: 'client-user', email: 'hello@ozer-os.com' }],
+    });
+
+    expect(result.inAppUserIds).toEqual(['client-user']);
+    expect(result.emails).toEqual(['hello@ozer-os.com']);
+  });
 });

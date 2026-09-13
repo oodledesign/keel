@@ -221,7 +221,9 @@ class MessagesNotificationsService {
       clientIds.length
         ? this.client
             .from('clients')
-            .select('id, display_name, company_name, first_name, last_name')
+            .select(
+              'id, display_name, company_name, first_name, last_name, email',
+            )
             .in('id', clientIds)
             .then((res: { data: any }) => res.data ?? [])
         : Promise.resolve([]),
@@ -244,11 +246,24 @@ class MessagesNotificationsService {
         email: contactDisplay.get(p.participant_contact_id)?.email ?? null,
       }));
 
+    const clientRecipients = (participants ?? [])
+      .filter((p: any) => p.participant_kind === 'client')
+      .map((p: any) => {
+        const client = clientRows.find(
+          (row: any) => row.id === p.participant_client_id,
+        );
+        return {
+          userId: (p.participant_user_id as string | null) ?? null,
+          email: (client?.email as string | null | undefined) ?? null,
+        };
+      });
+
     const collected = collectMessageNotifyRecipients({
       senderUserId: params.senderUserId,
       senderEmail: userById.get(params.senderUserId)?.email ?? null,
       members: memberRecipients,
       contacts: contactRecipients,
+      clients: clientRecipients,
     });
 
     const recipientUserIds = collected.inAppUserIds;
