@@ -101,16 +101,20 @@ struct RecipeDetailView: View {
     }
 
     private func load() async {
-        guard let token = session.accessToken else { return }
         do {
+            let token = try await session.validAccessToken()
             detail = try await client.recipe(
                 id: recipeId,
                 workspace: session.workspaceQueryValue,
                 accessToken: token
             )
+        } catch is CancellationError {
+            return
         } catch let error as NativeAPIError {
+            if error == .unauthorized { await session.handleUnauthorized() }
             loadError = error
         } catch {
+            if error.isTaskCancellation { return }
             loadError = .transport(error.localizedDescription)
         }
     }

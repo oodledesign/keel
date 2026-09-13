@@ -95,16 +95,20 @@ struct RecipesListView: View {
     }
 
     private func load() async {
-        guard let token = session.accessToken, !session.workspaceQueryValue.isEmpty else { return }
+        guard !session.workspaceQueryValue.isEmpty else { return }
         isLoading = true
         defer { isLoading = false }
         do {
+            let token = try await session.validAccessToken()
             payload = try await client.recipes(workspace: session.workspaceQueryValue, accessToken: token)
             loadError = nil
+        } catch is CancellationError {
+            return
         } catch let error as NativeAPIError {
-            if error == .unauthorized { await session.signOut() }
+            if error == .unauthorized { await session.handleUnauthorized() }
             loadError = error
         } catch {
+            if error.isTaskCancellation { return }
             loadError = .transport(error.localizedDescription)
         }
     }
