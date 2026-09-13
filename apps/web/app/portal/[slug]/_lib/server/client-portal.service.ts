@@ -380,7 +380,7 @@ class ClientPortalService {
       this.db
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection',
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
@@ -409,7 +409,9 @@ class ClientPortalService {
             status: subscriptionResult.data.status ?? null,
             nextBillingDate: subscriptionResult.data.next_billing_date ?? null,
             stripePaymentLink:
-              subscriptionResult.data.stripe_payment_link ?? null,
+              subscriptionResult.data.billing_collection === 'offline'
+                ? null
+                : (subscriptionResult.data.stripe_payment_link ?? null),
           }
         : null,
       notices: (
@@ -1768,7 +1770,7 @@ class ClientPortalService {
       this.db
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection',
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
@@ -1786,7 +1788,9 @@ class ClientPortalService {
           status: subscriptionResult.data.status ?? null,
           nextBillingDate: subscriptionResult.data.next_billing_date ?? null,
           stripePaymentLink:
-            subscriptionResult.data.stripe_payment_link ?? null,
+            subscriptionResult.data.billing_collection === 'offline'
+              ? null
+              : (subscriptionResult.data.stripe_payment_link ?? null),
         }
       : null;
 

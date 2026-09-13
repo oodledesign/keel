@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { isOfflineBillingCollection } from './plan-templates-types';
 import { getSiteOrigin, getStripeClientSecret } from './stripe-connect';
 
 type ClientSubscriptionRow = {
@@ -14,6 +15,7 @@ type ClientSubscriptionRow = {
   monthly_amount: number | null;
   status: string | null;
   stripe_subscription_id: string | null;
+  billing_collection?: string | null;
 };
 
 type AgencyStripeRow = {
@@ -66,13 +68,19 @@ export async function createClientSubscriptionCheckout(
   const { data: subscription, error: subError } = await db
     .from('client_subscriptions')
     .select<ClientSubscriptionRow>(
-      'id, business_id, client_org_id, plan_name, monthly_amount, status, stripe_subscription_id',
+      'id, business_id, client_org_id, plan_name, monthly_amount, status, stripe_subscription_id, billing_collection',
     )
     .eq('id', subscriptionId)
     .maybeSingle();
 
   if (subError || !subscription) {
     throw new Error('Subscription not found');
+  }
+
+  if (isOfflineBillingCollection(subscription.billing_collection)) {
+    throw new Error(
+      'This plan is billed offline and is not collected via Stripe',
+    );
   }
 
   if (subscription.stripe_subscription_id) {
@@ -203,6 +211,21 @@ export async function reconcileClientSubscriptionCheckoutSession(
   const admin = getSupabaseServerAdminClient();
   const db = admin as unknown as DynamicAdmin;
 
+  const { data: existing } = await db
+    .from('client_subscriptions')
+    .select<ClientSubscriptionRow>(
+      'id, business_id, client_org_id, plan_name, monthly_amount, status, stripe_subscription_id, billing_collection',
+    )
+    .eq('id', subscriptionId)
+    .maybeSingle();
+
+  if (isOfflineBillingCollection(existing?.billing_collection)) {
+    return {
+      activated: false as const,
+      reason: 'offline_billing' as const,
+    };
+  }
+
   const { error } = await db
     .from('client_subscriptions')
     .update({
@@ -212,6 +235,7 @@ export async function reconcileClientSubscriptionCheckoutSession(
           ? session.customer
           : (session.customer?.id ?? null),
       status: 'active',
+      billing_collection: 'stripe',
     })
     .eq('id', subscriptionId);
 

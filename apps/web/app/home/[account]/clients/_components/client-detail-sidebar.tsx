@@ -913,8 +913,8 @@ export function ClientDetailSidebar({
                         Retainers
                       </p>
                       <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        Recurring billing via Stripe Connect. Cancel + recreate
-                        to change price.
+                        Recurring retainers via Stripe or invoiced offline.
+                        Cancel + recreate to change price.
                       </p>
                     </div>
                     <AttachRetainerPlanButton

@@ -6,6 +6,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  ActivateOfflineClientSubscriptionSchema,
   AttachHostingPlanSchema,
   AttachRetainerPlanSchema,
   CancelClientSubscriptionSchema,
@@ -97,6 +98,7 @@ export const attachHostingPlanAction = enhanceAction(
       planTemplateId,
       clientId: String(client.id),
       websiteId: input.websiteId,
+      collection: input.collection,
     });
 
     revalidatePath('/home/[account]/websites', 'layout');
@@ -126,6 +128,7 @@ export const attachRetainerPlanAction = enhanceAction(
       planTemplateId,
       clientId: input.clientId,
       websiteId: null,
+      collection: input.collection,
     });
 
     revalidatePath('/home/[account]/clients', 'layout');
@@ -167,4 +170,17 @@ export const resendClientSubscriptionPaymentLinkAction = enhanceAction(
     return result;
   },
   { schema: ResendClientSubscriptionPaymentLinkSchema },
+);
+
+export const activateOfflineClientSubscriptionAction = enhanceAction(
+  async (input) => {
+    const result = await getService().activateOffline(
+      input.accountId,
+      input.subscriptionId,
+    );
+    revalidatePath('/home/[account]/clients', 'layout');
+    revalidatePath('/home/[account]/websites', 'layout');
+    return result;
+  },
+  { schema: ActivateOfflineClientSubscriptionSchema },
 );

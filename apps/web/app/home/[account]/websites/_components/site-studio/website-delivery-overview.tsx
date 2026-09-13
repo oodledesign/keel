@@ -164,8 +164,8 @@ export function WebsiteDeliveryOverview({
               Hosting billing
             </p>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Attach a recurring hosting plan. Cancel + recreate to change price
-              (no prorations yet).
+              Attach a recurring hosting plan via Stripe or invoiced offline.
+              Cancel + recreate to change price (no prorations yet).
             </p>
           </div>
           <AttachHostingPlanButton

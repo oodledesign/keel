@@ -40,6 +40,8 @@ export const DeletePlanTemplateSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const BillingCollectionSchema = z.enum(['stripe', 'offline']);
+
 export const AttachHostingPlanSchema = z.object({
   accountId: z.string().uuid(),
   websiteId: z.string().uuid(),
@@ -49,6 +51,7 @@ export const AttachHostingPlanSchema = z.object({
     accountId: true,
     id: true,
   }).optional(),
+  collection: BillingCollectionSchema.default('stripe'),
 });
 
 export const AttachRetainerPlanSchema = z.object({
@@ -59,6 +62,7 @@ export const AttachRetainerPlanSchema = z.object({
     accountId: true,
     id: true,
   }).optional(),
+  collection: BillingCollectionSchema.default('stripe'),
 });
 
 export const CancelClientSubscriptionSchema = z.object({
@@ -73,6 +77,11 @@ export const ListClientSubscriptionsSchema = z.object({
 });
 
 export const ResendClientSubscriptionPaymentLinkSchema = z.object({
+  accountId: z.string().uuid(),
+  subscriptionId: z.string().uuid(),
+});
+
+export const ActivateOfflineClientSubscriptionSchema = z.object({
   accountId: z.string().uuid(),
   subscriptionId: z.string().uuid(),
 });

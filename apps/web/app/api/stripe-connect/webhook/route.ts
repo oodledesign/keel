@@ -7,6 +7,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { createPlanTemplatesService } from '~/home/[account]/settings/services/_lib/server/plan-templates.service';
 import { mapStripeSubscriptionStatus } from '~/lib/billing/client-subscription-status';
 import { notifyConnectPaymentFailed } from '~/lib/billing/connect-payment-notifications';
+import { isOfflineBillingCollection } from '~/lib/billing/plan-templates-types';
 import { getStripeClientSecret } from '~/lib/billing/stripe-connect';
 import { reconcileClientSubscriptionCheckoutSession } from '~/lib/billing/subscription-checkout';
 
@@ -20,6 +21,7 @@ type ClientSubscriptionRow = {
   plan_name: string | null;
   monthly_amount: number | null;
   status: string | null;
+  billing_collection?: string | null;
 };
 
 type BusinessRow = {
@@ -143,7 +145,7 @@ async function loadSubscriptionByStripeId(stripeSubscriptionId: string) {
     db
       .from('client_subscriptions')
       .select(
-        'id, business_id, client_org_id, client_id, account_id, website_id, plan_name, monthly_amount, status',
+        'id, business_id, client_org_id, client_id, account_id, website_id, plan_name, monthly_amount, status, billing_collection',
       ) as MaybeSingleQuery<ClientSubscriptionRow>
   )
     .eq('stripe_subscription_id', stripeSubscriptionId)
@@ -152,21 +154,49 @@ async function loadSubscriptionByStripeId(stripeSubscriptionId: string) {
   return data;
 }
 
+async function loadSubscriptionById(subscriptionId: string) {
+  const db = getDb();
+  const { data } = await (
+    db
+      .from('client_subscriptions')
+      .select(
+        'id, business_id, client_org_id, client_id, account_id, website_id, plan_name, monthly_amount, status, billing_collection',
+      ) as MaybeSingleQuery<ClientSubscriptionRow>
+  )
+    .eq('id', subscriptionId)
+    .maybeSingle();
+
+  return data;
+}
+
+async function resolveSubscriptionForStripeEvent(
+  stripeSubscription: Stripe.Subscription,
+) {
+  const fromMeta = stripeSubscription.metadata?.client_subscription_id
+    ? await loadSubscriptionById(
+        stripeSubscription.metadata.client_subscription_id,
+      )
+    : null;
+
+  return fromMeta ?? (await loadSubscriptionByStripeId(stripeSubscription.id));
+}
+
 async function syncClientSubscriptionFromStripe(
   subscription: Stripe.Subscription,
 ) {
-  const db = getDb();
-  const subscriptionId =
-    subscription.metadata?.client_subscription_id ??
-    (await loadSubscriptionByStripeId(subscription.id))?.id;
+  const existing = await resolveSubscriptionForStripeEvent(subscription);
+  if (!existing?.id) {
+    return;
+  }
 
-  if (!subscriptionId) {
+  if (isOfflineBillingCollection(existing.billing_collection)) {
     return;
   }
 
   const periodEnd = periodEndIso(subscription);
   const status = mapStripeSubscriptionStatus(subscription.status);
 
+  const db = getDb();
   await db
     .from('client_subscriptions')
     .update({
@@ -190,7 +220,7 @@ async function syncClientSubscriptionFromStripe(
         ? { cancelled_at: new Date().toISOString() }
         : {}),
     })
-    .eq('id', subscriptionId);
+    .eq('id', existing.id);
 }
 
 async function activateClientSubscriptionFromCheckout(
@@ -198,6 +228,11 @@ async function activateClientSubscriptionFromCheckout(
 ) {
   const subscriptionId = session.metadata?.client_subscription_id;
   if (!subscriptionId) {
+    return;
+  }
+
+  const existing = await loadSubscriptionById(subscriptionId);
+  if (isOfflineBillingCollection(existing?.billing_collection)) {
     return;
   }
 
@@ -319,6 +354,11 @@ async function createPaidInvoiceFromStripeInvoice(
       : null);
 
   if (!subscription) {
+    return;
+  }
+
+  const stored = await loadSubscriptionById(subscription.id);
+  if (isOfflineBillingCollection(stored?.billing_collection)) {
     return;
   }
 
@@ -569,11 +609,12 @@ export async function POST(request: Request) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        const subscriptionId =
-          subscription.metadata?.client_subscription_id ??
-          (await loadSubscriptionByStripeId(subscription.id))?.id;
+        const existing = await resolveSubscriptionForStripeEvent(subscription);
 
-        if (subscriptionId) {
+        if (
+          existing?.id &&
+          !isOfflineBillingCollection(existing.billing_collection)
+        ) {
           const db = getDb();
           await db
             .from('client_subscriptions')
@@ -581,7 +622,7 @@ export async function POST(request: Request) {
               status: 'cancelled',
               cancelled_at: new Date().toISOString(),
             })
-            .eq('id', subscriptionId);
+            .eq('id', existing.id);
         }
         break;
       }

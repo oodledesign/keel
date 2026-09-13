@@ -238,7 +238,7 @@ class PortalBillingService {
       this.admin
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at, billing_collection',
         )
         .eq('client_org_id', clientOrgId)
         .eq('account_id', accountId)
@@ -247,7 +247,7 @@ class PortalBillingService {
         ? this.admin
             .from('client_subscriptions')
             .select(
-              'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at',
+              'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at, billing_collection',
             )
             .in('client_id', clientIds)
             .eq('account_id', accountId)
@@ -288,8 +288,9 @@ class PortalBillingService {
       if (customerId) customerIds.add(customerId);
 
       const status = String(row.status ?? 'pending');
+      const offline = row.billing_collection === 'offline';
       const checkoutUrl =
-        status === 'incomplete' || status === 'pending'
+        !offline && (status === 'incomplete' || status === 'pending')
           ? (row.stripe_payment_link as string | null)
           : null;
 
@@ -306,7 +307,7 @@ class PortalBillingService {
           (row.next_billing_date as string | null),
         checkoutUrl,
         canManagePaymentMethod: Boolean(
-          connect && customerId && status === 'active',
+          connect && customerId && status === 'active' && !offline,
         ),
       };
     });
