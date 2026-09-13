@@ -116,11 +116,17 @@ export function FamilyPageClient({
       ) : null}
 
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
-        <div className="flex w-max max-w-2xl min-w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-sm md:w-full">
+        <div
+          role="tablist"
+          aria-label="Meal sections"
+          className="flex w-max max-w-2xl min-w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-sm md:w-full"
+        >
           {TABS.map(({ id, label, shortLabel, Icon }) => (
             <button
               key={id}
               type="button"
+              role="tab"
+              aria-selected={tab === id}
               onClick={() => selectTab(id)}
               className={cn(
                 'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 font-medium whitespace-nowrap transition-colors',
@@ -316,7 +322,8 @@ function MealNextSteps({
       <div className="space-y-2">
         {steps.map((step) => {
           const className =
-            'flex w-full items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-left transition-opacity hover:opacity-90';
+            'flex w-full items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-left';
+          const interactiveClass = `${className} transition-opacity hover:opacity-90`;
           const content = (
             <>
               <div className="min-w-0 flex-1">
@@ -335,7 +342,11 @@ function MealNextSteps({
 
           if (step.href) {
             return (
-              <Link key={step.key} href={step.href} className={className}>
+              <Link
+                key={step.key}
+                href={step.href}
+                className={interactiveClass}
+              >
                 {content}
               </Link>
             );
@@ -347,7 +358,7 @@ function MealNextSteps({
                 key={step.key}
                 type="button"
                 onClick={step.onClick}
-                className={className}
+                className={interactiveClass}
               >
                 {content}
               </button>

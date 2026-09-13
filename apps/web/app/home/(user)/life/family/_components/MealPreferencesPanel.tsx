@@ -28,7 +28,12 @@ type Props = {
 };
 
 export function MealPreferencesPanel(props: Props) {
-  return <MealPreferencesForm key={props.preferences.updated_at} {...props} />;
+  return (
+    <MealPreferencesForm
+      key={props.preferences.updated_at ?? 'new'}
+      {...props}
+    />
+  );
 }
 
 function MealPreferencesForm({ preferences, accountSlug, onSaved }: Props) {
