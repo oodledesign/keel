@@ -326,10 +326,7 @@ function HeaderLayout({ children }: React.PropsWithChildren) {
   return (
     <PersonalVisionChromeShell>
       <UserWorkspaceContextProvider value={workspace}>
-        <Page
-          style={'header'}
-          className={WORKSPACE_SHELL_PAGE_CLASS}
-        >
+        <Page style={'header'} className={WORKSPACE_SHELL_PAGE_CLASS}>
           <PageNavigation>
             <HomeMenuNavigation workspace={workspace} />
           </PageNavigation>

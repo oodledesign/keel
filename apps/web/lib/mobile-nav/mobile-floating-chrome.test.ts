@@ -6,6 +6,7 @@ import {
   MOBILE_FLOATING_CHROME_SCROLL_PB,
   WORKSPACE_SHELL_PAGE_CLASS,
   WORKSPACE_SHELL_VIEWPORT_CLASS,
+  WORKSPACE_VISUAL_VIEWPORT_H,
 } from '~/lib/mobile-nav/mobile-floating-chrome';
 
 describe('mobile floating chrome tokens', () => {
@@ -26,10 +27,13 @@ describe('mobile floating chrome tokens', () => {
   });
 
   it('sizes the team and personal shells from the visual-height variable', () => {
-    expect(WORKSPACE_SHELL_VIEWPORT_CLASS).toContain(
-      '--workspace-visual-height',
+    expect(WORKSPACE_VISUAL_VIEWPORT_H).toBe(
+      'h-[var(--workspace-visual-height,100dvh)] max-h-[var(--workspace-visual-height,100dvh)]',
     );
-    expect(WORKSPACE_SHELL_PAGE_CLASS).toContain('--workspace-visual-height');
+    expect(WORKSPACE_SHELL_VIEWPORT_CLASS).toContain(
+      WORKSPACE_VISUAL_VIEWPORT_H,
+    );
+    expect(WORKSPACE_SHELL_PAGE_CLASS).toContain(WORKSPACE_VISUAL_VIEWPORT_H);
     expect(WORKSPACE_SHELL_VIEWPORT_CLASS).not.toContain('max-h-dvh');
     expect(WORKSPACE_SHELL_PAGE_CLASS).not.toContain('max-h-dvh');
   });

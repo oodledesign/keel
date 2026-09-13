@@ -23,10 +23,6 @@ export function WorkspaceMobileScrollLock() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
     if (!isMobileViewport()) {
       return;
     }
@@ -41,7 +37,8 @@ export function WorkspaceMobileScrollLock() {
     const previous = {
       htmlOverflow: html.style.overflow,
       htmlHeight: html.style.height,
-      htmlVisualHeight: html.style.getPropertyValue(WORKSPACE_VISUAL_HEIGHT_VAR),
+      htmlVisualHeight:
+        html.style.getPropertyValue(WORKSPACE_VISUAL_HEIGHT_VAR) || null,
       bodyOverflow: body.style.overflow,
       bodyHeight: body.style.height,
     };
@@ -59,6 +56,17 @@ export function WorkspaceMobileScrollLock() {
       body.style.height = heightPx;
     };
 
+    let raf: number | undefined;
+    const applyRaf = () => {
+      if (raf !== undefined) {
+        window.cancelAnimationFrame(raf);
+      }
+      raf = window.requestAnimationFrame(() => {
+        apply();
+        raf = undefined;
+      });
+    };
+
     apply();
 
     if (window.scrollY > 0) {
@@ -66,17 +74,20 @@ export function WorkspaceMobileScrollLock() {
     }
 
     const visualViewport = window.visualViewport;
-    visualViewport?.addEventListener('resize', apply);
-    visualViewport?.addEventListener('scroll', apply);
-    window.addEventListener('resize', apply);
+    visualViewport?.addEventListener('resize', applyRaf);
+    visualViewport?.addEventListener('scroll', applyRaf);
+    window.addEventListener('resize', applyRaf);
 
     return () => {
-      visualViewport?.removeEventListener('resize', apply);
-      visualViewport?.removeEventListener('scroll', apply);
-      window.removeEventListener('resize', apply);
+      if (raf !== undefined) {
+        window.cancelAnimationFrame(raf);
+      }
+      visualViewport?.removeEventListener('resize', applyRaf);
+      visualViewport?.removeEventListener('scroll', applyRaf);
+      window.removeEventListener('resize', applyRaf);
       html.style.overflow = previous.htmlOverflow;
       html.style.height = previous.htmlHeight;
-      if (previous.htmlVisualHeight) {
+      if (previous.htmlVisualHeight !== null) {
         html.style.setProperty(
           WORKSPACE_VISUAL_HEIGHT_VAR,
           previous.htmlVisualHeight,

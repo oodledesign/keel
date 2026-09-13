@@ -563,10 +563,7 @@ function HeaderLayoutShell({
         )}
         oooDefaultAccountId={accountId}
       >
-        <Page
-          style={'header'}
-          className={WORKSPACE_SHELL_PAGE_CLASS}
-        >
+        <Page style={'header'} className={WORKSPACE_SHELL_PAGE_CLASS}>
           <PageNavigation>
             <TeamAccountNavigationMenu
               workspace={data}
