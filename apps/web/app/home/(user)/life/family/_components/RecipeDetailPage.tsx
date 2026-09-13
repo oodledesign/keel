@@ -11,12 +11,18 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { buildPublicRecipeShareUrl } from '~/lib/meals/public-recipe-share';
+
 import {
   deleteRecipeAction,
   retryRecipeNutritionAction,
   toggleRecipeFavoriteAction,
 } from '../_lib/actions';
 import { buildRecipesListPath } from '../_lib/family-meal.paths';
+import {
+  rotateRecipeShareTokenAction,
+  setRecipePublicShareAction,
+} from '../_lib/recipe-share-actions';
 import type {
   RecipeCookLogRow,
   RecipePopularityStats,
@@ -27,6 +33,7 @@ import { RecipeBadges } from './RecipeBadges';
 import { RecipeCookLogPanel } from './RecipeCookLogPanel';
 import { RecipeDialog } from './RecipeDialog';
 import { RecipeMethodPanel } from './RecipeMethodPanel';
+import { RecipeSharePanel } from './RecipeSharePanel';
 import { RecipeSourceLink } from './RecipeSourceLink';
 import { panelClass, totalTimeLabel } from './meal-ui';
 
@@ -217,6 +224,31 @@ export function RecipeDetailPage({
           ) : null}
         </div>
       </header>
+
+      <RecipeSharePanel
+        title="Public link"
+        description="Anyone with the link can view this recipe. It stays private until you enable sharing."
+        enabled={Boolean(recipe.public_share_enabled)}
+        token={recipe.public_share_token}
+        buildUrl={buildPublicRecipeShareUrl}
+        onToggle={async (enabled) => {
+          const result = await setRecipePublicShareAction({
+            recipeId: recipe.id,
+            enabled,
+            ...scopeFields,
+          });
+          if (result.success) router.refresh();
+          return result;
+        }}
+        onRotate={async () => {
+          const result = await rotateRecipeShareTokenAction({
+            recipeId: recipe.id,
+            ...scopeFields,
+          });
+          if (result.success) router.refresh();
+          return result;
+        }}
+      />
 
       <RecipeMethodPanel
         baseServings={recipe.servings}

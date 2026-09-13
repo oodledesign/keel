@@ -13,14 +13,14 @@ import { cn } from '@kit/ui/utils';
 import { buildRecipeBookDetailPath } from '../_lib/family-meal.paths';
 import { deleteRecipeBookAction } from '../_lib/recipe-book-actions';
 import type {
-  RecipeBookRow,
+  RecipeBookWithRecipes,
   RecipeRow,
 } from '../_lib/schema/family-meal.schema';
 import { RecipeBookDialog } from './RecipeBookDialog';
 import { ACCENT, panelClass } from './meal-ui';
 
 type Props = {
-  books: RecipeBookRow[];
+  books: RecipeBookWithRecipes[];
   recipes: RecipeRow[];
   basePath: string;
   accountSlug?: string;
@@ -41,7 +41,7 @@ export function RecipeBookLibrary({
   const [dialogOpen, setDialogOpen] = useState(
     Boolean(initialRecipeIds?.length),
   );
-  const [editing, setEditing] = useState<RecipeBookRow | null>(null);
+  const [editing, setEditing] = useState<RecipeBookWithRecipes | null>(null);
   const [, startTransition] = useTransition();
 
   function openNew() {
@@ -49,7 +49,7 @@ export function RecipeBookLibrary({
     setDialogOpen(true);
   }
 
-  function openEdit(book: RecipeBookRow) {
+  function openEdit(book: RecipeBookWithRecipes) {
     setEditing(book);
     setDialogOpen(true);
   }
@@ -59,7 +59,7 @@ export function RecipeBookLibrary({
     if (!open) setEditing(null);
   }
 
-  function handleDelete(book: RecipeBookRow) {
+  function handleDelete(book: RecipeBookWithRecipes) {
     startTransition(async () => {
       const result = await deleteRecipeBookAction({
         bookId: book.id,

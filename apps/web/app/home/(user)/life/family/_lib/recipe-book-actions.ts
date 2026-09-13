@@ -2,8 +2,6 @@
 
 import { z } from 'zod';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import {
   DeleteRecipeBookSchema,
   RecipeBookInputSchema,
@@ -14,6 +12,7 @@ import {
   revalidateMealPlanPaths,
   revalidateRecipeBookPaths,
 } from './server/family-meal.scope';
+import { applyMealPlanScope, fromUntypedTable } from './server/family-untyped';
 
 type ActionResult<T = undefined> =
   | { success: true; data: T }
@@ -37,26 +36,11 @@ function fail(error: unknown): ActionResult<never> {
   };
 }
 
-function fromTable(table: string) {
-  const client = getSupabaseServerClient();
-  return (
-    client as unknown as {
-      from: (name: string) => ReturnType<typeof client.from>;
-    }
-  ).from(table);
-}
-
-function applyScope<
-  T extends {
-    eq: (column: string, value: string) => T;
-    is: (column: string, value: null) => T;
-  },
->(query: T, scope: MealPlanScope): T {
-  if (scope.kind === 'workspace') {
-    return query.eq('account_id', scope.accountId);
-  }
-
-  return query.eq('user_id', scope.userId).is('account_id', null);
+function applyScope(
+  query: ReturnType<typeof fromUntypedTable>,
+  scope: MealPlanScope,
+) {
+  return applyMealPlanScope(query, scope);
 }
 
 async function replaceBookItems(
@@ -64,34 +48,40 @@ async function replaceBookItems(
   recipeIds: string[],
   scope: MealPlanScope,
 ) {
-  if (recipeIds.length > 0) {
+  const uniqueIds = Array.from(new Set(recipeIds));
+
+  if (uniqueIds.length > 0) {
     const { data: recipes, error: recipesError } = await applyScope(
-      fromTable('family_recipes').select('id').in('id', recipeIds),
+      fromUntypedTable('family_recipes').select('id').in('id', uniqueIds),
       scope,
     );
 
     if (recipesError) throw recipesError;
 
     const allowed = new Set(
-      (recipes ?? []).map((row) => (row as { id: string }).id),
+      ((recipes ?? []) as unknown as Array<{ id: string }>).map(
+        (row) => row.id,
+      ),
     );
-    if (recipeIds.some((id) => !allowed.has(id))) {
+    if (uniqueIds.some((id) => !allowed.has(id))) {
       throw new Error('One or more recipes are not in this library');
     }
   }
 
-  const { error: deleteError } = await fromTable('family_recipe_book_items')
+  const { error: deleteError } = await fromUntypedTable(
+    'family_recipe_book_items',
+  )
     .delete()
     .eq('book_id', bookId);
 
   if (deleteError) throw deleteError;
 
-  if (recipeIds.length === 0) return;
+  if (uniqueIds.length === 0) return;
 
-  const { error: insertError } = await fromTable(
+  const { error: insertError } = await fromUntypedTable(
     'family_recipe_book_items',
   ).insert(
-    recipeIds.map((recipeId, index) => ({
+    uniqueIds.map((recipeId, index) => ({
       book_id: bookId,
       recipe_id: recipeId,
       sort_order: index,
@@ -120,22 +110,24 @@ export async function upsertRecipeBookAction(
 
     if (parsed.id) {
       const { data, error } = await applyScope(
-        fromTable('family_recipe_books').update(values).eq('id', parsed.id),
+        fromUntypedTable('family_recipe_books')
+          .update(values)
+          .eq('id', parsed.id),
         scope,
       )
         .select('id')
         .single();
 
       if (error) return fail(error);
-      bookId = (data as { id: string }).id;
+      bookId = (data as unknown as { id: string }).id;
     } else {
-      const { data, error } = await fromTable('family_recipe_books')
+      const { data, error } = await fromUntypedTable('family_recipe_books')
         .insert(values)
         .select('id')
         .single();
 
       if (error) return fail(error);
-      bookId = (data as { id: string }).id;
+      bookId = (data as unknown as { id: string }).id;
     }
 
     await replaceBookItems(bookId, parsed.recipeIds, scope);
@@ -153,7 +145,7 @@ export async function deleteRecipeBookAction(
     const parsed = DeleteRecipeBookSchema.parse(input);
     const scope = await resolveMealPlanScope(parsed.accountSlug);
     const { error } = await applyScope(
-      fromTable('family_recipe_books').delete().eq('id', parsed.bookId),
+      fromUntypedTable('family_recipe_books').delete().eq('id', parsed.bookId),
       scope,
     );
 

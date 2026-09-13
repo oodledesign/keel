@@ -2,8 +2,6 @@
 
 import { z } from 'zod';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import { generatePublicShareToken } from '~/lib/videos/public-share.server';
 
 import {
@@ -18,6 +16,7 @@ import {
   revalidateRecipeBookPaths,
   revalidateRecipePaths,
 } from './server/family-meal.scope';
+import { applyMealPlanScope, fromUntypedTable } from './server/family-untyped';
 
 type ActionResult<T = undefined> =
   | { success: true; data: T }
@@ -43,26 +42,11 @@ function fail(error: unknown): ActionResult<never> {
   };
 }
 
-function fromTable(table: string) {
-  const client = getSupabaseServerClient();
-  return (
-    client as unknown as {
-      from: (name: string) => ReturnType<typeof client.from>;
-    }
-  ).from(table);
-}
-
-function applyScope<
-  T extends {
-    eq: (column: string, value: string) => T;
-    is: (column: string, value: null) => T;
-  },
->(query: T, scope: MealPlanScope): T {
-  if (scope.kind === 'workspace') {
-    return query.eq('account_id', scope.accountId);
-  }
-
-  return query.eq('user_id', scope.userId).is('account_id', null);
+function applyScope(
+  query: ReturnType<typeof fromUntypedTable>,
+  scope: MealPlanScope,
+) {
+  return applyMealPlanScope(query, scope);
 }
 
 async function updateShareState({
@@ -79,7 +63,7 @@ async function updateShareState({
   rotate?: boolean;
 }): Promise<ShareState> {
   const { data: existing, error: readError } = await applyScope(
-    fromTable(table)
+    fromUntypedTable(table)
       .select('public_share_enabled, public_share_token')
       .eq('id', id),
     scope,
@@ -94,7 +78,7 @@ async function updateShareState({
     );
   }
 
-  const row = existing as {
+  const row = existing as unknown as {
     public_share_enabled: boolean | null;
     public_share_token: string | null;
   };
@@ -106,7 +90,7 @@ async function updateShareState({
       : currentToken;
 
   const { data, error } = await applyScope(
-    fromTable(table)
+    fromUntypedTable(table)
       .update({
         public_share_enabled: nextEnabled,
         public_share_token: nextToken,
@@ -120,7 +104,7 @@ async function updateShareState({
 
   if (error) throw error;
 
-  const updated = data as {
+  const updated = data as unknown as {
     public_share_enabled: boolean | null;
     public_share_token: string | null;
   };

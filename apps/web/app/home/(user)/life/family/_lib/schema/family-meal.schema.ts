@@ -90,8 +90,35 @@ export type RecipeRow = {
   nutrition_computed_at: string | null;
   nutrition_pending: boolean;
   prep_ingredients_hash: string | null;
+  public_share_enabled: boolean;
+  public_share_token: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type RecipeBookRow = {
+  id: string;
+  user_id: string;
+  account_id: string | null;
+  name: string;
+  description: string | null;
+  public_share_enabled: boolean;
+  public_share_token: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecipeBookItemRow = {
+  id: string;
+  book_id: string;
+  recipe_id: string;
+  sort_order: number;
+  created_at: string;
+};
+
+export type RecipeBookWithRecipes = RecipeBookRow & {
+  recipe_ids: string[];
+  recipe_count: number;
 };
 
 export type MealPreferencesRow = {
@@ -292,8 +319,52 @@ export type BulkAddGeneratedRecipesInput = z.infer<
   typeof BulkAddGeneratedRecipesSchema
 >;
 
+export const SetRecipePublicShareSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+export type SetRecipePublicShareInput = z.infer<
+  typeof SetRecipePublicShareSchema
+>;
+
+export const RotateRecipeShareTokenSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+});
+export type RotateRecipeShareTokenInput = z.infer<
+  typeof RotateRecipeShareTokenSchema
+>;
+
+export const RecipeBookInputSchema = AccountSlugFieldSchema.extend({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1, 'Name is required').max(160),
+  description: z.string().trim().max(2_000).optional().nullable(),
+  recipeIds: z.array(z.string().uuid()).max(80).default([]),
+});
+export type RecipeBookInput = z.infer<typeof RecipeBookInputSchema>;
+
+export const DeleteRecipeBookSchema = AccountSlugFieldSchema.extend({
+  bookId: z.string().uuid(),
+});
+export type DeleteRecipeBookInput = z.infer<typeof DeleteRecipeBookSchema>;
+
+export const SetRecipeBookPublicShareSchema = AccountSlugFieldSchema.extend({
+  bookId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+export type SetRecipeBookPublicShareInput = z.infer<
+  typeof SetRecipeBookPublicShareSchema
+>;
+
+export const RotateRecipeBookShareTokenSchema = AccountSlugFieldSchema.extend({
+  bookId: z.string().uuid(),
+});
+export type RotateRecipeBookShareTokenInput = z.infer<
+  typeof RotateRecipeBookShareTokenSchema
+>;
+
 export type FamilyMealData = {
   recipes: RecipeRow[];
+  books: RecipeBookWithRecipes[];
   preferences: MealPreferencesRow;
   accountSlug?: string;
   basePath: string;

@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Library,
   SlidersHorizontal,
 } from 'lucide-react';
 
@@ -18,13 +19,14 @@ import { cn } from '@kit/ui/utils';
 import type { FamilyMealData } from '../_lib/schema/family-meal.schema';
 import { MealPlanPanel } from './MealPlanPanel';
 import { MealPreferencesPanel } from './MealPreferencesPanel';
+import { RecipeBookLibrary } from './RecipeBookLibrary';
 import { RecipeLibrary } from './RecipeLibrary';
 import { ACCENT } from './meal-ui';
 
-type Tab = 'plan' | 'recipes' | 'preferences';
+type Tab = 'plan' | 'recipes' | 'books' | 'preferences';
 
 function parseTab(value: string | null): Tab {
-  if (value === 'recipes' || value === 'preferences') {
+  if (value === 'recipes' || value === 'books' || value === 'preferences') {
     return value;
   }
 
@@ -34,6 +36,7 @@ function parseTab(value: string | null): Tab {
 const TABS: { id: Tab; label: string; Icon: typeof CalendarDays }[] = [
   { id: 'plan', label: 'Meal plan', Icon: CalendarDays },
   { id: 'recipes', label: 'Recipes', Icon: BookOpen },
+  { id: 'books', label: 'Books', Icon: Library },
   { id: 'preferences', label: 'Preferences', Icon: SlidersHorizontal },
 ];
 
@@ -75,10 +78,15 @@ export function FamilyPageClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get('tab')));
+  const [bookDraft, setBookDraft] = useState<{ ids: string[]; key: number }>({
+    ids: [],
+    key: 0,
+  });
 
   const refresh = () => router.refresh();
 
   const recipeCount = initialData.recipes.length;
+  const bookCount = initialData.books.length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
@@ -96,7 +104,7 @@ export function FamilyPageClient({
         </div>
       ) : null}
 
-      <div className="flex w-full max-w-md rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-sm">
+      <div className="flex w-full max-w-2xl rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-sm">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -114,6 +122,11 @@ export function FamilyPageClient({
             {id === 'recipes' && recipeCount > 0 ? (
               <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 text-[11px]">
                 {recipeCount}
+              </span>
+            ) : null}
+            {id === 'books' && bookCount > 0 ? (
+              <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 text-[11px]">
+                {bookCount}
               </span>
             ) : null}
           </button>
@@ -200,6 +213,25 @@ export function FamilyPageClient({
           basePath={initialData.basePath}
           accountSlug={initialData.accountSlug}
           onChanged={refresh}
+          onCreateBook={(recipeIds) => {
+            setBookDraft({ ids: recipeIds, key: Date.now() });
+            setTab('books');
+          }}
+        />
+      ) : null}
+
+      {tab === 'books' ? (
+        <RecipeBookLibrary
+          key={bookDraft.key}
+          books={initialData.books}
+          recipes={initialData.recipes}
+          basePath={initialData.basePath}
+          accountSlug={initialData.accountSlug}
+          initialRecipeIds={bookDraft.ids}
+          onChanged={() => {
+            setBookDraft({ ids: [], key: 0 });
+            refresh();
+          }}
         />
       ) : null}
 

@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 
 import {
+  BookPlus,
   Clock,
   Link2,
   Pencil,
@@ -44,6 +45,7 @@ type Props = {
   basePath: string;
   accountSlug?: string;
   onChanged: () => void;
+  onCreateBook?: (recipeIds: string[]) => void;
 };
 
 export function RecipeLibrary({
@@ -52,6 +54,7 @@ export function RecipeLibrary({
   basePath,
   accountSlug,
   onChanged,
+  onCreateBook,
 }: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [query, setQuery] = useState('');
@@ -62,7 +65,10 @@ export function RecipeLibrary({
   const [editing, setEditing] = useState<RecipeRow | null>(null);
   const [draft, setDraft] = useState<RecipeFormDraft | null>(null);
   const [draftKey, setDraftKey] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [, startTransition] = useTransition();
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -161,6 +167,18 @@ export function RecipeLibrary({
             <Sparkles className="mr-1.5 h-4 w-4" />
             Generate with AI
           </Button>
+          {onCreateBook ? (
+            <Button
+              variant="outline"
+              disabled={selectedIds.length === 0}
+              onClick={() => onCreateBook(selectedIds)}
+            >
+              <BookPlus className="mr-1.5 h-4 w-4" />
+              {selectedIds.length > 0
+                ? `Create book (${selectedIds.length})`
+                : 'Create book'}
+            </Button>
+          ) : null}
           <Button
             onClick={openNew}
             style={{ backgroundColor: ACCENT }}
@@ -245,6 +263,23 @@ export function RecipeLibrary({
                 ) : null}
                 <div className="flex flex-1 flex-col p-4">
                   <div className="flex items-start justify-between gap-2">
+                    {onCreateBook ? (
+                      <label className="mt-0.5 flex shrink-0 items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedSet.has(recipe.id)}
+                          onChange={() => {
+                            setSelectedIds((current) =>
+                              current.includes(recipe.id)
+                                ? current.filter((id) => id !== recipe.id)
+                                : [...current, recipe.id],
+                            );
+                          }}
+                          aria-label={`Select ${recipe.name}`}
+                          className="h-4 w-4 accent-[var(--ozer-accent)]"
+                        />
+                      </label>
+                    ) : null}
                     <Link
                       href={buildRecipeDetailPath(basePath, recipe.id)}
                       className="min-w-0 flex-1 transition-opacity hover:opacity-90"

@@ -20,7 +20,7 @@ import {
   setRecipeBookPublicShareAction,
 } from '../_lib/recipe-share-actions';
 import type {
-  RecipeBookRow,
+  RecipeBookWithRecipes,
   RecipeRow,
 } from '../_lib/schema/family-meal.schema';
 import { RecipeBookDialog } from './RecipeBookDialog';
@@ -28,7 +28,7 @@ import { RecipeSharePanel } from './RecipeSharePanel';
 import { panelClass, totalTimeLabel } from './meal-ui';
 
 type Props = {
-  book: RecipeBookRow;
+  book: RecipeBookWithRecipes;
   recipes: RecipeRow[];
   basePath: string;
   accountSlug?: string;

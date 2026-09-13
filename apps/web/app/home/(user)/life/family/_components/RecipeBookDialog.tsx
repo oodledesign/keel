@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 
@@ -21,7 +21,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { upsertRecipeBookAction } from '../_lib/recipe-book-actions';
 import type {
-  RecipeBookRow,
+  RecipeBookWithRecipes,
   RecipeRow,
 } from '../_lib/schema/family-meal.schema';
 import { ACCENT } from './meal-ui';
@@ -29,14 +29,14 @@ import { ACCENT } from './meal-ui';
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  book?: RecipeBookRow | null;
+  book?: RecipeBookWithRecipes | null;
   recipes: RecipeRow[];
   initialRecipeIds?: string[];
   accountSlug?: string;
   onSaved: (bookId: string) => void;
 };
 
-function bookRecipeIds(book?: RecipeBookRow | null) {
+function bookRecipeIds(book?: RecipeBookWithRecipes | null) {
   return book?.recipe_ids ?? [];
 }
 
@@ -50,23 +50,15 @@ export function RecipeBookDialog({
   onSaved,
 }: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [name, setName] = useState(book?.name ?? '');
+  const [description, setDescription] = useState(book?.description ?? '');
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    bookRecipeIds(book).length > 0
+      ? bookRecipeIds(book)
+      : (initialRecipeIds ?? []),
+  );
   const [query, setQuery] = useState('');
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    if (!open) return;
-    setName(book?.name ?? '');
-    setDescription(book?.description ?? '');
-    setSelectedIds(
-      bookRecipeIds(book).length > 0
-        ? bookRecipeIds(book)
-        : (initialRecipeIds ?? []),
-    );
-    setQuery('');
-  }, [open, book, initialRecipeIds]);
 
   const recipesById = useMemo(
     () => new Map(recipes.map((recipe) => [recipe.id, recipe])),

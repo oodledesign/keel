@@ -42,19 +42,18 @@ async function WorkspaceRecipeBookDetailPage({
 
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(workspace, slug, ['family']);
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accessInput);
 
   if (
     !access.canViewDashboard ||
     !isAccountModuleEnabled(workspace.moduleSettings, 'meal_plan')
   ) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accessInput));
   }
 
   const [book, mealData, scope] = await Promise.all([
@@ -64,7 +63,7 @@ async function WorkspaceRecipeBookDetailPage({
   ]);
 
   if (!book) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accessInput));
   }
 
   return (

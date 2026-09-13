@@ -9,6 +9,8 @@ import type {
   MealEntryRow,
   MealPlanView,
   MealPreferencesRow,
+  RecipeBookRow,
+  RecipeBookWithRecipes,
   RecipeCookLogRow,
   RecipeIngredientRow,
   RecipePopularityStats,
@@ -25,6 +27,7 @@ import {
 } from './family-meal.dates';
 import { type MealPlanScope, resolveMealPlanScope } from './family-meal.scope';
 import { createFamilyShoppingService } from './family-shopping.service';
+import { fromUntypedTable } from './family-untyped';
 
 function defaultPreferences(
   userId: string,
@@ -58,6 +61,30 @@ function recipesQuery(scope: MealPlanScope) {
     return base.eq('account_id', scope.accountId);
   }
   return base.eq('user_id', scope.userId).is('account_id', null);
+}
+
+function booksQuery(scope: MealPlanScope) {
+  const base = fromUntypedTable('family_recipe_books').select('*');
+  if (scope.kind === 'workspace') {
+    return base.eq('account_id', scope.accountId);
+  }
+  return base.eq('user_id', scope.userId).is('account_id', null);
+}
+
+function mapRecipeRow(row: RecipeRow): RecipeRow {
+  return {
+    ...row,
+    public_share_enabled: Boolean(row.public_share_enabled),
+    public_share_token: row.public_share_token ?? null,
+  };
+}
+
+function mapBookRow(row: RecipeBookRow): RecipeBookRow {
+  return {
+    ...row,
+    public_share_enabled: Boolean(row.public_share_enabled),
+    public_share_token: row.public_share_token ?? null,
+  };
 }
 
 function preferencesQuery(scope: MealPlanScope) {
@@ -108,17 +135,33 @@ export const loadFamilyMealData = cache(
       getSupabaseServerClient(),
     );
 
-    const [recipesResult, preferencesResult, entriesResult, shoppingList] =
-      await Promise.all([
-        recipesQuery(scope)
-          .order('is_favorite', { ascending: false })
-          .order('updated_at', { ascending: false }),
-        preferencesQuery(scope).maybeSingle(),
-        entriesQuery(scope, rangeStart, rangeEnd),
-        shoppingService.findListForWeek(scope, weekStart).catch(() => null),
-      ]);
+    const [
+      recipesResult,
+      booksResult,
+      preferencesResult,
+      entriesResult,
+      shoppingList,
+    ] = await Promise.all([
+      recipesQuery(scope)
+        .order('is_favorite', { ascending: false })
+        .order('updated_at', { ascending: false }),
+      booksQuery(scope).order('updated_at', { ascending: false }),
+      preferencesQuery(scope).maybeSingle(),
+      entriesQuery(scope, rangeStart, rangeEnd),
+      shoppingService.findListForWeek(scope, weekStart).catch(() => null),
+    ]);
 
-    const recipes = (recipesResult.data ?? []) as RecipeRow[];
+    if (booksResult.error) {
+      console.error('[family-meal] load books:', booksResult.error.message);
+    }
+
+    const recipes = ((recipesResult.data ?? []) as RecipeRow[]).map(
+      mapRecipeRow,
+    );
+    const bookRows = (
+      (booksResult.data ?? []) as unknown as RecipeBookRow[]
+    ).map(mapBookRow);
+    const books = await attachBookRecipes(bookRows);
     const preferences =
       (preferencesResult.data as MealPreferencesRow | null) ??
       defaultPreferences(scope.userId, accountId);
@@ -126,6 +169,7 @@ export const loadFamilyMealData = cache(
 
     return {
       recipes,
+      books,
       preferences,
       accountSlug: scope.kind === 'workspace' ? scope.accountSlug : undefined,
       basePath: scope.basePath,
@@ -153,7 +197,88 @@ export const loadFamilyRecipeById = cache(
       return null;
     }
 
-    return (data as RecipeRow | null) ?? null;
+    return data ? mapRecipeRow(data as RecipeRow) : null;
+  },
+);
+
+async function attachBookRecipes(
+  books: RecipeBookRow[],
+): Promise<RecipeBookWithRecipes[]> {
+  if (books.length === 0) return [];
+
+  const { data, error } = await fromUntypedTable('family_recipe_book_items')
+    .select('book_id, recipe_id, sort_order')
+    .in(
+      'book_id',
+      books.map((book) => book.id),
+    )
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[family-meal] attachBookRecipes:', error.message);
+  }
+
+  const idsByBook = new Map<string, string[]>();
+  for (const item of data ?? []) {
+    const row = item as unknown as {
+      book_id: string;
+      recipe_id: string;
+      sort_order: number;
+    };
+    const current = idsByBook.get(row.book_id) ?? [];
+    current.push(row.recipe_id);
+    idsByBook.set(row.book_id, current);
+  }
+
+  return books.map((book) => {
+    const recipeIds = idsByBook.get(book.id) ?? [];
+    return {
+      ...book,
+      recipe_ids: recipeIds,
+      recipe_count: recipeIds.length,
+    };
+  });
+}
+
+export const loadFamilyRecipeBooks = cache(
+  async (accountSlug?: string): Promise<RecipeBookWithRecipes[]> => {
+    const scope = await resolveMealPlanScope(accountSlug);
+    const { data, error } = await booksQuery(scope).order('updated_at', {
+      ascending: false,
+    });
+
+    if (error) {
+      console.error('[family-meal] loadFamilyRecipeBooks:', error.message);
+      return [];
+    }
+
+    return attachBookRecipes(
+      ((data ?? []) as unknown as RecipeBookRow[]).map(mapBookRow),
+    );
+  },
+);
+
+export const loadFamilyRecipeBookById = cache(
+  async (
+    bookId: string,
+    accountSlug?: string,
+  ): Promise<RecipeBookWithRecipes | null> => {
+    const scope = await resolveMealPlanScope(accountSlug);
+    const { data, error } = await booksQuery(scope)
+      .eq('id', bookId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[family-meal] loadFamilyRecipeBookById:', error.message);
+      return null;
+    }
+
+    if (!data) return null;
+
+    const [book] = await attachBookRecipes([
+      mapBookRow(data as unknown as RecipeBookRow),
+    ]);
+    return book ?? null;
   },
 );
 
