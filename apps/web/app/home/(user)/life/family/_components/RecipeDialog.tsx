@@ -20,6 +20,12 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import type { RecipeImageCandidate } from '~/lib/ai/recipe-extract-utils';
+import {
+  canonicalizeSourceUrl,
+  extractMethodLabel,
+  tidyIngredientLines,
+  tidyInstructionText,
+} from '~/lib/ai/recipe-import-polish';
 import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
 
 import { upsertRecipeAction } from '../_lib/actions';
@@ -58,6 +64,9 @@ export type RecipeFormDraft = {
   source_url?: string | null;
   image_url?: string | null;
   image_candidates?: RecipeImageCandidate[];
+  warnings?: Array<{ code: string; message: string }>;
+  extractMethod?: string | null;
+  existing?: { id: string; name: string } | null;
 };
 
 type Props = {
@@ -204,6 +213,17 @@ function RecipeForm({
       return;
     }
 
+    if (
+      isImportReview &&
+      !form.ingredients.trim() &&
+      !form.instructions.trim()
+    ) {
+      toast.error(
+        'Couldn’t read ingredients or steps — paste them from the original, or retry the import.',
+      );
+      return;
+    }
+
     const toNum = (v: string) => {
       const n = Number.parseInt(v, 10);
       return Number.isFinite(n) ? n : null;
@@ -255,7 +275,7 @@ function RecipeForm({
       cook_minutes: toNum(form.cook_minutes),
       servings: toNum(form.servings),
       is_favorite: form.is_favorite,
-      source_url: sourceUrl,
+      source_url: sourceUrl ? canonicalizeSourceUrl(sourceUrl) : null,
       ...coverPayload,
       ...(isImportReview
         ? {
@@ -300,6 +320,27 @@ function RecipeForm({
             : 'Save it to the library, then add it to a dinner on the meal plan. Servings help scale the shopping list.'}
         </DialogDescription>
       </DialogHeader>
+
+      {isImportReview && extractMethodLabel(draft?.extractMethod) ? (
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {extractMethodLabel(draft?.extractMethod)}
+        </p>
+      ) : null}
+
+      {isImportReview && draft?.existing ? (
+        <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-xs text-[var(--workspace-shell-text)]">
+          Already in this library as “{draft.existing.name}”. You can still save
+          another copy.
+        </p>
+      ) : null}
+
+      {isImportReview && (draft?.warnings?.length ?? 0) > 0 ? (
+        <div className="space-y-1 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2 text-xs text-[var(--workspace-shell-text-muted)]">
+          {draft?.warnings?.map((warning) => (
+            <p key={warning.code}>{warning.message}</p>
+          ))}
+        </div>
+      ) : null}
 
       {isImportReview ||
       recipe?.source === 'instagram' ||
@@ -442,6 +483,38 @@ function RecipeForm({
         <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           Ingredients and method
         </p>
+        {isImportReview ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  ingredients: tidyIngredientLines(
+                    current.ingredients.split('\n'),
+                  ).join('\n'),
+                }))
+              }
+            >
+              Tidy ingredients
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  instructions: tidyInstructionText(current.instructions) ?? '',
+                }))
+              }
+            >
+              Drop junk steps
+            </Button>
+          </div>
+        ) : null}
         <div className="space-y-1.5">
           <Label htmlFor="recipe-ingredients">Ingredients</Label>
           <Textarea

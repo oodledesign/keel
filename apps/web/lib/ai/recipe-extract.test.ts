@@ -58,6 +58,15 @@ describe('isInstagramRecipeUrl', () => {
     );
     expect(isInstagramRecipeUrl('https://example.com/p/x')).toBe(false);
   });
+
+  it('accepts share and /reels/ links', () => {
+    expect(
+      isInstagramRecipeUrl('https://www.instagram.com/share/reel/AbCdEf123/'),
+    ).toBe(true);
+    expect(isInstagramRecipeUrl('https://instagram.com/reels/AbCdEf123')).toBe(
+      true,
+    );
+  });
 });
 
 describe('mapSchemaOrgRecipe', () => {

@@ -4,6 +4,14 @@ import {
   RECIPE_MEAL_TYPES,
   type RecipeMealType,
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
+import {
+  canonicalizeSourceUrl,
+  cleanRecipeTitle,
+  isInstagramRecipePath,
+  parseServingsValue,
+  tidyIngredientLines,
+  tidyInstructionText,
+} from '~/lib/ai/recipe-import-polish';
 import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
 import { getObjectSchemaTypes } from '~/lib/crawl/json-ld';
 
@@ -83,17 +91,7 @@ export function parseOptionalInt(value: unknown): number | null {
 }
 
 export function parseServings(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-    return Math.min(50, Math.round(value));
-  }
-  if (typeof value === 'string') {
-    const match = value.match(/(\d+)/);
-    if (match?.[1]) {
-      const n = Number.parseInt(match[1], 10);
-      if (Number.isFinite(n) && n > 0) return Math.min(50, n);
-    }
-  }
-  return null;
+  return parseServingsValue(value);
 }
 
 /** Parse ISO-8601 durations like PT1H30M or PT45M into whole minutes. */
@@ -232,10 +230,10 @@ export function normalizeExtractedRecipeDraft(
     null;
 
   const draft: ExtractedRecipeDraft = {
-    name: name.slice(0, 160),
+    name: cleanRecipeTitle(name).slice(0, 160),
     description,
-    ingredients,
-    instructions: instructionsRaw ? instructionsRaw.slice(0, 8_000) : null,
+    ingredients: tidyIngredientLines(ingredients),
+    instructions: tidyInstructionText(instructionsRaw),
     tags,
     meal_type,
     prep_minutes: parseOptionalInt(r.prep_minutes ?? r.prepMinutes),
@@ -358,11 +356,13 @@ export function attachExtractSource(
   const sourceUrl = parsePublicHttpUrl(input.sourceUrl);
   const candidates = parseImageCandidates(input.candidates ?? []);
   const origin = resolveExtractOrigin(sourceUrl, input.siteLabel);
+  const canonical = sourceUrl ? canonicalizeSourceUrl(sourceUrl) : null;
   return {
     ...draft,
+    name: cleanRecipeTitle(draft.name, origin?.source_label ?? input.siteLabel),
     source: origin?.source ?? draft.source,
     source_label: origin?.source_label ?? draft.source_label,
-    source_url: sourceUrl,
+    source_url: canonical,
     image_url: candidates[0]?.url ?? null,
     image_candidates: candidates,
   };
@@ -475,12 +475,5 @@ export function isPrivateOrLocalUrl(url: string): boolean {
 }
 
 export function isInstagramRecipeUrl(url: string): boolean {
-  try {
-    const parsed = new URL(normalizeUrl(url.trim()));
-    const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
-    if (host !== 'instagram.com' && host !== 'instagr.am') return false;
-    return /^\/(p|reel|tv)\//i.test(parsed.pathname);
-  } catch {
-    return false;
-  }
+  return isInstagramRecipePath(url);
 }
