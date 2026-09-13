@@ -177,6 +177,11 @@ struct HomeTodayView: View {
                         onOpen(.meetings)
                     }
                 }
+                if workspace?.showsProjects == true {
+                    actionChip("Projects", symbol: "list.clipboard") {
+                        onOpen(.projects)
+                    }
+                }
                 if workspace?.showsPeople == true {
                     actionChip("People", symbol: "person.2") {
                         onOpen(.people)

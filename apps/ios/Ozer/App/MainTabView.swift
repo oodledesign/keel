@@ -23,6 +23,8 @@ struct MainTabView: View {
                 PeopleListView()
             case .clients:
                 ClientsListView()
+            case .projects:
+                ProjectsListView()
             case .invoices:
                 InvoicesListView()
             case .meetings:

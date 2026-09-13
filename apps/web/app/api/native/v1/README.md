@@ -80,6 +80,15 @@ curl -sS "$ORIGIN/api/native/v1/clients?workspace=YOUR_SLUG" \
 curl -sS "$ORIGIN/api/native/v1/clients/CLIENT_ID?workspace=YOUR_SLUG" \
   -H "Authorization: Bearer $TOKEN"
 
+curl -sS "$ORIGIN/api/native/v1/projects?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS "$ORIGIN/api/native/v1/projects?workspace=YOUR_SLUG&status=all" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -sS "$ORIGIN/api/native/v1/projects/PROJECT_ID?workspace=YOUR_SLUG" \
+  -H "Authorization: Bearer $TOKEN"
+
 curl -sS "$ORIGIN/api/native/v1/invoices?workspace=YOUR_SLUG&status=open" \
   -H "Authorization: Bearer $TOKEN"
 
@@ -125,6 +134,45 @@ curl -sS -X POST "$ORIGIN/api/native/v1/messages/threads/THREAD_ID/messages" \
 `workspace` accepts an account slug, UUID, or the chip aliases `personal`, `family`, and `business` (`business` maps to the first `work_design` workspace). Exact slug or UUID wins when they collide with an alias. Personal is always included in `/workspaces` (empty slug falls back to the account id). `/clients` includes `image` / `logo` HTTPS URLs; `GET /clients/:id` adds `contacts`.
 
 `GET /tasks` query flags: `status=open|done|all` (default `open`; portal assignee rows stay out), optional `client=<uuid>`, optional `q` (case-insensitive title match). Personal still hides other people’s life tasks.
+
+## Projects
+
+Shown on `work_design`, `commercial_property`, and `building_surveyor` only (same business profiles as Clients). Personal / family / community get an empty list (not 403). Delivery rows only (`public.projects` with `project_type = delivery`) — no campaign trackers, retainers, or portal publishing.
+
+```
+GET /api/native/v1/projects?workspace=<slug-or-uuid>&status=open|done|all
+→ {
+  "items": [{
+    "id", "title", "status", "status_label",
+    "client_id", "client_name",
+    "start", "due", "is_ongoing", "is_phased",
+    "value", "value_pence",
+    "progress_pct",
+    "task_counts": { "open", "done", "total" }
+  }],
+  "statuses": [{ "slug", "label", "category": "open"|"completed"|"cancelled" }]
+}
+```
+
+`status` defaults to `open` (not completed/cancelled, including workspace custom closed slugs). `all` is for the phone board. `statuses` are the workspace columns (defaults when none are seeded). Money uses `formatWorkspaceMoney` (GBP unless a value is stored otherwise). `progress_pct` is the same leaf-task progress as the web project header.
+
+```
+GET /api/native/v1/projects/{id}?workspace=<slug-or-uuid>
+→ project plus
+  "description",
+  "phases": [{
+    "id", "name", "status", "status_label", "is_milestone", "colour",
+    "start", "due", "progress_pct", "task_count"
+  }],
+  "tasks": [{
+    "id", "title", "status", "due", "duration_minutes",
+    "client_id", "client_name",
+    "phase_id", "phase_name", "parent_task_id", "workspace"
+  }],
+  "default_board_mode": "phase"|"progress"
+```
+
+`default_board_mode` is `phase` when `is_phased` (web Phase / Progress switcher), otherwise `progress` (To do / In progress / Review / Done). Phases are omitted when the project is progress-only. Task `status` matches `/tasks` (`pending`, `in_progress`, `client_review`, `completed`). There is no create / edit / kanban persist on this API — complete or edit a task through `/tasks/{id}`.
 
 ## Today
 

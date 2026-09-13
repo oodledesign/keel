@@ -47,6 +47,8 @@ enum AppScreen: Hashable {
     case messages
     case people
     case clients
+    /// Menu only — studio / surveyor / commercial delivery projects.
+    case projects
     /// Menu only — not a default tab-bar pin.
     case invoices
     /// Menu on business spaces; surveyor tab-bar pin.
@@ -77,6 +79,7 @@ enum AppScreen: Hashable {
         case .messages: "Messages"
         case .people: "People"
         case .clients: "Clients"
+        case .projects: "Projects"
         case .invoices: "Invoices"
         case .meetings: "Meetings"
         case .shopping: "Shopping"
@@ -94,6 +97,7 @@ enum AppScreen: Hashable {
         case .messages: "bubble.left.and.bubble.right"
         case .people: "person.2"
         case .clients: "building.2"
+        case .projects: "list.clipboard"
         case .invoices: "doc.text"
         case .meetings: "waveform"
         case .shopping: "cart"
