@@ -4,6 +4,7 @@ import {
   type RightmoveMapperListing,
   annualChargeFromPerSqft,
   asOptionalNumber,
+  asPositiveWholeNumber,
   mapCondition,
   mapListingMediaToRightmove,
   mapListingToRightmovePayload,
@@ -72,6 +73,26 @@ describe('asOptionalNumber', () => {
     expect(asOptionalNumber(null)).toBeNull();
     expect(asOptionalNumber('')).toBeNull();
     expect(asOptionalNumber('nope')).toBeNull();
+  });
+});
+
+describe('asPositiveWholeNumber', () => {
+  it('rounds fractional strings and numbers to positive integers', () => {
+    expect(asPositiveWholeNumber('1776.4')).toBe(1776);
+    expect(asPositiveWholeNumber(1776.4)).toBe(1776);
+    expect(asPositiveWholeNumber('1776.5')).toBe(1777);
+    expect(asPositiveWholeNumber(0.5)).toBe(1);
+    expect(asPositiveWholeNumber(1776)).toBe(1776);
+  });
+
+  it('omits zero, negative, and non-numeric values', () => {
+    expect(asPositiveWholeNumber(0)).toBeNull();
+    expect(asPositiveWholeNumber('0.4')).toBeNull();
+    expect(asPositiveWholeNumber(-12)).toBeNull();
+    expect(asPositiveWholeNumber(-0.6)).toBeNull();
+    expect(asPositiveWholeNumber(null)).toBeNull();
+    expect(asPositiveWholeNumber('')).toBeNull();
+    expect(asPositiveWholeNumber('nope')).toBeNull();
   });
 });
 
@@ -284,6 +305,121 @@ describe('mapListingToRightmovePayload', () => {
       measurementType: 'GIA',
     });
     expect(typeof payload.building.sizing?.size).toBe('number');
+  });
+
+  it('rounds fractional building sizes to positive whole numbers', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: '1776.4' as unknown as number,
+        sizeMaxSqft: '1776.4' as unknown as number,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.sizing).toEqual({
+      size: 1776,
+      unit: 'SQFT',
+      measurementType: 'GIA',
+    });
+    expect(Number.isInteger(payload.building.sizing?.size)).toBe(true);
+  });
+
+  it('collapses min/max to size when rounding makes them equal', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 1000.3,
+        sizeMaxSqft: 1000.4,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.sizing).toEqual({
+      size: 1000,
+      unit: 'SQFT',
+      measurementType: 'GIA',
+    });
+  });
+
+  it('rounds min/max building sizes independently', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 1000.4,
+        sizeMaxSqft: 2500.6,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.sizing).toEqual({
+      minSize: 1000,
+      maxSize: 2501,
+      unit: 'SQFT',
+      measurementType: 'GIA',
+    });
+  });
+
+  it('omits building sizing when rounded values are not positive', () => {
+    const zero = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 0,
+        sizeMaxSqft: 0,
+      }),
+      agentId: 283634,
+    });
+    expect(zero.payload.building.sizing).toBeUndefined();
+
+    const negative = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: -12,
+        sizeMaxSqft: -0.4,
+      }),
+      agentId: 283634,
+    });
+    expect(negative.payload.building.sizing).toBeUndefined();
+
+    const fractionalZero = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 0.4,
+        sizeMaxSqft: 0.4,
+      }),
+      agentId: 283634,
+    });
+    expect(fractionalZero.payload.building.sizing).toBeUndefined();
+  });
+
+  it('emits the valid side of a min/max pair when the other is not a positive whole number', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 0,
+        sizeMaxSqft: 1776.4,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.sizing).toEqual({
+      size: 1776,
+      unit: 'SQFT',
+      measurementType: 'GIA',
+    });
+  });
+
+  it('keeps £/sqft annual totals on unrounded size while rounding sizing', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 1776.4,
+        sizeMaxSqft: 1776.4,
+        serviceChargePerSqft: 4.5,
+        ratesPayablePerSqft: 8.25,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.sizing?.size).toBe(1776);
+    expect(payload.building.serviceCharge).toBe(
+      annualChargeFromPerSqft(4.5, 1776.4),
+    );
+    expect(payload.building.businessRates).toBe(
+      annualChargeFromPerSqft(8.25, 1776.4),
+    );
   });
 
   it('rounds coordinates to 6 decimal places for ADF', () => {
@@ -526,6 +662,81 @@ describe('mapListingToRightmovePayload', () => {
     expect(space?.condition).toBe('SHELL_SPACE');
     expect(space?.status).toBe('AVAILABLE');
     expect(space?.primaryPropertyClassification.subType).toBe('WAREHOUSE');
+  });
+
+  it('rounds space sizing to a positive whole number', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: null,
+        sizeMaxSqft: null,
+      }),
+      agentId: 283634,
+      units: [
+        {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          label: 'Unit 1',
+          floorOrUnit: 'Ground',
+          sizeSqft: '1000.4' as unknown as number,
+          measurementStandard: 'gia',
+          sortOrder: 0,
+          externalId: null,
+          askingRentPence: null,
+          rentPerSqft: null,
+          description: null,
+          sector: null,
+          status: null,
+          serviceChargePerSqft: null,
+          ratesPayablePerSqft: null,
+          fittedSpace: null,
+        },
+      ],
+    });
+
+    expect('spaces' in payload.building).toBe(true);
+    if (!('spaces' in payload.building)) return;
+
+    expect(payload.building.spaces[0]?.sizing).toEqual({
+      size: 1000,
+      unit: 'SQFT',
+      measurementType: 'GIA',
+    });
+  });
+
+  it('does not emit invalid space sizing for zero or negative unit sizes', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 0,
+        sizeMaxSqft: -5,
+      }),
+      agentId: 283634,
+      units: [
+        {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          label: 'Unit 1',
+          floorOrUnit: 'Ground',
+          sizeSqft: 0,
+          measurementStandard: 'gia',
+          sortOrder: 0,
+          externalId: null,
+          askingRentPence: null,
+          rentPerSqft: null,
+          description: null,
+          sector: null,
+          status: null,
+          serviceChargePerSqft: null,
+          ratesPayablePerSqft: null,
+          fittedSpace: null,
+        },
+      ],
+    });
+
+    expect('spaces' in payload.building).toBe(true);
+    if (!('spaces' in payload.building)) return;
+
+    const size = payload.building.spaces[0]?.sizing.size;
+    expect(size).toBe(1);
+    expect(Number.isInteger(size)).toBe(true);
+    expect(size).toBeGreaterThan(0);
   });
 });
 

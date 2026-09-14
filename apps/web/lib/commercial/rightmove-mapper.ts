@@ -224,6 +224,17 @@ export function asOptionalNumber(value: unknown): number | null {
 }
 
 /**
+ * Rightmove sizing fields must be positive whole numbers
+ * (`building.sizing.size: Size needs to be a positive whole number`).
+ */
+export function asPositiveWholeNumber(value: unknown): number | null {
+  const n = asOptionalNumber(value);
+  if (n == null) return null;
+  const rounded = Math.round(n);
+  return rounded > 0 ? rounded : null;
+}
+
+/**
  * Rightmove rejects lat/long with more than 6 decimal places
  * (`building.location.longitude` / `latitude` validation).
  */
@@ -613,8 +624,8 @@ function buildBuildingPricing(listing: RightmoveMapperListing): {
 function buildBuildingSizing(
   listing: RightmoveMapperListing,
 ): RightmoveBuildingSizing | undefined {
-  const min = asOptionalNumber(listing.sizeMinSqft);
-  const max = asOptionalNumber(listing.sizeMaxSqft);
+  const min = asPositiveWholeNumber(listing.sizeMinSqft);
+  const max = asPositiveWholeNumber(listing.sizeMaxSqft);
   const unit: RightmoveAreaSizeUnit = 'SQFT';
   const measurementType = mapMeasurementType(listing.measurementStandard);
 
@@ -794,11 +805,13 @@ function mapUnitsToSpaces(input: {
   } = input;
 
   return units.map((unit, index) => {
-    const measuredSize =
-      asOptionalNumber(unit.sizeSqft) ??
-      asOptionalNumber(listing.sizeMinSqft) ??
-      asOptionalNumber(listing.sizeMaxSqft);
-    const size = measuredSize ?? 1;
+    // Space `sizing.size` is required by Rightmove; 1 sqft is the minimum
+    // valid sentinel when unit/listing sizes are missing or not positive.
+    const size =
+      asPositiveWholeNumber(unit.sizeSqft) ??
+      asPositiveWholeNumber(listing.sizeMinSqft) ??
+      asPositiveWholeNumber(listing.sizeMaxSqft) ??
+      1;
     const features = keyFeatures(listing.keyPoints, 1);
     const measurementType = mapMeasurementType(
       unit.measurementStandard ?? listing.measurementStandard,
