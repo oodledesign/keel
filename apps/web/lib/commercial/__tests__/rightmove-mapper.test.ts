@@ -81,6 +81,7 @@ describe('asPositiveWholeNumber', () => {
     expect(asPositiveWholeNumber('1776.4')).toBe(1776);
     expect(asPositiveWholeNumber(1776.4)).toBe(1776);
     expect(asPositiveWholeNumber('1776.5')).toBe(1777);
+    expect(asPositiveWholeNumber(0.5)).toBe(1);
     expect(asPositiveWholeNumber(1776)).toBe(1776);
   });
 
@@ -321,6 +322,22 @@ describe('mapListingToRightmovePayload', () => {
       measurementType: 'GIA',
     });
     expect(Number.isInteger(payload.building.sizing?.size)).toBe(true);
+  });
+
+  it('collapses min/max to size when rounding makes them equal', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        sizeMinSqft: 1000.3,
+        sizeMaxSqft: 1000.4,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.sizing).toEqual({
+      size: 1000,
+      unit: 'SQFT',
+      measurementType: 'GIA',
+    });
   });
 
   it('rounds min/max building sizes independently', () => {

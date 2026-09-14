@@ -231,7 +231,7 @@ export function asPositiveWholeNumber(value: unknown): number | null {
   const n = asOptionalNumber(value);
   if (n == null) return null;
   const rounded = Math.round(n);
-  return Number.isInteger(rounded) && rounded > 0 ? rounded : null;
+  return rounded > 0 ? rounded : null;
 }
 
 /**
@@ -805,6 +805,8 @@ function mapUnitsToSpaces(input: {
   } = input;
 
   return units.map((unit, index) => {
+    // Space `sizing.size` is required by Rightmove; 1 sqft is the minimum
+    // valid sentinel when unit/listing sizes are missing or not positive.
     const size =
       asPositiveWholeNumber(unit.sizeSqft) ??
       asPositiveWholeNumber(listing.sizeMinSqft) ??
