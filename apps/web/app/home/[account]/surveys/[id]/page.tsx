@@ -115,6 +115,8 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
           }
           observations={extras.observations}
           transcripts={extras.transcripts}
+          photoShare={extras.photoShare}
+          styleExampleCount={extras.styleExampleCount}
         />
       </PageBody>
     </>

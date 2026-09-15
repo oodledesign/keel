@@ -13,16 +13,26 @@ export async function loadSurveyHubExtras(input: {
   const service = createSurveyCaptureService(getSupabaseServerClient());
   await service.assertBuildingSurveyorAccount(input.accountId);
 
-  const [observations, transcripts, pinnedPhotos] = await Promise.all([
-    service.listObservations(input.accountId, input.proposalId),
-    service.listLinkedTranscripts(
-      input.accountId,
-      input.proposalId,
-      input.clientId,
-      input.dealId,
-    ),
-    service.listPinnedPhotos(input.accountId, input.proposalId),
-  ]);
+  const [observations, transcripts, pinnedPhotos, styleExamples] =
+    await Promise.all([
+      service.listObservations(input.accountId, input.proposalId),
+      service.listLinkedTranscripts(
+        input.accountId,
+        input.proposalId,
+        input.clientId,
+        input.dealId,
+      ),
+      service.listPinnedPhotos(input.accountId, input.proposalId),
+      service.listStyleExamples(input.accountId),
+    ]);
 
-  return { observations, transcripts, pinnedPhotos };
+  const survey = await service.getSurvey(input.accountId, input.proposalId);
+
+  return {
+    observations,
+    transcripts,
+    pinnedPhotos,
+    styleExampleCount: styleExamples.length,
+    photoShare: service.getPhotoShare(survey),
+  };
 }

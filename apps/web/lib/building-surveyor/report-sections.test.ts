@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BUILDING_SURVEY_SECTIONS,
+  applyObservationSectionKeys,
   htmlFromObservations,
   htmlFromRoutedSections,
   observationsFromTranscript,
@@ -65,6 +66,27 @@ describe('observationsFromTranscript', () => {
     expect(reassigned.some((item) => item.sectionKey === 'heating')).toBe(
       false,
     );
+  });
+});
+
+describe('applyObservationSectionKeys', () => {
+  it('uses valid AI keys and falls back to keywords for the rest', () => {
+    const drafts = applyObservationSectionKeys(
+      [
+        'The front sash window is stiff.',
+        'The boiler is dated but working.',
+        'A few slipped slates to the rear.',
+      ],
+      [
+        { index: 0, sectionKey: 'windows' },
+        { index: 1, sectionKey: 'not_a_section' },
+        { index: 2, sectionKey: 'roof_coverings' },
+      ],
+    );
+
+    expect(drafts[0]?.sectionKey).toBe('windows');
+    expect(drafts[1]?.sectionKey).toBe('heating');
+    expect(drafts[2]?.sectionKey).toBe('roof_coverings');
   });
 });
 

@@ -64,6 +64,7 @@ async function WorkspaceSettingsLayout({
             values={{
               integrations: 'Integrations',
               dynamics: 'Dynamics 365',
+              'survey-style': 'Survey style',
             }}
           />
         }

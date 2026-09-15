@@ -29,6 +29,7 @@ export type SurveyGenerateParams = {
   observations?: SurveyObservationInput[];
   pinnedPhotos?: SurveyPinnedPhotoInput[];
   surveyType?: string | null;
+  styleGuidance?: string | null;
 };
 
 export type SurveyGenerateResult = {
@@ -54,7 +55,8 @@ Rules:
 - Use only h2, p, ul, li, strong, em — no tables or inline styles.
 - Do not add Go Report or RICS Pro Forms branding.
 - Do not wrap output in markdown fences.
-- Include standard RICS Home Survey boilerplate only under "Description of the RICS Home Survey".`;
+- Include standard RICS Home Survey boilerplate only under "Description of the RICS Home Survey".
+- When style guidance is provided, match that surveyor's phrasing, sentence length, and recommendation tone. Do not copy property facts from the style examples.`;
 
 function stripMarkdownFences(text: string) {
   const trimmed = text.trim();
@@ -124,8 +126,11 @@ function buildUserPayload(params: SurveyGenerateParams) {
     site_transcripts: transcripts || '(none provided)',
     notes_and_files_context: notes || '(none provided)',
     required_section_count: BUILDING_SURVEY_SECTIONS.length,
+    style_guidance:
+      params.styleGuidance?.trim() ||
+      '(none — write in a clear RICS Home Survey voice)',
     instruction:
-      'Prefer the grouped observations over raw transcripts when both are present. Mention pinned photos in the matching section without inventing extra images.',
+      'Prefer the grouped observations over raw transcripts when both are present. Mention pinned photos and their captions in the matching section without inventing extra images. Match the style guidance.',
   });
 }
 

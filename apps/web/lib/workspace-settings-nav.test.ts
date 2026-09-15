@@ -108,6 +108,27 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).not.toContain('knowledge');
   });
 
+  it('adds survey style only for building surveyor workspaces', () => {
+    const surveyor = buildWorkspaceSettingsNav({
+      accountSlug: 'survey-co',
+      workspaceProfile: 'building_surveyor',
+      moduleSettings: {},
+      access: ownerAccess,
+    });
+    expect(surveyor.map((item) => item.id)).toContain('survey-style');
+    expect(surveyor.find((item) => item.id === 'survey-style')?.href).toBe(
+      '/app/survey-co/settings/survey-style',
+    );
+
+    const work = buildWorkspaceSettingsNav({
+      accountSlug: 'oodle',
+      workspaceProfile: 'work_design',
+      moduleSettings: {},
+      access: ownerAccess,
+    });
+    expect(work.map((item) => item.id)).not.toContain('survey-style');
+  });
+
   it('includes Integrations for every workspace profile', () => {
     const profiles = [
       'work_design',

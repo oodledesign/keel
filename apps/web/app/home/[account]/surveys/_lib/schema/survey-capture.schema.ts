@@ -57,6 +57,53 @@ export const GenerateSurveyDraftSchema = SurveyAccountSchema.extend({
   surveyorName: z.string().min(1).max(500),
 });
 
+export const ProposeSurveyPhotoCurationSchema = SurveyAccountSchema;
+
+export const UpdateSurveyPhotoCurationSchema = SurveyAccountSchema.extend({
+  docId: z.string().uuid(),
+  sectionKey: SurveySectionKeySchema.nullable().optional(),
+  caption: z.string().max(500).nullable().optional(),
+  photoRole: z.enum(['archive', 'curated']).optional(),
+  curatedSortOrder: z.number().int().min(0).max(99).nullable().optional(),
+});
+
+export const ReorderSurveyPhotosSchema = SurveyAccountSchema.extend({
+  orderedDocIds: z.array(z.string().uuid()).min(1).max(80),
+  sectionKey: SurveySectionKeySchema,
+});
+
+export const SetSurveyPhotoShareSchema = SurveyAccountSchema.extend({
+  enabled: z.boolean(),
+});
+
+export const AddSurveyStyleExampleSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    accountSlug: z.string().min(1).max(200),
+    title: z.string().min(1).max(500),
+    filePath: z.string().min(1).max(1_000),
+    mimeType: z.string().max(200).nullable().optional(),
+    originalFilename: z.string().max(500).optional(),
+  })
+  .refine((value) => value.filePath.startsWith(`${value.accountId}/`), {
+    message: 'File must be stored under this workspace',
+    path: ['filePath'],
+  });
+
+export const UpdateSurveyStyleExampleSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200),
+  exampleId: z.string().uuid(),
+  title: z.string().min(1).max(500).optional(),
+  styleNotes: z.string().max(8_000).nullable().optional(),
+});
+
+export const DeleteSurveyStyleExampleSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200),
+  exampleId: z.string().uuid(),
+});
+
 export type AddSurveyTranscriptInput = z.infer<
   typeof AddSurveyTranscriptSchema
 >;
@@ -72,6 +119,27 @@ export type DeleteSurveyObservationInput = z.infer<
 export type UpdateSurveyTypeInput = z.infer<typeof UpdateSurveyTypeSchema>;
 export type GenerateSurveyDraftInput = z.infer<
   typeof GenerateSurveyDraftSchema
+>;
+export type ProposeSurveyPhotoCurationInput = z.infer<
+  typeof ProposeSurveyPhotoCurationSchema
+>;
+export type UpdateSurveyPhotoCurationInput = z.infer<
+  typeof UpdateSurveyPhotoCurationSchema
+>;
+export type ReorderSurveyPhotosInput = z.infer<
+  typeof ReorderSurveyPhotosSchema
+>;
+export type SetSurveyPhotoShareInput = z.infer<
+  typeof SetSurveyPhotoShareSchema
+>;
+export type AddSurveyStyleExampleInput = z.infer<
+  typeof AddSurveyStyleExampleSchema
+>;
+export type UpdateSurveyStyleExampleInput = z.infer<
+  typeof UpdateSurveyStyleExampleSchema
+>;
+export type DeleteSurveyStyleExampleInput = z.infer<
+  typeof DeleteSurveyStyleExampleSchema
 >;
 
 export type SurveyObservation = {
@@ -92,4 +160,19 @@ export type SurveyTranscriptSummary = {
   source: string;
   meetingDate: string | null;
   createdAt: string;
+};
+
+export type SurveyStyleExample = {
+  id: string;
+  title: string;
+  originalFilename: string | null;
+  mimeType: string | null;
+  styleNotes: string | null;
+  extractedPreview: string;
+  createdAt: string;
+};
+
+export type SurveyPhotoShare = {
+  enabled: boolean;
+  token: string | null;
 };

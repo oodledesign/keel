@@ -271,14 +271,14 @@ export type SurveyPinnedPhotoInput = {
   caption?: string | null;
 };
 
-function splitTranscriptParagraphs(transcript: string): string[] {
+export function splitTranscriptParagraphs(transcript: string): string[] {
   return transcript
     .split(/\n{2,}|(?<=[.!?])\s+(?=[A-Z])/)
     .map((part) => part.trim())
     .filter((part) => part.length > 12);
 }
 
-function bestSectionKeyForText(text: string): string {
+export function bestSectionKeyForText(text: string): string {
   const lower = text.toLowerCase();
   let bestKey = 'overall_opinion';
   let bestScore = 0;
@@ -307,6 +307,28 @@ export function observationsFromTranscript(
 ): SurveyObservationDraft[] {
   return splitTranscriptParagraphs(transcript).map((body, index) => ({
     sectionKey: bestSectionKeyForText(body),
+    body,
+    sortOrder: index,
+  }));
+}
+
+/**
+ * Overlay AI (or surveyor) section keys onto already-split paragraphs.
+ * Unknown keys fall back to keyword routing for that paragraph.
+ */
+export function applyObservationSectionKeys(
+  paragraphs: string[],
+  assignments: Array<{ index: number; sectionKey: string }>,
+): SurveyObservationDraft[] {
+  const byIndex = new Map<number, string>();
+  for (const assignment of assignments) {
+    if (!Number.isInteger(assignment.index)) continue;
+    if (!buildingSurveySectionByKey(assignment.sectionKey)) continue;
+    byIndex.set(assignment.index, assignment.sectionKey);
+  }
+
+  return paragraphs.map((body, index) => ({
+    sectionKey: byIndex.get(index) ?? bestSectionKeyForText(body),
     body,
     sortOrder: index,
   }));

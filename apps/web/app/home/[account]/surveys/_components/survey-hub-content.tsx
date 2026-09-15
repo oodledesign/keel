@@ -10,8 +10,10 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
+import pathsConfig from '~/config/paths.config';
 import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { documentEditPath } from '~/lib/building-surveyor/document-kind';
@@ -33,6 +35,7 @@ import {
 
 import type {
   SurveyObservation,
+  SurveyPhotoShare,
   SurveyTranscriptSummary,
 } from '../_lib/schema/survey-capture.schema';
 import {
@@ -40,6 +43,7 @@ import {
   createSurveyObservationAction,
   deleteSurveyObservationAction,
   generateSurveyDraftAction,
+  setSurveyPhotoShareAction,
   updateSurveyObservationAction,
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
@@ -74,6 +78,8 @@ export function SurveyHubContent({
   proposal,
   observations: initialObservations,
   transcripts: initialTranscripts,
+  photoShare: initialPhotoShare,
+  styleExampleCount,
 }: {
   accountSlug: string;
   accountId: string;
@@ -95,6 +101,8 @@ export function SurveyHubContent({
   };
   observations: SurveyObservation[];
   transcripts: SurveyTranscriptSummary[];
+  photoShare: SurveyPhotoShare;
+  styleExampleCount: number;
 }) {
   const [observations, setObservations] = useState(initialObservations);
   const [transcripts, setTranscripts] = useState(initialTranscripts);
@@ -108,8 +116,18 @@ export function SurveyHubContent({
   const [pending, startTransition] = useTransition();
   const [generating, setGenerating] = useState(false);
   const [pasting, setPasting] = useState(false);
+  const [photoShare, setPhotoShare] = useState(initialPhotoShare);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const editHref = documentEditPath(accountSlug, proposal.id, 'survey_report');
+  const styleHref = pathsConfig.app.accountSurveyStyleSettings.replace(
+    '[account]',
+    accountSlug,
+  );
+  const photoSharePath =
+    photoShare.enabled && photoShare.token
+      ? pathsConfig.app.surveyPhotoShare.replace('[token]', photoShare.token)
+      : null;
   const hasDraft = Boolean(
     proposal.content_html?.replace(/<[^>]+>/g, '').trim(),
   );
@@ -172,9 +190,17 @@ export function SurveyHubContent({
       setPasteContent('');
       setPasteTitle('');
       toast.success(
-        `Grouped ${result.observations.length} observation${
-          result.observations.length === 1 ? '' : 's'
-        } into report sections.`,
+        result.groupingSource === 'ai'
+          ? `Grouped ${result.observations.length} observation${
+              result.observations.length === 1 ? '' : 's'
+            } by content.`
+          : `Grouped ${result.observations.length} observation${
+              result.observations.length === 1 ? '' : 's'
+            } with keyword routing${
+              result.groupingFallbackReason
+                ? ` (${result.groupingFallbackReason})`
+                : ''
+            }.`,
       );
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -328,7 +354,8 @@ export function SurveyHubContent({
                 </h3>
                 <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
                   Paste a walkthrough transcript. We store it against this
-                  survey and group the sentences into editable observations.
+                  survey and group sentences by content into editable
+                  observations. Keyword routing is used if AI is unavailable.
                 </p>
               </div>
               <Mic className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`} />
@@ -390,8 +417,8 @@ export function SurveyHubContent({
               Grouped observations
             </h3>
             <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-              Reassign a note if the keyword grouping missed the section. These
-              feed the draft report.
+              Reassign a note if the grouping missed the section. These feed the
+              draft report.
             </p>
 
             {canEdit ? (
@@ -587,8 +614,17 @@ export function SurveyHubContent({
               </Link>
             </p>
             <p className={`mt-2 text-xs ${workspaceTextMuted}`}>
-              Generation uses grouped observations first, then raw transcripts
-              and any photos pinned to a section.
+              Generation uses grouped observations first, then raw transcripts,
+              curated photo captions, and the firm&apos;s uploaded report style.
+            </p>
+            <p className="mt-3 text-sm">
+              <Link href={styleHref} className={workspaceLinkAccent}>
+                {styleExampleCount > 0
+                  ? `Survey style · ${styleExampleCount} past report${
+                      styleExampleCount === 1 ? '' : 's'
+                    }`
+                  : 'Add past reports for style'}
+              </Link>
             </p>
           </section>
 
@@ -602,14 +638,69 @@ export function SurveyHubContent({
           />
 
           <section className={`${workspacePanelCard} p-4 sm:p-5`}>
-            <div className="flex items-start gap-2">
-              <ImagePlus className={`mt-0.5 h-4 w-4 ${workspaceTextMuted}`} />
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                Pin a photo to a section to mark it curated for the draft. The
-                rest stay in the archive for the record. Automatic captions come
-                later.
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Client photo share
+                </h3>
+                <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+                  A link to the full archive — not embedded in the PDF.
+                </p>
+              </div>
+              {canEdit ? (
+                <Switch
+                  checked={photoShare.enabled}
+                  onCheckedChange={(enabled) => {
+                    startTransition(async () => {
+                      try {
+                        const next = await setSurveyPhotoShareAction({
+                          accountId,
+                          accountSlug,
+                          proposalId: proposal.id,
+                          enabled,
+                        });
+                        setPhotoShare(next);
+                      } catch (error) {
+                        toast.error(getErrorMessage(error));
+                      }
+                    });
+                  }}
+                />
+              ) : null}
             </div>
+            {photoShare.enabled && photoSharePath ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <code className="min-w-0 flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs">
+                  {photoSharePath}
+                </code>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    const url = `${window.location.origin}${photoSharePath}`;
+                    await navigator.clipboard.writeText(url);
+                    setShareCopied(true);
+                    window.setTimeout(() => setShareCopied(false), 2000);
+                  }}
+                >
+                  {shareCopied ? 'Copied' : 'Copy'}
+                </Button>
+                <Button type="button" size="sm" variant="outline" asChild>
+                  <a href={photoSharePath} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-3 flex items-start gap-2">
+                <ImagePlus className={`mt-0.5 h-4 w-4 ${workspaceTextMuted}`} />
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  Turn on sharing when the client should have the full photo
+                  set. Curated photos stay in the report draft.
+                </p>
+              </div>
+            )}
           </section>
         </div>
       </div>
