@@ -29,7 +29,7 @@ async function ListingOverviewPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [interestSummary, viewingsResult, parties, publications] =
+  const [interestSummary, viewingsResult, parties, publications, mediaRows] =
     await Promise.all([
       service.getInterestSummary(listingId),
       client
@@ -39,6 +39,12 @@ async function ListingOverviewPage({ params }: PageProps) {
         .eq('account_id', accountId),
       service.listParties(listingId, accountId),
       service.listPublicationsForListing(listingId),
+      client
+        .from('commercial_listing_media')
+        .select('created_at')
+        .eq('listing_id', listingId)
+        .eq('account_id', accountId)
+        .eq('is_private', false),
     ]);
 
   const viewingRows = viewingsResult.data ?? [];
@@ -56,6 +62,7 @@ async function ListingOverviewPage({ params }: PageProps) {
       accountSlug={slug}
       parties={parties}
       publications={publications}
+      mediaCreatedAt={(mediaRows.data ?? []).map((row) => row.created_at)}
       interestSummary={{
         ...interestSummary,
         upcomingViewings,

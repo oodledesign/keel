@@ -112,50 +112,27 @@ export function ListingChannelSyncIcon({
               Switched-on channels
             </p>
             <ul className="space-y-2" data-test="channel-sync-tooltip">
-              {switchedOn.map((channel) => {
-                const showResync =
-                  canEditDisposals &&
-                  channelNeedsRightmoveResync(channel.key, channel.status);
-
-                return (
-                  <li
-                    key={channel.key}
-                    className="flex items-start justify-between gap-3"
-                    data-test={`channel-sync-row-${channel.key}`}
+              {switchedOn.map((channel) => (
+                <li
+                  key={channel.key}
+                  className="min-w-0"
+                  data-test={`channel-sync-row-${channel.key}`}
+                >
+                  <p className="text-xs font-medium">{channel.label}</p>
+                  <p
+                    className={cn(
+                      'text-xs',
+                      channel.status.outOfSync ||
+                        channel.status.state === 'blocked'
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-[var(--workspace-shell-text-muted)]',
+                    )}
                   >
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium">{channel.label}</p>
-                      <p
-                        className={cn(
-                          'text-xs',
-                          channel.status.outOfSync ||
-                            channel.status.state === 'blocked'
-                            ? 'text-amber-700 dark:text-amber-300'
-                            : 'text-[var(--workspace-shell-text-muted)]',
-                        )}
-                      >
-                        {channel.status.label}
-                        {channel.status.detail
-                          ? ` — ${channel.status.detail}`
-                          : ''}
-                      </p>
-                    </div>
-                    {showResync ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={resyncPending}
-                        data-test="channel-sync-resync-rightmove"
-                        className="h-7 shrink-0 px-2 text-xs"
-                        onClick={resyncRightmove}
-                      >
-                        {resyncPending ? 'Re-syncing…' : 'Re-sync'}
-                      </Button>
-                    ) : null}
-                  </li>
-                );
-              })}
+                    {channel.status.label}
+                    {channel.status.detail ? ` — ${channel.status.detail}` : ''}
+                  </p>
+                </li>
+              ))}
             </ul>
           </TooltipContent>
         </Tooltip>

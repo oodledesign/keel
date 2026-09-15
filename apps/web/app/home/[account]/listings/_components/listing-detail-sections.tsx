@@ -186,6 +186,7 @@ export function ListingOverviewSection({
   interestSummary,
   parties = [],
   publications = [],
+  mediaCreatedAt = [],
 }: {
   listing: CommercialListing;
   accountId: string;
@@ -200,6 +201,7 @@ export function ListingOverviewSection({
   };
   parties?: ListingParty[];
   publications?: CommercialPortalPublication[];
+  mediaCreatedAt?: Array<string | null | undefined>;
 }) {
   const { listing } = useListingState(initial);
   const [matchBadgeCount, setMatchBadgeCount] = useState(
@@ -245,6 +247,7 @@ export function ListingOverviewSection({
         accountId={accountId}
         accountSlug={accountSlug}
         publications={publications}
+        mediaCreatedAt={mediaCreatedAt}
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard

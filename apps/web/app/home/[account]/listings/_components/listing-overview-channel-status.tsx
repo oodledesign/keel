@@ -63,11 +63,13 @@ export function ListingOverviewChannelStatus({
   accountId,
   accountSlug,
   publications,
+  mediaCreatedAt = [],
 }: {
   listing: CommercialListing;
   accountId: string;
   accountSlug: string;
   publications: CommercialPortalPublication[];
+  mediaCreatedAt?: Array<string | null | undefined>;
 }) {
   const publishingHref = listingTabHref(accountSlug, listing.id, 'publishing');
   const interestHref = listingTabHref(accountSlug, listing.id, 'interest');
@@ -116,6 +118,7 @@ export function ListingOverviewChannelStatus({
           updatedAt: listing.updatedAt,
         },
         publications,
+        mediaCreatedAt,
       }),
     },
     {

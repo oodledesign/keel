@@ -169,7 +169,23 @@ describe('getRightmoveChannelStatus', () => {
     expect(status.state).toBe('live');
     expect(status.outOfSync).toBe(true);
     expect(status.label).toBe('Live but Unsynced');
+    expect(status.detail).toMatch(/Behind the latest/);
     expect(channelNeedsRightmoveResync('rightmove', status)).toBe(true);
+  });
+
+  it('does not mark published Rightmove unsynced without listing or media dates', () => {
+    const status = getRightmoveChannelStatus({
+      listing: { status: 'marketing' },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: null,
+        },
+      ],
+    });
+    expect(status.label).toBe('Live');
+    expect(status.outOfSync).toBe(false);
   });
 
   it('is Live but Unsynced when last push is older than new media', () => {

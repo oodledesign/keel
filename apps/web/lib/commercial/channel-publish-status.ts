@@ -3,8 +3,11 @@ import {
   isEachFeedIncluded,
   isWebsiteFeedIncluded,
 } from '~/lib/commercial/each-feed-inclusion';
+import { isSafeHttpUrl } from '~/lib/commercial/listing-website-url';
 import { ACTIVE_LISTING_STATUSES_FOR_MATCH } from '~/lib/commercial/match-scoring';
 import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
+
+export { isSafeHttpUrl };
 
 export type ChannelPublishState = 'live' | 'off' | 'blocked' | 'unavailable';
 
@@ -281,6 +284,9 @@ export function getRightmoveChannelStatus(input?: {
   if (pub.status === 'published') {
     const listingUpdatedAt = listing?.updatedAt;
     const mediaCreatedAt = input?.mediaCreatedAt;
+    // Only compare timestamps when we have a listing or media reference.
+    // A published row with no last_sync_at and no reference dates is treated
+    // as in sync so legacy callers without dates do not all turn orange.
     const shouldEvaluateSync =
       listingUpdatedAt != null || (mediaCreatedAt?.length ?? 0) > 0;
     const outOfSync = shouldEvaluateSync
@@ -297,9 +303,11 @@ export function getRightmoveChannelStatus(input?: {
       switchOn: true,
       canEnable: true,
       label: outOfSync ? 'Live but Unsynced' : 'Live',
-      detail: hasUrl
-        ? 'On Rightmove (public page can take a few minutes)'
-        : 'On Rightmove',
+      detail: outOfSync
+        ? 'Behind the latest disposal updates — re-sync to push Rightmove'
+        : hasUrl
+          ? 'On Rightmove (public page can take a few minutes)'
+          : 'On Rightmove',
       blockers: [],
       lastError: null,
       outOfSync,
@@ -391,13 +399,4 @@ export function channelNeedsRightmoveResync(
   status: ChannelPublishStatus,
 ): boolean {
   return key === 'rightmove' && Boolean(status.switchOn && status.outOfSync);
-}
-
-export function isSafeHttpUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
 }
