@@ -63,6 +63,7 @@ type Props = {
   deals: DealOption[];
   disabled?: boolean;
   documentKind?: ProposalDocumentKind;
+  proposalId?: string;
   onContentApplied: (html: string) => void;
 };
 
@@ -107,6 +108,7 @@ export function ProposalEditAiAssist({
   deals,
   disabled,
   documentKind = 'proposal',
+  proposalId,
   onContentApplied,
 }: Props) {
   const copy = documentKindCopy(documentKind);
@@ -336,6 +338,7 @@ export function ProposalEditAiAssist({
       if (documentKind === 'survey_report') {
         const result = await generateSurveyReportHtmlAction({
           accountId,
+          proposalId,
           propertyLabel: company || name,
           clientName: name,
           accountName,

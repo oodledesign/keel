@@ -254,6 +254,64 @@ export function buildingSurveySectionListForPrompt(): string {
   ).join('\n');
 }
 
+export type SurveyObservationDraft = {
+  sectionKey: string;
+  body: string;
+  sortOrder: number;
+};
+
+export type SurveyObservationInput = {
+  sectionKey: string;
+  body: string;
+};
+
+export type SurveyPinnedPhotoInput = {
+  sectionKey: string;
+  title: string;
+  caption?: string | null;
+};
+
+function splitTranscriptParagraphs(transcript: string): string[] {
+  return transcript
+    .split(/\n{2,}|(?<=[.!?])\s+(?=[A-Z])/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 12);
+}
+
+function bestSectionKeyForText(text: string): string {
+  const lower = text.toLowerCase();
+  let bestKey = 'overall_opinion';
+  let bestScore = 0;
+
+  for (const section of BUILDING_SURVEY_SECTIONS) {
+    let score = 0;
+    for (const keyword of section.keywords) {
+      if (lower.includes(keyword)) {
+        score += keyword.length;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = section.key;
+    }
+  }
+
+  return bestKey;
+}
+
+/**
+ * Split a transcript into editable observations and assign each to a section.
+ */
+export function observationsFromTranscript(
+  transcript: string,
+): SurveyObservationDraft[] {
+  return splitTranscriptParagraphs(transcript).map((body, index) => ({
+    sectionKey: bestSectionKeyForText(body),
+    body,
+    sortOrder: index,
+  }));
+}
+
 /**
  * Route transcript paragraphs into section keys using keyword scores.
  * Used when the LLM path is unavailable, and as a safety net after generation.
@@ -261,55 +319,62 @@ export function buildingSurveySectionListForPrompt(): string {
 export function routeTranscriptToSections(
   transcript: string,
 ): Record<string, string> {
-  const buckets: Record<string, string[]> = {};
-  for (const section of BUILDING_SURVEY_SECTIONS) {
-    buckets[section.key] = [];
-  }
-
-  const paragraphs = transcript
-    .split(/\n{2,}|(?<=[.!?])\s+(?=[A-Z])/)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 12);
-
-  for (const paragraph of paragraphs) {
-    const lower = paragraph.toLowerCase();
-    let bestKey = 'overall_opinion';
-    let bestScore = 0;
-
-    for (const section of BUILDING_SURVEY_SECTIONS) {
-      let score = 0;
-      for (const keyword of section.keywords) {
-        if (lower.includes(keyword)) {
-          score += keyword.length;
-        }
-      }
-      if (score > bestScore) {
-        bestScore = score;
-        bestKey = section.key;
-      }
-    }
-
-    buckets[bestKey]?.push(paragraph);
-  }
-
   const result: Record<string, string> = {};
   for (const section of BUILDING_SURVEY_SECTIONS) {
-    const parts = buckets[section.key] ?? [];
-    result[section.key] = parts.join('\n\n');
+    result[section.key] = '';
   }
+
+  for (const observation of observationsFromTranscript(transcript)) {
+    const existing = result[observation.sectionKey] ?? '';
+    result[observation.sectionKey] = existing
+      ? `${existing}\n\n${observation.body}`
+      : observation.body;
+  }
+
   return result;
 }
 
 export function htmlFromRoutedSections(routed: Record<string, string>): string {
+  return htmlFromObservations(
+    BUILDING_SURVEY_SECTIONS.flatMap((section) => {
+      const body = routed[section.key]?.trim();
+      return body ? [{ sectionKey: section.key, body }] : [];
+    }),
+  );
+}
+
+export function htmlFromObservations(
+  observations: SurveyObservationInput[],
+  photos: SurveyPinnedPhotoInput[] = [],
+): string {
   return BUILDING_SURVEY_SECTIONS.map((section) => {
-    const body = routed[section.key]?.trim();
-    const paragraph = body
-      ? body
+    const bodies = observations
+      .filter((item) => item.sectionKey === section.key)
+      .map((item) => item.body.trim())
+      .filter(Boolean);
+    const sectionPhotos = photos.filter(
+      (photo) => photo.sectionKey === section.key,
+    );
+
+    const paragraphs = [
+      ...bodies.map((block) =>
+        block
           .split(/\n{2,}/)
-          .map((block) => `<p>${escapeHtml(block)}</p>`)
-          .join('\n')
-      : '<p></p>';
-    return `<h2 data-section="${section.key}">${escapeHtml(section.heading)}</h2>\n${paragraph}`;
+          .map((part) => `<p>${escapeHtml(part)}</p>`)
+          .join('\n'),
+      ),
+      ...sectionPhotos.map((photo) => {
+        const caption = photo.caption?.trim();
+        const label = caption ? `${photo.title} — ${caption}` : photo.title;
+        return `<p><em>Photo: ${escapeHtml(label)}</em></p>`;
+      }),
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    return `<h2 data-section="${section.key}">${escapeHtml(section.heading)}</h2>\n${
+      paragraphs || '<p></p>'
+    }`;
   }).join('\n');
 }
 

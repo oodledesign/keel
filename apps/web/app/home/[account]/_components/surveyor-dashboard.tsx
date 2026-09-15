@@ -115,7 +115,7 @@ export function SurveyorDashboard({
               {recentSurveys.map((survey) => (
                 <li key={survey.id} className="py-3 first:pt-0 last:pb-0">
                   <Link
-                    href={pathsConfig.app.accountSurveyEdit
+                    href={pathsConfig.app.accountSurveyDetail
                       .replace('[account]', accountSlug)
                       .replace('[id]', survey.id)}
                     className="flex items-center justify-between gap-3 hover:underline"

@@ -9,6 +9,7 @@ import {
   queueBrainDeleteSource,
   queueBrainIndexSource,
 } from '~/lib/brain/sync';
+import { DEFAULT_BUILDING_SURVEY_TYPE } from '~/lib/building-surveyor/survey-types';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { resolveDefaultTemplate } from '~/lib/content-templates/resolve-template';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
@@ -260,6 +261,10 @@ class ProposalsService {
         client_id: input.client_id ?? null,
         deal_id: input.deal_id ?? null,
         kind: documentKind,
+        survey_type:
+          documentKind === 'survey_report'
+            ? (input.survey_type ?? DEFAULT_BUILDING_SURVEY_TYPE)
+            : null,
         title:
           input.title ??
           (documentKind === 'survey_report' ? 'Building survey' : 'Proposal'),
@@ -344,6 +349,8 @@ class ProposalsService {
       payload.email_signature = input.email_signature;
     if (input.context_refs !== undefined)
       payload.context_refs = input.context_refs;
+    if (input.survey_type !== undefined)
+      payload.survey_type = input.survey_type;
 
     const { data, error } = await this.db
       .from('proposals')

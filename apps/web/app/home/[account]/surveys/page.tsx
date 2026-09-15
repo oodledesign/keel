@@ -75,7 +75,7 @@ async function SurveysPage({ params }: SurveysPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         title="Surveys"
-        description="Building survey reports with standard UK / RICS Home Survey headings"
+        description="Capture site notes and photos, group them into RICS sections, then draft the report"
         account={accountSlug}
       />
 

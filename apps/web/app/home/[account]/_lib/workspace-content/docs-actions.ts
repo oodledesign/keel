@@ -123,6 +123,7 @@ const RegisterUploadSchema = z.object({
   fileSizeBytes: z.number().int().nonnegative().optional(),
   proposalId: z.string().uuid().optional(),
   pinnedSectionKey: z.string().max(80).nullable().optional(),
+  photoRole: z.enum(['archive', 'curated']).optional(),
 });
 
 export const registerUploadedWorkspaceDocAction = enhanceAction(
@@ -151,6 +152,8 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
         created_by: user.id,
         proposal_id: data.proposalId ?? null,
         pinned_section_key: data.pinnedSectionKey ?? null,
+        photo_role:
+          data.photoRole ?? (data.pinnedSectionKey ? 'curated' : 'archive'),
         ...linkCols,
       } as never)
       .select('id')
@@ -308,11 +311,14 @@ export const deleteWorkspaceDocAction = enhanceAction(
 
 export const listProposalDocsAction = enhanceAction(
   async (data) => {
+    await assertBuildingSurveyorAccount(data.accountId);
+    // proposal_id / photo_role may lag generated Database types.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = getSupabaseServerClient() as any;
     const { data: rows, error } = await client
       .from('docs')
       .select(
-        'id, title, mime_type, file_path, storage_path, created_at, pinned_section_key, kind',
+        'id, title, mime_type, file_path, storage_path, created_at, pinned_section_key, photo_role, kind',
       )
       .eq('account_id', data.accountId)
       .eq('proposal_id', data.proposalId)
@@ -327,6 +333,8 @@ export const listProposalDocsAction = enhanceAction(
         mimeType: (row.mime_type as string | null) ?? null,
         createdAt: (row.created_at as string | null) ?? null,
         pinnedSectionKey: (row.pinned_section_key as string | null) ?? null,
+        photoRole:
+          (row.photo_role as 'archive' | 'curated' | null) ?? 'archive',
         kind: (row.kind as string | null) ?? 'uploaded',
       })),
     };
@@ -341,11 +349,15 @@ export const listProposalDocsAction = enhanceAction(
 
 export const updateProposalDocPinAction = enhanceAction(
   async (data) => {
+    await assertBuildingSurveyorAccount(data.accountId);
+    // proposal_id / photo_role may lag generated Database types.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = getSupabaseServerClient() as any;
     const { error } = await client
       .from('docs')
       .update({
         pinned_section_key: data.pinnedSectionKey,
+        photo_role: data.pinnedSectionKey ? 'curated' : 'archive',
       })
       .eq('id', data.docId)
       .eq('account_id', data.accountId)
@@ -363,6 +375,56 @@ export const updateProposalDocPinAction = enhanceAction(
     }),
   },
 );
+
+export const updateProposalDocPhotoRoleAction = enhanceAction(
+  async (data) => {
+    await assertBuildingSurveyorAccount(data.accountId);
+    // photo_role may lag generated Database types.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = getSupabaseServerClient() as any;
+    const payload: Record<string, unknown> = {
+      photo_role: data.photoRole,
+    };
+    if (data.photoRole === 'archive') {
+      payload.pinned_section_key = null;
+    }
+
+    const { error } = await client
+      .from('docs')
+      .update(payload)
+      .eq('id', data.docId)
+      .eq('account_id', data.accountId)
+      .eq('proposal_id', data.proposalId);
+
+    if (error) throw error;
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      proposalId: z.string().uuid(),
+      docId: z.string().uuid(),
+      photoRole: z.enum(['archive', 'curated']),
+    }),
+  },
+);
+
+async function assertBuildingSurveyorAccount(accountId: string) {
+  const client = getSupabaseServerClient();
+  const { data, error } = await client
+    .from('accounts')
+    .select('space_type')
+    .eq('id', accountId)
+    .maybeSingle();
+  if (error) throw error;
+  if (
+    (data as { space_type?: string } | null)?.space_type !== 'building-surveyor'
+  ) {
+    throw new Error(
+      'This action is only available in a building-surveyor workspace',
+    );
+  }
+}
 
 function revalidateDocsPaths(accountSlug: string, docId?: string) {
   const base = pathsConfig.app.accountDocs.replace('[account]', accountSlug);

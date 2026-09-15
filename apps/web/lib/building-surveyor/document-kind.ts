@@ -91,7 +91,7 @@ const SURVEY_COPY: ProposalDocumentCopy = {
   editorPlaceholder: 'Write the survey report…',
   savedToast: 'Survey saved',
   sendLabel: 'Send report',
-  backLabel: 'Back to surveys',
+  backLabel: 'Back to survey',
   referencedContext: 'Context used when drafting this survey.',
   privateNotePlaceholder: 'Internal notes about this survey',
   emailTemplatesHint: 'Used when sending this report.',
@@ -118,6 +118,20 @@ export function documentEditPath(
       ? pathsConfig.app.accountSurveyEdit
       : pathsConfig.app.accountProposalEdit;
   return template.replace('[account]', accountSlug).replace('[id]', documentId);
+}
+
+export function documentDetailPath(
+  accountSlug: string,
+  documentId: string,
+  kind: ProposalDocumentKind,
+): string {
+  if (kind === 'survey_report') {
+    return pathsConfig.app.accountSurveyDetail
+      .replace('[account]', accountSlug)
+      .replace('[id]', documentId);
+  }
+
+  return documentEditPath(accountSlug, documentId, kind);
 }
 
 export function documentListPath(
