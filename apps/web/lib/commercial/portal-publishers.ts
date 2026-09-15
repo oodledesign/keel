@@ -28,6 +28,10 @@ import {
 } from '~/lib/commercial/listing-website-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
+  isLiveRightmovePublication,
+  shouldUnpublishRightmoveForListingStatus,
+} from '~/lib/commercial/portal-sync-policy';
+import {
   RightmoveApiError,
   deleteCommercialProperty,
   putCommercialProperty,
@@ -930,6 +934,69 @@ export async function unpublishFromRightmove(
           : {}),
       },
     });
+  }
+}
+
+/**
+ * Re-PUT (or remove) a listing that is already live on Rightmove.
+ * No-ops when the channel was never published — turning Rightmove on stays
+ * an explicit Publishing toggle.
+ */
+export async function syncRightmoveIfLive(input: {
+  accountId: string;
+  listingId: string;
+  status?: ListingStatus;
+}): Promise<void> {
+  const { data, error } = await db()
+    .from('commercial_portal_publications')
+    .select('status')
+    .eq('account_id', input.accountId)
+    .eq('listing_id', input.listingId)
+    .eq('portal', 'rightmove')
+    .maybeSingle();
+
+  if (error) {
+    console.error('[portal] rightmove live-sync lookup failed', error.message);
+    return;
+  }
+
+  if (!isLiveRightmovePublication((data?.status as string | null) ?? null)) {
+    return;
+  }
+
+  try {
+    if (
+      input.status &&
+      shouldUnpublishRightmoveForListingStatus(input.status)
+    ) {
+      const publication = await unpublishFromRightmove(
+        input.accountId,
+        input.listingId,
+      );
+      if (publication.status === 'error') {
+        console.error(
+          '[portal] rightmove live-sync unpublish failed',
+          publication.last_error,
+        );
+      }
+      return;
+    }
+
+    const publication = await publishToRightmove(
+      input.accountId,
+      input.listingId,
+    );
+    if (publication.status === 'error') {
+      console.error(
+        '[portal] rightmove live-sync put failed',
+        publication.last_error,
+      );
+    }
+  } catch (err) {
+    console.error(
+      '[portal] rightmove live-sync failed',
+      err instanceof Error ? err.message : err,
+    );
   }
 }
 

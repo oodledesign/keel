@@ -35,6 +35,7 @@ import {
   SetBrochureShareSchema,
   SetLandlordShareSchema,
   SetListingMediaCoverSchema,
+  SyncListingPortalsAfterMediaSchema,
   UpdateListingAssignmentSchema,
   UpdateListingEnquirySchema,
   UpdateListingMediaSchema,
@@ -373,6 +374,15 @@ export const reorderListingMedia = enhanceAction(
     return getService().withSignedMediaUrls(media);
   },
   { schema: ReorderListingMediaSchema },
+);
+
+export const syncListingPortalsAfterMedia = enhanceAction(
+  async (input) => {
+    await requireBillableDisposalActor(input.accountId);
+    await getService().syncPortalsAfterMediaChange(input);
+    return { success: true };
+  },
+  { schema: SyncListingPortalsAfterMediaSchema },
 );
 
 export const createListingEnquiry = enhanceAction(

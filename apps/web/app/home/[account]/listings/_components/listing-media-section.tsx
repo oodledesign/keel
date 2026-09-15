@@ -72,11 +72,11 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import { compressListingImageFile } from '~/lib/commercial/compress-listing-image';
+import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
 import {
   compareListingMediaOrder,
   sortListingMedia,
 } from '~/lib/commercial/listing-media-order';
-import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
@@ -89,6 +89,7 @@ import {
   deleteListingMedia,
   reorderListingMedia,
   setListingMediaCover,
+  syncListingPortalsAfterMedia,
   updateListing,
   updateListingMedia,
 } from '../_lib/server/server-actions';
@@ -122,7 +123,7 @@ const PRIMARY_FILE_SECTIONS: Array<{
     type: 'brochure',
     title: 'Brochure',
     description:
-      'PDF or image uploaded for portals (e.g. Rightmove). Included the next time you publish or republish — not the online share link.',
+      'PDF or image for Website, EACH, and Rightmove. Live channels update after you save — not the online share link.',
     accept: 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
   },
   {
@@ -405,6 +406,9 @@ export function ListingMediaSection({
         }
 
         setMedia((prev) => [...prev, ...uploaded]);
+        if (uploaded.length > 0) {
+          await syncListingPortalsAfterMedia({ accountId, listingId });
+        }
         router.refresh();
         toast.success(
           uploaded.length === 1
@@ -625,6 +629,7 @@ export function ListingMediaSection({
           sortOrder: media.length,
         });
         setMedia((prev) => [...prev, created]);
+        await syncListingPortalsAfterMedia({ accountId, listingId });
         setVideoUrl('');
         router.refresh();
         toast.success('Video URL added');

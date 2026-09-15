@@ -54,6 +54,7 @@ import {
   EnsurePropertyHiveFeedSchema,
   EnsureWebsiteFeedReadySchema,
   ListRightmoveDisposalStatusesSchema,
+  RepublishRightmoveListingSchema,
   RightmoveBulkJobStatusSchema,
   RotateEachFeedSchema,
   RotatePropertyHiveFeedSchema,
@@ -596,6 +597,34 @@ export const setRightmoveListingInclusionAction = enhanceAction(
     };
   },
   { schema: SetRightmoveListingInclusionSchema },
+);
+
+export const republishRightmoveListingAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const { assertCommercialPortalPublishingAllowed } =
+      await import('~/lib/commercial/commercial-seat-access');
+    await assertCommercialPortalPublishingAllowed({
+      client,
+      accountId: input.accountId,
+    });
+
+    const publication = await publishToRightmove(
+      input.accountId,
+      input.listingId,
+    );
+    if (publication.status === 'error') {
+      throw new Error(
+        publication.last_error ?? 'Rightmove re-sync failed — try again',
+      );
+    }
+
+    return {
+      publication,
+      status: publication.status,
+    };
+  },
+  { schema: RepublishRightmoveListingSchema },
 );
 
 export const disconnectLinkedInOrgAction = enhanceAction(

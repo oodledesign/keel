@@ -99,6 +99,39 @@ export function withRightmoveMediaCacheBust(
   }
 }
 
+/**
+ * Stable token that changes when the stored file (or external URL) changes.
+ * Used for public-proxy ETags and Website/EACH feed cache-busting so a
+ * same-id replace is not treated as the old asset.
+ */
+export function commercialListingMediaVersion(input: {
+  mediaId: string;
+  storagePath?: string | null;
+  externalUrl?: string | null;
+  createdAt?: string | null;
+}): string {
+  const storagePath = input.storagePath?.trim();
+  if (storagePath) {
+    const last = storagePath.split('/').pop() ?? storagePath;
+    const cleaned = last.replace(/[^a-zA-Z0-9_-]/g, '');
+    if (cleaned) return cleaned.slice(0, 32);
+  }
+
+  const externalUrl = input.externalUrl?.trim();
+  if (externalUrl) {
+    const cleaned = externalUrl.replace(/[^a-zA-Z0-9_-]/g, '');
+    if (cleaned) return cleaned.slice(-32);
+  }
+
+  const createdAt = input.createdAt?.trim();
+  if (createdAt) {
+    const cleaned = createdAt.replace(/[^a-zA-Z0-9_-]/g, '');
+    if (cleaned) return cleaned.slice(0, 32);
+  }
+
+  return input.mediaId.replace(/-/g, '').slice(0, 32);
+}
+
 export function resolveSiteUrlForPublicMedia(): string | null {
   // Prefer the authenticated app host — marketing www does not serve these routes.
   const candidates = [

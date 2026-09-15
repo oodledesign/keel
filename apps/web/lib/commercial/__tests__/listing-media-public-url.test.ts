@@ -4,6 +4,7 @@ import {
   RIGHTMOVE_MEDIA_URL_MAX_LENGTH,
   buildCommercialListingMediaPublicUrl,
   commercialListingMediaFileName,
+  commercialListingMediaVersion,
   withRightmoveMediaCacheBust,
 } from '../listing-media-public-url';
 
@@ -54,5 +55,23 @@ describe('withRightmoveMediaCacheBust', () => {
     const signed =
       'https://example.supabase.co/storage/v1/object/sign/path/file.jpg?token=abc';
     expect(withRightmoveMediaCacheBust(signed, 1787230000)).toBe(signed);
+  });
+});
+
+describe('commercialListingMediaVersion', () => {
+  it('changes when the stored file path changes on the same media id', () => {
+    const mediaId = '702cafa5-a1bf-4a80-b7be-f498fbc52f33';
+    const before = commercialListingMediaVersion({
+      mediaId,
+      storagePath: 'acct/listing/old-uuid-main.jpg',
+      createdAt: '2026-08-07T10:00:00.000Z',
+    });
+    const after = commercialListingMediaVersion({
+      mediaId,
+      storagePath: 'acct/listing/new-uuid-main.jpg',
+      createdAt: '2026-08-07T10:00:00.000Z',
+    });
+    expect(before).not.toBe(after);
+    expect(after).toContain('new-uuid-main');
   });
 });

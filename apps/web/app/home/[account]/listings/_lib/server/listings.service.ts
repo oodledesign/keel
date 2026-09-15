@@ -30,7 +30,10 @@ import {
   listingMediaSupportsPreviewTransform,
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
-import { ensureListingFeedExternalId } from '~/lib/commercial/portal-publishers';
+import {
+  ensureListingFeedExternalId,
+  syncRightmoveIfLive,
+} from '~/lib/commercial/portal-publishers';
 import {
   getPropertyHiveCredentials,
   persistPropertyHivePublicationError,
@@ -54,6 +57,33 @@ import { createMatchSuggestionsService } from './match-suggestions.service';
 export type { MediaType };
 
 const UNPUBLISH_STATUSES: ListingStatus[] = ['withdrawn', 'let', 'sold'];
+
+async function touchListingUpdatedAt(
+  client: SupabaseClient,
+  listingId: string,
+  accountId: string,
+) {
+  const { error } = await client
+    .from('commercial_listings')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', listingId)
+    .eq('account_id', accountId);
+
+  if (error) {
+    console.error('[listings] touchListingUpdatedAt failed:', error.message, {
+      listingId,
+      accountId,
+    });
+  }
+}
+
+async function syncLivePortalsAfterMediaChange(
+  client: SupabaseClient,
+  input: { accountId: string; listingId: string },
+) {
+  await touchListingUpdatedAt(client, input.listingId, input.accountId);
+  await syncRightmoveIfLive(input);
+}
 
 /** Tables not yet in generated Database types — unwrap until typegen. */
 function fromTable(client: SupabaseClient, table: string) {
@@ -1747,7 +1777,15 @@ export function createListingsService(client: SupabaseClient) {
         listingId,
         status: input.status,
       });
+      // Rightmove is push-only and opt-in. Re-PUT when status changes on an
+      // already-published listing (e.g. Marketing ↔ Under offer). Marketing
+      // copy / price edits do not auto-push — use the Publishing toggle.
       if (input.status && input.status !== existing.status) {
+        await syncRightmoveIfLive({
+          accountId,
+          listingId,
+          status: input.status,
+        });
         try {
           await recordListingEvent(client, {
             accountId,
@@ -2285,6 +2323,11 @@ export function createListingsService(client: SupabaseClient) {
       return sortListingMedia(((data ?? []) as MediaRow[]).map(mapMedia));
     },
 
+    /**
+     * Insert a media row and bump listing.updated_at (Website/EACH last_updated).
+     * Does not PUT Rightmove — callers that finish a user upload should call
+     * `syncPortalsAfterMediaChange` once so a multi-file drop is a single push.
+     */
     async createMedia(
       input: CreateListingMediaInput,
     ): Promise<CommercialListingMedia> {
@@ -2365,6 +2408,7 @@ export function createListingsService(client: SupabaseClient) {
       } catch {
         /* best-effort */
       }
+      await touchListingUpdatedAt(client, input.listingId, input.accountId);
       return media;
     },
 
@@ -2394,6 +2438,10 @@ export function createListingsService(client: SupabaseClient) {
         });
         const updated = ordered.find((item) => item.id === input.mediaId);
         if (!updated) throw new Error('Failed to set cover image');
+        await syncLivePortalsAfterMediaChange(client, {
+          accountId: input.accountId,
+          listingId: input.listingId,
+        });
         return updated;
       }
 
@@ -2417,6 +2465,10 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to set cover image');
       }
 
+      await syncLivePortalsAfterMediaChange(client, {
+        accountId: input.accountId,
+        listingId: input.listingId,
+      });
       return mapMedia(data as MediaRow);
     },
 
@@ -2444,6 +2496,10 @@ export function createListingsService(client: SupabaseClient) {
         /* best-effort */
       }
 
+      await syncLivePortalsAfterMediaChange(client, {
+        accountId: input.accountId,
+        listingId: input.listingId,
+      });
       return ordered;
     },
 
@@ -2514,6 +2570,15 @@ export function createListingsService(client: SupabaseClient) {
         }
       }
 
+      const contentChanged =
+        input.storagePath !== undefined || input.mediaType !== undefined;
+      if (contentChanged) {
+        await syncLivePortalsAfterMediaChange(client, {
+          accountId: input.accountId,
+          listingId: input.listingId,
+        });
+      }
+
       return mapMedia(data as MediaRow);
     },
 
@@ -2524,7 +2589,7 @@ export function createListingsService(client: SupabaseClient) {
     ): Promise<void> {
       let fetchQuery = client
         .from('commercial_listing_media')
-        .select('storage_path')
+        .select('storage_path, listing_id')
         .eq('id', mediaId)
         .eq('account_id', accountId);
 
@@ -2538,8 +2603,12 @@ export function createListingsService(client: SupabaseClient) {
       if (fetchError) throw new Error(fetchError.message);
       if (!existing) throw new Error('Media not found');
 
-      const storagePath = (existing as { storage_path?: string | null } | null)
-        ?.storage_path;
+      const existingRow = existing as {
+        storage_path?: string | null;
+        listing_id?: string;
+      } | null;
+      const storagePath = existingRow?.storage_path;
+      const resolvedListingId = listingId ?? existingRow?.listing_id ?? null;
 
       let deleteQuery = client
         .from('commercial_listing_media')
@@ -2566,6 +2635,20 @@ export function createListingsService(client: SupabaseClient) {
           );
         }
       }
+
+      if (resolvedListingId) {
+        await syncLivePortalsAfterMediaChange(client, {
+          accountId,
+          listingId: resolvedListingId,
+        });
+      }
+    },
+
+    async syncPortalsAfterMediaChange(input: {
+      accountId: string;
+      listingId: string;
+    }): Promise<void> {
+      await syncLivePortalsAfterMediaChange(client, input);
     },
 
     async withSignedMediaUrls(

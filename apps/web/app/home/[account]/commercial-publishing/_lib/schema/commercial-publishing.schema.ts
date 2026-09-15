@@ -51,6 +51,10 @@ export const SetRightmoveListingInclusionSchema = AccountIdSchema.extend({
   enabled: z.boolean(),
 });
 
+export const RepublishRightmoveListingSchema = AccountIdSchema.extend({
+  listingId: z.string().uuid(),
+});
+
 export const DisconnectLinkedInOrgSchema = AccountIdSchema;
 
 export const SelectLinkedInOrgSchema = AccountIdSchema.extend({

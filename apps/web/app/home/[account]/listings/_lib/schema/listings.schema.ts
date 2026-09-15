@@ -333,6 +333,11 @@ export const SetListingMediaCoverSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+export const SyncListingPortalsAfterMediaSchema = z.object({
+  accountId: z.string().uuid(),
+  listingId: z.string().uuid(),
+});
+
 export const ReorderListingMediaSchema = z.object({
   accountId: z.string().uuid(),
   listingId: z.string().uuid(),
@@ -524,6 +529,9 @@ export type SetListingMediaCoverInput = z.infer<
 >;
 export type ReorderListingMediaInput = z.infer<
   typeof ReorderListingMediaSchema
+>;
+export type SyncListingPortalsAfterMediaInput = z.infer<
+  typeof SyncListingPortalsAfterMediaSchema
 >;
 export type UpdateListingMediaInput = z.infer<typeof UpdateListingMediaSchema>;
 export type CreateListingUnitInput = z.infer<typeof CreateListingUnitSchema>;
