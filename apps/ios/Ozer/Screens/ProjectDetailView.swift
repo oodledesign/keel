@@ -65,6 +65,7 @@ struct ProjectDetailView: View {
                 }
             }
             .padding(.top, 8)
+            .padding(.bottom, 88)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -205,8 +206,9 @@ struct ProjectDetailView: View {
                 }
                 boardColumn(title: "Unphased", subtitle: nil, tasks: tasks(in: nil))
             }
-            .padding(.bottom, 12)
         }
+        .contentMargins(.horizontal, 20, for: .scrollContent)
+        .padding(.horizontal, -20)
     }
 
     private var progressBoard: some View {
@@ -220,8 +222,9 @@ struct ProjectDetailView: View {
                     )
                 }
             }
-            .padding(.bottom, 12)
         }
+        .contentMargins(.horizontal, 20, for: .scrollContent)
+        .padding(.horizontal, -20)
     }
 
     private func boardColumn(title: String, subtitle: String?, tasks: [ProjectTaskItem]) -> some View {

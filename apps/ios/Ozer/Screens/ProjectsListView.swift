@@ -21,34 +21,15 @@ struct ProjectsListView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                pageHeader
                 if showsProjects, !session.workspaceQueryValue.isEmpty {
                     toolbar
                 }
-                Group {
-                    if !showsProjects && session.workspacesLoaded {
-                        unavailableCard
-                    } else if isLoading && payload == nil && loadError == nil {
-                        ProgressView()
-                            .tint(OzerPalette.coral)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let loadError {
-                        statusCard(error: loadError)
-                    } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
-                        membershipsEmptyCard
-                    } else if let payload, !payload.items.isEmpty {
-                        if hubView == .list {
-                            listContent(payload.items)
-                        } else {
-                            boardContent(payload)
-                        }
-                    } else {
-                        emptyCard()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                hubContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(.horizontal, 20)
+            .padding(.bottom, 88)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(OzerPalette.cream.ignoresSafeArea())
             .navigationTitle("Projects")
@@ -56,6 +37,11 @@ struct ProjectsListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     WorkspaceChip()
+                }
+                ToolbarItem(placement: .principal) {
+                    Color.clear
+                        .frame(width: 0, height: 0)
+                        .accessibilityHidden(true)
                 }
             }
             .task(id: reloadKey) {
@@ -66,6 +52,18 @@ struct ProjectsListView: View {
                 await load()
             }
         }
+    }
+
+    /// Visible title lives in the page stack so the workspace chip cannot share a toolbar row with it.
+    private var pageHeader: some View {
+        Text("Projects")
+            .font(.largeTitle.weight(.bold))
+            .foregroundStyle(OzerPalette.plum)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 8)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private var toolbar: some View {
@@ -92,8 +90,37 @@ struct ProjectsListView: View {
                 }
             }
         }
-        .padding(.top, 8)
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
         .padding(.bottom, 12)
+    }
+
+    @ViewBuilder
+    private var hubContent: some View {
+        if !showsProjects && session.workspacesLoaded {
+            unavailableCard
+                .padding(.horizontal, 20)
+        } else if isLoading && payload == nil && loadError == nil {
+            ProgressView()
+                .tint(OzerPalette.coral)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let loadError {
+            statusCard(error: loadError)
+                .padding(.horizontal, 20)
+        } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+            membershipsEmptyCard
+                .padding(.horizontal, 20)
+        } else if let payload, !payload.items.isEmpty {
+            if hubView == .list {
+                listContent(payload.items)
+                    .padding(.horizontal, 20)
+            } else {
+                boardContent(payload)
+            }
+        } else {
+            emptyCard()
+                .padding(.horizontal, 20)
+        }
     }
 
     private func listContent(_ items: [ProjectItem]) -> some View {
@@ -109,51 +136,68 @@ struct ProjectsListView: View {
                 }
             }
             .padding(.top, 8)
+            .padding(.bottom, 12)
         }
     }
 
     private func boardContent(_ payload: ProjectsPayload) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 12) {
-                ForEach(payload.statuses) { column in
-                    let items = payload.items.filter { $0.status == column.slug }
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text(column.label)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(OzerPalette.plum)
-                            Spacer()
-                            Text("\(items.count)")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(OzerPalette.plumMuted)
-                        }
-                        if items.isEmpty {
-                            Text("Nothing here")
-                                .font(.footnote)
-                                .foregroundStyle(OzerPalette.plumSoft)
-                                .padding(.vertical, 12)
-                        } else {
-                            ForEach(items) { item in
-                                NavigationLink {
-                                    ProjectDetailView(project: item)
-                                } label: {
-                                    projectBoardCard(item)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    .padding(12)
-                    .frame(width: 260, alignment: .topLeading)
-                    .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
-                            .stroke(OzerPalette.border, lineWidth: 1)
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(payload.statuses) { column in
+                        let items = payload.items.filter { $0.status == column.slug }
+                        boardColumn(column, items: items)
                     }
                 }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 24)
+            .contentMargins(.horizontal, 20, for: .scrollContent)
+            .contentMargins(.top, 8, for: .scrollContent)
+            .frame(
+                width: max(geo.size.width, 1),
+                height: max(geo.size.height, 1)
+            )
+        }
+    }
+
+    private func boardColumn(_ column: ProjectStatusColumn, items: [ProjectItem]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(column.label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plum)
+                Spacer()
+                Text("\(items.count)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plumMuted)
+            }
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if items.isEmpty {
+                        Text("Nothing here")
+                            .font(.footnote)
+                            .foregroundStyle(OzerPalette.plumSoft)
+                            .padding(.vertical, 12)
+                    } else {
+                        ForEach(items) { item in
+                            NavigationLink {
+                                ProjectDetailView(project: item)
+                            } label: {
+                                projectBoardCard(item)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.bottom, 12)
+            }
+        }
+        .padding(12)
+        .frame(width: 260, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
         }
     }
 
