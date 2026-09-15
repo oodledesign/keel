@@ -48,9 +48,16 @@ let package = Package(
                 "Workspace/WorkspaceNavigation.swift",
             ]
         ),
+        .target(
+            name: "OzerSurveys",
+            path: "../Ozer/Surveys",
+            sources: [
+                "SurveyDisplay.swift",
+            ]
+        ),
         .executableTarget(
             name: "OzerSpeechTests",
-            dependencies: ["OzerSpeech", "OzerNotes", "OzerMeetings", "OzerFinance", "OzerWorkspace"],
+            dependencies: ["OzerSpeech", "OzerNotes", "OzerMeetings", "OzerFinance", "OzerWorkspace", "OzerSurveys"],
             path: "Sources"
         ),
     ]

@@ -19,7 +19,14 @@ export const ProposalContextRefSchema = z.object({
 
 const clientOrDealRefine = <T extends z.ZodTypeAny>(schema: T) =>
   schema.superRefine((data, ctx) => {
-    const row = data as { client_id?: string | null; deal_id?: string | null };
+    const row = data as {
+      client_id?: string | null;
+      deal_id?: string | null;
+      kind?: string;
+    };
+    if (row.kind === 'survey_report') {
+      return;
+    }
     if (!row.client_id && !row.deal_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

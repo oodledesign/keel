@@ -384,6 +384,132 @@ actor NativeAPIClient {
         }
     }
 
+    func surveys(workspace: String, accessToken: String) async throws -> SurveysPayload {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/surveys",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(SurveysPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func survey(id: String, workspace: String, accessToken: String) async throws -> SurveyDetailPayload {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/surveys/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(SurveyDetailPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func createSurvey(
+        title: String,
+        workspace: String,
+        surveyType: String,
+        clientId: String?,
+        accessToken: String
+    ) async throws -> SurveyItem {
+        var payload: [String: Any] = [
+            "title": title,
+            "workspace": workspace,
+            "survey_type": surveyType,
+        ]
+        if let clientId, !clientId.isEmpty {
+            payload["client_id"] = clientId
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/surveys",
+            queryItems: [],
+            body: payload,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(SurveyItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func uploadSurveySession(
+        surveyId: String,
+        workspace: String,
+        title: String,
+        content: String,
+        durationSeconds: Int,
+        meetingDate: String,
+        audioData: Data?,
+        filename: String,
+        accessToken: String
+    ) async throws -> SurveySessionUploadResult {
+        var fields = [
+            "workspace": workspace,
+            "title": title,
+            "content": content,
+            "duration_seconds": String(durationSeconds),
+            "meeting_date": meetingDate,
+            "source": "iphone",
+        ]
+        if meetingDate.isEmpty {
+            fields.removeValue(forKey: "meeting_date")
+        }
+        let data = try await sendMultipartFields(
+            path: "api/native/v1/surveys/\(surveyId)/sessions",
+            fields: fields,
+            fileData: audioData,
+            filename: filename,
+            mimeType: "audio/mp4",
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(SurveySessionUploadResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func uploadSurveyPhoto(
+        surveyId: String,
+        workspace: String,
+        imageData: Data,
+        filename: String,
+        mimeType: String,
+        title: String,
+        accessToken: String
+    ) async throws -> SurveyPhotoItem {
+        let data = try await sendMultipartFields(
+            path: "api/native/v1/surveys/\(surveyId)/photos",
+            fields: [
+                "workspace": workspace,
+                "title": title,
+            ],
+            fileData: imageData,
+            filename: filename,
+            mimeType: mimeType,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(SurveyPhotoItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func meetings(workspace: String, accessToken: String) async throws -> MeetingsPayload {
         let data = try await send(
             method: "GET",
@@ -1019,6 +1145,76 @@ actor NativeAPIClient {
         body.append(Data("Content-Type: \(mimeType)\r\n\r\n".utf8))
         body.append(fileData)
         body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        request.httpBody = body
+
+        let data: Data
+        let http: HTTPURLResponse
+        do {
+            let result = try await session.data(for: request)
+            data = result.0
+            guard let response = result.1 as? HTTPURLResponse else {
+                throw NativeAPIError.transport("No HTTP response.")
+            }
+            http = response
+        } catch let error as NativeAPIError {
+            throw error
+        } catch {
+            throw NativeAPIError.transport(error.localizedDescription)
+        }
+
+        switch http.statusCode {
+        case 200, 201:
+            return data
+        case 400:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "Invalid request.")
+        case 401:
+            throw NativeAPIError.unauthorized
+        case 403:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "You don’t have access.")
+        case 404:
+            throw NativeAPIError.notFound
+        default:
+            throw NativeAPIError.http(http.statusCode)
+        }
+    }
+
+    private func sendMultipartFields(
+        path: String,
+        fields: [String: String],
+        fileData: Data?,
+        filename: String,
+        mimeType: String,
+        accessToken: String
+    ) async throws -> Data {
+        let url = AppConfiguration.apiBaseURL.appending(path: path)
+        let boundary = "ozer-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpShouldHandleCookies = false
+
+        var body = Data()
+        for (name, value) in fields {
+            body.append(Data("--\(boundary)\r\n".utf8))
+            body.append(Data("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".utf8))
+            body.append(Data("\(value)\r\n".utf8))
+        }
+        if let fileData {
+            body.append(Data("--\(boundary)\r\n".utf8))
+            body.append(
+                Data(
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".utf8
+                )
+            )
+            body.append(Data("Content-Type: \(mimeType)\r\n\r\n".utf8))
+            body.append(fileData)
+            body.append(Data("\r\n".utf8))
+        }
+        body.append(Data("--\(boundary)--\r\n".utf8))
         request.httpBody = body
 
         let data: Data

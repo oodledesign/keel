@@ -25,7 +25,7 @@ cp apps/ios/Config/Local.xcconfig.example apps/ios/Config/Local.xcconfig
 
 ## Permissions
 
-`Ozer/Info.plist` asks for the microphone and on-device speech recognition (Ozer-specific strings, not generic). `UIBackgroundModes` includes `audio` so a meeting can keep recording when the screen locks. No iCloud. Speech uses Apple’s Speech framework with `requiresOnDeviceRecognition` and locale `en-GB`.
+`Ozer/Info.plist` asks for the microphone, on-device speech recognition, camera, and photo library (Ozer-specific strings, not generic). `UIBackgroundModes` includes `audio` so a meeting or survey can keep recording when the screen locks. No iCloud. Speech uses Apple’s Speech framework with `requiresOnDeviceRecognition` and locale `en-GB`.
 
 The iOS Simulator must not run live on-device Speech, a mic tap that hops to the main actor, or the pyannote/WeSpeaker models — that pins the host CPU. Meetings on Simulator start a timer-only placeholder and show that live captions need a real iPhone. Dictation fails fast with the same message. Permission prompts time out instead of hanging after Allow.
 
@@ -304,7 +304,8 @@ Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView`
 
 - **Personal / family:** Home, Tasks, Review, Notes, Messages, People, Recipes, Meal plan, Shopping
 - **Studio (`work_design`):** Home, Tasks, Review, Notes, Messages, Meetings, Projects, Clients, Invoices
-- **Property / commercial / surveyor:** same business core, plus Projects, Clients and Invoices; Meetings on those capture spaces
+- **Property / commercial:** same business core, plus Projects, Clients and Invoices; Meetings on those capture spaces
+- **Surveyor:** same as property / commercial, plus **Surveys** (site recording into a survey report)
 - **Community:** Home, Tasks, Review, Notes, Messages — no shopping, meals, people, or clients
 
 Shopping, recipes, and meal plan never appear on studio, commercial, or surveyor. Switching workspace updates the links, leaves the menu open, and if the current screen is not in the new menu the shell falls back to Home.
@@ -317,10 +318,22 @@ Matches the web PWA: **Home | 3 pin slots | Menu**. Pins follow the open workspa
 - Family: Tasks, Shopping, Meal plan
 - Studio: Tasks, Notes, Messages
 - Property / commercial: Tasks, Notes, Clients
-- Surveyor: Tasks, Notes, Meetings
+- Surveyor: Tasks, Surveys, Meetings
 - Community / unknown: Tasks, Notes, Messages
 
-Out of scope: PowerSync, camera, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
+### Path A — survey recording (building-surveyor only)
+
+Pick or create a survey (address, optional client, survey type). Record dictation fully offline with pause / resume and multiple sessions. Audio and captions are queued on the phone and upload on reconnect as `meeting_transcripts` linked to that survey, then section-grouped into `survey_observations`. Photos use the native camera or camera roll and land in the survey library. The Meetings / Notes recorder is unchanged — survey save does not offer Meeting or Note.
+
+```
+GET /api/native/v1/surveys?workspace=<slug-or-uuid>
+POST /api/native/v1/surveys
+GET /api/native/v1/surveys/{id}?workspace=<slug-or-uuid>
+POST /api/native/v1/surveys/{id}/sessions   (JSON or multipart audio)
+POST /api/native/v1/surveys/{id}/photos     (multipart image)
+```
+
+Out of scope: PowerSync, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
 
 ## Monorepo
 

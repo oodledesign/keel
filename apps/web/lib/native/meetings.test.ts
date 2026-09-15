@@ -149,6 +149,7 @@ describe('listNativeMeetings', () => {
     const meetingChain = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue({
         data: [
@@ -205,6 +206,7 @@ describe('listNativeMeetings', () => {
 
     expect(from).toHaveBeenCalledWith('meeting_transcripts');
     expect(meetingChain.eq).toHaveBeenCalledWith('account_id', studio.id);
+    expect(meetingChain.is).toHaveBeenCalledWith('proposal_id', null);
     expect(items).toEqual([
       {
         id: 'm1',

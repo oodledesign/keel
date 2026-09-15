@@ -267,12 +267,6 @@ class SurveyCaptureService {
     );
     const survey = await this.getSurvey(input.accountId, input.proposalId);
 
-    if (!survey.client_id && !survey.deal_id) {
-      throw new Error(
-        'This survey needs a client or enquiry before transcripts can be added',
-      );
-    }
-
     const content = input.content.trim();
     const grouping = await groupSurveyObservations({
       transcript: content,
@@ -708,14 +702,21 @@ class SurveyCaptureService {
       .order('created_at', { ascending: true });
     if (error) this.throwErr(error);
 
-    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-      id: row.id as string,
-      title: (row.title as string | null) ?? 'Survey photo',
-      mimeType: (row.mime_type as string | null) ?? null,
-      createdAt: (row.created_at as string | null) ?? null,
-      pinnedSectionKey: (row.pinned_section_key as string | null) ?? null,
-      photoRole: (row.photo_role as string | null) ?? 'archive',
-      caption: (row.caption as string | null) ?? null,
-    }));
+    return ((data ?? []) as Array<Record<string, unknown>>)
+      .filter((row) => {
+        const mime = String(row.mime_type ?? '')
+          .trim()
+          .toLowerCase();
+        return !mime || mime.startsWith('image/');
+      })
+      .map((row) => ({
+        id: row.id as string,
+        title: (row.title as string | null) ?? 'Survey photo',
+        mimeType: (row.mime_type as string | null) ?? null,
+        createdAt: (row.created_at as string | null) ?? null,
+        pinnedSectionKey: (row.pinned_section_key as string | null) ?? null,
+        photoRole: (row.photo_role as string | null) ?? 'archive',
+        caption: (row.caption as string | null) ?? null,
+      }));
   }
 }

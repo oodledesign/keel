@@ -140,6 +140,9 @@ extension NativeWorkspace {
     /// In-room meetings on business / work / commercial / surveyor. Not personal or family.
     var showsMeetings: Bool { navigationKind.showsMeetings }
 
+    /// Site surveys on building-surveyor workspaces only.
+    var showsSurveys: Bool { navigationKind.showsSurveys }
+
     var isSurveyorWorkspace: Bool {
         profile == "building_surveyor"
     }
@@ -149,7 +152,7 @@ extension NativeWorkspace {
         showsMeetings
     }
 
-    /// Surveyor defaults to a note (later hangs off a survey). Studio / commercial default to a meeting.
+    /// Surveyor defaults to a note for the Meetings recorder. Site dictation uses Surveys.
     var defaultCaptureDestination: CaptureSaveDestination {
         if !allowsMeetingDestination { return .note }
         if isSurveyorWorkspace { return .note }

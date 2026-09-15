@@ -29,6 +29,8 @@ struct MainTabView: View {
                 InvoicesListView()
             case .meetings:
                 MeetingsListView()
+            case .surveys:
+                SurveysListView()
             case .shopping:
                 ShoppingListView()
             case .recipes:

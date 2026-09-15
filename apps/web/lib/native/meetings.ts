@@ -41,7 +41,7 @@ const LIST_LIMIT = 100;
 
 /** Keep `content` so existing phones can open a transcript from the hub payload. */
 const LIST_SELECT =
-  'id, title, content, client_id, meeting_date, source, duration_seconds, created_at, updated_at';
+  'id, title, content, client_id, meeting_date, source, duration_seconds, created_at, updated_at, proposal_id';
 
 const UPCOMING_LIMIT = 8;
 
@@ -232,6 +232,7 @@ export async function listNativeMeetings(
     .from('meeting_transcripts')
     .select(LIST_SELECT)
     .eq('account_id', workspace.id)
+    .is('proposal_id', null)
     .order('created_at', { ascending: false })
     .limit(LIST_LIMIT);
 
@@ -239,7 +240,9 @@ export async function listNativeMeetings(
     throw new Error(error.message);
   }
 
-  const rows = (data ?? []) as NativeMeetingRow[];
+  const rows = (
+    (data ?? []) as Array<NativeMeetingRow & { proposal_id?: string | null }>
+  ).filter((row) => !row.proposal_id);
   const [names, extracted] = await Promise.all([
     loadClientRows(
       client,

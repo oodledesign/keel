@@ -198,6 +198,30 @@ List items add `duration_seconds` and `has_extracted_tasks` on top of the existi
 
 `GET /meetings/:id` is the phone detail: the same meeting object plus `notes` (`{ text, generated_at }` from the Mac/web summary, or `null`) and `tasks` (approved / auto-published action items, with `planner_task_id` when a planner task exists).
 
+Site survey sessions store `proposal_id` on `meeting_transcripts` and are omitted from this Meetings list.
+
+## Surveys
+
+Building-surveyor workspaces only. Other profiles get an empty list on GET (not 403). Writes return 400. Surveys are `proposals` with `kind = survey_report`.
+
+```
+GET /api/native/v1/surveys?workspace=<slug-or-uuid>
+→ { "items": [{ "id", "title", "status", "survey_type", "survey_type_label", "client_id", "client_name", "session_count", "photo_count", "created_at", "updated_at" }] }
+
+POST /api/native/v1/surveys
+{ "workspace", "title", "survey_type?", "client_id?" }
+
+GET /api/native/v1/surveys/{id}?workspace=<slug-or-uuid>
+→ survey plus "sessions" and "photos" (signed preview URLs)
+
+POST /api/native/v1/surveys/{id}/sessions
+JSON { "workspace", "title?", "content?", "duration_seconds?", "meeting_date?", "source?" }
+or multipart fields plus optional audio `file`. Creates a meeting_transcript linked to the survey and groups it into survey_observations.
+
+POST /api/native/v1/surveys/{id}/photos
+multipart `workspace` + image `file` → survey library doc (`photo_role = archive`)
+```
+
 ## Task review
 
 Pending extracted tasks from **meetings** (`meeting_action_items.status = pending_review`) and **email** (`email_action_items.status = suggested`). Same accept / edit / dismiss idea as the web review queues. Cookie-free Bearer JSON.
