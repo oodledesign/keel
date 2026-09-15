@@ -39,38 +39,42 @@ function isSameOriginPublicLink(link: string, origin: string): boolean {
   }
 }
 
+function parsePropertyRecord(
+  item: unknown,
+  origin: string,
+): WordpressPropertyMatch | null {
+  if (!item || typeof item !== 'object') return null;
+  const row = item as {
+    id?: unknown;
+    slug?: unknown;
+    link?: unknown;
+    title?: unknown;
+  };
+  const id = Number(row.id);
+  const slug = typeof row.slug === 'string' ? row.slug : '';
+  const link = typeof row.link === 'string' ? row.link : '';
+  if (!Number.isFinite(id) || !slug || !isSameOriginPublicLink(link, origin)) {
+    return null;
+  }
+  return {
+    id,
+    slug,
+    link,
+    title: decodeTitle(row.title),
+  };
+}
+
 function parsePropertyRecords(
   payload: unknown,
   origin: string,
 ): WordpressPropertyMatch[] {
-  if (!Array.isArray(payload)) return [];
-  const matches: WordpressPropertyMatch[] = [];
-  for (const item of payload) {
-    if (!item || typeof item !== 'object') continue;
-    const row = item as {
-      id?: unknown;
-      slug?: unknown;
-      link?: unknown;
-      title?: unknown;
-    };
-    const id = Number(row.id);
-    const slug = typeof row.slug === 'string' ? row.slug : '';
-    const link = typeof row.link === 'string' ? row.link : '';
-    if (
-      !Number.isFinite(id) ||
-      !slug ||
-      !isSameOriginPublicLink(link, origin)
-    ) {
-      continue;
-    }
-    matches.push({
-      id,
-      slug,
-      link,
-      title: decodeTitle(row.title),
-    });
+  if (Array.isArray(payload)) {
+    return payload
+      .map((item) => parsePropertyRecord(item, origin))
+      .filter((item): item is WordpressPropertyMatch => item != null);
   }
-  return matches;
+  const single = parsePropertyRecord(payload, origin);
+  return single ? [single] : [];
 }
 
 export function listingWebsiteSlugCandidates(
@@ -198,8 +202,12 @@ async function fetchWordpressJson(
 }
 
 /**
- * Look up the live WP property page. Public REST does not expose PH
- * `external_id` / `ozer_listing_id` meta, so we match slug then title search.
+ * Look up the live WP property page.
+ *
+ * Public REST does not expose PH `external_id` or `ozer_listing_id` in
+ * `meta` / `acf`. Kato-style numeric `external_id` values are the WP post
+ * id, so we GET `/property/{id}` first, then slug candidates, then title
+ * search with token scoring.
  */
 export async function lookupWordpressListingPageUrl(input: {
   siteOrigin: string;
@@ -211,6 +219,21 @@ export async function lookupWordpressListingPageUrl(input: {
 
   const fetchImpl = input.deps?.fetch ?? fetch;
   const resolveHost = input.deps?.resolveHost;
+  const numericId = input.listing.externalId?.trim() ?? '';
+  if (/^\d+$/.test(numericId)) {
+    const byIdUrl = `${origin}/wp-json/wp/v2/property/${encodeURIComponent(numericId)}?_fields=id,link,slug,title`;
+    try {
+      const matches = parsePropertyRecords(
+        await fetchWordpressJson(byIdUrl, fetchImpl, resolveHost),
+        origin,
+      );
+      const exact = matches.find((match) => String(match.id) === numericId);
+      if (exact) return exact.link;
+    } catch {
+      // fall through to slug / search
+    }
+  }
+
   const slugs = listingWebsiteSlugCandidates(input.listing);
 
   for (const slug of slugs) {

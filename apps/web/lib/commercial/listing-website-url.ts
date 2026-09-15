@@ -4,7 +4,7 @@ import { isBlockedLogoHostname } from '~/lib/clients/client-logo-icons';
  * Workspace listing website URL templates for XML-only (and REST) agencies.
  *
  * Prefer storing the resolved URL on commercial_listings.website_url.
- * Templates fill empty website_url when the website feed is live.
+ * Templates supply the public site origin; we do not persist guessed slugs.
  *
  * Placeholders:
  * - {slug} — address slug (line1 + line2 + town), WordPress-style

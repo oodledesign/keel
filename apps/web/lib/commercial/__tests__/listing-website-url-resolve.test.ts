@@ -72,6 +72,62 @@ describe('resolvePublicWebsiteSiteOrigin', () => {
 });
 
 describe('lookupWordpressListingPageUrl', () => {
+  it('prefers a numeric external_id as the WP property post id', async () => {
+    const url = await lookupWordpressListingPageUrl({
+      siteOrigin: 'https://www.bracketts.co.uk',
+      listing: { ...listing, externalId: '72803' },
+      deps: {
+        fetch: async (input) => {
+          const href = String(input);
+          if (href.includes('/wp-json/wp/v2/property/72803')) {
+            return Response.json({
+              id: 72803,
+              slug: 'high-street-tonbridge-tn9-9',
+              link: 'https://www.bracketts.co.uk/property/high-street-tonbridge-tn9-9/',
+              title: { rendered: 'High Street, Tonbridge, TN9' },
+            });
+          }
+          throw new Error(`unexpected fetch ${href}`);
+        },
+      },
+    });
+    expect(url).toBe(
+      'https://www.bracketts.co.uk/property/high-street-tonbridge-tn9-9/',
+    );
+  });
+
+  it('falls through to slug search when the numeric post id is missing', async () => {
+    const requested: string[] = [];
+    const url = await lookupWordpressListingPageUrl({
+      siteOrigin: 'https://www.bracketts.co.uk',
+      listing: { ...listing, externalId: '72803' },
+      deps: {
+        fetch: async (input) => {
+          const href = String(input);
+          requested.push(href);
+          if (href.includes('/wp-json/wp/v2/property/72803')) {
+            return new Response('Not Found', { status: 404 });
+          }
+          if (href.includes('slug=20-21-chapman-way-tunbridge-wells')) {
+            return Response.json([
+              {
+                id: 99,
+                slug: '20-21-chapman-way-tunbridge-wells',
+                link: 'https://www.bracketts.co.uk/property/20-21-chapman-way-tunbridge-wells/',
+                title: { rendered: '20-21 Chapman Way, Tunbridge Wells' },
+              },
+            ]);
+          }
+          return Response.json([]);
+        },
+      },
+    });
+    expect(requested[0]).toContain('/wp-json/wp/v2/property/72803');
+    expect(url).toBe(
+      'https://www.bracketts.co.uk/property/20-21-chapman-way-tunbridge-wells/',
+    );
+  });
+
   it('returns the WP link when a slug candidate matches', async () => {
     const url = await lookupWordpressListingPageUrl({
       siteOrigin: 'https://www.bracketts.co.uk',
