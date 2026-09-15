@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -17,12 +17,16 @@ import {
 export function ListingPageSearch({
   listingBasePath,
   className,
+  variant = 'default',
 }: {
   listingBasePath: string;
   className?: string;
+  variant?: 'default' | 'sidebar';
 }) {
   const router = useRouter();
+  const resultsId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const isSidebar = variant === 'sidebar';
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -30,18 +34,14 @@ export function ListingPageSearch({
   const results = useMemo(() => searchDisposalPages(query), [query]);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
-  useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
+    const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
   const goTo = (hit: DisposalSearchHit) => {
@@ -51,9 +51,10 @@ export function ListingPageSearch({
     setQuery('');
     router.push(href);
     if (hit.hash) {
+      const hash = hit.hash;
       // After client navigation, scroll once the target exists.
       window.setTimeout(() => {
-        document.getElementById(hit.hash!)?.scrollIntoView({
+        document.getElementById(hash)?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
@@ -62,13 +63,21 @@ export function ListingPageSearch({
   };
 
   return (
-    <div ref={rootRef} className={cn('relative w-full max-w-md', className)}>
+    <div
+      ref={rootRef}
+      className={cn(
+        'relative w-full',
+        isSidebar ? 'max-w-none' : 'max-w-md',
+        className,
+      )}
+    >
       <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text)]/40" />
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text)]/40" />
         <Input
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
+            setActiveIndex(0);
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
@@ -99,11 +108,20 @@ export function ListingPageSearch({
               setQuery('');
             }
           }}
-          placeholder="Find on this disposal… e.g. parking"
-          className="h-9 bg-[var(--workspace-shell-panel)] pr-9 pl-9 text-sm"
+          placeholder="Find in this disposal"
+          className={cn(
+            'bg-[var(--workspace-shell-panel)] pr-8 pl-8 text-sm',
+            isSidebar ? 'h-8' : 'h-9',
+          )}
           aria-label="Search disposal pages and sections"
           aria-expanded={open && query.trim().length > 0}
-          aria-controls="disposal-page-search-results"
+          aria-controls={resultsId}
+          aria-haspopup="listbox"
+          aria-activedescendant={
+            open && results.length > 0
+              ? `${resultsId}-option-${activeIndex}`
+              : undefined
+          }
           role="combobox"
           autoComplete="off"
         />
@@ -113,6 +131,7 @@ export function ListingPageSearch({
             className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-[var(--workspace-shell-text)]/45 hover:text-[var(--workspace-shell-text)]"
             onClick={() => {
               setQuery('');
+              setActiveIndex(0);
               setOpen(false);
             }}
             aria-label="Clear search"
@@ -124,9 +143,12 @@ export function ListingPageSearch({
 
       {open && query.trim().length > 0 ? (
         <ul
-          id="disposal-page-search-results"
+          id={resultsId}
           role="listbox"
-          className="absolute z-40 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1 shadow-lg"
+          className={cn(
+            'absolute z-40 mt-1 max-h-72 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1 shadow-lg',
+            isSidebar ? 'left-0 w-72 min-w-[18rem]' : 'w-full',
+          )}
         >
           {results.length === 0 ? (
             <li className="px-3 py-2.5 text-sm text-[var(--workspace-shell-text)]/50">
@@ -136,6 +158,7 @@ export function ListingPageSearch({
             results.map((hit, index) => (
               <li
                 key={hit.id}
+                id={`${resultsId}-option-${index}`}
                 role="option"
                 aria-selected={index === activeIndex}
               >
