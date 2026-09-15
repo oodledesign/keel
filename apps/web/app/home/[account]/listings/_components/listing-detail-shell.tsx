@@ -46,11 +46,11 @@ import { cn } from '@kit/ui/utils';
 
 import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import pathsConfig from '~/config/paths.config';
+import { isSafeHttpUrl } from '~/lib/commercial/channel-publish-status';
 import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
 } from '~/lib/commercial/commercial-constants';
-import { isSafeHttpUrl } from '~/lib/commercial/channel-publish-status';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
