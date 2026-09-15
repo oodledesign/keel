@@ -4,6 +4,7 @@ import {
   isWebsiteFeedIncluded,
 } from '~/lib/commercial/each-feed-inclusion';
 import { ACTIVE_LISTING_STATUSES_FOR_MATCH } from '~/lib/commercial/match-scoring';
+import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
 
 export type ChannelPublishState = 'live' | 'off' | 'blocked' | 'unavailable';
 
@@ -20,6 +21,11 @@ export type ChannelPublishStatus = {
   /** Missing quals shown when switch cannot be enabled / state is blocked. */
   blockers: string[];
   lastError: string | null;
+  /**
+   * Live Rightmove row is older than the listing / newest media.
+   * Website and EACH are pull feeds — they never set this.
+   */
+  outOfSync?: boolean;
 };
 
 type ListingInput = {
@@ -31,6 +37,7 @@ type ListingInput = {
   postcode?: string | null;
   addressLine1?: string | null;
   disposalType?: string | null;
+  updatedAt?: string | null;
 };
 
 type PublicationInput = {
@@ -39,6 +46,7 @@ type PublicationInput = {
   lastError?: string | null;
   externalId?: string | null;
   externalUrl?: string | null;
+  lastSyncAt?: string | null;
 };
 
 function eachFieldBlockers(listing: ListingInput): string[] {
@@ -196,8 +204,12 @@ export function getEachChannelStatus(input: {
 }
 
 export function getRightmoveChannelStatus(input?: {
-  listing?: Pick<ListingInput, 'status' | 'name' | 'postcode' | 'addressLine1'>;
+  listing?: Pick<
+    ListingInput,
+    'status' | 'name' | 'postcode' | 'addressLine1' | 'updatedAt'
+  >;
   publications?: PublicationInput[];
+  mediaCreatedAt?: Array<string | null | undefined>;
 }): ChannelPublishStatus {
   const listing = input?.listing;
   const publications = input?.publications ?? [];
@@ -267,16 +279,30 @@ export function getRightmoveChannelStatus(input?: {
   }
 
   if (pub.status === 'published') {
+    const listingUpdatedAt = listing?.updatedAt;
+    const mediaCreatedAt = input?.mediaCreatedAt;
+    const shouldEvaluateSync =
+      listingUpdatedAt != null || (mediaCreatedAt?.length ?? 0) > 0;
+    const outOfSync = shouldEvaluateSync
+      ? isRightmoveSyncStale({
+          publicationStatus: pub.status,
+          lastSyncAt: pub.lastSyncAt,
+          listingUpdatedAt,
+          mediaCreatedAt,
+        })
+      : false;
+
     return {
       state: 'live',
       switchOn: true,
       canEnable: true,
-      label: 'Live',
+      label: outOfSync ? 'Live but Unsynced' : 'Live',
       detail: hasUrl
         ? 'On Rightmove (public page can take a few minutes)'
         : 'On Rightmove',
       blockers: [],
       lastError: null,
+      outOfSync,
     };
   }
 
@@ -337,6 +363,34 @@ export function getCirculationChannelStatus(input: {
     blockers: [],
     lastError: null,
   };
+}
+
+/** Switched-on channel is live and not waiting on a Rightmove re-push. */
+export function isSwitchedOnChannelHealthy(
+  status: ChannelPublishStatus,
+): boolean {
+  return status.state === 'live' && !status.outOfSync;
+}
+
+export function switchedOnChannelsHaveIssue(
+  statuses: ChannelPublishStatus[],
+): boolean {
+  return statuses.some(
+    (status) => status.switchOn && !isSwitchedOnChannelHealthy(status),
+  );
+}
+
+export function hasSwitchedOnChannels(
+  statuses: ChannelPublishStatus[],
+): boolean {
+  return statuses.some((status) => status.switchOn);
+}
+
+export function channelNeedsRightmoveResync(
+  key: string,
+  status: ChannelPublishStatus,
+): boolean {
+  return key === 'rightmove' && Boolean(status.switchOn && status.outOfSync);
 }
 
 export function isSafeHttpUrl(value: string): boolean {

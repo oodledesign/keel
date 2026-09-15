@@ -242,6 +242,7 @@ export function ListingOverviewSection({
       />
       <ListingOverviewChannelStatus
         listing={listing}
+        accountId={accountId}
         accountSlug={accountSlug}
         publications={publications}
       />

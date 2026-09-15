@@ -15,13 +15,13 @@ import {
   getWebsiteChannelStatus,
 } from '~/lib/commercial/channel-publish-status';
 import { listingTabHref } from '~/lib/commercial/listing-routes';
-import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type {
   CommercialListing,
   CommercialPortalPublication,
 } from '../_lib/server/listings.service';
+import { ListingChannelSyncIcon } from './listing-channel-sync-icon';
 
 type ChannelBadge = {
   key: string;
@@ -30,16 +30,12 @@ type ChannelBadge = {
   status: ChannelPublishStatus;
 };
 
-function ChannelStatusIcon({
-  state,
-}: {
-  state: ChannelPublishStatus['state'];
-}) {
-  if (state === 'live') {
-    return <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />;
-  }
-  if (state === 'blocked') {
+function ChannelStatusIcon({ status }: { status: ChannelPublishStatus }) {
+  if (status.outOfSync || status.state === 'blocked') {
     return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" aria-hidden />;
+  }
+  if (status.state === 'live') {
+    return <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />;
   }
   return (
     <X
@@ -49,11 +45,14 @@ function ChannelStatusIcon({
   );
 }
 
-function channelTone(state: ChannelPublishStatus['state']) {
-  if (state === 'live') {
+function channelTone(status: ChannelPublishStatus) {
+  if (status.outOfSync) {
+    return 'border-amber-500/25 bg-amber-500/10 text-amber-900 dark:text-amber-200';
+  }
+  if (status.state === 'live') {
     return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300';
   }
-  if (state === 'blocked') {
+  if (status.state === 'blocked') {
     return 'border-amber-500/25 bg-amber-500/10 text-amber-900 dark:text-amber-200';
   }
   return 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
@@ -61,23 +60,17 @@ function channelTone(state: ChannelPublishStatus['state']) {
 
 export function ListingOverviewChannelStatus({
   listing,
+  accountId,
   accountSlug,
   publications,
 }: {
   listing: CommercialListing;
+  accountId: string;
   accountSlug: string;
   publications: CommercialPortalPublication[];
 }) {
   const publishingHref = listingTabHref(accountSlug, listing.id, 'publishing');
   const interestHref = listingTabHref(accountSlug, listing.id, 'interest');
-  const rightmovePublication = publications.find(
-    (publication) => publication.portal === 'rightmove',
-  );
-  const rightmoveOutOfSync = isRightmoveSyncStale({
-    publicationStatus: rightmovePublication?.status,
-    lastSyncAt: rightmovePublication?.lastSyncAt,
-    listingUpdatedAt: listing.updatedAt,
-  });
 
   const channels: ChannelBadge[] = [
     {
@@ -120,6 +113,7 @@ export function ListingOverviewChannelStatus({
           name: listing.name,
           postcode: listing.postcode,
           addressLine1: listing.addressLine1,
+          updatedAt: listing.updatedAt,
         },
         publications,
       }),
@@ -140,9 +134,16 @@ export function ListingOverviewChannelStatus({
   return (
     <Card className={workspacePanelCard} data-test="overview-channel-status">
       <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-        <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-          Channels
-        </CardTitle>
+        <div className="flex min-w-0 items-center gap-2">
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Channels
+          </CardTitle>
+          <ListingChannelSyncIcon
+            channels={channels}
+            accountId={accountId}
+            listingId={listing.id}
+          />
+        </div>
         <Link
           href={publishingHref}
           className="text-xs text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)] hover:underline"
@@ -151,17 +152,6 @@ export function ListingOverviewChannelStatus({
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
-        {rightmoveOutOfSync ? (
-          <p
-            className="rounded-md bg-amber-500/10 px-2.5 py-2 text-xs text-amber-900 dark:text-amber-200"
-            data-test="overview-rightmove-out-of-sync"
-          >
-            Rightmove is behind this disposal.{' '}
-            <Link href={`${publishingHref}#channels`} className="underline">
-              Re-sync from Publishing
-            </Link>
-          </p>
-        ) : null}
         <ul className="flex flex-wrap gap-2">
           {channels.map((channel) => (
             <li key={channel.key}>
@@ -171,10 +161,10 @@ export function ListingOverviewChannelStatus({
                 data-test={`overview-channel-${channel.key}`}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-                  channelTone(channel.status.state),
+                  channelTone(channel.status),
                 )}
               >
-                <ChannelStatusIcon state={channel.status.state} />
+                <ChannelStatusIcon status={channel.status} />
                 <span>{channel.label}</span>
                 <span className="font-normal opacity-80">
                   {channel.status.label}

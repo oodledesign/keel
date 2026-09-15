@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  channelNeedsRightmoveResync,
   getCirculationChannelStatus,
   getEachChannelStatus,
   getRightmoveChannelStatus,
   getWebsiteChannelStatus,
+  hasSwitchedOnChannels,
+  switchedOnChannelsHaveIssue,
 } from '../channel-publish-status';
 
 describe('getWebsiteChannelStatus', () => {
@@ -144,6 +147,64 @@ describe('getRightmoveChannelStatus', () => {
     });
     expect(status.state).toBe('live');
     expect(status.switchOn).toBe(true);
+    expect(status.label).toBe('Live');
+    expect(status.outOfSync).toBeFalsy();
+  });
+
+  it('is Live but Unsynced when last push is older than the listing', () => {
+    const status = getRightmoveChannelStatus({
+      listing: {
+        status: 'marketing',
+        updatedAt: '2026-09-15T11:28:00.000Z',
+      },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-07T11:47:00.000Z',
+          externalUrl: 'https://www.rightmove.co.uk/properties/123',
+        },
+      ],
+    });
+    expect(status.state).toBe('live');
+    expect(status.outOfSync).toBe(true);
+    expect(status.label).toBe('Live but Unsynced');
+    expect(channelNeedsRightmoveResync('rightmove', status)).toBe(true);
+  });
+
+  it('is Live but Unsynced when last push is older than new media', () => {
+    const status = getRightmoveChannelStatus({
+      listing: { status: 'marketing' },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-07T11:47:00.000Z',
+        },
+      ],
+      mediaCreatedAt: ['2026-09-15T10:00:00.000Z'],
+    });
+    expect(status.outOfSync).toBe(true);
+    expect(status.label).toBe('Live but Unsynced');
+  });
+
+  it('stays Live when last sync is after listing and media updates', () => {
+    const status = getRightmoveChannelStatus({
+      listing: {
+        status: 'marketing',
+        updatedAt: '2026-09-15T11:28:00.000Z',
+      },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-15T12:00:00.000Z',
+        },
+      ],
+      mediaCreatedAt: ['2026-09-11T10:00:00.000Z'],
+    });
+    expect(status.label).toBe('Live');
+    expect(status.outOfSync).toBe(false);
   });
 
   it('is Failed when the last push errored', () => {
@@ -188,5 +249,90 @@ describe('getCirculationChannelStatus', () => {
     expect(status.state).toBe('live');
     expect(status.label).toBe('Included');
     expect(status.blockers).toEqual([]);
+  });
+});
+
+describe('switched-on channel sync health', () => {
+  it('is orange when a switched-on channel is blocked or unsynced', () => {
+    const website = getWebsiteChannelStatus({
+      listing: { status: 'marketing', externalId: '1' },
+      publications: [{ portal: 'property_hive', status: 'published' }],
+    });
+    const rightmove = getRightmoveChannelStatus({
+      listing: {
+        status: 'marketing',
+        updatedAt: '2026-09-15T11:28:00.000Z',
+      },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-07T11:47:00.000Z',
+        },
+      ],
+    });
+
+    expect(hasSwitchedOnChannels([website, rightmove])).toBe(true);
+    expect(switchedOnChannelsHaveIssue([website, rightmove])).toBe(true);
+  });
+
+  it('is orange when a switched-on pull feed is blocked', () => {
+    const website = getWebsiteChannelStatus({
+      listing: { status: 'marketing', externalId: null },
+      publications: [{ portal: 'property_hive', status: 'published' }],
+    });
+    const rightmove = getRightmoveChannelStatus({
+      listing: {
+        status: 'marketing',
+        updatedAt: '2026-09-15T11:28:00.000Z',
+      },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-15T12:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(website.state).toBe('blocked');
+    expect(website.outOfSync).toBeFalsy();
+    expect(switchedOnChannelsHaveIssue([website, rightmove])).toBe(true);
+  });
+
+  it('is green when every switched-on channel is live and in sync', () => {
+    const website = getWebsiteChannelStatus({
+      listing: { status: 'marketing', externalId: '1' },
+      publications: [{ portal: 'property_hive', status: 'published' }],
+    });
+    const rightmove = getRightmoveChannelStatus({
+      listing: {
+        status: 'marketing',
+        updatedAt: '2026-09-15T11:28:00.000Z',
+      },
+      publications: [
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-15T12:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(switchedOnChannelsHaveIssue([website, rightmove])).toBe(false);
+  });
+
+  it('ignores channels that are switched off', () => {
+    const website = getWebsiteChannelStatus({
+      listing: { status: 'marketing', externalId: '1' },
+      publications: [{ portal: 'property_hive', status: 'unpublished' }],
+    });
+    const rightmove = getRightmoveChannelStatus({
+      listing: { status: 'marketing' },
+      publications: [],
+    });
+
+    expect(hasSwitchedOnChannels([website, rightmove])).toBe(false);
+    expect(switchedOnChannelsHaveIssue([website, rightmove])).toBe(false);
   });
 });

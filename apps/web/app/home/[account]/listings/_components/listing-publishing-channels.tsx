@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ExternalLink } from 'lucide-react';
+import { AlertTriangle, ExternalLink } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
@@ -29,13 +29,9 @@ import {
   resolveStoredOrTemplatedWebsiteUrl,
 } from '~/lib/commercial/listing-website-url';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
-import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
-import {
-  ensureWebsiteFeedReadyAction,
-  republishRightmoveListingAction,
-} from '../../commercial-publishing/_lib/server/server-actions';
+import { ensureWebsiteFeedReadyAction } from '../../commercial-publishing/_lib/server/server-actions';
 import type {
   CommercialListing,
   CommercialListingMedia,
@@ -43,6 +39,7 @@ import type {
 } from '../_lib/server/listings.service';
 import { useDisposalAccess } from './disposal-access-context';
 import { ListingChannelEnableDialog } from './listing-channel-enable-dialog';
+import { ListingChannelSyncIcon } from './listing-channel-sync-icon';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import { ListingRightmoveFeedToggle } from './listing-rightmove-feed-toggle';
 import { ListingWebsiteFeedToggle } from './listing-website-feed-toggle';
@@ -67,7 +64,6 @@ export function ListingPublishingChannels({
   const router = useRouter();
   const { canEditDisposals } = useDisposalAccess();
   const [fixPending, startFix] = useTransition();
-  const [resyncPending, startResync] = useTransition();
   const [enableDialog, setEnableDialog] = useState<{
     channelLabel: string;
     blockers: ChannelPublishBlocker[];
@@ -101,22 +97,15 @@ export function ListingPublishingChannels({
       name: listing.name,
       postcode: listing.postcode,
       addressLine1: listing.addressLine1,
+      updatedAt: listing.updatedAt,
     },
     publications,
+    mediaCreatedAt: media.map((item) => item.createdAt),
   });
   const readiness = getMarketingReadiness({ listing, media, publications });
-  const rightmovePublication = publications.find(
-    (publication) => publication.portal === 'rightmove',
-  );
   const eachPublication = publications.find(
     (publication) => publication.portal === 'each',
   );
-  const rightmoveOutOfSync = isRightmoveSyncStale({
-    publicationStatus: rightmovePublication?.status,
-    lastSyncAt: rightmovePublication?.lastSyncAt,
-    listingUpdatedAt: listing.updatedAt,
-    mediaCreatedAt: media.map((item) => item.createdAt),
-  });
 
   const requestEnable = (
     channelLabel: string,
@@ -179,56 +168,28 @@ export function ListingPublishingChannels({
       className={`${workspacePanelCard} scroll-mt-36`}
       data-tour="sop-listing-publish"
     >
-      <CardHeader>
-        <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-          Channels
-        </CardTitle>
-        <p className="text-sm text-[var(--workspace-shell-text)]/50">
-          Choose where this disposal appears. Website and EACH are live XML
-          feeds. Rightmove publishes when you turn it on, then stays in sync
-          when status or media changes.
-        </p>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <div className="min-w-0 space-y-1.5">
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Channels
+          </CardTitle>
+          <p className="text-sm text-[var(--workspace-shell-text)]/50">
+            Choose where this disposal appears. Website and EACH are live XML
+            feeds. Rightmove publishes when you turn it on, then stays in sync
+            when status or media changes.
+          </p>
+        </div>
+        <ListingChannelSyncIcon
+          channels={[
+            { key: 'website', label: 'Website', status: websiteStatus },
+            { key: 'each', label: 'EACH', status: eachStatus },
+            { key: 'rightmove', label: 'Rightmove', status: rightmoveStatus },
+          ]}
+          accountId={accountId}
+          listingId={listing.id}
+        />
       </CardHeader>
       <CardContent className="space-y-3">
-        {rightmoveOutOfSync ? (
-          <div
-            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-amber-500/10 px-2.5 py-2 text-xs text-amber-900 dark:text-amber-200"
-            data-test="rightmove-out-of-sync"
-          >
-            <p>
-              Rightmove is behind this disposal — Website and EACH pick up
-              changes on the next import, but Rightmove still has the last push.
-            </p>
-            {canEditDisposals ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={resyncPending}
-                onClick={() => {
-                  startResync(async () => {
-                    try {
-                      await republishRightmoveListingAction({
-                        accountId,
-                        listingId: listing.id,
-                      });
-                      toast.success('Rightmove re-sync sent');
-                      router.refresh();
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : 'Could not re-sync Rightmove',
-                      );
-                    }
-                  });
-                }}
-              >
-                {resyncPending ? 'Re-syncing…' : 'Re-sync Rightmove'}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
         <ChannelRow>
           <ListingWebsiteFeedToggle
             accountId={accountId}
@@ -334,18 +295,31 @@ function ChannelRow({ children }: { children: React.ReactNode }) {
 }
 
 function ChannelStatusBanner({ status }: { status: ChannelPublishStatus }) {
-  const tone =
-    status.state === 'live'
+  const unsynced = Boolean(status.outOfSync);
+  const tone = unsynced
+    ? 'bg-amber-500/10 text-amber-900 dark:text-amber-200'
+    : status.state === 'live'
       ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
       : status.state === 'blocked'
         ? 'bg-amber-500/10 text-amber-900 dark:text-amber-200'
         : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
 
   return (
-    <div className={`rounded-md px-2.5 py-2 text-xs ${tone}`}>
-      <p className="font-medium">
-        {status.label}
-        <span className="font-normal opacity-80"> — {status.detail}</span>
+    <div
+      className={`rounded-md px-2.5 py-2 text-xs ${tone}`}
+      data-test={unsynced ? 'rightmove-live-unsynced' : undefined}
+    >
+      <p className="flex items-start gap-1.5 font-medium">
+        {unsynced ? (
+          <AlertTriangle
+            className="mt-px h-3.5 w-3.5 shrink-0 text-amber-500"
+            aria-hidden
+          />
+        ) : null}
+        <span>
+          {status.label}
+          <span className="font-normal opacity-80"> — {status.detail}</span>
+        </span>
       </p>
       {status.blockers.length > 0 ? (
         <ul className="mt-1 list-disc space-y-0.5 pl-4">
