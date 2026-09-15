@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -17,12 +17,16 @@ import {
 export function ListingPageSearch({
   listingBasePath,
   className,
+  variant = 'default',
 }: {
   listingBasePath: string;
   className?: string;
+  variant?: 'default' | 'sidebar';
 }) {
   const router = useRouter();
+  const resultsId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const isSidebar = variant === 'sidebar';
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -62,9 +66,16 @@ export function ListingPageSearch({
   };
 
   return (
-    <div ref={rootRef} className={cn('relative w-full max-w-md', className)}>
+    <div
+      ref={rootRef}
+      className={cn(
+        'relative w-full',
+        isSidebar ? 'max-w-none' : 'max-w-md',
+        className,
+      )}
+    >
       <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text)]/40" />
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text)]/40" />
         <Input
           value={query}
           onChange={(event) => {
@@ -99,11 +110,14 @@ export function ListingPageSearch({
               setQuery('');
             }
           }}
-          placeholder="Find on this disposal… e.g. parking"
-          className="h-9 bg-[var(--workspace-shell-panel)] pr-9 pl-9 text-sm"
+          placeholder="Find in this disposal"
+          className={cn(
+            'bg-[var(--workspace-shell-panel)] pr-8 pl-8 text-sm',
+            isSidebar ? 'h-8' : 'h-9',
+          )}
           aria-label="Search disposal pages and sections"
           aria-expanded={open && query.trim().length > 0}
-          aria-controls="disposal-page-search-results"
+          aria-controls={resultsId}
           role="combobox"
           autoComplete="off"
         />
@@ -124,9 +138,12 @@ export function ListingPageSearch({
 
       {open && query.trim().length > 0 ? (
         <ul
-          id="disposal-page-search-results"
+          id={resultsId}
           role="listbox"
-          className="absolute z-40 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1 shadow-lg"
+          className={cn(
+            'absolute z-40 mt-1 max-h-72 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1 shadow-lg',
+            isSidebar ? 'left-0 w-72 min-w-[18rem]' : 'w-full',
+          )}
         >
           {results.length === 0 ? (
             <li className="px-3 py-2.5 text-sm text-[var(--workspace-shell-text)]/50">

@@ -382,7 +382,6 @@ export function ListingDetailShell({
               headerActions={headerActions}
               rightmoveUrls={safeRightmoveUrls}
             />
-            <ListingPageSearch listingBasePath={base} className="max-w-lg" />
           </>
         ) : null}
 
@@ -395,33 +394,29 @@ export function ListingDetailShell({
           )}
         >
           {showStickyTitle ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-lg font-semibold text-[var(--workspace-shell-text)]">
-                    {listing.name}
-                  </h2>
-                  <ListingStatusBadge status={listing.status} />
-                </div>
-                {address ? (
-                  <p className="mt-0.5 flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
-                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span className="line-clamp-1">{address}</span>
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:max-w-md sm:items-end">
-                <ListingPageSearch
-                  listingBasePath={base}
-                  className="w-full sm:w-72"
-                />
+            <div className="min-w-0 lg:pr-72">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-lg font-semibold text-[var(--workspace-shell-text)]">
+                  {listing.name}
+                </h2>
+                <ListingStatusBadge status={listing.status} />
                 {headerActions}
               </div>
+              {address ? (
+                <p className="mt-0.5 flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="line-clamp-1">{address}</span>
+                </p>
+              ) : null}
             </div>
           ) : null}
 
           {/* Mobile / tablet primary + section nav */}
           <div className="space-y-2 lg:hidden">
+            <ListingPageSearch
+              listingBasePath={base}
+              className="w-full max-w-none"
+            />
             <nav className="flex gap-1 overflow-x-auto pb-0.5">
               {NAV.map((item) => {
                 const href = `${base}${item.href}`;
@@ -463,11 +458,18 @@ export function ListingDetailShell({
         <div className="flex flex-col gap-6 lg:flex-row">
           <nav
             className={cn(
-              'hidden shrink-0 lg:sticky lg:flex lg:w-52 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible',
+              'hidden shrink-0 lg:sticky lg:flex lg:w-56 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible',
               STICKY_OFFSET_CLASS,
               showStickyTitle ? 'lg:top-[4.75rem]' : 'lg:top-3',
             )}
           >
+            <div className="mb-2">
+              <ListingPageSearch
+                listingBasePath={base}
+                variant="sidebar"
+                className="w-full max-w-none"
+              />
+            </div>
             {NAV.map((item) => {
               const href = `${base}${item.href}`;
               const active = item.key === activeNav.key;
