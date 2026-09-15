@@ -34,15 +34,13 @@ struct ProjectsListView: View {
             .background(OzerPalette.cream.ignoresSafeArea())
             .navigationTitle("Projects")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(OzerPalette.cream, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     WorkspaceChip()
                 }
                 ToolbarItem(placement: .principal) {
                     Color.clear
-                        .frame(width: 1, height: 1)
+                        .frame(width: 0, height: 0)
                         .accessibilityHidden(true)
                 }
             }
@@ -65,7 +63,7 @@ struct ProjectsListView: View {
             .padding(.horizontal, 20)
             .padding(.top, 4)
             .padding(.bottom, 8)
-            .accessibilityHidden(true)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private var toolbar: some View {
@@ -154,7 +152,10 @@ struct ProjectsListView: View {
             }
             .contentMargins(.horizontal, 20, for: .scrollContent)
             .contentMargins(.top, 8, for: .scrollContent)
-            .frame(width: geo.size.width, height: geo.size.height)
+            .frame(
+                width: max(geo.size.width, 1),
+                height: max(geo.size.height, 1)
+            )
         }
     }
 
@@ -169,15 +170,14 @@ struct ProjectsListView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(OzerPalette.plumMuted)
             }
-            if items.isEmpty {
-                Text("Nothing here")
-                    .font(.footnote)
-                    .foregroundStyle(OzerPalette.plumSoft)
-                    .padding(.vertical, 12)
-                Spacer(minLength: 0)
-            } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 10) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if items.isEmpty {
+                        Text("Nothing here")
+                            .font(.footnote)
+                            .foregroundStyle(OzerPalette.plumSoft)
+                            .padding(.vertical, 12)
+                    } else {
                         ForEach(items) { item in
                             NavigationLink {
                                 ProjectDetailView(project: item)
@@ -187,8 +187,8 @@ struct ProjectsListView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.bottom, 12)
                 }
+                .padding(.bottom, 12)
             }
         }
         .padding(12)
