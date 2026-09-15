@@ -53,6 +53,8 @@ enum AppScreen: Hashable {
     case invoices
     /// Menu on business spaces; surveyor tab-bar pin.
     case meetings
+    /// Building-surveyor site surveys. Menu + tab-bar pin.
+    case surveys
     /// Personal / family shopping list. Family also pins it.
     case shopping
     /// Menu only — personal / family meal library.
@@ -82,6 +84,7 @@ enum AppScreen: Hashable {
         case .projects: "Projects"
         case .invoices: "Invoices"
         case .meetings: "Meetings"
+        case .surveys: "Surveys"
         case .shopping: "Shopping"
         case .recipes: "Recipes"
         case .mealPlan: "Meal plan"
@@ -100,6 +103,7 @@ enum AppScreen: Hashable {
         case .projects: "list.clipboard"
         case .invoices: "doc.text"
         case .meetings: "waveform"
+        case .surveys: "building.columns"
         case .shopping: "cart"
         case .recipes: "book"
         case .mealPlan: "calendar"

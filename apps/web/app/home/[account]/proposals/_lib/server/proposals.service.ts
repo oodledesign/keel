@@ -42,6 +42,8 @@ export function createProposalsService(client: SupabaseClient<Database>) {
 class ProposalsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
+  // Database types lag survey_report field-survey rows without a client.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private get db(): any {
     return this.client;
   }
@@ -231,7 +233,12 @@ class ProposalsService {
       'invoices.edit',
     );
 
-    if (!input.client_id && !input.deal_id) {
+    const documentKind = input.kind ?? 'proposal';
+    if (
+      documentKind !== 'survey_report' &&
+      !input.client_id &&
+      !input.deal_id
+    ) {
       throw new Error('Either client_id or deal_id is required');
     }
 
@@ -239,7 +246,6 @@ class ProposalsService {
       ? normalizeWorkspaceCurrency(input.currency)
       : await getWorkspaceCurrencyWithClient(this.db, input.accountId);
 
-    const documentKind = input.kind ?? 'proposal';
     const [htmlDefault, emailDefault] = await Promise.all([
       resolveDefaultTemplate(this.db, {
         kind:
@@ -309,7 +315,7 @@ class ProposalsService {
 
     const { data: existing, error: existingError } = await this.db
       .from('proposals')
-      .select('status, client_id, deal_id')
+      .select('status, client_id, deal_id, kind')
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
       .single();
@@ -322,7 +328,7 @@ class ProposalsService {
       input.client_id !== undefined ? input.client_id : existing.client_id;
     const nextDealId =
       input.deal_id !== undefined ? input.deal_id : existing.deal_id;
-    if (!nextClientId && !nextDealId) {
+    if (existing.kind !== 'survey_report' && !nextClientId && !nextDealId) {
       throw new Error('Either client_id or deal_id is required');
     }
 

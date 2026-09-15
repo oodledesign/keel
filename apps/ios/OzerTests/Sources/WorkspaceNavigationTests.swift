@@ -28,6 +28,7 @@ enum WorkspaceNavigationTests {
                 && !screens.contains(.recipes)
                 && !screens.contains(.mealPlan)
                 && !screens.contains(.people)
+                && !screens.contains(.surveys)
         }
 
         check("commercial property has clients not shopping") {
@@ -42,12 +43,12 @@ enum WorkspaceNavigationTests {
                 && !screens.contains(.people)
         }
 
-        check("surveyor has meetings and clients not shopping") {
+        check("surveyor has meetings surveys and clients not shopping") {
             let screens = WorkspaceNavigation.menuScreens(
                 profile: "building_surveyor",
                 isPersonal: false
             )
-            containsAll(screens, [.home, .tasks, .notes, .meetings, .projects, .clients])
+            containsAll(screens, [.home, .tasks, .notes, .meetings, .surveys, .projects, .clients])
                 && !screens.contains(.shopping)
                 && !screens.contains(.recipes)
                 && !screens.contains(.mealPlan)
@@ -61,6 +62,7 @@ enum WorkspaceNavigationTests {
                 && !screens.contains(.projects)
                 && !screens.contains(.invoices)
                 && !screens.contains(.meetings)
+                && !screens.contains(.surveys)
                 && !screens.contains(.people)
         }
 
@@ -98,9 +100,9 @@ enum WorkspaceNavigationTests {
                 == [.tasks, .notes, .clients]
         }
 
-        check("surveyor pins meetings") {
+        check("surveyor pins surveys") {
             WorkspaceNavigation.tabPins(profile: "building_surveyor", isPersonal: false)
-                == [.tasks, .notes, .meetings]
+                == [.tasks, .surveys, .meetings]
         }
 
         check("every pin is listed in that profile menu") {

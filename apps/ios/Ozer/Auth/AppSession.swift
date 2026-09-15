@@ -248,6 +248,7 @@ final class AppSession {
             let token = try await validAccessToken()
             await OfflineNoteQueue.shared.flush(accessToken: token)
             await OfflineMeetingQueue.shared.flush(accessToken: token)
+            await OfflineSurveyQueue.shared.flush(accessToken: token)
         } catch {
             return
         }

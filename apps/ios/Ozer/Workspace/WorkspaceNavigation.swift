@@ -86,6 +86,11 @@ enum WorkspaceNavigation {
             }
         }
 
+        /// Site surveys — building-surveyor only.
+        var showsSurveys: Bool {
+            self == .buildingSurveyor
+        }
+
         /// Native inbox exists for every workspace even when web omits Messages.
         var showsMessages: Bool { true }
     }
@@ -102,6 +107,9 @@ enum WorkspaceNavigation {
         }
         if kind.showsMeetings {
             screens.append(.meetings)
+        }
+        if kind.showsSurveys {
+            screens.append(.surveys)
         }
         if kind.showsPeople {
             screens.append(.people)
@@ -137,7 +145,7 @@ enum WorkspaceNavigation {
         case .workProperty, .commercialProperty:
             return [.tasks, .notes, .clients]
         case .buildingSurveyor:
-            return [.tasks, .notes, .meetings]
+            return [.tasks, .surveys, .meetings]
         case .community, .unknown:
             return fallbackPins
         }
