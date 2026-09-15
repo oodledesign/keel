@@ -128,6 +128,49 @@ describe('lookupWordpressListingPageUrl', () => {
     );
   });
 
+  it('does not fetch when DNS resolves to a private address', async () => {
+    let fetched = false;
+    const url = await lookupWordpressListingPageUrl({
+      siteOrigin: 'https://www.bracketts.co.uk',
+      listing: { ...listing, externalId: '72803' },
+      deps: {
+        resolveHost: async () => ['127.0.0.1'],
+        fetch: async () => {
+          fetched = true;
+          throw new Error('fetch should not run');
+        },
+      },
+    });
+    expect(fetched).toBe(false);
+    expect(url).toBeNull();
+  });
+
+  it('uses title search when slug candidates miss', async () => {
+    const url = await lookupWordpressListingPageUrl({
+      siteOrigin: 'https://www.bracketts.co.uk',
+      listing,
+      deps: {
+        fetch: async (input) => {
+          const href = String(input);
+          if (href.includes('search=20-21%20Chapman%20Way')) {
+            return Response.json([
+              {
+                id: 42,
+                slug: 'chapman-way-industrial-tunbridge-wells',
+                link: 'https://www.bracketts.co.uk/property/chapman-way-industrial-tunbridge-wells/',
+                title: { rendered: '20-21 Chapman Way, Tunbridge Wells' },
+              },
+            ]);
+          }
+          return Response.json([]);
+        },
+      },
+    });
+    expect(url).toBe(
+      'https://www.bracketts.co.uk/property/chapman-way-industrial-tunbridge-wells/',
+    );
+  });
+
   it('returns the WP link when a slug candidate matches', async () => {
     const url = await lookupWordpressListingPageUrl({
       siteOrigin: 'https://www.bracketts.co.uk',

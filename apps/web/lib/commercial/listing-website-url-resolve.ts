@@ -168,6 +168,9 @@ async function assertHostResolvesPublicly(
   url: string,
   resolveHost?: (hostname: string) => Promise<string[]>,
 ): Promise<boolean> {
+  // Optional so unit tests can skip DNS. Production always injects
+  // resolveHost. There is a short DNS-rebind window between this check
+  // and fetch; origins come from workspace listing URL / PH site_url.
   if (!resolveHost) return true;
   try {
     const { hostname } = new URL(url);
