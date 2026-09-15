@@ -51,9 +51,10 @@ export function ListingPageSearch({
     setQuery('');
     router.push(href);
     if (hit.hash) {
+      const hash = hit.hash;
       // After client navigation, scroll once the target exists.
       window.setTimeout(() => {
-        document.getElementById(hit.hash)?.scrollIntoView({
+        document.getElementById(hash)?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
