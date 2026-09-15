@@ -34,18 +34,14 @@ export function ListingPageSearch({
   const results = useMemo(() => searchDisposalPages(query), [query]);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
-  useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
+    const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
   const goTo = (hit: DisposalSearchHit) => {
@@ -57,7 +53,7 @@ export function ListingPageSearch({
     if (hit.hash) {
       // After client navigation, scroll once the target exists.
       window.setTimeout(() => {
-        document.getElementById(hit.hash!)?.scrollIntoView({
+        document.getElementById(hit.hash)?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
@@ -80,6 +76,7 @@ export function ListingPageSearch({
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
+            setActiveIndex(0);
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
@@ -118,6 +115,12 @@ export function ListingPageSearch({
           aria-label="Search disposal pages and sections"
           aria-expanded={open && query.trim().length > 0}
           aria-controls={resultsId}
+          aria-haspopup="listbox"
+          aria-activedescendant={
+            open && results.length > 0
+              ? `${resultsId}-option-${activeIndex}`
+              : undefined
+          }
           role="combobox"
           autoComplete="off"
         />
@@ -127,6 +130,7 @@ export function ListingPageSearch({
             className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-[var(--workspace-shell-text)]/45 hover:text-[var(--workspace-shell-text)]"
             onClick={() => {
               setQuery('');
+              setActiveIndex(0);
               setOpen(false);
             }}
             aria-label="Clear search"
@@ -153,6 +157,7 @@ export function ListingPageSearch({
             results.map((hit, index) => (
               <li
                 key={hit.id}
+                id={`${resultsId}-option-${index}`}
                 role="option"
                 aria-selected={index === activeIndex}
               >

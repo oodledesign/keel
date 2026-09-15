@@ -413,10 +413,7 @@ export function ListingDetailShell({
 
           {/* Mobile / tablet primary + section nav */}
           <div className="space-y-2 lg:hidden">
-            <ListingPageSearch
-              listingBasePath={base}
-              className="w-full max-w-none"
-            />
+            <ListingPageSearch listingBasePath={base} className="w-full" />
             <nav className="flex gap-1 overflow-x-auto pb-0.5">
               {NAV.map((item) => {
                 const href = `${base}${item.href}`;
@@ -467,7 +464,7 @@ export function ListingDetailShell({
               <ListingPageSearch
                 listingBasePath={base}
                 variant="sidebar"
-                className="w-full max-w-none"
+                className="w-full"
               />
             </div>
             {NAV.map((item) => {
