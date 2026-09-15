@@ -318,10 +318,11 @@ export const listProposalDocsAction = enhanceAction(
     const { data: rows, error } = await client
       .from('docs')
       .select(
-        'id, title, mime_type, file_path, storage_path, created_at, pinned_section_key, photo_role, kind',
+        'id, title, mime_type, file_path, storage_path, created_at, pinned_section_key, photo_role, caption, curated_sort_order, kind',
       )
       .eq('account_id', data.accountId)
       .eq('proposal_id', data.proposalId)
+      .order('curated_sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -335,6 +336,12 @@ export const listProposalDocsAction = enhanceAction(
         pinnedSectionKey: (row.pinned_section_key as string | null) ?? null,
         photoRole:
           (row.photo_role as 'archive' | 'curated' | null) ?? 'archive',
+        caption: (row.caption as string | null) ?? null,
+        curatedSortOrder:
+          row.curated_sort_order === null ||
+          row.curated_sort_order === undefined
+            ? null
+            : Number(row.curated_sort_order),
         kind: (row.kind as string | null) ?? 'uploaded',
       })),
     };

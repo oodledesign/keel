@@ -9,14 +9,22 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 
 import {
+  AddSurveyStyleExampleSchema,
   AddSurveyTranscriptSchema,
   CreateSurveyObservationSchema,
   DeleteSurveyObservationSchema,
+  DeleteSurveyStyleExampleSchema,
   GenerateSurveyDraftSchema,
+  ProposeSurveyPhotoCurationSchema,
+  ReorderSurveyPhotosSchema,
+  SetSurveyPhotoShareSchema,
   UpdateSurveyObservationSchema,
+  UpdateSurveyPhotoCurationSchema,
+  UpdateSurveyStyleExampleSchema,
   UpdateSurveyTypeSchema,
 } from '../schema/survey-capture.schema';
 import { createSurveyCaptureService } from './survey-capture.service';
+import { createSurveyStyleService } from './survey-style.service';
 
 function revalidateSurveyHub(accountSlug: string, proposalId: string) {
   revalidatePath(
@@ -36,6 +44,10 @@ function revalidateSurveyHub(accountSlug: string, proposalId: string) {
 
 function getService() {
   return createSurveyCaptureService(getSupabaseServerClient());
+}
+
+function getStyleService() {
+  return createSurveyStyleService(getSupabaseServerClient());
 }
 
 export const addSurveyTranscriptAction = enhanceAction(
@@ -90,6 +102,102 @@ export const updateSurveyTypeAction = enhanceAction(
     return result;
   },
   { schema: UpdateSurveyTypeSchema },
+);
+
+export const proposeSurveyPhotoCurationAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'propose-survey-photo-curation',
+        userId: user.id,
+        proposalId: data.proposalId,
+      },
+      'Proposing curated survey photos',
+    );
+    const result = await getService().proposePhotoCuration(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: ProposeSurveyPhotoCurationSchema },
+);
+
+export const updateSurveyPhotoCurationAction = enhanceAction(
+  async (data) => {
+    const result = await getService().updatePhotoCuration(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: UpdateSurveyPhotoCurationSchema },
+);
+
+export const reorderSurveyPhotosAction = enhanceAction(
+  async (data) => {
+    const result = await getService().reorderCuratedPhotos(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: ReorderSurveyPhotosSchema },
+);
+
+export const setSurveyPhotoShareAction = enhanceAction(
+  async (data) => {
+    const result = await getService().setPhotoShare(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: SetSurveyPhotoShareSchema },
+);
+
+export const addSurveyStyleExampleAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'add-survey-style-example',
+        userId: user.id,
+        accountId: data.accountId,
+      },
+      'Adding survey style example',
+    );
+    const result = await getStyleService().add(data);
+    revalidatePath(
+      pathsConfig.app.accountSurveyStyleSettings.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return result;
+  },
+  { schema: AddSurveyStyleExampleSchema },
+);
+
+export const updateSurveyStyleExampleAction = enhanceAction(
+  async (data) => {
+    const result = await getStyleService().update(data);
+    revalidatePath(
+      pathsConfig.app.accountSurveyStyleSettings.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return result;
+  },
+  { schema: UpdateSurveyStyleExampleSchema },
+);
+
+export const deleteSurveyStyleExampleAction = enhanceAction(
+  async (data) => {
+    const result = await getStyleService().remove(data);
+    revalidatePath(
+      pathsConfig.app.accountSurveyStyleSettings.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return result;
+  },
+  { schema: DeleteSurveyStyleExampleSchema },
 );
 
 export const generateSurveyDraftAction = enhanceAction(

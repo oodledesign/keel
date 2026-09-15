@@ -2,14 +2,16 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { randomBytes } from 'node:crypto';
+
 import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
+import { curateSurveyPhotos } from '~/lib/ai/survey-photo-curate';
 import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
-import {
-  buildingSurveySectionByKey,
-  observationsFromTranscript,
-} from '~/lib/building-surveyor/report-sections';
+import { combineSurveyStyleGuidance } from '~/lib/ai/survey-style-distill';
+import { buildingSurveySectionByKey } from '~/lib/building-surveyor/report-sections';
 import {
   type BuildingSurveyTypeKey,
   DEFAULT_BUILDING_SURVEY_TYPE,
@@ -22,9 +24,15 @@ import type {
   CreateSurveyObservationInput,
   DeleteSurveyObservationInput,
   GenerateSurveyDraftInput,
+  ProposeSurveyPhotoCurationInput,
+  ReorderSurveyPhotosInput,
+  SetSurveyPhotoShareInput,
   SurveyObservation,
+  SurveyPhotoShare,
+  SurveyStyleExample,
   SurveyTranscriptSummary,
   UpdateSurveyObservationInput,
+  UpdateSurveyPhotoCurationInput,
   UpdateSurveyTypeInput,
 } from '../schema/survey-capture.schema';
 
@@ -39,6 +47,8 @@ type SurveyRow = {
   deal_id?: string | null;
   recipient_name?: string | null;
   survey_type?: string | null;
+  photo_share_token?: string | null;
+  photo_share_enabled?: boolean | null;
 };
 
 function mapObservation(row: Record<string, unknown>): SurveyObservation {
@@ -79,7 +89,7 @@ class SurveyCaptureService {
     throw new Error(message);
   }
 
-  private async ensureUserAndPermission(
+  async ensureUserAndPermission(
     accountId: string,
     permission: 'invoices.view' | 'invoices.edit',
   ) {
@@ -117,7 +127,7 @@ class SurveyCaptureService {
     const { data, error } = await this.db
       .from('proposals')
       .select(
-        'id, account_id, kind, title, status, content_html, client_id, deal_id, recipient_name, survey_type',
+        'id, account_id, kind, title, status, content_html, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled',
       )
       .eq('id', proposalId)
       .eq('account_id', accountId)
@@ -192,10 +202,13 @@ class SurveyCaptureService {
   async listPinnedPhotos(accountId: string, proposalId: string) {
     const { data, error } = await this.db
       .from('docs')
-      .select('id, title, pinned_section_key, photo_role')
+      .select(
+        'id, title, pinned_section_key, photo_role, caption, curated_sort_order, created_at, mime_type',
+      )
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
       .not('pinned_section_key', 'is', null)
+      .order('curated_sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
     if (error) this.throwErr(error);
 
@@ -206,7 +219,43 @@ class SurveyCaptureService {
         title: (row.title as string | null) ?? 'Survey photo',
         sectionKey: row.pinned_section_key as string,
         photoRole: (row.photo_role as string | null) ?? 'archive',
+        caption: (row.caption as string | null) ?? null,
+        curatedSortOrder:
+          row.curated_sort_order === null ||
+          row.curated_sort_order === undefined
+            ? null
+            : Number(row.curated_sort_order),
       }));
+  }
+
+  getPhotoShare(survey: SurveyRow): SurveyPhotoShare {
+    return {
+      enabled: Boolean(survey.photo_share_enabled),
+      token: (survey.photo_share_token as string | null) ?? null,
+    };
+  }
+
+  async listStyleExamples(accountId: string): Promise<SurveyStyleExample[]> {
+    const { data, error } = await this.db
+      .from('survey_style_examples')
+      .select(
+        'id, title, original_filename, mime_type, style_notes, extracted_text, created_at',
+      )
+      .eq('account_id', accountId)
+      .order('created_at', { ascending: false });
+    if (error) this.throwErr(error);
+
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: row.id as string,
+      title: (row.title as string | null) ?? 'Past report',
+      originalFilename: (row.original_filename as string | null) ?? null,
+      mimeType: (row.mime_type as string | null) ?? null,
+      styleNotes: (row.style_notes as string | null) ?? null,
+      extractedPreview: ((row.extracted_text as string | null) ?? '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 220),
+      createdAt: row.created_at as string,
+    }));
   }
 
   async addTranscript(input: AddSurveyTranscriptInput) {
@@ -224,7 +273,12 @@ class SurveyCaptureService {
     }
 
     const content = input.content.trim();
-    const drafts = observationsFromTranscript(content);
+    const grouping = await groupSurveyObservations({
+      transcript: content,
+      accountId: input.accountId,
+      supabase: this.client,
+    });
+    const drafts = grouping.drafts;
     if (drafts.length === 0) {
       throw new Error(
         'Could not find usable observations in that transcript. Add more complete sentences.',
@@ -290,6 +344,8 @@ class SurveyCaptureService {
       observations: ((inserted ?? []) as Array<Record<string, unknown>>).map(
         mapObservation,
       ),
+      groupingSource: grouping.source,
+      groupingFallbackReason: grouping.fallbackReason,
     };
   }
 
@@ -403,16 +459,18 @@ class SurveyCaptureService {
       throw new Error('Sent or finalised surveys can no longer be redrafted');
     }
 
-    const [observations, transcripts, photos] = await Promise.all([
-      this.listObservations(input.accountId, input.proposalId),
-      this.listLinkedTranscripts(
-        input.accountId,
-        input.proposalId,
-        survey.client_id,
-        survey.deal_id,
-      ),
-      this.listPinnedPhotos(input.accountId, input.proposalId),
-    ]);
+    const [observations, transcripts, photos, styleExamples] =
+      await Promise.all([
+        this.listObservations(input.accountId, input.proposalId),
+        this.listLinkedTranscripts(
+          input.accountId,
+          input.proposalId,
+          survey.client_id,
+          survey.deal_id,
+        ),
+        this.listPinnedPhotos(input.accountId, input.proposalId),
+        this.listStyleExamples(input.accountId),
+      ]);
 
     if (observations.length === 0 && transcripts.length === 0) {
       throw new Error(
@@ -440,8 +498,15 @@ class SurveyCaptureService {
         pinnedPhotos: photos.map((photo) => ({
           sectionKey: photo.sectionKey,
           title: photo.title,
+          caption: photo.caption,
         })),
         surveyType: normalizeBuildingSurveyType(survey.survey_type),
+        styleGuidance: combineSurveyStyleGuidance(
+          styleExamples.map((example) => ({
+            title: example.title,
+            styleNotes: example.styleNotes,
+          })),
+        ),
       },
       { accountId: input.accountId, supabase: this.client },
     );
@@ -460,5 +525,191 @@ class SurveyCaptureService {
         (survey.survey_type as BuildingSurveyTypeKey | null) ??
         DEFAULT_BUILDING_SURVEY_TYPE,
     };
+  }
+
+  async proposePhotoCuration(input: ProposeSurveyPhotoCurationInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.getSurvey(input.accountId, input.proposalId);
+
+    const [observations, photos] = await Promise.all([
+      this.listObservations(input.accountId, input.proposalId),
+      this.listLibraryPhotos(input.accountId, input.proposalId),
+    ]);
+
+    const imagePhotos = photos.filter(
+      (photo) => !photo.mimeType || photo.mimeType.startsWith('image/'),
+    );
+
+    const result = await curateSurveyPhotos({
+      photos: imagePhotos.map((photo) => ({
+        id: photo.id,
+        title: photo.title,
+        createdAt: photo.createdAt,
+      })),
+      observations: observations.map((item) => ({
+        sectionKey: item.sectionKey,
+        body: item.body,
+      })),
+      accountId: input.accountId,
+      supabase: this.client,
+    });
+
+    const curatedIds = new Set(result.items.map((item) => item.docId));
+
+    for (const photo of imagePhotos) {
+      const proposal = result.items.find((item) => item.docId === photo.id);
+      if (proposal) {
+        const { error } = await this.db
+          .from('docs')
+          .update({
+            photo_role: 'curated',
+            pinned_section_key: proposal.sectionKey,
+            caption: proposal.caption,
+            curated_sort_order: proposal.sortOrder,
+          })
+          .eq('id', photo.id)
+          .eq('account_id', input.accountId)
+          .eq('proposal_id', input.proposalId);
+        if (error) this.throwErr(error);
+        continue;
+      }
+
+      if (photo.photoRole === 'curated' || photo.pinnedSectionKey) {
+        const { error } = await this.db
+          .from('docs')
+          .update({
+            photo_role: 'archive',
+            pinned_section_key: null,
+            caption: null,
+            curated_sort_order: null,
+          })
+          .eq('id', photo.id)
+          .eq('account_id', input.accountId)
+          .eq('proposal_id', input.proposalId);
+        if (error) this.throwErr(error);
+      }
+    }
+
+    return {
+      ...result,
+      curatedCount: curatedIds.size,
+    };
+  }
+
+  async updatePhotoCuration(input: UpdateSurveyPhotoCurationInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.getSurvey(input.accountId, input.proposalId);
+
+    const payload: Record<string, unknown> = {};
+    if (input.sectionKey !== undefined) {
+      if (input.sectionKey && !buildingSurveySectionByKey(input.sectionKey)) {
+        throw new Error('Unknown survey section');
+      }
+      payload.pinned_section_key = input.sectionKey;
+      payload.photo_role = input.sectionKey ? 'curated' : 'archive';
+      if (!input.sectionKey) {
+        payload.curated_sort_order = null;
+      }
+    }
+    if (input.caption !== undefined) {
+      payload.caption = input.caption?.trim() || null;
+    }
+    if (input.photoRole !== undefined) {
+      payload.photo_role = input.photoRole;
+      if (input.photoRole === 'archive') {
+        payload.pinned_section_key = null;
+        payload.curated_sort_order = null;
+      }
+    }
+    if (input.curatedSortOrder !== undefined) {
+      payload.curated_sort_order = input.curatedSortOrder;
+    }
+    if (Object.keys(payload).length === 0) {
+      throw new Error('Nothing to update');
+    }
+
+    const { error } = await this.db
+      .from('docs')
+      .update(payload)
+      .eq('id', input.docId)
+      .eq('account_id', input.accountId)
+      .eq('proposal_id', input.proposalId);
+    if (error) this.throwErr(error);
+    return { ok: true };
+  }
+
+  async reorderCuratedPhotos(input: ReorderSurveyPhotosInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.getSurvey(input.accountId, input.proposalId);
+
+    if (!buildingSurveySectionByKey(input.sectionKey)) {
+      throw new Error('Unknown survey section');
+    }
+
+    for (const [index, docId] of input.orderedDocIds.entries()) {
+      const { error } = await this.db
+        .from('docs')
+        .update({
+          curated_sort_order: index,
+          photo_role: 'curated',
+          pinned_section_key: input.sectionKey,
+        })
+        .eq('id', docId)
+        .eq('account_id', input.accountId)
+        .eq('proposal_id', input.proposalId)
+        .eq('pinned_section_key', input.sectionKey);
+      if (error) this.throwErr(error);
+    }
+
+    return { ok: true };
+  }
+
+  async setPhotoShare(input: SetSurveyPhotoShareInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const survey = await this.getSurvey(input.accountId, input.proposalId);
+
+    const token =
+      input.enabled && !survey.photo_share_token
+        ? randomBytes(24).toString('hex')
+        : (survey.photo_share_token ?? null);
+
+    const { error } = await this.db
+      .from('proposals')
+      .update({
+        photo_share_enabled: input.enabled,
+        photo_share_token: token,
+      })
+      .eq('id', input.proposalId)
+      .eq('account_id', input.accountId)
+      .eq('kind', 'survey_report');
+    if (error) this.throwErr(error);
+
+    return { enabled: input.enabled, token };
+  }
+
+  private async listLibraryPhotos(accountId: string, proposalId: string) {
+    const { data, error } = await this.db
+      .from('docs')
+      .select(
+        'id, title, mime_type, created_at, pinned_section_key, photo_role, caption',
+      )
+      .eq('account_id', accountId)
+      .eq('proposal_id', proposalId)
+      .order('created_at', { ascending: true });
+    if (error) this.throwErr(error);
+
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: row.id as string,
+      title: (row.title as string | null) ?? 'Survey photo',
+      mimeType: (row.mime_type as string | null) ?? null,
+      createdAt: (row.created_at as string | null) ?? null,
+      pinnedSectionKey: (row.pinned_section_key as string | null) ?? null,
+      photoRole: (row.photo_role as string | null) ?? 'archive',
+      caption: (row.caption as string | null) ?? null,
+    }));
   }
 }

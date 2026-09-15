@@ -217,6 +217,15 @@ export function buildWorkspaceSettingsNav(input: {
   }
 
   if (workspaceProfile === 'building_surveyor') {
+    items.push({
+      id: 'survey-style',
+      label: 'Survey style',
+      href: settingsPath(
+        pathsConfig.app.accountSurveyStyleSettings,
+        accountSlug,
+      ),
+    });
+
     if (canConfigureSendingDomain) {
       items.push({
         id: 'sending-domain',
