@@ -15,7 +15,9 @@ import {
 import { filterOnMarketListingsForPortalFeed } from '~/lib/commercial/each-feed-inclusion';
 import {
   buildCommercialListingMediaPublicUrl,
+  commercialListingMediaVersion,
   resolveSiteUrlForPublicMedia,
+  withRightmoveMediaCacheBust,
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import { renderPropertyHiveOzerListingFields } from '~/lib/commercial/property-hive-custom-fields';
@@ -280,13 +282,22 @@ function resolveMediaUrlFromMaps(
   siteUrl: string | null,
 ): string | null {
   if (siteUrl) {
-    return buildCommercialListingMediaPublicUrl({
+    const url = buildCommercialListingMediaPublicUrl({
       siteUrl,
       mediaId: media.id,
       mediaType: media.media_type,
       fileName: media.file_name,
       mimeType: media.mime_type,
     });
+    return withRightmoveMediaCacheBust(
+      url,
+      commercialListingMediaVersion({
+        mediaId: media.id,
+        storagePath: media.storage_path,
+        externalUrl: media.external_url,
+        createdAt: media.created_at,
+      }),
+    );
   }
 
   const storagePath = media.storage_path?.trim() || null;

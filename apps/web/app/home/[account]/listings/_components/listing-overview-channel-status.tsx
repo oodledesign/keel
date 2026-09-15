@@ -15,6 +15,7 @@ import {
   getWebsiteChannelStatus,
 } from '~/lib/commercial/channel-publish-status';
 import { listingTabHref } from '~/lib/commercial/listing-routes';
+import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type {
@@ -69,6 +70,14 @@ export function ListingOverviewChannelStatus({
 }) {
   const publishingHref = listingTabHref(accountSlug, listing.id, 'publishing');
   const interestHref = listingTabHref(accountSlug, listing.id, 'interest');
+  const rightmovePublication = publications.find(
+    (publication) => publication.portal === 'rightmove',
+  );
+  const rightmoveOutOfSync = isRightmoveSyncStale({
+    publicationStatus: rightmovePublication?.status,
+    lastSyncAt: rightmovePublication?.lastSyncAt,
+    listingUpdatedAt: listing.updatedAt,
+  });
 
   const channels: ChannelBadge[] = [
     {
@@ -141,7 +150,18 @@ export function ListingOverviewChannelStatus({
           Manage
         </Link>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        {rightmoveOutOfSync ? (
+          <p
+            className="rounded-md bg-amber-500/10 px-2.5 py-2 text-xs text-amber-900 dark:text-amber-200"
+            data-test="overview-rightmove-out-of-sync"
+          >
+            Rightmove is behind this disposal.{' '}
+            <Link href={`${publishingHref}#channels`} className="underline">
+              Re-sync from Publishing
+            </Link>
+          </p>
+        ) : null}
         <ul className="flex flex-wrap gap-2">
           {channels.map((channel) => (
             <li key={channel.key}>

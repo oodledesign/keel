@@ -7,6 +7,7 @@ import {
   asPositiveWholeNumber,
   mapCondition,
   mapListingMediaToRightmove,
+  mapListingStatusToRightmove,
   mapListingToRightmovePayload,
   mapSectorToSubType,
   mapUseClasses,
@@ -288,6 +289,15 @@ describe('mapListingMediaToRightmove', () => {
   });
 });
 
+describe('mapListingStatusToRightmove', () => {
+  it('maps Under offer separately from Available and Let agreed', () => {
+    expect(mapListingStatusToRightmove('under_offer')).toBe('UNDER_OFFER');
+    expect(mapListingStatusToRightmove('marketing')).toBe('AVAILABLE');
+    expect(mapListingStatusToRightmove('let')).toBe('LET_AGREED');
+    expect(mapListingStatusToRightmove('sold')).toBe('SOLD_STC');
+  });
+});
+
 describe('mapListingToRightmovePayload', () => {
   it('emits numeric sizing when sizes arrive as numeric strings', () => {
     const { payload } = mapListingToRightmovePayload({
@@ -433,6 +443,16 @@ describe('mapListingToRightmovePayload', () => {
 
     expect(payload.building.location.latitude).toBe(51.217228);
     expect(payload.building.location.longitude).toBe(0.31167);
+  });
+
+  it('keeps Under offer published and maps Rightmove status', () => {
+    const { payload, published } = mapListingToRightmovePayload({
+      listing: baseListing({ status: 'under_offer' }),
+      agentId: 283634,
+    });
+
+    expect(published).toBe(true);
+    expect(payload.building.status).toBe('UNDER_OFFER');
   });
 
   it('maps New Lease tenure and POA rent', () => {

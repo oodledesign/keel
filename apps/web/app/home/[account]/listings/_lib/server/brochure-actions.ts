@@ -147,6 +147,11 @@ export const publishListingBrochurePdf = enhanceAction(
       sortOrder: 0,
     });
 
+    await listingsService.syncPortalsAfterMediaChange({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
+
     const [withUrl] = await listingsService.withSignedMediaUrls([media]);
     return withUrl ?? media;
   },

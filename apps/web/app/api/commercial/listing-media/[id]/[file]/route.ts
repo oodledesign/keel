@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { commercialListingMediaVersion } from '~/lib/commercial/listing-media-public-url';
 import { COMMERCIAL_LISTING_MEDIA_BUCKET } from '~/lib/commercial/migrate-external-listing-media';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 
@@ -50,7 +51,12 @@ async function loadPublicMedia(id: string): Promise<MediaRow | null> {
 }
 
 function etagFor(row: MediaRow): string {
-  const stamp = row.created_at ?? row.storage_path ?? row.id;
+  const stamp = commercialListingMediaVersion({
+    mediaId: row.id,
+    storagePath: row.storage_path,
+    externalUrl: row.external_url,
+    createdAt: row.created_at,
+  });
   return `"${Buffer.from(stamp).toString('base64url')}"`;
 }
 

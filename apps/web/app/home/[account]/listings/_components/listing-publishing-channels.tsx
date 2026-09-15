@@ -29,9 +29,13 @@ import {
   resolveStoredOrTemplatedWebsiteUrl,
 } from '~/lib/commercial/listing-website-url';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
+import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
-import { ensureWebsiteFeedReadyAction } from '../../commercial-publishing/_lib/server/server-actions';
+import {
+  ensureWebsiteFeedReadyAction,
+  republishRightmoveListingAction,
+} from '../../commercial-publishing/_lib/server/server-actions';
 import type {
   CommercialListing,
   CommercialListingMedia,
@@ -63,6 +67,7 @@ export function ListingPublishingChannels({
   const router = useRouter();
   const { canEditDisposals } = useDisposalAccess();
   const [fixPending, startFix] = useTransition();
+  const [resyncPending, startResync] = useTransition();
   const [enableDialog, setEnableDialog] = useState<{
     channelLabel: string;
     blockers: ChannelPublishBlocker[];
@@ -99,11 +104,19 @@ export function ListingPublishingChannels({
     },
     publications,
   });
-  const hasRightmoveLink = publications.some(
-    (publication) =>
-      publication.portal === 'rightmove' && Boolean(publication.externalUrl),
-  );
   const readiness = getMarketingReadiness({ listing, media, publications });
+  const rightmovePublication = publications.find(
+    (publication) => publication.portal === 'rightmove',
+  );
+  const eachPublication = publications.find(
+    (publication) => publication.portal === 'each',
+  );
+  const rightmoveOutOfSync = isRightmoveSyncStale({
+    publicationStatus: rightmovePublication?.status,
+    lastSyncAt: rightmovePublication?.lastSyncAt,
+    listingUpdatedAt: listing.updatedAt,
+    mediaCreatedAt: media.map((item) => item.createdAt),
+  });
 
   const requestEnable = (
     channelLabel: string,
@@ -154,6 +167,8 @@ export function ListingPublishingChannels({
   const websiteUrl = resolvedWebsiteUrl;
   const showWebsiteLink =
     websiteUrl.length > 0 && isPublicListingPageUrl(websiteUrl);
+  const eachUrl = eachPublication?.externalUrl?.trim() ?? '';
+  const showEachLink = eachUrl.length > 0 && isPublicListingPageUrl(eachUrl);
   const needsFeedIdFix =
     websiteStatus.state === 'blocked' &&
     websiteStatus.blockers.some((b) => /feed id/i.test(b));
@@ -170,23 +185,50 @@ export function ListingPublishingChannels({
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
           Choose where this disposal appears. Website and EACH are live XML
-          feeds. Rightmove publishes this disposal when you turn it on.
+          feeds. Rightmove publishes when you turn it on, then stays in sync
+          when status or media changes.
         </p>
-        {showWebsiteLink || hasRightmoveLink ? (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {showWebsiteLink ? (
-              <Button asChild variant="outline" size="sm" className="gap-1.5">
-                <a href={websiteUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Open website listing
-                </a>
-              </Button>
-            ) : null}
-            <RightmoveListingLinks publications={publications} />
-          </div>
-        ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
+        {rightmoveOutOfSync ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-amber-500/10 px-2.5 py-2 text-xs text-amber-900 dark:text-amber-200"
+            data-test="rightmove-out-of-sync"
+          >
+            <p>
+              Rightmove is behind this disposal — Website and EACH pick up
+              changes on the next import, but Rightmove still has the last push.
+            </p>
+            {canEditDisposals ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={resyncPending}
+                onClick={() => {
+                  startResync(async () => {
+                    try {
+                      await republishRightmoveListingAction({
+                        accountId,
+                        listingId: listing.id,
+                      });
+                      toast.success('Rightmove re-sync sent');
+                      router.refresh();
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not re-sync Rightmove',
+                      );
+                    }
+                  });
+                }}
+              >
+                {resyncPending ? 'Re-syncing…' : 'Re-sync Rightmove'}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         <ChannelRow>
           <ListingWebsiteFeedToggle
             accountId={accountId}
@@ -196,6 +238,9 @@ export function ListingPublishingChannels({
             onBeforeEnable={() => requestEnable('Website', websiteStatus)}
           />
           <ChannelStatusBanner status={websiteStatus} />
+          {showWebsiteLink ? (
+            <ChannelOpenLink href={websiteUrl} label="Open website listing" />
+          ) : null}
           {needsFeedIdFix && canEditDisposals ? (
             <Button
               type="button"
@@ -237,6 +282,9 @@ export function ListingPublishingChannels({
             onBeforeEnable={() => requestEnable('EACH', eachStatus)}
           />
           <ChannelStatusBanner status={eachStatus} />
+          {showEachLink ? (
+            <ChannelOpenLink href={eachUrl} label="Open EACH listing" />
+          ) : null}
         </ChannelRow>
 
         <ChannelRow>
@@ -248,6 +296,7 @@ export function ListingPublishingChannels({
             onBeforeEnable={() => requestEnable('Rightmove', rightmoveStatus)}
           />
           <ChannelStatusBanner status={rightmoveStatus} />
+          <RightmoveListingLinks publications={publications} />
         </ChannelRow>
       </CardContent>
 
@@ -262,6 +311,17 @@ export function ListingPublishingChannels({
         onContinue={() => closeEnableDialog(true)}
       />
     </Card>
+  );
+}
+
+function ChannelOpenLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Button asChild variant="outline" size="sm" className="gap-1.5">
+      <a href={href} target="_blank" rel="noreferrer">
+        <ExternalLink className="h-3.5 w-3.5" />
+        {label}
+      </a>
+    </Button>
   );
 }
 
