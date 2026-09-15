@@ -5,6 +5,7 @@ import {
   buildListingAddressSlug,
   isCommercialFeedUrl,
   isPublicListingPageUrl,
+  publicOriginFromListingUrlTemplate,
   resolveStoredOrTemplatedWebsiteUrl,
   slugifyListingSegment,
 } from '../listing-website-url';
@@ -55,6 +56,14 @@ describe('applyListingWebsiteUrlTemplate', () => {
         listing,
       ),
     ).toBe('https://example.com/p/119390');
+  });
+
+  it('extracts the public site origin from a template', () => {
+    expect(
+      publicOriginFromListingUrlTemplate(
+        'https://www.bracketts.co.uk/property/{slug}/',
+      ),
+    ).toBe('https://www.bracketts.co.uk');
   });
 
   it('returns null when a used placeholder is empty', () => {

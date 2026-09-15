@@ -24,10 +24,8 @@ import {
   getRightmoveChannelStatus,
   getWebsiteChannelStatus,
 } from '~/lib/commercial/channel-publish-status';
-import {
-  isPublicListingPageUrl,
-  resolveStoredOrTemplatedWebsiteUrl,
-} from '~/lib/commercial/listing-website-url';
+import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
+import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -51,15 +49,16 @@ export function ListingPublishingChannels({
   accountId,
   accountSlug,
   media = [],
-  listingUrlTemplate = null,
+  websitePublicPageUrl = null,
+  websiteUrlHealth = null,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
   accountSlug: string;
   media?: CommercialListingMedia[];
-  /** Workspace Property Hive listing URL template (XML-only sites). */
-  listingUrlTemplate?: string | null;
+  websitePublicPageUrl?: string | null;
+  websiteUrlHealth?: WebsiteUrlHealth | null;
 }) {
   const router = useRouter();
   const { canEditDisposals } = useDisposalAccess();
@@ -78,6 +77,8 @@ export function ListingPublishingChannels({
       websiteUrl: listing.websiteUrl,
     },
     publications,
+    publicPageUrl: websitePublicPageUrl,
+    urlHealth: websiteUrlHealth,
   });
   const eachStatus = getEachChannelStatus({
     listing: {
@@ -138,22 +139,7 @@ export function ListingPublishingChannels({
     setEnableDialog(null);
   };
 
-  const phPublication = publications.find((p) => p.portal === 'property_hive');
-  const resolvedWebsiteUrl =
-    resolveStoredOrTemplatedWebsiteUrl({
-      websiteUrl: listing.websiteUrl,
-      portalExternalUrl: phPublication?.externalUrl ?? null,
-      template: listingUrlTemplate,
-      listing: {
-        externalId: listing.externalId,
-        addressLine1: listing.addressLine1,
-        addressLine2: listing.addressLine2,
-        town: listing.town,
-        postcode: listing.postcode,
-        name: listing.name,
-      },
-    }) ?? '';
-  const websiteUrl = resolvedWebsiteUrl;
+  const websiteUrl = websitePublicPageUrl ?? '';
   const showWebsiteLink =
     websiteUrl.length > 0 && isPublicListingPageUrl(websiteUrl);
   const eachUrl = eachPublication?.externalUrl?.trim() ?? '';
@@ -307,7 +293,15 @@ function ChannelStatusBanner({ status }: { status: ChannelPublishStatus }) {
   return (
     <div
       className={`rounded-md px-2.5 py-2 text-xs ${tone}`}
-      data-test={unsynced ? 'rightmove-live-unsynced' : undefined}
+      data-test={
+        status.issue === 'website_broken'
+          ? 'website-link-broken'
+          : status.issue === 'website_pending'
+            ? 'website-url-pending'
+            : unsynced
+              ? 'rightmove-live-unsynced'
+              : undefined
+      }
     >
       <p className="flex items-start gap-1.5 font-medium">
         {unsynced ? (

@@ -13,6 +13,7 @@ import { Switch } from '@kit/ui/switch';
 
 import pathsConfig from '~/config/paths.config';
 import { workspacePublishingHref as workspacePublishingPath } from '~/lib/commercial/listing-routes';
+import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -41,14 +42,16 @@ export function ListingPublishingSection({
   accountId,
   accountSlug,
   media = [],
-  listingUrlTemplate = null,
+  websitePublicPageUrl = null,
+  websiteUrlHealth = null,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
   accountSlug: string;
   media?: CommercialListingMedia[];
-  listingUrlTemplate?: string | null;
+  websitePublicPageUrl?: string | null;
+  websiteUrlHealth?: WebsiteUrlHealth | null;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const [listing, setListing] = useState(initial);
@@ -93,7 +96,8 @@ export function ListingPublishingSection({
         accountId={accountId}
         accountSlug={accountSlug}
         media={media}
-        listingUrlTemplate={listingUrlTemplate}
+        websitePublicPageUrl={websitePublicPageUrl}
+        websiteUrlHealth={websiteUrlHealth}
       />
 
       <Card id="brochure" className={`${workspacePanelCard} scroll-mt-36`}>

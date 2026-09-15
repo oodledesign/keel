@@ -21,11 +21,8 @@ import {
   resolveSiteUrlForPublicMedia,
   withRightmoveMediaCacheBust,
 } from '~/lib/commercial/listing-media-public-url';
-import {
-  LISTING_URL_TEMPLATE_META_KEY,
-  applyListingWebsiteUrlTemplate,
-  isPublicListingPageUrl,
-} from '~/lib/commercial/listing-website-url';
+import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
+import { resolveLiveWordpressListingUrl } from '~/lib/commercial/listing-website-url-resolve.server';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   isLiveRightmovePublication,
@@ -1038,30 +1035,9 @@ export async function ensureListingFeedExternalId(input: {
 }
 
 /**
- * Website (Property Hive XML) is opt-out of the dedicated XML feed.
- * Off → unpublished (excluded from feed). On → published (included when on-market).
- * Preserves existing Property Hive external ids so a toggle cannot drop a live post.
- */
-
-async function loadWebsiteListingUrlTemplate(
-  accountId: string,
-): Promise<string | null> {
-  const { data } = await db()
-    .from('commercial_portal_credentials')
-    .select('metadata')
-    .eq('account_id', accountId)
-    .eq('portal', 'property_hive')
-    .maybeSingle();
-  const meta = (data?.metadata ?? {}) as Record<string, unknown>;
-  const template = meta[LISTING_URL_TEMPLATE_META_KEY];
-  return typeof template === 'string' && template.trim()
-    ? template.trim()
-    : null;
-}
-
-/**
- * When website_url is empty and the workspace has a listing URL template,
- * persist a durable public URL (XML-only agencies cannot get WP link via REST).
+ * When website_url is empty, persist the live WordPress property link.
+ * Does not store guessed listing-URL-template slugs (those 404 when PH
+ * uses a different path, e.g. missing a unit number).
  */
 export async function maybeFillListingWebsiteUrlFromTemplate(input: {
   accountId: string;
@@ -1081,21 +1057,23 @@ export async function maybeFillListingWebsiteUrlFromTemplate(input: {
   const existing = (listing.website_url as string | null)?.trim() ?? '';
   if (existing && isPublicListingPageUrl(existing)) return existing;
 
-  const template = await loadWebsiteListingUrlTemplate(input.accountId);
-  const built = applyListingWebsiteUrlTemplate(template, {
-    externalId: listing.external_id as string | null,
-    addressLine1: listing.address_line_1 as string | null,
-    addressLine2: listing.address_line_2 as string | null,
-    town: listing.town as string | null,
-    postcode: listing.postcode as string | null,
-    name: listing.name as string | null,
+  const resolved = await resolveLiveWordpressListingUrl({
+    accountId: input.accountId,
+    listing: {
+      externalId: listing.external_id as string | null,
+      addressLine1: listing.address_line_1 as string | null,
+      addressLine2: listing.address_line_2 as string | null,
+      town: listing.town as string | null,
+      postcode: listing.postcode as string | null,
+      name: listing.name as string | null,
+    },
   });
-  if (!built) return null;
+  if (!resolved) return null;
 
   const { error: updateError } = await db()
     .from('commercial_listings')
     .update({
-      website_url: built,
+      website_url: resolved,
       updated_at: new Date().toISOString(),
     })
     .eq('id', input.listingId)
@@ -1103,9 +1081,14 @@ export async function maybeFillListingWebsiteUrlFromTemplate(input: {
     .or('website_url.is.null,website_url.eq.');
 
   if (updateError) throw new Error(updateError.message);
-  return built;
+  return resolved;
 }
 
+/**
+ * Website (Property Hive XML) is opt-out of the dedicated XML feed.
+ * Off → unpublished (excluded from feed). On → published (included when on-market).
+ * Preserves existing Property Hive external ids so a toggle cannot drop a live post.
+ */
 export async function setWebsiteListingFeedInclusion(input: {
   accountId: string;
   listingId: string;

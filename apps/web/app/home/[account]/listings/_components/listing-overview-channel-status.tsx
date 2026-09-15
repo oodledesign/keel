@@ -15,6 +15,7 @@ import {
   getWebsiteChannelStatus,
 } from '~/lib/commercial/channel-publish-status';
 import { listingTabHref } from '~/lib/commercial/listing-routes';
+import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type {
@@ -64,12 +65,16 @@ export function ListingOverviewChannelStatus({
   accountSlug,
   publications,
   mediaCreatedAt = [],
+  websitePublicPageUrl = null,
+  websiteUrlHealth = null,
 }: {
   listing: CommercialListing;
   accountId: string;
   accountSlug: string;
   publications: CommercialPortalPublication[];
   mediaCreatedAt?: Array<string | null | undefined>;
+  websitePublicPageUrl?: string | null;
+  websiteUrlHealth?: WebsiteUrlHealth | null;
 }) {
   const publishingHref = listingTabHref(accountSlug, listing.id, 'publishing');
   const interestHref = listingTabHref(accountSlug, listing.id, 'interest');
@@ -86,6 +91,8 @@ export function ListingOverviewChannelStatus({
           websiteUrl: listing.websiteUrl,
         },
         publications,
+        publicPageUrl: websitePublicPageUrl,
+        urlHealth: websiteUrlHealth,
       }),
     },
     {

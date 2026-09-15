@@ -48,6 +48,38 @@ describe('getWebsiteChannelStatus', () => {
     expect(status.blockers).toEqual([]);
   });
 
+  it('is Live but link broken when the public page returns 404', () => {
+    const status = getWebsiteChannelStatus({
+      listing: { status: 'marketing', externalId: '14e1a5eb' },
+      publications: [{ portal: 'property_hive', status: 'published' }],
+      publicPageUrl:
+        'https://www.bracketts.co.uk/property/chapman-way-tunbridge-wells/',
+      urlHealth: {
+        url: 'https://www.bracketts.co.uk/property/chapman-way-tunbridge-wells/',
+        ok: false,
+        status: 404,
+        reason: 'http_error',
+      },
+    });
+    expect(status.state).toBe('live');
+    expect(status.canEnable).toBe(true);
+    expect(status.label).toBe('Live but link broken (404)');
+    expect(status.issue).toBe('website_broken');
+    expect(status.outOfSync).toBe(true);
+    expect(status.blockers).toEqual([]);
+  });
+
+  it('is Live but public URL pending when the feed is live and no page URL is stored', () => {
+    const status = getWebsiteChannelStatus({
+      listing: { status: 'marketing', externalId: '14e1a5eb' },
+      publications: [{ portal: 'property_hive', status: 'published' }],
+      publicPageUrl: null,
+    });
+    expect(status.label).toBe('Live but public URL pending');
+    expect(status.issue).toBe('website_pending');
+    expect(status.canEnable).toBe(true);
+  });
+
   it('ignores stale credentials-not-configured errors for XML feed', () => {
     const status = getWebsiteChannelStatus({
       listing: { status: 'marketing', externalId: 'x' },

@@ -4,6 +4,11 @@ import {
   isWebsiteFeedIncluded,
 } from '~/lib/commercial/each-feed-inclusion';
 import { isSafeHttpUrl } from '~/lib/commercial/listing-website-url';
+import {
+  type WebsiteUrlHealth,
+  isWebsitePublicPageBroken,
+  websiteBrokenStatusLabel,
+} from '~/lib/commercial/listing-website-url-health';
 import { ACTIVE_LISTING_STATUSES_FOR_MATCH } from '~/lib/commercial/match-scoring';
 import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
 
@@ -25,10 +30,11 @@ export type ChannelPublishStatus = {
   blockers: string[];
   lastError: string | null;
   /**
-   * Live Rightmove row is older than the listing / newest media.
-   * Website and EACH are pull feeds — they never set this.
+   * Live channel needs attention: stale Rightmove push, broken public page,
+   * or public URL still pending after Website went live.
    */
   outOfSync?: boolean;
+  issue?: 'rightmove_stale' | 'website_broken' | 'website_pending';
 };
 
 type ListingInput = {
@@ -74,6 +80,8 @@ function rightmoveFieldBlockers(listing: ListingInput): string[] {
 export function getWebsiteChannelStatus(input: {
   listing: ListingInput;
   publications: PublicationInput[];
+  publicPageUrl?: string | null;
+  urlHealth?: WebsiteUrlHealth | null;
 }): ChannelPublishStatus {
   const { listing, publications } = input;
   const pub = publications.find((p) => p.portal === 'property_hive');
@@ -123,6 +131,38 @@ export function getWebsiteChannelStatus(input: {
       detail: 'Not publishing to the website yet',
       blockers,
       lastError,
+    };
+  }
+
+  const urlHealth = input.urlHealth;
+  if (urlHealth && isWebsitePublicPageBroken(urlHealth)) {
+    return {
+      state: 'live',
+      switchOn: true,
+      canEnable: true,
+      label: websiteBrokenStatusLabel(urlHealth),
+      detail:
+        'Public page URL is wrong — the feed is still live. Open the link to confirm.',
+      blockers: [],
+      lastError: null,
+      outOfSync: true,
+      issue: 'website_broken',
+    };
+  }
+
+  // Only when the caller resolved a public URL (or confirmed there is none).
+  if (input.publicPageUrl !== undefined && !input.publicPageUrl?.trim()) {
+    return {
+      state: 'live',
+      switchOn: true,
+      canEnable: true,
+      label: 'Live but public URL pending',
+      detail:
+        'In the website feed — the public page URL is not stored yet (import may still be catching up)',
+      blockers: [],
+      lastError: null,
+      outOfSync: true,
+      issue: 'website_pending',
     };
   }
 
@@ -311,6 +351,7 @@ export function getRightmoveChannelStatus(input?: {
       blockers: [],
       lastError: null,
       outOfSync,
+      issue: outOfSync ? 'rightmove_stale' : undefined,
     };
   }
 
@@ -398,5 +439,8 @@ export function channelNeedsRightmoveResync(
   key: string,
   status: ChannelPublishStatus,
 ): boolean {
-  return key === 'rightmove' && Boolean(status.switchOn && status.outOfSync);
+  return (
+    key === 'rightmove' &&
+    Boolean(status.switchOn && status.issue === 'rightmove_stale')
+  );
 }
