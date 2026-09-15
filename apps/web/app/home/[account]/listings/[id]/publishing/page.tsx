@@ -2,7 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { getWebsiteChannelStatus } from '~/lib/commercial/channel-publish-status';
 import { LISTING_URL_TEMPLATE_META_KEY } from '~/lib/commercial/listing-website-url';
+import { loadWebsiteChannelUrlState } from '~/lib/commercial/listing-website-url-resolve.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -48,6 +50,33 @@ async function ListingPublishingPage({ params }: PageProps) {
     loadListingUrlTemplate(client as unknown as SupabaseClient, accountId),
   ]);
 
+  const websiteIsLive =
+    getWebsiteChannelStatus({
+      listing: {
+        status: listing.status,
+        externalId: listing.externalId,
+        websiteUrl: listing.websiteUrl,
+      },
+      publications,
+    }).state === 'live';
+
+  const websiteUrlState = await loadWebsiteChannelUrlState({
+    accountId,
+    listingId,
+    listing: {
+      externalId: listing.externalId,
+      addressLine1: listing.addressLine1,
+      addressLine2: listing.addressLine2,
+      town: listing.town,
+      postcode: listing.postcode,
+      name: listing.name,
+      websiteUrl: listing.websiteUrl,
+    },
+    publications,
+    listingUrlTemplate,
+    websiteIsLive,
+  });
+
   const mediaWithUrls = await service.withSignedMediaUrls(media);
 
   return (
@@ -57,7 +86,8 @@ async function ListingPublishingPage({ params }: PageProps) {
       accountId={accountId}
       accountSlug={slug}
       media={mediaWithUrls}
-      listingUrlTemplate={listingUrlTemplate}
+      websitePublicPageUrl={websiteUrlState.publicPageUrl}
+      websiteUrlHealth={websiteUrlState.health}
     />
   );
 }

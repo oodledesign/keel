@@ -41,6 +41,7 @@ import {
   type EnquiryStatus,
   formatCommercialUseClassLabel,
 } from '~/lib/commercial/commercial-constants';
+import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import { RequirementFormModal } from '../../requirements/_components/requirement-form-modal';
@@ -186,6 +187,9 @@ export function ListingOverviewSection({
   interestSummary,
   parties = [],
   publications = [],
+  mediaCreatedAt = [],
+  websitePublicPageUrl = null,
+  websiteUrlHealth = null,
 }: {
   listing: CommercialListing;
   accountId: string;
@@ -200,6 +204,9 @@ export function ListingOverviewSection({
   };
   parties?: ListingParty[];
   publications?: CommercialPortalPublication[];
+  mediaCreatedAt?: Array<string | null | undefined>;
+  websitePublicPageUrl?: string | null;
+  websiteUrlHealth?: WebsiteUrlHealth | null;
 }) {
   const { listing } = useListingState(initial);
   const [matchBadgeCount, setMatchBadgeCount] = useState(
@@ -242,8 +249,12 @@ export function ListingOverviewSection({
       />
       <ListingOverviewChannelStatus
         listing={listing}
+        accountId={accountId}
         accountSlug={accountSlug}
         publications={publications}
+        mediaCreatedAt={mediaCreatedAt}
+        websitePublicPageUrl={websitePublicPageUrl}
+        websiteUrlHealth={websiteUrlHealth}
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard

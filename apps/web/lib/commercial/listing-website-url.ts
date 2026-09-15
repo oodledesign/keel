@@ -1,8 +1,10 @@
+import { isBlockedLogoHostname } from '~/lib/clients/client-logo-icons';
+
 /**
  * Workspace listing website URL templates for XML-only (and REST) agencies.
  *
  * Prefer storing the resolved URL on commercial_listings.website_url.
- * Templates fill empty website_url when the website feed is live.
+ * Templates supply the public site origin; we do not persist guessed slugs.
  *
  * Placeholders:
  * - {slug} — address slug (line1 + line2 + town), WordPress-style
@@ -49,6 +51,33 @@ export function isPublicListingPageUrl(value: string): boolean {
   if (!trimmed || !isSafeHttpUrl(trimmed)) return false;
   if (isCommercialFeedUrl(trimmed)) return false;
   return true;
+}
+
+/** Origin of a public http(s) URL, or null when the host is not fetch-safe. */
+export function publicOriginFromHttpUrl(
+  value: string | null | undefined,
+): string | null {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed || !isSafeHttpUrl(trimmed)) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (isBlockedLogoHostname(parsed.hostname)) return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Origin from a listing URL template such as
+ * `https://www.bracketts.co.uk/property/{slug}/`.
+ */
+export function publicOriginFromListingUrlTemplate(
+  template: string | null | undefined,
+): string | null {
+  const raw = template?.trim() ?? '';
+  if (!raw) return null;
+  return publicOriginFromHttpUrl(raw.replace(/\{[a-z0-9_]+\}/gi, 'x'));
 }
 
 /** WordPress-ish sanitize_title for path segments. */

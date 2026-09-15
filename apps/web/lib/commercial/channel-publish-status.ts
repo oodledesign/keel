@@ -3,7 +3,16 @@ import {
   isEachFeedIncluded,
   isWebsiteFeedIncluded,
 } from '~/lib/commercial/each-feed-inclusion';
+import { isSafeHttpUrl } from '~/lib/commercial/listing-website-url';
+import {
+  type WebsiteUrlHealth,
+  isWebsitePublicPageBroken,
+  websiteBrokenStatusLabel,
+} from '~/lib/commercial/listing-website-url-health';
 import { ACTIVE_LISTING_STATUSES_FOR_MATCH } from '~/lib/commercial/match-scoring';
+import { isRightmoveSyncStale } from '~/lib/commercial/portal-sync-policy';
+
+export { isSafeHttpUrl };
 
 export type ChannelPublishState = 'live' | 'off' | 'blocked' | 'unavailable';
 
@@ -20,6 +29,12 @@ export type ChannelPublishStatus = {
   /** Missing quals shown when switch cannot be enabled / state is blocked. */
   blockers: string[];
   lastError: string | null;
+  /**
+   * Live channel needs attention: stale Rightmove push, broken public page,
+   * or public URL still pending after Website went live.
+   */
+  outOfSync?: boolean;
+  issue?: 'rightmove_stale' | 'website_broken' | 'website_pending';
 };
 
 type ListingInput = {
@@ -31,6 +46,7 @@ type ListingInput = {
   postcode?: string | null;
   addressLine1?: string | null;
   disposalType?: string | null;
+  updatedAt?: string | null;
 };
 
 type PublicationInput = {
@@ -39,6 +55,7 @@ type PublicationInput = {
   lastError?: string | null;
   externalId?: string | null;
   externalUrl?: string | null;
+  lastSyncAt?: string | null;
 };
 
 function eachFieldBlockers(listing: ListingInput): string[] {
@@ -63,6 +80,8 @@ function rightmoveFieldBlockers(listing: ListingInput): string[] {
 export function getWebsiteChannelStatus(input: {
   listing: ListingInput;
   publications: PublicationInput[];
+  publicPageUrl?: string | null;
+  urlHealth?: WebsiteUrlHealth | null;
 }): ChannelPublishStatus {
   const { listing, publications } = input;
   const pub = publications.find((p) => p.portal === 'property_hive');
@@ -112,6 +131,38 @@ export function getWebsiteChannelStatus(input: {
       detail: 'Not publishing to the website yet',
       blockers,
       lastError,
+    };
+  }
+
+  const urlHealth = input.urlHealth;
+  if (urlHealth && isWebsitePublicPageBroken(urlHealth)) {
+    return {
+      state: 'live',
+      switchOn: true,
+      canEnable: true,
+      label: websiteBrokenStatusLabel(urlHealth),
+      detail:
+        'Public page URL is wrong — the feed is still live. Open the link to confirm.',
+      blockers: [],
+      lastError: null,
+      outOfSync: true,
+      issue: 'website_broken',
+    };
+  }
+
+  // Only when the caller resolved a public URL (or confirmed there is none).
+  if (input.publicPageUrl !== undefined && !input.publicPageUrl?.trim()) {
+    return {
+      state: 'live',
+      switchOn: true,
+      canEnable: true,
+      label: 'Live but public URL pending',
+      detail:
+        'In the website feed — the public page URL is not stored yet (import may still be catching up)',
+      blockers: [],
+      lastError: null,
+      outOfSync: true,
+      issue: 'website_pending',
     };
   }
 
@@ -196,8 +247,12 @@ export function getEachChannelStatus(input: {
 }
 
 export function getRightmoveChannelStatus(input?: {
-  listing?: Pick<ListingInput, 'status' | 'name' | 'postcode' | 'addressLine1'>;
+  listing?: Pick<
+    ListingInput,
+    'status' | 'name' | 'postcode' | 'addressLine1' | 'updatedAt'
+  >;
   publications?: PublicationInput[];
+  mediaCreatedAt?: Array<string | null | undefined>;
 }): ChannelPublishStatus {
   const listing = input?.listing;
   const publications = input?.publications ?? [];
@@ -267,16 +322,36 @@ export function getRightmoveChannelStatus(input?: {
   }
 
   if (pub.status === 'published') {
+    const listingUpdatedAt = listing?.updatedAt;
+    const mediaCreatedAt = input?.mediaCreatedAt;
+    // Only compare timestamps when we have a listing or media reference.
+    // A published row with no last_sync_at and no reference dates is treated
+    // as in sync so legacy callers without dates do not all turn orange.
+    const shouldEvaluateSync =
+      listingUpdatedAt != null || (mediaCreatedAt?.length ?? 0) > 0;
+    const outOfSync = shouldEvaluateSync
+      ? isRightmoveSyncStale({
+          publicationStatus: pub.status,
+          lastSyncAt: pub.lastSyncAt,
+          listingUpdatedAt,
+          mediaCreatedAt,
+        })
+      : false;
+
     return {
       state: 'live',
       switchOn: true,
       canEnable: true,
-      label: 'Live',
-      detail: hasUrl
-        ? 'On Rightmove (public page can take a few minutes)'
-        : 'On Rightmove',
+      label: outOfSync ? 'Live but Unsynced' : 'Live',
+      detail: outOfSync
+        ? 'Behind the latest disposal updates — re-sync to push Rightmove'
+        : hasUrl
+          ? 'On Rightmove (public page can take a few minutes)'
+          : 'On Rightmove',
       blockers: [],
       lastError: null,
+      outOfSync,
+      issue: outOfSync ? 'rightmove_stale' : undefined,
     };
   }
 
@@ -339,11 +414,33 @@ export function getCirculationChannelStatus(input: {
   };
 }
 
-export function isSafeHttpUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
+/** Switched-on channel is live and not waiting on a Rightmove re-push. */
+export function isSwitchedOnChannelHealthy(
+  status: ChannelPublishStatus,
+): boolean {
+  return status.state === 'live' && !status.outOfSync;
+}
+
+export function switchedOnChannelsHaveIssue(
+  statuses: ChannelPublishStatus[],
+): boolean {
+  return statuses.some(
+    (status) => status.switchOn && !isSwitchedOnChannelHealthy(status),
+  );
+}
+
+export function hasSwitchedOnChannels(
+  statuses: ChannelPublishStatus[],
+): boolean {
+  return statuses.some((status) => status.switchOn);
+}
+
+export function channelNeedsRightmoveResync(
+  key: string,
+  status: ChannelPublishStatus,
+): boolean {
+  return (
+    key === 'rightmove' &&
+    Boolean(status.switchOn && status.issue === 'rightmove_stale')
+  );
 }
