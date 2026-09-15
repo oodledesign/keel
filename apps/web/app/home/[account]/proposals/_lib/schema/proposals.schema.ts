@@ -73,6 +73,7 @@ export const CreateProposalSchema = clientOrDealRefine(
     private_note: optionalNullableString,
     context_refs: z.array(ProposalContextRefSchema).optional(),
     kind: z.enum(['proposal', 'survey_report']).optional(),
+    survey_type: z.string().max(80).nullable().optional(),
   }),
 );
 
@@ -93,6 +94,7 @@ export const UpdateProposalSchema = z.object({
   email_body: optionalNullableString,
   email_signature: optionalNullableString,
   context_refs: z.array(ProposalContextRefSchema).optional(),
+  survey_type: z.string().max(80).nullable().optional(),
 });
 
 export const DeleteProposalSchema = z.object({

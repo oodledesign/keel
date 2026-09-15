@@ -5,10 +5,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { callAI } from '~/lib/ai/router';
 import {
   BUILDING_SURVEY_SECTIONS,
+  type SurveyObservationInput,
+  type SurveyPinnedPhotoInput,
   buildingSurveySectionListForPrompt,
+  htmlFromObservations,
   htmlFromRoutedSections,
   routeTranscriptToSections,
 } from '~/lib/building-surveyor/report-sections';
+import { buildingSurveyTypeLabel } from '~/lib/building-surveyor/survey-types';
 
 export type SurveyTranscript = {
   title: string;
@@ -22,6 +26,9 @@ export type SurveyGenerateParams = {
   surveyorName: string;
   transcripts: SurveyTranscript[];
   contextNotes?: Array<{ title: string; content: string; type: string }>;
+  observations?: SurveyObservationInput[];
+  pinnedPhotos?: SurveyPinnedPhotoInput[];
+  surveyType?: string | null;
 };
 
 export type SurveyGenerateResult = {
@@ -60,6 +67,36 @@ function stripMarkdownFences(text: string) {
   return trimmed;
 }
 
+function groupedObservationsForPrompt(params: SurveyGenerateParams) {
+  const observations = params.observations ?? [];
+  if (observations.length === 0) return '(none provided)';
+
+  return BUILDING_SURVEY_SECTIONS.map((section) => {
+    const items = observations
+      .filter((item) => item.sectionKey === section.key)
+      .map((item) => item.body.trim())
+      .filter(Boolean);
+    if (items.length === 0) return null;
+    return `### ${section.heading} (${section.key})\n${items.join('\n\n')}`;
+  })
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function pinnedPhotosForPrompt(params: SurveyGenerateParams) {
+  const photos = params.pinnedPhotos ?? [];
+  if (photos.length === 0) return '(none provided)';
+
+  return photos
+    .map((photo) => {
+      const caption = photo.caption?.trim();
+      return `- [${photo.sectionKey}] ${photo.title}${
+        caption ? ` — ${caption}` : ''
+      }`;
+    })
+    .join('\n');
+}
+
 function buildUserPayload(params: SurveyGenerateParams) {
   const transcripts = params.transcripts
     .map(
@@ -80,13 +117,26 @@ function buildUserPayload(params: SurveyGenerateParams) {
     client_name: params.clientName?.trim() || null,
     workspace_name: params.accountName,
     surveyor_name: params.surveyorName,
+    survey_type: buildingSurveyTypeLabel(params.surveyType),
+    grouped_observations:
+      groupedObservationsForPrompt(params) || '(none provided)',
+    pinned_photos: pinnedPhotosForPrompt(params),
     site_transcripts: transcripts || '(none provided)',
     notes_and_files_context: notes || '(none provided)',
     required_section_count: BUILDING_SURVEY_SECTIONS.length,
+    instruction:
+      'Prefer the grouped observations over raw transcripts when both are present. Mention pinned photos in the matching section without inventing extra images.',
   });
 }
 
 function fallbackHtml(params: SurveyGenerateParams): string {
+  if ((params.observations?.length ?? 0) > 0) {
+    return htmlFromObservations(
+      params.observations ?? [],
+      params.pinnedPhotos ?? [],
+    );
+  }
+
   const combined = params.transcripts
     .map((t) => t.content)
     .concat((params.contextNotes ?? []).map((n) => n.content))
@@ -109,9 +159,12 @@ export async function generateSurveyReportHtml(
 ): Promise<SurveyGenerateResult> {
   if (
     params.transcripts.length === 0 &&
-    (params.contextNotes?.length ?? 0) === 0
+    (params.contextNotes?.length ?? 0) === 0 &&
+    (params.observations?.length ?? 0) === 0
   ) {
-    throw new Error('Provide at least one site transcript or note');
+    throw new Error(
+      'Provide at least one site transcript, grouped observation, or note',
+    );
   }
 
   try {

@@ -26,7 +26,7 @@ import { toast } from '@kit/ui/sonner';
 import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
 import {
   type ProposalDocumentKind,
-  documentEditPath,
+  documentDetailPath,
   documentKindCopy,
 } from '~/lib/building-surveyor/document-kind';
 import { uniqueEmails } from '~/lib/email/unique-emails';
@@ -88,7 +88,7 @@ export function ProposalRowMenu({
     }
   };
 
-  const editPath = documentEditPath(accountSlug, proposal.id, documentKind);
+  const editPath = documentDetailPath(accountSlug, proposal.id, documentKind);
 
   return (
     <>

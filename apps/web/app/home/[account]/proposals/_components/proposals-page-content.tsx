@@ -40,7 +40,7 @@ import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobo
 import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
 import {
   type ProposalDocumentKind,
-  documentEditPath,
+  documentDetailPath,
   documentKindCopy,
   titleForRecipient,
 } from '~/lib/building-surveyor/document-kind';
@@ -434,7 +434,7 @@ export function ProposalsPageContent({
       });
       if (proposal?.id) {
         setCreateSheetOpen(false);
-        router.push(documentEditPath(accountSlug, proposal.id, documentKind));
+        router.push(documentDetailPath(accountSlug, proposal.id, documentKind));
       }
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -605,7 +605,7 @@ export function ProposalsPageContent({
 
       setAiDialogOpen(false);
       if (proposal?.id) {
-        router.push(documentEditPath(accountSlug, proposal.id, documentKind));
+        router.push(documentDetailPath(accountSlug, proposal.id, documentKind));
       }
     } catch (error) {
       const message = getErrorMessage(error);
@@ -625,7 +625,7 @@ export function ProposalsPageContent({
   };
 
   const editPathFor = (id: string) =>
-    documentEditPath(accountSlug, id, documentKind);
+    documentDetailPath(accountSlug, id, documentKind);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
     { key: 'unapproved', label: 'Unapproved', count: counts.unapproved },

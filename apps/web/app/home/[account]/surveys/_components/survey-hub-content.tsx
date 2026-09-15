@@ -1,0 +1,629 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+
+import Link from 'next/link';
+
+import { FileText, ImagePlus, Loader2, Mic, Plus, Trash2 } from 'lucide-react';
+
+import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
+
+import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
+import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
+import { documentEditPath } from '~/lib/building-surveyor/document-kind';
+import {
+  BUILDING_SURVEY_SECTIONS,
+  buildingSurveySectionByKey,
+} from '~/lib/building-surveyor/report-sections';
+import {
+  BUILDING_SURVEY_TYPES,
+  buildingSurveyTypeLabel,
+  normalizeBuildingSurveyType,
+} from '~/lib/building-surveyor/survey-types';
+import {
+  workspaceBtnPrimaryMd,
+  workspaceLinkAccent,
+  workspacePanelCard,
+  workspaceTextMuted,
+} from '~/lib/workspace-ui';
+
+import type {
+  SurveyObservation,
+  SurveyTranscriptSummary,
+} from '../_lib/schema/survey-capture.schema';
+import {
+  addSurveyTranscriptAction,
+  createSurveyObservationAction,
+  deleteSurveyObservationAction,
+  generateSurveyDraftAction,
+  updateSurveyObservationAction,
+  updateSurveyTypeAction,
+} from '../_lib/server/survey-capture-actions';
+
+type ClientInfo = {
+  id: string;
+  display_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  company_name?: string | null;
+  email?: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  postcode?: string | null;
+};
+
+type DealInfo = {
+  id: string;
+  name?: string | null;
+  contact_name?: string | null;
+  company_name?: string | null;
+  stage?: string | null;
+};
+
+export function SurveyHubContent({
+  accountSlug,
+  accountId,
+  accountName,
+  senderName,
+  canEdit,
+  proposal,
+  observations: initialObservations,
+  transcripts: initialTranscripts,
+}: {
+  accountSlug: string;
+  accountId: string;
+  accountName: string;
+  senderName: string;
+  canEdit: boolean;
+  proposal: {
+    id: string;
+    title?: string | null;
+    status: string;
+    content_html?: string | null;
+    recipient_name?: string | null;
+    client_id?: string | null;
+    deal_id?: string | null;
+    survey_type?: string | null;
+    client?: ClientInfo | null;
+    deal?: DealInfo | null;
+    updated_at?: string | null;
+  };
+  observations: SurveyObservation[];
+  transcripts: SurveyTranscriptSummary[];
+}) {
+  const [observations, setObservations] = useState(initialObservations);
+  const [transcripts, setTranscripts] = useState(initialTranscripts);
+  const [surveyType, setSurveyType] = useState(
+    normalizeBuildingSurveyType(proposal.survey_type),
+  );
+  const [pasteTitle, setPasteTitle] = useState('');
+  const [pasteContent, setPasteContent] = useState('');
+  const [newSectionKey, setNewSectionKey] = useState('overall_opinion');
+  const [newBody, setNewBody] = useState('');
+  const [pending, startTransition] = useTransition();
+  const [generating, setGenerating] = useState(false);
+  const [pasting, setPasting] = useState(false);
+
+  const editHref = documentEditPath(accountSlug, proposal.id, 'survey_report');
+  const hasDraft = Boolean(
+    proposal.content_html?.replace(/<[^>]+>/g, '').trim(),
+  );
+  const clientName =
+    proposal.client?.display_name?.trim() ||
+    [proposal.client?.first_name, proposal.client?.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    proposal.recipient_name?.trim() ||
+    proposal.deal?.contact_name?.trim() ||
+    'No client yet';
+  const propertyLabel =
+    proposal.deal?.company_name?.trim() ||
+    proposal.deal?.name?.trim() ||
+    proposal.client?.company_name?.trim() ||
+    proposal.title?.trim() ||
+    'Property not set';
+  const address = [
+    proposal.client?.address_line_1,
+    proposal.client?.address_line_2,
+    proposal.client?.city,
+    proposal.client?.postcode,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const grouped = useMemo(() => {
+    const byKey = new Map<string, SurveyObservation[]>();
+    for (const observation of observations) {
+      const list = byKey.get(observation.sectionKey) ?? [];
+      list.push(observation);
+      byKey.set(observation.sectionKey, list);
+    }
+    return BUILDING_SURVEY_SECTIONS.map((section) => ({
+      section,
+      items: byKey.get(section.key) ?? [],
+    })).filter((group) => group.items.length > 0);
+  }, [observations]);
+
+  const handlePaste = async () => {
+    if (!canEdit) return;
+    const content = pasteContent.trim();
+    if (content.length < 20) {
+      toast.error('Paste a longer site transcript so it can be grouped.');
+      return;
+    }
+
+    setPasting(true);
+    try {
+      const result = await addSurveyTranscriptAction({
+        accountId,
+        accountSlug,
+        proposalId: proposal.id,
+        title: pasteTitle.trim() || 'Site transcript',
+        content,
+      });
+      setTranscripts((prev) => [result.transcript, ...prev]);
+      setObservations((prev) => [...prev, ...result.observations]);
+      setPasteContent('');
+      setPasteTitle('');
+      toast.success(
+        `Grouped ${result.observations.length} observation${
+          result.observations.length === 1 ? '' : 's'
+        } into report sections.`,
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setPasting(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!canEdit) return;
+    setGenerating(true);
+    try {
+      const result = await generateSurveyDraftAction({
+        accountId,
+        accountSlug,
+        proposalId: proposal.id,
+        accountName,
+        surveyorName: senderName,
+      });
+      toast.success(
+        result.source === 'ai'
+          ? 'Draft report updated from grouped observations.'
+          : (result.fallbackReason ??
+              'Drafted from keyword routing because the AI path was unavailable.'),
+        {
+          action: {
+            label: 'Open editor',
+            onClick: () => {
+              window.location.href = editHref;
+            },
+          },
+        },
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p
+            className={`text-xs tracking-wide uppercase ${workspaceTextMuted}`}
+          >
+            Survey hub
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-[var(--workspace-shell-text)]">
+            {proposal.title?.trim() || 'Building survey'}
+          </h2>
+          <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+            {clientName} · {propertyLabel}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={editHref}>
+              <FileText className="mr-2 h-4 w-4" />
+              {hasDraft ? 'Open draft' : 'Open report editor'}
+            </Link>
+          </Button>
+          {canEdit ? (
+            <Button
+              type="button"
+              className={workspaceBtnPrimaryMd}
+              disabled={
+                generating ||
+                (observations.length === 0 && transcripts.length === 0)
+              }
+              onClick={() => void handleGenerate()}
+            >
+              {generating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="mr-2 h-4 w-4" />
+              )}
+              Generate draft
+            </Button>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
+        <div className="space-y-5">
+          <section className={`${workspacePanelCard} p-4 sm:p-5`}>
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Property and client
+            </h3>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+              <InfoRow label="Client" value={clientName} />
+              <InfoRow label="Property / enquiry" value={propertyLabel} />
+              <InfoRow label="Address" value={address || 'Not recorded'} />
+              <InfoRow
+                label="Enquiry stage"
+                value={proposal.deal?.stage?.replaceAll('_', ' ') || '—'}
+              />
+              <div className="sm:col-span-2">
+                <Label className={`text-xs ${workspaceTextMuted}`}>
+                  Survey type
+                </Label>
+                {canEdit ? (
+                  <select
+                    value={surveyType}
+                    onChange={(event) => {
+                      const next = normalizeBuildingSurveyType(
+                        event.target.value,
+                      );
+                      setSurveyType(next);
+                      startTransition(async () => {
+                        try {
+                          await updateSurveyTypeAction({
+                            accountId,
+                            accountSlug,
+                            proposalId: proposal.id,
+                            surveyType: next,
+                          });
+                          toast.success('Survey type saved');
+                        } catch (error) {
+                          toast.error(getErrorMessage(error));
+                        }
+                      });
+                    }}
+                    className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
+                  >
+                    {BUILDING_SURVEY_TYPES.map((item) => (
+                      <option key={item.key} value={item.key}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="mt-1 text-sm">
+                    {buildingSurveyTypeLabel(surveyType)}
+                  </p>
+                )}
+                <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+                  Stored on this survey so later templates can use different
+                  section sets without starting again.
+                </p>
+              </div>
+            </dl>
+          </section>
+
+          <section className={`${workspacePanelCard} p-4 sm:p-5`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Site transcripts
+                </h3>
+                <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+                  Paste a walkthrough transcript. We store it against this
+                  survey and group the sentences into editable observations.
+                </p>
+              </div>
+              <Mic className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`} />
+            </div>
+
+            {canEdit ? (
+              <div className="mt-4 space-y-3">
+                <Input
+                  value={pasteTitle}
+                  onChange={(event) => setPasteTitle(event.target.value)}
+                  placeholder="Transcript title (optional)"
+                />
+                <Textarea
+                  value={pasteContent}
+                  onChange={(event) => setPasteContent(event.target.value)}
+                  placeholder="Paste the site transcript here…"
+                  className="min-h-36"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={pasting}
+                  onClick={() => void handlePaste()}
+                >
+                  {pasting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  Add transcript and group
+                </Button>
+              </div>
+            ) : null}
+
+            {transcripts.length === 0 ? (
+              <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
+                No transcripts on this survey yet.
+              </p>
+            ) : (
+              <ul className="mt-4 divide-y divide-[color:var(--workspace-shell-border)]">
+                {transcripts.map((item) => (
+                  <li key={item.id} className="py-3 first:pt-0">
+                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {item.title}
+                    </p>
+                    <p
+                      className={`mt-1 line-clamp-3 text-xs ${workspaceTextMuted}`}
+                    >
+                      {item.content}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className={`${workspacePanelCard} p-4 sm:p-5`}>
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Grouped observations
+            </h3>
+            <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+              Reassign a note if the keyword grouping missed the section. These
+              feed the draft report.
+            </p>
+
+            {canEdit ? (
+              <div className="mt-4 space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-3">
+                <Label className="text-xs">Add observation</Label>
+                <select
+                  value={newSectionKey}
+                  onChange={(event) => setNewSectionKey(event.target.value)}
+                  className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm"
+                >
+                  {BUILDING_SURVEY_SECTIONS.map((section) => (
+                    <option key={section.key} value={section.key}>
+                      {section.heading}
+                    </option>
+                  ))}
+                </select>
+                <Textarea
+                  value={newBody}
+                  onChange={(event) => setNewBody(event.target.value)}
+                  placeholder="Observation…"
+                  className="min-h-20"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={pending || !newBody.trim()}
+                  onClick={() => {
+                    startTransition(async () => {
+                      try {
+                        const created = await createSurveyObservationAction({
+                          accountId,
+                          accountSlug,
+                          proposalId: proposal.id,
+                          sectionKey: newSectionKey,
+                          body: newBody.trim(),
+                        });
+                        setObservations((prev) => [...prev, created]);
+                        setNewBody('');
+                      } catch (error) {
+                        toast.error(getErrorMessage(error));
+                      }
+                    });
+                  }}
+                >
+                  Add observation
+                </Button>
+              </div>
+            ) : null}
+
+            {grouped.length === 0 ? (
+              <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
+                Observations will appear here after you paste a transcript.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-5">
+                {grouped.map(({ section, items }) => (
+                  <div key={section.key}>
+                    <h4 className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                      {section.group} · {section.heading}
+                    </h4>
+                    <ul className="mt-2 space-y-3">
+                      {items.map((item) => (
+                        <li
+                          key={item.id}
+                          className="rounded-lg border border-[color:var(--workspace-shell-border)] p-3"
+                        >
+                          {canEdit ? (
+                            <div className="space-y-2">
+                              <select
+                                value={item.sectionKey}
+                                onChange={(event) => {
+                                  const sectionKey = event.target.value;
+                                  setObservations((prev) =>
+                                    prev.map((row) =>
+                                      row.id === item.id
+                                        ? { ...row, sectionKey }
+                                        : row,
+                                    ),
+                                  );
+                                  startTransition(async () => {
+                                    try {
+                                      await updateSurveyObservationAction({
+                                        accountId,
+                                        accountSlug,
+                                        proposalId: proposal.id,
+                                        observationId: item.id,
+                                        sectionKey,
+                                      });
+                                    } catch (error) {
+                                      toast.error(getErrorMessage(error));
+                                    }
+                                  });
+                                }}
+                                className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs"
+                              >
+                                {BUILDING_SURVEY_SECTIONS.map((option) => (
+                                  <option key={option.key} value={option.key}>
+                                    {option.heading}
+                                  </option>
+                                ))}
+                              </select>
+                              <Textarea
+                                defaultValue={item.body}
+                                className="min-h-20 text-sm"
+                                onBlur={(event) => {
+                                  const body = event.target.value.trim();
+                                  if (!body || body === item.body) return;
+                                  setObservations((prev) =>
+                                    prev.map((row) =>
+                                      row.id === item.id
+                                        ? { ...row, body }
+                                        : row,
+                                    ),
+                                  );
+                                  startTransition(async () => {
+                                    try {
+                                      await updateSurveyObservationAction({
+                                        accountId,
+                                        accountSlug,
+                                        proposalId: proposal.id,
+                                        observationId: item.id,
+                                        body,
+                                      });
+                                    } catch (error) {
+                                      toast.error(getErrorMessage(error));
+                                    }
+                                  });
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs text-red-400 hover:text-red-300"
+                                onClick={() => {
+                                  startTransition(async () => {
+                                    try {
+                                      await deleteSurveyObservationAction({
+                                        accountId,
+                                        accountSlug,
+                                        proposalId: proposal.id,
+                                        observationId: item.id,
+                                      });
+                                      setObservations((prev) =>
+                                        prev.filter(
+                                          (row) => row.id !== item.id,
+                                        ),
+                                      );
+                                    } catch (error) {
+                                      toast.error(getErrorMessage(error));
+                                    }
+                                  });
+                                }}
+                              >
+                                <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                Remove
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <p className={`text-xs ${workspaceTextMuted}`}>
+                                {buildingSurveySectionByKey(item.sectionKey)
+                                  ?.heading ?? item.sectionKey}
+                              </p>
+                              <p className="mt-1 text-sm">{item.body}</p>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div className="space-y-5">
+          <section className={`${workspacePanelCard} p-4 sm:p-5`}>
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Draft report
+            </h3>
+            <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+              Status: {proposal.status}
+              {hasDraft ? ' · draft content saved' : ' · no draft yet'}
+            </p>
+            <p className="mt-3 text-sm">
+              <Link href={editHref} className={workspaceLinkAccent}>
+                {hasDraft
+                  ? 'Review and edit the report'
+                  : 'Open the blank report editor'}
+              </Link>
+            </p>
+            <p className={`mt-2 text-xs ${workspaceTextMuted}`}>
+              Generation uses grouped observations first, then raw transcripts
+              and any photos pinned to a section.
+            </p>
+          </section>
+
+          <SurveyPhotosPanel
+            accountId={accountId}
+            accountSlug={accountSlug}
+            proposalId={proposal.id}
+            clientId={proposal.client_id}
+            canEdit={canEdit}
+            layout="library"
+          />
+
+          <section className={`${workspacePanelCard} p-4 sm:p-5`}>
+            <div className="flex items-start gap-2">
+              <ImagePlus className={`mt-0.5 h-4 w-4 ${workspaceTextMuted}`} />
+              <p className={`text-xs ${workspaceTextMuted}`}>
+                Pin a photo to a section to mark it curated for the draft. The
+                rest stay in the archive for the record. Automatic captions come
+                later.
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className={`text-xs ${workspaceTextMuted}`}>{label}</dt>
+      <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
+        {value}
+      </dd>
+    </div>
+  );
+}

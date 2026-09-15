@@ -25,6 +25,7 @@ type SurveyPhoto = {
   mimeType: string | null;
   createdAt: string | null;
   pinnedSectionKey: string | null;
+  photoRole?: 'archive' | 'curated';
 };
 
 export function SurveyPhotosPanel({
@@ -33,12 +34,14 @@ export function SurveyPhotosPanel({
   proposalId,
   clientId,
   canEdit,
+  layout = 'compact',
 }: {
   accountId: string;
   accountSlug: string;
   proposalId: string;
   clientId?: string | null;
   canEdit: boolean;
+  layout?: 'compact' | 'library';
 }) {
   const supabase = useSupabase();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -158,20 +161,24 @@ export function SurveyPhotosPanel({
     }
   };
 
-  const pinnedCount = photos.filter((photo) => photo.pinnedSectionKey).length;
+  const curatedCount = photos.filter(
+    (photo) => photo.photoRole === 'curated' || photo.pinnedSectionKey,
+  ).length;
+  const listClassName =
+    layout === 'library' ? 'mt-3 grid gap-3 sm:grid-cols-2' : 'mt-3 space-y-3';
 
   return (
     <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Survey photos
+            Photo library
           </h2>
           <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-            Stored in the workspace files library. Pin a few onto report
-            sections; the rest stay here.
+            Bulk upload site photos. Pinning a photo to a section marks it
+            curated for the draft; the rest stay in the archive.
             {photos.length > 0
-              ? ` ${photos.length} in library${pinnedCount ? `, ${pinnedCount} pinned` : ''}.`
+              ? ` ${photos.length} in library${curatedCount ? `, ${curatedCount} curated` : ''}.`
               : ''}
           </p>
         </div>
@@ -212,7 +219,7 @@ export function SurveyPhotosPanel({
           store as Notes.
         </p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className={listClassName}>
           {photos.map((photo) => (
             <li
               key={photo.id}
@@ -234,6 +241,11 @@ export function SurveyPhotosPanel({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                     {photo.title}
+                  </p>
+                  <p className="mt-0.5 text-[10px] tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                    {photo.photoRole === 'curated' || photo.pinnedSectionKey
+                      ? 'Curated'
+                      : 'Archive'}
                   </p>
                   {canEdit ? (
                     <div className="mt-2 space-y-2">

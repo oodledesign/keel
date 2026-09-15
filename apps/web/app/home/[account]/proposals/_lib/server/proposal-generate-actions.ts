@@ -6,6 +6,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { createSurveyCaptureService } from '~/home/[account]/surveys/_lib/server/survey-capture.service';
 import {
   type ProposalTranscript,
   editProposalHtml,
@@ -115,13 +116,26 @@ export const generateProposalHtmlAction = enhanceAction(
   { schema: generateProposalSchema },
 );
 
+const observationSchema = z.object({
+  sectionKey: z.string().min(1).max(80),
+  body: z.string().min(1).max(20_000),
+});
+
+const pinnedPhotoSchema = z.object({
+  sectionKey: z.string().min(1).max(80),
+  title: z.string().min(1).max(500),
+  caption: z.string().max(1000).nullable().optional(),
+});
+
 const generateSurveyReportSchema = z
   .object({
     accountId: z.string().uuid(),
+    proposalId: z.string().uuid().optional(),
     propertyLabel: z.string().min(1).max(500),
     clientName: z.string().max(500).nullable().optional(),
     accountName: z.string().min(1).max(500),
     surveyorName: z.string().min(1).max(500),
+    surveyType: z.string().max(80).nullable().optional(),
     transcripts: z.array(transcriptSchema).max(20).default([]),
     contextNotes: z
       .array(
@@ -133,11 +147,19 @@ const generateSurveyReportSchema = z
       )
       .max(20)
       .optional(),
+    observations: z.array(observationSchema).max(200).optional(),
+    pinnedPhotos: z.array(pinnedPhotoSchema).max(80).optional(),
   })
   .refine(
     (data) =>
-      data.transcripts.length > 0 || (data.contextNotes?.length ?? 0) > 0,
-    { message: 'Provide at least one site transcript or note/file' },
+      data.transcripts.length > 0 ||
+      (data.contextNotes?.length ?? 0) > 0 ||
+      (data.observations?.length ?? 0) > 0 ||
+      Boolean(data.proposalId),
+    {
+      message:
+        'Provide at least one site transcript, grouped observation, or note/file',
+    },
   );
 
 export const generateSurveyReportHtmlAction = enhanceAction(
@@ -145,12 +167,45 @@ export const generateSurveyReportHtmlAction = enhanceAction(
     await assertInvoicesEditPermission(input.accountId, user.id);
 
     const client = getSupabaseServerClient();
+    const capture = createSurveyCaptureService(client);
+    await capture.assertBuildingSurveyorAccount(input.accountId);
+
+    let observations = input.observations;
+    let pinnedPhotos = input.pinnedPhotos;
+    let surveyType = input.surveyType ?? null;
+
+    if (input.proposalId) {
+      const survey = await capture.getSurvey(input.accountId, input.proposalId);
+      surveyType = survey.survey_type ?? surveyType;
+      if (!observations?.length) {
+        const rows = await capture.listObservations(
+          input.accountId,
+          input.proposalId,
+        );
+        observations = rows.map((row) => ({
+          sectionKey: row.sectionKey,
+          body: row.body,
+        }));
+      }
+      if (!pinnedPhotos?.length) {
+        const photos = await capture.listPinnedPhotos(
+          input.accountId,
+          input.proposalId,
+        );
+        pinnedPhotos = photos.map((photo) => ({
+          sectionKey: photo.sectionKey,
+          title: photo.title,
+        }));
+      }
+    }
+
     const result = await generateSurveyReportHtml(
       {
         propertyLabel: input.propertyLabel.trim(),
         clientName: input.clientName?.trim() || null,
         accountName: input.accountName.trim(),
         surveyorName: input.surveyorName.trim(),
+        surveyType,
         transcripts: input.transcripts.map((t) => ({
           title: t.title.trim(),
           content: t.content.trim(),
@@ -160,6 +215,8 @@ export const generateSurveyReportHtmlAction = enhanceAction(
           content: n.content.trim(),
           type: n.type,
         })),
+        observations,
+        pinnedPhotos,
       },
       { accountId: input.accountId, supabase: client },
     );

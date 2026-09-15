@@ -19,6 +19,7 @@ import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import {
   type ProposalDocumentKind,
+  documentDetailPath,
   documentKindCopy,
   documentListPath,
 } from '~/lib/building-surveyor/document-kind';
@@ -144,7 +145,10 @@ export function ProposalEditContent({
   const router = useRouter();
   const copy = documentKindCopy(documentKind);
   const proposal = initialProposal as unknown as ProposalData;
-  const proposalsPath = documentListPath(accountSlug, documentKind);
+  const proposalsPath =
+    documentKind === 'survey_report'
+      ? documentDetailPath(accountSlug, proposal.id, documentKind)
+      : documentListPath(accountSlug, documentKind);
 
   const isDraft = proposal.status === 'draft';
   const isLocked = proposal.status !== 'draft';
@@ -337,6 +341,7 @@ export function ProposalEditContent({
                     deals={deals}
                     disabled={saving}
                     documentKind={documentKind}
+                    proposalId={proposal.id}
                     onContentApplied={setContentHtml}
                   />
                 ) : null}
