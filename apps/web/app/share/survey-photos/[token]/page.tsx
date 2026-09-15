@@ -26,7 +26,7 @@ async function SurveyPhotoSharePage({ params }: SurveyPhotoSharePageProps) {
       <main className="flex min-h-[100dvh] items-center justify-center bg-[var(--ozer-plum-900)] px-4">
         <div className="max-w-md text-center">
           <h1 className="font-heading text-xl font-bold text-[var(--ozer-text-on-dark)]">
-            Photos not found
+            Photographs not found
           </h1>
           <p className="mt-2 text-sm text-[var(--ozer-text-on-dark-muted)]">
             This share link is invalid or has been turned off.

@@ -322,6 +322,7 @@ export const listProposalDocsAction = enhanceAction(
       )
       .eq('account_id', data.accountId)
       .eq('proposal_id', data.proposalId)
+      .eq('kind', 'uploaded')
       .order('curated_sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
 

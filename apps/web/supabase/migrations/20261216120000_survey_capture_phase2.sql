@@ -41,7 +41,14 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.survey_style_examples TO se
 DROP POLICY IF EXISTS survey_style_examples_select ON public.survey_style_examples;
 CREATE POLICY survey_style_examples_select ON public.survey_style_examples
   FOR SELECT TO authenticated
-  USING (public.has_role_on_account(account_id));
+  USING (
+    public.has_role_on_account(account_id)
+    AND EXISTS (
+      SELECT 1 FROM public.accounts a
+      WHERE a.id = account_id
+        AND a.space_type = 'building-surveyor'
+    )
+  );
 
 DROP POLICY IF EXISTS survey_style_examples_insert ON public.survey_style_examples;
 CREATE POLICY survey_style_examples_insert ON public.survey_style_examples

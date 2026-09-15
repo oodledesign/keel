@@ -64,6 +64,13 @@ class SurveyStyleService {
       throw new Error('Upload a PDF, Word document, HTML file, or text file.');
     }
 
+    if (
+      !input.filePath.startsWith(`${input.accountId}/`) ||
+      input.filePath.includes('..')
+    ) {
+      throw new Error('Invalid file path');
+    }
+
     const admin = getSupabaseServerAdminClient();
     const { data: file, error: downloadError } = await admin.storage
       .from(ACCOUNT_DOCS_BUCKET)
@@ -165,13 +172,6 @@ class SurveyStyleService {
       .maybeSingle();
     if (fetchError) throw new Error(fetchError.message);
 
-    const { error } = await this.db
-      .from('survey_style_examples')
-      .delete()
-      .eq('id', input.exampleId)
-      .eq('account_id', input.accountId);
-    if (error) throw new Error(error.message);
-
     const path = (data as { file_path?: string | null } | null)?.file_path;
     const bucket =
       (data as { storage_bucket?: string | null } | null)?.storage_bucket ??
@@ -180,6 +180,13 @@ class SurveyStyleService {
       const admin = getSupabaseServerAdminClient();
       await admin.storage.from(bucket).remove([path]);
     }
+
+    const { error } = await this.db
+      .from('survey_style_examples')
+      .delete()
+      .eq('id', input.exampleId)
+      .eq('account_id', input.accountId);
+    if (error) throw new Error(error.message);
 
     return { ok: true };
   }

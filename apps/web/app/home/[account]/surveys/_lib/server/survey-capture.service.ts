@@ -208,6 +208,7 @@ class SurveyCaptureService {
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
       .not('pinned_section_key', 'is', null)
+      .eq('kind', 'uploaded')
       .order('curated_sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
     if (error) this.throwErr(error);
@@ -570,7 +571,8 @@ class SurveyCaptureService {
           })
           .eq('id', photo.id)
           .eq('account_id', input.accountId)
-          .eq('proposal_id', input.proposalId);
+          .eq('proposal_id', input.proposalId)
+          .eq('kind', 'uploaded');
         if (error) this.throwErr(error);
         continue;
       }
@@ -586,7 +588,8 @@ class SurveyCaptureService {
           })
           .eq('id', photo.id)
           .eq('account_id', input.accountId)
-          .eq('proposal_id', input.proposalId);
+          .eq('proposal_id', input.proposalId)
+          .eq('kind', 'uploaded');
         if (error) this.throwErr(error);
       }
     }
@@ -635,7 +638,8 @@ class SurveyCaptureService {
       .update(payload)
       .eq('id', input.docId)
       .eq('account_id', input.accountId)
-      .eq('proposal_id', input.proposalId);
+      .eq('proposal_id', input.proposalId)
+      .eq('kind', 'uploaded');
     if (error) this.throwErr(error);
     return { ok: true };
   }
@@ -660,7 +664,8 @@ class SurveyCaptureService {
         .eq('id', docId)
         .eq('account_id', input.accountId)
         .eq('proposal_id', input.proposalId)
-        .eq('pinned_section_key', input.sectionKey);
+        .eq('pinned_section_key', input.sectionKey)
+        .eq('kind', 'uploaded');
       if (error) this.throwErr(error);
     }
 
@@ -699,6 +704,7 @@ class SurveyCaptureService {
       )
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
+      .eq('kind', 'uploaded')
       .order('created_at', { ascending: true });
     if (error) this.throwErr(error);
 

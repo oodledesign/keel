@@ -76,14 +76,19 @@ export const SetSurveyPhotoShareSchema = SurveyAccountSchema.extend({
   enabled: z.boolean(),
 });
 
-export const AddSurveyStyleExampleSchema = z.object({
-  accountId: z.string().uuid(),
-  accountSlug: z.string().min(1).max(200),
-  title: z.string().min(1).max(500),
-  filePath: z.string().min(1).max(1_000),
-  mimeType: z.string().max(200).nullable().optional(),
-  originalFilename: z.string().max(500).optional(),
-});
+export const AddSurveyStyleExampleSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    accountSlug: z.string().min(1).max(200),
+    title: z.string().min(1).max(500),
+    filePath: z.string().min(1).max(1_000),
+    mimeType: z.string().max(200).nullable().optional(),
+    originalFilename: z.string().max(500).optional(),
+  })
+  .refine((value) => value.filePath.startsWith(`${value.accountId}/`), {
+    message: 'File must be stored under this workspace',
+    path: ['filePath'],
+  });
 
 export const UpdateSurveyStyleExampleSchema = z.object({
   accountId: z.string().uuid(),

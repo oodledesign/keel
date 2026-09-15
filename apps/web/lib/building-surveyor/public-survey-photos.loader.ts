@@ -24,7 +24,7 @@ export async function loadPublicSurveyPhotosByToken(
   token: string,
 ): Promise<PublicSurveyPhotoShare | null> {
   const normalized = token.trim();
-  if (normalized.length < 16) return null;
+  if (normalized.length < 40) return null;
 
   const admin = getSupabaseServerAdminClient();
   // photo_share_* / space_type join may lag generated Database types.
@@ -56,6 +56,7 @@ export async function loadPublicSurveyPhotosByToken(
     )
     .eq('account_id', survey.account_id)
     .eq('proposal_id', survey.id)
+    .eq('kind', 'uploaded')
     .order('photo_role', { ascending: false })
     .order('curated_sort_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
@@ -66,7 +67,6 @@ export async function loadPublicSurveyPhotosByToken(
   for (const row of (rows ?? []) as Array<Record<string, unknown>>) {
     const mime = (row.mime_type as string | null) ?? '';
     if (mime && !mime.startsWith('image/')) continue;
-    if ((row.kind as string | null) && row.kind !== 'uploaded') continue;
 
     const path =
       (row.file_path as string | null) ?? (row.storage_path as string | null);
