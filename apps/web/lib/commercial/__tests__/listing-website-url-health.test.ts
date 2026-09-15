@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   isSafePublicProbeUrl,
   isWebsitePublicPageBroken,
-  probePublicListingPageUrl,
 } from '../listing-website-url-health';
+import { probePublicListingPageUrl } from '../listing-website-url-health.server';
 
 const PUBLIC_URL =
   'https://www.bracketts.co.uk/property/20-21-chapman-way-tunbridge-wells/';
