@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  extractStyleDocumentText,
-  heuristicStyleNotes,
-  isSurveyStyleMime,
-} from './style-extract';
+import { heuristicStyleNotes, isSurveyStyleMime } from './style-extract';
+import { extractStyleDocumentText } from './style-extract.server';
 
 describe('isSurveyStyleMime', () => {
   it('accepts PDF, DOCX, HTML and text', () => {

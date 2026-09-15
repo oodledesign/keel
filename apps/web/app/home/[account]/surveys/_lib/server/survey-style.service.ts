@@ -6,10 +6,8 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { distillSurveyStyleNotes } from '~/lib/ai/survey-style-distill';
-import {
-  extractStyleDocumentText,
-  isSurveyStyleMime,
-} from '~/lib/building-surveyor/style-extract';
+import { isSurveyStyleMime } from '~/lib/building-surveyor/style-extract';
+import { extractStyleDocumentText } from '~/lib/building-surveyor/style-extract.server';
 import type { Database } from '~/lib/database.types';
 
 import type {
