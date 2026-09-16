@@ -26,9 +26,22 @@ export const AttachSurveyEpcSchema = SurveyAccountSchema.extend({
 
 export const ClearSurveyEpcSchema = SurveyAccountSchema;
 
+export const UpdateSurveyEpcSchema = SurveyAccountSchema.extend({
+  currentRating: z.string().max(4).nullable().optional(),
+  potentialRating: z.string().max(4).nullable().optional(),
+  lodgementDate: z.string().max(16).nullable().optional(),
+  floorArea: z.number().nullable().optional(),
+  fuelType: z.string().max(240).nullable().optional(),
+  recommendationsSummary: z.string().max(4000).nullable().optional(),
+});
+
+export const RefreshSurveyEpcSchema = SurveyAccountSchema;
+
 export type SurveyPropertyLookupInput = z.infer<
   typeof SurveyPropertyLookupSchema
 >;
 export type SearchSurveyEpcInput = z.infer<typeof SearchSurveyEpcSchema>;
 export type AttachSurveyEpcInput = z.infer<typeof AttachSurveyEpcSchema>;
 export type ClearSurveyEpcInput = z.infer<typeof ClearSurveyEpcSchema>;
+export type UpdateSurveyEpcInput = z.infer<typeof UpdateSurveyEpcSchema>;
+export type RefreshSurveyEpcInput = z.infer<typeof RefreshSurveyEpcSchema>;

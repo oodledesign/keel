@@ -12,8 +12,10 @@ import { EpcApiError } from '~/lib/building-surveyor/epc/types';
 import {
   AttachSurveyEpcSchema,
   ClearSurveyEpcSchema,
+  RefreshSurveyEpcSchema,
   SearchSurveyEpcSchema,
   SurveyPropertyLookupSchema,
+  UpdateSurveyEpcSchema,
 } from '../schema/survey-epc.schema';
 import { createSurveyEpcService } from './survey-epc.service';
 
@@ -104,6 +106,50 @@ export const attachSurveyEpcAction = enhanceAction(
     }
   },
   { schema: AttachSurveyEpcSchema },
+);
+
+export const updateSurveyEpcAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'update-survey-epc',
+        userId: user.id,
+        proposalId: data.proposalId,
+      },
+      'Saving surveyor EPC overrides',
+    );
+    try {
+      const result = await getService().update(data);
+      revalidateSurveyHub(data.accountSlug, data.proposalId);
+      return result;
+    } catch (error) {
+      rethrowEpc(error);
+    }
+  },
+  { schema: UpdateSurveyEpcSchema },
+);
+
+export const refreshSurveyEpcAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'refresh-survey-epc',
+        userId: user.id,
+        proposalId: data.proposalId,
+      },
+      'Refreshing GOV.UK EPC for survey',
+    );
+    try {
+      const result = await getService().refresh(data);
+      revalidateSurveyHub(data.accountSlug, data.proposalId);
+      return result;
+    } catch (error) {
+      rethrowEpc(error);
+    }
+  },
+  { schema: RefreshSurveyEpcSchema },
 );
 
 export const clearSurveyEpcAction = enhanceAction(

@@ -47,7 +47,7 @@ import {
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
 import { GroupedObservationCard } from './grouped-observation-card';
-import { SurveyEpcPanel, SurveyEpcSummaryCard } from './survey-epc-panel';
+import { SurveyEpcPanel } from './survey-epc-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
 type ClientInfo = {
@@ -154,14 +154,6 @@ export function SurveyHubContent({
     proposal.client?.company_name?.trim() ||
     proposal.title?.trim() ||
     'Property not set';
-  const address = [
-    proposal.client?.address_line_1,
-    proposal.client?.address_line_2,
-    proposal.client?.city,
-    proposal.client?.postcode,
-  ]
-    .filter(Boolean)
-    .join(', ');
 
   const grouped = useMemo(() => {
     const byKey = new Map<string, SurveyObservation[]>();
@@ -297,18 +289,15 @@ export function SurveyHubContent({
         <div className="space-y-5">
           <section className={`${workspacePanelCard} p-4 sm:p-5`}>
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-              Property and client
+              Project prep
             </h3>
+            <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+              Confirm the property after intake. EPC is pulled from the GOV.UK
+              register and can be overridden before the draft report.
+            </p>
             <dl className="mt-3 grid gap-3 sm:grid-cols-2">
               <InfoRow label="Client" value={clientName} />
               <InfoRow label="Property / enquiry" value={propertyLabel} />
-              <InfoRow
-                label="Address"
-                value={propertyLookup.address || address || 'Not recorded'}
-              />
-              {propertyLookup.uprn ? (
-                <InfoRow label="UPRN" value={propertyLookup.uprn} />
-              ) : null}
               <InfoRow
                 label="Enquiry stage"
                 value={proposal.deal?.stage?.replaceAll('_', ' ') || '—'}
@@ -353,23 +342,21 @@ export function SurveyHubContent({
                   </p>
                 )}
                 <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                  Stored on this survey so later templates can use different
-                  section sets without starting again.
+                  L2 and L3 share one section template. Field visibility can
+                  change later without starting again.
                 </p>
               </div>
             </dl>
-            <SurveyEpcSummaryCard attached={attachedEpc} />
+            <SurveyEpcPanel
+              accountId={accountId}
+              accountSlug={accountSlug}
+              proposalId={proposal.id}
+              canEdit={canEdit}
+              configured={epcConfigured}
+              lookup={propertyLookup}
+              attached={attachedEpc}
+            />
           </section>
-
-          <SurveyEpcPanel
-            accountId={accountId}
-            accountSlug={accountSlug}
-            proposalId={proposal.id}
-            canEdit={canEdit}
-            configured={epcConfigured}
-            lookup={propertyLookup}
-            attached={attachedEpc}
-          />
 
           <section className={`${workspacePanelCard} p-4 sm:p-5`}>
             <div className="flex items-start justify-between gap-3">

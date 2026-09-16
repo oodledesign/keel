@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS public.survey_epc (
   fuel_type text,
   recommendations_summary text,
   raw_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  pulled_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  overridden_fields text[] NOT NULL DEFAULT '{}',
   fetched_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -53,6 +55,16 @@ COMMENT ON TABLE public.survey_epc IS
 
 COMMENT ON COLUMN public.survey_epc.raw_json IS
   'Full certificate JSON returned by GET /api/certificate, stored for audit.';
+
+ALTER TABLE public.survey_epc
+  ADD COLUMN IF NOT EXISTS pulled_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS overridden_fields text[] NOT NULL DEFAULT '{}';
+
+COMMENT ON COLUMN public.survey_epc.pulled_json IS
+  'Auto-pulled EPC field snapshot from the register. Surveyor edits stay in the typed columns.';
+
+COMMENT ON COLUMN public.survey_epc.overridden_fields IS
+  'Field names the surveyor overrode after auto-pull (current_rating, floor_area, …).';
 
 DROP TRIGGER IF EXISTS set_survey_epc_timestamps ON public.survey_epc;
 CREATE TRIGGER set_survey_epc_timestamps

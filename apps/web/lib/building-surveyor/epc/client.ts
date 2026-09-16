@@ -23,7 +23,7 @@ function messageForStatus(status: number, fallback: string): string {
   switch (status) {
     case 401:
     case 403:
-      return 'The GOV.UK EPC API rejected the request. Check GOV_UK_EPC_API_BEARER_TOKEN.';
+      return 'EPC lookup is unavailable right now.';
     case 404:
       return 'No energy certificate was found for this lookup.';
     case 429:

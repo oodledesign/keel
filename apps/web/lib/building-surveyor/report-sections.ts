@@ -211,6 +211,8 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     heading: 'Energy efficiency',
     group: 'Back matter',
     keywords: ['energy', 'epc', 'insulation', 'efficiency'],
+    // GOV.UK EPC auto-pull prefills this slot when empty. About the property
+    // may mention floor area / fuel from the same snapshot.
   },
   {
     key: 'declaration',

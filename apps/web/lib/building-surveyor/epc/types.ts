@@ -60,6 +60,22 @@ export type SurveyEpcRecord = {
   floorArea: number | null;
   fuelType: string | null;
   recommendationsSummary: string | null;
+  pulled: {
+    currentRating: string | null;
+    potentialRating: string | null;
+    lodgementDate: string | null;
+    floorArea: number | null;
+    fuelType: string | null;
+    recommendationsSummary: string | null;
+  };
+  overriddenFields: Array<
+    | 'currentRating'
+    | 'potentialRating'
+    | 'lodgementDate'
+    | 'floorArea'
+    | 'fuelType'
+    | 'recommendationsSummary'
+  >;
   fetchedAt: string;
 };
 

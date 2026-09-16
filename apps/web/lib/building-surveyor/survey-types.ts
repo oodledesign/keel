@@ -1,6 +1,7 @@
 /**
- * Thin survey template keys. Phase 1 still uses BUILDING_SURVEY_SECTIONS
- * for every type so later templates can land without rewriting the hub.
+ * Thin survey template keys. L1/L2/L3 share BUILDING_SURVEY_SECTIONS;
+ * later types can hide fields without a second hub. EPC prefill lands in
+ * Energy efficiency and About the property for every building-surveyor survey.
  */
 export const BUILDING_SURVEY_TYPES = [
   {

@@ -1,31 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { Leaf, Loader2 } from 'lucide-react';
+import { Leaf, Loader2, RefreshCw } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
+import type { OverridableEpcField } from '~/lib/building-surveyor/epc/overrides';
+import { isEpcFieldOverridden } from '~/lib/building-surveyor/epc/overrides';
 import type {
   EpcSearchHit,
   SurveyEpcRecord,
   SurveyPropertyLookup,
 } from '~/lib/building-surveyor/epc/types';
-import {
-  workspaceBtnPrimaryMd,
-  workspacePanelCard,
-  workspaceTextMuted,
-} from '~/lib/workspace-ui';
+import { workspaceBtnPrimaryMd, workspaceTextMuted } from '~/lib/workspace-ui';
 
 import {
   attachSurveyEpcAction,
   clearSurveyEpcAction,
+  refreshSurveyEpcAction,
   saveSurveyPropertyLookupAction,
   searchSurveyEpcAction,
+  updateSurveyEpcAction,
 } from '../_lib/server/survey-epc-actions';
 import type { SurveyEpcSearchResult } from '../_lib/server/survey-epc.service';
 
@@ -33,6 +34,8 @@ type RankedHit = EpcSearchHit & {
   matchScore: number;
   addressLabel: string;
 };
+
+const ENERGY_BANDS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
 
 function formatFetchedAt(value: string | null | undefined) {
   if (!value) return null;
@@ -45,6 +48,27 @@ function formatFetchedAt(value: string | null | undefined) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function FieldSourceBadge({
+  field,
+  overridden,
+}: {
+  field: OverridableEpcField;
+  overridden: readonly string[];
+}) {
+  const edited = isEpcFieldOverridden(field, overridden);
+  return (
+    <span
+      className={`ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+        edited
+          ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+          : 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+      }`}
+    >
+      {edited ? 'Edited' : 'Auto-pulled'}
+    </span>
+  );
 }
 
 function RatingBadge({ rating }: { rating: string | null }) {
@@ -80,22 +104,58 @@ export function SurveyEpcPanel({
   const [hits, setHits] = useState<RankedHit[]>([]);
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [attaching, setAttaching] = useState<string | null>(null);
+  const [savingFields, setSavingFields] = useState(false);
+  const [currentRating, setCurrentRating] = useState(
+    initialAttached?.currentRating ?? '',
+  );
+  const [potentialRating, setPotentialRating] = useState(
+    initialAttached?.potentialRating ?? '',
+  );
+  const [lodgementDate, setLodgementDate] = useState(
+    initialAttached?.lodgementDate ?? '',
+  );
+  const [floorArea, setFloorArea] = useState(
+    initialAttached?.floorArea != null ? String(initialAttached.floorArea) : '',
+  );
+  const [fuelType, setFuelType] = useState(initialAttached?.fuelType ?? '');
+  const [recommendationsSummary, setRecommendationsSummary] = useState(
+    initialAttached?.recommendationsSummary ?? '',
+  );
+
+  const syncAttached = (next: SurveyEpcRecord | null) => {
+    setAttached(next);
+    setCurrentRating(next?.currentRating ?? '');
+    setPotentialRating(next?.potentialRating ?? '');
+    setLodgementDate(next?.lodgementDate ?? '');
+    setFloorArea(next?.floorArea != null ? String(next.floorArea) : '');
+    setFuelType(next?.fuelType ?? '');
+    setRecommendationsSummary(next?.recommendationsSummary ?? '');
+  };
+
+  useEffect(() => {
+    setAttached(initialAttached);
+    setCurrentRating(initialAttached?.currentRating ?? '');
+    setPotentialRating(initialAttached?.potentialRating ?? '');
+    setLodgementDate(initialAttached?.lodgementDate ?? '');
+    setFloorArea(
+      initialAttached?.floorArea != null
+        ? String(initialAttached.floorArea)
+        : '',
+    );
+    setFuelType(initialAttached?.fuelType ?? '');
+    setRecommendationsSummary(initialAttached?.recommendationsSummary ?? '');
+  }, [initialAttached]);
 
   const applySearch = (result: SurveyEpcSearchResult) => {
     setHits(result.hits);
     if (result.hits.length === 0) {
       toast.error('No energy certificates matched this address.');
-      return;
     }
-    toast.success(
-      result.hits.length === 1
-        ? 'One certificate found — confirm it below.'
-        : `${result.hits.length} certificates found. Confirm the matching one.`,
-    );
   };
 
-  const handleSave = async (suggest: boolean) => {
+  const handleConfirmAddress = async () => {
     if (!canEdit) return;
     setSaving(true);
     try {
@@ -106,12 +166,22 @@ export function SurveyEpcPanel({
         address: address.trim() || null,
         postcode: postcode.trim() || null,
         uprn: uprn.trim() || null,
-        suggest,
+        suggest: configured,
       });
       setAddress(result.lookup.address ?? '');
       setPostcode(result.lookup.postcode ?? '');
       setUprn(result.lookup.uprn ?? '');
-      toast.success('Property lookup saved');
+
+      if (result.autoAttached && result.attached) {
+        syncAttached(result.attached);
+        setHits([]);
+        toast.success(
+          'Address confirmed. EPC auto-pulled from the register — review and edit if needed.',
+        );
+        return;
+      }
+
+      toast.success('Address confirmed');
       if (result.suggestions) applySearch(result.suggestions);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -120,8 +190,8 @@ export function SurveyEpcPanel({
     }
   };
 
-  const handleFetch = async () => {
-    if (!canEdit) return;
+  const handleSearch = async () => {
+    if (!canEdit || !configured) return;
     setSearching(true);
     try {
       const result = await searchSurveyEpcAction({
@@ -133,9 +203,7 @@ export function SurveyEpcPanel({
         uprn: uprn.trim() || null,
       });
       if (!result.configured) {
-        toast.error(
-          'EPC lookup is not configured on this server. Ask an admin to add the GOV.UK EPC API token.',
-        );
+        toast.error('EPC lookup is unavailable.');
         return;
       }
       applySearch(result);
@@ -156,14 +224,36 @@ export function SurveyEpcPanel({
         proposalId,
         certificateNumber,
       });
-      setAttached(next);
+      syncAttached(next);
       setHits([]);
       if (next.uprn) setUprn(next.uprn);
-      toast.success('EPC attached to this survey');
+      toast.success('EPC attached. Fields are auto-pulled and editable.');
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
       setAttaching(null);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!canEdit || !configured) return;
+    if (!attached) {
+      await handleSearch();
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const next = await refreshSurveyEpcAction({
+        accountId,
+        accountSlug,
+        proposalId,
+      });
+      syncAttached(next);
+      toast.success('EPC refreshed. Your edits were kept.');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -175,23 +265,54 @@ export function SurveyEpcPanel({
         accountSlug,
         proposalId,
       });
-      setAttached(null);
+      syncAttached(null);
       toast.success('EPC removed from this survey');
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
   };
 
+  const handleSaveOverrides = async () => {
+    if (!canEdit || !attached) return;
+    const parsedFloor = floorArea.trim() === '' ? null : Number(floorArea);
+    if (floorArea.trim() && !Number.isFinite(parsedFloor)) {
+      toast.error('Floor area must be a number.');
+      return;
+    }
+    setSavingFields(true);
+    try {
+      const next = await updateSurveyEpcAction({
+        accountId,
+        accountSlug,
+        proposalId,
+        currentRating: currentRating.trim() || null,
+        potentialRating: potentialRating.trim() || null,
+        lodgementDate: lodgementDate.trim() || null,
+        floorArea: parsedFloor,
+        fuelType: fuelType.trim() || null,
+        recommendationsSummary: recommendationsSummary.trim() || null,
+      });
+      syncAttached(next);
+      toast.success('EPC fields saved');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setSavingFields(false);
+    }
+  };
+
+  const overridden = attached?.overriddenFields ?? [];
+
   return (
-    <section className={`${workspacePanelCard} p-4 sm:p-5`}>
+    <div className="mt-5 border-t border-[color:var(--workspace-shell-border)] pt-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Energy Performance Certificate
-          </h3>
+          <h4 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Property address
+          </h4>
           <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-            Fetch the GOV.UK register certificate for this property and use it
-            in About the property and the report energy section.
+            Confirm the survey address to auto-pull the Energy Performance
+            Certificate. Values are marked auto-pulled and can be edited.
           </p>
         </div>
         <Leaf className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`} />
@@ -223,112 +344,212 @@ export function SurveyEpcPanel({
               className="mt-1"
               value={uprn}
               onChange={(event) => setUprn(event.target.value)}
-              placeholder="Optional"
+              placeholder="If known"
             />
           </div>
           <div className="flex flex-wrap gap-2 sm:col-span-2">
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              className={workspaceBtnPrimaryMd}
               disabled={saving}
-              onClick={() => void handleSave(configured)}
+              onClick={() => void handleConfirmAddress()}
             >
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Save address
+              Confirm address
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              className={workspaceBtnPrimaryMd}
-              disabled={searching || !configured}
-              onClick={() => void handleFetch()}
-            >
-              {searching ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Leaf className="mr-2 h-4 w-4" />
-              )}
-              Fetch EPC
-            </Button>
+            {configured ? (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={searching || refreshing}
+                  onClick={() => void handleRefresh()}
+                >
+                  {refreshing || searching ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {attached ? 'Refresh EPC' : 'Find EPC'}
+                </Button>
+              </>
+            ) : null}
           </div>
-          {!configured ? (
-            <p className={`text-xs sm:col-span-2 ${workspaceTextMuted}`}>
-              EPC lookup is not enabled on this server yet. An admin needs to
-              add the GOV.UK Energy Certificate Data API bearer token.
-            </p>
-          ) : null}
         </div>
-      ) : null}
-
-      {attached ? (
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+      ) : (
+        <dl className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
-            <dt className={`text-xs ${workspaceTextMuted}`}>
-              Current / potential
-            </dt>
-            <dd className="mt-1 flex items-center gap-2">
-              <RatingBadge rating={attached.currentRating} />
-              <span className={workspaceTextMuted}>→</span>
-              <RatingBadge rating={attached.potentialRating} />
+            <dt className={`text-xs ${workspaceTextMuted}`}>Address</dt>
+            <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
+              {address || 'Not recorded'}
             </dd>
           </div>
           <div>
-            <dt className={`text-xs ${workspaceTextMuted}`}>Certificate</dt>
+            <dt className={`text-xs ${workspaceTextMuted}`}>Postcode</dt>
             <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
-              {attached.certificateNumber}
+              {postcode || '—'}
             </dd>
           </div>
-          <div>
-            <dt className={`text-xs ${workspaceTextMuted}`}>Lodged</dt>
-            <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
-              {attached.lodgementDate || '—'}
-            </dd>
-          </div>
-          <div>
-            <dt className={`text-xs ${workspaceTextMuted}`}>Floor area</dt>
-            <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
-              {attached.floorArea != null ? `${attached.floorArea} m²` : '—'}
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className={`text-xs ${workspaceTextMuted}`}>Fuel / heating</dt>
-            <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
-              {attached.fuelType || '—'}
-            </dd>
-          </div>
-          {attached.recommendationsSummary ? (
-            <div className="sm:col-span-2">
-              <dt className={`text-xs ${workspaceTextMuted}`}>
-                Recommendations
-              </dt>
+          {uprn ? (
+            <div>
+              <dt className={`text-xs ${workspaceTextMuted}`}>UPRN</dt>
               <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
-                {attached.recommendationsSummary}
+                {uprn}
               </dd>
             </div>
           ) : null}
-          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+        </dl>
+      )}
+
+      <div className="mt-5">
+        <h4 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          Energy / About the property
+        </h4>
+        <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+          Register data used in the Energy efficiency section. Floor area and
+          fuel can also appear in About the property. L2 and L3 share this
+          template.
+        </p>
+      </div>
+
+      {attached ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label className={`text-xs ${workspaceTextMuted}`}>
+              Current rating
+              <FieldSourceBadge field="currentRating" overridden={overridden} />
+            </Label>
+            <select
+              className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
+              value={currentRating}
+              disabled={!canEdit}
+              onChange={(event) => setCurrentRating(event.target.value)}
+            >
+              <option value="">—</option>
+              {ENERGY_BANDS.map((band) => (
+                <option key={band} value={band}>
+                  {band}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className={`text-xs ${workspaceTextMuted}`}>
+              Potential rating
+              <FieldSourceBadge
+                field="potentialRating"
+                overridden={overridden}
+              />
+            </Label>
+            <select
+              className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
+              value={potentialRating}
+              disabled={!canEdit}
+              onChange={(event) => setPotentialRating(event.target.value)}
+            >
+              <option value="">—</option>
+              {ENERGY_BANDS.map((band) => (
+                <option key={band} value={band}>
+                  {band}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className={`text-xs ${workspaceTextMuted}`}>
+              Lodged
+              <FieldSourceBadge field="lodgementDate" overridden={overridden} />
+            </Label>
+            <Input
+              className="mt-1"
+              type="date"
+              value={lodgementDate}
+              disabled={!canEdit}
+              onChange={(event) => setLodgementDate(event.target.value)}
+            />
+          </div>
+          <div>
+            <Label className={`text-xs ${workspaceTextMuted}`}>
+              Floor area (m²)
+              <FieldSourceBadge field="floorArea" overridden={overridden} />
+            </Label>
+            <Input
+              className="mt-1"
+              inputMode="decimal"
+              value={floorArea}
+              disabled={!canEdit}
+              onChange={(event) => setFloorArea(event.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className={`text-xs ${workspaceTextMuted}`}>
+              Fuel / heating
+              <FieldSourceBadge field="fuelType" overridden={overridden} />
+            </Label>
+            <Input
+              className="mt-1"
+              value={fuelType}
+              disabled={!canEdit}
+              onChange={(event) => setFuelType(event.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className={`text-xs ${workspaceTextMuted}`}>
+              Recommendations
+              <FieldSourceBadge
+                field="recommendationsSummary"
+                overridden={overridden}
+              />
+            </Label>
+            <Textarea
+              className="mt-1 min-h-20"
+              value={recommendationsSummary}
+              disabled={!canEdit}
+              onChange={(event) =>
+                setRecommendationsSummary(event.target.value)
+              }
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
             <p className={`text-xs ${workspaceTextMuted}`}>
-              Fetched {formatFetchedAt(attached.fetchedAt) ?? 'recently'} from
-              the GOV.UK Energy Certificate Data API.
+              Certificate {attached.certificateNumber}
+              {formatFetchedAt(attached.fetchedAt)
+                ? ` · pulled ${formatFetchedAt(attached.fetchedAt)}`
+                : ''}
             </p>
             {canEdit ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void handleClear()}
-              >
-                Remove
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={savingFields}
+                  onClick={() => void handleSaveOverrides()}
+                >
+                  {savingFields ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Save edits
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void handleClear()}
+                >
+                  Remove
+                </Button>
+              </div>
             ) : null}
           </div>
-        </dl>
+        </div>
       ) : (
-        <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
-          No EPC attached yet.
+        <p className={`mt-3 text-sm ${workspaceTextMuted}`}>
+          Confirm the address to auto-pull an EPC for this property.
         </p>
       )}
 
@@ -351,23 +572,25 @@ export function SurveyEpcPanel({
                   {hit.registrationDate ? ` · ${hit.registrationDate}` : ''}
                 </p>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={attaching === hit.certificateNumber}
-                onClick={() => void handleAttach(hit.certificateNumber)}
-              >
-                {attaching === hit.certificateNumber ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Use this certificate
-              </Button>
+              {canEdit ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={attaching === hit.certificateNumber}
+                  onClick={() => void handleAttach(hit.certificateNumber)}
+                >
+                  {attaching === hit.certificateNumber ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Use this certificate
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
       ) : null}
-    </section>
+    </div>
   );
 }
 
@@ -389,6 +612,13 @@ export function SurveyEpcSummaryCard({
         <span className={`text-sm ${workspaceTextMuted}`}>
           {attached.certificateNumber}
         </span>
+        {attached.overriddenFields.length > 0 ? (
+          <span className={`text-xs ${workspaceTextMuted}`}>
+            {attached.overriddenFields.length} edited
+          </span>
+        ) : (
+          <span className={`text-xs ${workspaceTextMuted}`}>Auto-pulled</span>
+        )}
       </div>
       {attached.fuelType || attached.floorArea != null ? (
         <p className={`mt-2 text-sm text-[var(--workspace-shell-text)]`}>
