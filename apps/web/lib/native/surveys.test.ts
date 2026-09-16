@@ -5,6 +5,7 @@ import {
   addNativeSurveyPhoto,
   createNativeSurvey,
   createNativeSurveySession,
+  getNativeSurvey,
   listNativeSurveys,
 } from './surveys';
 import type { NativeWorkspace } from './workspace-shared';
@@ -363,8 +364,10 @@ describe('createNativeSurveySession', () => {
         body: 'Stopcock is stiff.\n\nSupply pipework is copper.',
         rics_code: 'F3',
         section_key: 'water',
-        transcript_id: 'sess-2',
       }),
+    );
+    expect(updateChain.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ transcript_id: 'sess-2' }),
     );
   });
 
@@ -445,5 +448,114 @@ describe('addNativeSurveyPhoto', () => {
     );
     expect(photo.rics_code).toBe('F3');
     expect(photo.section_key).toBe('water');
+  });
+});
+
+describe('getNativeSurvey', () => {
+  it('returns on-site sections with the accumulated note and tagged photos', async () => {
+    const surveyLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          survey_level: 2,
+          client_id: clientId,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const clientChain = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: clientId,
+            display_name: 'Hope and Wonder',
+            first_name: null,
+            last_name: null,
+            company_name: null,
+            client_type: 'individual',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const sessionChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'sess-1',
+            title: 'F3 Water',
+            content: 'Stopcock is stiff.',
+            source: 'desktop_recorder',
+            duration_seconds: 12,
+            meeting_date: '2026-09-15',
+            created_at: '2026-09-15T11:00:00Z',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const photoChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'photo-1',
+            title: 'F3 Water',
+            mime_type: 'image/jpeg',
+            created_at: '2026-09-16T11:00:00Z',
+            file_path: 'path/stopcock.jpg',
+            pinned_section_key: 'water',
+            kind: 'uploaded',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const observationChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            transcript_id: 'sess-1',
+            section_key: 'water',
+            rics_code: 'F3',
+            body: 'Stopcock is stiff.\n\nSupply pipework is copper.',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === 'proposals') return surveyLookup;
+      if (table === 'clients') return clientChain;
+      if (table === 'meeting_transcripts') return sessionChain;
+      if (table === 'docs') return photoChain;
+      if (table === 'survey_observations') return observationChain;
+      return surveyLookup;
+    });
+
+    const detail = await getNativeSurvey({ from } as never, surveyor, surveyId);
+    const water = detail.sections.find((item) => item.rics_code === 'F3');
+
+    expect(water?.label).toBe('F3 Water');
+    expect(water?.note).toBe(
+      'Stopcock is stiff.\n\nSupply pipework is copper.',
+    );
+    expect(water?.photo_count).toBe(1);
+    expect(detail.sessions[0]?.rics_code).toBe('F3');
+    expect(detail.photos[0]?.rics_code).toBe('F3');
+    expect(detail.photos[0]?.section_key).toBe('water');
   });
 });

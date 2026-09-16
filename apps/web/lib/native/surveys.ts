@@ -745,6 +745,7 @@ async function upsertUserSectionObservation(input: {
     .select('id, body')
     .eq('account_id', input.workspaceId)
     .eq('proposal_id', input.surveyId)
+    // Catalogue codes are alphanumeric / underscore only (F3, water).
     .or(
       `rics_code.eq.${input.section.ricsCode},section_key.eq.${input.section.key}`,
     )
@@ -766,7 +767,6 @@ async function upsertUserSectionObservation(input: {
       .from('survey_observations')
       .update({
         body: appendSurveySectionNote(existing.body, incoming),
-        transcript_id: input.transcriptId,
         section_key: input.section.key,
         rics_code: input.section.ricsCode,
       } as never)

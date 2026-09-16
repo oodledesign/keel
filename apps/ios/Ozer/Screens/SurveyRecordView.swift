@@ -312,7 +312,6 @@ struct SurveyRecordView: View {
         for item in catalogue {
             seedNote(for: item)
         }
-        seedNote(for: selectedSection)
     }
 
     private func seedNote(for item: SurveySectionItem) {
