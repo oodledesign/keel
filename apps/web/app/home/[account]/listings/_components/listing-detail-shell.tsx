@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -51,15 +51,21 @@ import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
 } from '~/lib/commercial/commercial-constants';
+import { buildListingFeedChannels } from '~/lib/commercial/listing-feed-channels';
+import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import type { CommercialListing } from '../_lib/server/listings.service';
+import type {
+  CommercialListing,
+  CommercialPortalPublication,
+} from '../_lib/server/listings.service';
 import {
   archiveListing,
   duplicateListing,
 } from '../_lib/server/server-actions';
 import { DisposalAccessProvider } from './disposal-access-context';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
+import { ListingFeedsControl } from './listing-feeds-control';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingPageSearch } from './listing-page-search';
 import { ListingSectorPills } from './listing-sector-pills';
@@ -167,6 +173,10 @@ export function ListingDetailShell({
   accountId,
   canEditDisposals,
   rightmoveUrls = [],
+  publications = [],
+  mediaCreatedAt = [],
+  websitePublicPageUrl = null,
+  websiteUrlHealth = null,
   children,
 }: {
   listing: CommercialListing;
@@ -174,6 +184,10 @@ export function ListingDetailShell({
   accountId: string;
   canEditDisposals: boolean;
   rightmoveUrls?: string[];
+  publications?: CommercialPortalPublication[];
+  mediaCreatedAt?: Array<string | null | undefined>;
+  websitePublicPageUrl?: string | null;
+  websiteUrlHealth?: WebsiteUrlHealth | null;
   children: React.ReactNode;
 }) {
   const safeRightmoveUrls = rightmoveUrls.filter(isSafeHttpUrl);
@@ -205,6 +219,25 @@ export function ListingDetailShell({
   const address = listingAddress(listing);
   const isArchived = listing.status === 'withdrawn';
   const showStickyTitle = !isOverview || heroPinned;
+  const feedChannels = useMemo(
+    () =>
+      buildListingFeedChannels({
+        listing,
+        accountSlug,
+        publications,
+        mediaCreatedAt,
+        websitePublicPageUrl,
+        websiteUrlHealth,
+      }),
+    [
+      listing,
+      accountSlug,
+      publications,
+      mediaCreatedAt,
+      websitePublicPageUrl,
+      websiteUrlHealth,
+    ],
+  );
 
   useEffect(() => {
     if (!isOverview) {
@@ -380,7 +413,13 @@ export function ListingDetailShell({
               listing={listing}
               address={address}
               headerActions={headerActions}
-              rightmoveUrls={safeRightmoveUrls}
+              feedsControl={
+                <ListingFeedsControl
+                  channels={feedChannels}
+                  accountId={accountId}
+                  listingId={listing.id}
+                />
+              }
             />
           </>
         ) : null}
@@ -400,6 +439,11 @@ export function ListingDetailShell({
                   {listing.name}
                 </h2>
                 <ListingStatusBadge status={listing.status} />
+                <ListingFeedsControl
+                  channels={feedChannels}
+                  accountId={accountId}
+                  listingId={listing.id}
+                />
                 {headerActions}
               </div>
               {address ? (
@@ -551,12 +595,12 @@ function OverviewHeader({
   listing,
   address,
   headerActions,
-  rightmoveUrls,
+  feedsControl,
 }: {
   listing: CommercialListing;
   address: string;
   headerActions: React.ReactNode;
-  rightmoveUrls: string[];
+  feedsControl: React.ReactNode;
 }) {
   const updatedLabel = formatUpdatedAt(listing.updatedAt);
 
@@ -632,26 +676,7 @@ function OverviewHeader({
               Updated {updatedLabel}
             </p>
           ) : null}
-          {rightmoveUrls.length > 0 ? (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {rightmoveUrls.map((url, index) => (
-                <Button
-                  key={url}
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                >
-                  <a href={url} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {rightmoveUrls.length === 1
-                      ? 'Open on Rightmove'
-                      : `Rightmove ${index + 1}`}
-                  </a>
-                </Button>
-              ))}
-            </div>
-          ) : null}
+          <div className="pt-1">{feedsControl}</div>
         </div>
       </div>
     </div>
