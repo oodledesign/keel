@@ -390,6 +390,9 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
           ? await this.getForm(input.accountId, input.formId)
           : null;
 
+      // Audience workspaces can keep editing a pre-existing full form
+      // (pipeline / RSVP / listing) but cannot convert it to a different
+      // non-list destination. New work stays mailing_list-only.
       if (
         mode === 'audience' &&
         input.destination !== 'mailing_list' &&

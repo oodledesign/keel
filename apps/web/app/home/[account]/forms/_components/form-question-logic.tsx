@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { GitBranch, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -89,12 +90,11 @@ export function FormQuestionLogic({
               <label
                 className={`flex items-center gap-2 text-sm ${workspaceText}`}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={Boolean(showWhen)}
-                  onChange={(event) =>
+                  onCheckedChange={(checked) =>
                     onChange({
-                      visibleWhen: event.target.checked
+                      visibleWhen: checked
                         ? createEmptyVisibleWhen(priorFields[0]?.key ?? '')
                         : undefined,
                     })

@@ -45,8 +45,6 @@ export const AUDIENCE_FORM_DESTINATIONS = ['mailing_list'] as const;
 
 export const AUDIENCE_FORM_TEMPLATES = ['subscribe'] as const;
 
-export const FULL_ONLY_FORM_FIELD_TYPES = ['file'] as const;
-
 export function isAudienceFormDestination(
   destination: WorkspaceFormDestination,
 ): boolean {
