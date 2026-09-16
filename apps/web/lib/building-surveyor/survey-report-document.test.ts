@@ -99,6 +99,22 @@ describe('parseSurveyReportDocument', () => {
       }),
     ).toBeNull();
   });
+
+  it('rejects non-http image sources', () => {
+    expect(
+      parseSurveyReportDocument({
+        version: 1,
+        blocks: [
+          {
+            id: 'img-1',
+            type: 'image',
+            src: 'javascript:alert(1)',
+            alt: 'x',
+          },
+        ],
+      }),
+    ).toBeNull();
+  });
 });
 
 describe('hydrateSurveyReportImageSrcs', () => {

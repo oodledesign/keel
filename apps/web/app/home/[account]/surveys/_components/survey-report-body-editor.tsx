@@ -43,6 +43,7 @@ import {
   removeSurveyReportBlock,
   reorderSurveyReportBlocks,
 } from '~/lib/building-surveyor/survey-report-document';
+import { sanitizeRichText } from '~/lib/campaigns/compile-campaign-document';
 import { RICH_TEXT_LIST_CLASS } from '~/lib/rich-text-html';
 import {
   workspacePanelCard,
@@ -424,7 +425,7 @@ function CanvasBlockPreview({ block }: { block: SurveyReportBlock }) {
         <div
           className={`px-6 py-3 text-sm leading-relaxed ${RICH_TEXT_LIST_CLASS}`}
           dangerouslySetInnerHTML={{
-            __html: block.html || '<p></p>',
+            __html: sanitizeRichText(block.html || '<p></p>'),
           }}
         />
       );

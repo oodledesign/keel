@@ -1,15 +1,9 @@
 import { z } from 'zod';
 
+import { SurveyReportDocumentSchema } from '~/lib/building-surveyor/survey-report-document';
+
 const optionalString = z.string().optional();
 const optionalNullableString = z.string().nullable().optional();
-
-const proposalStatus = z.enum([
-  'draft',
-  'sent',
-  'read',
-  'approved',
-  'declined',
-]);
 
 export const ProposalContextRefSchema = z.object({
   type: z.enum(['note', 'file']),
@@ -72,7 +66,7 @@ export const CreateProposalSchema = clientOrDealRefine(
     deal_id: z.string().uuid().nullable().optional(),
     title: optionalNullableString,
     content_html: optionalNullableString,
-    body_document: z.unknown().optional(),
+    body_document: SurveyReportDocumentSchema.optional(),
     recipient_name: optionalNullableString,
     recipient_email: optionalNullableString,
     total_pence: z.number().int().min(0).nullable().optional(),
@@ -92,7 +86,7 @@ export const UpdateProposalSchema = z.object({
   deal_id: z.string().uuid().nullable().optional(),
   title: optionalNullableString,
   content_html: optionalNullableString,
-  body_document: z.unknown().optional(),
+  body_document: SurveyReportDocumentSchema.optional(),
   recipient_name: optionalNullableString,
   recipient_email: optionalNullableString,
   total_pence: z.number().int().min(0).nullable().optional(),

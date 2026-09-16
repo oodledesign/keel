@@ -74,7 +74,12 @@ export const SurveyReportBlockSchema = z.discriminatedUnion('type', [
   z.object({
     id: z.string().min(1).max(80),
     type: z.literal('image'),
-    src: z.string().max(2_000),
+    src: z
+      .string()
+      .max(2_000)
+      .refine((value) => !value || isSafeHttpUrl(value), {
+        message: 'Image URL must be http(s)',
+      }),
     alt: z.string().max(200),
     caption: z.string().max(1_000).optional(),
     documentId: z.string().uuid().optional(),

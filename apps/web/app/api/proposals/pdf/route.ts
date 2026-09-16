@@ -10,7 +10,10 @@ import {
 } from '~/home/[account]/proposals/_lib/server/proposal-pdf';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
-import { parseSurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
+import {
+  isSafeHttpUrl,
+  parseSurveyReportDocument,
+} from '~/lib/building-surveyor/survey-report-document';
 
 async function buildPayload(
   proposal: Record<string, unknown>,
@@ -100,7 +103,7 @@ async function loadSurveyImageBytes(
       if (block.type !== 'image') return;
       const url =
         (block.documentId ? signed[block.documentId] : null) ?? block.src;
-      if (!url) return;
+      if (!url || !isSafeHttpUrl(url)) return;
       const image = await fetchImageBytes(url);
       if (!image) return;
       if (block.documentId) bytes[block.documentId] = image.bytes;

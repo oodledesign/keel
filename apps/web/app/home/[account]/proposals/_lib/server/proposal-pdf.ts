@@ -11,6 +11,7 @@ import {
 import {
   type SurveyReportBlock,
   type SurveyReportDocument,
+  isSafeHttpUrl,
   parseSurveyReportDocument,
 } from '~/lib/building-surveyor/survey-report-document';
 import { stripHtmlToText } from '~/lib/campaigns/campaign-document';
@@ -96,6 +97,7 @@ async function fetchLogoBytes(
 export async function fetchImageBytes(
   url: string,
 ): Promise<{ bytes: Uint8Array; kind: 'png' | 'jpg' } | null> {
+  if (!isSafeHttpUrl(url)) return null;
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
