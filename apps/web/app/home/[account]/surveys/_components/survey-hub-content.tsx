@@ -13,6 +13,7 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
+import { SurveyStatusBadge } from '~/components/surveys/survey-status-badge';
 import pathsConfig from '~/config/paths.config';
 import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
@@ -574,10 +575,12 @@ export function SurveyHubContent({
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
               Draft report
             </h3>
-            <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-              Status: {proposal.status}
-              {hasDraft ? ' · draft content saved' : ' · no draft yet'}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+              <SurveyStatusBadge status={proposal.status} />
+              <span className={workspaceTextMuted}>
+                {hasDraft ? 'Draft content saved' : 'No draft yet'}
+              </span>
+            </div>
             <p className="mt-3 text-sm">
               <Link href={editHref} className={workspaceLinkAccent}>
                 {hasDraft

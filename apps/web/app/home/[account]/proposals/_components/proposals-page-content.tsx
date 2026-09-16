@@ -30,6 +30,7 @@ import { toast } from '@kit/ui/sonner';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import { AddressSearchField } from '~/components/commercial/address-search-field';
+import { SurveyStatusBadge } from '~/components/surveys/survey-status-badge';
 import pathsConfig from '~/config/paths.config';
 import {
   listNotesAndFilesForContextAction,
@@ -803,7 +804,11 @@ export function ProposalsPageContent({
                         : '—'}
                     </td>
                     <td className="py-3 pr-4">
-                      <ProposalStatusBadge status={row.status} />
+                      {documentKind === 'survey_report' ? (
+                        <SurveyStatusBadge status={row.status} />
+                      ) : (
+                        <ProposalStatusBadge status={row.status} />
+                      )}
                     </td>
                     <td className="py-3">
                       <ProposalRowMenu

@@ -67,6 +67,22 @@ enum SurveyQueueStatus: Equatable {
     }
 }
 
+enum SurveyStatusTone: Equatable {
+    case draft
+    case inProgress
+    case sent
+    case read
+    case approved
+    case declined
+    case archived
+    case unknown
+}
+
+struct SurveyStatusPresentation: Equatable {
+    var label: String
+    var tone: SurveyStatusTone
+}
+
 enum SurveyDisplay {
     static func surveyLevel(from surveyType: String?) -> Int {
         SurveyTypeOption.parse(surveyType).surveyLevel
@@ -103,6 +119,58 @@ enum SurveyDisplay {
             return pendingCount > 0 ? .onlinePending(pendingCount) : .onlineSynced
         }
         return .offlinePending(pendingCount)
+    }
+
+    /// Survey reports reuse `proposals.status` (`draft`, `sent`, `read`,
+    /// `approved`, `declined`). Aliases cover in progress / published / archived.
+    static func statusPresentation(for raw: String?) -> SurveyStatusPresentation {
+        let key = statusKey(raw)
+        switch key {
+        case "draft":
+            return SurveyStatusPresentation(label: "Draft", tone: .draft)
+        case "in_progress", "inprogress":
+            return SurveyStatusPresentation(label: "In progress", tone: .inProgress)
+        case "sent":
+            return SurveyStatusPresentation(label: "Sent", tone: .sent)
+        case "published":
+            return SurveyStatusPresentation(label: "Published", tone: .sent)
+        case "read":
+            return SurveyStatusPresentation(label: "Read", tone: .read)
+        case "approved":
+            return SurveyStatusPresentation(label: "Approved", tone: .approved)
+        case "declined":
+            return SurveyStatusPresentation(label: "Declined", tone: .declined)
+        case "archived":
+            return SurveyStatusPresentation(label: "Archived", tone: .archived)
+        default:
+            let fallback = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if fallback.isEmpty {
+                return SurveyStatusPresentation(label: "Draft", tone: .draft)
+            }
+            return SurveyStatusPresentation(label: titleCaseStatus(fallback), tone: .unknown)
+        }
+    }
+
+    static func statusKey(_ raw: String?) -> String {
+        (raw ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "’", with: "")
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "_", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+    }
+
+    static func titleCaseStatus(_ raw: String) -> String {
+        raw
+            .replacingOccurrences(of: "[_-]+", with: " ", options: .regularExpression)
+            .split(separator: " ")
+            .map { part in
+                let word = String(part)
+                guard let first = word.first else { return word }
+                return String(first).uppercased() + word.dropFirst().lowercased()
+            }
+            .joined(separator: " ")
     }
 
     static let dayFormatter: DateFormatter = {

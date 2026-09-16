@@ -33,6 +33,21 @@ enum SurveyDisplayTests {
                 && SurveyTypeOption.ricsHssL3.surveyLevel == 3
         }
 
+        check("survey status uses British English labels and shared tones") {
+            SurveyDisplay.statusPresentation(for: "draft")
+                == SurveyStatusPresentation(label: "Draft", tone: .draft)
+                && SurveyDisplay.statusPresentation(for: "SENT")
+                == SurveyStatusPresentation(label: "Sent", tone: .sent)
+                && SurveyDisplay.statusPresentation(for: "in-progress")
+                == SurveyStatusPresentation(label: "In progress", tone: .inProgress)
+                && SurveyDisplay.statusPresentation(for: "published")
+                == SurveyStatusPresentation(label: "Published", tone: .sent)
+                && SurveyDisplay.statusPresentation(for: "archived")
+                == SurveyStatusPresentation(label: "Archived", tone: .archived)
+                && SurveyDisplay.statusPresentation(for: "ready_to_issue").label
+                == "Ready To Issue"
+        }
+
         check("later visits append to the same section note") {
             SurveyDisplay.appendNote(existing: "Stopcock is stiff.", incoming: "Supply is copper.")
                 == "Stopcock is stiff.\n\nSupply is copper."

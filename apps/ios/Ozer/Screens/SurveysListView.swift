@@ -139,9 +139,14 @@ struct SurveysListView: View {
 
     private func surveyRow(_ item: SurveyItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(item.title)
-                .font(.body.weight(.medium))
-                .foregroundStyle(OzerPalette.plum)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(item.title)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                SurveyStatusBadge(status: item.status)
+            }
             Text(item.typeLabel)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(OzerPalette.plum)
