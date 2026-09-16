@@ -5,6 +5,9 @@ import {
   buildingSurveyTypeLabel,
   isBuildingSurveyTypeKey,
   normalizeBuildingSurveyType,
+  normalizeSurveyLevel,
+  surveyLevelFromType,
+  surveyTypeForLevel,
 } from './survey-types';
 
 describe('building survey types', () => {
@@ -22,5 +25,14 @@ describe('building survey types', () => {
     expect(buildingSurveyTypeLabel('rics_hss_l3')).toBe(
       'RICS Home Survey Level 3',
     );
+  });
+
+  it('dual-writes survey level onto the shared template keys', () => {
+    expect(normalizeSurveyLevel(3)).toBe(3);
+    expect(normalizeSurveyLevel('l3')).toBe(3);
+    expect(surveyLevelFromType('rics_hss_l3')).toBe(3);
+    expect(surveyLevelFromType('dilapidations')).toBe(2);
+    expect(surveyTypeForLevel(3)).toBe('rics_hss_l3');
+    expect(surveyTypeForLevel(2)).toBe('rics_hss_l2');
   });
 });

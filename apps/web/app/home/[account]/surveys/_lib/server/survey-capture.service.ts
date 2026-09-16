@@ -12,8 +12,15 @@ import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
 import { curateSurveyPhotos } from '~/lib/ai/survey-photo-curate';
 import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
 import { combineSurveyStyleGuidance } from '~/lib/ai/survey-style-distill';
+import { compileSurveyReportDocument } from '~/lib/building-surveyor/compile-survey-report-document';
+import {
+  applyEpcEnergySection,
+  energySectionHtmlFromEpc,
+  epcFactsForPrompt,
+} from '~/lib/building-surveyor/epc/energy-section';
 import { buildingSurveySectionByKey } from '~/lib/building-surveyor/report-sections';
 import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
+import { surveyLevelFromType } from '~/lib/building-surveyor/survey-types';
 import {
   type BuildingSurveyTypeKey,
   DEFAULT_BUILDING_SURVEY_TYPE,
@@ -52,6 +59,15 @@ type SurveyRow = {
   survey_type?: string | null;
   photo_share_token?: string | null;
   photo_share_enabled?: boolean | null;
+  survey_level?: number | null;
+  survey_property_address?: string | null;
+  survey_property_postcode?: string | null;
+  survey_uprn?: string | null;
+  survey_flood_risk_band?: string | null;
+  survey_flood_risk_summary?: string | null;
+  survey_flood_source?: string | null;
+  survey_flood_raw_json?: unknown;
+  survey_flood_fetched_at?: string | null;
 };
 
 function mapObservation(row: Record<string, unknown>): SurveyObservation {
@@ -130,7 +146,7 @@ class SurveyCaptureService {
     const { data, error } = await this.db
       .from('proposals')
       .select(
-        'id, account_id, kind, title, status, content_html, body_document, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled',
+        'id, account_id, kind, title, status, content_html, body_document, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled, survey_level, survey_property_address, survey_property_postcode, survey_uprn, survey_flood_risk_band, survey_flood_risk_summary, survey_flood_source, survey_flood_raw_json, survey_flood_fetched_at',
       )
       .eq('id', proposalId)
       .eq('account_id', accountId)
@@ -445,7 +461,10 @@ class SurveyCaptureService {
 
     const { error } = await this.db
       .from('proposals')
-      .update({ survey_type: input.surveyType })
+      .update({
+        survey_type: input.surveyType,
+        survey_level: surveyLevelFromType(input.surveyType),
+      })
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
       .eq('kind', 'survey_report');
@@ -490,6 +509,38 @@ class SurveyCaptureService {
       })),
     );
 
+    const { data: epcRow } = await this.db
+      .from('survey_epc')
+      .select(
+        'certificate_number, uprn, current_rating, potential_rating, lodgement_date, floor_area, fuel_type, recommendations_summary',
+      )
+      .eq('account_id', input.accountId)
+      .eq('proposal_id', input.proposalId)
+      .maybeSingle();
+
+    const epcSummary = epcRow
+      ? {
+          certificateNumber: String(epcRow.certificate_number ?? ''),
+          uprn: (epcRow.uprn as string | null) ?? null,
+          addressLine1: null,
+          addressLine2: null,
+          postTown: null,
+          postcode: null,
+          currentRating: (epcRow.current_rating as string | null) ?? null,
+          potentialRating: (epcRow.potential_rating as string | null) ?? null,
+          currentScore: null,
+          potentialScore: null,
+          lodgementDate: (epcRow.lodgement_date as string | null) ?? null,
+          floorArea:
+            epcRow.floor_area == null ? null : Number(epcRow.floor_area),
+          fuelType: (epcRow.fuel_type as string | null) ?? null,
+          dwellingType: null,
+          recommendations: [],
+          recommendationsSummary:
+            (epcRow.recommendations_summary as string | null) ?? null,
+        }
+      : null;
+
     const result = await generateSurveyReportHtml(
       {
         propertyLabel:
@@ -521,15 +572,24 @@ class SurveyCaptureService {
             styleNotes: example.styleNotes,
           })),
         ),
+        epcFacts: epcSummary ? epcFactsForPrompt(epcSummary) : null,
       },
       { accountId: input.accountId, supabase: this.client },
     );
 
+    const document = epcSummary
+      ? applyEpcEnergySection(
+          result.document,
+          energySectionHtmlFromEpc(epcSummary),
+        )
+      : result.document;
+    const contentHtml = compileSurveyReportDocument(document);
+
     const { error } = await this.db
       .from('proposals')
       .update({
-        content_html: result.contentHtml,
-        body_document: result.document,
+        content_html: contentHtml,
+        body_document: document,
       })
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
@@ -538,6 +598,8 @@ class SurveyCaptureService {
 
     return {
       ...result,
+      document,
+      contentHtml,
       surveyType:
         (survey.survey_type as BuildingSurveyTypeKey | null) ??
         DEFAULT_BUILDING_SURVEY_TYPE,

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
+import { SURVEY_SECTION_CATALOGUE } from '~/lib/building-surveyor/survey-section-catalogue';
 import { BUILDING_SURVEY_TYPES } from '~/lib/building-surveyor/survey-types';
 
 const surveyTypeKeys = BUILDING_SURVEY_TYPES.map((item) => item.key) as [
@@ -10,10 +11,12 @@ const surveyTypeKeys = BUILDING_SURVEY_TYPES.map((item) => item.key) as [
 
 export const SurveyTypeSchema = z.enum(surveyTypeKeys);
 
-const sectionKeys = BUILDING_SURVEY_SECTIONS.map((section) => section.key) as [
-  string,
-  ...string[],
-];
+const sectionKeys = [
+  ...new Set([
+    ...BUILDING_SURVEY_SECTIONS.map((section) => section.key),
+    ...SURVEY_SECTION_CATALOGUE.map((item) => item.key),
+  ]),
+] as [string, ...string[]];
 
 export const SurveySectionKeySchema = z.enum(sectionKeys);
 

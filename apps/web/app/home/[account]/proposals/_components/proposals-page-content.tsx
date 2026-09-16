@@ -29,6 +29,7 @@ import { toast } from '@kit/ui/sonner';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
+import { AddressSearchField } from '~/components/commercial/address-search-field';
 import pathsConfig from '~/config/paths.config';
 import {
   listNotesAndFilesForContextAction,
@@ -44,6 +45,11 @@ import {
   documentKindCopy,
   titleForRecipient,
 } from '~/lib/building-surveyor/document-kind';
+import {
+  HOME_SURVEY_LEVEL_OPTIONS,
+  type SurveyLevel,
+} from '~/lib/building-surveyor/survey-types';
+import type { AddressSuggestion } from '~/lib/commercial/address-suggest.types';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { generateSurveyReportHtmlAction } from '../_lib/server/proposal-generate-actions';
@@ -149,6 +155,10 @@ export function ProposalsPageContent({
   const [clientsLoading, setClientsLoading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedDealId, setSelectedDealId] = useState('');
+  const [createSurveyLevel, setCreateSurveyLevel] = useState<SurveyLevel>(2);
+  const [createAddress, setCreateAddress] = useState('');
+  const [createPostcode, setCreatePostcode] = useState('');
+  const [createUprn, setCreateUprn] = useState('');
 
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiMode, setAiMode] = useState<'client' | 'deal'>('client');
@@ -255,6 +265,10 @@ export function ProposalsPageContent({
     setCreateMode('client');
     setSelectedClientId('');
     setSelectedDealId('');
+    setCreateSurveyLevel(2);
+    setCreateAddress('');
+    setCreatePostcode('');
+    setCreateUprn('');
     setClientsLoading(true);
     try {
       const result = await listClients({ accountId, page: 1, pageSize: 100 });
@@ -403,13 +417,16 @@ export function ProposalsPageContent({
 
   const handleCreateProposal = async () => {
     if (!canEditProposals) return;
+    const isSurvey = documentKind === 'survey_report';
     const clientId = createMode === 'client' ? selectedClientId : undefined;
     const dealId = createMode === 'deal' ? selectedDealId : undefined;
-    if (!clientId && !dealId) {
+    if (!clientId && !dealId && !(isSurvey && createAddress.trim())) {
       toast.error(
-        createMode === 'client'
-          ? 'Please select a client'
-          : `Please select a ${copy.dealLabel.toLowerCase()}`,
+        isSurvey
+          ? 'Add a property address or select a client'
+          : createMode === 'client'
+            ? 'Please select a client'
+            : `Please select a ${copy.dealLabel.toLowerCase()}`,
       );
       return;
     }
@@ -419,18 +436,36 @@ export function ProposalsPageContent({
     try {
       const proposal = await createProposal({
         accountId,
-        client_id: clientId ?? null,
-        deal_id: dealId ?? null,
+        client_id: clientId || null,
+        deal_id: dealId || null,
         kind: documentKind,
         recipient_name: deal?.contactName || null,
-        title: deal
-          ? titleForRecipient(
-              documentKind,
-              deal.contactName ||
-                deal.companyName ||
-                copy.dealLabel.toLowerCase(),
-            )
+        title: isSurvey
+          ? createAddress.trim() ||
+            (deal
+              ? titleForRecipient(
+                  documentKind,
+                  deal.contactName ||
+                    deal.companyName ||
+                    copy.dealLabel.toLowerCase(),
+                )
+              : undefined)
+          : deal
+            ? titleForRecipient(
+                documentKind,
+                deal.contactName ||
+                  deal.companyName ||
+                  copy.dealLabel.toLowerCase(),
+              )
+            : undefined,
+        survey_level: isSurvey ? createSurveyLevel : undefined,
+        survey_property_address: isSurvey
+          ? createAddress.trim() || null
           : undefined,
+        survey_property_postcode: isSurvey
+          ? createPostcode.trim() || null
+          : undefined,
+        survey_uprn: isSurvey ? createUprn.trim() || null : undefined,
       });
       if (proposal?.id) {
         setCreateSheetOpen(false);
@@ -845,9 +880,85 @@ export function ProposalsPageContent({
               </button>
             </div>
 
+            {documentKind === 'survey_report' ? (
+              <div className="space-y-3">
+                <div>
+                  <Label>Survey level</Label>
+                  <div className="mt-2 inline-flex gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1 text-xs">
+                    {HOME_SURVEY_LEVEL_OPTIONS.map((option) => (
+                      <button
+                        key={option.level}
+                        type="button"
+                        onClick={() => setCreateSurveyLevel(option.level)}
+                        className={`rounded-full px-3 py-1.5 font-medium ${
+                          createSurveyLevel === option.level
+                            ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                            : 'text-[var(--workspace-shell-text-muted)]'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                    One template. Level only changes optional field visibility.
+                  </p>
+                </div>
+                <AddressSearchField
+                  label="Find property"
+                  onSelect={(suggestion: AddressSuggestion) => {
+                    setCreateAddress(
+                      [
+                        suggestion.addressLine1,
+                        suggestion.addressLine2,
+                        suggestion.town,
+                      ]
+                        .filter(Boolean)
+                        .join(', ') || suggestion.label,
+                    );
+                    setCreatePostcode(suggestion.postcode ?? '');
+                  }}
+                />
+                <div>
+                  <Label>Address</Label>
+                  <Input
+                    className="mt-1"
+                    value={createAddress}
+                    onChange={(event) => setCreateAddress(event.target.value)}
+                    placeholder="12 Example Street, Bath"
+                    data-test="survey-create-address"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>Postcode</Label>
+                    <Input
+                      className="mt-1"
+                      value={createPostcode}
+                      onChange={(event) =>
+                        setCreatePostcode(event.target.value)
+                      }
+                      placeholder="BA1 1UA"
+                    />
+                  </div>
+                  <div>
+                    <Label>UPRN</Label>
+                    <Input
+                      className="mt-1"
+                      value={createUprn}
+                      onChange={(event) => setCreateUprn(event.target.value)}
+                      placeholder="If known"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {createMode === 'client' ? (
               <div>
-                <Label>Client</Label>
+                <Label>
+                  Client {documentKind === 'survey_report' ? '(optional)' : ''}
+                </Label>
                 <ClientCombobox
                   clients={clientOptions}
                   value={selectedClientId}
@@ -885,7 +996,14 @@ export function ProposalsPageContent({
               onClick={() => void handleCreateProposal()}
               disabled={
                 creating ||
-                (createMode === 'client' ? !selectedClientId : !selectedDealId)
+                (documentKind === 'survey_report'
+                  ? !createAddress.trim() &&
+                    (createMode === 'client'
+                      ? !selectedClientId
+                      : !selectedDealId)
+                  : createMode === 'client'
+                    ? !selectedClientId
+                    : !selectedDealId)
               }
             >
               {creating ? 'Creating…' : 'Create and edit'}

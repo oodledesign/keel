@@ -9,7 +9,10 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
-import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
+import {
+  type HubSurveySection,
+  surveySectionDisplayLabel,
+} from '~/lib/building-surveyor/survey-section-catalogue';
 import { workspaceText, workspaceTextMuted } from '~/lib/workspace-ui';
 
 import type { SurveyObservation } from '../_lib/schema/survey-capture.schema';
@@ -24,6 +27,7 @@ export function GroupedObservationCard({
   accountSlug,
   proposalId,
   canEdit,
+  sections,
   onChange,
   onDelete,
 }: {
@@ -32,6 +36,7 @@ export function GroupedObservationCard({
   accountSlug: string;
   proposalId: string;
   canEdit: boolean;
+  sections: readonly HubSurveySection[];
   onChange: (next: SurveyObservation) => void;
   onDelete: (id: string) => void;
 }) {
@@ -74,9 +79,13 @@ export function GroupedObservationCard({
             }}
             className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs"
           >
-            {BUILDING_SURVEY_SECTIONS.map((option) => (
+            {sections.map((option) => (
               <option key={option.key} value={option.key}>
-                {option.heading}
+                {surveySectionDisplayLabel({
+                  heading: option.heading,
+                  ricsCode: option.letter,
+                  letter: option.letter,
+                })}
               </option>
             ))}
           </select>

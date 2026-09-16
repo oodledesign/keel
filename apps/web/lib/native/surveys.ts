@@ -7,7 +7,13 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import { extractUkPostcode } from '~/lib/building-surveyor/epc/parse';
 import { buildingSurveyBlankHtml } from '~/lib/building-surveyor/report-sections';
+import {
+  normalizeSurveyLevel,
+  surveyLevelFromType,
+  surveyTypeForLevel,
+} from '~/lib/building-surveyor/survey-types';
 import { parseTranscriptContent } from '~/lib/recorder/transcript-speakers';
 
 import { NativeHttpError } from './http';
@@ -45,7 +51,7 @@ export {
 
 const LIST_LIMIT = 80;
 const SURVEY_SELECT =
-  'id, title, status, survey_type, client_id, created_at, updated_at';
+  'id, title, status, survey_type, survey_level, survey_property_address, survey_property_postcode, survey_uprn, survey_flood_risk_band, survey_flood_risk_summary, client_id, created_at, updated_at';
 
 function requireSurveyWorkspace(workspace: NativeWorkspace) {
   if (!workspaceShowsNativeSurveys(workspace.profile)) {
@@ -333,6 +339,10 @@ export async function createNativeSurvey(input: {
   workspace: NativeWorkspace;
   title: string;
   surveyType?: string | null;
+  surveyLevel?: number | string | null;
+  address?: string | null;
+  postcode?: string | null;
+  uprn?: string | null;
   clientId?: string | null;
 }): Promise<NativeSurvey> {
   requireSurveyWorkspace(input.workspace);
@@ -352,7 +362,17 @@ export async function createNativeSurvey(input: {
     );
   }
 
-  const surveyType = parseNativeSurveyType(input.surveyType);
+  const surveyLevel = input.surveyLevel
+    ? normalizeSurveyLevel(input.surveyLevel)
+    : surveyLevelFromType(input.surveyType);
+  const surveyType = input.surveyLevel
+    ? surveyTypeForLevel(surveyLevel)
+    : parseNativeSurveyType(input.surveyType);
+  const address = input.address?.trim() || title;
+  const postcode =
+    input.postcode?.trim() ||
+    extractUkPostcode(input.postcode) ||
+    extractUkPostcode(address);
   const { data, error } = await input.client
     .from('proposals')
     .insert({
@@ -361,6 +381,10 @@ export async function createNativeSurvey(input: {
       deal_id: null,
       kind: 'survey_report',
       survey_type: surveyType,
+      survey_level: surveyLevel,
+      survey_property_address: address,
+      survey_property_postcode: postcode,
+      survey_uprn: input.uprn?.trim() || null,
       title,
       content_html: buildingSurveyBlankHtml(),
       status: 'draft',
@@ -382,6 +406,65 @@ export async function createNativeSurvey(input: {
     sessionCount: 0,
     photoCount: 0,
   });
+}
+
+export async function updateNativeSurveyPrep(input: {
+  client: SupabaseClient;
+  workspace: NativeWorkspace;
+  surveyId: string;
+  address?: string | null;
+  postcode?: string | null;
+  uprn?: string | null;
+  surveyLevel?: number | string | null;
+}): Promise<NativeSurvey> {
+  requireSurveyWorkspace(input.workspace);
+  const survey = await loadSurveyRow(
+    input.client,
+    input.workspace,
+    input.surveyId,
+  );
+
+  const surveyLevel =
+    input.surveyLevel == null
+      ? undefined
+      : normalizeSurveyLevel(input.surveyLevel);
+
+  const { data, error } = await input.client
+    .from('proposals')
+    .update({
+      ...(input.address !== undefined
+        ? { survey_property_address: input.address?.trim() || null }
+        : {}),
+      ...(input.postcode !== undefined
+        ? {
+            survey_property_postcode:
+              input.postcode?.trim() || extractUkPostcode(input.postcode),
+          }
+        : {}),
+      ...(input.uprn !== undefined
+        ? { survey_uprn: input.uprn?.trim() || null }
+        : {}),
+      ...(surveyLevel
+        ? {
+            survey_level: surveyLevel,
+            survey_type: surveyTypeForLevel(surveyLevel),
+          }
+        : {}),
+    } as never)
+    .eq('id', survey.id)
+    .eq('account_id', input.workspace.id)
+    .eq('kind', 'survey_report')
+    .select(SURVEY_SELECT)
+    .single();
+
+  if (error || !data) {
+    surveyFailed(error, 'Could not update survey prep');
+  }
+
+  return mapNativeSurvey(
+    data as NativeSurveyRow,
+    input.workspace.slug || input.workspace.id,
+  );
 }
 
 export async function createNativeSurveySession(input: {
