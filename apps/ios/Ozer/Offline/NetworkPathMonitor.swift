@@ -15,6 +15,8 @@ final class NetworkPathMonitor {
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "so.ozer.app.network")
     private(set) var isOnline = true
+    private(set) var isCellular = false
+    private(set) var isExpensive = false
     private var started = false
 
     func start() {
@@ -26,6 +28,8 @@ final class NetworkPathMonitor {
                 let online = path.status == .satisfied
                 let becameOnline = online && !self.isOnline
                 self.isOnline = online
+                self.isCellular = path.usesInterfaceType(.cellular)
+                self.isExpensive = path.isExpensive
                 if becameOnline {
                     NotificationCenter.default.post(name: .ozerNetworkBecameOnline, object: nil)
                 }

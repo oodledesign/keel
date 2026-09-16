@@ -6,6 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
+import { cleanSurveyTranscript } from '~/lib/ai/survey-transcript-cleanup';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { extractUkPostcode } from '~/lib/building-surveyor/epc/parse';
 import { buildingSurveyBlankHtml } from '~/lib/building-surveyor/report-sections';
@@ -564,6 +565,7 @@ export async function createNativeSurveySession(input: {
 }): Promise<{
   session: NativeSurveySession;
   grouping_source: 'ai' | 'keyword_fallback' | 'user';
+  cleanup_source: 'ai' | 'passthrough' | null;
 }> {
   requireSurveyWorkspace(input.workspace);
   const chosenSection = input.ricsCode
@@ -646,9 +648,18 @@ export async function createNativeSurveySession(input: {
   let groupingSource: 'ai' | 'keyword_fallback' | 'user' = chosenSection
     ? 'user'
     : 'keyword_fallback';
+  let cleanupSource: 'ai' | 'passthrough' | null = null;
 
   if (chosenSection) {
     try {
+      const cleanup = await cleanSurveyTranscript({
+        sourceText: rawContent,
+        ricsCode: chosenSection.ricsCode,
+        sectionKey: chosenSection.key,
+        accountId: input.workspace.id,
+        supabase: input.client,
+      });
+      cleanupSource = cleanup.source;
       await upsertUserSectionObservation({
         client: input.client,
         userId: input.userId,
@@ -656,7 +667,9 @@ export async function createNativeSurveySession(input: {
         surveyId: survey.id,
         transcriptId,
         section: chosenSection,
-        body: rawContent,
+        sourceBody: rawContent,
+        cleanedBody: cleanup.cleanedText,
+        cleanupSource: cleanup.source,
       });
     } catch (observationError) {
       console.warn(
@@ -686,20 +699,35 @@ export async function createNativeSurveySession(input: {
           Number((maxRow as { sort_order?: number } | null)?.sort_order ?? -1) +
           1;
 
+        const rows = [];
+        for (const [index, draft] of grouping.drafts.entries()) {
+          const cleanup = await cleanSurveyTranscript({
+            sourceText: draft.body,
+            ricsCode: draft.ricsCode ?? null,
+            sectionKey: draft.sectionKey,
+            accountId: input.workspace.id,
+            supabase: input.client,
+          });
+          if (cleanup.source === 'ai' || cleanupSource == null) {
+            cleanupSource = cleanup.source;
+          }
+          rows.push({
+            account_id: input.workspace.id,
+            proposal_id: survey.id,
+            transcript_id: transcriptId,
+            section_key: draft.sectionKey,
+            rics_code: draft.ricsCode ?? null,
+            body: cleanup.cleanedText,
+            source_body: draft.body,
+            cleanup_source: cleanup.source,
+            sort_order: startOrder + index,
+            created_by: input.userId,
+          });
+        }
+
         const { error: observationError } = await input.client
           .from('survey_observations')
-          .insert(
-            grouping.drafts.map((draft, index) => ({
-              account_id: input.workspace.id,
-              proposal_id: survey.id,
-              transcript_id: transcriptId,
-              section_key: draft.sectionKey,
-              rics_code: draft.ricsCode ?? null,
-              body: draft.body,
-              sort_order: startOrder + index,
-              created_by: input.userId,
-            })) as never,
-          );
+          .insert(rows as never);
         if (observationError) {
           console.warn(
             '[native/surveys] observation insert failed',
@@ -725,6 +753,7 @@ export async function createNativeSurveySession(input: {
       section_key: chosenSection?.key ?? null,
     },
     grouping_source: groupingSource,
+    cleanup_source: cleanupSource,
   };
 }
 
@@ -735,14 +764,17 @@ async function upsertUserSectionObservation(input: {
   surveyId: string;
   transcriptId: string;
   section: ReturnType<typeof requireOnSiteSurveySection>;
-  body: string;
+  sourceBody: string;
+  cleanedBody: string;
+  cleanupSource: 'ai' | 'passthrough';
 }) {
-  const incoming = input.body.trim();
-  if (!incoming) return;
+  const incomingSource = input.sourceBody.trim();
+  const incomingCleaned = input.cleanedBody.trim() || incomingSource;
+  if (!incomingSource && !incomingCleaned) return;
 
   const existingQuery = await input.client
     .from('survey_observations')
-    .select('id, body')
+    .select('id, body, source_body')
     .eq('account_id', input.workspaceId)
     .eq('proposal_id', input.surveyId)
     // Catalogue codes are alphanumeric / underscore only (F3, water).
@@ -760,13 +792,19 @@ async function upsertUserSectionObservation(input: {
   const existing = existingQuery.data as {
     id: string;
     body?: string | null;
+    source_body?: string | null;
   } | null;
 
   if (existing?.id) {
     const { error } = await input.client
       .from('survey_observations')
       .update({
-        body: appendSurveySectionNote(existing.body, incoming),
+        body: appendSurveySectionNote(existing.body, incomingCleaned),
+        source_body: appendSurveySectionNote(
+          existing.source_body ?? existing.body,
+          incomingSource,
+        ),
+        cleanup_source: input.cleanupSource,
         section_key: input.section.key,
         rics_code: input.section.ricsCode,
       } as never)
@@ -796,7 +834,9 @@ async function upsertUserSectionObservation(input: {
     transcript_id: input.transcriptId,
     section_key: input.section.key,
     rics_code: input.section.ricsCode,
-    body: incoming,
+    body: incomingCleaned,
+    source_body: incomingSource,
+    cleanup_source: input.cleanupSource,
     sort_order: startOrder,
     created_by: input.userId,
   } as never);
@@ -896,7 +936,7 @@ async function storeSurveyFile(input: {
       created_by: input.userId,
       proposal_id: input.surveyId,
       client_id: input.clientId,
-      photo_role: 'archive',
+      photo_role: input.pinnedSectionKey ? 'curated' : 'archive',
       pinned_section_key: input.pinnedSectionKey ?? null,
     } as never)
     .select('id, title, mime_type, created_at, pinned_section_key')
