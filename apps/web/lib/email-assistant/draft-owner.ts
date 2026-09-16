@@ -23,14 +23,14 @@ export async function resolveDraftOwnerContext(
   const admin = getSupabaseServerAdminClient();
   const connectionId = options?.connectionId?.trim() || null;
 
-  let unscopedQuery = admin
+  let mailboxQuery = admin
     .from('google_connections')
     .select('id, google_email, mailbox_kind')
     .eq('user_id', userId)
     .eq('mailbox_kind', mailboxKind);
 
   if (mailboxKind === 'business' && options?.accountId) {
-    unscopedQuery = unscopedQuery.eq('account_id', options.accountId);
+    mailboxQuery = mailboxQuery.eq('account_id', options.accountId);
   }
 
   const connectionQuery = connectionId
@@ -42,7 +42,7 @@ export async function resolveDraftOwnerContext(
         .maybeSingle()
     : mailboxKind === 'business' && !options?.accountId
       ? Promise.resolve({ data: null, error: null })
-      : unscopedQuery.maybeSingle();
+      : mailboxQuery.maybeSingle();
 
   const [{ data: connection }, { data: account }, { data: authUser }] =
     await Promise.all([

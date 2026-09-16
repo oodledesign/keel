@@ -73,12 +73,7 @@ export async function POST(_request: Request, context: RouteContext) {
           .select('style_notes, signature, signature_is_html')
           .eq('connection_id', connectionId)
           .maybeSingle()
-      : auth.client
-          .from('email_assistant_settings')
-          .select('style_notes, signature, signature_is_html')
-          .eq('user_id', auth.user.id)
-          .limit(1)
-          .maybeSingle(),
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const mailboxKindRaw = (connection as { mailbox_kind?: string | null } | null)

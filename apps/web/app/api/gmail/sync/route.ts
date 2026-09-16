@@ -40,7 +40,7 @@ async function assertGoogleConnection(
   userId: string,
   mailboxKind: MailboxKind,
   scope?: { accountId?: string | null; connectionId?: string | null },
-) {
+): Promise<string> {
   if (
     isBusinessMailboxUnscoped(mailboxKind, scope?.accountId) &&
     !scope?.connectionId
@@ -73,6 +73,8 @@ async function assertGoogleConnection(
   if (!data) {
     throw new Error('Connect Gmail in Email settings before syncing');
   }
+
+  return (data as { id: string }).id;
 }
 
 async function syncUserMailbox(
@@ -228,12 +230,17 @@ export async function POST(request: Request) {
   const preferredAccountId = url.searchParams.get('preferredAccountId');
 
   try {
-    await assertGoogleConnection(auth.user.id, mailboxKind, {
-      accountId: preferredAccountId,
-    });
+    const connectionId = await assertGoogleConnection(
+      auth.user.id,
+      mailboxKind,
+      {
+        accountId: preferredAccountId,
+      },
+    );
     const result = await syncUserMailbox(auth.user.id, mailboxKind, {
       assistant,
       preferredAccountId,
+      connectionId,
     });
     return jsonOk(result);
   } catch (error) {
