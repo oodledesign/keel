@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   type RightmoveDisposalStatusRow,
   collectRightmoveUrls,
-  rightmoveDisposalIsOutOfSync,
+  resolveRightmoveDisposalOverviewStatus,
   sortRightmoveDisposalRows,
 } from '~/lib/commercial/rightmove-publish-status';
 
@@ -83,7 +83,7 @@ export async function listRightmoveDisposalStatuses(
         urls,
         lastUpdatedAt: lastSyncAt ?? listingUpdatedAt,
         lastError,
-        outOfSync: rightmoveDisposalIsOutOfSync({
+        overviewStatus: resolveRightmoveDisposalOverviewStatus({
           listingStatus: String(listing.status ?? ''),
           listingUpdatedAt,
           rightmoveStatus,

@@ -3,17 +3,30 @@ import {
   isSafeHttpUrl,
 } from '~/lib/commercial/channel-publish-status';
 
+export const RIGHTMOVE_OVERVIEW_STATUSES = [
+  'failed',
+  'unsynced',
+  'removed',
+  'draft',
+  'not_pushed',
+  'pushed',
+] as const;
+
+export type RightmoveOverviewStatus =
+  (typeof RIGHTMOVE_OVERVIEW_STATUSES)[number];
+
 export type RightmoveDisposalStatusRow = {
   listingId: string;
   name: string;
   listingStatus: string;
+  /** Stored `commercial_portal_publications.status`, or `none`. */
   rightmoveStatus: string;
+  /** First-class overview bucket, including Unsynced. */
+  overviewStatus: RightmoveOverviewStatus;
   externalId: string | null;
   urls: string[];
   lastUpdatedAt: string | null;
   lastError: string | null;
-  /** Live on Rightmove but last push is behind listing/media updates. */
-  outOfSync: boolean;
 };
 
 export function collectRightmoveUrls(input: {
@@ -62,36 +75,58 @@ export function formatRightmoveUpdatedAt(
   });
 }
 
-export function formatRightmovePublicationStatus(
-  status: string | null | undefined,
-  options?: { outOfSync?: boolean },
-) {
-  if (options?.outOfSync && status === 'published') {
-    return 'Live but Unsynced';
+export function resolveRightmoveOverviewStatus(input: {
+  storedStatus?: string | null;
+  outOfSync?: boolean;
+}): RightmoveOverviewStatus {
+  const stored = input.storedStatus?.trim() || 'none';
+  if (stored === 'unsynced') return 'unsynced';
+  if (stored === 'pushed') return 'pushed';
+  if (stored === 'failed' || stored === 'error') return 'failed';
+  if (stored === 'removed' || stored === 'unpublished') return 'removed';
+  if (stored === 'draft') return 'draft';
+  if (stored === 'published') {
+    return input.outOfSync ? 'unsynced' : 'pushed';
   }
+  return 'not_pushed';
+}
+
+export function formatRightmoveOverviewStatus(
+  status: RightmoveOverviewStatus,
+) {
   switch (status) {
-    case 'published':
-      return 'Published';
-    case 'unpublished':
-      return 'Removed';
-    case 'error':
+    case 'pushed':
+      return 'Pushed';
+    case 'unsynced':
+      return 'Unsynced';
+    case 'failed':
       return 'Failed';
+    case 'removed':
+      return 'Removed';
     case 'draft':
       return 'Draft';
-    default:
+    case 'not_pushed':
       return 'Not pushed';
   }
 }
 
-/** Semantic pill classes for Rightmove publication status. */
+export function formatRightmovePublicationStatus(
+  status: string | null | undefined,
+) {
+  return formatRightmoveOverviewStatus(
+    resolveRightmoveOverviewStatus({ storedStatus: status }),
+  );
+}
+
+/** Semantic pill classes for Rightmove overview statuses. */
 export const RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS: Record<
-  ReturnType<typeof formatRightmovePublicationStatus>,
+  ReturnType<typeof formatRightmoveOverviewStatus>,
   string
 > = {
-  Published:
+  Pushed:
     'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
-  'Live but Unsynced':
-    'bg-amber-100 text-amber-950 ring-1 ring-inset ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-100 dark:ring-amber-500/30',
+  Unsynced:
+    'bg-orange-100 text-orange-900 ring-1 ring-inset ring-orange-200/80 dark:bg-orange-500/15 dark:text-orange-100 dark:ring-orange-500/30',
   Failed:
     'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-200/80 dark:bg-rose-500/15 dark:text-rose-100 dark:ring-rose-500/30',
   'Not pushed':
@@ -104,23 +139,22 @@ export const RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS: Record<
 
 export function rightmovePublicationStatusBadgeClass(
   status: string | null | undefined,
-  options?: { outOfSync?: boolean },
 ) {
   return RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS[
-    formatRightmovePublicationStatus(status, options)
+    formatRightmovePublicationStatus(status)
   ];
 }
 
 export function isRightmoveDisposalFailed(
-  row: Pick<RightmoveDisposalStatusRow, 'rightmoveStatus'>,
+  row: Pick<RightmoveDisposalStatusRow, 'overviewStatus'>,
 ): boolean {
-  return row.rightmoveStatus === 'error';
+  return row.overviewStatus === 'failed';
 }
 
 export function isRightmoveDisposalUnsynced(
-  row: Pick<RightmoveDisposalStatusRow, 'outOfSync'>,
+  row: Pick<RightmoveDisposalStatusRow, 'overviewStatus'>,
 ): boolean {
-  return Boolean(row.outOfSync);
+  return row.overviewStatus === 'unsynced';
 }
 
 export function rightmoveDisposalIsOutOfSync(input: {
@@ -157,19 +191,41 @@ export function rightmoveDisposalIsOutOfSync(input: {
   );
 }
 
-function rightmoveStatusRank(row: RightmoveDisposalStatusRow): number {
-  if (isRightmoveDisposalFailed(row)) return 0;
-  if (isRightmoveDisposalUnsynced(row)) return 1;
-  if (row.rightmoveStatus === 'none' || !row.rightmoveStatus) return 3;
-  if (row.rightmoveStatus === 'published') return 4;
-  return 2;
+export function resolveRightmoveDisposalOverviewStatus(input: {
+  listingStatus: string;
+  listingUpdatedAt?: string | null;
+  rightmoveStatus: string;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  externalId?: string | null;
+  externalUrl?: string | null;
+  mediaCreatedAt?: Array<string | null | undefined>;
+}): RightmoveOverviewStatus {
+  return resolveRightmoveOverviewStatus({
+    storedStatus: input.rightmoveStatus,
+    outOfSync: rightmoveDisposalIsOutOfSync(input),
+  });
+}
+
+export function countRightmoveOverviewStatuses(
+  rows: Array<Pick<RightmoveDisposalStatusRow, 'overviewStatus'>>,
+): Record<RightmoveOverviewStatus, number> {
+  const counts = Object.fromEntries(
+    RIGHTMOVE_OVERVIEW_STATUSES.map((status) => [status, 0]),
+  ) as Record<RightmoveOverviewStatus, number>;
+  for (const row of rows) {
+    counts[row.overviewStatus] += 1;
+  }
+  return counts;
 }
 
 export function sortRightmoveDisposalRows(
   rows: RightmoveDisposalStatusRow[],
 ): RightmoveDisposalStatusRow[] {
   return [...rows].sort((a, b) => {
-    const rank = rightmoveStatusRank(a) - rightmoveStatusRank(b);
+    const rank =
+      RIGHTMOVE_OVERVIEW_STATUSES.indexOf(a.overviewStatus) -
+      RIGHTMOVE_OVERVIEW_STATUSES.indexOf(b.overviewStatus);
     if (rank !== 0) return rank;
     return a.name.localeCompare(b.name, 'en');
   });
