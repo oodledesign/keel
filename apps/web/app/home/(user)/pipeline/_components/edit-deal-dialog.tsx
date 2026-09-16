@@ -33,10 +33,12 @@ import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-tr
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { InstructionCareCompliancePanel } from '~/home/[account]/pipeline/_components/instruction-care-compliance-panel';
 import { WipAttachmentsStrip } from '~/home/[account]/pipeline/_components/wip-attachments-strip';
+import { createSurveyorQuoteAction } from '~/home/[account]/pipeline/_lib/server/surveyor-quote-actions';
 import {
   ClientCombobox,
   type ClientOption,
 } from '~/home/[account]/projects/_components/client-combobox';
+import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -68,6 +70,7 @@ type Props = {
   stages?: ReadonlyArray<{ key: string; label: string }>;
   listings?: Array<{ id: string; name: string }>;
   commercial?: boolean;
+  surveyor?: boolean;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
   onCareLogAdded?: (instructionId: string, createdAt: string) => void;
 };
@@ -86,6 +89,7 @@ export function EditDealDialog({
   stages = WORK_STAGES,
   listings = [],
   commercial = false,
+  surveyor = false,
   onRequestCreateDisposal,
   onCareLogAdded,
 }: Props) {
@@ -107,6 +111,9 @@ export function EditDealDialog({
   const [listingId, setListingId] = useState(
     deal?.commercialListingId ?? NONE_LISTING,
   );
+  const [followUpCall, setFollowUpCall] = useState(Boolean(deal?.followUpCall));
+  const [quoteAddress, setQuoteAddress] = useState('');
+  const [quotePending, setQuotePending] = useState(false);
 
   const showAssignField = !workspaceScoped && businesses.length > 1;
 
@@ -131,6 +138,8 @@ export function EditDealDialog({
       setMode(deal.clientId ? 'client' : 'lead');
       setClientId(deal.clientId ?? '');
       setListingId(deal.commercialListingId ?? NONE_LISTING);
+      setFollowUpCall(Boolean(deal.followUpCall));
+      setQuoteAddress(deal.projectName || deal.companyName || '');
       setError(null);
     }
   }, [deal, open, businesses, workspaceScoped]);
@@ -276,6 +285,7 @@ export function EditDealDialog({
         description: mode === 'client' ? description || null : undefined,
         accountSlug: accountSlug ?? null,
         commercialListingId: commercial ? commercialListingId : undefined,
+        followUpCall: surveyor ? followUpCall : undefined,
         ...(commercial
           ? {
               hotsRentPsf,
@@ -310,6 +320,7 @@ export function EditDealDialog({
         businessColor: biz?.color ?? null,
         clientId: linkedClientId,
         clientName: linkedClientName,
+        followUpCall: surveyor ? followUpCall : deal.followUpCall,
         commercialListingId: commercial
           ? commercialListingId
           : deal.commercialListingId,
@@ -555,6 +566,64 @@ export function EditDealDialog({
               </Select>
             </div>
           </div>
+
+          {surveyor ? (
+            <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
+              <input
+                type="checkbox"
+                checked={followUpCall}
+                onChange={(event) => setFollowUpCall(event.target.checked)}
+                className="rounded border-[color:var(--workspace-control-border)]"
+              />
+              Follow-up call
+            </label>
+          ) : null}
+
+          {surveyor && accountId && accountSlug ? (
+            <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Standardised quote
+              </p>
+              <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                Address, Level 2 and Level 3 together, form of appointment, and
+                Terms of Business. Accepting the quote or signing ToB moves the
+                card to Accepted.
+              </p>
+              <Input
+                value={quoteAddress}
+                onChange={(event) => setQuoteAddress(event.target.value)}
+                placeholder="Property address"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+              />
+              <button
+                type="button"
+                className={`${workspaceBtnPrimaryMd} h-8 px-3 text-xs`}
+                disabled={quotePending || !quoteAddress.trim()}
+                onClick={() => {
+                  setQuotePending(true);
+                  void createSurveyorQuoteAction({
+                    accountId,
+                    accountSlug,
+                    dealId: deal.id,
+                    address: quoteAddress.trim(),
+                    clientName:
+                      deal.clientName || deal.contactName || undefined,
+                  })
+                    .then((result) => {
+                      window.location.href = pathsConfig.app.accountProposalEdit
+                        .replace('[account]', accountSlug)
+                        .replace('[id]', result.proposalId);
+                    })
+                    .catch((error: unknown) => {
+                      setError(getErrorMessage(error));
+                    })
+                    .finally(() => setQuotePending(false));
+                }}
+              >
+                {quotePending ? 'Creating quote…' : 'Create quote'}
+              </button>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label

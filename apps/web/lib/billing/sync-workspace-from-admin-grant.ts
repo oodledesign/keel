@@ -8,6 +8,7 @@ import {
   moduleKeysForProfile,
 } from '~/home/[account]/_lib/workspace-profile';
 
+import { ensureAdminCampaignStarterCredits } from './apply-admin-plan-usage-grants';
 import { markBusinessUpgradedFromLite } from './business-lite';
 import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
 import {
@@ -15,7 +16,6 @@ import {
   accountPlanLimitColumnsFromCatalog,
   findPlanByProductAndPlanId,
 } from './ozer-plan-catalog';
-import { ensureAdminCampaignStarterCredits } from './apply-admin-plan-usage-grants';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import {
   syncBusinessLiteModules,
@@ -64,10 +64,12 @@ export async function seedWorkspaceModulesForProfile(
     await setModuleEnabled(admin, accountId, moduleKey, true);
   }
 
-  // Surveys nav checks `proposals` via resolveAccountModuleKey; keep it
-  // enabled even though the canonical surveyor order uses `surveys`.
+  // Surveys nav checks `proposals`; contracts pages also accept `invoices`.
   if (profile === 'building_surveyor') {
     await setModuleEnabled(admin, accountId, 'proposals', true);
+    await setModuleEnabled(admin, accountId, 'invoices', true);
+    await setModuleEnabled(admin, accountId, 'contracts', true);
+    await setModuleEnabled(admin, accountId, 'forms', true);
   }
 }
 

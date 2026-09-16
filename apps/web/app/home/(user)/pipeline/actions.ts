@@ -310,6 +310,7 @@ export type UpdateDealInput = {
   hotsSolicitorName?: string | null;
   hotsTargetExchangeDate?: string | null;
   hotsNotes?: string | null;
+  followUpCall?: boolean;
 };
 
 export async function updateDeal(dealId: string, input: UpdateDealInput) {
@@ -349,6 +350,9 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   }
   if (input.hotsNotes !== undefined) {
     updates.hots_notes = input.hotsNotes?.trim() || null;
+  }
+  if (input.followUpCall !== undefined) {
+    updates.follow_up_call = input.followUpCall;
   }
   if (
     input.stage === 'completed' ||

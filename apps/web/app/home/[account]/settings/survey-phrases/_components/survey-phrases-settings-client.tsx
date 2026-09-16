@@ -90,8 +90,10 @@ export function SurveyPhrasesSettingsClient({
           Phrase banks
         </h2>
         <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-          Import a GoReport Predefined Responses workbook. Phrases stay on your
-          user (or this workspace) and are never seeded for other tenants.
+          Import a GoReport-style spreadsheet with Title, Text, and Path columns
+          (including ||placeholders||). Map to RICS codes such as F3. Choose
+          Firm phrase book (workspace) or My phrase book (personal). Phrases
+          stay on this workspace and are never seeded for other tenants.
         </p>
 
         {canEdit ? (
@@ -116,8 +118,8 @@ export function SurveyPhrasesSettingsClient({
                     setScope(event.target.value as 'personal' | 'workspace')
                   }
                 >
-                  <option value="personal">Personal</option>
-                  <option value="workspace">Workspace shared</option>
+                  <option value="personal">My phrase book</option>
+                  <option value="workspace">Firm phrase book</option>
                 </select>
               </div>
               <div>

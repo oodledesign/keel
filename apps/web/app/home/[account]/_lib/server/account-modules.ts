@@ -161,6 +161,18 @@ export function isWorkModuleEnabled(
   return isAccountModuleEnabled(moduleSettings, key);
 }
 
+/** Business workspaces gate contracts via invoices; surveyor seeds `contracts`. */
+export function isContractsModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+  workspaceProfile?: string | null,
+) {
+  return (
+    isWorkModuleEnabled(moduleSettings, 'invoices') ||
+    (workspaceProfile === 'building_surveyor' &&
+      isAccountModuleEnabled(moduleSettings, 'contracts'))
+  );
+}
+
 /** Feedflow module toggle (`account_module_settings.module_key = 'feedflow'`). */
 export function isFeedflowModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,

@@ -15,6 +15,8 @@ export const ListSurveyPhrasesSchema = z.object({
   ricsCode: z.string().max(40).optional(),
   sectionKey: z.string().max(80).optional(),
   query: z.string().max(200).optional(),
+  scope: z.enum(['personal', 'workspace', 'all']).optional(),
+  allSections: z.boolean().optional(),
 });
 
 export const DeleteSurveyPhraseBankSchema = z.object({
@@ -40,6 +42,8 @@ export type SurveyPhrase = {
   sectionKey: string | null;
   defaultRating: string | null;
   goreportPath: string | null;
+  bankScope?: 'personal' | 'workspace' | null;
+  bankName?: string | null;
 };
 
 export type SurveyPhraseBank = {

@@ -10,6 +10,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { CONDITION_RATINGS } from '~/lib/building-surveyor/condition-rating';
+import { phraseInsertMode } from '~/lib/building-surveyor/phrase-insert-blocks';
 import { ricsCodeForSectionKey } from '~/lib/building-surveyor/report-sections';
 import {
   type HubSurveySection,
@@ -33,6 +34,7 @@ export function GroupedObservationCard({
   sections,
   onChange,
   onDelete,
+  onInsertAsBlock,
 }: {
   item: SurveyObservation;
   accountId: string;
@@ -42,6 +44,7 @@ export function GroupedObservationCard({
   sections: readonly HubSurveySection[];
   onChange: (next: SurveyObservation) => void;
   onDelete: (id: string) => void;
+  onInsertAsBlock?: (body: string, defaultRating?: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftBody, setDraftBody] = useState(item.body);
@@ -122,10 +125,14 @@ export function GroupedObservationCard({
             ricsCode={item.ricsCode ?? ricsCodeForSectionKey(item.sectionKey)}
             sectionKey={item.sectionKey}
             onInsert={(body, defaultRating) => {
-              const nextBody = draftBody.trim()
-                ? `${draftBody.trim()}\n\n${body}`
-                : body;
-              setDraftBody(nextBody);
+              if (
+                phraseInsertMode(draftBody) === 'new-block' &&
+                onInsertAsBlock
+              ) {
+                onInsertAsBlock(body, defaultRating);
+                return;
+              }
+              setDraftBody(body);
               if (defaultRating && !item.conditionRating) {
                 onChange({
                   ...item,

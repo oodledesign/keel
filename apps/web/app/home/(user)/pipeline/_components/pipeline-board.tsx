@@ -86,7 +86,7 @@ import type {
   PipelineData,
   PipelineDeal,
 } from '../../_lib/server/pipeline.loader';
-import { moveDealToStage } from '../actions';
+import { moveDealToStage, updateDeal } from '../actions';
 import { AddDealDialog } from './add-deal-dialog';
 import { EditDealDialog } from './edit-deal-dialog';
 
@@ -406,6 +406,31 @@ export function PipelineBoard({
     setEditOpen(true);
   }, []);
 
+  const handleToggleFollowUp = useCallback(
+    (deal: PipelineDeal, followUpCall: boolean) => {
+      setDeals((prev) =>
+        prev.map((row) =>
+          row.id === deal.id ? { ...row, followUpCall } : row,
+        ),
+      );
+      void updateDeal(deal.id, {
+        followUpCall,
+        accountSlug: workspaceAccountSlug ?? null,
+      }).then((result) => {
+        if (!result.success) {
+          setDeals((prev) =>
+            prev.map((row) =>
+              row.id === deal.id
+                ? { ...row, followUpCall: deal.followUpCall }
+                : row,
+            ),
+          );
+        }
+      });
+    },
+    [workspaceAccountSlug],
+  );
+
   const handleDealUpdated = useCallback(
     (updated: PipelineDeal) => {
       setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
@@ -495,7 +520,7 @@ export function PipelineBoard({
         : 'deals.csv';
     a.click();
     URL.revokeObjectURL(url);
-  }, [filteredDeals, listingById, STAGES, isCommercial]);
+  }, [filteredDeals, listingById, STAGES, isCommercial, isSurveyor]);
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -709,6 +734,7 @@ export function PipelineBoard({
         stages={selectableStages}
         listings={listings}
         commercial={isCommercial}
+        surveyor={isSurveyor}
         onRequestCreateDisposal={
           onRequestCreateDisposal
             ? (deal) => {
@@ -745,6 +771,8 @@ export function PipelineBoard({
                   onEditDeal={handleEditDeal}
                   listingById={listingById}
                   commercial={isCommercial}
+                  surveyor={isSurveyor}
+                  onToggleFollowUp={handleToggleFollowUp}
                 />
               );
             })}
@@ -764,6 +792,7 @@ export function PipelineBoard({
                   : null
               }
               commercial={isCommercial}
+              surveyor={isSurveyor}
             />
           )}
         </DragOverlay>
@@ -782,6 +811,8 @@ function StageColumn({
   onEditDeal,
   listingById,
   commercial,
+  surveyor = false,
+  onToggleFollowUp,
 }: {
   stageKey: string;
   label: string;
@@ -790,6 +821,8 @@ function StageColumn({
   onEditDeal: (deal: PipelineDeal) => void;
   listingById: Map<string, PipelineListingOption>;
   commercial: boolean;
+  surveyor?: boolean;
+  onToggleFollowUp?: (deal: PipelineDeal, followUpCall: boolean) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stageKey}`,
@@ -841,6 +874,8 @@ function StageColumn({
                     : null
                 }
                 commercial={commercial}
+                surveyor={surveyor}
+                onToggleFollowUp={onToggleFollowUp}
               />
             ))
           )}
@@ -859,6 +894,8 @@ function DealCard({
   onEdit,
   listing,
   commercial = false,
+  surveyor = false,
+  onToggleFollowUp,
 }: {
   deal: PipelineDeal;
   stageColor: { dot: string; bar: string; tint: string } | undefined;
@@ -866,6 +903,8 @@ function DealCard({
   onEdit: () => void;
   listing?: PipelineListingOption | null;
   commercial?: boolean;
+  surveyor?: boolean;
+  onToggleFollowUp?: (deal: PipelineDeal, followUpCall: boolean) => void;
 }) {
   const {
     attributes,
@@ -1009,6 +1048,20 @@ function DealCard({
           ) : null}
         </div>
       </div>
+      {surveyor ? (
+        <label
+          className="mt-2 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-2 text-xs text-[var(--workspace-shell-text)]"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={deal.followUpCall}
+            onChange={(event) => onToggleFollowUp?.(deal, event.target.checked)}
+            className="rounded border-[color:var(--workspace-control-border)]"
+          />
+          Follow-up call
+        </label>
+      ) : null}
       {deal.nextAction && (
         <div className="mt-2 border-t border-[color:var(--workspace-shell-border)] pt-2">
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">

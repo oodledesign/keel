@@ -359,6 +359,16 @@ export async function handleProposalApproved(proposalId: string) {
   if (!proposal || proposal.kind === 'survey_report') {
     return;
   }
+
+  if (proposal.deal_id) {
+    const { maybeMoveSurveyorDealOnAccepted } =
+      await import('~/lib/building-surveyor/surveyor-pipeline-sync');
+    await maybeMoveSurveyorDealOnAccepted(
+      proposal.account_id,
+      proposal.deal_id,
+    );
+  }
+
   if (proposal.client_id || !proposal.deal_id) {
     return;
   }
@@ -375,14 +385,33 @@ export async function handleProposalApproved(proposalId: string) {
     .eq('id', proposalId);
 
   if (proposal.deal_id) {
-    await admin
-      .from('pipeline_deals')
-      .update({ stage: 'won' })
-      .eq('id', proposal.deal_id);
+    const { maybeMoveSurveyorDealOnAccepted } =
+      await import('~/lib/building-surveyor/surveyor-pipeline-sync');
+    const surveyorAccepted = await maybeMoveSurveyorDealOnAccepted(
+      proposal.account_id,
+      proposal.deal_id,
+    );
+    if (!surveyorAccepted) {
+      await admin
+        .from('pipeline_deals')
+        .update({ stage: 'won' })
+        .eq('id', proposal.deal_id);
+    }
 
+    const { data: account } = await admin
+      .from('accounts')
+      .select('space_type')
+      .eq('id', proposal.account_id)
+      .maybeSingle();
+    const keepDealLink =
+      (account as { space_type?: string } | null)?.space_type ===
+      'building-surveyor';
     await admin
       .from('contracts')
-      .update({ client_id: converted.clientId, deal_id: null })
+      .update({
+        client_id: converted.clientId,
+        ...(keepDealLink ? {} : { deal_id: null }),
+      })
       .eq('proposal_id', proposalId);
   }
 

@@ -35,6 +35,10 @@ import {
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import {
+  SURVEY_PHRASE_DRAG_MIME,
+  parsePhraseDrag,
+} from '~/lib/building-surveyor/phrase-insert-blocks';
+import {
   type DeskReviewSection,
   adjacentDeskReviewSection,
 } from '~/lib/building-surveyor/survey-desk-review';
@@ -54,6 +58,7 @@ import {
   updateSurveyObservationAction,
   updateSurveyPhotoCurationAction,
 } from '../_lib/server/survey-capture-actions';
+import { SurveyPhrasePanel } from './survey-phrase-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
 type DeskReviewPhoto = {
@@ -214,6 +219,29 @@ export function SurveyDeskReviewClient({
           prev.map((row) => (row.id === next.id ? next : row)),
         );
         toast.success('Section notes saved');
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+      }
+    });
+  };
+
+  const insertPhraseBlock = (body: string, defaultRating?: string | null) => {
+    const trimmed = body.trim();
+    if (!trimmed || !current || !canEdit) return;
+    startTransition(async () => {
+      try {
+        const created = await createSurveyObservationAction({
+          accountId,
+          accountSlug,
+          proposalId,
+          sectionKey: current.key,
+          body: trimmed,
+          conditionRating: defaultRating
+            ? (defaultRating as SurveyObservation['conditionRating'])
+            : undefined,
+        });
+        setObservations((prev) => [...prev, created]);
+        toast.success('Phrase added as a new note');
       } catch (error) {
         toast.error(getErrorMessage(error));
       }
@@ -472,7 +500,30 @@ export function SurveyDeskReviewClient({
           </div>
         </header>
 
-        <div className={`${workspacePanelCard} space-y-3 p-4 sm:p-5`}>
+        <div
+          className={`${workspacePanelCard} space-y-3 p-4 sm:p-5`}
+          onDragOver={(event) => {
+            if (
+              event.dataTransfer.types.includes(SURVEY_PHRASE_DRAG_MIME) ||
+              event.dataTransfer.types.includes(
+                SURVEY_PHRASE_DRAG_MIME.toLowerCase(),
+              )
+            ) {
+              event.preventDefault();
+            }
+          }}
+          onDrop={(event) => {
+            const payload = parsePhraseDrag(
+              event.dataTransfer.getData(SURVEY_PHRASE_DRAG_MIME) ||
+                event.dataTransfer.getData(
+                  SURVEY_PHRASE_DRAG_MIME.toLowerCase(),
+                ),
+            );
+            if (!payload) return;
+            event.preventDefault();
+            insertPhraseBlock(payload.body, payload.defaultRating);
+          }}
+        >
           <h3 className={`text-sm font-semibold ${workspaceText}`}>
             AI-cleaned text
           </h3>
@@ -694,6 +745,14 @@ export function SurveyDeskReviewClient({
           ) : null}
         </div>
       </section>
+
+      <SurveyPhrasePanel
+        accountId={accountId}
+        sectionKey={current.key}
+        ricsCode={current.ricsCode}
+        canEdit={canEdit}
+        onInsert={insertPhraseBlock}
+      />
     </div>
   );
 }
