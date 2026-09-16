@@ -35,11 +35,11 @@ Speaker models come from FluidInference’s CoreML conversion of pyannote (CC-BY
 
 Set in `Config/Shared.xcconfig` (defaults) and optional `Config/Local.xcconfig` (overrides). Values are copied into `Info.plist` at build time.
 
-| Key | Default | Notes |
-|-----|---------|--------|
-| `OZER_API_BASE` | `https://app.ozer.so` | Native API host |
-| `OZER_SUPABASE_URL` | `https://igewpbdkvvhclfprteca.supabase.co` | Auth host |
-| `OZER_SUPABASE_ANON_KEY` | _(empty)_ | **Local only.** Placeholder in git. |
+| Key                      | Default                                    | Notes                               |
+| ------------------------ | ------------------------------------------ | ----------------------------------- |
+| `OZER_API_BASE`          | `https://app.ozer.so`                      | Native API host                     |
+| `OZER_SUPABASE_URL`      | `https://igewpbdkvvhclfprteca.supabase.co` | Auth host                           |
+| `OZER_SUPABASE_ANON_KEY` | _(empty)_                                  | **Local only.** Placeholder in git. |
 
 `//` starts a comment in xcconfig, so URLs are written as `https:/$()/app.ozer.so`.
 
@@ -323,14 +323,14 @@ Matches the web PWA: **Home | 3 pin slots | Menu**. Pins follow the open workspa
 
 ### Path A — survey recording (building-surveyor only)
 
-Pick or create a survey (address, optional client, survey type). Record dictation fully offline with pause / resume and multiple sessions. Audio and captions are queued on the phone and upload on reconnect as `meeting_transcripts` linked to that survey, then section-grouped into `survey_observations`. Photos use the native camera or camera roll and land in the survey library. The Meetings / Notes recorder is unchanged — survey save does not offer Meeting or Note.
+Pick or create a survey (address, optional client, survey type). On the survey, pick a **section** (L2/L3 RICS catalogue, e.g. F3 Water or D2 Roof coverings). Record dictation into that section, fully offline, with pause / resume. Returning to the same section later **appends** to the same running note. Photos taken while a section is selected are tagged with that `rics_code`. Audio, captions, and photos queue on the phone and upload on reconnect. The server attaches or appends `survey_observations` for the chosen code — the phone does not assign sections with AI. The Meetings / Notes recorder is unchanged — survey save does not offer Meeting or Note.
 
 ```
 GET /api/native/v1/surveys?workspace=<slug-or-uuid>
 POST /api/native/v1/surveys
 GET /api/native/v1/surveys/{id}?workspace=<slug-or-uuid>
-POST /api/native/v1/surveys/{id}/sessions   (JSON or multipart audio)
-POST /api/native/v1/surveys/{id}/photos     (multipart image)
+POST /api/native/v1/surveys/{id}/sessions   (JSON or multipart audio; include rics_code)
+POST /api/native/v1/surveys/{id}/photos     (multipart image; include rics_code)
 ```
 
 Out of scope: PowerSync, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.

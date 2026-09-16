@@ -10,7 +10,10 @@ import {
 } from '~/lib/building-surveyor/survey-types';
 
 import { NativeHttpError } from './http';
+import type { NativeOnSiteSection } from './survey-sections';
 import { isUuid } from './workspace-shared';
+
+export type { NativeOnSiteSection } from './survey-sections';
 
 /** Path A is building-surveyor only. Other workspace types stay on Meetings / Notes. */
 export function workspaceShowsNativeSurveys(
@@ -59,6 +62,8 @@ export type NativeSurveySession = {
   source: string | null;
   meeting_date: string | null;
   created_at: string;
+  rics_code: string | null;
+  section_key: string | null;
 };
 
 export type NativeSurveyPhoto = {
@@ -67,11 +72,14 @@ export type NativeSurveyPhoto = {
   mime_type: string | null;
   created_at: string | null;
   preview_url: string | null;
+  rics_code: string | null;
+  section_key: string | null;
 };
 
 export type NativeSurveyDetail = NativeSurvey & {
   sessions: NativeSurveySession[];
   photos: NativeSurveyPhoto[];
+  sections: NativeOnSiteSection[];
 };
 
 export type NativeSurveyRow = {

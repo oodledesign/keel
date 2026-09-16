@@ -455,6 +455,7 @@ actor NativeAPIClient {
         meetingDate: String,
         audioData: Data?,
         filename: String,
+        ricsCode: String? = nil,
         accessToken: String
     ) async throws -> SurveySessionUploadResult {
         var fields = [
@@ -467,6 +468,9 @@ actor NativeAPIClient {
         ]
         if meetingDate.isEmpty {
             fields.removeValue(forKey: "meeting_date")
+        }
+        if let ricsCode, !ricsCode.isEmpty {
+            fields["rics_code"] = ricsCode
         }
         let data = try await sendMultipartFields(
             path: "api/native/v1/surveys/\(surveyId)/sessions",
@@ -490,14 +494,19 @@ actor NativeAPIClient {
         filename: String,
         mimeType: String,
         title: String,
+        ricsCode: String? = nil,
         accessToken: String
     ) async throws -> SurveyPhotoItem {
+        var fields = [
+            "workspace": workspace,
+            "title": title,
+        ]
+        if let ricsCode, !ricsCode.isEmpty {
+            fields["rics_code"] = ricsCode
+        }
         let data = try await sendMultipartFields(
             path: "api/native/v1/surveys/\(surveyId)/photos",
-            fields: [
-                "workspace": workspace,
-                "title": title,
-            ],
+            fields: fields,
             fileData: imageData,
             filename: filename,
             mimeType: mimeType,

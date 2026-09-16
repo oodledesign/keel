@@ -1,19 +1,15 @@
-import PhotosUI
 import SwiftUI
 import UIKit
 
 struct SurveyDetailView: View {
     @Environment(AppSession.self) private var session
     @State private var survey: SurveyItem
-    @State private var sessions: [SurveySessionItem] = []
-    @State private var photos: [SurveyPhotoItem] = []
+    @State private var remoteSections: [SurveySectionItem] = []
+    @State private var selectedSection: SurveySectionItem?
     @State private var queue = OfflineSurveyQueue.shared
     @State private var network = NetworkPathMonitor.shared
-    @State private var isRecording = false
     @State private var isLoading = false
     @State private var loadError: String?
-    @State private var pickerItems: [PhotosPickerItem] = []
-    @State private var showCamera = false
 
     private let api = NativeAPIClient()
 
@@ -33,6 +29,45 @@ struct SurveyDetailView: View {
         queue.photos(forSurvey: survey.id, workspace: workspace)
     }
 
+    private var catalogue: [SurveySectionItem] {
+        if !remoteSections.isEmpty {
+            return remoteSections
+        }
+        return SurveySectionCatalogue.onSiteSections(level: survey.resolvedSurveyLevel).map {
+            SurveySectionItem.fromCatalogue($0)
+        }
+    }
+
+    private var sectionRows: [SurveySectionItem] {
+        catalogue.map { section in
+            let pendingBodies = pendingSessions
+                .filter { matches(section, ricsCode: $0.ricsCode) }
+                .sorted { $0.createdAt < $1.createdAt }
+                .map(\.content)
+            var copy = section
+            copy.note = SurveyDisplay.accumulatedNote(remote: section.note, pendingBodies: pendingBodies)
+            copy.photoCount = section.photoCount
+                + pendingPhotos.filter { matches(section, ricsCode: $0.ricsCode) }.count
+            return copy
+        }
+    }
+
+    private var groupedSections: [(group: String, sections: [SurveySectionItem])] {
+        var order: [String] = []
+        var buckets: [String: [SurveySectionItem]] = [:]
+        for item in sectionRows {
+            if buckets[item.group] == nil {
+                order.append(item.group)
+                buckets[item.group] = []
+            }
+            buckets[item.group]?.append(item)
+        }
+        return order.compactMap { group in
+            guard let sections = buckets[group] else { return nil }
+            return (group, sections)
+        }
+    }
+
     private var queueStatus: SurveyQueueStatus {
         SurveyDisplay.queueStatus(
             isOnline: network.isOnline,
@@ -46,10 +81,7 @@ struct SurveyDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
                 queueBanner
-                recordButton
-                photoActions
-                sessionsSection
-                photosSection
+                sectionsList
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 88)
@@ -64,29 +96,9 @@ struct SurveyDetailView: View {
             await session.flushOfflineWork()
             await load()
         }
-        .fullScreenCover(isPresented: $isRecording) {
-            SurveyRecordView(survey: survey) {
+        .fullScreenCover(item: $selectedSection) { section in
+            SurveyRecordView(survey: survey, section: section, catalogue: catalogue) {
                 await load()
-            }
-        }
-        .onChange(of: pickerItems) { _, items in
-            Task { await importPickerItems(items) }
-        }
-        .sheet(isPresented: $showCamera) {
-            SurveyCameraPicker { data in
-                if let data {
-                    enqueuePhoto(data: data, title: "Site photo")
-                }
-                showCamera = false
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                PhotosPicker(selection: $pickerItems, maxSelectionCount: 30, matching: .images) {
-                    Image(systemName: "photo.on.rectangle")
-                        .foregroundStyle(OzerPalette.coral)
-                }
-                .accessibilityLabel("Add photos from library")
             }
         }
     }
@@ -110,18 +122,16 @@ struct SurveyDetailView: View {
     private var queueBanner: some View {
         HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(isRecording ? OzerPalette.coral : (network.isOnline ? OzerPalette.info : OzerPalette.plumSoft))
+                .fill(network.isOnline ? OzerPalette.info : OzerPalette.plumSoft)
                 .frame(width: 8, height: 8)
                 .padding(.top, 5)
             VStack(alignment: .leading, spacing: 4) {
-                if isRecording {
-                    Text("Recording")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(OzerPalette.coral)
-                }
                 Text(queueStatus.banner)
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
+                Text("Pick a section, then record notes and photos into it. Coming back later appends to the same note.")
+                    .font(.caption)
+                    .foregroundStyle(OzerPalette.plumSoft)
             }
             Spacer()
         }
@@ -129,77 +139,67 @@ struct SurveyDetailView: View {
         .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
     }
 
-    private var recordButton: some View {
-        Button {
-            isRecording = true
-        } label: {
-            Label("Record site notes", systemImage: "record.circle")
-                .font(.body.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-        }
-        .buttonStyle(OzerPrimaryButtonStyle())
-    }
-
-    private var photoActions: some View {
-        HStack(spacing: 12) {
-            Button {
-                showCamera = true
-            } label: {
-                Label("Camera", systemImage: "camera")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-            }
-            .buttonStyle(OzerSecondaryButtonStyle())
-
-            PhotosPicker(selection: $pickerItems, maxSelectionCount: 30, matching: .images) {
-                Label("Library", systemImage: "photo.on.rectangle")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-            }
-            .buttonStyle(OzerSecondaryButtonStyle())
-        }
-    }
-
-    private var sessionsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Recordings")
+    private var sectionsList: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Sections")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(OzerPalette.plum)
 
-            if sessions.isEmpty && pendingSessions.isEmpty {
-                Text("No sessions yet. Record as you walk the property. Pause and resume on the same take, or start another session later.")
+            if sectionRows.isEmpty {
+                Text("On-site sections are not available for this survey type yet.")
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
             } else {
-                ForEach(pendingSessions) { item in
-                    sessionCard(
-                        title: item.title,
-                        body: item.content,
-                        waiting: true
-                    )
+                ForEach(groupedSections, id: \.group) { group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(group.group)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(OzerPalette.plumMuted)
+                        ForEach(group.sections) { item in
+                            Button {
+                                selectedSection = item
+                            } label: {
+                                sectionRow(item)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
-                ForEach(sessions) { item in
-                    sessionCard(title: item.title, body: item.content, waiting: false)
-                }
+            }
+            if let loadError {
+                Text(loadError)
+                    .font(.caption)
+                    .foregroundStyle(OzerPalette.plumSoft)
             }
         }
     }
 
-    private func sessionCard(title: String, body: String, waiting: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.body.weight(.medium))
-                .foregroundStyle(OzerPalette.plum)
-            if !body.isEmpty {
-                Text(body)
+    private func sectionRow(_ item: SurveySectionItem) -> some View {
+        let queued = pendingSessions.filter { matches(item, ricsCode: $0.ricsCode) }.count
+            + pendingPhotos.filter { matches(item, ricsCode: $0.ricsCode) }.count
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(item.displayLabel)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+                Spacer()
+                if item.photoCount > 0 {
+                    Text("\(item.photoCount) photo\(item.photoCount == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+            }
+            if item.note.isEmpty {
+                Text("No notes yet")
+                    .font(.subheadline)
+                    .foregroundStyle(OzerPalette.plumSoft)
+            } else {
+                Text(item.note)
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
-                    .lineLimit(4)
+                    .lineLimit(3)
             }
-            if waiting {
+            if queued > 0 {
                 Text("Waiting to upload")
                     .font(.caption)
                     .foregroundStyle(OzerPalette.plumSoft)
@@ -212,105 +212,29 @@ struct SurveyDetailView: View {
             RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
                 .stroke(OzerPalette.border, lineWidth: 1)
         }
+        .accessibilityLabel(item.displayLabel)
+        .accessibilityHint("Record notes and photos for this section")
     }
 
-    private var photosSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Photo library")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(OzerPalette.plum)
-
-            if photos.isEmpty && pendingPhotos.isEmpty {
-                Text("Add photos from the camera or camera roll. They stay on this iPhone until they upload into the survey library.")
-                    .font(.subheadline)
-                    .foregroundStyle(OzerPalette.plumMuted)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    ForEach(pendingPhotos) { photo in
-                        photoTile(title: photo.title, url: queue.photoURL(for: photo), remote: nil, waiting: true)
-                    }
-                    ForEach(photos) { photo in
-                        photoTile(title: photo.title, url: nil, remote: photo.previewUrl, waiting: false)
-                    }
-                }
-            }
-            if let loadError {
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundStyle(OzerPalette.plumSoft)
-            }
-        }
-    }
-
-    private func photoTile(title: String, url: URL?, remote: String?, waiting: Bool) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            if let url, let image = UIImage(contentsOfFile: url.path) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else if let remote, let remoteURL = URL(string: remote) {
-                AsyncImage(url: remoteURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        OzerPalette.creamDeep
-                    }
-                }
-            } else {
-                OzerPalette.creamDeep
-            }
-            Text(waiting ? "Queued" : title)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(OzerPalette.creamOnDark)
-                .padding(6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(OzerPalette.plum.opacity(0.55))
-        }
-        .frame(height: 96)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private func importPickerItems(_ items: [PhotosPickerItem]) async {
-        guard !items.isEmpty else { return }
-        for item in items {
-            if let data = try? await item.loadTransferable(type: Data.self) {
-                enqueuePhoto(data: data, title: "Site photo")
-            }
-        }
-        pickerItems = []
-        await session.flushOfflineWork()
-        await load()
-    }
-
-    private func enqueuePhoto(data: Data, title: String) {
-        _ = queue.enqueuePhoto(
-            workspace: workspace,
-            surveyId: survey.id,
-            isLocalSurvey: survey.isLocal,
-            title: title,
-            imageData: data
-        )
-        Task {
-            await session.flushOfflineWork()
-            await load()
-        }
+    private func matches(_ section: SurveySectionItem, ricsCode: String?) -> Bool {
+        guard let ricsCode, !ricsCode.isEmpty else { return false }
+        if ricsCode.caseInsensitiveCompare(section.ricsCode) == .orderedSame { return true }
+        if ricsCode.caseInsensitiveCompare(section.key) == .orderedSame { return true }
+        return SurveySectionCatalogue.section(ricsCodeOrKey: ricsCode)?.ricsCode == section.ricsCode
     }
 
     private func load() async {
         isLoading = true
         defer { isLoading = false }
         if survey.isLocal {
-            sessions = []
-            photos = []
+            remoteSections = []
             return
         }
         do {
             let token = try await session.validAccessToken()
             let detail = try await api.survey(id: survey.id, workspace: workspace, accessToken: token)
             survey = detail.survey
-            sessions = detail.sessions
-            photos = detail.photos
+            remoteSections = detail.sections
             loadError = nil
         } catch let error as NativeAPIError where error == .unauthorized {
             await session.handleUnauthorized()
