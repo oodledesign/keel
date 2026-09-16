@@ -224,10 +224,13 @@ When `rics_code` (or `section_key`) is set, the surveyor-chosen section is used:
 the session is attached to that code and the running `survey_observations` note
 is created or appended. AI does not assign the section.
 Without `rics_code`, the legacy keyword/AI grouping path remains.
+In both cases a light-tier cleanup pass strips filler without changing the section.
 
 POST /api/native/v1/surveys/{id}/photos
 multipart `workspace` + image `file` + optional `rics_code` / `section_key`
-→ survey library doc (`photo_role = archive`, `pinned_section_key` when tagged)
+→ survey library doc (`photo_role = curated` when pinned, otherwise `archive`).
+Uploaded bytes are the report-bound copy. Higher-resolution originals stay on
+the iPhone when the client compresses before upload.
 ```
 
 ## Task review

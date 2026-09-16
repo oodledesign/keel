@@ -300,6 +300,11 @@ export function SurveyHubContent({
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm">
+            <Link href={`/home/${accountSlug}/surveys/${proposal.id}/review`}>
+              Desk review
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
             <Link href={editHref}>
               <FileText className="mr-2 h-4 w-4" />
               {hasDraft ? 'Open draft' : 'Open report editor'}

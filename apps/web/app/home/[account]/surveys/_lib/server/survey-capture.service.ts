@@ -9,9 +9,11 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
+import { captionEmptySurveyPhotos } from '~/lib/ai/survey-photo-caption';
 import { curateSurveyPhotos } from '~/lib/ai/survey-photo-curate';
 import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
 import { combineSurveyStyleGuidance } from '~/lib/ai/survey-style-distill';
+import { cleanSurveyObservationBodies } from '~/lib/ai/survey-transcript-cleanup';
 import {
   assembleSurveyReportFromTemplate,
   mergeValuesFromSurvey,
@@ -29,6 +31,7 @@ import {
 } from '~/lib/building-surveyor/report-sections';
 import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
 import type { SurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
+import { surveySectionByKey } from '~/lib/building-surveyor/survey-section-catalogue';
 import {
   type BuildingSurveyTypeKey,
   DEFAULT_BUILDING_SURVEY_TYPE,
@@ -39,12 +42,14 @@ import type { Database } from '~/lib/database.types';
 
 import type {
   AddSurveyTranscriptInput,
+  AutoCaptionSurveyPhotosInput,
   CreateSurveyObservationInput,
   DeleteSurveyObservationInput,
   GenerateSurveyDraftInput,
   ProposeSurveyPhotoCurationInput,
   ReorderSurveyPhotosInput,
   SetSurveyPhotoShareInput,
+  SurveyLibraryPhoto,
   SurveyObservation,
   SurveyPhotoShare,
   SurveyStyleExample,
@@ -81,7 +86,12 @@ type SurveyRow = {
   survey_flood_fetched_at?: string | null;
 };
 
+function isKnownSectionKey(key: string) {
+  return Boolean(buildingSurveySectionByKey(key) || surveySectionByKey(key));
+}
+
 function mapObservation(row: Record<string, unknown>): SurveyObservation {
+  const cleanup = row.cleanup_source;
   return {
     id: row.id as string,
     proposalId: row.proposal_id as string,
@@ -89,6 +99,9 @@ function mapObservation(row: Record<string, unknown>): SurveyObservation {
     sectionKey: row.section_key as string,
     ricsCode: (row.rics_code as string | null) ?? null,
     body: (row.body as string | null) ?? '',
+    sourceBody: (row.source_body as string | null) ?? null,
+    cleanupSource:
+      cleanup === 'ai' || cleanup === 'passthrough' ? cleanup : null,
     conditionRating: isConditionRating(row.condition_rating as string | null)
       ? (row.condition_rating as SurveyObservation['conditionRating'])
       : null,
@@ -97,6 +110,9 @@ function mapObservation(row: Record<string, unknown>): SurveyObservation {
     updatedAt: row.updated_at as string,
   };
 }
+
+const OBSERVATION_SELECT =
+  'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, source_body, cleanup_source, sort_order, created_at, updated_at';
 
 export function createSurveyCaptureService(client: SupabaseClient<Database>) {
   return new SurveyCaptureService(client);
@@ -179,9 +195,7 @@ class SurveyCaptureService {
   ): Promise<SurveyObservation[]> {
     const { data, error } = await this.db
       .from('survey_observations')
-      .select(
-        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
-      )
+      .select(OBSERVATION_SELECT)
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
       .order('sort_order', { ascending: true })
@@ -311,7 +325,11 @@ class SurveyCaptureService {
       accountId: input.accountId,
       supabase: this.client,
     });
-    const drafts = grouping.drafts;
+    const drafts = await cleanSurveyObservationBodies({
+      drafts: grouping.drafts,
+      accountId: input.accountId,
+      supabase: this.client,
+    });
     if (drafts.length === 0) {
       throw new Error(
         'Could not find usable observations in that transcript. Add more complete sentences.',
@@ -354,6 +372,8 @@ class SurveyCaptureService {
       section_key: draft.sectionKey,
       rics_code: draft.ricsCode ?? ricsCodeForSectionKey(draft.sectionKey),
       body: draft.body,
+      source_body: draft.sourceBody,
+      cleanup_source: draft.cleanupSource,
       sort_order: startOrder + index,
       created_by: user.id,
     }));
@@ -361,9 +381,7 @@ class SurveyCaptureService {
     const { data: inserted, error: insertError } = await this.db
       .from('survey_observations')
       .insert(rows)
-      .select(
-        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
-      );
+      .select(OBSERVATION_SELECT);
     if (insertError) this.throwErr(insertError);
 
     return {
@@ -391,7 +409,7 @@ class SurveyCaptureService {
     );
     await this.getSurvey(input.accountId, input.proposalId);
 
-    if (!buildingSurveySectionByKey(input.sectionKey)) {
+    if (!isKnownSectionKey(input.sectionKey)) {
       throw new Error('Unknown survey section');
     }
 
@@ -416,9 +434,7 @@ class SurveyCaptureService {
         sort_order: Number(maxRow?.sort_order ?? -1) + 1,
         created_by: user.id,
       })
-      .select(
-        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
-      )
+      .select(OBSERVATION_SELECT)
       .single();
     if (error || !data) this.throwErr(error, 'Could not add observation');
     return mapObservation(data as Record<string, unknown>);
@@ -431,7 +447,7 @@ class SurveyCaptureService {
 
     const payload: Record<string, unknown> = {};
     if (input.sectionKey !== undefined) {
-      if (!buildingSurveySectionByKey(input.sectionKey)) {
+      if (!isKnownSectionKey(input.sectionKey)) {
         throw new Error('Unknown survey section');
       }
       payload.section_key = input.sectionKey;
@@ -453,9 +469,7 @@ class SurveyCaptureService {
       .eq('id', input.observationId)
       .eq('account_id', input.accountId)
       .eq('proposal_id', input.proposalId)
-      .select(
-        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
-      )
+      .select(OBSERVATION_SELECT)
       .single();
     if (error || !data) this.throwErr(error, 'Could not update observation');
     return mapObservation(data as Record<string, unknown>);
@@ -706,7 +720,7 @@ class SurveyCaptureService {
           .update({
             photo_role: 'curated',
             pinned_section_key: proposal.sectionKey,
-            caption: proposal.caption,
+            caption: photo.caption?.trim() || proposal.caption,
             curated_sort_order: proposal.sortOrder,
           })
           .eq('id', photo.id)
@@ -747,7 +761,7 @@ class SurveyCaptureService {
 
     const payload: Record<string, unknown> = {};
     if (input.sectionKey !== undefined) {
-      if (input.sectionKey && !buildingSurveySectionByKey(input.sectionKey)) {
+      if (input.sectionKey && !isKnownSectionKey(input.sectionKey)) {
         throw new Error('Unknown survey section');
       }
       payload.pinned_section_key = input.sectionKey;
@@ -789,7 +803,7 @@ class SurveyCaptureService {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
     await this.getSurvey(input.accountId, input.proposalId);
 
-    if (!buildingSurveySectionByKey(input.sectionKey)) {
+    if (!isKnownSectionKey(input.sectionKey)) {
       throw new Error('Unknown survey section');
     }
 
@@ -836,15 +850,74 @@ class SurveyCaptureService {
     return { enabled: input.enabled, token };
   }
 
-  private async listLibraryPhotos(accountId: string, proposalId: string) {
+  async autoCaptionSectionPhotos(input: AutoCaptionSurveyPhotosInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.getSurvey(input.accountId, input.proposalId);
+
+    if (!isKnownSectionKey(input.sectionKey)) {
+      throw new Error('Unknown survey section');
+    }
+
+    const [observations, photos] = await Promise.all([
+      this.listObservations(input.accountId, input.proposalId),
+      this.listLibraryPhotos(input.accountId, input.proposalId),
+    ]);
+
+    const sectionPhotos = photos.filter(
+      (photo) => photo.pinnedSectionKey === input.sectionKey,
+    );
+    const sectionNotes = observations
+      .filter((item) => item.sectionKey === input.sectionKey)
+      .map((item) => item.body)
+      .join('\n\n');
+
+    const result = await captionEmptySurveyPhotos({
+      photos: sectionPhotos,
+      observationText: sectionNotes,
+      sectionKey: input.sectionKey,
+      ricsCode:
+        surveySectionByKey(input.sectionKey)?.ricsCode ??
+        ricsCodeForSectionKey(input.sectionKey),
+      accountId: input.accountId,
+      supabase: this.client,
+    });
+
+    let updated = 0;
+    for (const [docId, caption] of result.captions) {
+      const photo = sectionPhotos.find((item) => item.id === docId);
+      if (photo?.caption?.trim()) continue;
+      const { error } = await this.db
+        .from('docs')
+        .update({ caption })
+        .eq('id', docId)
+        .eq('account_id', input.accountId)
+        .eq('proposal_id', input.proposalId)
+        .eq('kind', 'uploaded');
+      if (error) this.throwErr(error);
+      updated += 1;
+    }
+
+    return {
+      ...result,
+      captions: Object.fromEntries(result.captions),
+      updated,
+    };
+  }
+
+  async listLibraryPhotos(
+    accountId: string,
+    proposalId: string,
+  ): Promise<SurveyLibraryPhoto[]> {
     const { data, error } = await this.db
       .from('docs')
       .select(
-        'id, title, mime_type, created_at, pinned_section_key, photo_role, caption',
+        'id, title, mime_type, created_at, pinned_section_key, photo_role, caption, curated_sort_order',
       )
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
       .eq('kind', 'uploaded')
+      .order('curated_sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
     if (error) this.throwErr(error);
 
@@ -861,8 +934,16 @@ class SurveyCaptureService {
         mimeType: (row.mime_type as string | null) ?? null,
         createdAt: (row.created_at as string | null) ?? null,
         pinnedSectionKey: (row.pinned_section_key as string | null) ?? null,
-        photoRole: (row.photo_role as string | null) ?? 'archive',
+        photoRole:
+          row.photo_role === 'curated'
+            ? 'curated'
+            : ('archive' as SurveyLibraryPhoto['photoRole']),
         caption: (row.caption as string | null) ?? null,
+        curatedSortOrder:
+          row.curated_sort_order === null ||
+          row.curated_sort_order === undefined
+            ? null
+            : Number(row.curated_sort_order),
       }));
   }
 }

@@ -11,6 +11,7 @@ import pathsConfig from '~/config/paths.config';
 import {
   AddSurveyStyleExampleSchema,
   AddSurveyTranscriptSchema,
+  AutoCaptionSurveyPhotosSchema,
   CreateSurveyObservationSchema,
   DeleteSurveyObservationSchema,
   DeleteSurveyStyleExampleSchema,
@@ -39,6 +40,11 @@ function revalidateSurveyHub(accountSlug: string, proposalId: string) {
   );
   revalidatePath(
     pathsConfig.app.accountSurveys.replace('[account]', accountSlug),
+  );
+  revalidatePath(
+    pathsConfig.app.accountSurveyReview
+      .replace('[account]', accountSlug)
+      .replace('[id]', proposalId),
   );
 }
 
@@ -102,6 +108,25 @@ export const updateSurveyTypeAction = enhanceAction(
     return result;
   },
   { schema: UpdateSurveyTypeSchema },
+);
+
+export const autoCaptionSurveyPhotosAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'auto-caption-survey-photos',
+        userId: user.id,
+        proposalId: data.proposalId,
+        sectionKey: data.sectionKey,
+      },
+      'Captioning empty survey photos',
+    );
+    const result = await getService().autoCaptionSectionPhotos(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: AutoCaptionSurveyPhotosSchema },
 );
 
 export const proposeSurveyPhotoCurationAction = enhanceAction(

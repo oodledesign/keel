@@ -84,8 +84,10 @@ export const OzerAIFeature = {
   instagram_reply_enhanced: 'instagram_reply_enhanced',
   retainer_service_match: 'retainer_service_match',
   survey_observation_group: 'survey_observation_group',
+  survey_transcript_cleanup: 'survey_transcript_cleanup',
   survey_style_distill: 'survey_style_distill',
   survey_photo_curate: 'survey_photo_curate',
+  survey_photo_caption: 'survey_photo_caption',
 } as const;
 
 export type OzerAIFeatureKey =
@@ -575,6 +577,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     maxOutputTokens: 4096,
     structuredOutput: true,
   },
+  survey_transcript_cleanup: {
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 0.5,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
   survey_style_distill: {
     provider: 'google',
     model: GEMINI_FLASH_LITE_MODEL,
@@ -589,6 +599,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     credits: 1,
     batchable: false,
     maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  survey_photo_caption: {
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 0.5,
+    batchable: false,
+    maxOutputTokens: 2048,
     structuredOutput: true,
   },
 };
@@ -678,8 +696,10 @@ export function resolveFeatureConfig(feature: OzerAIFeatureKey): FeatureConfig {
       feature === 'email_triage' ||
       feature === 'retainer_service_match' ||
       feature === 'survey_observation_group' ||
+      feature === 'survey_transcript_cleanup' ||
       feature === 'survey_style_distill' ||
-      feature === 'survey_photo_curate')
+      feature === 'survey_photo_curate' ||
+      feature === 'survey_photo_caption')
   ) {
     return {
       ...config,

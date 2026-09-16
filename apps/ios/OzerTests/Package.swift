@@ -54,6 +54,7 @@ let package = Package(
             sources: [
                 "SurveyDisplay.swift",
                 "SurveySectionCatalogue.swift",
+                "SurveyPhotoSync.swift",
             ]
         ),
         .executableTarget(
