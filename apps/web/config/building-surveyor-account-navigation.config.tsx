@@ -15,6 +15,7 @@ import pathsConfig from '~/config/paths.config';
 import { BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { isAccountModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import { displayBuildingSurveyorBoardName } from '~/lib/building-surveyor/pipeline-stages';
 
 const iconClasses = 'w-4';
 
@@ -46,7 +47,9 @@ export function buildBuildingSurveyorSpaceNavChildren(
 ): NavChild[] {
   const ms = moduleSettings;
   const home = createPath(pathsConfig.app.accountHome, account);
-  const pipelineBoardName = options?.pipelineBoardName?.trim() || 'Enquiries';
+  const pipelineBoardName = displayBuildingSurveyorBoardName(
+    options?.pipelineBoardName,
+  );
 
   const registry: Record<string, () => NavChild | null> = {
     dashboard: () =>
@@ -77,7 +80,7 @@ export function buildBuildingSurveyorSpaceNavChildren(
     meetings: () =>
       access.canViewClients && isEnabled(ms, 'clients')
         ? {
-            label: 'Transcripts',
+            label: 'Meetings',
             path: createPath(pathsConfig.app.accountMeetings, account),
             Icon: <Mic className={iconClasses} />,
           }

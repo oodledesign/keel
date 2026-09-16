@@ -1310,6 +1310,7 @@ struct TodayPayload: Decodable, Equatable {
     var meetingsToday: [MeetingTodayItem]
     var finances: FinancesPayload?
     var taskReview: TaskReviewCounts?
+    var surveyor: SurveyorHomePayload?
 
     static let empty = TodayPayload(
         title: nil,
@@ -1324,7 +1325,8 @@ struct TodayPayload: Decodable, Equatable {
         recentNotes: [],
         meetingsToday: [],
         finances: nil,
-        taskReview: .empty
+        taskReview: .empty,
+        surveyor: nil
     )
 
     enum CodingKeys: String, CodingKey {
@@ -1335,6 +1337,7 @@ struct TodayPayload: Decodable, Equatable {
         case recentNotes = "recent_notes"
         case meetingsToday = "meetings_today"
         case taskReview = "task_review"
+        case surveyor
     }
 
     init(
@@ -1350,7 +1353,8 @@ struct TodayPayload: Decodable, Equatable {
         recentNotes: [NoteItem] = [],
         meetingsToday: [MeetingTodayItem] = [],
         finances: FinancesPayload? = nil,
-        taskReview: TaskReviewCounts? = nil
+        taskReview: TaskReviewCounts? = nil,
+        surveyor: SurveyorHomePayload? = nil
     ) {
         self.title = title
         self.greeting = greeting
@@ -1365,6 +1369,7 @@ struct TodayPayload: Decodable, Equatable {
         self.meetingsToday = meetingsToday
         self.finances = finances
         self.taskReview = taskReview
+        self.surveyor = surveyor
     }
 
     init(from decoder: Decoder) throws {
@@ -1381,6 +1386,7 @@ struct TodayPayload: Decodable, Equatable {
         meetingsToday = try container.decodeIfPresent([MeetingTodayItem].self, forKey: .meetingsToday) ?? []
         finances = try container.decodeIfPresent(FinancesPayload.self, forKey: .finances)
         taskReview = try container.decodeIfPresent(TaskReviewCounts.self, forKey: .taskReview)
+        surveyor = try container.decodeIfPresent(SurveyorHomePayload.self, forKey: .surveyor)
 
         if !tasksDueToday.isEmpty || !overdueTasks.isEmpty {
             items = Self.mergeHomeItems(

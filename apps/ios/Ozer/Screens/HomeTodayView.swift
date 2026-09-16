@@ -34,6 +34,7 @@ struct HomeTodayView: View {
     @State private var showTaskEditor = false
     @State private var showDictation = false
     @State private var pendingInvoice: InvoiceItem?
+    @State private var pendingSurvey: SurveyItem?
 
     private let client = NativeAPIClient()
 
@@ -86,7 +87,7 @@ struct HomeTodayView: View {
             .padding(.horizontal, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(OzerPalette.cream.ignoresSafeArea())
-            .navigationTitle("Today")
+            .navigationTitle(workspace?.isSurveyorWorkspace == true ? "Home" : "Today")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -119,24 +120,37 @@ struct HomeTodayView: View {
             .navigationDestination(item: $pendingInvoice) { invoice in
                 InvoiceDetailView(invoice: invoice)
             }
+            .navigationDestination(item: $pendingSurvey) { survey in
+                SurveyDetailView(survey: survey)
+            }
         }
     }
 
     private var dashboard: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                quickActions
-                if let review = payload?.taskReview, review.pendingCount > 0 {
-                    reviewCard(review)
+        Group {
+            if workspace?.isSurveyorWorkspace == true {
+                SurveyorHomeView(
+                    payload: payload?.surveyor ?? .empty,
+                    onOpen: onOpen,
+                    onOpenSurvey: { pendingSurvey = $0 }
+                )
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        header
+                        quickActions
+                        if let review = payload?.taskReview, review.pendingCount > 0 {
+                            reviewCard(review)
+                        }
+                        if workspace?.showsInvoices == true {
+                            financeSection
+                        }
+                        overviewCard
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
                 }
-                if workspace?.showsInvoices == true {
-                    financeSection
-                }
-                overviewCard
             }
-            .padding(.top, 8)
-            .padding(.bottom, 12)
         }
     }
 

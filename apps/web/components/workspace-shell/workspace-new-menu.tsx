@@ -475,7 +475,7 @@ function getTeamItems(
     return [
       {
         key: 'enquiry',
-        label: 'New enquiry',
+        label: 'New pipeline item',
         icon: Kanban,
         href: `${accountPath(account, pathsConfig.app.accountPipeline)}?create=lead`,
       },
@@ -493,7 +493,7 @@ function getTeamItems(
       },
       {
         key: 'transcript',
-        label: 'Paste transcript',
+        label: 'Add meeting',
         icon: FileText,
         href: `${accountPath(account, pathsConfig.app.accountMeetings)}?create=1`,
       },

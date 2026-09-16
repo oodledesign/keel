@@ -158,7 +158,7 @@ const generateSurveyReportSchema = z
       Boolean(data.proposalId),
     {
       message:
-        'Provide at least one site transcript, grouped observation, or note/file',
+        'Provide at least one site meeting, grouped observation, or note/file',
     },
   );
 

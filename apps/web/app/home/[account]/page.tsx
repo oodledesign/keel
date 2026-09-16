@@ -237,7 +237,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
         <TeamAccountLayoutPageHeader
           account={account}
           title={accountLabel}
-          description="Enquiries, transcripts, and building survey reports."
+          description="Pipeline, meetings, and building survey reports."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           <Suspense fallback={null}></Suspense>

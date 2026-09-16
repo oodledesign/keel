@@ -153,6 +153,7 @@ export function ClientsPageContent({
   showCommercialRole = false,
   showLinkedInImport = true,
   initialAudience = 'all',
+  campaignsEnabled = false,
 }: {
   accountSlug: string;
   accountId: string;
@@ -168,6 +169,8 @@ export function ClientsPageContent({
   showCommercialRole?: boolean;
   showLinkedInImport?: boolean;
   initialAudience?: ContactAudience;
+  /** Email Campaigns add-on. Mailing-list contacts stay hidden when off. */
+  campaignsEnabled?: boolean;
 }) {
   const isCommercial = variant === 'commercial';
   const pathname = usePathname();
@@ -187,7 +190,9 @@ export function ClientsPageContent({
   const [sort, setSort] = useState<SortKey>('name-asc');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [showArchived, setShowArchived] = useState(false);
-  const [audience, setAudience] = useState<ContactAudience>(initialAudience);
+  const [audience, setAudience] = useState<ContactAudience>(
+    campaignsEnabled ? initialAudience : 'all',
+  );
   const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
   const [members, setMembers] = useState<
     Array<{ user_id: string; name: string | null; picture_url?: string | null }>
@@ -264,7 +269,7 @@ export function ClientsPageContent({
           pageSize,
           members,
           variant,
-          audience,
+          audience: campaignsEnabled ? audience : 'all',
         });
         const list = Array.isArray((result as { data?: unknown })?.data)
           ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -282,7 +287,7 @@ export function ClientsPageContent({
         setLoadingPage(false);
       }
     },
-    [accountId, pageSize, members, variant, audience],
+    [accountId, pageSize, members, variant, audience, campaignsEnabled],
   );
 
   const refreshClients = useCallback(async () => {
@@ -339,7 +344,7 @@ export function ClientsPageContent({
             pageSize,
             members,
             variant,
-            audience,
+            audience: campaignsEnabled ? audience : 'all',
           });
           const list = Array.isArray((result as { data?: unknown })?.data)
             ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -377,7 +382,15 @@ export function ClientsPageContent({
     return () => {
       cancelled = true;
     };
-  }, [accountId, searchDebounced, pageSize, members, variant, audience]);
+  }, [
+    accountId,
+    searchDebounced,
+    pageSize,
+    members,
+    variant,
+    audience,
+    campaignsEnabled,
+  ]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -456,13 +469,14 @@ export function ClientsPageContent({
   };
 
   const setContactAudience = (next: ContactAudience) => {
+    if (!campaignsEnabled && next === 'mailing_list') return;
     if (next === audience) return;
     setAudience(next);
     setPageClients([]);
     setCachedClients([]);
     setPage(1);
     const nextParams = new URLSearchParams(searchParams.toString());
-    if (next === 'mailing_list') {
+    if (next === 'mailing_list' && campaignsEnabled) {
       nextParams.set('list', 'mailing');
     } else {
       nextParams.delete('list');
@@ -551,40 +565,42 @@ export function ClientsPageContent({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
-        <div
-          className={cn('inline-flex rounded-lg p-1', panelToolbarClass)}
-          role="tablist"
-          aria-label={isCommercial ? 'Contact list' : 'Client list'}
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={audience === 'all'}
-            onClick={() => setContactAudience('all')}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium transition',
-              audience === 'all'
-                ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
-                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-            )}
+        {campaignsEnabled ? (
+          <div
+            className={cn('inline-flex rounded-lg p-1', panelToolbarClass)}
+            role="tablist"
+            aria-label={isCommercial ? 'Contact list' : 'Client list'}
           >
-            {isCommercial ? 'All contacts' : 'All clients'}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={audience === 'mailing_list'}
-            onClick={() => setContactAudience('mailing_list')}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium transition',
-              audience === 'mailing_list'
-                ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
-                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-            )}
-          >
-            Mailing list
-          </button>
-        </div>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={audience === 'all'}
+              onClick={() => setContactAudience('all')}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-sm font-medium transition',
+                audience === 'all'
+                  ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              )}
+            >
+              {isCommercial ? 'All contacts' : 'All clients'}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={audience === 'mailing_list'}
+              onClick={() => setContactAudience('mailing_list')}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-sm font-medium transition',
+                audience === 'mailing_list'
+                  ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+              )}
+            >
+              Mailing list
+            </button>
+          </div>
+        ) : null}
 
         <div className="relative min-w-[220px] flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />

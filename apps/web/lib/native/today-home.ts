@@ -1,5 +1,6 @@
 import type { NativeFinances } from './invoices-shared';
 import { type NativeNote, isNativeMeetingNote } from './notes-shared';
+import type { NativeSurveyorHome } from './surveyor-home-shared';
 import type { NativeTask } from './task-map';
 import {
   type NativeTaskReviewCounts,
@@ -30,6 +31,8 @@ export type NativeTodayHomePayload = {
   finances: NativeFinances | null;
   /** Pending meeting + email suggestions for the review queue. */
   task_review: NativeTaskReviewCounts;
+  /** Building-surveyor home cards. Null on every other workspace. */
+  surveyor: NativeSurveyorHome | null;
   /** Flat merge of due-today then overdue for older clients. */
   items: NativeTodayCompatItem[];
 };
@@ -157,6 +160,7 @@ export function buildNativeTodayHomePayload(input: {
   meetingsToday: NativeTodayMeeting[];
   finances: NativeFinances | null;
   taskReview?: NativeTaskReviewCounts;
+  surveyor?: NativeSurveyorHome | null;
 }): NativeTodayHomePayload {
   return {
     greeting: input.greeting,
@@ -172,6 +176,7 @@ export function buildNativeTodayHomePayload(input: {
     meetings_today: input.meetingsToday,
     finances: input.finances,
     task_review: input.taskReview ?? emptyNativeTaskReviewCounts(),
+    surveyor: input.surveyor ?? null,
     items: mergeNativeTodayItems(input.dueToday, input.overdue),
   };
 }

@@ -431,7 +431,7 @@ export function MeetingsPageContent({
               </p>
               {canEdit ? (
                 <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  Add a meeting or save transcripts from a client page.
+                  Add a meeting from here or a client page.
                 </p>
               ) : null}
             </div>

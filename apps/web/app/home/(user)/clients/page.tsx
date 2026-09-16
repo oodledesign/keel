@@ -14,6 +14,7 @@ import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../[account]/_lib/role-access';
+import { isCampaignsModuleEnabled } from '../../[account]/_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../[account]/_lib/server/team-account-workspace.loader';
 import { ClientsPageContent } from '../../[account]/clients/_components/clients-page-content';
 import { loadClientsPageData } from '../../[account]/clients/_lib/server/clients-page.loader';
@@ -134,6 +135,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
         isContractorView={isContractorView}
         initialOverview={initialOverview}
         initialTotal={initialTotal}
+        campaignsEnabled={isCampaignsModuleEnabled(workspace.moduleSettings)}
       />
     </PageBody>
   );

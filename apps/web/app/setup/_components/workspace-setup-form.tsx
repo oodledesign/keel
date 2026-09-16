@@ -383,7 +383,7 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                         : isCommercial
                           ? commercialCardBlurb()
                           : isSurveyor
-                            ? 'Enquiry → booking → building survey reports from site transcripts'
+                            ? 'Pipeline → booking → building survey reports from site meetings'
                             : draft.profile === 'family'
                               ? 'Free — household tasks, calendar and meal planning'
                               : communityCardBlurb()}

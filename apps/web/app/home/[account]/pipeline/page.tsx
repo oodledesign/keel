@@ -9,7 +9,10 @@ import { createClientsService } from '~/home/[account]/clients/_lib/server/clien
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import { createRequirementsService } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
-import { DEFAULT_BUILDING_SURVEYOR_BOARD_NAME } from '~/lib/building-surveyor/pipeline-stages';
+import {
+  DEFAULT_BUILDING_SURVEYOR_BOARD_NAME,
+  displayBuildingSurveyorBoardName,
+} from '~/lib/building-surveyor/pipeline-stages';
 import { isBuildingSurveyorTerminalStage } from '~/lib/building-surveyor/pipeline-stages';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import { isCommercialTerminalStage } from '~/lib/commercial/pipeline-stage-config';
@@ -30,8 +33,18 @@ interface TeamAccountPipelinePageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async () => {
-  return { title: 'WIP' };
+export const generateMetadata = async ({
+  params,
+}: TeamAccountPipelinePageProps) => {
+  const accountSlug = (await params).account;
+  const workspace = await loadTeamWorkspace(accountSlug);
+  if (workspace.workspaceProfile === 'building_surveyor') {
+    return { title: DEFAULT_BUILDING_SURVEYOR_BOARD_NAME };
+  }
+  if (workspace.workspaceProfile === 'commercial_property') {
+    return { title: DEFAULT_COMMERCIAL_WIP_BOARD_NAME };
+  }
+  return { title: 'Pipeline' };
 };
 
 function formatCurrency(value: number) {
@@ -212,12 +225,12 @@ async function TeamAccountPipelinePage({
   const headerTitle = isCommercial
     ? boardName
     : isSurveyor
-      ? DEFAULT_BUILDING_SURVEYOR_BOARD_NAME
+      ? displayBuildingSurveyorBoardName(DEFAULT_BUILDING_SURVEYOR_BOARD_NAME)
       : 'Pipeline';
   const headerDescription = isCommercial
     ? undefined
     : isSurveyor
-      ? `${activeDeals.length} open enquiries · ${formatCurrency(totalValue)} quoted`
+      ? `${activeDeals.length} open · ${formatCurrency(totalValue)} quoted`
       : `${activeDeals.length} active leads · ${formatCurrency(totalValue)} total value`;
 
   return (

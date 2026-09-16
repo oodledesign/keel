@@ -9,6 +9,8 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { isCampaignsModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import { loadAccountModuleSettings } from '~/lib/quick-action/module-access';
 
 import {
   CreateClientSchema,
@@ -80,10 +82,25 @@ export const listClientProperties = enhanceAction(
   { schema: ClientScopedListSchema },
 );
 
+async function resolveClientsAudience(
+  accountId: string,
+  audience: 'all' | 'mailing_list' | undefined,
+) {
+  if (audience !== 'mailing_list') return audience;
+  const settings = await loadAccountModuleSettings(
+    getSupabaseServerClient(),
+    accountId,
+  );
+  return isCampaignsModuleEnabled(settings) ? audience : 'all';
+}
+
 export const listClients = enhanceAction(
   async (input) => {
     const service = getService();
-    return service.listClients(input);
+    return service.listClients({
+      ...input,
+      audience: await resolveClientsAudience(input.accountId, input.audience),
+    });
   },
   { schema: ListClientsSchema },
 );
@@ -91,7 +108,14 @@ export const listClients = enhanceAction(
 export const listClientsOverview = enhanceAction(
   async (input) => {
     const service = getService();
-    return service.listClientsOverview(input);
+    const audience = await resolveClientsAudience(
+      input.accountId,
+      input.audience,
+    );
+    return service.listClientsOverview({
+      ...input,
+      audience,
+    });
   },
   {
     schema: ListClientsSchema.extend({
