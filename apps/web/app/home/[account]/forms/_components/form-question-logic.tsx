@@ -1,8 +1,11 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+
+import { GitBranch, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -40,108 +43,136 @@ export function FormQuestionLogic({
   stepsMode,
   onChange,
 }: Props) {
+  const showWhen = field.visibleWhen;
+  const jumpRules = field.jumpRules ?? [];
+  const hasLogic = Boolean(showWhen) || jumpRules.length > 0;
+  const [open, setOpen] = useState(hasLogic);
+
   if (field.type === 'hidden') return null;
   if (priorFields.length === 0 && laterFields.length === 0 && !stepsMode) {
     return null;
   }
 
-  const showWhen = field.visibleWhen;
-  const jumpRules = field.jumpRules ?? [];
-
   return (
-    <div
-      className="mt-4 space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3"
-      data-test="form-question-logic"
-    >
-      <p
-        className={`text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+    <div className="mt-4 space-y-3" data-test="form-question-logic">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="rounded-xl"
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
+        data-test="form-question-logic-toggle"
+        aria-expanded={open}
       >
+        <GitBranch className="mr-1.5 h-3.5 w-3.5" />
         Logic
-      </p>
+        {hasLogic ? (
+          <span
+            className="ml-1.5 h-1.5 w-1.5 rounded-full bg-[var(--ozer-accent)]"
+            aria-hidden
+          />
+        ) : null}
+      </Button>
 
-      {priorFields.length > 0 ? (
-        <div className="space-y-2">
-          <label className={`flex items-center gap-2 text-sm ${workspaceText}`}>
-            <input
-              type="checkbox"
-              checked={Boolean(showWhen)}
-              onChange={(event) =>
-                onChange({
-                  visibleWhen: event.target.checked
-                    ? createEmptyVisibleWhen(priorFields[0]?.key ?? '')
-                    : undefined,
-                })
-              }
-              data-test="form-logic-show-when-toggle"
-            />
-            Show this question only when
-          </label>
-          {showWhen ? (
-            <LogicConditionRow
-              fields={priorFields}
-              op={showWhen.op}
-              fieldKey={showWhen.fieldKey}
-              value={showWhen.value ?? ''}
-              onFieldKey={(fieldKey) =>
-                onChange({ visibleWhen: { ...showWhen, fieldKey } })
-              }
-              onOp={(op) => onChange({ visibleWhen: { ...showWhen, op } })}
-              onValue={(value) =>
-                onChange({ visibleWhen: { ...showWhen, value } })
-              }
-            />
+      {open ? (
+        <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
+          <p
+            className={`text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+          >
+            Logic
+          </p>
+
+          {priorFields.length > 0 ? (
+            <div className="space-y-2">
+              <label
+                className={`flex items-center gap-2 text-sm ${workspaceText}`}
+              >
+                <Checkbox
+                  checked={Boolean(showWhen)}
+                  onCheckedChange={(checked) =>
+                    onChange({
+                      visibleWhen: checked
+                        ? createEmptyVisibleWhen(priorFields[0]?.key ?? '')
+                        : undefined,
+                    })
+                  }
+                  data-test="form-logic-show-when-toggle"
+                />
+                Show this question only when
+              </label>
+              {showWhen ? (
+                <LogicConditionRow
+                  fields={priorFields}
+                  op={showWhen.op}
+                  fieldKey={showWhen.fieldKey}
+                  value={showWhen.value ?? ''}
+                  onFieldKey={(fieldKey) =>
+                    onChange({ visibleWhen: { ...showWhen, fieldKey } })
+                  }
+                  onOp={(op) => onChange({ visibleWhen: { ...showWhen, op } })}
+                  onValue={(value) =>
+                    onChange({ visibleWhen: { ...showWhen, value } })
+                  }
+                />
+              ) : null}
+            </div>
           ) : null}
-        </div>
-      ) : null}
 
-      {stepsMode ? (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <p className={`text-sm ${workspaceText}`}>
-              After this answer, go to
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={(event) => {
-                event.stopPropagation();
-                onChange({
-                  jumpRules: [...jumpRules, createFormJumpRule()],
-                });
-              }}
-              data-test="form-logic-add-jump"
-            >
-              <Plus className="mr-1 h-3.5 w-3.5" />
-              Add jump
-            </Button>
-          </div>
-          {jumpRules.length === 0 ? (
-            <p className={`text-xs ${workspaceTextMuted}`}>
-              Optional. Used in Steps — skip ahead or finish early.
-            </p>
-          ) : (
-            jumpRules.map((rule) => (
-              <JumpRuleRow
-                key={rule.id}
-                field={field}
-                rule={rule}
-                laterFields={laterFields}
-                onChange={(next) =>
-                  onChange({
-                    jumpRules: jumpRules.map((item) =>
-                      item.id === rule.id ? next : item,
-                    ),
-                  })
-                }
-                onRemove={() =>
-                  onChange({
-                    jumpRules: jumpRules.filter((item) => item.id !== rule.id),
-                  })
-                }
-              />
-            ))
-          )}
+          {stepsMode ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className={`text-sm ${workspaceText}`}>
+                  After this answer, go to
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onChange({
+                      jumpRules: [...jumpRules, createFormJumpRule()],
+                    });
+                  }}
+                  data-test="form-logic-add-jump"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Add jump
+                </Button>
+              </div>
+              {jumpRules.length === 0 ? (
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  Optional. Used in Steps — skip ahead or finish early.
+                </p>
+              ) : (
+                jumpRules.map((rule) => (
+                  <JumpRuleRow
+                    key={rule.id}
+                    field={field}
+                    rule={rule}
+                    laterFields={laterFields}
+                    onChange={(next) =>
+                      onChange({
+                        jumpRules: jumpRules.map((item) =>
+                          item.id === rule.id ? next : item,
+                        ),
+                      })
+                    }
+                    onRemove={() =>
+                      onChange({
+                        jumpRules: jumpRules.filter(
+                          (item) => item.id !== rule.id,
+                        ),
+                      })
+                    }
+                  />
+                ))
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

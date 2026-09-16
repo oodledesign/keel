@@ -8,13 +8,25 @@ import {
 } from './form-templates';
 
 describe('workspace form templates', () => {
-  it('exposes contact, blank, and rsvp templates', () => {
-    expect(WORKSPACE_FORM_TEMPLATES).toEqual(['contact', 'blank', 'rsvp']);
+  it('exposes contact, blank, rsvp, and subscribe templates', () => {
+    expect(WORKSPACE_FORM_TEMPLATES).toEqual([
+      'contact',
+      'blank',
+      'rsvp',
+      'subscribe',
+    ]);
     expect(listWorkspaceFormTemplates().map((meta) => meta.id)).toEqual([
       'contact',
       'blank',
       'rsvp',
+      'subscribe',
     ]);
+  });
+
+  it('limits audience mode to subscribe', () => {
+    expect(
+      listWorkspaceFormTemplates('audience').map((meta) => meta.id),
+    ).toEqual(['subscribe']);
   });
 
   it('maps contact to the current default fields', () => {
@@ -92,6 +104,19 @@ describe('workspace form templates', () => {
     const defaults = workspaceFormCreateDefaultsForTemplate('contact');
     expect(defaults.emailSettings.includeSubmittedAnswers).toBe(true);
     expect(defaults.emailSettings.templates).toEqual([]);
+    expect(defaults.theme.presentation).toBe('classic');
+  });
+
+  it('maps subscribe to mailing list defaults', () => {
+    const defaults = workspaceFormCreateDefaultsForTemplate('subscribe');
+    expect(defaults.defaultName).toBe('Subscribe');
+    expect(defaults.suggestedDestination).toBe('mailing_list');
+    expect(defaults.submitLabel).toBe('Subscribe');
+    expect(defaults.fields.map((field) => field.key)).toEqual([
+      'name',
+      'email',
+    ]);
+    expect(defaults.theme.layout).toBe('standard');
     expect(defaults.theme.presentation).toBe('classic');
   });
 });

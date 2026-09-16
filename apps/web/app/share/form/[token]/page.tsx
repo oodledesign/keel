@@ -11,7 +11,10 @@ import {
   publicFormStepCount,
 } from '~/lib/workspace-forms/form-draft.server';
 import { shouldIncludeWelcomeStep } from '~/lib/workspace-forms/form-steps';
-import { brandPageGradientCss } from '~/lib/workspace-forms/form-theme';
+import {
+  brandPageGradientCss,
+  resolveFormThemeColors,
+} from '~/lib/workspace-forms/form-theme';
 import { loadCachedPublicWorkspaceForm } from '~/lib/workspace-forms/public-form';
 
 import { PublicWorkspaceForm } from './_components/public-workspace-form';
@@ -62,9 +65,10 @@ async function PublicWorkspaceFormPage({
     );
   }
 
+  const themeColors = resolveFormThemeColors(form.theme, form.brand);
   const brandGradient = form.theme.pageBackground === 'brand_gradient';
   const pageBackground = brandGradient
-    ? brandPageGradientCss(form.brand.primary_color)
+    ? brandPageGradientCss(themeColors.primaryColor)
     : form.brand.secondary_color || '#FBF6EC';
   const useContentShell = !embed;
   const logoSurface = brandLogoSurfaceForPage({
@@ -119,8 +123,8 @@ async function PublicWorkspaceFormPage({
         initialValues={draft?.values}
         initialStepIndex={draft?.stepIndex}
         logoUrl={resolveBrandLogoForSurface(form.brand, logoSurface)}
-        accentColor={form.brand.accent_color}
-        primaryColor={form.brand.primary_color}
+        accentColor={themeColors.accentColor}
+        primaryColor={themeColors.primaryColor}
         chromeOnDark={brandGradient && !useContentShell}
         contentShell={useContentShell}
       />

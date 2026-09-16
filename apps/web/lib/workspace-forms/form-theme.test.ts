@@ -5,6 +5,7 @@ import {
   darkenHex,
   isRsvpLikeWorkspaceForm,
   parseWorkspaceFormTheme,
+  resolveFormThemeColors,
   resolveWorkspaceFormLayout,
   serializeWorkspaceFormTheme,
 } from './form-theme';
@@ -23,6 +24,32 @@ describe('darkenHex', () => {
   });
 });
 
+describe('resolveFormThemeColors', () => {
+  it('falls back to workspace brand when overrides are empty', () => {
+    expect(
+      resolveFormThemeColors(
+        { primaryColor: null, accentColor: null },
+        { primary_color: '#0d2344', accent_color: '#57c87f' },
+      ),
+    ).toEqual({
+      primaryColor: '#0d2344',
+      accentColor: '#57c87f',
+    });
+  });
+
+  it('prefers form-level overrides', () => {
+    expect(
+      resolveFormThemeColors(
+        { primaryColor: '#351e28', accentColor: '#ff5c34' },
+        { primary_color: '#0d2344', accent_color: '#57c87f' },
+      ),
+    ).toEqual({
+      primaryColor: '#351e28',
+      accentColor: '#ff5c34',
+    });
+  });
+});
+
 describe('brandPageGradientCss', () => {
   it('builds a 135deg primary → darker gradient', () => {
     expect(brandPageGradientCss('#0D2344')).toBe(
@@ -38,6 +65,8 @@ describe('parseWorkspaceFormTheme', () => {
       layout: 'standard',
       layoutExplicit: false,
       presentation: 'classic',
+      primaryColor: null,
+      accentColor: null,
     });
   });
 
@@ -52,6 +81,8 @@ describe('parseWorkspaceFormTheme', () => {
       layout: 'event',
       layoutExplicit: false,
       presentation: 'classic',
+      primaryColor: null,
+      accentColor: null,
     });
   });
 
@@ -76,6 +107,8 @@ describe('parseWorkspaceFormTheme', () => {
       layout: 'standard',
       layoutExplicit: true,
       presentation: 'classic',
+      primaryColor: null,
+      accentColor: null,
     });
   });
 
@@ -109,6 +142,20 @@ describe('serializeWorkspaceFormTheme', () => {
       layout: 'event',
       layoutExplicit: true,
       presentation: 'steps',
+      primaryColor: null,
+      accentColor: null,
+    });
+  });
+
+  it('reads form-level colour overrides', () => {
+    expect(
+      parseWorkspaceFormTheme({
+        primaryColor: '#0D2',
+        accentColor: '#FF5C34',
+      }),
+    ).toMatchObject({
+      primaryColor: '#00dd22',
+      accentColor: '#ff5c34',
     });
   });
 });

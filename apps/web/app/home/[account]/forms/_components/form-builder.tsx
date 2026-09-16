@@ -10,11 +10,6 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
-  RadioGroup,
-  RadioGroupItem,
-  RadioGroupItemLabel,
-} from '@kit/ui/radio-group';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -52,17 +47,12 @@ import {
   visibleFieldStepNumberById,
 } from '~/lib/workspace-forms/form-steps';
 import {
-  WORKSPACE_FORM_LAYOUTS,
-  WORKSPACE_FORM_LAYOUT_LABELS,
-  WORKSPACE_FORM_PAGE_BACKGROUNDS,
-  WORKSPACE_FORM_PAGE_BACKGROUND_LABELS,
-  WORKSPACE_FORM_PRESENTATIONS,
-  WORKSPACE_FORM_PRESENTATION_LABELS,
   type WorkspaceFormLayout,
   type WorkspaceFormPageBackground,
   type WorkspaceFormPresentation,
   isRsvpLikeWorkspaceForm,
 } from '~/lib/workspace-forms/form-theme';
+import type { WorkspaceFormsMode } from '~/lib/workspace-forms/forms-mode';
 import { ensureMailingListFields } from '~/lib/workspace-forms/mailing-list-fields';
 import {
   workspaceBtnPrimary,
@@ -81,6 +71,7 @@ import type {
   WorkspaceFormRecord,
   WorkspaceFormSubmissionRecord,
 } from '../_lib/server/workspace-forms.service';
+import { FormAppearancePanel } from './form-appearance-panel';
 import { FormEmailSettingsPanel } from './form-email-settings-panel';
 import { FormFieldTypePicker } from './form-field-type-picker';
 import { FormQuestionCard } from './form-question-card';
@@ -114,6 +105,8 @@ type Props = {
   members: FormNotifyMemberOption[];
   submissions: WorkspaceFormSubmissionRecord[];
   showListingDestination: boolean;
+  formsMode: WorkspaceFormsMode;
+  brandColors: { primary: string; accent: string };
   initialTab?: FormEditorTab;
 };
 
@@ -125,8 +118,12 @@ export function FormBuilder({
   members,
   submissions,
   showListingDestination,
+  formsMode,
+  brandColors,
   initialTab,
 }: Props) {
+  const audienceOnly = formsMode === 'audience';
+  const fullForms = formsMode === 'full';
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -152,7 +149,13 @@ export function FormBuilder({
     useState<WorkspaceFormPageBackground>(form.theme.pageBackground);
   const [layout, setLayout] = useState<WorkspaceFormLayout>(form.theme.layout);
   const [presentation, setPresentation] = useState<WorkspaceFormPresentation>(
-    form.theme.presentation,
+    audienceOnly ? 'classic' : form.theme.presentation,
+  );
+  const [primaryColor, setPrimaryColor] = useState<string | null>(
+    form.theme.primaryColor,
+  );
+  const [accentColor, setAccentColor] = useState<string | null>(
+    form.theme.accentColor,
   );
   const [emailSettings, setEmailSettings] =
     useState<WorkspaceFormEmailSettings>(form.emailSettings);
@@ -214,7 +217,9 @@ export function FormBuilder({
             pageBackground,
             layout,
             layoutExplicit: true,
-            presentation,
+            presentation: audienceOnly ? 'classic' : presentation,
+            primaryColor,
+            accentColor,
           },
           emailSettings,
         });
@@ -321,7 +326,7 @@ export function FormBuilder({
               <h2 className={`text-base font-semibold ${workspaceText}`}>
                 Questions
               </h2>
-              {presentation === 'steps' ? (
+              {fullForms && presentation === 'steps' ? (
                 <p className={`text-xs ${workspaceTextMuted}`}>
                   New questions start on their own step. Use “Keep next question
                   on this step” to show more than one field at a time.
@@ -331,13 +336,14 @@ export function FormBuilder({
             <FormFieldTypePicker
               placeholder="Add question"
               testId="add-form-field"
-              onSelect={(type) =>
+              formsMode={formsMode}
+              onSelect={(type) => {
                 setFields((current) => {
                   const next = createWorkspaceFormField(type, current);
                   setActiveFieldId(next.id);
                   return [...current, next];
-                })
-              }
+                });
+              }}
             />
           </div>
 
@@ -349,11 +355,14 @@ export function FormBuilder({
               total={fields.length}
               active={activeFieldId === field.id}
               stepIndex={
-                presentation === 'steps'
+                fullForms && presentation === 'steps'
                   ? (visibleStepById.get(field.id) ?? null)
                   : null
               }
+              logicEnabled={fullForms}
+              formsMode={formsMode}
               stepAction={
+                fullForms &&
                 presentation === 'steps' &&
                 field.type !== 'hidden' &&
                 field.id !== lastVisibleId
@@ -443,96 +452,109 @@ export function FormBuilder({
               />
             </div>
 
-            <div className="grid gap-1.5">
-              <Label htmlFor="event-address">Event address</Label>
-              <Input
-                id="event-address"
-                value={eventAddress}
-                onChange={(event) => setEventAddress(event.target.value)}
-                placeholder="Shown on the public RSVP page — not a submitter question"
-                data-test="form-event-address"
-              />
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                Optional venue line for event / RSVP pages. Submitters do not
-                fill this in.
-              </p>
-            </div>
+            {fullForms ? (
+              <>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="event-address">Event address</Label>
+                  <Input
+                    id="event-address"
+                    value={eventAddress}
+                    onChange={(event) => setEventAddress(event.target.value)}
+                    placeholder="Shown on the public RSVP page — not a submitter question"
+                    data-test="form-event-address"
+                  />
+                  <p className={`text-xs ${workspaceTextMuted}`}>
+                    Optional venue line for event / RSVP pages. Submitters do
+                    not fill this in.
+                  </p>
+                </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor="event-date">Event date</Label>
-                <Input
-                  id="event-date"
-                  value={eventDate}
-                  onChange={(event) => setEventDate(event.target.value)}
-                  placeholder="15 October"
-                  data-test="form-event-date"
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="event-time">Event time</Label>
-                <Input
-                  id="event-time"
-                  value={eventTime}
-                  onChange={(event) => setEventTime(event.target.value)}
-                  placeholder="8:00am – 10:00am"
-                  data-test="form-event-time"
-                />
-              </div>
-            </div>
-            <p className={`-mt-2 text-xs ${workspaceTextMuted}`}>
-              Optional. Shown with icons on the public page when filled in —
-              same as the event address, not a submitter question.
-            </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="event-date">Event date</Label>
+                    <Input
+                      id="event-date"
+                      value={eventDate}
+                      onChange={(event) => setEventDate(event.target.value)}
+                      placeholder="15 October"
+                      data-test="form-event-date"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="event-time">Event time</Label>
+                    <Input
+                      id="event-time"
+                      value={eventTime}
+                      onChange={(event) => setEventTime(event.target.value)}
+                      placeholder="8:00am – 10:00am"
+                      data-test="form-event-time"
+                    />
+                  </div>
+                </div>
+                <p className={`-mt-2 text-xs ${workspaceTextMuted}`}>
+                  Optional. Shown with icons on the public page when filled in —
+                  same as the event address, not a submitter question.
+                </p>
+              </>
+            ) : null}
           </section>
 
           <section className={`${workspacePanelCard} space-y-4 p-5`}>
             <h2 className={`text-base font-semibold ${workspaceText}`}>
-              Collection and appearance
+              Collection
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-1.5">
                 <Label>Destination</Label>
-                <Select
-                  value={destination}
-                  onValueChange={(value) => {
-                    const next = value as WorkspaceFormDestination;
-                    setDestination(next);
-                    if (next === 'mailing_list') {
-                      setFields((current) =>
-                        ensureMailingListFields(current, {
-                          commercial: showListingDestination,
-                        }),
-                      );
-                    } else {
-                      setAudienceListId('');
-                    }
-                    if (next === 'listing_enquiry') {
-                      setFields((current) => ensureListingField(current));
-                    }
-                  }}
-                >
-                  <SelectTrigger data-test="form-destination">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pipeline">
-                      {WORKSPACE_FORM_DESTINATION_LABELS.pipeline}
-                    </SelectItem>
-                    <SelectItem value="mailing_list">
-                      {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
-                    </SelectItem>
-                    <SelectItem value="submission_list">
-                      {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
-                    </SelectItem>
-                    {showListingDestination ||
-                    destination === 'listing_enquiry' ? (
-                      <SelectItem value="listing_enquiry">
-                        {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}
+                {audienceOnly ? (
+                  <p
+                    className={`rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-sm ${workspaceText}`}
+                    data-test="form-destination"
+                  >
+                    {WORKSPACE_FORM_DESTINATION_LABELS[destination]}
+                  </p>
+                ) : (
+                  <Select
+                    value={destination}
+                    onValueChange={(value) => {
+                      const next = value as WorkspaceFormDestination;
+                      setDestination(next);
+                      if (next === 'mailing_list') {
+                        setFields((current) =>
+                          ensureMailingListFields(current, {
+                            commercial: showListingDestination,
+                          }),
+                        );
+                      } else {
+                        setAudienceListId('');
+                      }
+                      if (next === 'listing_enquiry') {
+                        setFields((current) => ensureListingField(current));
+                      }
+                    }}
+                  >
+                    <SelectTrigger data-test="form-destination">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pipeline">
+                        {WORKSPACE_FORM_DESTINATION_LABELS.pipeline}
                       </SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
+                      <SelectItem value="mailing_list">
+                        {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
+                      </SelectItem>
+                      <SelectItem value="submission_list">
+                        {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
+                      </SelectItem>
+                      {showListingDestination ||
+                      destination === 'listing_enquiry' ? (
+                        <SelectItem value="listing_enquiry">
+                          {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}
+                        </SelectItem>
+                      ) : null}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="submit-label">Submit button</Label>
@@ -621,120 +643,6 @@ export function FormBuilder({
                 placeholder="Thank you — we have received your enquiry."
               />
             </div>
-
-            <div className="grid gap-2">
-              <Label>Page background</Label>
-              <RadioGroup
-                value={pageBackground}
-                onValueChange={(value) =>
-                  setPageBackground(value as WorkspaceFormPageBackground)
-                }
-                className="grid gap-2 sm:grid-cols-2"
-                data-test="form-page-background"
-              >
-                {WORKSPACE_FORM_PAGE_BACKGROUNDS.map((value) => {
-                  const meta = WORKSPACE_FORM_PAGE_BACKGROUND_LABELS[value];
-                  const selected = pageBackground === value;
-                  return (
-                    <RadioGroupItemLabel
-                      key={value}
-                      selected={selected}
-                      className="h-full items-start gap-3 space-x-0"
-                    >
-                      <RadioGroupItem value={value} className="mt-0.5" />
-                      <span className="grid gap-0.5">
-                        <span className={`font-medium ${workspaceText}`}>
-                          {meta.label}
-                        </span>
-                        <span className={`text-xs ${workspaceTextMuted}`}>
-                          {meta.description}
-                        </span>
-                      </span>
-                    </RadioGroupItemLabel>
-                  );
-                })}
-              </RadioGroup>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Presentation</Label>
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                Classic keeps every question on one page. Steps shows one step
-                at a time with Next, Back, and progress. New steps start as one
-                question; group fields in the builder when you want more than
-                one on a step. RSVP two-column layout still works — event
-                details stay on the left.
-              </p>
-              <RadioGroup
-                value={presentation}
-                onValueChange={(value) =>
-                  setPresentation(value as WorkspaceFormPresentation)
-                }
-                className="grid gap-2 sm:grid-cols-2"
-                data-test="form-presentation"
-              >
-                {WORKSPACE_FORM_PRESENTATIONS.map((value) => {
-                  const meta = WORKSPACE_FORM_PRESENTATION_LABELS[value];
-                  const selected = presentation === value;
-                  return (
-                    <RadioGroupItemLabel
-                      key={value}
-                      selected={selected}
-                      className="h-full items-start gap-3 space-x-0"
-                    >
-                      <RadioGroupItem value={value} className="mt-0.5" />
-                      <span className="grid gap-0.5">
-                        <span className={`font-medium ${workspaceText}`}>
-                          {meta.label}
-                        </span>
-                        <span className={`text-xs ${workspaceTextMuted}`}>
-                          {meta.description}
-                        </span>
-                      </span>
-                    </RadioGroupItemLabel>
-                  );
-                })}
-              </RadioGroup>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Public layout</Label>
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                Event / two-column is the RSVP public layout. New and existing
-                RSVPs use it by default. Choose Standard and save if you want a
-                single-column page instead.
-              </p>
-              <RadioGroup
-                value={layout}
-                onValueChange={(value) =>
-                  setLayout(value as WorkspaceFormLayout)
-                }
-                className="grid gap-2 sm:grid-cols-2"
-                data-test="form-page-layout"
-              >
-                {WORKSPACE_FORM_LAYOUTS.map((value) => {
-                  const meta = WORKSPACE_FORM_LAYOUT_LABELS[value];
-                  const selected = layout === value;
-                  return (
-                    <RadioGroupItemLabel
-                      key={value}
-                      selected={selected}
-                      className="h-full items-start gap-3 space-x-0"
-                    >
-                      <RadioGroupItem value={value} className="mt-0.5" />
-                      <span className="grid gap-0.5">
-                        <span className={`font-medium ${workspaceText}`}>
-                          {meta.label}
-                        </span>
-                        <span className={`text-xs ${workspaceTextMuted}`}>
-                          {meta.description}
-                        </span>
-                      </span>
-                    </RadioGroupItemLabel>
-                  );
-                })}
-              </RadioGroup>
-            </div>
           </section>
         </TabsContent>
 
@@ -747,7 +655,21 @@ export function FormBuilder({
           />
         </TabsContent>
 
-        <TabsContent value="share" className="mt-0">
+        <TabsContent value="share" className="mt-0 space-y-4">
+          <FormAppearancePanel
+            formsMode={formsMode}
+            brandColors={brandColors}
+            pageBackground={pageBackground}
+            layout={layout}
+            presentation={presentation}
+            primaryColor={primaryColor}
+            accentColor={accentColor}
+            onPageBackground={setPageBackground}
+            onLayout={setLayout}
+            onPresentation={setPresentation}
+            onPrimaryColor={setPrimaryColor}
+            onAccentColor={setAccentColor}
+          />
           <FormSharePanel
             shareToken={form.shareToken}
             enabled={enabled}

@@ -3,13 +3,16 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  canAccessWorkspaceForms,
+  resolveWorkspaceFormsMode,
+} from '~/lib/workspace-forms/forms-mode';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../_lib/role-access';
-import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import {
   FORMS_WORKSPACE_SPACE_TYPES,
@@ -42,10 +45,12 @@ async function FormsPage({ params }: FormsPageProps) {
 
   if (
     !access.canViewDashboard ||
-    !isWorkModuleEnabled(workspace.moduleSettings, 'forms')
+    !canAccessWorkspaceForms(workspace.moduleSettings)
   ) {
     redirect(getDefaultAccountPath(accountSlug));
   }
+
+  const formsMode = resolveWorkspaceFormsMode(workspace.moduleSettings);
 
   const { forms } = await loadWorkspaceFormsPage(workspace.account.id);
 
@@ -54,7 +59,11 @@ async function FormsPage({ params }: FormsPageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Forms"
-        description="Public forms for enquiries, with share links and website embeds."
+        description={
+          formsMode === 'audience'
+            ? 'Subscribe forms for mailing lists — share a link or embed on your site.'
+            : 'Public forms for enquiries, with share links and website embeds.'
+        }
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
         <FormsList
@@ -64,6 +73,7 @@ async function FormsPage({ params }: FormsPageProps) {
           showListingDestination={isCommercialPropertyProfile(
             workspace.workspaceProfile,
           )}
+          formsMode={formsMode}
         />
       </PageBody>
     </>

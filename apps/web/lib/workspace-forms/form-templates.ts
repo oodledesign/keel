@@ -8,8 +8,14 @@ import {
   defaultWorkspaceFormFields,
 } from './form-fields';
 import type { WorkspaceFormTheme } from './form-theme';
+import type { WorkspaceFormsMode } from './forms-mode';
 
-export const WORKSPACE_FORM_TEMPLATES = ['contact', 'blank', 'rsvp'] as const;
+export const WORKSPACE_FORM_TEMPLATES = [
+  'contact',
+  'blank',
+  'rsvp',
+  'subscribe',
+] as const;
 
 export type WorkspaceFormTemplate = (typeof WORKSPACE_FORM_TEMPLATES)[number];
 
@@ -54,10 +60,23 @@ export const WORKSPACE_FORM_TEMPLATE_META: Record<
     submitLabel: 'Send RSVP',
     successMessage: 'Thanks — your RSVP has been received.',
   },
+  subscribe: {
+    id: 'subscribe',
+    label: 'Subscribe',
+    description: 'Collect signups for a mailing list.',
+    defaultName: 'Subscribe',
+    suggestedDestination: 'mailing_list',
+    submitLabel: 'Subscribe',
+    successMessage: 'Thanks — you are on the list.',
+  },
 };
 
-export function listWorkspaceFormTemplates(): WorkspaceFormTemplateMeta[] {
-  return WORKSPACE_FORM_TEMPLATES.map((id) => WORKSPACE_FORM_TEMPLATE_META[id]);
+export function listWorkspaceFormTemplates(
+  mode: WorkspaceFormsMode = 'full',
+): WorkspaceFormTemplateMeta[] {
+  const templates =
+    mode === 'audience' ? (['subscribe'] as const) : WORKSPACE_FORM_TEMPLATES;
+  return templates.map((id) => WORKSPACE_FORM_TEMPLATE_META[id]);
 }
 
 function blankWorkspaceFormFields(): WorkspaceFormField[] {
@@ -142,6 +161,8 @@ export function workspaceFormFieldsForTemplate(
       return blankWorkspaceFormFields();
     case 'rsvp':
       return rsvpWorkspaceFormFields();
+    case 'subscribe':
+      return blankWorkspaceFormFields();
     case 'contact':
     default:
       return defaultWorkspaceFormFields();
@@ -175,6 +196,8 @@ export function workspaceFormCreateDefaultsForTemplate(
       layout: isRsvp ? 'event' : 'standard',
       layoutExplicit: false,
       presentation: 'classic',
+      primaryColor: null,
+      accentColor: null,
     },
     eventAddress: null,
     eventDate: null,

@@ -8,6 +8,7 @@ import { Badge } from '@kit/ui/badge';
 
 import pathsConfig from '~/config/paths.config';
 import { WORKSPACE_FORM_DESTINATION_LABELS } from '~/lib/workspace-forms/form-fields';
+import type { WorkspaceFormsMode } from '~/lib/workspace-forms/forms-mode';
 import {
   workspacePanelCard,
   workspaceText,
@@ -22,6 +23,7 @@ type Props = {
   accountSlug: string;
   forms: WorkspaceFormRecord[];
   showListingDestination: boolean;
+  formsMode: WorkspaceFormsMode;
 };
 
 export function FormsList({
@@ -29,19 +31,23 @@ export function FormsList({
   accountSlug,
   forms,
   showListingDestination,
+  formsMode,
 }: Props) {
+  const audienceOnly = formsMode === 'audience';
+
   return (
     <div className="space-y-6 px-4 py-6 lg:px-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className={`max-w-2xl text-sm ${workspaceTextMuted}`}>
-          Create a form, share a public link, or embed it on your website.
-          Submissions can create a pipeline enquiry, a listing enquiry, or a
-          mailing-list contact.
+          {audienceOnly
+            ? 'Create subscribe forms for different mailing lists. Share a public link or embed a signup on your website.'
+            : 'Create a form, share a public link, or embed it on your website. Submissions can create a pipeline enquiry, a listing enquiry, or a mailing-list contact.'}
         </p>
         <CreateFormDialog
           accountId={accountId}
           accountSlug={accountSlug}
           showListingDestination={showListingDestination}
+          formsMode={formsMode}
         />
       </div>
 
@@ -52,8 +58,9 @@ export function FormsList({
             No forms yet
           </h2>
           <p className={`mx-auto mt-2 max-w-md text-sm ${workspaceTextMuted}`}>
-            Start with a contact or quote form. For property pages, create a
-            listing-bound form and pass the listing id in the embed URL.
+            {audienceOnly
+              ? 'Start with a subscribe form and point it at a mailing list. You can create more than one form for different lists.'
+              : 'Start with a contact or quote form. For property pages, create a listing-bound form and pass the listing id in the embed URL.'}
           </p>
         </div>
       ) : (

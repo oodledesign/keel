@@ -68,6 +68,16 @@ export const WorkspaceFormThemeSchema = z.object({
   layout: z.enum(WORKSPACE_FORM_LAYOUTS).optional(),
   layoutExplicit: z.boolean().optional(),
   presentation: z.enum(WORKSPACE_FORM_PRESENTATIONS).optional(),
+  primaryColor: z
+    .string()
+    .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/)
+    .nullable()
+    .optional(),
+  accentColor: z
+    .string()
+    .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/)
+    .nullable()
+    .optional(),
 });
 
 export const WorkspaceFormEmailTemplateSchema = z.object({

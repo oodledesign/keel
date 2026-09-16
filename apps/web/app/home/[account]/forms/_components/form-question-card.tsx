@@ -20,6 +20,7 @@ import {
   type WorkspaceFormFieldType,
   fieldTypeUsesOptions,
 } from '~/lib/workspace-forms/form-fields';
+import type { WorkspaceFormsMode } from '~/lib/workspace-forms/forms-mode';
 import {
   workspacePanelCard,
   workspaceText,
@@ -48,6 +49,8 @@ type Props = {
   onMove: (direction: -1 | 1) => void;
   onDuplicate: () => void;
   onRemove: () => void;
+  logicEnabled?: boolean;
+  formsMode?: WorkspaceFormsMode;
 };
 
 export function FormQuestionCard({
@@ -65,6 +68,8 @@ export function FormQuestionCard({
   onMove,
   onDuplicate,
   onRemove,
+  logicEnabled = true,
+  formsMode = 'full',
 }: Props) {
   return (
     <div
@@ -131,6 +136,7 @@ export function FormQuestionCard({
             value={field.type}
             onSelect={onChangeType}
             triggerClassName="w-full"
+            formsMode={formsMode}
           />
         </div>
       </div>
@@ -220,13 +226,15 @@ export function FormQuestionCard({
         </div>
       ) : null}
 
-      <FormQuestionLogic
-        field={field}
-        priorFields={priorFields}
-        laterFields={laterFields}
-        stepsMode={stepIndex != null}
-        onChange={onChange}
-      />
+      {logicEnabled ? (
+        <FormQuestionLogic
+          field={field}
+          priorFields={priorFields}
+          laterFields={laterFields}
+          stepsMode={stepIndex != null}
+          onChange={onChange}
+        />
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <label className={`flex items-center gap-2 text-sm ${workspaceText}`}>

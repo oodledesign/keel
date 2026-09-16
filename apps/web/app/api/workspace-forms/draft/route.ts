@@ -8,6 +8,7 @@ import {
   publicOriginFromRequest,
   savePublicFormDraft,
 } from '~/lib/workspace-forms/form-draft.server';
+import { isPublicFormHoneypotFilled } from '~/lib/workspace-forms/form-honeypot';
 import { shouldIncludeWelcomeStep } from '~/lib/workspace-forms/form-steps';
 import { PublicWorkspaceFormDraftSchema } from '~/lib/workspace-forms/form.schema';
 import { loadPublicWorkspaceFormByToken } from '~/lib/workspace-forms/public-form';
@@ -26,7 +27,7 @@ export function OPTIONS() {
 
 export const POST = enhanceRouteHandler(
   async ({ request, body }) => {
-    if (body.website) {
+    if (isPublicFormHoneypotFilled(body.website)) {
       return NextResponse.json(
         { ok: true, emailed: false, resumeUrl: '' },
         { headers: CORS_HEADERS },

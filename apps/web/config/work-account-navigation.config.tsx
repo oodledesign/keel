@@ -50,6 +50,7 @@ import {
   isVideosModuleEnabled,
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
+import { canAccessWorkspaceForms } from '~/lib/workspace-forms/forms-mode';
 
 const iconClasses = 'w-4';
 
@@ -257,7 +258,7 @@ function buildWorkNavItemsForKeys(
           }
         : null,
     forms: () =>
-      access.canViewDashboard && isWorkNavModuleEnabled(ms, 'forms')
+      access.canViewDashboard && canAccessWorkspaceForms(ms)
         ? {
             label: 'Forms',
             path: createPath(pathsConfig.app.accountForms, account),

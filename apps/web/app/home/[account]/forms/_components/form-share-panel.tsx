@@ -1,21 +1,40 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+
+import { AppWindow, Code2, ExternalLink, SquareStack } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
-import { OZER_LISTING_ID_META_KEY } from '~/lib/commercial/property-hive-custom-fields';
+import {
+  buildInlineIframeSnippet,
+  buildInlineScriptSnippet,
+  buildPopupEmbedSnippet,
+  buildPropertyHiveSnippet,
+  formUrlWithListing,
+  publicFormPath,
+  publicFormUrl,
+} from '~/lib/workspace-forms/form-embed';
 import type { WorkspaceFormDestination } from '~/lib/workspace-forms/form-fields';
 import {
   workspacePanelCard,
   workspaceText,
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
+
+type EmbedKind = 'inline' | 'popup' | 'wordpress';
 
 type Props = {
   shareToken: string;
@@ -41,55 +60,70 @@ export function FormSharePanel({
   onToggle,
   showPropertyHiveSnippet = false,
 }: Props) {
+  const [embedKind, setEmbedKind] = useState<EmbedKind | null>(null);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const publicPath = pathsConfig.app.formShare.replace('[token]', shareToken);
-  const publicUrl = `${origin}${publicPath}`;
+  const publicPath = publicFormPath(shareToken, pathsConfig.app.formShare);
+  const publicUrl = publicFormUrl(origin, publicPath);
   const bindsListing =
     destination === 'listing_enquiry' ||
     (destination === 'mailing_list' && showPropertyHiveSnippet);
-  const listingUrl = bindsListing
-    ? `${publicUrl}?listing=${listingId || 'LISTING_ID'}`
-    : publicUrl;
+  const bind = useMemo(
+    () => ({ bindsListing, listingId }),
+    [bindsListing, listingId],
+  );
+  const listingUrl = formUrlWithListing(publicUrl, bind);
 
   const iframeSnippet = useMemo(
-    () =>
-      `<iframe src="${listingUrl}" title="Enquiry form" style="width:100%;min-height:720px;border:0;"></iframe>`,
+    () => buildInlineIframeSnippet(listingUrl),
     [listingUrl],
   );
-
   const scriptSnippet = useMemo(
     () =>
-      [
-        `<div data-ozer-form="${shareToken}"${
-          bindsListing ? ` data-listing="${listingId || 'LISTING_ID'}"` : ''
-        }></div>`,
-        `<script>`,
-        `(function(){`,
-        `  var el=document.querySelector('[data-ozer-form="${shareToken}"]');`,
-        `  if(!el||el.querySelector('iframe')) return;`,
-        `  var listing=el.getAttribute('data-listing')||'';`,
-        `  var iframe=document.createElement('iframe');`,
-        `  iframe.src='${publicUrl}'+(listing?'?listing='+encodeURIComponent(listing):'');`,
-        `  iframe.style='width:100%;min-height:720px;border:0;';`,
-        `  iframe.title='Enquiry form';`,
-        `  el.appendChild(iframe);`,
-        `})();`,
-        `</script>`,
-      ].join('\n'),
-    [bindsListing, listingId, publicUrl, shareToken],
+      buildInlineScriptSnippet({
+        shareToken,
+        publicUrl,
+        bind,
+      }),
+    [bind, publicUrl, shareToken],
   );
-
-  const propertyHiveSnippet = useMemo(
+  const popupSnippet = useMemo(
     () =>
-      [
-        `<?php`,
-        `// Single property template — meta key ${OZER_LISTING_ID_META_KEY} from the Ozer Property Hive feed.`,
-        `$ozer_listing_id = get_post_meta( get_the_ID(), '${OZER_LISTING_ID_META_KEY}', true );`,
-        `?>`,
-        `<iframe src="${publicUrl}?listing=<?php echo rawurlencode( $ozer_listing_id ); ?>" title="Ozer form" style="width:100%;min-height:720px;border:0;"></iframe>`,
-      ].join('\n'),
+      buildPopupEmbedSnippet({
+        shareToken,
+        publicUrl,
+        bind,
+      }),
+    [bind, publicUrl, shareToken],
+  );
+  const propertyHiveSnippet = useMemo(
+    () => buildPropertyHiveSnippet(publicUrl),
     [publicUrl],
   );
+
+  const cards = [
+    {
+      id: 'inline' as const,
+      title: 'Inline',
+      description: 'Embed the form in a page with an iframe or script.',
+      icon: SquareStack,
+    },
+    {
+      id: 'popup' as const,
+      title: 'Popup',
+      description: 'Show a button that opens the form in a modal.',
+      icon: AppWindow,
+    },
+    ...(showPropertyHiveSnippet
+      ? [
+          {
+            id: 'wordpress' as const,
+            title: 'WordPress',
+            description: 'Property Hive single-property template snippet.',
+            icon: Code2,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <section className={`${workspacePanelCard} space-y-4 p-5`}>
@@ -121,10 +155,10 @@ export function FormSharePanel({
       </div>
 
       {enabled ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="grid gap-1.5">
             <Label>Public link</Label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <code className="block min-w-0 flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs">
                 {listingUrl}
               </code>
@@ -136,78 +170,147 @@ export function FormSharePanel({
               >
                 Copy
               </Button>
-            </div>
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Iframe snippet</Label>
-            <Textarea
-              readOnly
-              value={iframeSnippet}
-              rows={3}
-              className="font-mono text-xs"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="w-fit"
-              onClick={() => copy(iframeSnippet, 'Iframe snippet')}
-            >
-              Copy iframe
-            </Button>
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Script snippet</Label>
-            <Textarea
-              readOnly
-              value={scriptSnippet}
-              rows={8}
-              className="font-mono text-xs"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="w-fit"
-              onClick={() => copy(scriptSnippet, 'Script snippet')}
-            >
-              Copy script
-            </Button>
-          </div>
-          {showPropertyHiveSnippet ? (
-            <div className="grid gap-1.5">
-              <Label>WordPress / Property Hive property template</Label>
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                The feed sends the Ozer listing UUID as custom field{' '}
-                <code>{OZER_LISTING_ID_META_KEY}</code>. In Property Hive
-                Import, map that XML field to a custom field with the same meta
-                key, then paste this on the single property template.
-              </p>
-              <Textarea
-                readOnly
-                value={propertyHiveSnippet}
-                rows={6}
-                className="font-mono text-xs"
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-fit"
-                onClick={() =>
-                  copy(propertyHiveSnippet, 'Property Hive snippet')
-                }
-              >
-                Copy WordPress snippet
+              <Button type="button" size="sm" variant="outline" asChild>
+                <a
+                  href={listingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-test="open-public-form"
+                >
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  Open
+                </a>
               </Button>
             </div>
-          ) : null}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {cards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => setEmbedKind(card.id)}
+                  className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-left transition-colors hover:bg-[var(--workspace-shell-panel-hover)]"
+                  data-test={`form-embed-card-${card.id}`}
+                >
+                  <Icon className="mb-3 h-5 w-5 text-[var(--ozer-accent)]" />
+                  <div className={`text-sm font-medium ${workspaceText}`}>
+                    {card.title}
+                  </div>
+                  <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+                    {card.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <p className={`text-sm ${workspaceTextMuted}`}>
           Publish the form to generate a public link and embed snippet.
         </p>
       )}
+
+      <Dialog
+        open={embedKind !== null}
+        onOpenChange={(next) => {
+          if (!next) setEmbedKind(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          {embedKind === 'inline' ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Inline embed</DialogTitle>
+                <DialogDescription>
+                  Paste either snippet where the form should appear on the page.
+                </DialogDescription>
+              </DialogHeader>
+              <SnippetBlock
+                label="Iframe snippet"
+                value={iframeSnippet}
+                rows={3}
+                copyLabel="Iframe snippet"
+              />
+              <SnippetBlock
+                label="Script snippet"
+                value={scriptSnippet}
+                rows={8}
+                copyLabel="Script snippet"
+              />
+            </>
+          ) : null}
+          {embedKind === 'popup' ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Popup embed</DialogTitle>
+                <DialogDescription>
+                  Paste this on your site. The button opens the form in a modal.
+                  Change the button label if you want.
+                </DialogDescription>
+              </DialogHeader>
+              <SnippetBlock
+                label="Popup snippet"
+                value={popupSnippet}
+                rows={12}
+                copyLabel="Popup snippet"
+              />
+            </>
+          ) : null}
+          {embedKind === 'wordpress' ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>WordPress / Property Hive</DialogTitle>
+                <DialogDescription>
+                  Paste this on the single property template after mapping the
+                  Ozer listing UUID custom field.
+                </DialogDescription>
+              </DialogHeader>
+              <SnippetBlock
+                label="WordPress snippet"
+                value={propertyHiveSnippet}
+                rows={6}
+                copyLabel="Property Hive snippet"
+              />
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </section>
+  );
+}
+
+function SnippetBlock({
+  label,
+  value,
+  rows,
+  copyLabel,
+}: {
+  label: string;
+  value: string;
+  rows: number;
+  copyLabel: string;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      <Label>{label}</Label>
+      <Textarea
+        readOnly
+        value={value}
+        rows={rows}
+        className="font-mono text-xs"
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="w-fit"
+        onClick={() => copy(value, copyLabel)}
+      >
+        Copy
+      </Button>
+    </div>
   );
 }
