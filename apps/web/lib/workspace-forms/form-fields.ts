@@ -114,6 +114,18 @@ export const WORKSPACE_FORM_FIELD_TYPE_GROUPS: Array<{
   },
 ];
 
+const FULL_ONLY_FIELD_TYPES = new Set<WorkspaceFormFieldType>(['file']);
+
+export function workspaceFormFieldTypeGroupsForMode(
+  mode: 'audience' | 'full' | 'none' = 'full',
+): Array<{ id: string; types: WorkspaceFormFieldType[] }> {
+  if (mode !== 'audience') return WORKSPACE_FORM_FIELD_TYPE_GROUPS;
+  return WORKSPACE_FORM_FIELD_TYPE_GROUPS.map((group) => ({
+    ...group,
+    types: group.types.filter((type) => !FULL_ONLY_FIELD_TYPES.has(type)),
+  })).filter((group) => group.types.length > 0);
+}
+
 export const WORKSPACE_FORM_OPTION_TYPES: WorkspaceFormFieldType[] = [
   'select',
   'radio',

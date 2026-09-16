@@ -29,6 +29,11 @@ import type {
   UpdateWorkspaceFormInput,
 } from '~/lib/workspace-forms/form.schema';
 import {
+  audienceFormCreateError,
+  resolveWorkspaceFormsMode,
+  sanitizeAudienceFormFields,
+} from '~/lib/workspace-forms/forms-mode';
+import {
   defaultMailingListFormFields,
   ensureMailingListFields,
 } from '~/lib/workspace-forms/mailing-list-fields';
@@ -149,6 +154,20 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     updatedAt: row.updated_at,
     submissionCount,
   };
+}
+
+async function loadFormsMode(client: SupabaseClient, accountId: string) {
+  const { data } = await fromTable(client, 'account_module_settings')
+    .select('module_key, enabled')
+    .eq('account_id', accountId);
+
+  const settings = Object.fromEntries(
+    ((data ?? []) as Array<{ module_key: string; enabled: boolean }>).map(
+      (row) => [row.module_key, row.enabled],
+    ),
+  );
+
+  return resolveWorkspaceFormsMode(settings);
 }
 
 async function isCommercialAccount(
@@ -303,9 +322,21 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
     async createForm(
       input: CreateWorkspaceFormInput,
     ): Promise<WorkspaceFormRecord> {
+      const mode = await loadFormsMode(client, input.accountId);
+      if (mode === 'none') {
+        throw new Error('Forms are not available in this workspace.');
+      }
+      if (mode === 'audience') {
+        const blocked = audienceFormCreateError({
+          destination: input.destination,
+          template: input.template,
+        });
+        if (blocked) throw new Error(blocked);
+      }
+
       const commercial = await isCommercialAccount(client, input.accountId);
       const templateDefaults = workspaceFormCreateDefaultsForTemplate(
-        input.template ?? 'contact',
+        mode === 'audience' ? 'subscribe' : (input.template ?? 'contact'),
       );
       let fields = templateDefaults.fields;
 
@@ -349,6 +380,29 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
     async updateForm(
       input: UpdateWorkspaceFormInput,
     ): Promise<WorkspaceFormRecord> {
+      const mode = await loadFormsMode(client, input.accountId);
+      if (mode === 'none') {
+        throw new Error('Forms are not available in this workspace.');
+      }
+
+      const existing =
+        mode === 'audience'
+          ? await this.getForm(input.accountId, input.formId)
+          : null;
+
+      if (
+        mode === 'audience' &&
+        input.destination !== 'mailing_list' &&
+        existing?.destination !== input.destination
+      ) {
+        throw new Error(
+          'This workspace can only collect mailing-list signups.',
+        );
+      }
+
+      const audienceLite =
+        mode === 'audience' && input.destination === 'mailing_list';
+
       const audienceListId =
         input.destination === 'mailing_list'
           ? input.audienceListId || null
@@ -370,12 +424,15 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
       }
 
       const commercial = await isCommercialAccount(client, input.accountId);
+      const rawFields = audienceLite
+        ? sanitizeAudienceFormFields(input.fields)
+        : input.fields;
       const fields =
         input.destination === 'mailing_list'
-          ? ensureMailingListFields(input.fields, { commercial })
+          ? ensureMailingListFields(rawFields, { commercial })
           : input.destination === 'listing_enquiry'
-            ? ensureListingField(input.fields)
-            : input.fields;
+            ? ensureListingField(rawFields)
+            : rawFields;
 
       const updates: Record<string, unknown> = {
         name: input.name.trim(),
@@ -395,6 +452,7 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         updates.theme = serializeWorkspaceFormTheme({
           ...input.theme,
           layoutExplicit: true,
+          presentation: audienceLite ? 'classic' : input.theme.presentation,
         });
       }
 

@@ -27,6 +27,10 @@ export type WorkspaceFormTheme = {
   layoutExplicit: boolean;
   /** classic = all fields on one page; steps = Typeform-style one question at a time. */
   presentation: WorkspaceFormPresentation;
+  /** Form-level override; null uses workspace brand primary. */
+  primaryColor: string | null;
+  /** Form-level override; null uses workspace brand accent (buttons). */
+  accentColor: string | null;
 };
 
 export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
@@ -34,6 +38,8 @@ export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
   layout: 'standard',
   layoutExplicit: false,
   presentation: 'classic',
+  primaryColor: null,
+  accentColor: null,
 };
 
 export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
@@ -83,6 +89,23 @@ export const WORKSPACE_FORM_PAGE_BACKGROUND_LABELS: Record<
 };
 
 const HEX_RE = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+
+export function parseThemeHex(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const value = raw.trim();
+  if (!HEX_RE.test(value)) return null;
+  return expandHex(value).toLowerCase();
+}
+
+export function resolveFormThemeColors(
+  theme: Pick<WorkspaceFormTheme, 'primaryColor' | 'accentColor'>,
+  brand: { primary_color: string; accent_color: string },
+): { primaryColor: string; accentColor: string } {
+  return {
+    primaryColor: theme.primaryColor || brand.primary_color,
+    accentColor: theme.accentColor || brand.accent_color,
+  };
+}
 
 function expandHex(hex: string): string {
   const raw = hex.slice(1);
@@ -161,6 +184,10 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
     layoutExplicit:
       (raw as { layoutExplicit?: unknown }).layoutExplicit === true,
     presentation: readStoredPresentation(raw),
+    primaryColor: parseThemeHex(
+      (raw as { primaryColor?: unknown }).primaryColor,
+    ),
+    accentColor: parseThemeHex((raw as { accentColor?: unknown }).accentColor),
   };
 }
 
@@ -236,5 +263,7 @@ export function serializeWorkspaceFormTheme(
     layout: parsed.layout,
     layoutExplicit: parsed.layoutExplicit,
     presentation: parsed.presentation,
+    primaryColor: parsed.primaryColor,
+    accentColor: parsed.accentColor,
   };
 }

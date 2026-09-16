@@ -13,10 +13,11 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import {
-  WORKSPACE_FORM_FIELD_TYPE_GROUPS,
   WORKSPACE_FORM_FIELD_TYPE_LABELS,
   type WorkspaceFormFieldType,
+  workspaceFormFieldTypeGroupsForMode,
 } from '~/lib/workspace-forms/form-fields';
+import type { WorkspaceFormsMode } from '~/lib/workspace-forms/forms-mode';
 import {
   workspaceSelectContentClass,
   workspaceText,
@@ -31,6 +32,7 @@ type Props = {
   onSelect: (type: WorkspaceFormFieldType) => void;
   triggerClassName?: string;
   testId?: string;
+  formsMode?: WorkspaceFormsMode;
 };
 
 export function FormFieldTypePicker({
@@ -39,7 +41,9 @@ export function FormFieldTypePicker({
   onSelect,
   triggerClassName,
   testId,
+  formsMode = 'full',
 }: Props) {
+  const groups = workspaceFormFieldTypeGroupsForMode(formsMode);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -74,7 +78,7 @@ export function FormFieldTypePicker({
         align="end"
         className={cn(workspaceSelectContentClass, 'w-64 p-1')}
       >
-        {WORKSPACE_FORM_FIELD_TYPE_GROUPS.map((group, index) => (
+        {groups.map((group, index) => (
           <div key={group.id}>
             {index > 0 ? <DropdownMenuSeparator /> : null}
             {group.types.map((type) => (

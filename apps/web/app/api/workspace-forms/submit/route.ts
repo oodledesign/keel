@@ -4,6 +4,7 @@ import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { clientIpFromRequest, isRateLimited } from '~/lib/rate-limit/in-memory';
+import { isPublicFormHoneypotFilled } from '~/lib/workspace-forms/form-honeypot';
 import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 import { PublicWorkspaceFormSubmitSchema } from '~/lib/workspace-forms/form.schema';
 import {
@@ -26,7 +27,7 @@ export function OPTIONS() {
 
 export const POST = enhanceRouteHandler(
   async ({ request, body }) => {
-    if (body.website) {
+    if (isPublicFormHoneypotFilled(body.website)) {
       return NextResponse.json(
         { ok: true, successMessage: 'Thank you.' },
         { headers: CORS_HEADERS },

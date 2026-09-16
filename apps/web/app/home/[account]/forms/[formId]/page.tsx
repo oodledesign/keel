@@ -4,13 +4,16 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { parseFormEditorTab } from '~/lib/workspace-forms/form-editor-tab';
+import {
+  canAccessWorkspaceForms,
+  resolveWorkspaceFormsMode,
+} from '~/lib/workspace-forms/forms-mode';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
-import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   FORMS_WORKSPACE_SPACE_TYPES,
@@ -45,12 +48,14 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
 
   if (
     !access.canViewDashboard ||
-    !isWorkModuleEnabled(workspace.moduleSettings, 'forms')
+    !canAccessWorkspaceForms(workspace.moduleSettings)
   ) {
     redirect(getDefaultAccountPath(accountSlug));
   }
 
-  const { form, submissions, listings, members, audienceLists } =
+  const formsMode = resolveWorkspaceFormsMode(workspace.moduleSettings);
+
+  const { form, submissions, listings, members, audienceLists, brand } =
     await loadWorkspaceFormDetail(workspace.account.id, formId, accountSlug);
 
   if (!form) {
@@ -75,6 +80,11 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
           showListingDestination={isCommercialPropertyProfile(
             workspace.workspaceProfile,
           )}
+          formsMode={formsMode}
+          brandColors={{
+            primary: brand.primary_color,
+            accent: brand.accent_color,
+          }}
           initialTab={parseFormEditorTab(query.tab)}
         />
       </PageBody>

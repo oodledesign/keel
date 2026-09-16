@@ -37,6 +37,7 @@ import {
   listWorkspaceFormTemplates,
   workspaceFormCreateDefaultsForTemplate,
 } from '~/lib/workspace-forms/form-templates';
+import type { WorkspaceFormsMode } from '~/lib/workspace-forms/forms-mode';
 import {
   workspaceBtnPrimary,
   workspaceFilterActive,
@@ -50,19 +51,26 @@ type Props = {
   accountId: string;
   accountSlug: string;
   showListingDestination: boolean;
+  formsMode: WorkspaceFormsMode;
 };
-
-const TEMPLATES = listWorkspaceFormTemplates();
 
 export function CreateFormDialog({
   accountId,
   accountSlug,
   showListingDestination,
+  formsMode,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const contactDefaults = workspaceFormCreateDefaultsForTemplate('contact');
-  const [template, setTemplate] = useState<WorkspaceFormTemplate>('contact');
+  const audienceOnly = formsMode === 'audience';
+  const templates = listWorkspaceFormTemplates(formsMode);
+  const defaultTemplate: WorkspaceFormTemplate = audienceOnly
+    ? 'subscribe'
+    : 'contact';
+  const contactDefaults =
+    workspaceFormCreateDefaultsForTemplate(defaultTemplate);
+  const [template, setTemplate] =
+    useState<WorkspaceFormTemplate>(defaultTemplate);
   const [name, setName] = useState(contactDefaults.defaultName);
   const [nameTouched, setNameTouched] = useState(false);
   const [destination, setDestination] = useState<WorkspaceFormDestination>(
@@ -71,8 +79,8 @@ export function CreateFormDialog({
   const [pending, startTransition] = useTransition();
 
   function resetFormState() {
-    const defaults = workspaceFormCreateDefaultsForTemplate('contact');
-    setTemplate('contact');
+    const defaults = workspaceFormCreateDefaultsForTemplate(defaultTemplate);
+    setTemplate(defaultTemplate);
     setName(defaults.defaultName);
     setNameTouched(false);
     setDestination(defaults.suggestedDestination);
@@ -133,18 +141,21 @@ export function CreateFormDialog({
         <DialogHeader>
           <DialogTitle>Create a form</DialogTitle>
           <DialogDescription>
-            Pick a template to start from, then choose where submissions should
-            land. You can add and reorder fields next.
+            {audienceOnly
+              ? 'Create a subscribe form and choose which mailing list it feeds. You can have more than one form for different lists.'
+              : 'Pick a template to start from, then choose where submissions should land. You can add and reorder fields next.'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
           <div className="grid gap-1.5">
             <Label>Template</Label>
             <div
-              className="grid gap-2 sm:grid-cols-3"
+              className={`grid gap-2 ${
+                templates.length > 3 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'
+              }`}
               data-test="create-form-templates"
             >
-              {TEMPLATES.map((meta) => {
+              {templates.map((meta) => {
                 const selected = template === meta.id;
                 return (
                   <button
@@ -182,35 +193,42 @@ export function CreateFormDialog({
               data-test="create-form-name"
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label>Destination</Label>
-            <Select
-              value={destination}
-              onValueChange={(value) =>
-                setDestination(value as WorkspaceFormDestination)
-              }
-            >
-              <SelectTrigger data-test="create-form-destination">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pipeline">
-                  {WORKSPACE_FORM_DESTINATION_LABELS.pipeline}
-                </SelectItem>
-                <SelectItem value="mailing_list">
-                  {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
-                </SelectItem>
-                <SelectItem value="submission_list">
-                  {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
-                </SelectItem>
-                {showListingDestination ? (
-                  <SelectItem value="listing_enquiry">
-                    {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}
+          {audienceOnly ? (
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              Submissions go to a mailing list. Pick the list in the form
+              settings after creating.
+            </p>
+          ) : (
+            <div className="grid gap-1.5">
+              <Label>Destination</Label>
+              <Select
+                value={destination}
+                onValueChange={(value) =>
+                  setDestination(value as WorkspaceFormDestination)
+                }
+              >
+                <SelectTrigger data-test="create-form-destination">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pipeline">
+                    {WORKSPACE_FORM_DESTINATION_LABELS.pipeline}
                   </SelectItem>
-                ) : null}
-              </SelectContent>
-            </Select>
-          </div>
+                  <SelectItem value="mailing_list">
+                    {WORKSPACE_FORM_DESTINATION_LABELS.mailing_list}
+                  </SelectItem>
+                  <SelectItem value="submission_list">
+                    {WORKSPACE_FORM_DESTINATION_LABELS.submission_list}
+                  </SelectItem>
+                  {showListingDestination ? (
+                    <SelectItem value="listing_enquiry">
+                      {WORKSPACE_FORM_DESTINATION_LABELS.listing_enquiry}
+                    </SelectItem>
+                  ) : null}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button
