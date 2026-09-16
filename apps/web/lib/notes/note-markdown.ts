@@ -146,10 +146,7 @@ function parseInlinesRange(
       continue;
     }
 
-    if (
-      input.startsWith('<u>', index) &&
-      index + 3 < end
-    ) {
+    if (input.startsWith('<u>', index) && index + 3 < end) {
       const close = findToken(input, '</u>', index + 3, end);
       if (close !== -1) {
         flush();
@@ -233,11 +230,7 @@ function findToken(
   return -1;
 }
 
-function canOpenUnderscore(
-  input: string,
-  index: number,
-  end: number,
-): boolean {
+function canOpenUnderscore(input: string, index: number, end: number): boolean {
   if (index >= end || input[index] !== '_') {
     return false;
   }

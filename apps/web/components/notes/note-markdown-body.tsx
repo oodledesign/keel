@@ -30,7 +30,12 @@ export function NoteMarkdownBody({
 
   if (!html) {
     return (
-      <p className={cn('text-sm text-[var(--workspace-shell-text-muted)]', className)}>
+      <p
+        className={cn(
+          'text-sm text-[var(--workspace-shell-text-muted)]',
+          className,
+        )}
+      >
         {emptyLabel}
       </p>
     );

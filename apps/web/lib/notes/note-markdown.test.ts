@@ -18,7 +18,12 @@ describe('parseNoteMarkdown', () => {
   it('keeps speaker H2 headings and inline marks', () => {
     const blocks = parseNoteMarkdown(sample);
 
-    expect(blocks.map((block) => [block.kind, block.runs.map((run) => run.text).join('')])).toEqual([
+    expect(
+      blocks.map((block) => [
+        block.kind,
+        block.runs.map((run) => run.text).join(''),
+      ]),
+    ).toEqual([
       ['heading1', 'Title'],
       ['heading2', 'Me'],
       ['paragraph', 'Hello bold and italic and under'],
@@ -29,9 +34,15 @@ describe('parseNoteMarkdown', () => {
     ]);
 
     const paragraph = blocks[2]!;
-    expect(paragraph.runs.some((run) => run.bold && run.text === 'bold')).toBe(true);
-    expect(paragraph.runs.some((run) => run.italic && run.text === 'italic')).toBe(true);
-    expect(paragraph.runs.some((run) => run.underline && run.text === 'under')).toBe(true);
+    expect(paragraph.runs.some((run) => run.bold && run.text === 'bold')).toBe(
+      true,
+    );
+    expect(
+      paragraph.runs.some((run) => run.italic && run.text === 'italic'),
+    ).toBe(true);
+    expect(
+      paragraph.runs.some((run) => run.underline && run.text === 'under'),
+    ).toBe(true);
   });
 
   it('parses nested underline and bold', () => {
@@ -60,7 +71,9 @@ describe('noteMarkdownToHtml', () => {
     expect(html).toContain('<strong>bold</strong>');
     expect(html).toContain('<em>italic</em>');
     expect(html).toContain('<u>under</u>');
-    expect(html).toContain('<ul><li>one</li><li>two <strong>items</strong></li></ul>');
+    expect(html).toContain(
+      '<ul><li>one</li><li>two <strong>items</strong></li></ul>',
+    );
     expect(html).not.toContain('**');
     expect(html).not.toContain('##');
     expect(html).not.toContain('- one');
@@ -80,6 +93,8 @@ describe('noteMarkdownToHtml', () => {
 describe('noteMarkdownToPlainText', () => {
   it('strips markers for list previews', () => {
     expect(noteMarkdownToPlainText('# Title\n**bold**')).toBe('Title\nbold');
-    expect(noteMarkdownToPlainText('## Me\nHello **there**')).toBe('Me\nHello there');
+    expect(noteMarkdownToPlainText('## Me\nHello **there**')).toBe(
+      'Me\nHello there',
+    );
   });
 });

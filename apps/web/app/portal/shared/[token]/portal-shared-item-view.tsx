@@ -5,7 +5,6 @@ import { Download } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 
 import { NoteMarkdownBody } from '~/components/notes/note-markdown-body';
-
 import {
   NOTE_FILE_CATEGORY_LABELS,
   type NoteFileCategory,
