@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 import { parseTranscriptContent } from '~/lib/recorder/transcript-speakers';
 
@@ -342,6 +343,13 @@ export async function createNativeMeeting(input: {
 
   const row = data as NativeMeetingRow;
   queueBrainIndexSource(input.workspace.id, 'transcript', row.id);
+
+  await notifyMeetingTranscriptSyncedInApp({
+    accountId: input.workspace.id,
+    accountSlug: input.workspace.slug,
+    meetingTranscriptId: row.id,
+    meetingTitle: title,
+  });
 
   return toNativeMeeting(
     row,

@@ -9,6 +9,7 @@ import {
   resolveSuggestedAssigneeId,
   shouldIncludeExtractedItem,
 } from '~/lib/email-assistant/account-members';
+import { notifyMeetingTasksReadyForReviewInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import {
   type MeetingExtractedActionItem,
   extractMeetingActionItems,
@@ -167,6 +168,13 @@ export async function extractAndPersistMeetingActionItems(
   if (error) {
     throw new Error(error.message);
   }
+
+  await notifyMeetingTasksReadyForReviewInApp({
+    accountId: input.accountId,
+    meetingTranscriptId: input.meetingTranscriptId,
+    meetingTitle: input.title,
+    taskCount: rows.length,
+  });
 
   return rows.length;
 }

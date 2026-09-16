@@ -9,6 +9,7 @@ import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import {
   RecorderUsageLimitError,
   assertRecorderSyncAllowed,
@@ -250,6 +251,14 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   const slug = account?.slug as string | undefined;
+  const meetingTitle = input.title?.trim() || 'Meeting transcript';
+  await notifyMeetingTranscriptSyncedInApp({
+    accountId: targetAccountId,
+    accountSlug: slug,
+    meetingTranscriptId: row.id,
+    meetingTitle,
+  });
+
   const detailPath = slug
     ? workAccountPath(pathsConfig.app.accountMeetingDetail, slug).replace(
         '[transcriptId]',

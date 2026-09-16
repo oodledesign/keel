@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
 import { NativeHttpError } from './http';
@@ -24,6 +25,10 @@ vi.mock('~/lib/brain/sync', () => ({
 
 vi.mock('~/lib/recorder/meeting-summary', () => ({
   loadMeetingSummary: vi.fn(),
+}));
+
+vi.mock('~/lib/notifications/meeting-in-app-notifications', () => ({
+  notifyMeetingTranscriptSyncedInApp: vi.fn().mockResolvedValue(true),
 }));
 
 const studio: NativeWorkspace = {
@@ -285,6 +290,10 @@ describe('listNativeUpcomingMeetings', () => {
 });
 
 describe('createNativeMeeting', () => {
+  beforeEach(() => {
+    vi.mocked(notifyMeetingTranscriptSyncedInApp).mockClear();
+  });
+
   it('requires a client in this workspace and inserts meeting_transcripts', async () => {
     const clientLookup = {
       select: vi.fn().mockReturnThis(),
@@ -352,6 +361,12 @@ describe('createNativeMeeting', () => {
     );
     expect(created.id).toBe('m1');
     expect(created.client_name).toBe('Hope and Wonder');
+    expect(notifyMeetingTranscriptSyncedInApp).toHaveBeenCalledWith({
+      accountId: studio.id,
+      accountSlug: studio.slug,
+      meetingTranscriptId: 'm1',
+      meetingTitle: 'Site visit',
+    });
   });
 
   it('rejects a missing client', async () => {
