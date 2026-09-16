@@ -8,24 +8,16 @@ import {
   surveyorStageOnQuoteSent,
 } from './pipeline-stages';
 
-function adminDb() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return getSupabaseServerAdminClient() as any;
-}
-
 export async function isBuildingSurveyorAccount(
   accountId: string,
 ): Promise<boolean> {
-  const admin = adminDb();
+  const admin = getSupabaseServerAdminClient();
   const { data } = await admin
     .from('accounts')
     .select('space_type')
     .eq('id', accountId)
     .maybeSingle();
-  return (
-    (data as { space_type?: string | null } | null)?.space_type ===
-    'building-surveyor'
-  );
+  return data?.space_type === 'building-surveyor';
 }
 
 export async function moveSurveyorDealStage(input: {
@@ -36,7 +28,7 @@ export async function moveSurveyorDealStage(input: {
   if (!input.dealId) return false;
   if (!(await isBuildingSurveyorAccount(input.accountId))) return false;
 
-  const admin = adminDb();
+  const admin = getSupabaseServerAdminClient();
   const { error } = await admin
     .from('pipeline_deals')
     .update({ stage: input.stage })

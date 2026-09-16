@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Download, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
@@ -54,11 +55,9 @@ export function SurveyPublishPanel({
       </p>
 
       <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text)]">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={useAi}
-          onChange={(event) => setUseAi(event.target.checked)}
-          className="rounded border-[color:var(--workspace-control-border)]"
+          onCheckedChange={(checked) => setUseAi(checked === true)}
         />
         Include a light AI consistency check (Ozer credits)
       </label>

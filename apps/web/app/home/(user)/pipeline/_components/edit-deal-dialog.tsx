@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
+import { useRouter } from 'next/navigation';
+
 import { Loader2 } from 'lucide-react';
 
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -93,6 +96,7 @@ export function EditDealDialog({
   onRequestCreateDisposal,
   onCareLogAdded,
 }: Props) {
+  const router = useRouter();
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -569,11 +573,9 @@ export function EditDealDialog({
 
           {surveyor ? (
             <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={followUpCall}
-                onChange={(event) => setFollowUpCall(event.target.checked)}
-                className="rounded border-[color:var(--workspace-control-border)]"
+                onCheckedChange={(checked) => setFollowUpCall(checked === true)}
               />
               Follow-up call
             </label>
@@ -610,9 +612,11 @@ export function EditDealDialog({
                       deal.clientName || deal.contactName || undefined,
                   })
                     .then((result) => {
-                      window.location.href = pathsConfig.app.accountProposalEdit
-                        .replace('[account]', accountSlug)
-                        .replace('[id]', result.proposalId);
+                      router.push(
+                        pathsConfig.app.accountProposalEdit
+                          .replace('[account]', accountSlug)
+                          .replace('[id]', result.proposalId),
+                      );
                     })
                     .catch((error: unknown) => {
                       setError(getErrorMessage(error));

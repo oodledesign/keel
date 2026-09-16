@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { callAI, isInsufficientCreditsError } from '~/lib/ai/router';
+import { callAI } from '~/lib/ai/router';
 import {
   type SurveyGapFlag,
   parseSurveyGapCheckResponse,
@@ -36,10 +36,7 @@ export async function confirmSurveyGapCheckWithAi(input: {
       supabase: input.supabase,
     });
     return { flags: parseSurveyGapCheckResponse(text), source: 'ai' };
-  } catch (error) {
-    if (isInsufficientCreditsError(error)) {
-      return { flags: [], source: 'passthrough' };
-    }
+  } catch {
     return { flags: [], source: 'passthrough' };
   }
 }

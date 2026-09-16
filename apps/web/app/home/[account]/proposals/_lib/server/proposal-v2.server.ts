@@ -360,10 +360,11 @@ export async function handleProposalApproved(proposalId: string) {
     return;
   }
 
+  let surveyorAccepted = false;
   if (proposal.deal_id) {
     const { maybeMoveSurveyorDealOnAccepted } =
       await import('~/lib/building-surveyor/surveyor-pipeline-sync');
-    await maybeMoveSurveyorDealOnAccepted(
+    surveyorAccepted = await maybeMoveSurveyorDealOnAccepted(
       proposal.account_id,
       proposal.deal_id,
     );
@@ -385,12 +386,6 @@ export async function handleProposalApproved(proposalId: string) {
     .eq('id', proposalId);
 
   if (proposal.deal_id) {
-    const { maybeMoveSurveyorDealOnAccepted } =
-      await import('~/lib/building-surveyor/surveyor-pipeline-sync');
-    const surveyorAccepted = await maybeMoveSurveyorDealOnAccepted(
-      proposal.account_id,
-      proposal.deal_id,
-    );
     if (!surveyorAccepted) {
       await admin
         .from('pipeline_deals')

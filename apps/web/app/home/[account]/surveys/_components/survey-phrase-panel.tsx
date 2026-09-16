@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import { Quote } from 'lucide-react';
 
@@ -47,38 +54,48 @@ export function SurveyPhrasePanel({
   const [selected, setSelected] = useState<SurveyPhrase | null>(null);
   const [answers, setAnswers] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  const queryRef = useRef(query);
 
-  const loadPhrases = (nextQuery = query) => {
-    startTransition(async () => {
-      try {
-        const rows = await listSurveyPhrasesAction({
-          accountId,
-          ricsCode:
-            sectionFilter === 'current' ? (ricsCode ?? undefined) : undefined,
-          sectionKey:
-            sectionFilter === 'current' && !ricsCode ? sectionKey : undefined,
-          query: nextQuery.trim() || undefined,
-          scope: scope === 'all' ? undefined : scope,
-          allSections: sectionFilter === 'all',
-        });
-        setPhrases(rows);
-      } catch (error) {
-        toast.error(getErrorMessage(error));
-      }
-    });
-  };
+  useEffect(() => {
+    queryRef.current = query;
+  }, [query]);
+
+  const loadPhrases = useCallback(
+    (nextQuery?: string) => {
+      const search = (nextQuery ?? queryRef.current).trim() || undefined;
+      startTransition(async () => {
+        try {
+          const rows = await listSurveyPhrasesAction({
+            accountId,
+            ricsCode:
+              sectionFilter === 'current' ? (ricsCode ?? undefined) : undefined,
+            sectionKey:
+              sectionFilter === 'current' && !ricsCode ? sectionKey : undefined,
+            query: search,
+            scope: scope === 'all' ? undefined : scope,
+            allSections: sectionFilter === 'all',
+          });
+          setPhrases(rows);
+        } catch (error) {
+          toast.error(getErrorMessage(error));
+        }
+      });
+    },
+    [accountId, ricsCode, scope, sectionFilter, sectionKey],
+  );
 
   useEffect(() => {
     loadPhrases();
-    setSelected(null);
-    // Reload when the section or filters change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- explicit filter deps
-  }, [accountId, sectionKey, ricsCode, sectionFilter, scope]);
+  }, [loadPhrases]);
 
   const groups = useMemo(() => groupPhrasesBySectionCode(phrases), [phrases]);
+  const activePhrase =
+    selected && phrases.some((phrase) => phrase.id === selected.id)
+      ? selected
+      : null;
   const tokens = useMemo(
-    () => (selected ? parsePhraseTokens(selected.body) : []),
-    [selected],
+    () => (activePhrase ? parsePhraseTokens(activePhrase.body) : []),
+    [activePhrase],
   );
 
   const insertPhrase = (phrase: SurveyPhrase, resolved?: string) => {
@@ -233,7 +250,7 @@ export function SurveyPhrasePanel({
           </ul>
         )}
 
-        {selected ? (
+        {activePhrase ? (
           <div className="mt-3 rounded-lg border border-[color:var(--workspace-shell-border)] p-2">
             <PhraseResolver
               tokens={tokens}
@@ -241,8 +258,8 @@ export function SurveyPhrasePanel({
               onAnswer={setAnswers}
               onInsert={() =>
                 insertPhrase(
-                  selected,
-                  resolvePhraseBody(selected.body, answers),
+                  activePhrase,
+                  resolvePhraseBody(activePhrase.body, answers),
                 )
               }
             />

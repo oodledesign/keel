@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1053,11 +1054,11 @@ function DealCard({
           className="mt-2 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-2 text-xs text-[var(--workspace-shell-text)]"
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <input
-            type="checkbox"
+          <Checkbox
             checked={deal.followUpCall}
-            onChange={(event) => onToggleFollowUp?.(deal, event.target.checked)}
-            className="rounded border-[color:var(--workspace-control-border)]"
+            onCheckedChange={(checked) =>
+              onToggleFollowUp?.(deal, checked === true)
+            }
           />
           Follow-up call
         </label>
