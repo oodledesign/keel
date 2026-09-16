@@ -44,6 +44,7 @@ import { deliveryProjectTitle } from '~/lib/projects/project-types';
 import {
   isKanbanColumnMinimized,
   kanbanBoardClassName,
+  kanbanColumnCardsClassName,
   kanbanColumnClassName,
 } from '~/lib/projects/projects-kanban-layout';
 
@@ -366,12 +367,7 @@ function KanbanColumn({
         items={sortableIds}
         strategy={verticalListSortingStrategy}
       >
-        <div
-          className={cn(
-            'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2',
-            isEmpty && 'min-h-[200px]',
-          )}
-        >
+        <div className={kanbanColumnCardsClassName({ isEmpty })}>
           {isEmpty ? (
             <p className="sr-only">No projects</p>
           ) : (
