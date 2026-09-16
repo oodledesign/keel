@@ -10,6 +10,7 @@ struct SurveyDetailView: View {
     @State private var network = NetworkPathMonitor.shared
     @State private var isLoading = false
     @State private var loadError: String?
+    @State private var allowMobileData = SurveyPhotoSyncPreference.current.allowsMobileData
 
     private let api = NativeAPIClient()
 
@@ -81,6 +82,7 @@ struct SurveyDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
                 queueBanner
+                syncSettings
                 sectionsList
             }
             .padding(.horizontal, 20)
@@ -137,6 +139,40 @@ struct SurveyDetailView: View {
         }
         .padding(12)
         .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+    }
+
+    private var syncSettings: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $allowMobileData) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Upload large photos on mobile data")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(OzerPalette.plum)
+                    Text(SurveyPhotoSyncPreference.from(allowsMobileData: allowMobileData).settingsDetail)
+                        .font(.caption)
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+            }
+            .tint(OzerPalette.coral)
+            .onChange(of: allowMobileData) { _, next in
+                SurveyPhotoSyncPreference.current = SurveyPhotoSyncPreference.from(allowsMobileData: next)
+                if next {
+                    Task {
+                        await session.flushOfflineWork()
+                        await load()
+                    }
+                }
+            }
+            Text(SurveyPhotoSync.archiveRetentionNote)
+                .font(.caption2)
+                .foregroundStyle(OzerPalette.plumMuted)
+        }
+        .padding(12)
+        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
+                .stroke(OzerPalette.border, lineWidth: 1)
+        }
     }
 
     private var sectionsList: some View {

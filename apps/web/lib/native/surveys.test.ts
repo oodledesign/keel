@@ -10,12 +10,17 @@ import {
 } from './surveys';
 import type { NativeWorkspace } from './workspace-shared';
 
-const { groupSurveyObservations } = vi.hoisted(() => ({
+const { groupSurveyObservations, cleanSurveyTranscript } = vi.hoisted(() => ({
   groupSurveyObservations: vi.fn(),
+  cleanSurveyTranscript: vi.fn(),
 }));
 
 vi.mock('~/lib/ai/survey-observation-group', () => ({
   groupSurveyObservations,
+}));
+
+vi.mock('~/lib/ai/survey-transcript-cleanup', () => ({
+  cleanSurveyTranscript,
 }));
 
 vi.mock('~/lib/brain/sync', () => ({
@@ -185,12 +190,19 @@ describe('createNativeSurvey', () => {
 describe('createNativeSurveySession', () => {
   beforeEach(() => {
     groupSurveyObservations.mockReset();
+    cleanSurveyTranscript.mockReset();
     groupSurveyObservations.mockResolvedValue({
       drafts: [
         { sectionKey: 'windows', body: 'The sash is stiff.', sortOrder: 0 },
       ],
       source: 'keyword_fallback',
     });
+    cleanSurveyTranscript.mockImplementation(
+      async ({ sourceText }: { sourceText: string }) => ({
+        cleanedText: sourceText.replace(/^Um,\s*/i, ''),
+        source: 'ai',
+      }),
+    );
   });
 
   it('inserts a meeting_transcript linked to the survey and groups sections', async () => {
@@ -271,9 +283,21 @@ describe('createNativeSurveySession', () => {
       }),
     );
     expect(groupSurveyObservations).toHaveBeenCalled();
+    expect(cleanSurveyTranscript).toHaveBeenCalled();
+    expect(observationInsert.insert).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          section_key: 'windows',
+          body: 'The sash is stiff.',
+          source_body: 'The sash is stiff.',
+          cleanup_source: 'ai',
+        }),
+      ]),
+    );
     expect(result.session.id).toBe('sess-1');
     expect(result.grouping_source).toBe('keyword_fallback');
     expect(result.session.rics_code).toBeNull();
+    expect(result.cleanup_source).toBe('ai');
   });
 
   it('uses the surveyor-chosen section and appends to the running note', async () => {
@@ -356,12 +380,22 @@ describe('createNativeSurveySession', () => {
     });
 
     expect(groupSurveyObservations).not.toHaveBeenCalled();
+    expect(cleanSurveyTranscript).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceText: 'Supply pipework is copper.',
+        ricsCode: 'F3',
+        sectionKey: 'water',
+      }),
+    );
     expect(result.grouping_source).toBe('user');
+    expect(result.cleanup_source).toBe('ai');
     expect(result.session.rics_code).toBe('F3');
     expect(result.session.section_key).toBe('water');
     expect(updateChain.update).toHaveBeenCalledWith(
       expect.objectContaining({
         body: 'Stopcock is stiff.\n\nSupply pipework is copper.',
+        source_body: 'Stopcock is stiff.\n\nSupply pipework is copper.',
+        cleanup_source: 'ai',
         rics_code: 'F3',
         section_key: 'water',
       }),
@@ -369,6 +403,103 @@ describe('createNativeSurveySession', () => {
     expect(updateChain.update).not.toHaveBeenCalledWith(
       expect.objectContaining({ transcript_id: 'sess-2' }),
     );
+  });
+
+  it('skips grouping when rics_code is set and does not invent another section', async () => {
+    const surveyLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          survey_level: 2,
+          client_id: clientId,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const transcriptInsert = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'sess-2',
+          title: 'F3 Water',
+          content: 'Um, the stopcock is stiff.',
+          source: 'iphone',
+          duration_seconds: 12,
+          meeting_date: '2026-09-16',
+          created_at: '2026-09-16T11:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const observationLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const observationMax = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    const observationInsert = {
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    };
+    let observationCalls = 0;
+
+    const from = vi.fn((table: string) => {
+      if (table === 'proposals') return surveyLookup;
+      if (table === 'meeting_transcripts') return transcriptInsert;
+      if (table === 'survey_observations') {
+        observationCalls += 1;
+        if (observationCalls === 1) return observationLookup;
+        if (observationCalls === 2) return observationMax;
+        return observationInsert;
+      }
+      return surveyLookup;
+    });
+
+    const result = await createNativeSurveySession({
+      client: { from } as never,
+      userId: 'user-dan',
+      workspace: surveyor,
+      surveyId,
+      title: 'F3 Water',
+      content: 'Um, the stopcock is stiff.',
+      ricsCode: 'F3',
+    });
+
+    expect(groupSurveyObservations).not.toHaveBeenCalled();
+    expect(cleanSurveyTranscript).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceText: 'Um, the stopcock is stiff.',
+        ricsCode: 'F3',
+        sectionKey: 'water',
+      }),
+    );
+    expect(observationInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        section_key: 'water',
+        rics_code: 'F3',
+        body: 'the stopcock is stiff.',
+        source_body: 'Um, the stopcock is stiff.',
+        cleanup_source: 'ai',
+      }),
+    );
+    expect(result.grouping_source).toBe('user');
+    expect(result.cleanup_source).toBe('ai');
   });
 
   it('rejects a desk-only or unknown section code', async () => {

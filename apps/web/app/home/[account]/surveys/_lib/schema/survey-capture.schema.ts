@@ -65,6 +65,10 @@ export const GenerateSurveyDraftSchema = SurveyAccountSchema.extend({
   surveyorName: z.string().min(1).max(500),
 });
 
+export const AutoCaptionSurveyPhotosSchema = SurveyAccountSchema.extend({
+  sectionKey: SurveySectionKeySchema,
+});
+
 export const ProposeSurveyPhotoCurationSchema = SurveyAccountSchema;
 
 export const UpdateSurveyPhotoCurationSchema = SurveyAccountSchema.extend({
@@ -150,6 +154,10 @@ export type DeleteSurveyStyleExampleInput = z.infer<
   typeof DeleteSurveyStyleExampleSchema
 >;
 
+export type AutoCaptionSurveyPhotosInput = z.infer<
+  typeof AutoCaptionSurveyPhotosSchema
+>;
+
 export type SurveyObservation = {
   id: string;
   proposalId: string;
@@ -157,10 +165,23 @@ export type SurveyObservation = {
   sectionKey: string;
   ricsCode: string | null;
   body: string;
+  sourceBody: string | null;
+  cleanupSource: 'ai' | 'passthrough' | null;
   conditionRating: '1' | '2' | '3' | 'NA' | 'NI' | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type SurveyLibraryPhoto = {
+  id: string;
+  title: string;
+  mimeType: string | null;
+  createdAt: string | null;
+  pinnedSectionKey: string | null;
+  photoRole: 'archive' | 'curated';
+  caption: string | null;
+  curatedSortOrder: number | null;
 };
 
 export type SurveyTranscriptSummary = {

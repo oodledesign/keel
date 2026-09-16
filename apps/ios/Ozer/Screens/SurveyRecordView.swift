@@ -18,6 +18,8 @@ struct SurveyRecordView: View {
     @State private var network = NetworkPathMonitor.shared
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var showCamera = false
+    @State private var showDataPrompt = false
+    @State private var pendingPhotoEnqueue: Data?
     @State private var queue = OfflineSurveyQueue.shared
     @State private var localNotes: [String: String]
 
@@ -117,6 +119,30 @@ struct SurveyRecordView: View {
                     }
                     showCamera = false
                 }
+            }
+            .confirmationDialog(
+                "Upload photos on mobile data?",
+                isPresented: $showDataPrompt,
+                titleVisibility: .visible
+            ) {
+                Button("Wait for Wi-Fi") {
+                    if let pending = pendingPhotoEnqueue {
+                        actuallyEnqueuePhoto(data: pending)
+                    }
+                    pendingPhotoEnqueue = nil
+                }
+                Button("Use mobile data") {
+                    SurveyPhotoSyncPreference.current = .useMobileData
+                    if let pending = pendingPhotoEnqueue {
+                        actuallyEnqueuePhoto(data: pending)
+                    }
+                    pendingPhotoEnqueue = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingPhotoEnqueue = nil
+                }
+            } message: {
+                Text("Large photos wait for Wi-Fi by default. Recordings still upload on mobile data. \(SurveyPhotoSync.archiveRetentionNote)")
             }
         }
     }
@@ -398,6 +424,15 @@ struct SurveyRecordView: View {
     }
 
     private func enqueuePhoto(data: Data) {
+        if network.isCellular && !SurveyPhotoSyncPreference.current.allowsMobileData {
+            pendingPhotoEnqueue = data
+            showDataPrompt = true
+            return
+        }
+        actuallyEnqueuePhoto(data: data)
+    }
+
+    private func actuallyEnqueuePhoto(data: Data) {
         _ = queue.enqueuePhoto(
             workspace: workspace,
             surveyId: survey.id,

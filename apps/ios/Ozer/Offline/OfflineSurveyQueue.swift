@@ -32,6 +32,7 @@ struct PendingSurveyPhoto: Codable, Identifiable, Equatable, Hashable {
     var isLocalSurvey: Bool
     var title: String
     var fileName: String
+    var originalFileName: String?
     var mimeType: String
     var createdAt: String
     var ricsCode: String?
@@ -164,16 +165,22 @@ final class OfflineSurveyQueue {
         mimeType: String = "image/jpeg",
         ricsCode: String? = nil
     ) -> PendingSurveyPhoto {
-        let fileName = "\(UUID().uuidString).jpg"
+        let id = UUID().uuidString
+        let originalName = "\(id)-original.jpg"
+        let fileName = "\(id).jpg"
+        let originalURL = Self.originalPhotoDirectory.appendingPathComponent(originalName)
+        try? imageData.write(to: originalURL, options: .atomic)
+        let uploadData = SurveyPhotoCompression.uploadJPEG(from: imageData)
         let url = Self.photoDirectory.appendingPathComponent(fileName)
-        try? imageData.write(to: url, options: .atomic)
+        try? uploadData.write(to: url, options: .atomic)
         let item = PendingSurveyPhoto(
-            id: UUID().uuidString,
+            id: id,
             workspace: workspace,
             surveyId: surveyId,
             isLocalSurvey: isLocalSurvey,
             title: title,
             fileName: fileName,
+            originalFileName: originalName,
             mimeType: mimeType,
             createdAt: OfflineNoteQueue.isoString(from: Date()),
             ricsCode: ricsCode
@@ -259,7 +266,25 @@ final class OfflineSurveyQueue {
             }
         }
 
-        for photo in pendingPhotos.filter({ !$0.isLocalSurvey }) {
+        let wifiHeldPhotos = pendingPhotos.filter { !$0.isLocalSurvey }
+        if lastError == nil,
+           !wifiHeldPhotos.isEmpty,
+           !SurveyPhotoSync.shouldUploadPhotos(
+               isOnline: true,
+               isCellular: NetworkPathMonitor.shared.isCellular,
+               preference: SurveyPhotoSyncPreference.current
+           ) {
+            lastError = SurveyPhotoSync.waitingForWifiMessage(pendingPhotoCount: wifiHeldPhotos.count)
+        }
+
+        for photo in wifiHeldPhotos {
+            guard SurveyPhotoSync.shouldUploadPhotos(
+                isOnline: true,
+                isCellular: NetworkPathMonitor.shared.isCellular,
+                preference: SurveyPhotoSyncPreference.current
+            ) else {
+                continue
+            }
             do {
                 guard let url = photoURL(for: photo),
                       let data = try? Data(contentsOf: url) else {
@@ -328,6 +353,11 @@ final class OfflineSurveyQueue {
 
     nonisolated static var photoDirectory: URL {
         excludedSupportFolder("OzerSurveyQueue/photos")
+    }
+
+    /// Higher-resolution originals stay on the iPhone after the compressed copy uploads.
+    nonisolated static var originalPhotoDirectory: URL {
+        excludedSupportFolder("OzerSurveyPhotos/originals")
     }
 
     nonisolated private static var createsURL: URL {
