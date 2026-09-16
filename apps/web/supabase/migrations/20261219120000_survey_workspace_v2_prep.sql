@@ -87,7 +87,7 @@ ALTER TABLE public.proposals
   );
 
 COMMENT ON COLUMN public.proposals.survey_flood_risk_band IS
-  'Placeholder flood-risk band for building-surveyor project prep (e.g. very_low, low, medium, high). Unused by other proposal kinds.';
+  'Placeholder flood-risk band for building-surveyor project prep (e.g. very_low, low, medium, high). Unused by other proposal kinds. P1 should add a CHECK when the live flood path lands.';
 
 COMMENT ON COLUMN public.proposals.survey_flood_risk_summary IS
   'Short flood-risk summary shown in project prep. Filled by P1.';

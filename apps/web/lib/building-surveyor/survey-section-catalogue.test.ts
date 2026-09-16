@@ -52,7 +52,9 @@ describe('survey section catalogue', () => {
   });
 
   it('dual-writes onto the Phase 1–2 section keys that already exist', () => {
-    const legacyKeys = new Set(BUILDING_SURVEY_SECTIONS.map((item) => item.key));
+    const legacyKeys = new Set(
+      BUILDING_SURVEY_SECTIONS.map((item) => item.key),
+    );
     const overlapping = SURVEY_SECTION_CATALOGUE.filter((item) =>
       legacyKeys.has(item.key),
     );
@@ -66,6 +68,19 @@ describe('survey section catalogue', () => {
         'energy',
       ]),
     );
+    // Catalogue must stay a superset of Phase 1 keys so dual-write remains possible.
     expect(overlapping.length).toBe(legacyKeys.size);
+  });
+
+  it('gives every catalogue item a real heading', () => {
+    for (const item of SURVEY_SECTION_CATALOGUE) {
+      expect(item.heading.length).toBeGreaterThan(0);
+    }
+
+    const declaration = surveySectionByRicsCode('K');
+    expect(declaration?.heading).toBe("Surveyor's declaration");
+    expect(surveySectionDisplayLabel(declaration!)).toBe(
+      "K · Surveyor's declaration",
+    );
   });
 });
