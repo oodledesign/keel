@@ -6,11 +6,13 @@ import {
   stripHtmlToText,
 } from '~/lib/campaigns/campaign-document';
 
+import type { ConditionRating } from './condition-rating';
 import {
   BUILDING_SURVEY_SECTIONS,
   type SurveyObservationInput,
   type SurveyPinnedPhotoInput,
   buildingSurveySectionByKey,
+  surveySectionDisplayLabel,
 } from './report-sections';
 
 export const SURVEY_REPORT_DOCUMENT_VERSION = 1 as const;
@@ -33,6 +35,8 @@ export type SurveyReportBlock =
       text: string;
       level: 1 | 2;
       sectionKey?: string;
+      ricsCode?: string;
+      conditionRating?: ConditionRating;
     }
   | {
       id: string;
@@ -65,6 +69,8 @@ export const SurveyReportBlockSchema = z.discriminatedUnion('type', [
     text: z.string().max(500),
     level: z.union([z.literal(1), z.literal(2)]),
     sectionKey: z.string().max(80).optional(),
+    ricsCode: z.string().max(40).optional(),
+    conditionRating: z.enum(['1', '2', '3', 'NA', 'NI']).optional(),
   }),
   z.object({
     id: z.string().min(1).max(80),
@@ -93,7 +99,7 @@ export const SurveyReportBlockSchema = z.discriminatedUnion('type', [
 
 export const SurveyReportDocumentSchema = z.object({
   version: z.literal(SURVEY_REPORT_DOCUMENT_VERSION),
-  blocks: z.array(SurveyReportBlockSchema).max(200),
+  blocks: z.array(SurveyReportBlockSchema).max(400),
 });
 
 export const SURVEY_REPORT_BLOCK_LIBRARY: Array<{
@@ -146,9 +152,10 @@ export function blankSurveyReportDocument(): SurveyReportDocument {
       {
         id: createSurveyReportBlockId(),
         type: 'heading' as const,
-        text: section.heading,
+        text: surveySectionDisplayLabel(section),
         level: 2 as const,
         sectionKey: section.key,
+        ricsCode: section.ricsCode,
       },
       {
         id: createSurveyReportBlockId(),
@@ -187,13 +194,31 @@ export function documentFromObservations(
     const sectionPhotos = photos.filter(
       (photo) => photo.sectionKey === section.key,
     );
+    const rating = observations.find(
+      (item) => item.sectionKey === section.key && item.conditionRating,
+    )?.conditionRating;
+
+    for (const photo of sectionPhotos) {
+      const caption = photo.caption?.trim() || photo.title;
+      blocks.push({
+        id: createSurveyReportBlockId(),
+        type: 'image',
+        src: photo.url?.trim() || '',
+        alt: caption,
+        caption,
+        documentId: photo.documentId,
+        sectionKey: section.key,
+      });
+    }
 
     blocks.push({
       id: createSurveyReportBlockId(),
       type: 'heading',
-      text: section.heading,
+      text: surveySectionDisplayLabel(section),
       level: 2,
       sectionKey: section.key,
+      ricsCode: section.ricsCode,
+      conditionRating: rating ?? undefined,
     });
 
     if (bodies.length > 0) {
@@ -207,19 +232,6 @@ export function documentFromObservations(
         id: createSurveyReportBlockId(),
         type: 'text',
         html: '<p></p>',
-      });
-    }
-
-    for (const photo of sectionPhotos) {
-      const caption = photo.caption?.trim() || photo.title;
-      blocks.push({
-        id: createSurveyReportBlockId(),
-        type: 'image',
-        src: photo.url?.trim() || '',
-        alt: caption,
-        caption,
-        documentId: photo.documentId,
-        sectionKey: section.key,
       });
     }
   }
@@ -247,19 +259,6 @@ export function documentFromSectionHtml(
       (photo) => photo.sectionKey === section.key,
     );
 
-    blocks.push({
-      id: createSurveyReportBlockId(),
-      type: 'heading',
-      text: section.heading,
-      level: 2,
-      sectionKey: section.key,
-    });
-    blocks.push({
-      id: createSurveyReportBlockId(),
-      type: 'text',
-      html: html || '<p></p>',
-    });
-
     for (const photo of sectionPhotos) {
       const caption = photo.caption?.trim() || photo.title;
       blocks.push({
@@ -272,6 +271,20 @@ export function documentFromSectionHtml(
         sectionKey: section.key,
       });
     }
+
+    blocks.push({
+      id: createSurveyReportBlockId(),
+      type: 'heading',
+      text: surveySectionDisplayLabel(section),
+      level: 2,
+      sectionKey: section.key,
+      ricsCode: section.ricsCode,
+    });
+    blocks.push({
+      id: createSurveyReportBlockId(),
+      type: 'text',
+      html: html || '<p></p>',
+    });
   }
 
   return { version: SURVEY_REPORT_DOCUMENT_VERSION, blocks };

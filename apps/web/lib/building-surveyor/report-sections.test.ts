@@ -88,6 +88,15 @@ describe('applyObservationSectionKeys', () => {
     expect(drafts[1]?.sectionKey).toBe('heating');
     expect(drafts[2]?.sectionKey).toBe('roof_coverings');
   });
+
+  it('accepts RICS codes from the AI assignment path', () => {
+    const drafts = applyObservationSectionKeys(
+      ['A few slipped slates to the rear.'],
+      [{ index: 0, sectionKey: 'D2' }],
+    );
+    expect(drafts[0]?.sectionKey).toBe('roof_coverings');
+    expect(drafts[0]?.ricsCode).toBe('D2');
+  });
 });
 
 describe('htmlFromObservations', () => {

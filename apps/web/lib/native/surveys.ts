@@ -508,6 +508,7 @@ export async function createNativeSurveySession(input: {
             proposal_id: survey.id,
             transcript_id: transcriptId,
             section_key: draft.sectionKey,
+            rics_code: draft.ricsCode ?? null,
             body: draft.body,
             sort_order: startOrder + index,
             created_by: input.userId,

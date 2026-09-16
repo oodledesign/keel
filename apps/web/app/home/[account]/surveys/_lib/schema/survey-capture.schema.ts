@@ -33,15 +33,19 @@ export const AddSurveyTranscriptSchema = SurveyAccountSchema.extend({
     .optional(),
 });
 
+export const ConditionRatingSchema = z.enum(['1', '2', '3', 'NA', 'NI']);
+
 export const UpdateSurveyObservationSchema = SurveyAccountSchema.extend({
   observationId: z.string().uuid(),
   sectionKey: SurveySectionKeySchema.optional(),
   body: z.string().min(1).max(20_000).optional(),
+  conditionRating: ConditionRatingSchema.nullable().optional(),
 });
 
 export const CreateSurveyObservationSchema = SurveyAccountSchema.extend({
   sectionKey: SurveySectionKeySchema,
   body: z.string().min(1).max(20_000),
+  conditionRating: ConditionRatingSchema.nullable().optional(),
 });
 
 export const DeleteSurveyObservationSchema = SurveyAccountSchema.extend({
@@ -50,6 +54,7 @@ export const DeleteSurveyObservationSchema = SurveyAccountSchema.extend({
 
 export const UpdateSurveyTypeSchema = SurveyAccountSchema.extend({
   surveyType: SurveyTypeSchema,
+  surveyTemplateId: z.string().uuid().nullable().optional(),
 });
 
 export const GenerateSurveyDraftSchema = SurveyAccountSchema.extend({
@@ -147,7 +152,9 @@ export type SurveyObservation = {
   proposalId: string;
   transcriptId: string | null;
   sectionKey: string;
+  ricsCode: string | null;
   body: string;
+  conditionRating: '1' | '2' | '3' | 'NA' | 'NI' | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

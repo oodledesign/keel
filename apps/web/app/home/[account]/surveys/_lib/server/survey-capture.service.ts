@@ -12,8 +12,18 @@ import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
 import { curateSurveyPhotos } from '~/lib/ai/survey-photo-curate';
 import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
 import { combineSurveyStyleGuidance } from '~/lib/ai/survey-style-distill';
-import { buildingSurveySectionByKey } from '~/lib/building-surveyor/report-sections';
+import {
+  assembleSurveyReportFromTemplate,
+  mergeValuesFromSurvey,
+} from '~/lib/building-surveyor/assemble-survey-template';
+import { compileSurveyReportDocument } from '~/lib/building-surveyor/compile-survey-report-document';
+import { isConditionRating } from '~/lib/building-surveyor/condition-rating';
+import {
+  buildingSurveySectionByKey,
+  ricsCodeForSectionKey,
+} from '~/lib/building-surveyor/report-sections';
 import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
+import type { SurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
 import {
   type BuildingSurveyTypeKey,
   DEFAULT_BUILDING_SURVEY_TYPE,
@@ -37,6 +47,7 @@ import type {
   UpdateSurveyPhotoCurationInput,
   UpdateSurveyTypeInput,
 } from '../schema/survey-capture.schema';
+import { createSurveyTemplatesService } from './survey-templates.service';
 
 type SurveyRow = {
   id: string;
@@ -50,6 +61,7 @@ type SurveyRow = {
   deal_id?: string | null;
   recipient_name?: string | null;
   survey_type?: string | null;
+  survey_template_id?: string | null;
   photo_share_token?: string | null;
   photo_share_enabled?: boolean | null;
 };
@@ -60,7 +72,11 @@ function mapObservation(row: Record<string, unknown>): SurveyObservation {
     proposalId: row.proposal_id as string,
     transcriptId: (row.transcript_id as string | null) ?? null,
     sectionKey: row.section_key as string,
+    ricsCode: (row.rics_code as string | null) ?? null,
     body: (row.body as string | null) ?? '',
+    conditionRating: isConditionRating(row.condition_rating as string | null)
+      ? (row.condition_rating as SurveyObservation['conditionRating'])
+      : null,
     sortOrder: Number(row.sort_order ?? 0),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -130,7 +146,7 @@ class SurveyCaptureService {
     const { data, error } = await this.db
       .from('proposals')
       .select(
-        'id, account_id, kind, title, status, content_html, body_document, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled',
+        'id, account_id, kind, title, status, content_html, body_document, client_id, deal_id, recipient_name, survey_type, survey_template_id, photo_share_token, photo_share_enabled',
       )
       .eq('id', proposalId)
       .eq('account_id', accountId)
@@ -149,7 +165,7 @@ class SurveyCaptureService {
     const { data, error } = await this.db
       .from('survey_observations')
       .select(
-        'id, proposal_id, transcript_id, section_key, body, sort_order, created_at, updated_at',
+        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
       )
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
@@ -321,6 +337,7 @@ class SurveyCaptureService {
       proposal_id: survey.id,
       transcript_id: transcript.id,
       section_key: draft.sectionKey,
+      rics_code: draft.ricsCode ?? ricsCodeForSectionKey(draft.sectionKey),
       body: draft.body,
       sort_order: startOrder + index,
       created_by: user.id,
@@ -330,7 +347,7 @@ class SurveyCaptureService {
       .from('survey_observations')
       .insert(rows)
       .select(
-        'id, proposal_id, transcript_id, section_key, body, sort_order, created_at, updated_at',
+        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
       );
     if (insertError) this.throwErr(insertError);
 
@@ -378,12 +395,14 @@ class SurveyCaptureService {
         account_id: input.accountId,
         proposal_id: input.proposalId,
         section_key: input.sectionKey,
+        rics_code: ricsCodeForSectionKey(input.sectionKey),
+        condition_rating: input.conditionRating ?? null,
         body: input.body.trim(),
         sort_order: Number(maxRow?.sort_order ?? -1) + 1,
         created_by: user.id,
       })
       .select(
-        'id, proposal_id, transcript_id, section_key, body, sort_order, created_at, updated_at',
+        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
       )
       .single();
     if (error || !data) this.throwErr(error, 'Could not add observation');
@@ -401,9 +420,13 @@ class SurveyCaptureService {
         throw new Error('Unknown survey section');
       }
       payload.section_key = input.sectionKey;
+      payload.rics_code = ricsCodeForSectionKey(input.sectionKey);
     }
     if (input.body !== undefined) {
       payload.body = input.body.trim();
+    }
+    if (input.conditionRating !== undefined) {
+      payload.condition_rating = input.conditionRating;
     }
     if (Object.keys(payload).length === 0) {
       throw new Error('Nothing to update');
@@ -416,7 +439,7 @@ class SurveyCaptureService {
       .eq('account_id', input.accountId)
       .eq('proposal_id', input.proposalId)
       .select(
-        'id, proposal_id, transcript_id, section_key, body, sort_order, created_at, updated_at',
+        'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, sort_order, created_at, updated_at',
       )
       .single();
     if (error || !data) this.throwErr(error, 'Could not update observation');
@@ -443,14 +466,21 @@ class SurveyCaptureService {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
     await this.getSurvey(input.accountId, input.proposalId);
 
+    const payload: Record<string, unknown> = { survey_type: input.surveyType };
+    if (input.surveyTemplateId !== undefined) {
+      payload.survey_template_id = input.surveyTemplateId;
+    }
     const { error } = await this.db
       .from('proposals')
-      .update({ survey_type: input.surveyType })
+      .update(payload)
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
       .eq('kind', 'survey_report');
     if (error) this.throwErr(error);
-    return { surveyType: input.surveyType };
+    return {
+      surveyType: input.surveyType,
+      surveyTemplateId: input.surveyTemplateId ?? null,
+    };
   }
 
   async generateDraft(input: GenerateSurveyDraftInput) {
@@ -505,7 +535,9 @@ class SurveyCaptureService {
         })),
         observations: observations.map((item) => ({
           sectionKey: item.sectionKey,
+          ricsCode: item.ricsCode,
           body: item.body,
+          conditionRating: item.conditionRating,
         })),
         pinnedPhotos: photos.map((photo) => ({
           sectionKey: photo.sectionKey,
@@ -525,11 +557,45 @@ class SurveyCaptureService {
       { accountId: input.accountId, supabase: this.client },
     );
 
+    const template = await createSurveyTemplatesService(
+      this.client,
+    ).resolveForSurvey({
+      accountId: input.accountId,
+      surveyType: normalizeBuildingSurveyType(survey.survey_type),
+      templateId: survey.survey_template_id,
+    });
+
+    const assembled = assembleSurveyReportFromTemplate({
+      template,
+      merge: mergeValuesFromSurvey({
+        propertyAddress: survey.title,
+        clientName: survey.recipient_name,
+        surveyorName: input.surveyorName,
+        companyName: input.accountName,
+      }),
+      observations: observations.map((item) => ({
+        sectionKey: item.sectionKey,
+        ricsCode: item.ricsCode,
+        body: item.body,
+        conditionRating: item.conditionRating,
+      })),
+      photos: photos.map((photo) => ({
+        sectionKey: photo.sectionKey,
+        title: photo.title,
+        caption: photo.caption,
+        documentId: photo.documentId,
+        url: photoUrls[photo.documentId] ?? null,
+      })),
+      sectionHtml: sectionHtmlFromDocument(result.document),
+    });
+
+    const contentHtml = compileSurveyReportDocument(assembled);
+
     const { error } = await this.db
       .from('proposals')
       .update({
-        content_html: result.contentHtml,
-        body_document: result.document,
+        content_html: contentHtml,
+        body_document: assembled,
       })
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
@@ -538,6 +604,8 @@ class SurveyCaptureService {
 
     return {
       ...result,
+      document: assembled,
+      contentHtml,
       surveyType:
         (survey.survey_type as BuildingSurveyTypeKey | null) ??
         DEFAULT_BUILDING_SURVEY_TYPE,
@@ -741,4 +809,22 @@ class SurveyCaptureService {
         caption: (row.caption as string | null) ?? null,
       }));
   }
+}
+
+function sectionHtmlFromDocument(
+  document: SurveyReportDocument,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  let currentKey: string | null = null;
+  for (const block of document.blocks) {
+    if (block.type === 'heading' && block.sectionKey) {
+      currentKey = block.sectionKey;
+      continue;
+    }
+    if (block.type === 'text' && currentKey) {
+      const existing = result[currentKey];
+      result[currentKey] = existing ? `${existing}\n${block.html}` : block.html;
+    }
+  }
+  return result;
 }

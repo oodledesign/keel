@@ -31,7 +31,10 @@ import {
   reorderSurveyPhotosAction,
   updateSurveyPhotoCurationAction,
 } from '~/home/[account]/surveys/_lib/server/survey-capture-actions';
-import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
+import {
+  BUILDING_SURVEY_SECTIONS,
+  surveySectionDisplayLabel,
+} from '~/lib/building-surveyor/report-sections';
 
 type SurveyPhoto = {
   id: string;
@@ -397,7 +400,7 @@ export function SurveyPhotosPanel({
                           {BUILDING_SURVEY_SECTIONS.map((section) => (
                             <option key={section.key} value={section.key}>
                               {isCurated ? 'Move to' : 'Pin to'}{' '}
-                              {section.heading}
+                              {surveySectionDisplayLabel(section)}
                             </option>
                           ))}
                         </select>
@@ -472,9 +475,15 @@ export function SurveyPhotosPanel({
                     ) : photo.pinnedSectionKey ? (
                       <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                         Pinned to{' '}
-                        {BUILDING_SURVEY_SECTIONS.find(
-                          (section) => section.key === photo.pinnedSectionKey,
-                        )?.heading ?? photo.pinnedSectionKey}
+                        {surveySectionDisplayLabel(
+                          BUILDING_SURVEY_SECTIONS.find(
+                            (section) => section.key === photo.pinnedSectionKey,
+                          ) ?? {
+                            heading: photo.pinnedSectionKey ?? '',
+                            ricsCode: '',
+                            letter: '',
+                          },
+                        )}
                         {photo.caption ? ` — ${photo.caption}` : ''}
                       </p>
                     ) : null}

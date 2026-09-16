@@ -31,6 +31,12 @@ describe('documentFromObservations', () => {
       (block) => block.type === 'text' && block.html.includes('Sash is stiff.'),
     );
     const image = document.blocks.find((block) => block.type === 'image');
+    const imageIndex = document.blocks.findIndex(
+      (block) => block.type === 'image',
+    );
+    const headingIndex = document.blocks.findIndex(
+      (block) => block.type === 'heading' && block.sectionKey === 'windows',
+    );
 
     expect(heading).toBeDefined();
     expect(text).toBeDefined();
@@ -40,6 +46,8 @@ describe('documentFromObservations', () => {
       caption: 'Cracked putty to the lower sash.',
       documentId: '11111111-1111-4111-8111-111111111111',
     });
+    expect(heading).toMatchObject({ ricsCode: 'D5' });
+    expect(imageIndex).toBeLessThan(headingIndex);
     expect(surveyReportDocumentHasContent(document)).toBe(true);
   });
 });
@@ -61,13 +69,13 @@ describe('documentFromSectionHtml', () => {
     const wallIndex = document.blocks.findIndex(
       (block) => block.type === 'heading' && block.sectionKey === 'main_walls',
     );
+    expect(document.blocks[wallIndex - 1]).toMatchObject({
+      type: 'image',
+      caption: 'Stepped crack above the lintel.',
+    });
     expect(document.blocks[wallIndex + 1]).toMatchObject({
       type: 'text',
       html: '<p>Diagonal cracking to the bay.</p>',
-    });
-    expect(document.blocks[wallIndex + 2]).toMatchObject({
-      type: 'image',
-      caption: 'Stepped crack above the lintel.',
     });
   });
 });

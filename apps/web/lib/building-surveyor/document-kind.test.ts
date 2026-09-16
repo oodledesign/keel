@@ -29,5 +29,14 @@ describe('document paths', () => {
     expect(
       pathsConfig.app.accountSurveyStyleSettings.replace('[account]', 'acme'),
     ).toBe('/app/acme/settings/survey-style');
+    expect(
+      pathsConfig.app.accountSurveyTemplatesSettings.replace(
+        '[account]',
+        'acme',
+      ),
+    ).toBe('/app/acme/settings/survey-templates');
+    expect(
+      pathsConfig.app.accountSurveyPhrasesSettings.replace('[account]', 'acme'),
+    ).toBe('/app/acme/settings/survey-phrases');
   });
 });
