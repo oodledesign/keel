@@ -1,3 +1,7 @@
+/**
+ * GoReport Predefined Responses parser. `parseGoreportXlsx` is Node-only
+ * (via xlsx-min). Keep this module out of client bundles.
+ */
 import {
   type GoreportMappedField,
   isGoreportChecksumRow,

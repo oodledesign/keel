@@ -241,7 +241,7 @@ function TemplateEditor({
           />
         </div>
       </div>
-      {staticBlocks.slice(0, 8).map((block) => (
+      {staticBlocks.map((block) => (
         <div key={block.id}>
           <Label>
             {block.title || block.kind}

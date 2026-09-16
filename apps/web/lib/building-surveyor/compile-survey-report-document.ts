@@ -1,5 +1,4 @@
 import { isSafeHttpUrl } from '~/lib/campaigns/campaign-document';
-import { sanitizeRichText } from '~/lib/campaigns/compile-campaign-document';
 
 import { CONDITION_RATING_COLORS } from './condition-rating';
 import {
@@ -36,7 +35,7 @@ function renderSurveyBlock(block: SurveyReportBlock): string {
       return `<${tag}${sectionAttr}${ricsAttr}${ratingAttr}>${escapeHtml(block.text)}${badge}</${tag}>`;
     }
     case 'text':
-      return sanitizeRichText(block.html);
+      return sanitizeSurveyReportHtml(block.html);
     case 'image': {
       const src = block.src.trim();
       if (!src || !isSafeHttpUrl(src)) return '';

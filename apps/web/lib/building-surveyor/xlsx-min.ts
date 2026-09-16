@@ -1,3 +1,7 @@
+/**
+ * Minimal OOXML reader for GoReport xlsx. Node-only (zlib).
+ * Import from server services or unit tests — not client components.
+ */
 import { deflateRawSync, inflateRawSync } from 'node:zlib';
 
 type ZipEntry = {

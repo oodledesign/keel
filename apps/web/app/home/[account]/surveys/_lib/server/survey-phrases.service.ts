@@ -135,15 +135,19 @@ class SurveyPhrasesService {
     } else if (input.sectionKey) {
       query = query.eq('section_key', input.sectionKey);
     }
-    if (input.query?.trim()) {
-      const likePattern = `%${input.query.trim().replace(/[%_\\]/g, '\\$&')}%`;
-      const quotedLike = `"${likePattern.replace(/"/g, '')}"`;
-      query = query.or(`title.ilike.${quotedLike},body.ilike.${quotedLike}`);
-    }
 
     const { data, error } = await query;
     if (error) this.throwErr(error);
-    return ((data ?? []) as Array<Record<string, unknown>>).map(mapPhrase);
+    const rows = ((data ?? []) as Array<Record<string, unknown>>).map(
+      mapPhrase,
+    );
+    const term = input.query?.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter(
+      (row) =>
+        row.title.toLowerCase().includes(term) ||
+        row.body.toLowerCase().includes(term),
+    );
   }
 
   async importGoreport(input: ImportGoreportPhrasesInput) {
@@ -151,6 +155,10 @@ class SurveyPhrasesService {
     const buffer = Buffer.from(input.fileBase64, 'base64');
     if (buffer.length < 32) {
       throw new Error('That file is too small to be a GoReport export');
+    }
+
+    if (buffer.length > 5_000_000) {
+      throw new Error('That GoReport export is too large to import');
     }
 
     const parsed = parseGoreportXlsx(buffer);
