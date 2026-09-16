@@ -39,7 +39,7 @@ export function KanbanColumnHeader({
               className={headingClassName}
               aria-label={label}
             >
-              <span aria-hidden>{initials}</span>
+              <span aria-hidden="true">{initials}</span>
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={8}>

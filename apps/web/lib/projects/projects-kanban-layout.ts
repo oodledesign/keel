@@ -34,6 +34,7 @@ export function kanbanColumnHeaderClassName({
   className?: string;
 } = {}): string {
   return cn(
+    // sticky: page-scroll boards. shrink-0: self-scrolling columns (header is a sibling of overflow-y-auto).
     'sticky top-0 z-10 shrink-0 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] py-2.5',
     minimized ? 'px-1' : 'px-3',
     className,
