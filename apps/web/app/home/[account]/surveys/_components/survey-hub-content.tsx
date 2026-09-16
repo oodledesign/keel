@@ -17,6 +17,10 @@ import pathsConfig from '~/config/paths.config';
 import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { documentEditPath } from '~/lib/building-surveyor/document-kind';
+import type {
+  SurveyEpcRecord,
+  SurveyPropertyLookup,
+} from '~/lib/building-surveyor/epc/types';
 import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
 import {
   BUILDING_SURVEY_TYPES,
@@ -43,6 +47,7 @@ import {
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
 import { GroupedObservationCard } from './grouped-observation-card';
+import { SurveyEpcPanel, SurveyEpcSummaryCard } from './survey-epc-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
 type ClientInfo = {
@@ -77,6 +82,9 @@ export function SurveyHubContent({
   transcripts: initialTranscripts,
   photoShare: initialPhotoShare,
   styleExampleCount,
+  attachedEpc,
+  propertyLookup,
+  epcConfigured,
 }: {
   accountSlug: string;
   accountId: string;
@@ -100,6 +108,9 @@ export function SurveyHubContent({
   transcripts: SurveyTranscriptSummary[];
   photoShare: SurveyPhotoShare;
   styleExampleCount: number;
+  attachedEpc: SurveyEpcRecord | null;
+  propertyLookup: SurveyPropertyLookup;
+  epcConfigured: boolean;
 }) {
   const [observations, setObservations] = useState(initialObservations);
   const [transcripts, setTranscripts] = useState(initialTranscripts);
@@ -291,7 +302,13 @@ export function SurveyHubContent({
             <dl className="mt-3 grid gap-3 sm:grid-cols-2">
               <InfoRow label="Client" value={clientName} />
               <InfoRow label="Property / enquiry" value={propertyLabel} />
-              <InfoRow label="Address" value={address || 'Not recorded'} />
+              <InfoRow
+                label="Address"
+                value={propertyLookup.address || address || 'Not recorded'}
+              />
+              {propertyLookup.uprn ? (
+                <InfoRow label="UPRN" value={propertyLookup.uprn} />
+              ) : null}
               <InfoRow
                 label="Enquiry stage"
                 value={proposal.deal?.stage?.replaceAll('_', ' ') || '—'}
@@ -341,7 +358,18 @@ export function SurveyHubContent({
                 </p>
               </div>
             </dl>
+            <SurveyEpcSummaryCard attached={attachedEpc} />
           </section>
+
+          <SurveyEpcPanel
+            accountId={accountId}
+            accountSlug={accountSlug}
+            proposalId={proposal.id}
+            canEdit={canEdit}
+            configured={epcConfigured}
+            lookup={propertyLookup}
+            attached={attachedEpc}
+          />
 
           <section className={`${workspacePanelCard} p-4 sm:p-5`}>
             <div className="flex items-start justify-between gap-3">

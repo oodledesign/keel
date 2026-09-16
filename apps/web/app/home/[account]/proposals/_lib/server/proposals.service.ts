@@ -9,6 +9,7 @@ import {
   queueBrainDeleteSource,
   queueBrainIndexSource,
 } from '~/lib/brain/sync';
+import { extractUkPostcode } from '~/lib/building-surveyor/epc/parse';
 import { DEFAULT_BUILDING_SURVEY_TYPE } from '~/lib/building-surveyor/survey-types';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { resolveDefaultTemplate } from '~/lib/content-templates/resolve-template';
@@ -274,6 +275,12 @@ class ProposalsService {
         title:
           input.title ??
           (documentKind === 'survey_report' ? 'Building survey' : 'Proposal'),
+        ...(documentKind === 'survey_report'
+          ? {
+              survey_property_address: input.title?.trim() || null,
+              survey_property_postcode: extractUkPostcode(input.title) || null,
+            }
+          : {}),
         content_html: input.content_html ?? htmlDefault?.bodyHtml ?? '',
         ...(documentKind === 'survey_report' && input.body_document
           ? { body_document: input.body_document }

@@ -7,6 +7,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import { extractUkPostcode } from '~/lib/building-surveyor/epc/parse';
 import { buildingSurveyBlankHtml } from '~/lib/building-surveyor/report-sections';
 import { parseTranscriptContent } from '~/lib/recorder/transcript-speakers';
 
@@ -362,6 +363,8 @@ export async function createNativeSurvey(input: {
       kind: 'survey_report',
       survey_type: surveyType,
       title,
+      survey_property_address: title,
+      survey_property_postcode: extractUkPostcode(title),
       content_html: buildingSurveyBlankHtml(),
       status: 'draft',
       recipient_name: clientRow ? nativeClientName(clientRow) : null,

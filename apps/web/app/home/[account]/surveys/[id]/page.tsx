@@ -117,6 +117,9 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
           transcripts={extras.transcripts}
           photoShare={extras.photoShare}
           styleExampleCount={extras.styleExampleCount}
+          attachedEpc={extras.attachedEpc}
+          propertyLookup={extras.propertyLookup}
+          epcConfigured={extras.epcConfigured}
         />
       </PageBody>
     </>

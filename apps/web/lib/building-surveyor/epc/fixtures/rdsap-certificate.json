@@ -1,0 +1,49 @@
+{
+  "data": {
+    "uprn": 10094703381,
+    "postcode": "M20 4AP",
+    "post_town": "Manchester",
+    "address_line_1": "12 Example Street",
+    "address_line_2": null,
+    "assessment_type": "RdSAP",
+    "schema_type": "RdSAP-Schema-21.0.0",
+    "dwelling_type": "Mid-terrace house",
+    "total_floor_area": 55,
+    "registration_date": "2023-12-01",
+    "inspection_date": "2023-12-01",
+    "energy_rating_current": 50,
+    "energy_rating_potential": 72,
+    "current_energy_efficiency_band": "E",
+    "potential_energy_efficiency_band": "C",
+    "main_heating": [
+      {
+        "description": "Boiler and radiators, mains gas",
+        "energy_efficiency_rating": 4
+      }
+    ],
+    "suggested_improvements": [
+      {
+        "sequence": 1,
+        "typical_saving": 360,
+        "indicative_cost": "£100 - £350",
+        "improvement_type": "Z3",
+        "improvement_details": {
+          "improvement_texts": {
+            "improvement_description": "Increase loft insulation to 270 mm"
+          }
+        }
+      },
+      {
+        "sequence": 2,
+        "typical_saving": 99,
+        "indicative_cost": 2000,
+        "improvement_type": "Z2",
+        "improvement_details": {
+          "improvement_texts": {
+            "improvement_description": "Cavity wall insulation"
+          }
+        }
+      }
+    ]
+  }
+}
