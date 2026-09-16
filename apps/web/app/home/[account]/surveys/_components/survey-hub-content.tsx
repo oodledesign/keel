@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { FileText, ImagePlus, Loader2, Mic, Plus, Trash2 } from 'lucide-react';
+import { FileText, ImagePlus, Loader2, Mic, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -17,10 +17,7 @@ import pathsConfig from '~/config/paths.config';
 import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { documentEditPath } from '~/lib/building-surveyor/document-kind';
-import {
-  BUILDING_SURVEY_SECTIONS,
-  buildingSurveySectionByKey,
-} from '~/lib/building-surveyor/report-sections';
+import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
 import {
   BUILDING_SURVEY_TYPES,
   buildingSurveyTypeLabel,
@@ -41,12 +38,12 @@ import type {
 import {
   addSurveyTranscriptAction,
   createSurveyObservationAction,
-  deleteSurveyObservationAction,
   generateSurveyDraftAction,
   setSurveyPhotoShareAction,
-  updateSurveyObservationAction,
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
+import { GroupedObservationCard } from './grouped-observation-card';
+import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
 type ClientInfo = {
   id: string;
@@ -475,123 +472,43 @@ export function SurveyHubContent({
               </p>
             ) : (
               <div className="mt-4 space-y-5">
-                {grouped.map(({ section, items }) => (
-                  <div key={section.key}>
-                    <h4 className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                      {section.group} · {section.heading}
-                    </h4>
-                    <ul className="mt-2 space-y-3">
-                      {items.map((item) => (
-                        <li
-                          key={item.id}
-                          className="rounded-lg border border-[color:var(--workspace-shell-border)] p-3"
-                        >
-                          {canEdit ? (
-                            <div className="space-y-2">
-                              <select
-                                value={item.sectionKey}
-                                onChange={(event) => {
-                                  const sectionKey = event.target.value;
-                                  setObservations((prev) =>
-                                    prev.map((row) =>
-                                      row.id === item.id
-                                        ? { ...row, sectionKey }
-                                        : row,
-                                    ),
-                                  );
-                                  startTransition(async () => {
-                                    try {
-                                      await updateSurveyObservationAction({
-                                        accountId,
-                                        accountSlug,
-                                        proposalId: proposal.id,
-                                        observationId: item.id,
-                                        sectionKey,
-                                      });
-                                    } catch (error) {
-                                      toast.error(getErrorMessage(error));
-                                    }
-                                  });
-                                }}
-                                className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs"
-                              >
-                                {BUILDING_SURVEY_SECTIONS.map((option) => (
-                                  <option key={option.key} value={option.key}>
-                                    {option.heading}
-                                  </option>
-                                ))}
-                              </select>
-                              <Textarea
-                                defaultValue={item.body}
-                                className="min-h-20 text-sm"
-                                onBlur={(event) => {
-                                  const body = event.target.value.trim();
-                                  if (!body || body === item.body) return;
-                                  setObservations((prev) =>
-                                    prev.map((row) =>
-                                      row.id === item.id
-                                        ? { ...row, body }
-                                        : row,
-                                    ),
-                                  );
-                                  startTransition(async () => {
-                                    try {
-                                      await updateSurveyObservationAction({
-                                        accountId,
-                                        accountSlug,
-                                        proposalId: proposal.id,
-                                        observationId: item.id,
-                                        body,
-                                      });
-                                    } catch (error) {
-                                      toast.error(getErrorMessage(error));
-                                    }
-                                  });
-                                }}
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-xs text-red-400 hover:text-red-300"
-                                onClick={() => {
-                                  startTransition(async () => {
-                                    try {
-                                      await deleteSurveyObservationAction({
-                                        accountId,
-                                        accountSlug,
-                                        proposalId: proposal.id,
-                                        observationId: item.id,
-                                      });
-                                      setObservations((prev) =>
-                                        prev.filter(
-                                          (row) => row.id !== item.id,
-                                        ),
-                                      );
-                                    } catch (error) {
-                                      toast.error(getErrorMessage(error));
-                                    }
-                                  });
-                                }}
-                              >
-                                <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                Remove
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <p className={`text-xs ${workspaceTextMuted}`}>
-                                {buildingSurveySectionByKey(item.sectionKey)
-                                  ?.heading ?? item.sectionKey}
-                              </p>
-                              <p className="mt-1 text-sm">{item.body}</p>
-                            </>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                {grouped.map(({ section, items }) => {
+                  return (
+                    <div key={section.key}>
+                      <h4 className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                        <SurveySectionHeadingIcon
+                          sectionKey={section.key}
+                          className="h-3.5 w-3.5 shrink-0"
+                        />
+                        {section.group} · {section.heading}
+                      </h4>
+                      <ul className="mt-2 space-y-3">
+                        {items.map((item) => (
+                          <GroupedObservationCard
+                            key={item.id}
+                            item={item}
+                            accountId={accountId}
+                            accountSlug={accountSlug}
+                            proposalId={proposal.id}
+                            canEdit={canEdit}
+                            onChange={(next) =>
+                              setObservations((prev) =>
+                                prev.map((row) =>
+                                  row.id === next.id ? next : row,
+                                ),
+                              )
+                            }
+                            onDelete={(id) =>
+                              setObservations((prev) =>
+                                prev.filter((row) => row.id !== id),
+                              )
+                            }
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>

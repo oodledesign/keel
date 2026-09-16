@@ -88,7 +88,7 @@ const SURVEY_COPY: ProposalDocumentCopy = {
   dealLabel: 'Enquiry',
   dealPlaceholder: 'Select enquiry',
   contentLabel: 'Survey report',
-  editorPlaceholder: 'Write the survey report…',
+  editorPlaceholder: 'Add text and photo blocks, or generate a draft…',
   savedToast: 'Survey saved',
   sendLabel: 'Send report',
   backLabel: 'Back to survey',

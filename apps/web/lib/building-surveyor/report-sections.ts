@@ -269,6 +269,8 @@ export type SurveyPinnedPhotoInput = {
   sectionKey: string;
   title: string;
   caption?: string | null;
+  documentId?: string;
+  url?: string | null;
 };
 
 export function splitTranscriptParagraphs(transcript: string): string[] {

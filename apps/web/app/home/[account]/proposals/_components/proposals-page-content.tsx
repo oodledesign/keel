@@ -514,6 +514,7 @@ export function ProposalsPageContent({
       }
 
       let contentHtml = '';
+      let generatedDocument: unknown;
       if (documentKind === 'survey_report') {
         const result = await generateSurveyReportHtmlAction({
           accountId,
@@ -529,6 +530,7 @@ export function ProposalsPageContent({
         });
         contentHtml = result.contentHtml.trim();
         setAiStreamPreview(contentHtml);
+        generatedDocument = result.document;
         if (result.source === 'keyword_fallback') {
           toast.message(
             result.fallbackReason ??
@@ -598,6 +600,8 @@ export function ProposalsPageContent({
         kind: documentKind,
         title: titleForRecipient(documentKind, recipientName),
         content_html: contentHtml,
+        body_document:
+          documentKind === 'survey_report' ? generatedDocument : undefined,
         recipient_name: recipientName,
         context_refs: selectedRefs,
         total_pence: deal?.value ? Math.round(deal.value * 100) : null,

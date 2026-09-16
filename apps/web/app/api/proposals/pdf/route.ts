@@ -4,8 +4,13 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { buildProposalPdf } from '~/home/[account]/proposals/_lib/server/proposal-pdf';
+import {
+  buildProposalPdf,
+  fetchImageBytes,
+} from '~/home/[account]/proposals/_lib/server/proposal-pdf';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
+import { parseSurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
 
 async function buildPayload(
   proposal: Record<string, unknown>,
@@ -24,18 +29,86 @@ async function buildPayload(
     client.from('accounts').select('name').eq('id', accountId).maybeSingle(),
   ]);
 
+  const kind = (proposal.kind as string | null) ?? 'proposal';
+  const document =
+    kind === 'survey_report'
+      ? parseSurveyReportDocument(proposal.body_document)
+      : null;
+  const imageBytesById = document
+    ? await loadSurveyImageBytes(accountId, document)
+    : {};
+
   return {
     title: (proposal.title as string) ?? 'Proposal',
     status: (proposal.status as string) ?? 'draft',
     content_html: (proposal.content_html as string) ?? '',
+    kind,
+    body_document: proposal.body_document,
     total_pence: proposal.total_pence as number | null,
     currency: (proposal.currency as string) ?? 'gbp',
     expires_at: proposal.expires_at as string | null,
     recipient_name: proposal.recipient_name as string | null,
     brand_name: account?.name ?? null,
     brand_logo_url: brand.logo_url,
+    imageBytesById,
     client: clientRow ?? null,
   };
+}
+
+async function loadSurveyImageBytes(
+  accountId: string,
+  document: NonNullable<ReturnType<typeof parseSurveyReportDocument>>,
+) {
+  const admin = getSupabaseServerAdminClient();
+  const imageBlocks = document.blocks.filter((block) => block.type === 'image');
+  const documentIds = imageBlocks
+    .map((block) => (block.type === 'image' ? block.documentId : null))
+    .filter((id): id is string => Boolean(id));
+
+  const sources: Array<{
+    id: string;
+    filePath?: string | null;
+    storagePath?: string | null;
+    storageBucket?: string | null;
+  }> = [];
+
+  if (documentIds.length > 0) {
+    // file_path / proposal photos may lag generated Database types.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = admin as any;
+    const { data: rows } = await db
+      .from('docs')
+      .select('id, file_path, storage_path, storage_bucket')
+      .eq('account_id', accountId)
+      .in('id', documentIds);
+
+    for (const row of (rows ?? []) as Array<Record<string, unknown>>) {
+      sources.push({
+        id: row.id as string,
+        filePath: (row.file_path as string | null) ?? null,
+        storagePath: (row.storage_path as string | null) ?? null,
+        storageBucket: (row.storage_bucket as string | null) ?? null,
+      });
+    }
+  }
+
+  const signed = await signSurveyPhotoUrls(admin, sources);
+  const bytes: Record<string, Uint8Array> = {};
+
+  await Promise.all(
+    imageBlocks.map(async (block) => {
+      if (block.type !== 'image') return;
+      const url =
+        (block.documentId ? signed[block.documentId] : null) ?? block.src;
+      if (!url) return;
+      const image = await fetchImageBytes(url);
+      if (!image) return;
+      if (block.documentId) bytes[block.documentId] = image.bytes;
+      bytes[block.src] = image.bytes;
+    }),
+  );
+
+  return bytes;
 }
 
 /**

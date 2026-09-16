@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'node:crypto';
 
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
@@ -12,6 +13,7 @@ import { curateSurveyPhotos } from '~/lib/ai/survey-photo-curate';
 import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
 import { combineSurveyStyleGuidance } from '~/lib/ai/survey-style-distill';
 import { buildingSurveySectionByKey } from '~/lib/building-surveyor/report-sections';
+import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
 import {
   type BuildingSurveyTypeKey,
   DEFAULT_BUILDING_SURVEY_TYPE,
@@ -43,6 +45,7 @@ type SurveyRow = {
   title?: string | null;
   status?: string | null;
   content_html?: string | null;
+  body_document?: unknown;
   client_id?: string | null;
   deal_id?: string | null;
   recipient_name?: string | null;
@@ -127,7 +130,7 @@ class SurveyCaptureService {
     const { data, error } = await this.db
       .from('proposals')
       .select(
-        'id, account_id, kind, title, status, content_html, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled',
+        'id, account_id, kind, title, status, content_html, body_document, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled',
       )
       .eq('id', proposalId)
       .eq('account_id', accountId)
@@ -203,7 +206,7 @@ class SurveyCaptureService {
     const { data, error } = await this.db
       .from('docs')
       .select(
-        'id, title, pinned_section_key, photo_role, caption, curated_sort_order, created_at, mime_type',
+        'id, title, pinned_section_key, photo_role, caption, curated_sort_order, created_at, mime_type, file_path, storage_path, storage_bucket',
       )
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
@@ -218,9 +221,13 @@ class SurveyCaptureService {
       .map((row) => ({
         id: row.id as string,
         title: (row.title as string | null) ?? 'Survey photo',
+        documentId: row.id as string,
         sectionKey: row.pinned_section_key as string,
         photoRole: (row.photo_role as string | null) ?? 'archive',
         caption: (row.caption as string | null) ?? null,
+        filePath: (row.file_path as string | null) ?? null,
+        storagePath: (row.storage_path as string | null) ?? null,
+        storageBucket: (row.storage_bucket as string | null) ?? null,
         curatedSortOrder:
           row.curated_sort_order === null ||
           row.curated_sort_order === undefined
@@ -473,6 +480,16 @@ class SurveyCaptureService {
       );
     }
 
+    const photoUrls = await signSurveyPhotoUrls(
+      getSupabaseServerAdminClient(),
+      photos.map((photo) => ({
+        id: photo.documentId,
+        filePath: photo.filePath,
+        storagePath: photo.storagePath,
+        storageBucket: photo.storageBucket,
+      })),
+    );
+
     const result = await generateSurveyReportHtml(
       {
         propertyLabel:
@@ -494,6 +511,8 @@ class SurveyCaptureService {
           sectionKey: photo.sectionKey,
           title: photo.title,
           caption: photo.caption,
+          documentId: photo.documentId,
+          url: photoUrls[photo.documentId] ?? null,
         })),
         surveyType: normalizeBuildingSurveyType(survey.survey_type),
         styleGuidance: combineSurveyStyleGuidance(
@@ -508,7 +527,10 @@ class SurveyCaptureService {
 
     const { error } = await this.db
       .from('proposals')
-      .update({ content_html: result.contentHtml })
+      .update({
+        content_html: result.contentHtml,
+        body_document: result.document,
+      })
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)
       .eq('kind', 'survey_report');

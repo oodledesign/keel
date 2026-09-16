@@ -3,15 +3,20 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { callAI } from '~/lib/ai/router';
+import { parseGeneratedDocument } from '~/lib/ai/survey-report-generate-parse';
+import { compileSurveyReportDocument } from '~/lib/building-surveyor/compile-survey-report-document';
 import {
   BUILDING_SURVEY_SECTIONS,
   type SurveyObservationInput,
   type SurveyPinnedPhotoInput,
   buildingSurveySectionListForPrompt,
-  htmlFromObservations,
-  htmlFromRoutedSections,
   routeTranscriptToSections,
 } from '~/lib/building-surveyor/report-sections';
+import {
+  type SurveyReportDocument,
+  documentFromObservations,
+  documentFromSectionHtml,
+} from '~/lib/building-surveyor/survey-report-document';
 import { buildingSurveyTypeLabel } from '~/lib/building-surveyor/survey-types';
 
 export type SurveyTranscript = {
@@ -33,6 +38,7 @@ export type SurveyGenerateParams = {
 };
 
 export type SurveyGenerateResult = {
+  document: SurveyReportDocument;
   contentHtml: string;
   source: 'ai' | 'keyword_fallback';
   fallbackReason?: string;
@@ -40,10 +46,15 @@ export type SurveyGenerateResult = {
 
 const SURVEY_SYSTEM_PROMPT = `You write UK building survey / RICS Home Survey report drafts for a chartered surveying firm.
 
-Output ONLY the report body as simple HTML fragments — no <!DOCTYPE>, <html>, <head>, or <body> wrapper.
+Output ONLY valid JSON — no markdown fences, no HTML wrapper document.
 
-Use these sections in order, each as an <h2 data-section="KEY"> heading followed by <p> content.
-Keep the heading text exactly as given. Put data-section on every h2.
+{
+  "sections": [
+    { "key": "about_inspection", "html": "<p>...</p>" }
+  ]
+}
+
+Use these section keys. Keep heading text out of the html — the app adds headings.
 
 ${buildingSurveySectionListForPrompt()}
 
@@ -51,23 +62,13 @@ Rules:
 - British English. Professional, factual, cautious. Do not invent defects.
 - Route findings to the matching section even when they appear out of order in the transcript (e.g. windows mentioned across several bedrooms belong under Windows).
 - Mentions of the same element in different rooms should be combined in that element's section.
-- Where the transcript does not mention a section, leave a single empty <p></p> under that heading.
-- Use only h2, p, ul, li, strong, em — no tables or inline styles.
+- Where the transcript does not mention a section, use an empty string or omit the section.
+- html may use only p, ul, li, strong, em — no images, tables, or inline styles.
 - Do not add Go Report or RICS Pro Forms branding.
 - Do not wrap output in markdown fences.
-- Include standard RICS Home Survey boilerplate only under "Description of the RICS Home Survey".
+- Include standard RICS Home Survey boilerplate only under "rics_description".
+- Do not invent photograph references. Curated photos are placed by the app after each section.
 - When style guidance is provided, match that surveyor's phrasing, sentence length, and recommendation tone. Do not copy property facts from the style examples.`;
-
-function stripMarkdownFences(text: string) {
-  const trimmed = text.trim();
-  if (trimmed.startsWith('```')) {
-    return trimmed
-      .replace(/^```(?:html)?\s*/i, '')
-      .replace(/\s*```$/, '')
-      .trim();
-  }
-  return trimmed;
-}
 
 function groupedObservationsForPrompt(params: SurveyGenerateParams) {
   const observations = params.observations ?? [];
@@ -94,7 +95,7 @@ function pinnedPhotosForPrompt(params: SurveyGenerateParams) {
       const caption = photo.caption?.trim();
       return `- [${photo.sectionKey}] ${photo.title}${
         caption ? ` — ${caption}` : ''
-      }`;
+      }${photo.documentId ? ` (doc:${photo.documentId})` : ''}`;
     })
     .join('\n');
 }
@@ -130,13 +131,13 @@ function buildUserPayload(params: SurveyGenerateParams) {
       params.styleGuidance?.trim() ||
       '(none — write in a clear RICS Home Survey voice)',
     instruction:
-      'Prefer the grouped observations over raw transcripts when both are present. Mention pinned photos and their captions in the matching section without inventing extra images. Match the style guidance.',
+      'Prefer the grouped observations over raw transcripts when both are present. Write section html only. Curated photos are attached after each matching section by the app — mention the defect, not a fake image tag. Match the style guidance.',
   });
 }
 
-function fallbackHtml(params: SurveyGenerateParams): string {
+function fallbackDocument(params: SurveyGenerateParams): SurveyReportDocument {
   if ((params.observations?.length ?? 0) > 0) {
-    return htmlFromObservations(
+    return documentFromObservations(
       params.observations ?? [],
       params.pinnedPhotos ?? [],
     );
@@ -146,12 +147,29 @@ function fallbackHtml(params: SurveyGenerateParams): string {
     .map((t) => t.content)
     .concat((params.contextNotes ?? []).map((n) => n.content))
     .join('\n\n');
-  return htmlFromRoutedSections(routeTranscriptToSections(combined));
+  const routed = routeTranscriptToSections(combined);
+  return documentFromSectionHtml(
+    BUILDING_SURVEY_SECTIONS.map((section) => ({
+      key: section.key,
+      html: routed[section.key]?.trim()
+        ? `<p>${escapeHtml(routed[section.key] ?? '')}</p>`
+        : '<p></p>',
+    })),
+    params.pinnedPhotos ?? [],
+  );
 }
 
-function htmlLooksLikeSurvey(html: string): boolean {
-  const headingCount = (html.match(/<h2/gi) ?? []).length;
-  return headingCount >= 8;
+function resultFromDocument(
+  document: SurveyReportDocument,
+  source: SurveyGenerateResult['source'],
+  fallbackReason?: string,
+): SurveyGenerateResult {
+  return {
+    document,
+    contentHtml: compileSurveyReportDocument(document),
+    source,
+    fallbackReason,
+  };
 }
 
 /**
@@ -180,23 +198,33 @@ export async function generateSurveyReportHtml(
       accountId: meter.accountId,
       supabase: meter.supabase,
     });
-    const html = stripMarkdownFences(text ?? '');
-    if (!htmlLooksLikeSurvey(html)) {
-      return {
-        contentHtml: fallbackHtml(params),
-        source: 'keyword_fallback',
-        fallbackReason:
-          'The model returned an incomplete draft, so sections were filled from keyword routing.',
-      };
+    const document = parseGeneratedDocument(
+      text ?? '',
+      params.pinnedPhotos ?? [],
+    );
+    if (!document) {
+      return resultFromDocument(
+        fallbackDocument(params),
+        'keyword_fallback',
+        'The model returned an incomplete draft, so sections were filled from keyword routing.',
+      );
     }
-    return { contentHtml: html, source: 'ai' };
+    return resultFromDocument(document, 'ai');
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'AI draft unavailable';
-    return {
-      contentHtml: fallbackHtml(params),
-      source: 'keyword_fallback',
-      fallbackReason: message,
-    };
+    return resultFromDocument(
+      fallbackDocument(params),
+      'keyword_fallback',
+      message,
+    );
   }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
