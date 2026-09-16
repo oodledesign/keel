@@ -16,14 +16,9 @@ interface MeetingsPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async ({ params }: MeetingsPageProps) => {
-  const accountSlug = (await params).account;
-  const workspace = await loadTeamWorkspace(accountSlug);
+export const generateMetadata = async () => {
   return {
-    title:
-      workspace.workspaceProfile === 'building_surveyor'
-        ? 'Transcripts'
-        : 'Meetings',
+    title: 'Meetings',
   };
 };
 

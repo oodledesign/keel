@@ -155,7 +155,7 @@ function htmlLooksLikeSurvey(html: string): boolean {
 }
 
 /**
- * Draft a building survey from pasted/uploaded site transcripts.
+ * Draft a building survey from pasted/uploaded site meetings.
  * Falls back to keyword section-routing when AI keys or credits are unavailable.
  */
 export async function generateSurveyReportHtml(
@@ -168,7 +168,7 @@ export async function generateSurveyReportHtml(
     (params.observations?.length ?? 0) === 0
   ) {
     throw new Error(
-      'Provide at least one site transcript, grouped observation, or note',
+      'Provide at least one site meeting, grouped observation, or note',
     );
   }
 

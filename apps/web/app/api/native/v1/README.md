@@ -184,6 +184,7 @@ GET /api/native/v1/projects/{id}?workspace=<slug-or-uuid>
 - `meetings_today` (`id`, `title`, `created_at`) on workspaces that record meetings
 - `finances` on studio / surveyor / commercial workspaces (or `null`) — invoice outstanding plus this-month in/out and the last 6 months chart series (same as web Home)
 - `task_review` — `{ pending_count, meeting_count, email_count }` for the in-app review badge
+- `surveyor` — building-surveyor home only (`open_count`, `enquiry_count`, `booked_count`, `surveyed_count`, `recent_surveys`, `pipeline`). `null` on every other workspace
 - `items` — flat due-today then overdue, for older clients that still read a list
 
 ## Meetings

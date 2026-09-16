@@ -469,7 +469,7 @@ class SurveyCaptureService {
 
     if (observations.length === 0 && transcripts.length === 0) {
       throw new Error(
-        'Add a site transcript or observation before drafting the report',
+        'Add a site meeting or observation before drafting the report',
       );
     }
 

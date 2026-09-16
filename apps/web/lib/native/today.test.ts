@@ -271,6 +271,7 @@ describe('buildNativeTodayHomePayload', () => {
       email_count: 0,
       pending_count: 0,
     });
+    expect(payload.surveyor).toBeNull();
     expect(mergeNativeTodayItems([due], [late])).toHaveLength(2);
     expect(
       nativeTodaySupportingMessage({ dueTodayCount: 0, overdueCount: 0 }),

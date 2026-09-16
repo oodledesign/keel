@@ -11,6 +11,7 @@ import {
 } from '../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
+  isCampaignsModuleEnabled,
   isPropertyNavModuleEnabled,
   isWorkModuleEnabled,
 } from '../_lib/server/account-modules';
@@ -65,6 +66,9 @@ async function ClientsPage({ params, searchParams }: ClientsPageProps) {
   const isProperty = spaceType === 'property';
   const isCommercial = spaceType === 'commercial-property';
   const variant = isCommercial ? 'commercial' : 'work';
+  const campaignsEnabled = isCampaignsModuleEnabled(workspace.moduleSettings);
+  const mailingAudience =
+    campaignsEnabled && listParam === 'mailing' ? 'mailing_list' : 'all';
 
   const {
     accountId,
@@ -75,7 +79,7 @@ async function ClientsPage({ params, searchParams }: ClientsPageProps) {
     initialTotal,
   } = await loadClientsPageData(accountSlug, {
     variant,
-    audience: listParam === 'mailing' ? 'mailing_list' : 'all',
+    audience: mailingAudience,
   });
 
   const pageTitle = isProperty
@@ -108,7 +112,8 @@ async function ClientsPage({ params, searchParams }: ClientsPageProps) {
           }
           showCommercialRole={isCommercial}
           showLinkedInImport={!isCommercial}
-          initialAudience={listParam === 'mailing' ? 'mailing_list' : 'all'}
+          initialAudience={mailingAudience}
+          campaignsEnabled={campaignsEnabled}
         />
       </PageBody>
     </>

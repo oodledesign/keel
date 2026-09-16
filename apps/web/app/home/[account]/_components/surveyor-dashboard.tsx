@@ -34,15 +34,16 @@ export function SurveyorDashboard({
   enquiryCount,
   bookedCount,
   surveyedCount,
-  openEnquiryCount,
+  openPipelineCount,
   recentSurveys,
+  pipelineDeals,
 }: SurveyorDashboardData) {
-  const enquiriesHref = accountPath(
+  const pipelineHref = accountPath(
     accountSlug,
     pathsConfig.app.accountPipeline,
   );
   const surveysHref = accountPath(accountSlug, pathsConfig.app.accountSurveys);
-  const transcriptsHref = accountPath(
+  const meetingsHref = accountPath(
     accountSlug,
     pathsConfig.app.accountMeetings,
   );
@@ -54,7 +55,7 @@ export function SurveyorDashboard({
         <div>
           <h2 className="text-lg font-semibold">Surveyor home</h2>
           <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-            Enquiries, site transcripts, and building survey reports.
+            Pipeline, site meetings, and building survey reports.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -62,26 +63,26 @@ export function SurveyorDashboard({
             <Link href={`${surveysHref}?create=1`}>New survey</Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href={`${transcriptsHref}?create=1`}>Paste transcript</Link>
+            <Link href={`${meetingsHref}?create=1`}>Add meeting</Link>
           </Button>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          href={enquiriesHref}
-          label="Open enquiries"
-          value={openEnquiryCount}
+          href={pipelineHref}
+          label="Open pipeline"
+          value={openPipelineCount}
           icon={ClipboardList}
         />
         <MetricCard
-          href={enquiriesHref}
-          label="New enquiries"
+          href={pipelineHref}
+          label="Enquiry"
           value={enquiryCount}
           icon={ClipboardList}
         />
         <MetricCard
-          href={enquiriesHref}
+          href={pipelineHref}
           label="Booked"
           value={bookedCount}
           icon={UserRound}
@@ -107,8 +108,8 @@ export function SurveyorDashboard({
           </div>
           {recentSurveys.length === 0 ? (
             <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
-              No survey reports yet. Create one from an enquiry or paste a site
-              transcript to draft the RICS headings.
+              No survey reports yet. Create one from a pipeline item or add a
+              site meeting to draft the RICS headings.
             </p>
           ) : (
             <ul className="mt-4 divide-y divide-[color:var(--workspace-shell-border)]">
@@ -141,17 +142,61 @@ export function SurveyorDashboard({
         </CardContent>
       </Card>
 
+      <Card className={workspacePanelCard}>
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold">Pipeline</h3>
+            <Link
+              href={pipelineHref}
+              className={`text-sm ${workspaceLinkAccent}`}
+            >
+              View all
+            </Link>
+          </div>
+          {pipelineDeals.length === 0 ? (
+            <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
+              No open pipeline items yet. Add a lead to start a survey booking.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-[color:var(--workspace-shell-border)]">
+              {pipelineDeals.map((deal) => (
+                <li key={deal.id} className="py-3 first:pt-0 last:pb-0">
+                  <Link
+                    href={pipelineHref}
+                    className="flex items-center justify-between gap-3 hover:underline"
+                  >
+                    <span>
+                      <span className="font-medium">{deal.title}</span>
+                      {deal.clientName ? (
+                        <span
+                          className={`mt-0.5 block text-xs ${workspaceTextMuted}`}
+                        >
+                          {deal.clientName}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className={`text-xs ${workspaceTextMuted}`}>
+                      {deal.stageLabel}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-3 md:grid-cols-3">
         <QuickLink
-          href={`${enquiriesHref}?create=lead`}
-          label="New enquiry"
-          description="Add an enquiry to the pipeline"
+          href={`${pipelineHref}?create=lead`}
+          label="New pipeline item"
+          description="Add a lead to the pipeline"
           icon={ClipboardList}
         />
         <QuickLink
-          href={`${transcriptsHref}?create=1`}
-          label="Paste transcript"
-          description="Use the existing meetings paste flow"
+          href={`${meetingsHref}?create=1`}
+          label="Add meeting"
+          description="Paste or record a site meeting"
           icon={Mic}
         />
         <QuickLink

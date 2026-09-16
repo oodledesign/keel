@@ -44,4 +44,13 @@ export function isBuildingSurveyorTerminalStage(stage: string): boolean {
   );
 }
 
-export const DEFAULT_BUILDING_SURVEYOR_BOARD_NAME = 'Enquiries';
+export const DEFAULT_BUILDING_SURVEYOR_BOARD_NAME = 'Pipeline';
+
+/** User-facing board title. Legacy stored "Enquiries" maps to Pipeline. */
+export function displayBuildingSurveyorBoardName(name?: string | null) {
+  const trimmed = name?.trim();
+  if (!trimmed || /^enquiries$/i.test(trimmed)) {
+    return DEFAULT_BUILDING_SURVEYOR_BOARD_NAME;
+  }
+  return trimmed;
+}

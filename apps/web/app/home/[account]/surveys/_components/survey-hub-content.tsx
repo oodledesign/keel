@@ -172,7 +172,7 @@ export function SurveyHubContent({
     if (!canEdit) return;
     const content = pasteContent.trim();
     if (content.length < 20) {
-      toast.error('Paste a longer site transcript so it can be grouped.');
+      toast.error('Paste a longer site meeting so it can be grouped.');
       return;
     }
 
@@ -182,7 +182,7 @@ export function SurveyHubContent({
         accountId,
         accountSlug,
         proposalId: proposal.id,
-        title: pasteTitle.trim() || 'Site transcript',
+        title: pasteTitle.trim() || 'Site meeting',
         content,
       });
       setTranscripts((prev) => [result.transcript, ...prev]);
@@ -350,12 +350,12 @@ export function SurveyHubContent({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  Site transcripts
+                  Site meetings
                 </h3>
                 <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                  Paste a walkthrough transcript. We store it against this
-                  survey and group sentences by content into editable
-                  observations. Keyword routing is used if AI is unavailable.
+                  Paste a walkthrough meeting. We store it against this survey
+                  and group sentences by content into editable observations.
+                  Keyword routing is used if AI is unavailable.
                 </p>
               </div>
               <Mic className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`} />
@@ -366,12 +366,12 @@ export function SurveyHubContent({
                 <Input
                   value={pasteTitle}
                   onChange={(event) => setPasteTitle(event.target.value)}
-                  placeholder="Transcript title (optional)"
+                  placeholder="Meeting title (optional)"
                 />
                 <Textarea
                   value={pasteContent}
                   onChange={(event) => setPasteContent(event.target.value)}
-                  placeholder="Paste the site transcript here…"
+                  placeholder="Paste the site meeting here…"
                   className="min-h-36"
                 />
                 <Button
@@ -385,14 +385,14 @@ export function SurveyHubContent({
                   ) : (
                     <Plus className="mr-2 h-4 w-4" />
                   )}
-                  Add transcript and group
+                  Add meeting and group
                 </Button>
               </div>
             ) : null}
 
             {transcripts.length === 0 ? (
               <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
-                No transcripts on this survey yet.
+                No meetings on this survey yet.
               </p>
             ) : (
               <ul className="mt-4 divide-y divide-[color:var(--workspace-shell-border)]">
@@ -471,7 +471,7 @@ export function SurveyHubContent({
 
             {grouped.length === 0 ? (
               <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
-                Observations will appear here after you paste a transcript.
+                Observations will appear here after you add a meeting.
               </p>
             ) : (
               <div className="mt-4 space-y-5">
@@ -614,7 +614,7 @@ export function SurveyHubContent({
               </Link>
             </p>
             <p className={`mt-2 text-xs ${workspaceTextMuted}`}>
-              Generation uses grouped observations first, then raw transcripts,
+              Generation uses grouped observations first, then raw meetings,
               curated photo captions, and the firm&apos;s uploaded report style.
             </p>
             <p className="mt-3 text-sm">

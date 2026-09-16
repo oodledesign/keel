@@ -4,7 +4,12 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { BUILDING_SURVEYOR_PIPELINE_STAGES } from '~/lib/building-surveyor/pipeline-stages';
+import {
+  BUILDING_SURVEYOR_PIPELINE_LABELS,
+  BUILDING_SURVEYOR_PIPELINE_STAGES,
+  type BuildingSurveyorPipelineStage,
+  isBuildingSurveyorTerminalStage,
+} from '~/lib/building-surveyor/pipeline-stages';
 
 import { loadTeamWorkspace } from './team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from './workspace-route-guard';
@@ -17,14 +22,23 @@ export type SurveyorDashboardSurvey = {
   clientName: string | null;
 };
 
+export type SurveyorDashboardDeal = {
+  id: string;
+  title: string;
+  stage: string;
+  stageLabel: string;
+  clientName: string | null;
+};
+
 export type SurveyorDashboardData = {
   accountId: string;
   accountSlug: string;
   enquiryCount: number;
   bookedCount: number;
   surveyedCount: number;
-  openEnquiryCount: number;
+  openPipelineCount: number;
   recentSurveys: SurveyorDashboardSurvey[];
+  pipelineDeals: SurveyorDashboardDeal[];
 };
 
 export const loadSurveyorDashboardData = cache(loadSurveyorDashboardDataImpl);
@@ -43,8 +57,11 @@ async function loadSurveyorDashboardDataImpl(
   const [dealsResult, surveysResult] = await Promise.all([
     client
       .from('pipeline_deals')
-      .select('id, stage')
-      .eq('account_id', accountId),
+      .select(
+        'id, name, stage, contact_name, company_name, updated_at, clients(display_name)',
+      )
+      .eq('account_id', accountId)
+      .order('updated_at', { ascending: false }),
     client
       .from('proposals')
       .select('id, title, status, updated_at, clients(display_name)')
@@ -57,19 +74,49 @@ async function loadSurveyorDashboardDataImpl(
   if (dealsResult.error) throw new Error(dealsResult.error.message);
   if (surveysResult.error) throw new Error(surveysResult.error.message);
 
-  const deals = (dealsResult.data ?? []) as Array<{ stage: string }>;
+  type DealRow = {
+    id: string;
+    name: string | null;
+    stage: string;
+    contact_name: string | null;
+    company_name: string | null;
+    clients: { display_name: string | null } | null;
+  };
+
+  const deals = (dealsResult.data ?? []) as DealRow[];
   const enquiryCount = deals.filter((deal) => deal.stage === 'enquiry').length;
   const bookedCount = deals.filter((deal) => deal.stage === 'booked').length;
   const surveyedCount = deals.filter(
     (deal) => deal.stage === 'surveyed',
   ).length;
-  const openEnquiryCount = deals.filter((deal) =>
+  const openDeals = deals.filter((deal) =>
     (BUILDING_SURVEYOR_PIPELINE_STAGES as readonly string[]).includes(
       deal.stage,
     )
-      ? deal.stage !== 'reported' && deal.stage !== 'lost'
+      ? !isBuildingSurveyorTerminalStage(deal.stage)
       : false,
-  ).length;
+  );
+  const openPipelineCount = openDeals.length;
+
+  const pipelineDeals: SurveyorDashboardDeal[] = openDeals
+    .slice(0, 8)
+    .map((deal) => {
+      const stage = deal.stage as BuildingSurveyorPipelineStage;
+      return {
+        id: deal.id,
+        title:
+          deal.name?.trim() ||
+          deal.company_name?.trim() ||
+          deal.contact_name?.trim() ||
+          'Untitled',
+        stage: deal.stage,
+        stageLabel: BUILDING_SURVEYOR_PIPELINE_LABELS[stage] ?? deal.stage,
+        clientName:
+          deal.clients?.display_name?.trim() ||
+          deal.contact_name?.trim() ||
+          null,
+      };
+    });
 
   const recentSurveys: SurveyorDashboardSurvey[] = (
     (surveysResult.data ?? []) as Array<{
@@ -93,7 +140,8 @@ async function loadSurveyorDashboardDataImpl(
     enquiryCount,
     bookedCount,
     surveyedCount,
-    openEnquiryCount,
+    openPipelineCount,
     recentSurveys,
+    pipelineDeals,
   };
 }
