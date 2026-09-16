@@ -66,12 +66,7 @@ export async function POST(_request: Request, context: RouteContext) {
           .select('google_email, mailbox_kind')
           .eq('id', connectionId)
           .maybeSingle()
-      : auth.client
-          .from('google_connections')
-          .select('google_email, mailbox_kind')
-          .eq('user_id', auth.user.id)
-          .eq('mailbox_kind', 'business')
-          .maybeSingle(),
+      : Promise.resolve({ data: null, error: null }),
     connectionId
       ? auth.client
           .from('email_assistant_settings')
@@ -161,6 +156,8 @@ export async function POST(_request: Request, context: RouteContext) {
       (settings as { signature_is_html?: boolean | null } | null)
         ?.signature_is_html,
     ),
+    mailboxKind,
+    { connectionId },
   );
 
   const voiceBlock = await loadVoicePromptBlock(auth.client, {

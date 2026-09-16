@@ -1,11 +1,11 @@
 import 'server-only';
 
 import {
+  type GmailLabel,
   applyLabelIdChanges,
   isManualPickerLabel,
   listLabels,
   modifyThread,
-  type GmailLabel,
 } from '@kit/gmail';
 import type { MailboxKind } from '@kit/google-auth';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
@@ -19,9 +19,12 @@ export type ModifyThreadGmailLabelsResult = {
 export async function listMailboxGmailLabels(input: {
   userId: string;
   mailboxKind?: MailboxKind;
+  accountId?: string | null;
 }): Promise<GmailLabel[]> {
   const mailboxKind = input.mailboxKind ?? 'personal';
-  const labels = await listLabels(input.userId, mailboxKind);
+  const labels = await listLabels(input.userId, mailboxKind, {
+    accountId: input.accountId,
+  });
 
   return labels
     .filter(isManualPickerLabel)
@@ -31,9 +34,12 @@ export async function listMailboxGmailLabels(input: {
 export async function listAllMailboxGmailLabels(input: {
   userId: string;
   mailboxKind?: MailboxKind;
+  accountId?: string | null;
 }): Promise<GmailLabel[]> {
   const mailboxKind = input.mailboxKind ?? 'personal';
-  return listLabels(input.userId, mailboxKind);
+  return listLabels(input.userId, mailboxKind, {
+    accountId: input.accountId,
+  });
 }
 
 /**
@@ -83,7 +89,9 @@ export async function modifyThreadGmailLabels(input: {
   );
 
   try {
-    const labels = await listLabels(input.userId, mailboxKind);
+    const labels = await listLabels(input.userId, mailboxKind, {
+      connectionId: threadRow.connection_id,
+    });
     const allowedIds = new Set(
       labels.filter(isManualPickerLabel).map((label) => label.id),
     );
@@ -108,6 +116,7 @@ export async function modifyThreadGmailLabels(input: {
       threadRow.gmail_thread_id,
       { addLabelIds, removeLabelIds },
       mailboxKind,
+      { connectionId: threadRow.connection_id },
     );
 
     const nextLabelIds = applyLabelIdChanges(
@@ -172,14 +181,6 @@ async function resolveMailboxKindForThread(
     }
   }
 
-  const { data: connections } = await admin
-    .from('google_connections')
-    .select('mailbox_kind')
-    .eq('user_id', userId);
-
-  const rows = (connections ?? []) as Array<{ mailbox_kind?: string | null }>;
-  const preferred =
-    rows.find((row) => row.mailbox_kind === 'business') ?? rows[0];
-
-  return preferred?.mailbox_kind === 'personal' ? 'personal' : 'business';
+  // Missing or unknown connection — do not guess another workspace's mailbox.
+  return 'business';
 }

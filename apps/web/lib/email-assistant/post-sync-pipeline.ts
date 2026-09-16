@@ -117,6 +117,7 @@ export async function runEmailAssistantPipeline(
   options?: {
     mailboxKind?: MailboxKind;
     preferredAccountId?: string | null;
+    connectionId?: string | null;
   },
 ): Promise<EmailAssistantPipelineResult> {
   const mailboxKind = options?.mailboxKind ?? 'business';
@@ -134,7 +135,10 @@ export async function runEmailAssistantPipeline(
   };
 
   const admin = getSupabaseServerAdminClient();
-  const owner = await resolveDraftOwnerContext(userId, mailboxKind);
+  const owner = await resolveDraftOwnerContext(userId, mailboxKind, {
+    accountId: preferredAccountId,
+    connectionId: options?.connectionId,
+  });
 
   if (!owner?.connectionId) {
     result.errors.push('Could not resolve mailbox owner');

@@ -1,6 +1,10 @@
 import 'server-only';
 
-import type { MailboxKind } from '@kit/google-auth';
+import {
+  type GoogleMailboxScope,
+  type MailboxKind,
+  getConnectionByUserMailbox,
+} from '@kit/google-auth';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 type DynamicQuery = PromiseLike<{
@@ -42,25 +46,18 @@ function adminTable(name: string) {
 export async function resolveConnectionId(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<string | null> {
-  const { data, error } = await adminTable('google_connections')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('mailbox_kind', mailboxKind)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data as { id?: string } | null)?.id ?? null;
+  const row = await getConnectionByUserMailbox(userId, mailboxKind, scope);
+  return row?.id ?? null;
 }
 
 export async function loadAssistantSettings(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ) {
-  const connectionId = await resolveConnectionId(userId, mailboxKind);
+  const connectionId = await resolveConnectionId(userId, mailboxKind, scope);
 
   if (!connectionId) {
     return null;
@@ -87,8 +84,9 @@ export async function saveAssistantCursor(
   userId: string,
   historyId: string | null,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ) {
-  const connectionId = await resolveConnectionId(userId, mailboxKind);
+  const connectionId = await resolveConnectionId(userId, mailboxKind, scope);
 
   if (!connectionId) {
     throw new Error('Google account is not connected');
@@ -117,10 +115,12 @@ export async function saveAssistantCursor(
 export async function touchAssistantSyncTime(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ) {
-  const settings = await loadAssistantSettings(userId, mailboxKind);
+  const settings = await loadAssistantSettings(userId, mailboxKind, scope);
   const connectionId =
-    settings?.connection_id ?? (await resolveConnectionId(userId, mailboxKind));
+    settings?.connection_id ??
+    (await resolveConnectionId(userId, mailboxKind, scope));
 
   if (!connectionId) {
     throw new Error('Google account is not connected');
@@ -199,6 +199,8 @@ export async function upsertEmailThread(input: {
   labelIds: string[];
   isUnread: boolean;
   lastMessageAt: string | null;
+  /** Workspace that owns the mailbox. Set only on insert so later client links stay. */
+  accountId?: string | null;
 }): Promise<string> {
   const now = new Date().toISOString();
 
@@ -244,6 +246,9 @@ export async function upsertEmailThread(input: {
         is_unread: input.isUnread,
         last_message_at: lastMessageAt,
         updated_at: now,
+        ...(!existingRow && input.accountId
+          ? { account_id: input.accountId }
+          : {}),
       },
       { onConflict: 'connection_id,gmail_thread_id' },
     )

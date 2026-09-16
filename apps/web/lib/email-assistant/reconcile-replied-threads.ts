@@ -49,7 +49,7 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
     return { cleared: 0 };
   }
 
-  const ownerByUserId = new Map<string, string>();
+  const ownerByConnectionId = new Map<string, string>();
   const settingsByConnectionId = new Map<string, AutoSyncGmailSettings>();
   const mailboxKindByConnectionId = new Map<string, MailboxKind>();
   let cleared = 0;
@@ -60,14 +60,20 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
     const connectionId = (row as { connection_id?: string | null }).connection_id ?? null;
     const labelIds = (row as { label_ids?: string[] | null }).label_ids ?? null;
 
-    let ownerEmail = ownerByUserId.get(mailboxUserId);
+    if (!connectionId) {
+      continue;
+    }
+
+    let ownerEmail = ownerByConnectionId.get(connectionId);
     if (!ownerEmail) {
-      const owner = await resolveDraftOwnerContext(mailboxUserId);
+      const owner = await resolveDraftOwnerContext(mailboxUserId, 'business', {
+        connectionId,
+      });
       if (!owner) {
         continue;
       }
       ownerEmail = owner.email;
-      ownerByUserId.set(mailboxUserId, ownerEmail);
+      ownerByConnectionId.set(connectionId, ownerEmail);
     }
 
     const { data: latest, error: latestError } = await admin

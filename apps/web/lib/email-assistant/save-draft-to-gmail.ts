@@ -183,10 +183,7 @@ export async function saveDraftToGmail(input: {
   }
 
   if (!ownerConnection) {
-    ownerConnection =
-      connections.find((row) => row.mailbox_kind === 'business') ??
-      connections[0] ??
-      null;
+    throw new Error('Gmail is not connected for this workspace');
   }
 
   const settingsRows = (settings ?? []) as Array<{
@@ -242,6 +239,7 @@ export async function saveDraftToGmail(input: {
     input.userId,
     replyMessageGmailId,
     mailboxKind,
+    { connectionId: threadRecord.connection_id },
   );
 
   const ownerEmail = ownerConnection?.google_email ?? undefined;
@@ -250,6 +248,8 @@ export async function saveDraftToGmail(input: {
     input.userId,
     settingsRow?.signature ?? null,
     Boolean(settingsRow?.signature_is_html),
+    mailboxKind,
+    { connectionId: threadRecord.connection_id },
   );
 
   const recipients = buildReplyAllRecipients({
@@ -281,6 +281,7 @@ export async function saveDraftToGmail(input: {
         draftRecord.gmail_draft_id,
         raw,
         mailboxKind,
+        { connectionId: threadRecord.connection_id },
       )
     : await createDraft(
         input.userId,
@@ -289,6 +290,7 @@ export async function saveDraftToGmail(input: {
           raw,
         },
         mailboxKind,
+        { connectionId: threadRecord.connection_id },
       );
 
   const gmailDraftId = gmailDraft.id ?? draftRecord.gmail_draft_id;

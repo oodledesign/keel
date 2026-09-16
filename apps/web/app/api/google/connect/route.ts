@@ -44,12 +44,23 @@ export async function GET(request: NextRequest) {
   const mailboxKind = parseMailboxKind(
     request.nextUrl.searchParams.get('mailbox'),
   );
+  const accountId =
+    request.nextUrl.searchParams.get('accountId')?.trim() || undefined;
+
+  if (mailboxKind === 'business' && !accountId) {
+    return NextResponse.redirect(
+      absoluteUrl(
+        `${returnPath}?email_error=${encodeURIComponent('Connect Gmail from a workspace Emails page')}`,
+      ),
+    );
+  }
 
   try {
     const state = signGoogleOAuthState({
       userId: user.id,
       returnPath,
       mailboxKind,
+      accountId,
       exp: Date.now() + 10 * 60_000,
     });
 

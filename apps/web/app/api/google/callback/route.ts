@@ -109,6 +109,9 @@ export async function GET(request: NextRequest) {
       ...GMAIL_OAUTH_SCOPES,
     ];
 
+    const mailboxKind =
+      payload.mailboxKind === 'personal' ? 'personal' : 'business';
+
     await upsertConnection(
       user.id,
       {
@@ -118,7 +121,10 @@ export async function GET(request: NextRequest) {
         expiresAt: expiresAtFromToken(tokens.expires_in),
       },
       scopes,
-      payload.mailboxKind === 'personal' ? 'personal' : 'business',
+      mailboxKind,
+      {
+        accountId: mailboxKind === 'business' ? payload.accountId : null,
+      },
     );
   } catch (error) {
     const message =

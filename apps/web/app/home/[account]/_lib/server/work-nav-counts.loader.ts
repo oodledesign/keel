@@ -96,6 +96,7 @@ export async function loadWorkNavCounts(
       counts.emailNeedsReplyCount = await countNeedsReplyEmailThreads(admin, {
         userId,
         mailboxKind: 'business',
+        accountId,
       });
     } catch (error) {
       const pgError = error as PostgrestError;
@@ -111,6 +112,7 @@ export async function loadWorkNavCounts(
             {
               userId,
               mailboxKind: 'business',
+              accountId,
             },
           );
         } catch {

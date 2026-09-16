@@ -6,5 +6,5 @@ export {
   upsertConnection,
   getConnectionByUserMailbox,
 } from './connection';
-export type { MailboxKind } from './connection';
+export type { GoogleMailboxScope, MailboxKind } from './connection';
 export type { GoogleConnectionTokens, GoogleTokenResponse } from './types';

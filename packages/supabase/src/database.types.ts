@@ -9683,6 +9683,7 @@ export type Database = {
       google_connections: {
         Row: {
           access_token_encrypted: string
+          account_id: string | null
           connected_at: string
           google_email: string
           id: string
@@ -9695,6 +9696,7 @@ export type Database = {
         }
         Insert: {
           access_token_encrypted: string
+          account_id?: string | null
           connected_at?: string
           google_email: string
           id?: string
@@ -9707,6 +9709,7 @@ export type Database = {
         }
         Update: {
           access_token_encrypted?: string
+          account_id?: string | null
           connected_at?: string
           google_email?: string
           id?: string
@@ -9717,7 +9720,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "google_connections_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_invitations: {
         Row: {
@@ -17758,6 +17769,7 @@ export type Database = {
       claim_gmail_sync_batch: {
         Args: { p_batch_size?: number }
         Returns: {
+          account_id: string | null
           connection_id: string
           mailbox_kind: string
           user_id: string

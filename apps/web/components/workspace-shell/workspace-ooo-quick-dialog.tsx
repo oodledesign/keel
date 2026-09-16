@@ -208,7 +208,7 @@ export function WorkspaceOooQuickDialog({
         }
       }
 
-      const status = await getGmailVacationStatus(userId);
+      const status = await getGmailVacationStatus(userId, accountId);
       if (!cancelled) {
         setGmailStatus(status);
       }
@@ -221,7 +221,7 @@ export function WorkspaceOooQuickDialog({
 
   function refreshGmailStatus() {
     if (!userId) return;
-    void getGmailVacationStatus(userId).then(setGmailStatus);
+    void getGmailVacationStatus(userId, accountId).then(setGmailStatus);
   }
 
   function runGmailAction(
@@ -461,7 +461,9 @@ export function WorkspaceOooQuickDialog({
                   reconnectHref={reconnectHref}
                   hideInSync
                   onTurnOffGmail={() =>
-                    runGmailAction(() => turnOffGmailVacationResponder(userId))
+                    runGmailAction(() =>
+                      turnOffGmailVacationResponder(userId, accountId),
+                    )
                   }
                   onTurnOnHolidayMode={() => setAway(true)}
                   onSyncToGmail={() => {

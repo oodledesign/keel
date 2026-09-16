@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { MailboxKind } from '@kit/google-auth';
+import type { GoogleMailboxScope, MailboxKind } from '@kit/google-auth';
 
 import { gmailFetch } from './client';
 
@@ -21,6 +21,7 @@ export async function createDraft(
   userId: string,
   input: CreateDraftInput,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailDraftResponse> {
   return gmailFetch<GmailDraftResponse>(
     userId,
@@ -36,6 +37,7 @@ export async function createDraft(
       }),
     },
     mailboxKind,
+    scope,
   );
 }
 
@@ -44,6 +46,7 @@ export async function updateDraft(
   draftId: string,
   raw: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailDraftResponse> {
   return gmailFetch<GmailDraftResponse>(
     userId,
@@ -58,6 +61,7 @@ export async function updateDraft(
       }),
     },
     mailboxKind,
+    scope,
   );
 }
 
@@ -65,6 +69,7 @@ export async function sendDraft(
   userId: string,
   draftId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailDraftResponse> {
   return gmailFetch<GmailDraftResponse>(
     userId,
@@ -75,5 +80,6 @@ export async function sendDraft(
       body: JSON.stringify({}),
     },
     mailboxKind,
+    scope,
   );
 }

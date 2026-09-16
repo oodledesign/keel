@@ -95,6 +95,9 @@ export async function buildSendDraftPreview(input: {
     input.userId,
     gmailMessageId,
     mailboxKind,
+    {
+      connectionId: (thread as { connection_id?: string | null }).connection_id,
+    },
   );
 
   const ownerEmail =
@@ -177,7 +180,10 @@ export async function sendDraftFromOzer(input: {
       ? 'personal'
       : 'business';
 
-  const sent = await sendDraft(input.userId, gmailDraftId, mailboxKind);
+  const sent = await sendDraft(input.userId, gmailDraftId, mailboxKind, {
+    connectionId: (threadForConnection as { connection_id?: string | null })
+      .connection_id,
+  });
   const gmailMessageId = sent.message?.id ?? null;
   const threadId = draftRow.thread_id as string;
 
@@ -217,6 +223,8 @@ export async function sendDraftFromOzer(input: {
       await syncGmailThread(input.userId, gmailThreadId, {
         format: 'metadata',
         mailboxKind,
+        connectionId: (threadForConnection as { connection_id?: string | null })
+          .connection_id,
       });
     } catch {
       // Best-effort sync after send.

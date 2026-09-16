@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { MailboxKind } from '@kit/google-auth';
+import type { GoogleMailboxScope, MailboxKind } from '@kit/google-auth';
 
 import { gmailFetch } from './client';
 
@@ -71,7 +71,9 @@ export function isSystemLabelId(labelId: string): boolean {
   );
 }
 
-export function isUserVisibleLabel(label: Pick<GmailLabel, 'id' | 'type' | 'name'>): boolean {
+export function isUserVisibleLabel(
+  label: Pick<GmailLabel, 'id' | 'type' | 'name'>,
+): boolean {
   if (label.type === 'user') {
     return true;
   }
@@ -80,7 +82,9 @@ export function isUserVisibleLabel(label: Pick<GmailLabel, 'id' | 'type' | 'name
 }
 
 /** Labels suitable for the manual picker (user labels only; Ozer/* owned by triage). */
-export function isManualPickerLabel(label: Pick<GmailLabel, 'id' | 'type' | 'name'>): boolean {
+export function isManualPickerLabel(
+  label: Pick<GmailLabel, 'id' | 'type' | 'name'>,
+): boolean {
   if (label.type !== 'user') {
     return false;
   }
@@ -91,12 +95,14 @@ export function isManualPickerLabel(label: Pick<GmailLabel, 'id' | 'type' | 'nam
 export async function listLabels(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailLabel[]> {
   const response = await gmailFetch<ListLabelsResponse>(
     userId,
     '/labels',
     undefined,
     mailboxKind,
+    scope,
   );
 
   const labels: GmailLabel[] = [];
@@ -125,6 +131,7 @@ export async function ensureLabel(
   userId: string,
   name: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailLabel> {
   const trimmed = name.trim();
 
@@ -132,7 +139,7 @@ export async function ensureLabel(
     throw new Error('Label name is required');
   }
 
-  const existing = await listLabels(userId, mailboxKind);
+  const existing = await listLabels(userId, mailboxKind, scope);
   const match = existing.find(
     (label) => label.name.toLowerCase() === trimmed.toLowerCase(),
   );
@@ -154,6 +161,7 @@ export async function ensureLabel(
       }),
     },
     mailboxKind,
+    scope,
   );
 
   const id = created.id?.trim();
@@ -178,6 +186,7 @@ export async function modifyThread(
     removeLabelIds?: string[];
   },
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<ModifyThreadResponse> {
   const addLabelIds = [...new Set((input.addLabelIds ?? []).filter(Boolean))];
   const removeLabelIds = [
@@ -200,6 +209,7 @@ export async function modifyThread(
       }),
     },
     mailboxKind,
+    scope,
   );
 }
 
@@ -210,9 +220,7 @@ export function applyLabelIdChanges(
   removeLabelIds: string[] = [],
 ): string[] {
   const remove = new Set(removeLabelIds);
-  const next = new Set(
-    (current ?? []).filter((id) => id && !remove.has(id)),
-  );
+  const next = new Set((current ?? []).filter((id) => id && !remove.has(id)));
 
   for (const id of addLabelIds) {
     if (id) {

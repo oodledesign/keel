@@ -2,9 +2,10 @@ import 'server-only';
 
 import { GmailApiError, htmlSignatureToPlain } from '@kit/gmail';
 import {
-  getGmailDefaultSignature,
   type ResolvedEmailSignature,
+  getGmailDefaultSignature,
 } from '@kit/gmail/send-as';
+import type { GoogleMailboxScope, MailboxKind } from '@kit/google-auth';
 
 export type { ResolvedEmailSignature };
 
@@ -33,6 +34,8 @@ export async function resolveEmailAssistantSignature(
   userId: string,
   settingsSignature: string | null | undefined,
   signatureIsHtml = false,
+  mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<ResolvedEmailSignature> {
   const fromSettings = parseSettingsSignature(
     settingsSignature,
@@ -44,7 +47,7 @@ export async function resolveEmailAssistantSignature(
   }
 
   try {
-    return await getGmailDefaultSignature(userId);
+    return await getGmailDefaultSignature(userId, mailboxKind, scope);
   } catch (error) {
     if (error instanceof GmailApiError && error.status === 403) {
       return { plain: null, html: null };

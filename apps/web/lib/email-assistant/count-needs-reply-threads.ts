@@ -3,21 +3,33 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
+import {
+  applyGoogleConnectionScope,
+  isBusinessMailboxUnscoped,
+} from '~/lib/email-assistant/google-connection-scope';
 import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
 
 /**
- * Count threads marked actionable (reply_now / reply_later) for a user's Gmail connection.
+ * Count threads marked actionable (reply_now / reply_later) for a mailbox.
+ * Business mailboxes are scoped to a workspace connection.
  */
 export async function countNeedsReplyEmailThreads(
   client: SupabaseClient,
-  params: { userId: string; mailboxKind: MailboxKind },
+  params: {
+    userId: string;
+    mailboxKind: MailboxKind;
+    accountId?: string | null;
+  },
 ): Promise<number> {
-  const { data: connection, error: connectionError } = await client
-    .from('google_connections')
-    .select('id')
-    .eq('user_id', params.userId)
-    .eq('mailbox_kind', params.mailboxKind)
-    .maybeSingle();
+  if (isBusinessMailboxUnscoped(params.mailboxKind, params.accountId)) {
+    return 0;
+  }
+
+  const { data: connection, error: connectionError } =
+    await applyGoogleConnectionScope(
+      client.from('google_connections').select('id'),
+      params,
+    ).maybeSingle();
 
   if (connectionError) {
     throw connectionError;

@@ -8,6 +8,10 @@ import {
 } from '~/lib/cron/cron-guards';
 import { authorizeCron } from '~/lib/email-assistant/cron-auth';
 import {
+  applyGoogleConnectionScope,
+  isBusinessMailboxUnscoped,
+} from '~/lib/email-assistant/google-connection-scope';
+import {
   type MailboxKind,
   parseMailboxKind,
 } from '~/lib/email-assistant/mailbox-kind';
@@ -35,14 +39,32 @@ type SyncResultRow = {
 async function assertGoogleConnection(
   userId: string,
   mailboxKind: MailboxKind,
+  scope?: { accountId?: string | null; connectionId?: string | null },
 ) {
+  if (
+    isBusinessMailboxUnscoped(mailboxKind, scope?.accountId) &&
+    !scope?.connectionId
+  ) {
+    throw new Error('Connect Gmail in Email settings before syncing');
+  }
+
   const admin = getSupabaseServerAdminClient();
-  const { data, error } = await admin
-    .from('google_connections')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('mailbox_kind', mailboxKind)
-    .maybeSingle();
+  const query = scope?.connectionId
+    ? admin
+        .from('google_connections')
+        .select('id')
+        .eq('id', scope.connectionId)
+        .eq('user_id', userId)
+    : applyGoogleConnectionScope(
+        admin.from('google_connections').select('id'),
+        {
+          userId,
+          mailboxKind,
+          accountId: scope?.accountId,
+        },
+      );
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw new Error(error.message);
@@ -56,9 +78,16 @@ async function assertGoogleConnection(
 async function syncUserMailbox(
   userId: string,
   mailboxKind: MailboxKind,
-  options?: { assistant?: boolean; preferredAccountId?: string | null },
+  options?: {
+    assistant?: boolean;
+    preferredAccountId?: string | null;
+    connectionId?: string | null;
+  },
 ) {
-  const syncResult = await syncMailbox(userId, mailboxKind);
+  const syncResult = await syncMailbox(userId, mailboxKind, {
+    accountId: options?.preferredAccountId,
+    connectionId: options?.connectionId,
+  });
   const runAssistant = options?.assistant !== false;
 
   if (!runAssistant) {
@@ -72,6 +101,7 @@ async function syncUserMailbox(
     assistant = await runEmailAssistantPipeline(userId, {
       mailboxKind,
       preferredAccountId: options?.preferredAccountId,
+      connectionId: options?.connectionId,
     });
   } catch (pipelineError) {
     assistant = {
@@ -79,6 +109,7 @@ async function syncUserMailbox(
       linked: 0,
       draftsCreated: 0,
       draftsSavedToGmail: 0,
+      extracted: 0,
       skipped: 0,
       errors: [
         pipelineError instanceof Error
@@ -109,6 +140,7 @@ async function syncAllConnectedUsers() {
           connection_id: string;
           user_id: string;
           mailbox_kind: string;
+          account_id?: string | null;
         }> | null;
         error: { message: string } | null;
       }>;
@@ -131,7 +163,10 @@ async function syncAllConnectedUsers() {
     try {
       // Mail sync + assistant (classify / drafts / suggested tasks) so cron
       // generates email tasks without requiring a manual Sync click.
-      const syncResult = await syncUserMailbox(userId, mailboxKind);
+      const syncResult = await syncUserMailbox(userId, mailboxKind, {
+        preferredAccountId: row.account_id,
+        connectionId,
+      });
 
       results.push({
         userId,
@@ -193,7 +228,9 @@ export async function POST(request: Request) {
   const preferredAccountId = url.searchParams.get('preferredAccountId');
 
   try {
-    await assertGoogleConnection(auth.user.id, mailboxKind);
+    await assertGoogleConnection(auth.user.id, mailboxKind, {
+      accountId: preferredAccountId,
+    });
     const result = await syncUserMailbox(auth.user.id, mailboxKind, {
       assistant,
       preferredAccountId,

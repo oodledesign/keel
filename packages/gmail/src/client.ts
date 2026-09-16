@@ -1,6 +1,10 @@
 import 'server-only';
 
-import { type MailboxKind, getValidAccessToken } from '@kit/google-auth';
+import {
+  type GoogleMailboxScope,
+  type MailboxKind,
+  getValidAccessToken,
+} from '@kit/google-auth';
 
 const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
@@ -19,8 +23,9 @@ export async function gmailFetch<T>(
   path: string,
   init?: RequestInit,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<T> {
-  const accessToken = await getValidAccessToken(userId, mailboxKind);
+  const accessToken = await getValidAccessToken(userId, mailboxKind, scope);
   const url = `${GMAIL_API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
 
   const response = await fetch(url, {
@@ -52,6 +57,7 @@ export async function gmailFetchPaginated<TItem>(
   pickItems: (page: Record<string, unknown>) => TItem[] | undefined,
   pickNextToken: (page: Record<string, unknown>) => string | undefined,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<TItem[]> {
   const items: TItem[] = [];
   let pageToken: string | undefined;
@@ -75,6 +81,7 @@ export async function gmailFetchPaginated<TItem>(
       `${path}${suffix}`,
       undefined,
       mailboxKind,
+      scope,
     )) as Record<string, unknown>;
 
     items.push(...(pickItems(page) ?? []));
