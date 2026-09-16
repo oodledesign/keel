@@ -17,6 +17,7 @@ import {
   approveProposalByTokenAction,
   declineProposalByTokenAction,
 } from '~/home/[account]/proposals/_lib/server/server-actions';
+import { sanitizeSurveyReportHtml } from '~/lib/building-surveyor/compile-survey-report-document';
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
 
 type CommentRow = {
@@ -30,6 +31,7 @@ type ProposalPayload = {
   id: string;
   title: string | null;
   content_html: string | null;
+  kind?: string | null;
   status: string;
   total_pence: number | null;
   currency: string | null;
@@ -204,9 +206,12 @@ export function PortalProposalView({
       </div>
 
       <div
-        className="prose prose-invert prose-headings:text-[var(--ozer-text-on-light)] prose-p:text-[#334155] mt-8 max-w-none rounded-lg border border-[color:var(--workspace-shell-border)] bg-white p-6 text-[var(--ozer-text-on-light)]"
+        className="prose prose-invert prose-headings:text-[var(--ozer-text-on-light)] prose-p:text-[var(--ozer-text-on-light)] mt-8 max-w-none rounded-lg border border-[color:var(--workspace-shell-border)] bg-white p-6 text-[var(--ozer-text-on-light)] [&_figcaption]:mt-2 [&_figcaption]:text-sm [&_figcaption]:text-[var(--ozer-text-muted)] [&_figure]:my-4 [&_img]:max-h-80 [&_img]:w-full [&_img]:rounded-md [&_img]:object-contain"
         dangerouslySetInnerHTML={{
-          __html: sanitizeCommunityHtml(data.content_html ?? ''),
+          __html:
+            data.kind === 'survey_report'
+              ? sanitizeSurveyReportHtml(data.content_html ?? '')
+              : sanitizeCommunityHtml(data.content_html ?? ''),
         }}
       />
 

@@ -37,6 +37,7 @@ import {
   type ProposalDocumentKind,
   documentKindCopy,
 } from '~/lib/building-surveyor/document-kind';
+import type { SurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { generateSurveyReportHtmlAction } from '../_lib/server/proposal-generate-actions';
@@ -65,6 +66,7 @@ type Props = {
   documentKind?: ProposalDocumentKind;
   proposalId?: string;
   onContentApplied: (html: string) => void;
+  onDocumentApplied?: (document: SurveyReportDocument) => void;
 };
 
 const EDIT_PRESETS = [
@@ -110,6 +112,7 @@ export function ProposalEditAiAssist({
   documentKind = 'proposal',
   proposalId,
   onContentApplied,
+  onDocumentApplied,
 }: Props) {
   const copy = documentKindCopy(documentKind);
   const {
@@ -347,6 +350,9 @@ export function ProposalEditAiAssist({
           contextNotes,
         });
         html = result.contentHtml.trim();
+        if (result.document) {
+          onDocumentApplied?.(result.document);
+        }
         setPreview(html);
         if (result.source === 'keyword_fallback') {
           toast.message(

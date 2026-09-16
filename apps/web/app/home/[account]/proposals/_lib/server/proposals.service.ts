@@ -275,6 +275,9 @@ class ProposalsService {
           input.title ??
           (documentKind === 'survey_report' ? 'Building survey' : 'Proposal'),
         content_html: input.content_html ?? htmlDefault?.bodyHtml ?? '',
+        ...(documentKind === 'survey_report' && input.body_document
+          ? { body_document: input.body_document }
+          : {}),
         status: 'draft',
         recipient_name: input.recipient_name ?? null,
         recipient_email: input.recipient_email ?? null,
@@ -338,6 +341,12 @@ class ProposalsService {
     if (input.title !== undefined) payload.title = input.title;
     if (input.content_html !== undefined)
       payload.content_html = input.content_html;
+    if (
+      input.body_document !== undefined &&
+      existing.kind === 'survey_report'
+    ) {
+      payload.body_document = input.body_document;
+    }
     if (input.recipient_name !== undefined)
       payload.recipient_name = input.recipient_name;
     if (input.recipient_email !== undefined)

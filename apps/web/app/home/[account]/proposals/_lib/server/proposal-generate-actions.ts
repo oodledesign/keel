@@ -3,6 +3,7 @@
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
@@ -13,6 +14,8 @@ import {
   generateProposalHtml,
 } from '~/lib/ai/proposal-generate';
 import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
+import { combineSurveyStyleGuidance } from '~/lib/ai/survey-style-distill';
+import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
 import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 const transcriptSchema = z.object({
@@ -125,6 +128,8 @@ const pinnedPhotoSchema = z.object({
   sectionKey: z.string().min(1).max(80),
   title: z.string().min(1).max(500),
   caption: z.string().max(1000).nullable().optional(),
+  documentId: z.string().uuid().optional(),
+  url: z.string().max(2_000).nullable().optional(),
 });
 
 const generateSurveyReportSchema = z
@@ -173,6 +178,7 @@ export const generateSurveyReportHtmlAction = enhanceAction(
     let observations = input.observations;
     let pinnedPhotos = input.pinnedPhotos;
     let surveyType = input.surveyType ?? null;
+    let styleGuidance: string | null = null;
 
     if (input.proposalId) {
       const survey = await capture.getSurvey(input.accountId, input.proposalId);
@@ -192,11 +198,30 @@ export const generateSurveyReportHtmlAction = enhanceAction(
           input.accountId,
           input.proposalId,
         );
+        const photoUrls = await signSurveyPhotoUrls(
+          getSupabaseServerAdminClient(),
+          photos.map((photo) => ({
+            id: photo.documentId,
+            filePath: photo.filePath,
+            storagePath: photo.storagePath,
+            storageBucket: photo.storageBucket,
+          })),
+        );
         pinnedPhotos = photos.map((photo) => ({
           sectionKey: photo.sectionKey,
           title: photo.title,
+          caption: photo.caption,
+          documentId: photo.documentId,
+          url: photoUrls[photo.documentId] ?? null,
         }));
       }
+      const styleExamples = await capture.listStyleExamples(input.accountId);
+      styleGuidance = combineSurveyStyleGuidance(
+        styleExamples.map((example) => ({
+          title: example.title,
+          styleNotes: example.styleNotes,
+        })),
+      );
     }
 
     const result = await generateSurveyReportHtml(
@@ -217,6 +242,7 @@ export const generateSurveyReportHtmlAction = enhanceAction(
         })),
         observations,
         pinnedPhotos,
+        styleGuidance,
       },
       { accountId: input.accountId, supabase: client },
     );

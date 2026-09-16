@@ -17,12 +17,18 @@ import { Textarea } from '@kit/ui/textarea';
 import { DocumentRichTextEditor } from '~/components/document-rich-text';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import { SurveyReportBodyEditor } from '~/home/[account]/surveys/_components/survey-report-body-editor';
+import { compileSurveyReportDocument } from '~/lib/building-surveyor/compile-survey-report-document';
 import {
   type ProposalDocumentKind,
   documentDetailPath,
   documentKindCopy,
   documentListPath,
 } from '~/lib/building-surveyor/document-kind';
+import {
+  type SurveyReportDocument,
+  resolveSurveyReportDocument,
+} from '~/lib/building-surveyor/survey-report-document';
 import {
   useFormDirtyState,
   useUnsavedChangesWarning,
@@ -59,6 +65,7 @@ type ProposalData = {
   deal_id: string | null;
   title: string | null;
   content_html: string | null;
+  body_document?: unknown;
   status: string;
   recipient_name: string | null;
   recipient_email: string | null;
@@ -161,6 +168,13 @@ export function ProposalEditContent({
 
   const [title, setTitle] = useState(proposal.title ?? '');
   const [contentHtml, setContentHtml] = useState(proposal.content_html ?? '');
+  const [reportDocument, setReportDocument] = useState<SurveyReportDocument>(
+    () =>
+      resolveSurveyReportDocument(
+        (initialProposal as { body_document?: unknown }).body_document,
+        proposal.content_html ?? '',
+      ),
+  );
   const [recipientName, setRecipientName] = useState(
     proposal.recipient_name ?? '',
   );
@@ -189,6 +203,7 @@ export function ProposalEditContent({
     () => ({
       title,
       contentHtml,
+      reportDocument,
       recipientName,
       recipientEmail,
       expiresAt,
@@ -201,6 +216,7 @@ export function ProposalEditContent({
     [
       title,
       contentHtml,
+      reportDocument,
       recipientName,
       recipientEmail,
       expiresAt,
@@ -240,7 +256,12 @@ export function ProposalEditContent({
         accountId,
         proposalId: proposal.id,
         title: title.trim() || null,
-        content_html: contentHtml,
+        content_html:
+          documentKind === 'survey_report'
+            ? compileSurveyReportDocument(reportDocument)
+            : contentHtml,
+        body_document:
+          documentKind === 'survey_report' ? reportDocument : undefined,
         recipient_name: recipientName.trim() || null,
         recipient_email: recipientEmail.trim() || null,
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
@@ -262,6 +283,7 @@ export function ProposalEditContent({
     accountId,
     canModify,
     contentHtml,
+    documentKind,
     emailBody,
     emailSignature,
     emailSubject,
@@ -269,6 +291,7 @@ export function ProposalEditContent({
     markClean,
     privateNote,
     proposal.id,
+    reportDocument,
     recipientEmail,
     recipientName,
     router,
@@ -284,7 +307,11 @@ export function ProposalEditContent({
     'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)] placeholder:text-[var(--workspace-shell-text-muted)]';
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 sm:gap-6">
+    <div
+      className={`mx-auto flex w-full flex-col gap-5 sm:gap-6 ${
+        documentKind === 'survey_report' ? 'max-w-[88rem]' : 'max-w-6xl'
+      }`}
+    >
       <header className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <Button
@@ -343,6 +370,10 @@ export function ProposalEditContent({
                     documentKind={documentKind}
                     proposalId={proposal.id}
                     onContentApplied={setContentHtml}
+                    onDocumentApplied={(next) => {
+                      setReportDocument(next);
+                      setContentHtml(compileSurveyReportDocument(next));
+                    }}
                   />
                 ) : null}
 
@@ -466,217 +497,235 @@ export function ProposalEditContent({
           onClose={() => setShowSendPanel(false)}
         />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className={canvasClassName}>
-            {brandLogoUrl ? (
-              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 md:top-8 md:right-8">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={brandLogoUrl}
-                  alt="Brand logo"
-                  className="h-10 w-auto max-w-[96px] object-contain object-right sm:h-12 sm:max-w-[120px]"
-                />
-              </div>
-            ) : null}
-
-            <div className="space-y-5 pr-0 sm:space-y-6 sm:pr-28 md:pr-32">
-              <div>
-                {readOnly ? (
-                  <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">
-                    {title.trim() || copy.untitled}
-                  </h2>
-                ) : (
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder={`${copy.defaultTitle} title`}
-                    className={`text-2xl font-bold ${inputClassName}`}
-                  />
-                )}
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">
-                    Recipient name
-                  </Label>
-                  <Input
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    disabled={readOnly}
-                    placeholder={defaultRecipientName || 'Client name'}
-                    className={`mt-1 ${inputClassName}`}
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className={canvasClassName}>
+              {brandLogoUrl ? (
+                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 md:top-8 md:right-8">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={brandLogoUrl}
+                    alt="Brand logo"
+                    className="h-10 w-auto max-w-[96px] object-contain object-right sm:h-12 sm:max-w-[120px]"
                   />
                 </div>
+              ) : null}
+
+              <div className="space-y-5 pr-0 sm:space-y-6 sm:pr-28 md:pr-32">
                 <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">
-                    Recipient email
-                  </Label>
-                  <Input
-                    type="email"
-                    value={recipientEmail}
-                    onChange={(e) => setRecipientEmail(e.target.value)}
-                    disabled={readOnly}
-                    placeholder={proposal.client?.email ?? 'client@example.com'}
-                    className={`mt-1 ${inputClassName}`}
-                  />
+                  {readOnly ? (
+                    <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">
+                      {title.trim() || copy.untitled}
+                    </h2>
+                  ) : (
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={`${copy.defaultTitle} title`}
+                      className={`text-2xl font-bold ${inputClassName}`}
+                    />
+                  )}
                 </div>
-              </div>
 
-              <div className="max-w-xs">
-                <Label className="text-[var(--workspace-shell-text-muted)]">
-                  Expires
-                </Label>
-                <Input
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  disabled={readOnly}
-                  className={`mt-1 ${inputClassName}`}
-                />
-              </div>
-
-              <div>
-                <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">
-                  {copy.contentLabel}
-                </Label>
-                <DocumentRichTextEditor
-                  value={contentHtml}
-                  onChange={setContentHtml}
-                  readOnly={readOnly}
-                  minHeight={360}
-                  placeholder={copy.editorPlaceholder}
-                />
-              </div>
-            </div>
-          </div>
-
-          <aside className="space-y-4">
-            {documentKind === 'survey_report' ? (
-              <SurveyPhotosPanel
-                accountId={accountId}
-                accountSlug={accountSlug}
-                proposalId={proposal.id}
-                clientId={proposal.client_id}
-                canEdit={canModify}
-              />
-            ) : null}
-
-            {(proposal.context_refs?.length ?? 0) > 0 ? (
-              <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  Referenced notes and files
-                </h2>
-                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  {copy.referencedContext}
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {(proposal.context_refs ?? []).map((ref) => (
-                    <li key={`${ref.type}-${ref.id}`}>
-                      <Link
-                        href={pathsConfig.app.accountNotes.replace(
-                          '[account]',
-                          accountSlug,
-                        )}
-                        className="text-sm text-[var(--ozer-accent-muted)] hover:underline"
-                      >
-                        {ref.type === 'file' ? 'File' : 'Note'}: {ref.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Private note
-              </h2>
-              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                Only visible to your team — not shown to clients.
-              </p>
-              <Textarea
-                value={privateNote}
-                onChange={(e) => setPrivateNote(e.target.value)}
-                disabled={readOnly}
-                rows={5}
-                placeholder={copy.privateNotePlaceholder}
-                className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-              />
-            </section>
-
-            <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Total (optional)
-              </h2>
-              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                Shown in emails and on the client portal.
-              </p>
-              <div className="relative mt-3">
-                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]">
-                  £
-                </span>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={totalPenceInput}
-                  onChange={(e) => setTotalPenceInput(e.target.value)}
-                  disabled={readOnly}
-                  placeholder="0.00"
-                  className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-7 text-[var(--workspace-shell-text)]"
-                />
-              </div>
-            </section>
-
-            {canManageProposalStatus ? (
-              <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  Email templates
-                </h2>
-                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  {copy.emailTemplatesHint}
-                </p>
-                <div className="mt-4 space-y-3">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label className="text-[var(--workspace-shell-text-muted)]">
-                      Subject
+                      Recipient name
                     </Label>
                     <Input
-                      value={emailSubject}
-                      onChange={(e) => setEmailSubject(e.target.value)}
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
                       disabled={readOnly}
-                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      placeholder={defaultRecipientName || 'Client name'}
+                      className={`mt-1 ${inputClassName}`}
                     />
                   </div>
                   <div>
                     <Label className="text-[var(--workspace-shell-text-muted)]">
-                      Body
+                      Recipient email
                     </Label>
-                    <Textarea
-                      value={emailBody}
-                      onChange={(e) => setEmailBody(e.target.value)}
+                    <Input
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
                       disabled={readOnly}
-                      rows={3}
-                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[var(--workspace-shell-text-muted)]">
-                      Signature
-                    </Label>
-                    <Textarea
-                      value={emailSignature}
-                      onChange={(e) => setEmailSignature(e.target.value)}
-                      disabled={readOnly}
-                      rows={2}
-                      className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      placeholder={
+                        proposal.client?.email ?? 'client@example.com'
+                      }
+                      className={`mt-1 ${inputClassName}`}
                     />
                   </div>
                 </div>
+
+                <div className="max-w-xs">
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Expires
+                  </Label>
+                  <Input
+                    type="date"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    disabled={readOnly}
+                    className={`mt-1 ${inputClassName}`}
+                  />
+                </div>
+
+                {documentKind === 'survey_report' ? null : (
+                  <div>
+                    <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">
+                      {copy.contentLabel}
+                    </Label>
+                    <DocumentRichTextEditor
+                      value={contentHtml}
+                      onChange={setContentHtml}
+                      readOnly={readOnly}
+                      minHeight={360}
+                      placeholder={copy.editorPlaceholder}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <aside className="space-y-4">
+              {documentKind === 'survey_report' ? (
+                <SurveyPhotosPanel
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  proposalId={proposal.id}
+                  clientId={proposal.client_id}
+                  canEdit={canModify}
+                />
+              ) : null}
+
+              {(proposal.context_refs?.length ?? 0) > 0 ? (
+                <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+                  <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                    Referenced notes and files
+                  </h2>
+                  <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                    {copy.referencedContext}
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {(proposal.context_refs ?? []).map((ref) => (
+                      <li key={`${ref.type}-${ref.id}`}>
+                        <Link
+                          href={pathsConfig.app.accountNotes.replace(
+                            '[account]',
+                            accountSlug,
+                          )}
+                          className="text-sm text-[var(--ozer-accent-muted)] hover:underline"
+                        >
+                          {ref.type === 'file' ? 'File' : 'Note'}: {ref.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Private note
+                </h2>
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Only visible to your team — not shown to clients.
+                </p>
+                <Textarea
+                  value={privateNote}
+                  onChange={(e) => setPrivateNote(e.target.value)}
+                  disabled={readOnly}
+                  rows={5}
+                  placeholder={copy.privateNotePlaceholder}
+                  className="mt-3 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                />
               </section>
-            ) : null}
-          </aside>
+
+              <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Total (optional)
+                </h2>
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Shown in emails and on the client portal.
+                </p>
+                <div className="relative mt-3">
+                  <span className="absolute top-1/2 left-3 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]">
+                    £
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={totalPenceInput}
+                    onChange={(e) => setTotalPenceInput(e.target.value)}
+                    disabled={readOnly}
+                    placeholder="0.00"
+                    className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-7 text-[var(--workspace-shell-text)]"
+                  />
+                </div>
+              </section>
+
+              {canManageProposalStatus ? (
+                <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+                  <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                    Email templates
+                  </h2>
+                  <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                    {copy.emailTemplatesHint}
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Subject
+                      </Label>
+                      <Input
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        disabled={readOnly}
+                        className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Body
+                      </Label>
+                      <Textarea
+                        value={emailBody}
+                        onChange={(e) => setEmailBody(e.target.value)}
+                        disabled={readOnly}
+                        rows={3}
+                        className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Signature
+                      </Label>
+                      <Textarea
+                        value={emailSignature}
+                        onChange={(e) => setEmailSignature(e.target.value)}
+                        disabled={readOnly}
+                        rows={2}
+                        className="mt-1 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      />
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+            </aside>
+          </div>
+          {documentKind === 'survey_report' ? (
+            <SurveyReportBodyEditor
+              document={reportDocument}
+              accountId={accountId}
+              proposalId={proposal.id}
+              disabled={readOnly}
+              onChange={(next) => {
+                setReportDocument(next);
+                setContentHtml(compileSurveyReportDocument(next));
+              }}
+            />
+          ) : null}
         </div>
       )}
     </div>
