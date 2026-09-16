@@ -18,9 +18,26 @@ struct SurveyItem: Decodable, Identifiable, Equatable, Hashable {
     var sessionCount: Int
     var photoCount: Int
     var surveyLevel: Int
+    var propertyAddress: String?
+    var propertyPostcode: String?
     var createdAt: String?
     var updatedAt: String?
     var isLocal: Bool
+
+    var displayAddress: String {
+        let stored = propertyAddress?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return stored.isEmpty ? title : stored
+    }
+
+    /// Prep responses omit client / counts — keep the local row and take address fields only.
+    func mergingAddress(from other: SurveyItem) -> SurveyItem {
+        var copy = self
+        copy.title = other.title
+        copy.propertyAddress = other.propertyAddress ?? other.title
+        copy.propertyPostcode = other.propertyPostcode
+        copy.updatedAt = other.updatedAt ?? copy.updatedAt
+        return copy
+    }
 
     var typeLabel: String {
         surveyTypeLabel.isEmpty ? SurveyTypeOption.parse(surveyType).label : surveyTypeLabel
@@ -39,6 +56,8 @@ struct SurveyItem: Decodable, Identifiable, Equatable, Hashable {
         case sessionCount = "session_count"
         case photoCount = "photo_count"
         case surveyLevel = "survey_level"
+        case propertyAddress = "survey_property_address"
+        case propertyPostcode = "survey_property_postcode"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case isLocal = "is_local"
@@ -56,6 +75,8 @@ struct SurveyItem: Decodable, Identifiable, Equatable, Hashable {
         sessionCount: Int = 0,
         photoCount: Int = 0,
         surveyLevel: Int? = nil,
+        propertyAddress: String? = nil,
+        propertyPostcode: String? = nil,
         createdAt: String? = nil,
         updatedAt: String? = nil,
         isLocal: Bool = false
@@ -71,6 +92,8 @@ struct SurveyItem: Decodable, Identifiable, Equatable, Hashable {
         self.sessionCount = sessionCount
         self.photoCount = photoCount
         self.surveyLevel = surveyLevel ?? SurveyDisplay.surveyLevel(from: surveyType)
+        self.propertyAddress = propertyAddress
+        self.propertyPostcode = propertyPostcode
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isLocal = isLocal
@@ -91,6 +114,8 @@ struct SurveyItem: Decodable, Identifiable, Equatable, Hashable {
         sessionCount = try container.decodeIfPresent(Int.self, forKey: .sessionCount) ?? 0
         photoCount = try container.decodeIfPresent(Int.self, forKey: .photoCount) ?? 0
         let decodedLevel = try container.decodeIfPresent(Int.self, forKey: .surveyLevel)
+        propertyAddress = try container.decodeIfPresent(String.self, forKey: .propertyAddress)
+        propertyPostcode = try container.decodeIfPresent(String.self, forKey: .propertyPostcode)
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
         isLocal = try container.decodeIfPresent(Bool.self, forKey: .isLocal) ?? false
@@ -309,6 +334,8 @@ struct SurveyDetailPayload: Decodable, Equatable {
         case sessionCount = "session_count"
         case photoCount = "photo_count"
         case surveyLevel = "survey_level"
+        case propertyAddress = "survey_property_address"
+        case propertyPostcode = "survey_property_postcode"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -330,6 +357,8 @@ struct SurveyDetailPayload: Decodable, Equatable {
             sessionCount: try container.decodeIfPresent(Int.self, forKey: .sessionCount) ?? 0,
             photoCount: try container.decodeIfPresent(Int.self, forKey: .photoCount) ?? 0,
             surveyLevel: try container.decodeIfPresent(Int.self, forKey: .surveyLevel),
+            propertyAddress: try container.decodeIfPresent(String.self, forKey: .propertyAddress),
+            propertyPostcode: try container.decodeIfPresent(String.self, forKey: .propertyPostcode),
             createdAt: try container.decodeIfPresent(String.self, forKey: .createdAt),
             updatedAt: try container.decodeIfPresent(String.self, forKey: .updatedAt)
         )

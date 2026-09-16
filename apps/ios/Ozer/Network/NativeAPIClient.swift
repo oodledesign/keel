@@ -417,11 +417,40 @@ actor NativeAPIClient {
         }
     }
 
+    func suggestAddresses(
+        query: String,
+        workspace: String,
+        limit: Int = 6,
+        accessToken: String
+    ) async throws -> [AddressSuggestion] {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/address-suggest",
+            queryItems: [
+                URLQueryItem(name: "workspace", value: workspace),
+                URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "limit", value: String(limit)),
+            ],
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return []
+        }
+        do {
+            return try JSONDecoder().decode(AddressSuggestionsPayload.self, from: data).suggestions
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func createSurvey(
         title: String,
         workspace: String,
         surveyType: String,
         clientId: String?,
+        address: String? = nil,
+        postcode: String? = nil,
         accessToken: String
     ) async throws -> SurveyItem {
         var payload: [String: Any] = [
@@ -432,9 +461,57 @@ actor NativeAPIClient {
         if let clientId, !clientId.isEmpty {
             payload["client_id"] = clientId
         }
+        if let address, !address.isEmpty {
+            payload["address"] = address
+        }
+        if let postcode, !postcode.isEmpty {
+            payload["postcode"] = postcode
+        }
         let data = try await send(
             method: "POST",
             path: "api/native/v1/surveys",
+            queryItems: [],
+            body: payload,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(SurveyItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func updateSurveyPrep(
+        id: String,
+        workspace: String,
+        address: String?,
+        postcode: String?,
+        latitude: Double?,
+        longitude: Double?,
+        confirm: Bool,
+        titleFromAddress: Bool,
+        accessToken: String
+    ) async throws -> SurveyItem {
+        var payload: [String: Any] = [
+            "workspace": workspace,
+            "confirm": confirm,
+            "title_from_address": titleFromAddress,
+        ]
+        if let address {
+            payload["address"] = address
+        }
+        if let postcode {
+            payload["postcode"] = postcode
+        }
+        if let latitude {
+            payload["latitude"] = latitude
+        }
+        if let longitude {
+            payload["longitude"] = longitude
+        }
+        let data = try await send(
+            method: "PATCH",
+            path: "api/native/v1/surveys/\(id)/prep",
             queryItems: [],
             body: payload,
             accessToken: accessToken

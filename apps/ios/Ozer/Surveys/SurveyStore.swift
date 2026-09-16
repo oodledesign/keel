@@ -30,7 +30,9 @@ final class SurveyStore {
         title: String,
         surveyType: SurveyTypeOption,
         clientId: String?,
-        clientName: String?
+        clientName: String?,
+        propertyAddress: String? = nil,
+        propertyPostcode: String? = nil
     ) -> SurveyItem {
         let now = OfflineNoteQueue.isoString(from: Date())
         let item = SurveyItem(
@@ -42,6 +44,8 @@ final class SurveyStore {
             surveyTypeLabel: surveyType.label,
             clientId: clientId,
             clientName: clientName,
+            propertyAddress: propertyAddress ?? title,
+            propertyPostcode: propertyPostcode,
             createdAt: now,
             updatedAt: now,
             isLocal: true
@@ -71,6 +75,20 @@ final class SurveyStore {
         var copy = remote
         copy.isLocal = false
         surveys.insert(copy, at: 0)
+        persist()
+    }
+
+    func updateAddress(
+        id: String,
+        title: String,
+        propertyAddress: String?,
+        propertyPostcode: String?
+    ) {
+        guard let index = surveys.firstIndex(where: { $0.id == id }) else { return }
+        surveys[index].title = title
+        surveys[index].propertyAddress = propertyAddress
+        surveys[index].propertyPostcode = propertyPostcode
+        surveys[index].updatedAt = OfflineNoteQueue.isoString(from: Date())
         persist()
     }
 
@@ -114,6 +132,8 @@ extension SurveyItem: Encodable {
         try container.encode(sessionCount, forKey: .sessionCount)
         try container.encode(photoCount, forKey: .photoCount)
         try container.encode(surveyLevel, forKey: .surveyLevel)
+        try container.encodeIfPresent(propertyAddress, forKey: .propertyAddress)
+        try container.encodeIfPresent(propertyPostcode, forKey: .propertyPostcode)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
         try container.encode(isLocal, forKey: .isLocal)

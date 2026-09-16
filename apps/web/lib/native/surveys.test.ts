@@ -7,6 +7,7 @@ import {
   createNativeSurveySession,
   getNativeSurvey,
   listNativeSurveys,
+  updateNativeSurveyPrep,
 } from './surveys';
 import type { NativeWorkspace } from './workspace-shared';
 
@@ -184,6 +185,109 @@ describe('createNativeSurvey', () => {
     );
     expect(created.id).toBe(surveyId);
     expect(created.survey_type_label).toBe('Dilapidations');
+  });
+
+  it('persists a confirmed Mapbox address and postcode', async () => {
+    const insertChain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street, Bath',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          survey_property_address: '12 High Street, Bath',
+          survey_property_postcode: 'BA1 1AA',
+          client_id: null,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+
+    const created = await createNativeSurvey({
+      client: { from: () => insertChain } as never,
+      userId: 'user-dan',
+      workspace: surveyor,
+      title: '12 High Street, Bath',
+      address: '12 High Street, Bath',
+      postcode: 'BA1 1AA',
+    });
+
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        survey_property_address: '12 High Street, Bath',
+        survey_property_postcode: 'BA1 1AA',
+        title: '12 High Street, Bath',
+      }),
+    );
+    expect(created.survey_property_address).toBe('12 High Street, Bath');
+    expect(created.survey_property_postcode).toBe('BA1 1AA');
+  });
+});
+
+describe('updateNativeSurveyPrep', () => {
+  it('saves address, postcode, and title from a confirmed suggestion', async () => {
+    const lookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: 'Building survey',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          client_id: null,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const updateChain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street, Bath',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          survey_property_address: '12 High Street, Bath',
+          survey_property_postcode: 'BA1 1AA',
+          client_id: null,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T11:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    let proposalCalls = 0;
+    const from = vi.fn(() => {
+      proposalCalls += 1;
+      return proposalCalls === 1 ? lookup : updateChain;
+    });
+
+    const updated = await updateNativeSurveyPrep({
+      client: { from } as never,
+      workspace: surveyor,
+      surveyId,
+      address: '12 High Street, Bath',
+      postcode: 'BA1 1AA',
+      titleFromAddress: true,
+    });
+
+    expect(updateChain.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        survey_property_address: '12 High Street, Bath',
+        survey_property_postcode: 'BA1 1AA',
+        title: '12 High Street, Bath',
+      }),
+    );
+    expect(updated.title).toBe('12 High Street, Bath');
   });
 });
 

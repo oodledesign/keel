@@ -296,30 +296,29 @@ struct CreateSurveySheet: View {
     @Environment(AppSession.self) private var session
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
+    @State private var postcode = ""
+    @State private var latitude: Double?
+    @State private var longitude: Double?
+    @State private var selectedAddress: String?
     @State private var surveyType = SurveyTypeOption.default
     @State private var selectedClientId: String?
     @State private var clients: [ClientItem] = []
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var network = NetworkPathMonitor.shared
 
     private let api = NativeAPIClient()
 
     var body: some View {
         NavigationStack {
+            ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Property / address")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(OzerPalette.plumMuted)
-                    TextField("12 High Street, Bath", text: $title)
-                        .textInputAutocapitalization(.words)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous)
-                                .stroke(OzerPalette.border, lineWidth: 1)
-                        }
+                AddressSearchField(
+                    text: $title,
+                    isOnline: network.isOnline,
+                    onSelect: applySuggestion
+                ) { query in
+                    try await suggestAddresses(query)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -397,6 +396,7 @@ struct CreateSurveySheet: View {
                 .disabled(isSaving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(20)
+            }
             .background(OzerPalette.cream.ignoresSafeArea())
             .navigationTitle("New survey")
             .navigationBarTitleDisplayMode(.inline)
@@ -407,6 +407,14 @@ struct CreateSurveySheet: View {
                 }
             }
             .task { await loadClients() }
+            .onChange(of: title) { _, newValue in
+                if let selectedAddress, newValue != selectedAddress {
+                    latitude = nil
+                    longitude = nil
+                    self.selectedAddress = nil
+                    postcode = SurveyAddress.extractUkPostcode(from: newValue) ?? ""
+                }
+            }
         }
         .presentationDetents([.large])
     }
@@ -426,18 +434,43 @@ struct CreateSurveySheet: View {
         }
     }
 
+    private func applySuggestion(_ suggestion: AddressSuggestion) {
+        title = SurveyAddress.formatted(suggestion)
+        selectedAddress = title
+        postcode = suggestion.postcode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        latitude = suggestion.latitude
+        longitude = suggestion.longitude
+        errorMessage = nil
+    }
+
+    private func suggestAddresses(_ query: String) async throws -> [AddressSuggestion] {
+        let token = try await session.validAccessToken()
+        let workspace = session.workspaceQueryValue
+        guard !workspace.isEmpty else { return [] }
+        return try await api.suggestAddresses(
+            query: query,
+            workspace: workspace,
+            accessToken: token
+        )
+    }
+
     private func save() async {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         isSaving = true
         defer { isSaving = false }
         let workspace = session.workspaceQueryValue
+        let resolvedPostcode = postcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? SurveyAddress.extractUkPostcode(from: trimmed)
+            : postcode.trimmingCharacters(in: .whitespacesAndNewlines)
         let local = SurveyStore.shared.saveLocal(
             workspace: workspace,
             title: trimmed,
             surveyType: surveyType,
             clientId: selectedClientId,
-            clientName: selectedClient?.displayName
+            clientName: selectedClient?.displayName,
+            propertyAddress: trimmed,
+            propertyPostcode: resolvedPostcode
         )
         _ = OfflineSurveyQueue.shared.enqueueCreate(
             id: local.id,
@@ -445,7 +478,11 @@ struct CreateSurveySheet: View {
             title: trimmed,
             surveyType: surveyType.rawValue,
             clientId: selectedClientId,
-            clientName: selectedClient?.displayName
+            clientName: selectedClient?.displayName,
+            address: trimmed,
+            postcode: resolvedPostcode,
+            latitude: latitude,
+            longitude: longitude
         )
         await session.flushOfflineWork()
         let created = SurveyStore.shared.survey(id: local.id) ?? local
