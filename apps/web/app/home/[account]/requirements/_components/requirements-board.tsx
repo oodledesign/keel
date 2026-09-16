@@ -263,7 +263,7 @@ function StageColumn({
         isOver ? 'bg-[var(--workspace-shell-sidebar-accent)]' : ''
       }`}
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-2 bg-[var(--workspace-shell-panel)] py-0.5">
         <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           {REQUIREMENT_STATUS_LABELS[stage]}
         </p>

@@ -314,7 +314,7 @@ function PhaseColumn({
       }`}
       style={{ borderTopWidth: 3, borderTopColor: colour }}
     >
-      <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
+      <div className="sticky top-0 z-10 border-b border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/95 p-3 backdrop-blur-sm">
         {phase ? (
           <div className="flex items-start gap-1">
             <Link

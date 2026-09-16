@@ -400,7 +400,7 @@ function PortalProjectKanbanView({
             className="flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
             style={{ borderTopWidth: 3, borderTopColor: col.colour }}
           >
-            <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
+            <div className="sticky top-0 z-10 border-b border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/95 p-3 backdrop-blur-sm">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-sm font-semibold text-[var(--ozer-text-on-light)]">
                   {col.label}
@@ -731,7 +731,7 @@ function PortalProjectPhaseKanbanView({
             className="flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
             style={{ borderTopWidth: 3, borderTopColor: colour }}
           >
-            <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
+            <div className="sticky top-0 z-10 border-b border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/95 p-3 backdrop-blur-sm">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-sm font-semibold text-[var(--ozer-text-on-light)]">
                   {col.label}

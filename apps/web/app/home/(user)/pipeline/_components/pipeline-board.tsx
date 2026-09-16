@@ -803,7 +803,7 @@ function StageColumn({
         isOver ? 'rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]' : ''
       }`}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="sticky top-0 z-10 mb-3 flex items-center justify-between bg-[var(--workspace-shell-canvas)] py-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             {label}
