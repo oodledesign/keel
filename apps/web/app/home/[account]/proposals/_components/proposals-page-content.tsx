@@ -472,7 +472,7 @@ export function ProposalsPageContent({
           (createAddress.trim() || createPostcode.trim() || createLatitude)
         ) {
           try {
-            await saveSurveyPropertyLookupAction({
+            const lookupResult = await saveSurveyPropertyLookupAction({
               accountId,
               accountSlug,
               proposalId: proposal.id,
@@ -483,6 +483,9 @@ export function ProposalsPageContent({
               suggest: true,
               pullFlood: true,
             });
+            if (lookupResult.floodError) {
+              toast.error(lookupResult.floodError);
+            }
           } catch (error) {
             toast.error(getErrorMessage(error));
           }

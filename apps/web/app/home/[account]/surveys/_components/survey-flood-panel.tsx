@@ -300,6 +300,7 @@ export function SurveyFloodPanel({
                   size="sm"
                   variant="ghost"
                   onClick={() => void handleClear()}
+                  data-test="survey-flood-clear"
                 >
                   Remove
                 </Button>

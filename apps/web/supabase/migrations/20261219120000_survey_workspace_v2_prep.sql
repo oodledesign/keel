@@ -56,6 +56,7 @@ COMMENT ON COLUMN public.survey_flood.pulled_json IS
 COMMENT ON COLUMN public.survey_flood.overridden_fields IS
   'Field names the surveyor overrode after auto-pull.';
 
+-- Dual-write: if survey_flood already exists from a prior branch, add columns.
 ALTER TABLE public.survey_flood
   ADD COLUMN IF NOT EXISTS flood_zone text,
   ADD COLUMN IF NOT EXISTS rivers_and_sea text,
