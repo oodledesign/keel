@@ -157,6 +157,8 @@ class SurveyEpcService {
       survey_property_address?: string | null;
       survey_property_postcode?: string | null;
       survey_uprn?: string | null;
+      survey_property_latitude?: number | null;
+      survey_property_longitude?: number | null;
       client_id?: string | null;
     };
 
@@ -191,6 +193,8 @@ class SurveyEpcService {
         address: row.survey_property_address ?? null,
         postcode: row.survey_property_postcode ?? null,
         uprn: row.survey_uprn ?? null,
+        latitude: row.survey_property_latitude ?? null,
+        longitude: row.survey_property_longitude ?? null,
       },
       clientAddress,
       clientPostcode,
@@ -240,6 +244,8 @@ class SurveyEpcService {
         address: input.address?.trim() || stored.address,
         postcode: input.postcode?.trim() || stored.postcode,
         uprn: input.uprn?.trim() || stored.uprn,
+        latitude: stored.latitude,
+        longitude: stored.longitude,
       },
     });
 
@@ -286,6 +292,8 @@ class SurveyEpcService {
         extractUkPostcode(input.address) ||
         null,
       uprn: normalizeUprn(input.uprn),
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
     };
 
     const { error } = await this.db
@@ -294,6 +302,8 @@ class SurveyEpcService {
         survey_property_address: lookup.address,
         survey_property_postcode: lookup.postcode,
         survey_uprn: lookup.uprn,
+        survey_property_latitude: lookup.latitude,
+        survey_property_longitude: lookup.longitude,
       })
       .eq('id', input.proposalId)
       .eq('account_id', input.accountId)

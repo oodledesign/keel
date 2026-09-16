@@ -6,7 +6,10 @@ export const SurveyPropertyLookupSchema = SurveyAccountSchema.extend({
   address: z.string().max(500).nullable().optional(),
   postcode: z.string().max(16).nullable().optional(),
   uprn: z.string().max(20).nullable().optional(),
+  latitude: z.number().min(49).max(61).nullable().optional(),
+  longitude: z.number().min(-9).max(3).nullable().optional(),
   suggest: z.boolean().optional(),
+  pullFlood: z.boolean().optional(),
 });
 
 export const SearchSurveyEpcSchema = SurveyAccountSchema.extend({

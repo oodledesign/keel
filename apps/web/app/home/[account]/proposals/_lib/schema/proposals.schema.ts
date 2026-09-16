@@ -76,6 +76,11 @@ export const CreateProposalSchema = clientOrDealRefine(
     context_refs: z.array(ProposalContextRefSchema).optional(),
     kind: z.enum(['proposal', 'survey_report']).optional(),
     survey_type: z.string().max(80).nullable().optional(),
+    survey_property_address: optionalNullableString,
+    survey_property_postcode: optionalNullableString,
+    survey_uprn: optionalNullableString,
+    survey_property_latitude: z.number().min(49).max(61).nullable().optional(),
+    survey_property_longitude: z.number().min(-9).max(3).nullable().optional(),
   }),
 );
 

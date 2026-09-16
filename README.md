@@ -39,3 +39,12 @@ Energy Performance Certificates are a **platform** integration, not per-user reg
 - **Vercel Production:** Project Settings → Environment Variables on the `web` project. Add `GOV_UK_EPC_API_BEARER_TOKEN` as **Sensitive**, environment **Production**. Add Preview only if you want lookup on preview deploys. Redeploy after saving.
 - **Turbo:** `globalEnv` allowlists `GOV_UK_EPC_API_BEARER_TOKEN` so the Next.js server runtime can read it. Do not prefix with `NEXT_PUBLIC_`.
 - **CI:** fixture unit tests only. The live Energy Certificate Data API is not called in CI.
+
+## Building-surveyor survey prep (address + flood)
+
+Phase 1 of Survey Workspace v2. Building-surveyor only.
+
+- **Address search:** reuses the existing server Mapbox geocoder (`/api/commercial/address-suggest`). Token resolution: `MAPBOX_SECRET_TOKEN` → `MAPBOX_ACCESS_TOKEN` → `MAPBOX_TOKEN` → `NEXT_PUBLIC_MAPBOX_TOKEN`. Prefer the secret token. Do not expose a new client-only token for this flow.
+- **UPRN:** Mapbox Geocoding does not return UPRN. It is filled when a GOV.UK EPC certificate matches, or entered by the surveyor.
+- **Flood risk:** Environment Agency **Flood Map for Planning** WFS (rivers and sea Zone 2 and Zone 3). A point in Zone 3 → Zone 3; else Zone 2 → Zone 2; else Zone 1. No API key. Supplementary current warnings from `https://environment.data.gov.uk/flood-monitoring/id/floods?lat=&long=&dist=2`. Server-only fetch; fixture unit tests only — live EA endpoints are not called in CI.
+- **L2 / L3:** one shared section and field catalogue. Level 3 reveals extra optional detail fields. Do not fork two template shells.

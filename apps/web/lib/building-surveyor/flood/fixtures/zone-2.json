@@ -1,0 +1,26 @@
+{
+  "type": "FeatureCollection",
+  "numberMatched": 1,
+  "features": [
+    {
+      "type": "Feature",
+      "id": "Flood_Map_for_Planning_Rivers_And_Sea_Flood_Zone_2.1",
+      "properties": {
+        "layer": "Flood Zone 2",
+        "type": "Flood Zone 2"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-0.13, 51.49],
+            [-0.1, 51.49],
+            [-0.1, 51.52],
+            [-0.13, 51.52],
+            [-0.13, 51.49]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { AddressSearchField } from '~/components/commercial/address-search-field';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import type { OverridableEpcField } from '~/lib/building-surveyor/epc/overrides';
 import { isEpcFieldOverridden } from '~/lib/building-surveyor/epc/overrides';
@@ -18,6 +19,8 @@ import type {
   SurveyEpcRecord,
   SurveyPropertyLookup,
 } from '~/lib/building-surveyor/epc/types';
+import type { SurveyFloodRecord } from '~/lib/building-surveyor/flood/types';
+import { suggestionToSurveyLookup } from '~/lib/building-surveyor/survey-address';
 import { workspaceBtnPrimaryMd, workspaceTextMuted } from '~/lib/workspace-ui';
 
 import {
@@ -88,6 +91,8 @@ export function SurveyEpcPanel({
   configured,
   lookup: initialLookup,
   attached: initialAttached,
+  onFloodPulled,
+  onLookupChange,
 }: {
   accountId: string;
   accountSlug: string;
@@ -96,10 +101,18 @@ export function SurveyEpcPanel({
   configured: boolean;
   lookup: SurveyPropertyLookup;
   attached: SurveyEpcRecord | null;
+  onFloodPulled?: (flood: SurveyFloodRecord | null) => void;
+  onLookupChange?: (lookup: SurveyPropertyLookup) => void;
 }) {
   const [address, setAddress] = useState(initialLookup.address ?? '');
   const [postcode, setPostcode] = useState(initialLookup.postcode ?? '');
   const [uprn, setUprn] = useState(initialLookup.uprn ?? '');
+  const [latitude, setLatitude] = useState<number | null>(
+    initialLookup.latitude ?? null,
+  );
+  const [longitude, setLongitude] = useState<number | null>(
+    initialLookup.longitude ?? null,
+  );
   const [attached, setAttached] = useState(initialAttached);
   const [hits, setHits] = useState<RankedHit[]>([]);
   const [saving, setSaving] = useState(false);
@@ -166,22 +179,36 @@ export function SurveyEpcPanel({
         address: address.trim() || null,
         postcode: postcode.trim() || null,
         uprn: uprn.trim() || null,
+        latitude,
+        longitude,
         suggest: configured,
+        pullFlood: true,
       });
       setAddress(result.lookup.address ?? '');
       setPostcode(result.lookup.postcode ?? '');
       setUprn(result.lookup.uprn ?? '');
+      setLatitude(result.lookup.latitude ?? latitude);
+      setLongitude(result.lookup.longitude ?? longitude);
+      if (result.flood) onFloodPulled?.(result.flood);
 
       if (result.autoAttached && result.attached) {
         syncAttached(result.attached);
         setHits([]);
         toast.success(
-          'Address confirmed. EPC auto-pulled from the register — review and edit if needed.',
+          result.flood
+            ? 'Address confirmed. EPC and flood risk auto-pulled — review and edit if needed.'
+            : 'Address confirmed. EPC auto-pulled from the register — review and edit if needed.',
         );
+        if (result.floodError) toast.error(result.floodError);
         return;
       }
 
-      toast.success('Address confirmed');
+      toast.success(
+        result.flood
+          ? 'Address confirmed. Flood risk auto-pulled.'
+          : 'Address confirmed',
+      );
+      if (result.floodError) toast.error(result.floodError);
       if (result.suggestions) applySearch(result.suggestions);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -314,8 +341,10 @@ export function SurveyEpcPanel({
             Property address
           </h4>
           <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-            Confirm the survey address to auto-pull the Energy Performance
-            Certificate. Values are marked auto-pulled and can be edited.
+            Search for the survey address to auto-fill postcode and map pin,
+            then confirm to pull the Energy Performance Certificate and flood
+            risk. Values are marked auto-pulled and can be edited. UPRN is
+            filled when the register matches.
           </p>
         </div>
         <Leaf className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`} />
@@ -323,6 +352,26 @@ export function SurveyEpcPanel({
 
       {canEdit ? (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <AddressSearchField
+              label="Search address"
+              helperText="Select a result to fill address, postcode and map pin. UPRN is added if the EPC register can resolve it."
+              onSelect={(suggestion) => {
+                const next = suggestionToSurveyLookup(suggestion);
+                setAddress(next.address);
+                setPostcode(next.postcode ?? '');
+                setLatitude(next.latitude);
+                setLongitude(next.longitude);
+                onLookupChange?.({
+                  address: next.address,
+                  postcode: next.postcode,
+                  uprn: uprn.trim() || null,
+                  latitude: next.latitude,
+                  longitude: next.longitude,
+                });
+              }}
+            />
+          </div>
           <div className="sm:col-span-2">
             <Label className={`text-xs ${workspaceTextMuted}`}>Address</Label>
             <Input

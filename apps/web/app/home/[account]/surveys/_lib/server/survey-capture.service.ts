@@ -61,6 +61,8 @@ type SurveyRow = {
   survey_property_address?: string | null;
   survey_property_postcode?: string | null;
   survey_uprn?: string | null;
+  survey_property_latitude?: number | null;
+  survey_property_longitude?: number | null;
 };
 
 function mapObservation(row: Record<string, unknown>): SurveyObservation {
@@ -139,7 +141,7 @@ class SurveyCaptureService {
     const { data, error } = await this.db
       .from('proposals')
       .select(
-        'id, account_id, kind, title, status, content_html, body_document, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled, survey_property_address, survey_property_postcode, survey_uprn',
+        'id, account_id, kind, title, status, content_html, body_document, client_id, deal_id, recipient_name, survey_type, photo_share_token, photo_share_enabled, survey_property_address, survey_property_postcode, survey_uprn, survey_property_latitude, survey_property_longitude',
       )
       .eq('id', proposalId)
       .eq('account_id', accountId)

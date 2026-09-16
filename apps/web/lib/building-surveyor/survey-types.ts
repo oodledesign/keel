@@ -1,7 +1,7 @@
 /**
- * Thin survey template keys. L1/L2/L3 share BUILDING_SURVEY_SECTIONS;
- * later types can hide fields without a second hub. EPC prefill lands in
- * Energy efficiency and About the property for every building-surveyor survey.
+ * Thin survey template keys. L2 and L3 share one section / field catalogue;
+ * Level 3 only reveals extra optional detail fields. EPC and flood prefill
+ * land in Energy efficiency and Risks for every building-surveyor survey.
  */
 export const BUILDING_SURVEY_TYPES = [
   {

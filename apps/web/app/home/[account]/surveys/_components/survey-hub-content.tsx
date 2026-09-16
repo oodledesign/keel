@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -21,7 +21,13 @@ import type {
   SurveyEpcRecord,
   SurveyPropertyLookup,
 } from '~/lib/building-surveyor/epc/types';
-import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
+import type { SurveyFloodRecord } from '~/lib/building-surveyor/flood/types';
+import { sectionsForSurveyType } from '~/lib/building-surveyor/report-sections';
+import {
+  surveyLevelForType,
+  surveyLevelLabel,
+} from '~/lib/building-surveyor/survey-level';
+import { fieldsForSurveyType } from '~/lib/building-surveyor/survey-template-fields';
 import {
   BUILDING_SURVEY_TYPES,
   buildingSurveyTypeLabel,
@@ -48,6 +54,7 @@ import {
 } from '../_lib/server/survey-capture-actions';
 import { GroupedObservationCard } from './grouped-observation-card';
 import { SurveyEpcPanel } from './survey-epc-panel';
+import { SurveyFloodPanel } from './survey-flood-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
 type ClientInfo = {
@@ -83,6 +90,7 @@ export function SurveyHubContent({
   photoShare: initialPhotoShare,
   styleExampleCount,
   attachedEpc,
+  attachedFlood: initialAttachedFlood,
   propertyLookup,
   epcConfigured,
 }: {
@@ -109,6 +117,7 @@ export function SurveyHubContent({
   photoShare: SurveyPhotoShare;
   styleExampleCount: number;
   attachedEpc: SurveyEpcRecord | null;
+  attachedFlood: SurveyFloodRecord | null;
   propertyLookup: SurveyPropertyLookup;
   epcConfigured: boolean;
 }) {
@@ -126,6 +135,8 @@ export function SurveyHubContent({
   const [pasting, setPasting] = useState(false);
   const [photoShare, setPhotoShare] = useState(initialPhotoShare);
   const [shareCopied, setShareCopied] = useState(false);
+  const [attachedFlood, setAttachedFlood] = useState(initialAttachedFlood);
+  const [lookup, setLookup] = useState(propertyLookup);
 
   const editHref = documentEditPath(accountSlug, proposal.id, 'survey_report');
   const styleHref = pathsConfig.app.accountSurveyStyleSettings.replace(
@@ -155,6 +166,26 @@ export function SurveyHubContent({
     proposal.title?.trim() ||
     'Property not set';
 
+  const visibleSections = useMemo(
+    () => sectionsForSurveyType(surveyType),
+    [surveyType],
+  );
+
+  useEffect(() => {
+    if (!visibleSections.some((section) => section.key === newSectionKey)) {
+      setNewSectionKey(visibleSections[0]?.key ?? 'overall_opinion');
+    }
+  }, [newSectionKey, visibleSections]);
+  const visibleFields = useMemo(
+    () => fieldsForSurveyType(surveyType),
+    [surveyType],
+  );
+  const levelOnlyFields = useMemo(
+    () => visibleFields.filter((field) => field.levels.length === 1),
+    [visibleFields],
+  );
+  const surveyLevel = surveyLevelForType(surveyType);
+
   const grouped = useMemo(() => {
     const byKey = new Map<string, SurveyObservation[]>();
     for (const observation of observations) {
@@ -162,11 +193,13 @@ export function SurveyHubContent({
       list.push(observation);
       byKey.set(observation.sectionKey, list);
     }
-    return BUILDING_SURVEY_SECTIONS.map((section) => ({
-      section,
-      items: byKey.get(section.key) ?? [],
-    })).filter((group) => group.items.length > 0);
-  }, [observations]);
+    return visibleSections
+      .map((section) => ({
+        section,
+        items: byKey.get(section.key) ?? [],
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [observations, visibleSections]);
 
   const handlePaste = async () => {
     if (!canEdit) return;
@@ -292,9 +325,10 @@ export function SurveyHubContent({
               Project prep
             </h3>
             <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-              Confirm the property after intake. EPC is pulled from the GOV.UK
-              register into Energy (J) and can be overridden. Flood risk can sit
-              here later.
+              Search and confirm the property. EPC is pulled from the GOV.UK
+              register into Energy (J). Flood zone comes from the Environment
+              Agency Flood Map for Planning. Both are marked auto-pulled and can
+              be overridden.
             </p>
             <dl className="mt-3 grid gap-3 sm:grid-cols-2">
               <InfoRow label="Client" value={clientName} />
@@ -343,9 +377,32 @@ export function SurveyHubContent({
                   </p>
                 )}
                 <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                  L2 and L3 share one section template. Field visibility can
-                  change later without starting again.
+                  L2 and L3 share one template. {surveyLevelLabel(surveyLevel)}{' '}
+                  currently shows {visibleFields.length} fields
+                  {levelOnlyFields.length
+                    ? `, including ${levelOnlyFields.length} ${
+                        surveyLevel === 'l3' ? 'Level 3' : 'Level 2'
+                      }-only optional detail field${
+                        levelOnlyFields.length === 1 ? '' : 's'
+                      }`
+                    : ''}
+                  .
                 </p>
+                {levelOnlyFields.length > 0 ? (
+                  <ul
+                    className={`mt-2 flex flex-wrap gap-1.5 text-xs ${workspaceTextMuted}`}
+                    data-test="survey-level-fields"
+                  >
+                    {levelOnlyFields.map((field) => (
+                      <li
+                        key={field.key}
+                        className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[var(--workspace-shell-text)]"
+                      >
+                        {field.label}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             </dl>
             <SurveyEpcPanel
@@ -354,8 +411,19 @@ export function SurveyHubContent({
               proposalId={proposal.id}
               canEdit={canEdit}
               configured={epcConfigured}
-              lookup={propertyLookup}
+              lookup={lookup}
               attached={attachedEpc}
+              onFloodPulled={setAttachedFlood}
+              onLookupChange={setLookup}
+            />
+            <SurveyFloodPanel
+              accountId={accountId}
+              accountSlug={accountSlug}
+              proposalId={proposal.id}
+              canEdit={canEdit}
+              attached={attachedFlood}
+              latitude={lookup.latitude ?? null}
+              longitude={lookup.longitude ?? null}
             />
           </section>
 
@@ -442,11 +510,12 @@ export function SurveyHubContent({
                   onChange={(event) => setNewSectionKey(event.target.value)}
                   className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm"
                 >
-                  {BUILDING_SURVEY_SECTIONS.map((section) => (
+                  {visibleSections.map((section) => (
                     <option key={section.key} value={section.key}>
                       {section.letter
                         ? `${section.letter}. ${section.heading}`
                         : section.heading}
+                      {section.optionalDetail ? ' (optional)' : ''}
                     </option>
                   ))}
                 </select>
@@ -511,6 +580,7 @@ export function SurveyHubContent({
                             accountSlug={accountSlug}
                             proposalId={proposal.id}
                             canEdit={canEdit}
+                            sections={visibleSections}
                             onChange={(next) =>
                               setObservations((prev) =>
                                 prev.map((row) =>

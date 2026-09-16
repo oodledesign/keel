@@ -26,6 +26,8 @@ describe('resolveSurveyLookup', () => {
           address: '12 Example Street',
           postcode: 'm204ap',
           uprn: '000001234567',
+          latitude: 53.43,
+          longitude: -2.23,
         },
         clientAddress: 'Other House, LS1 4AP',
         title: 'Walkaround',
@@ -34,6 +36,8 @@ describe('resolveSurveyLookup', () => {
       address: '12 Example Street',
       postcode: 'M20 4AP',
       uprn: '1234567',
+      latitude: 53.43,
+      longitude: -2.23,
     });
 
     expect(
@@ -44,6 +48,8 @@ describe('resolveSurveyLookup', () => {
       address: '14 Union Street, LS1 4AP',
       postcode: 'LS1 4AP',
       uprn: null,
+      latitude: null,
+      longitude: null,
     });
   });
 });
@@ -54,6 +60,8 @@ describe('rankEpcHits', () => {
       address: '12 Example Street, Manchester',
       postcode: 'M20 4AP',
       uprn: '10094703381',
+      latitude: null,
+      longitude: null,
     });
 
     expect(ranked[0]?.certificateNumber).toBe('1111-2222-3333-4444-5555');
@@ -63,6 +71,8 @@ describe('rankEpcHits', () => {
         address: '12 Example Street',
         postcode: 'M20 4AP',
         uprn: '10094703381',
+        latitude: null,
+        longitude: null,
       }),
     ).toBe(true);
   });
@@ -72,6 +82,8 @@ describe('rankEpcHits', () => {
       address: '14 Example Street',
       postcode: 'M20 4AP',
       uprn: null,
+      latitude: null,
+      longitude: null,
     });
 
     expect(ranked[0]?.certificateNumber).toBe('0000-1672-0000-1732-0000');

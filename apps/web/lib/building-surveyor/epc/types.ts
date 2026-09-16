@@ -71,6 +71,8 @@ export type SurveyPropertyLookup = {
   address: string | null;
   postcode: string | null;
   uprn: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type EpcApiErrorCode = 400 | 401 | 403 | 404 | 429 | 500;

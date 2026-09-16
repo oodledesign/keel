@@ -63,6 +63,8 @@ export function resolveSurveyLookup(input: {
     address: storedAddress || clientAddress || title,
     postcode: storedPostcode || clientPostcode || titlePostcode,
     uprn: storedUprn,
+    latitude: input.stored?.latitude ?? null,
+    longitude: input.stored?.longitude ?? null,
   };
 }
 

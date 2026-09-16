@@ -29,6 +29,7 @@ import { toast } from '@kit/ui/sonner';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
+import { AddressSearchField } from '~/components/commercial/address-search-field';
 import pathsConfig from '~/config/paths.config';
 import {
   listNotesAndFilesForContextAction,
@@ -38,12 +39,19 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
+import { saveSurveyPropertyLookupAction } from '~/home/[account]/surveys/_lib/server/survey-epc-actions';
 import {
   type ProposalDocumentKind,
   documentDetailPath,
   documentKindCopy,
   titleForRecipient,
 } from '~/lib/building-surveyor/document-kind';
+import { suggestionToSurveyLookup } from '~/lib/building-surveyor/survey-address';
+import {
+  BUILDING_SURVEY_TYPES,
+  type BuildingSurveyTypeKey,
+  DEFAULT_BUILDING_SURVEY_TYPE,
+} from '~/lib/building-surveyor/survey-types';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { generateSurveyReportHtmlAction } from '../_lib/server/proposal-generate-actions';
@@ -149,6 +157,12 @@ export function ProposalsPageContent({
   const [clientsLoading, setClientsLoading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedDealId, setSelectedDealId] = useState('');
+  const [createSurveyType, setCreateSurveyType] =
+    useState<BuildingSurveyTypeKey>(DEFAULT_BUILDING_SURVEY_TYPE);
+  const [createAddress, setCreateAddress] = useState('');
+  const [createPostcode, setCreatePostcode] = useState('');
+  const [createLatitude, setCreateLatitude] = useState<number | null>(null);
+  const [createLongitude, setCreateLongitude] = useState<number | null>(null);
 
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiMode, setAiMode] = useState<'client' | 'deal'>('client');
@@ -255,6 +269,11 @@ export function ProposalsPageContent({
     setCreateMode('client');
     setSelectedClientId('');
     setSelectedDealId('');
+    setCreateSurveyType(DEFAULT_BUILDING_SURVEY_TYPE);
+    setCreateAddress('');
+    setCreatePostcode('');
+    setCreateLatitude(null);
+    setCreateLongitude(null);
     setClientsLoading(true);
     try {
       const result = await listClients({ accountId, page: 1, pageSize: 100 });
@@ -403,9 +422,10 @@ export function ProposalsPageContent({
 
   const handleCreateProposal = async () => {
     if (!canEditProposals) return;
+    const isSurvey = documentKind === 'survey_report';
     const clientId = createMode === 'client' ? selectedClientId : undefined;
     const dealId = createMode === 'deal' ? selectedDealId : undefined;
-    if (!clientId && !dealId) {
+    if (!isSurvey && !clientId && !dealId) {
       toast.error(
         createMode === 'client'
           ? 'Please select a client'
@@ -413,26 +433,60 @@ export function ProposalsPageContent({
       );
       return;
     }
+    if (isSurvey && !createAddress.trim() && !clientId && !dealId) {
+      toast.error('Search and select a property address, or pick a client.');
+      return;
+    }
 
     const deal = deals.find((d) => d.id === dealId);
     setCreating(true);
     try {
+      const addressTitle = createAddress.trim() || undefined;
       const proposal = await createProposal({
         accountId,
-        client_id: clientId ?? null,
-        deal_id: dealId ?? null,
+        client_id: clientId || null,
+        deal_id: dealId || null,
         kind: documentKind,
+        survey_type: isSurvey ? createSurveyType : undefined,
         recipient_name: deal?.contactName || null,
-        title: deal
-          ? titleForRecipient(
-              documentKind,
-              deal.contactName ||
-                deal.companyName ||
-                copy.dealLabel.toLowerCase(),
-            )
+        title: addressTitle
+          ? addressTitle
+          : deal
+            ? titleForRecipient(
+                documentKind,
+                deal.contactName ||
+                  deal.companyName ||
+                  copy.dealLabel.toLowerCase(),
+              )
+            : undefined,
+        survey_property_address: isSurvey ? addressTitle || null : undefined,
+        survey_property_postcode: isSurvey
+          ? createPostcode.trim() || null
           : undefined,
+        survey_property_latitude: isSurvey ? createLatitude : undefined,
+        survey_property_longitude: isSurvey ? createLongitude : undefined,
       });
       if (proposal?.id) {
+        if (
+          isSurvey &&
+          (createAddress.trim() || createPostcode.trim() || createLatitude)
+        ) {
+          try {
+            await saveSurveyPropertyLookupAction({
+              accountId,
+              accountSlug,
+              proposalId: proposal.id,
+              address: createAddress.trim() || null,
+              postcode: createPostcode.trim() || null,
+              latitude: createLatitude,
+              longitude: createLongitude,
+              suggest: true,
+              pullFlood: true,
+            });
+          } catch (error) {
+            toast.error(getErrorMessage(error));
+          }
+        }
         setCreateSheetOpen(false);
         router.push(documentDetailPath(accountSlug, proposal.id, documentKind));
       }
@@ -820,6 +874,64 @@ export function ProposalsPageContent({
             <SheetTitle>{copy.createSheetTitle}</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
+            {documentKind === 'survey_report' ? (
+              <div className="space-y-3">
+                <AddressSearchField
+                  label="Property address"
+                  helperText="Select a result to fill address and postcode. Confirming on the hub pulls EPC and flood risk."
+                  onSelect={(suggestion) => {
+                    const next = suggestionToSurveyLookup(suggestion);
+                    setCreateAddress(next.address);
+                    setCreatePostcode(next.postcode ?? '');
+                    setCreateLatitude(next.latitude);
+                    setCreateLongitude(next.longitude);
+                  }}
+                />
+                <div>
+                  <Label>Address</Label>
+                  <Input
+                    className="mt-1"
+                    value={createAddress}
+                    onChange={(event) => setCreateAddress(event.target.value)}
+                    placeholder="12 Example Street, Manchester"
+                    data-test="survey-create-address"
+                  />
+                </div>
+                <div>
+                  <Label>Postcode</Label>
+                  <Input
+                    className="mt-1"
+                    value={createPostcode}
+                    onChange={(event) => setCreatePostcode(event.target.value)}
+                    placeholder="M20 4AP"
+                    data-test="survey-create-postcode"
+                  />
+                </div>
+                <div>
+                  <Label>Survey level</Label>
+                  <select
+                    value={createSurveyType}
+                    onChange={(event) =>
+                      setCreateSurveyType(
+                        event.target.value as BuildingSurveyTypeKey,
+                      )
+                    }
+                    className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
+                    data-test="survey-create-level"
+                  >
+                    {BUILDING_SURVEY_TYPES.map((item) => (
+                      <option key={item.key} value={item.key}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                    Level 2 and Level 3 share one template. Level 3 shows extra
+                    optional detail fields.
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <div className="inline-flex gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1 text-xs">
               <button
                 type="button"
@@ -885,10 +997,18 @@ export function ProposalsPageContent({
               onClick={() => void handleCreateProposal()}
               disabled={
                 creating ||
-                (createMode === 'client' ? !selectedClientId : !selectedDealId)
+                (documentKind === 'survey_report'
+                  ? false
+                  : createMode === 'client'
+                    ? !selectedClientId
+                    : !selectedDealId)
               }
             >
-              {creating ? 'Creating…' : 'Create and edit'}
+              {creating
+                ? 'Creating…'
+                : documentKind === 'survey_report'
+                  ? 'Create survey'
+                  : 'Create and edit'}
             </Button>
           </div>
         </SheetContent>

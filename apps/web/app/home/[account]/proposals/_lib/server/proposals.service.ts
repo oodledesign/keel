@@ -277,8 +277,20 @@ class ProposalsService {
           (documentKind === 'survey_report' ? 'Building survey' : 'Proposal'),
         ...(documentKind === 'survey_report'
           ? {
-              survey_property_address: input.title?.trim() || null,
-              survey_property_postcode: extractUkPostcode(input.title) || null,
+              survey_property_address:
+                input.survey_property_address?.trim() ||
+                input.title?.trim() ||
+                null,
+              survey_property_postcode:
+                input.survey_property_postcode?.trim() ||
+                extractUkPostcode(
+                  input.survey_property_address || input.title,
+                ) ||
+                null,
+              survey_uprn: input.survey_uprn?.trim() || null,
+              survey_property_latitude: input.survey_property_latitude ?? null,
+              survey_property_longitude:
+                input.survey_property_longitude ?? null,
             }
           : {}),
         content_html: input.content_html ?? htmlDefault?.bodyHtml ?? '',

@@ -6,6 +6,7 @@ import { isGovUkEpcConfigured } from '~/lib/building-surveyor/epc/env';
 
 import { createSurveyCaptureService } from './survey-capture.service';
 import { createSurveyEpcService } from './survey-epc.service';
+import { createSurveyFloodService } from './survey-flood.service';
 
 export async function loadSurveyHubExtras(input: {
   accountId: string;
@@ -16,6 +17,7 @@ export async function loadSurveyHubExtras(input: {
   const client = getSupabaseServerClient();
   const service = createSurveyCaptureService(client);
   const epcService = createSurveyEpcService(client);
+  const floodService = createSurveyFloodService(client);
   await service.assertBuildingSurveyorAccount(input.accountId);
 
   const [
@@ -25,6 +27,7 @@ export async function loadSurveyHubExtras(input: {
     styleExamples,
     attachedEpc,
     propertyLookup,
+    attachedFlood,
   ] = await Promise.all([
     service.listObservations(input.accountId, input.proposalId),
     service.listLinkedTranscripts(
@@ -37,6 +40,7 @@ export async function loadSurveyHubExtras(input: {
     service.listStyleExamples(input.accountId),
     epcService.getAttached(input.accountId, input.proposalId),
     epcService.getLookup(input.accountId, input.proposalId),
+    floodService.getAttached(input.accountId, input.proposalId),
   ]);
 
   const survey = await service.getSurvey(input.accountId, input.proposalId);
@@ -48,6 +52,7 @@ export async function loadSurveyHubExtras(input: {
     styleExampleCount: styleExamples.length,
     photoShare: service.getPhotoShare(survey),
     attachedEpc,
+    attachedFlood,
     propertyLookup,
     epcConfigured: isGovUkEpcConfigured(),
   };

@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "@id": "http://environment.data.gov.uk/flood-monitoring/id/floods/123",
+      "description": "Flood alert in force for the River Irwell",
+      "severity": "Flood Alert",
+      "severityLevel": 3,
+      "eaAreaName": "Greater Manchester"
+    }
+  ]
+}

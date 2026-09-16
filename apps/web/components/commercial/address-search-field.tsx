@@ -18,6 +18,8 @@ type AddressSearchFieldProps = {
   inputClassName?: string;
   label?: string;
   placeholder?: string;
+  helperText?: string | null;
+  defaultQuery?: string;
 };
 
 export function AddressSearchField({
@@ -26,9 +28,11 @@ export function AddressSearchField({
   inputClassName,
   label = 'Find address',
   placeholder = 'Start typing a UK address, postcode, or place…',
+  helperText = 'Select a result to fill address, postcode and map pin. You can still edit the fields below.',
+  defaultQuery = '',
 }: AddressSearchFieldProps) {
   const listId = useId();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(defaultQuery);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -190,10 +194,11 @@ export function AddressSearchField({
         </ul>
       ) : null}
 
-      <p className="text-xs text-[var(--workspace-shell-text)]/45">
-        Select a result to fill address, postcode and map pin. You can still
-        edit the fields below.
-      </p>
+      {helperText ? (
+        <p className="text-xs text-[var(--workspace-shell-text)]/45">
+          {helperText}
+        </p>
+      ) : null}
     </div>
   );
 }

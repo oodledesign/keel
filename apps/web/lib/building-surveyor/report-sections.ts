@@ -1,6 +1,13 @@
+import {
+  type SurveyLevel,
+  surveyLevelForType,
+} from '~/lib/building-surveyor/survey-level';
+
 /**
  * Standard UK building / RICS Home Survey headings.
  * Single source of truth for templates, transcript routing, and photo pins.
+ * L2 and L3 share this catalogue; `levels` hides optional Level 3 detail
+ * (and L2-only valuation) without forking a second template shell.
  */
 export type BuildingSurveySection = {
   key: string;
@@ -9,6 +16,13 @@ export type BuildingSurveySection = {
   keywords: readonly string[];
   /** RICS letter when the section is lettered (Energy is J). */
   letter?: string;
+  /**
+   * Visible survey levels. Omitted means both L2 and L3.
+   * Level 3 adds optional detail sections; Level 2 keeps valuation.
+   */
+  levels?: readonly SurveyLevel[];
+  /** Extra optional detail — shown when the survey level includes this section. */
+  optionalDetail?: boolean;
 };
 
 export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
@@ -36,6 +50,14 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
       'tenure',
       'accommodation',
     ],
+  },
+  {
+    key: 'construction_detail',
+    heading: 'Construction and materials',
+    group: 'Introduction',
+    keywords: ['construction form', 'age band', 'accommodation schedule'],
+    levels: ['l3'],
+    optionalDetail: true,
   },
   {
     key: 'chimney_stacks',
@@ -149,6 +171,14 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     keywords: ['bathroom', 'wc', 'basin', 'bath', 'shower', 'sanitary'],
   },
   {
+    key: 'means_of_escape',
+    heading: 'Means of escape',
+    group: 'Inside',
+    keywords: ['means of escape', 'escape route', 'fire door'],
+    levels: ['l3'],
+    optionalDetail: true,
+  },
+  {
     key: 'electricity',
     heading: 'Electricity',
     group: 'Services',
@@ -197,6 +227,14 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     keywords: ['garage', 'outbuilding', 'shed', 'store'],
   },
   {
+    key: 'other_local_factors',
+    heading: 'Other local factors',
+    group: 'Grounds',
+    keywords: ['local factor', 'mining', 'landfill', 'invasive'],
+    levels: ['l3'],
+    optionalDetail: true,
+  },
+  {
     key: 'legal_advisers',
     heading: 'Issues for your legal advisers',
     group: 'Back matter',
@@ -216,6 +254,41 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     keywords: ['energy', 'epc', 'insulation', 'efficiency'],
     // GOV.UK EPC auto-pull prefills this slot when empty. About the property
     // may mention floor area / fuel from the same snapshot.
+  },
+  {
+    key: 'energy_heating',
+    heading: 'Energy — heating',
+    group: 'Back matter',
+    letter: 'J',
+    keywords: ['heating efficiency', 'boiler efficiency'],
+    levels: ['l3'],
+    optionalDetail: true,
+  },
+  {
+    key: 'energy_lighting',
+    heading: 'Energy — lighting',
+    group: 'Back matter',
+    letter: 'J',
+    keywords: ['lighting efficiency', 'led lighting'],
+    levels: ['l3'],
+    optionalDetail: true,
+  },
+  {
+    key: 'energy_ventilation',
+    heading: 'Energy — ventilation',
+    group: 'Back matter',
+    letter: 'J',
+    keywords: ['ventilation', 'extractor fan'],
+    levels: ['l3'],
+    optionalDetail: true,
+  },
+  {
+    key: 'valuation',
+    heading: 'Valuation',
+    group: 'Back matter',
+    keywords: ['valuation', 'market value', 'rebuild'],
+    levels: ['l2'],
+    optionalDetail: true,
   },
   {
     key: 'declaration',
@@ -244,6 +317,23 @@ export function buildingSurveySectionByKey(
   key: string,
 ): BuildingSurveySection | undefined {
   return BUILDING_SURVEY_SECTIONS.find((section) => section.key === key);
+}
+
+export function sectionVisibleAtLevel(
+  section: BuildingSurveySection,
+  level: SurveyLevel,
+): boolean {
+  const levels = section.levels ?? (['l2', 'l3'] as const);
+  return levels.includes(level);
+}
+
+export function sectionsForSurveyType(
+  surveyType: string | null | undefined,
+): BuildingSurveySection[] {
+  const level = surveyLevelForType(surveyType);
+  return BUILDING_SURVEY_SECTIONS.filter((section) =>
+    sectionVisibleAtLevel(section, level),
+  );
 }
 
 export function buildingSurveyBlankHtml(): string {

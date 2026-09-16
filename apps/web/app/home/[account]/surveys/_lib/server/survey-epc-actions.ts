@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { EpcApiError } from '~/lib/building-surveyor/epc/types';
+import { FloodApiError } from '~/lib/building-surveyor/flood/types';
+import type { SurveyFloodRecord } from '~/lib/building-surveyor/flood/types';
 
 import {
   AttachSurveyEpcSchema,
@@ -18,6 +20,7 @@ import {
   UpdateSurveyEpcSchema,
 } from '../schema/survey-epc.schema';
 import { createSurveyEpcService } from './survey-epc.service';
+import { createSurveyFloodService } from './survey-flood.service';
 
 function revalidateSurveyHub(accountSlug: string, proposalId: string) {
   revalidatePath(
@@ -76,8 +79,32 @@ export const saveSurveyPropertyLookupAction = enhanceAction(
     );
     try {
       const result = await getService().saveLookup(data);
+      let flood: SurveyFloodRecord | null = null;
+      let floodError: string | null = null;
+      if (
+        data.pullFlood !== false &&
+        result.lookup.latitude != null &&
+        result.lookup.longitude != null
+      ) {
+        try {
+          flood = await createSurveyFloodService(
+            getSupabaseServerClient(),
+          ).pull({
+            accountId: data.accountId,
+            accountSlug: data.accountSlug,
+            proposalId: data.proposalId,
+            latitude: result.lookup.latitude,
+            longitude: result.lookup.longitude,
+          });
+        } catch (error) {
+          floodError =
+            error instanceof FloodApiError || error instanceof Error
+              ? error.message
+              : 'Flood risk could not be pulled.';
+        }
+      }
       revalidateSurveyHub(data.accountSlug, data.proposalId);
-      return result;
+      return { ...result, flood, floodError };
     } catch (error) {
       rethrowEpc(error);
     }
