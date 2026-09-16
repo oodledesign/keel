@@ -8,7 +8,8 @@ import {
 
 /**
  * Standard UK building / RICS Home Survey headings.
- * Catalogue (letter/rics codes) lives in rics-catalogue.ts.
+ * Phrase-bank / template codes live in rics-catalogue.ts.
+ * Hub L2/L3 visibility uses survey-section-catalogue.ts.
  */
 export {
   BUILDING_SURVEY_SECTIONS,

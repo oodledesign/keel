@@ -35,6 +35,7 @@ export type SurveyGenerateParams = {
   pinnedPhotos?: SurveyPinnedPhotoInput[];
   surveyType?: string | null;
   styleGuidance?: string | null;
+  epcFacts?: string | null;
 };
 
 export type SurveyGenerateResult = {
@@ -130,8 +131,11 @@ function buildUserPayload(params: SurveyGenerateParams) {
     style_guidance:
       params.styleGuidance?.trim() ||
       '(none — write in a clear RICS Home Survey voice)',
+    epc:
+      params.epcFacts?.trim() ||
+      '(none attached — do not invent an Energy Performance Certificate)',
     instruction:
-      'Prefer the grouped observations over raw transcripts when both are present. Write section html only. Curated photos are attached after each matching section by the app — mention the defect, not a fake image tag. Match the style guidance.',
+      'Prefer the grouped observations over raw transcripts when both are present. Write section html only. Curated photos are attached after each matching section by the app — mention the defect, not a fake image tag. Match the style guidance. If EPC facts are provided, use them in the energy section and mention floor area or fuel in about_property only when that section is otherwise empty. Do not invent certificate numbers.',
   });
 }
 
