@@ -109,3 +109,13 @@ describe('htmlFromObservations', () => {
     expect(html).toContain('data-section="windows"');
   });
 });
+
+describe('RICS lettered sections', () => {
+  it('marks energy efficiency as section J', () => {
+    const energy = BUILDING_SURVEY_SECTIONS.find(
+      (section) => section.key === 'energy',
+    );
+    expect(energy?.letter).toBe('J');
+    expect(energy?.heading).toBe('Energy efficiency');
+  });
+});

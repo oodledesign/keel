@@ -7,6 +7,8 @@ export type BuildingSurveySection = {
   heading: string;
   group: string;
   keywords: readonly string[];
+  /** RICS letter when the section is lettered (Energy is J). */
+  letter?: string;
 };
 
 export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
@@ -210,6 +212,7 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     key: 'energy',
     heading: 'Energy efficiency',
     group: 'Back matter',
+    letter: 'J',
     keywords: ['energy', 'epc', 'insulation', 'efficiency'],
     // GOV.UK EPC auto-pull prefills this slot when empty. About the property
     // may mention floor area / fuel from the same snapshot.

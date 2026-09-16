@@ -29,3 +29,13 @@ Ozer owns the marketing list. After a public mailing-list signup, Ozer upserts a
 - **Setup + field map**: [apps/web/lib/dynamics/README.md](./apps/web/lib/dynamics/README.md).
 - **Retry**: `GET /api/cron/dynamics-contact-sync` (Bearer `CRON_SECRET`). Public signup never fails if Dynamics is down.
 - **CI**: mapper + Dataverse client tests use mocked `fetch`. Live Entra / Dataverse OAuth is not run in CI.
+
+## Building-surveyor GOV.UK EPC
+
+Energy Performance Certificates are a **platform** integration, not per-user registration. Server-only fetch on `survey_report` rows in `building-surveyor` workspaces. After address confirm, the hub prefills Energy (J) / About the property; surveyors can override auto-pulled fields.
+
+- **Env name (exact):** `GOV_UK_EPC_API_BEARER_TOKEN`
+- **New box processes:** already receive this env (Dan). Do not ask surveyors to paste a token.
+- **Vercel Production:** Project Settings → Environment Variables on the `web` project. Add `GOV_UK_EPC_API_BEARER_TOKEN` as **Sensitive**, environment **Production**. Add Preview only if you want lookup on preview deploys. Redeploy after saving.
+- **Turbo:** `globalEnv` already allowlists the name (plus older aliases) so the Next.js server runtime can read it. Do not prefix with `NEXT_PUBLIC_`.
+- **CI:** fixture unit tests only. The live Energy Certificate Data API is not called in CI.

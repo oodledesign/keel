@@ -412,12 +412,11 @@ export function SurveyEpcPanel({
 
       <div className="mt-5">
         <h4 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-          Energy / About the property
+          Energy (J) / About the property
         </h4>
         <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-          Register data used in the Energy efficiency section. Floor area and
-          fuel can also appear in About the property. L2 and L3 share this
-          template.
+          Register data used in Energy efficiency (J). Floor area and fuel can
+          also appear in About the property. L2 and L3 share this template.
         </p>
       </div>
 

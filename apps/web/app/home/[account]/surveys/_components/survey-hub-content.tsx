@@ -293,7 +293,8 @@ export function SurveyHubContent({
             </h3>
             <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
               Confirm the property after intake. EPC is pulled from the GOV.UK
-              register and can be overridden before the draft report.
+              register into Energy (J) and can be overridden. Flood risk can sit
+              here later.
             </p>
             <dl className="mt-3 grid gap-3 sm:grid-cols-2">
               <InfoRow label="Client" value={clientName} />
@@ -443,7 +444,9 @@ export function SurveyHubContent({
                 >
                   {BUILDING_SURVEY_SECTIONS.map((section) => (
                     <option key={section.key} value={section.key}>
-                      {section.heading}
+                      {section.letter
+                        ? `${section.letter}. ${section.heading}`
+                        : section.heading}
                     </option>
                   ))}
                 </select>
@@ -495,7 +498,9 @@ export function SurveyHubContent({
                           sectionKey={section.key}
                           className="h-3.5 w-3.5 shrink-0"
                         />
-                        {section.group} · {section.heading}
+                        {section.letter
+                          ? `${section.letter} · ${section.heading}`
+                          : `${section.group} · ${section.heading}`}
                       </h4>
                       <ul className="mt-2 space-y-3">
                         {items.map((item) => (

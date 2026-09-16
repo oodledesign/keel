@@ -1,8 +1,9 @@
 import 'server-only';
 
-// Platform credential (not per-user). Vercel Production and new box processes
-// receive GOV_UK_EPC_API_BEARER_TOKEN. Aliases stay for older local env files
-// and can be dropped once those files are gone.
+// Platform credential (not per-user). Exact name for Vercel Production and
+// new box processes: GOV_UK_EPC_API_BEARER_TOKEN. Set it as a Sensitive env
+// on the web project (Production). Do not expose as NEXT_PUBLIC_*.
+// Aliases stay for older local env files and can be dropped later.
 const TOKEN_KEYS = [
   'GOV_UK_EPC_API_BEARER_TOKEN',
   'EPC_API_BEARER_TOKEN',
