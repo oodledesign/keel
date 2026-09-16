@@ -564,16 +564,18 @@ export function JobsPageContent({
           statuses={statuses}
         />
       ) : view === 'kanban' ? (
-        <ProjectsKanbanView
-          accountSlug={accountSlug}
-          accountId={accountId}
-          items={kanbanItems}
-          canEditJobs={canEditJobs}
-          personalScope={personalScope}
-          projectDetailPathBuilder={projectDetailPathBuilder}
-          onJobStatusChange={handleJobStatusChange}
-          statuses={statuses}
-        />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ProjectsKanbanView
+            accountSlug={accountSlug}
+            accountId={accountId}
+            items={kanbanItems}
+            canEditJobs={canEditJobs}
+            personalScope={personalScope}
+            projectDetailPathBuilder={projectDetailPathBuilder}
+            onJobStatusChange={handleJobStatusChange}
+            statuses={statuses}
+          />
+        </div>
       ) : view === 'timeline' ? (
         <JobsPmTimelineView
           jobs={visibleJobs}

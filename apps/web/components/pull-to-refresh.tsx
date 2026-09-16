@@ -16,12 +16,15 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import { triggerHapticFeedback } from '~/lib/haptics';
-import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import {
   isPullToRefreshEnabled,
   subscribePullToRefreshContext,
 } from '~/lib/pwa/pull-to-refresh-context';
-import { WorkspaceMobileScrollArea } from '~/lib/pwa/workspace-mobile-scroll-area';
+import {
+  WORKSPACE_MOBILE_SCROLL_INNER_CLASS,
+  WORKSPACE_MOBILE_SCROLL_PAGE_CLASS,
+  WorkspaceMobileScrollArea,
+} from '~/lib/pwa/workspace-mobile-scroll-area';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 
 const PULL_THRESHOLD = 72;
@@ -260,24 +263,22 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       <div
         ref={scrollRef}
         data-workspace-mobile-scroll-inner
-        className="min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        className={WORKSPACE_MOBILE_SCROLL_INNER_CLASS}
       >
-          <div
-            className={cn(
-              'flex min-h-full min-w-0 flex-col rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
-              !isDragging && pullDistance === 0 && !refreshing
-                ? ''
-                : !isDragging && 'transition-transform duration-200 ease-out',
-            )}
+        <div
+          className={cn(
+            'flex h-full min-h-full min-w-0 flex-col rounded-t-[1.25rem] bg-[var(--workspace-shell-canvas)] shadow-[0_-1px_0_rgba(255,255,255,0.06)]',
+            !isDragging && pullDistance === 0 && !refreshing
+              ? ''
+              : !isDragging && 'transition-transform duration-200 ease-out',
+          )}
           style={
             contentOffset > 0
               ? { transform: `translateY(${contentOffset}px)` }
               : undefined
           }
         >
-          <div className={cn(MOBILE_FLOATING_CHROME_SCROLL_PB, 'lg:pb-0')}>
-            {children}
-          </div>
+          <div className={WORKSPACE_MOBILE_SCROLL_PAGE_CLASS}>{children}</div>
         </div>
       </div>
     </div>

@@ -281,14 +281,14 @@ export function JobProjectProgressBoard({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-full min-h-0 flex-1 items-stretch gap-4 overflow-x-auto overscroll-x-contain pb-2">
+      <div className="flex h-full min-h-0 flex-1 items-stretch gap-4 overflow-auto overscroll-contain pb-2">
         {STATUS_COLUMNS.map((col) => {
           const columnTasks = byStatus.get(col.key) ?? [];
           const colour = PROGRESS_STATUS_COLOURS[col.key] ?? '#64748B';
           return (
             <div
               key={col.key}
-              className="flex h-full w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
+              className="flex min-h-full w-[min(100%,280px)] shrink-0 flex-col overflow-visible rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
               style={{ borderTopWidth: 3, borderTopColor: colour }}
             >
               <div className="sticky top-0 z-10 border-b border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/95 p-3 backdrop-blur-sm">
@@ -307,7 +307,7 @@ export function JobProjectProgressBoard({
                 </p>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+              <div className="flex flex-col gap-2 p-3">
                 {columnTasks.length === 0 ? (
                   <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
                     Drop tasks here by changing status

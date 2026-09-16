@@ -391,13 +391,13 @@ function PortalProjectKanbanView({
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    <div className="flex items-stretch gap-3 overflow-auto pb-2">
       {STATUS_COLUMNS.map((col) => {
         const columnTasks = byStatus.get(col.key) ?? [];
         return (
           <div
             key={col.key}
-            className="flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
+            className="flex min-h-full w-[min(100%,280px)] shrink-0 flex-col overflow-visible rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
             style={{ borderTopWidth: 3, borderTopColor: col.colour }}
           >
             <div className="sticky top-0 z-10 border-b border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/95 p-3 backdrop-blur-sm">
@@ -716,7 +716,7 @@ function PortalProjectPhaseKanbanView({
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    <div className="flex items-stretch gap-3 overflow-auto pb-2">
       {columns.map((col, index) => {
         const columnTasks = byPhase.get(col.key) ?? [];
         if (col.key === '__unassigned__' && columnTasks.length === 0) {
@@ -728,7 +728,7 @@ function PortalProjectPhaseKanbanView({
         return (
           <div
             key={col.key}
-            className="flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
+            className="flex min-h-full w-[min(100%,280px)] shrink-0 flex-col overflow-visible rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
             style={{ borderTopWidth: 3, borderTopColor: colour }}
           >
             <div className="sticky top-0 z-10 border-b border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/95 p-3 backdrop-blur-sm">

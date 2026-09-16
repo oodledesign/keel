@@ -4,6 +4,23 @@ import { cn } from '@kit/ui/utils';
 
 import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 
+export const WORKSPACE_MOBILE_SCROLL_INNER_CLASS =
+  'min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]';
+
+/**
+ * Fill the scrollport so `flex-1 min-h-0 overflow-hidden` pages (boards)
+ * get a real height and can own vertical scroll. `h-full min-h-full`
+ * together means a viewport-height floor that can still grow for tall
+ * pages; those overflow this box and the outer scroller handles them.
+ */
+export const WORKSPACE_MOBILE_SCROLL_FILL_CLASS =
+  'flex h-full min-h-full min-w-0 flex-col bg-[var(--workspace-shell-canvas)]';
+
+export const WORKSPACE_MOBILE_SCROLL_PAGE_CLASS = cn(
+  MOBILE_FLOATING_CHROME_SCROLL_PB,
+  'flex min-h-0 flex-1 flex-col lg:pb-0',
+);
+
 type WorkspaceMobileScrollAreaProps = {
   children: ReactNode;
   className?: string;
@@ -23,12 +40,10 @@ export function WorkspaceMobileScrollArea({
     >
       <div
         data-workspace-mobile-scroll-inner
-        className="min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        className={WORKSPACE_MOBILE_SCROLL_INNER_CLASS}
       >
-        <div className="min-h-full bg-[var(--workspace-shell-canvas)]">
-          <div className={cn(MOBILE_FLOATING_CHROME_SCROLL_PB, 'lg:pb-0')}>
-            {children}
-          </div>
+        <div className={WORKSPACE_MOBILE_SCROLL_FILL_CLASS}>
+          <div className={WORKSPACE_MOBILE_SCROLL_PAGE_CLASS}>{children}</div>
         </div>
       </div>
     </div>

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isKanbanColumnMinimized,
+  kanbanBoardClassName,
+  kanbanColumnCardsClassName,
   kanbanColumnClassName,
   kanbanColumnHeaderClassName,
   kanbanColumnInitials,
@@ -49,7 +51,7 @@ describe('kanbanColumnWidthClass', () => {
 });
 
 describe('kanbanColumnHeaderClassName', () => {
-  it('pins the heading to the column viewport', () => {
+  it('pins the heading to the board scroller', () => {
     expect(kanbanColumnHeaderClassName()).toContain('sticky top-0');
   });
 });
@@ -61,7 +63,9 @@ describe('kanbanColumnClassName', () => {
       isOver: true,
     });
 
-    expect(className).toContain('h-full');
+    expect(className).toContain('min-h-full');
+    expect(className).toContain('overflow-visible');
+    expect(className).not.toContain('overflow-hidden');
     expect(className).toContain('md:w-60');
     expect(className).not.toContain('w-10');
     expect(className).toContain('border-[var(--ozer-accent)]/40');
@@ -76,5 +80,22 @@ describe('kanbanColumnClassName', () => {
 
     expect(className).toContain('w-10');
     expect(className).not.toContain('md:w-60');
+  });
+});
+
+describe('kanbanBoardClassName', () => {
+  it('scrolls the board vertically so sticky headers can pin', () => {
+    expect(kanbanBoardClassName).toContain('overflow-auto');
+    expect(kanbanBoardClassName).not.toContain('overflow-y-hidden');
+    expect(kanbanBoardClassName).toContain('items-stretch');
+  });
+});
+
+describe('kanbanColumnCardsClassName', () => {
+  it('does not create a nested column scroller that traps sticky', () => {
+    expect(kanbanColumnCardsClassName()).not.toContain('overflow-y-auto');
+    expect(kanbanColumnCardsClassName({ isEmpty: true })).toContain(
+      'min-h-[200px]',
+    );
   });
 });

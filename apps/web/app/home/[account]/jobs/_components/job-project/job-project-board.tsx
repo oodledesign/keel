@@ -258,7 +258,7 @@ function PhaseColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex h-full w-[min(100%,280px)] shrink-0 flex-col rounded-xl border bg-[var(--workspace-shell-panel)]/80 ${
+      className={`flex min-h-full w-[min(100%,280px)] shrink-0 flex-col overflow-visible rounded-xl border bg-[var(--workspace-shell-panel)]/80 ${
         isOver
           ? 'border-[var(--ozer-accent)]/50'
           : 'border-[color:var(--workspace-shell-border)]/80'
@@ -365,7 +365,7 @@ function PhaseColumn({
         items={tasks.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+        <div className="flex flex-col gap-2 p-2">
           {tasks.map((task) => (
             <SortableTaskCard
               key={task.id}
@@ -380,7 +380,7 @@ function PhaseColumn({
 
       {canEditJobs && (
         <form
-          className="border-t border-[color:var(--workspace-shell-border)]/80 p-2"
+          className="sticky bottom-0 z-10 mt-auto border-t border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)] p-2"
           onSubmit={(e) => {
             e.preventDefault();
             const title = draftTitle.trim();
@@ -751,7 +751,7 @@ export function JobProjectBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden pb-1">
+        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-auto pb-1">
           {phases.map((phase) => (
             <SortablePhaseColumn
               key={phase.id}
