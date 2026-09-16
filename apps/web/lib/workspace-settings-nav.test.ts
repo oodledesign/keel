@@ -116,8 +116,13 @@ describe('buildWorkspaceSettingsNav', () => {
       access: ownerAccess,
     });
     expect(surveyor.map((item) => item.id)).toContain('survey-style');
+    expect(surveyor.map((item) => item.id)).toContain('survey-templates');
+    expect(surveyor.map((item) => item.id)).toContain('survey-phrases');
     expect(surveyor.find((item) => item.id === 'survey-style')?.href).toBe(
       '/app/survey-co/settings/survey-style',
+    );
+    expect(surveyor.find((item) => item.id === 'survey-templates')?.href).toBe(
+      '/app/survey-co/settings/survey-templates',
     );
 
     const work = buildWorkspaceSettingsNav({
@@ -127,6 +132,8 @@ describe('buildWorkspaceSettingsNav', () => {
       access: ownerAccess,
     });
     expect(work.map((item) => item.id)).not.toContain('survey-style');
+    expect(work.map((item) => item.id)).not.toContain('survey-templates');
+    expect(work.map((item) => item.id)).not.toContain('survey-phrases');
   });
 
   it('includes Integrations for every workspace profile', () => {

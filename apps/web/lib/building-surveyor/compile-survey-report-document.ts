@@ -1,6 +1,6 @@
 import { isSafeHttpUrl } from '~/lib/campaigns/campaign-document';
-import { sanitizeRichText } from '~/lib/campaigns/compile-campaign-document';
 
+import { CONDITION_RATING_COLORS } from './condition-rating';
 import {
   SURVEY_REPORT_DOCUMENT_MARKER,
   type SurveyReportBlock,
@@ -24,10 +24,18 @@ function renderSurveyBlock(block: SurveyReportBlock): string {
       const sectionAttr = block.sectionKey
         ? ` data-section="${escapeAttr(block.sectionKey)}"`
         : '';
-      return `<${tag}${sectionAttr}>${escapeHtml(block.text)}</${tag}>`;
+      const ricsAttr = block.ricsCode
+        ? ` data-rics="${escapeAttr(block.ricsCode)}"`
+        : '';
+      const rating = block.conditionRating;
+      const ratingAttr = rating ? ` data-rating="${escapeAttr(rating)}"` : '';
+      const badge = rating
+        ? ` <span class="survey-rating-badge" data-rating="${escapeAttr(rating)}" style="display:inline-block;width:1.35em;height:1.35em;line-height:1.35em;border-radius:999px;background:${CONDITION_RATING_COLORS[rating]};color:#fff;text-align:center;font-size:0.8em">${escapeHtml(rating)}</span>`
+        : '';
+      return `<${tag}${sectionAttr}${ricsAttr}${ratingAttr}>${escapeHtml(block.text)}${badge}</${tag}>`;
     }
     case 'text':
-      return sanitizeRichText(block.html);
+      return sanitizeSurveyReportHtml(block.html);
     case 'image': {
       const src = block.src.trim();
       if (!src || !isSafeHttpUrl(src)) return '';

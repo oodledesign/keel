@@ -218,6 +218,22 @@ export function buildWorkspaceSettingsNav(input: {
 
   if (workspaceProfile === 'building_surveyor') {
     items.push({
+      id: 'survey-templates',
+      label: 'Survey templates',
+      href: settingsPath(
+        pathsConfig.app.accountSurveyTemplatesSettings,
+        accountSlug,
+      ),
+    });
+    items.push({
+      id: 'survey-phrases',
+      label: 'Phrase banks',
+      href: settingsPath(
+        pathsConfig.app.accountSurveyPhrasesSettings,
+        accountSlug,
+      ),
+    });
+    items.push({
       id: 'survey-style',
       label: 'Survey style',
       href: settingsPath(

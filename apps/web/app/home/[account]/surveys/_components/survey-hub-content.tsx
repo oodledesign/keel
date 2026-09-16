@@ -17,7 +17,11 @@ import pathsConfig from '~/config/paths.config';
 import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { documentEditPath } from '~/lib/building-surveyor/document-kind';
-import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
+import {
+  BUILDING_SURVEY_SECTIONS,
+  surveySectionDisplayLabel,
+} from '~/lib/building-surveyor/report-sections';
+import type { SurveyTemplateRecord } from '~/lib/building-surveyor/survey-template';
 import {
   BUILDING_SURVEY_TYPES,
   buildingSurveyTypeLabel,
@@ -77,6 +81,8 @@ export function SurveyHubContent({
   transcripts: initialTranscripts,
   photoShare: initialPhotoShare,
   styleExampleCount,
+  templates = [],
+  surveyTemplateId: initialTemplateId,
 }: {
   accountSlug: string;
   accountId: string;
@@ -100,6 +106,8 @@ export function SurveyHubContent({
   transcripts: SurveyTranscriptSummary[];
   photoShare: SurveyPhotoShare;
   styleExampleCount: number;
+  templates?: SurveyTemplateRecord[];
+  surveyTemplateId?: string | null;
 }) {
   const [observations, setObservations] = useState(initialObservations);
   const [transcripts, setTranscripts] = useState(initialTranscripts);
@@ -114,6 +122,9 @@ export function SurveyHubContent({
   const [generating, setGenerating] = useState(false);
   const [pasting, setPasting] = useState(false);
   const [photoShare, setPhotoShare] = useState(initialPhotoShare);
+  const [surveyTemplateId, setSurveyTemplateId] = useState(
+    initialTemplateId ?? '',
+  );
   const [shareCopied, setShareCopied] = useState(false);
 
   const editHref = documentEditPath(accountSlug, proposal.id, 'survey_report');
@@ -336,9 +347,52 @@ export function SurveyHubContent({
                   </p>
                 )}
                 <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                  Stored on this survey so later templates can use different
-                  section sets without starting again.
+                  Assign a cloned RICS shell (or keep the system template for
+                  this survey type).
                 </p>
+                {templates.length > 0 ? (
+                  <div className="mt-3">
+                    <Label className={`text-xs ${workspaceTextMuted}`}>
+                      Report template
+                    </Label>
+                    {canEdit ? (
+                      <select
+                        value={surveyTemplateId}
+                        onChange={(event) => {
+                          const next = event.target.value || null;
+                          setSurveyTemplateId(next ?? '');
+                          startTransition(async () => {
+                            try {
+                              await updateSurveyTypeAction({
+                                accountId,
+                                accountSlug,
+                                proposalId: proposal.id,
+                                surveyType,
+                                surveyTemplateId: next,
+                              });
+                              toast.success('Template assigned');
+                            } catch (error) {
+                              toast.error(getErrorMessage(error));
+                            }
+                          });
+                        }}
+                        className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm"
+                      >
+                        <option value="">System template for type</option>
+                        {templates.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="mt-1 text-sm">
+                        {templates.find((item) => item.id === surveyTemplateId)
+                          ?.name ?? 'System template'}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </dl>
           </section>
@@ -428,7 +482,7 @@ export function SurveyHubContent({
                 >
                   {BUILDING_SURVEY_SECTIONS.map((section) => (
                     <option key={section.key} value={section.key}>
-                      {section.heading}
+                      {surveySectionDisplayLabel(section)}
                     </option>
                   ))}
                 </select>
@@ -480,7 +534,7 @@ export function SurveyHubContent({
                           sectionKey={section.key}
                           className="h-3.5 w-3.5 shrink-0"
                         />
-                        {section.group} · {section.heading}
+                        {surveySectionDisplayLabel(section)}
                       </h4>
                       <ul className="mt-2 space-y-3">
                         {items.map((item) => (

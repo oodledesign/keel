@@ -9,7 +9,12 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
-import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
+import { CONDITION_RATINGS } from '~/lib/building-surveyor/condition-rating';
+import {
+  BUILDING_SURVEY_SECTIONS,
+  ricsCodeForSectionKey,
+  surveySectionDisplayLabel,
+} from '~/lib/building-surveyor/report-sections';
 import { workspaceText, workspaceTextMuted } from '~/lib/workspace-ui';
 
 import type { SurveyObservation } from '../_lib/schema/survey-capture.schema';
@@ -17,6 +22,7 @@ import {
   deleteSurveyObservationAction,
   updateSurveyObservationAction,
 } from '../_lib/server/survey-capture-actions';
+import { SurveyPhraseInsert } from './survey-phrase-insert';
 
 export function GroupedObservationCard({
   item,
@@ -76,10 +82,57 @@ export function GroupedObservationCard({
           >
             {BUILDING_SURVEY_SECTIONS.map((option) => (
               <option key={option.key} value={option.key}>
-                {option.heading}
+                {surveySectionDisplayLabel(option)}
               </option>
             ))}
           </select>
+          <select
+            value={item.conditionRating ?? ''}
+            onChange={(event) => {
+              const conditionRating = (event.target.value ||
+                null) as SurveyObservation['conditionRating'];
+              onChange({ ...item, conditionRating });
+              startTransition(async () => {
+                try {
+                  await updateSurveyObservationAction({
+                    accountId,
+                    accountSlug,
+                    proposalId,
+                    observationId: item.id,
+                    conditionRating,
+                  });
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                }
+              });
+            }}
+            className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs"
+          >
+            <option value="">No rating</option>
+            {CONDITION_RATINGS.map((rating) => (
+              <option key={rating} value={rating}>
+                {rating}
+              </option>
+            ))}
+          </select>
+          <SurveyPhraseInsert
+            accountId={accountId}
+            ricsCode={item.ricsCode ?? ricsCodeForSectionKey(item.sectionKey)}
+            sectionKey={item.sectionKey}
+            onInsert={(body, defaultRating) => {
+              const nextBody = draftBody.trim()
+                ? `${draftBody.trim()}\n\n${body}`
+                : body;
+              setDraftBody(nextBody);
+              if (defaultRating && !item.conditionRating) {
+                onChange({
+                  ...item,
+                  conditionRating:
+                    defaultRating as SurveyObservation['conditionRating'],
+                });
+              }
+            }}
+          />
           <Textarea
             value={draftBody}
             onChange={(event) => setDraftBody(event.target.value)}
@@ -133,6 +186,11 @@ export function GroupedObservationCard({
 
   return (
     <li className="group relative rounded-lg border border-[color:var(--workspace-shell-border)] p-3">
+      {item.conditionRating ? (
+        <p className={`mb-1 text-[11px] ${workspaceTextMuted}`}>
+          Rating {item.conditionRating}
+        </p>
+      ) : null}
       <p className={`pr-16 text-sm whitespace-pre-wrap ${workspaceText}`}>
         {item.body}
       </p>

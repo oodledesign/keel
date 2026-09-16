@@ -25,4 +25,22 @@ describe('compileSurveyReportDocument', () => {
     expect(html).toContain('<img src="https://example.com/window.jpg"');
     expect(html).toContain('Cracked putty to the lower sash.');
   });
+
+  it('keeps rating tables and badges that campaign rich-text would strip', () => {
+    const html = compileSurveyReportDocument({
+      version: 1,
+      blocks: [
+        {
+          id: 'summary',
+          type: 'text',
+          html: '<h3>Condition rating 3</h3><table><tbody><tr><td>F4 Heating</td></tr></tbody></table><span class="survey-rating-badge" data-rating="3">3</span>',
+        },
+      ],
+    });
+
+    expect(html).toContain('<table>');
+    expect(html).toContain('F4 Heating');
+    expect(html).toContain('survey-rating-badge');
+    expect(html).not.toMatch(/<script/i);
+  });
 });
