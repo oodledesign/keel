@@ -24,6 +24,7 @@ export function SurveyStatusBadge({
 
   return (
     <span
+      data-test="survey-status-badge"
       className={cn(
         'inline-flex items-center rounded-full font-medium',
         size === 'sm' && 'px-2.5 py-0.5 text-[11px]',

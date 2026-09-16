@@ -32,7 +32,9 @@ describe('survey status pills', () => {
   it('keeps draft amber/grey and sent green', () => {
     expect(resolveSurveyStatusTone('draft')).toBe('draft');
     expect(resolveSurveyStatusTone('DRAFT')).toBe('draft');
-    expect(surveyStatusBadgeClass('draft')).toBe(SURVEY_STATUS_BADGE_CLASS.draft);
+    expect(surveyStatusBadgeClass('draft')).toBe(
+      SURVEY_STATUS_BADGE_CLASS.draft,
+    );
     expect(surveyStatusBadgeClass('sent')).toBe(SURVEY_STATUS_BADGE_CLASS.sent);
     expect(surveyStatusBadgeClass('archived')).toBe(
       SURVEY_STATUS_BADGE_CLASS.archived,

@@ -151,7 +151,7 @@ enum SurveyDisplay {
         }
     }
 
-    static func statusKey(_ raw: String?) -> String {
+    private static func statusKey(_ raw: String?) -> String {
         (raw ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
@@ -161,7 +161,7 @@ enum SurveyDisplay {
             .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
     }
 
-    static func titleCaseStatus(_ raw: String) -> String {
+    private static func titleCaseStatus(_ raw: String) -> String {
         raw
             .replacingOccurrences(of: "[_-]+", with: " ", options: .regularExpression)
             .split(separator: " ")
