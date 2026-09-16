@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -43,6 +43,8 @@ import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job
 import {
   type RightmoveDisposalStatusRow,
   formatRightmoveUpdatedAt,
+  isRightmoveDisposalFailed,
+  isRightmoveDisposalUnsynced,
 } from '~/lib/commercial/rightmove-publish-status';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -93,6 +95,9 @@ export function RightmoveBulkPublishPanel({
   const [job, setJob] = useState<RightmoveBulkJobPublic | null>(initialJob);
   const [startPending, startTransition] = useTransition();
   const [statusOpen, setStatusOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'unsynced' | 'failed'
+  >('all');
   const [rows, setRows] = useState<RightmoveDisposalStatusRow[]>([]);
   const [rowsPending, startRowsTransition] = useTransition();
 
@@ -177,13 +182,29 @@ export function RightmoveBulkPublishPanel({
       .replace('[account]', accountSlug)
       .replace('[id]', listingId)}/publishing`;
 
-  const statusCounts = useMemo(() => {
-    const published = rows.filter(
-      (row) => row.rightmoveStatus === 'published',
-    ).length;
-    const failed = rows.filter((row) => row.rightmoveStatus === 'error').length;
-    return { published, failed, total: rows.length };
-  }, [rows]);
+  const failedRows = useMemo(
+    () => rows.filter(isRightmoveDisposalFailed),
+    [rows],
+  );
+  const unsyncedRows = useMemo(
+    () => rows.filter(isRightmoveDisposalUnsynced),
+    [rows],
+  );
+  const visibleRows = useMemo(() => {
+    if (statusFilter === 'failed') return failedRows;
+    if (statusFilter === 'unsynced') return unsyncedRows;
+    return rows;
+  }, [failedRows, rows, statusFilter, unsyncedRows]);
+  const statusCounts = useMemo(
+    () => ({
+      onRightmove: rows.filter((row) => row.rightmoveStatus === 'published')
+        .length,
+      unsynced: unsyncedRows.length,
+      failed: failedRows.length,
+      total: rows.length,
+    }),
+    [failedRows, rows, unsyncedRows],
+  );
 
   return (
     <div className="space-y-3">
@@ -236,11 +257,18 @@ export function RightmoveBulkPublishPanel({
           open={statusOpen}
           onOpenChange={(open) => {
             setStatusOpen(open);
-            if (open) loadRows();
+            if (open) {
+              setStatusFilter('all');
+              loadRows();
+            }
           }}
         >
           <DialogTrigger asChild>
-            <Button type="button" variant="outline">
+            <Button
+              type="button"
+              variant="outline"
+              data-test="rightmove-status-open"
+            >
               Rightmove status
             </Button>
           </DialogTrigger>
@@ -249,13 +277,71 @@ export function RightmoveBulkPublishPanel({
               <DialogTitle>Rightmove disposals</DialogTitle>
               <DialogDescription>
                 Status, listing URL, and last sync for every disposal in this
-                workspace.
+                workspace. Live but unsynced means Rightmove is behind the
+                latest disposal or media updates.
                 {rows.length > 0
-                  ? ` ${statusCounts.published} published, ${statusCounts.failed} failed, ${statusCounts.total} total.`
+                  ? ` ${statusCounts.onRightmove} on Rightmove, ${statusCounts.unsynced} unsynced, ${statusCounts.failed} failed, ${statusCounts.total} total.`
                   : null}
               </DialogDescription>
             </DialogHeader>
-            <div className="max-h-[60vh] overflow-auto">
+            {rows.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  data-test="rightmove-status-filter-all"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  All ({statusCounts.total})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={statusFilter === 'unsynced' ? 'default' : 'outline'}
+                  data-test="rightmove-status-filter-unsynced"
+                  onClick={() => setStatusFilter('unsynced')}
+                >
+                  Unsynced ({statusCounts.unsynced})
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={statusFilter === 'failed' ? 'default' : 'outline'}
+                  data-test="rightmove-status-filter-failed"
+                  onClick={() => setStatusFilter('failed')}
+                >
+                  Failed ({statusCounts.failed})
+                </Button>
+              </div>
+            ) : null}
+            {unsyncedRows.length > 0 && statusFilter !== 'failed' ? (
+              <div
+                className="max-h-48 space-y-2 overflow-auto rounded-lg border border-amber-500/30 bg-amber-500/10 p-3"
+                data-test="rightmove-status-unsynced"
+              >
+                <p className="flex items-center gap-1.5 text-sm font-medium text-[var(--workspace-shell-text)]">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  {unsyncedRows.length} live but unsynced
+                </p>
+                <ul className="space-y-2">
+                  {unsyncedRows.map((row) => (
+                    <li key={row.listingId} className="space-y-0.5">
+                      <Link
+                        href={listingHref(row.listingId)}
+                        className="text-sm font-medium text-[var(--workspace-shell-text)] underline-offset-2 hover:underline"
+                      >
+                        {row.name}
+                      </Link>
+                      <p className="text-xs text-amber-800 dark:text-amber-200">
+                        Behind the latest disposal updates
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="max-h-[50vh] overflow-auto">
               {rowsPending && rows.length === 0 ? (
                 <p className="flex items-center gap-2 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -264,6 +350,12 @@ export function RightmoveBulkPublishPanel({
               ) : rows.length === 0 ? (
                 <p className="py-8 text-sm text-[var(--workspace-shell-text-muted)]">
                   No disposals in this workspace yet.
+                </p>
+              ) : visibleRows.length === 0 ? (
+                <p className="py-8 text-sm text-[var(--workspace-shell-text-muted)]">
+                  {statusFilter === 'unsynced'
+                    ? 'No live Rightmove listings are behind the latest updates.'
+                    : 'No failed Rightmove pushes.'}
                 </p>
               ) : (
                 <Table>
@@ -276,13 +368,20 @@ export function RightmoveBulkPublishPanel({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((row) => {
+                    {visibleRows.map((row) => {
                       const listingStatus =
                         LISTING_STATUS_LABELS[
                           row.listingStatus as keyof typeof LISTING_STATUS_LABELS
                         ] ?? row.listingStatus;
                       return (
-                        <TableRow key={row.listingId}>
+                        <TableRow
+                          key={row.listingId}
+                          data-test={
+                            row.outOfSync
+                              ? 'rightmove-status-row-unsynced'
+                              : undefined
+                          }
+                        >
                           <TableCell>
                             <Link
                               href={listingHref(row.listingId)}
@@ -301,7 +400,13 @@ export function RightmoveBulkPublishPanel({
                                   ? null
                                   : row.rightmoveStatus
                               }
+                              outOfSync={row.outOfSync}
                             />
+                            {row.outOfSync ? (
+                              <p className="mt-1 max-w-xs text-xs text-amber-800 dark:text-amber-200">
+                                Behind the latest disposal updates
+                              </p>
+                            ) : null}
                             {row.lastError ? (
                               <p className="mt-1 max-w-xs truncate text-xs text-rose-500">
                                 {row.lastError}

@@ -1,4 +1,7 @@
-import { isSafeHttpUrl } from '~/lib/commercial/channel-publish-status';
+import {
+  getRightmoveChannelStatus,
+  isSafeHttpUrl,
+} from '~/lib/commercial/channel-publish-status';
 
 export type RightmoveDisposalStatusRow = {
   listingId: string;
@@ -9,6 +12,8 @@ export type RightmoveDisposalStatusRow = {
   urls: string[];
   lastUpdatedAt: string | null;
   lastError: string | null;
+  /** Live on Rightmove but last push is behind listing/media updates. */
+  outOfSync: boolean;
 };
 
 export function collectRightmoveUrls(input: {
@@ -59,7 +64,11 @@ export function formatRightmoveUpdatedAt(
 
 export function formatRightmovePublicationStatus(
   status: string | null | undefined,
+  options?: { outOfSync?: boolean },
 ) {
+  if (options?.outOfSync && status === 'published') {
+    return 'Live but Unsynced';
+  }
   switch (status) {
     case 'published':
       return 'Published';
@@ -81,6 +90,8 @@ export const RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS: Record<
 > = {
   Published:
     'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
+  'Live but Unsynced':
+    'bg-amber-100 text-amber-950 ring-1 ring-inset ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-100 dark:ring-amber-500/30',
   Failed:
     'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-200/80 dark:bg-rose-500/15 dark:text-rose-100 dark:ring-rose-500/30',
   'Not pushed':
@@ -93,8 +104,73 @@ export const RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS: Record<
 
 export function rightmovePublicationStatusBadgeClass(
   status: string | null | undefined,
+  options?: { outOfSync?: boolean },
 ) {
   return RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS[
-    formatRightmovePublicationStatus(status)
+    formatRightmovePublicationStatus(status, options)
   ];
+}
+
+export function isRightmoveDisposalFailed(
+  row: Pick<RightmoveDisposalStatusRow, 'rightmoveStatus'>,
+): boolean {
+  return row.rightmoveStatus === 'error';
+}
+
+export function isRightmoveDisposalUnsynced(
+  row: Pick<RightmoveDisposalStatusRow, 'outOfSync'>,
+): boolean {
+  return Boolean(row.outOfSync);
+}
+
+export function rightmoveDisposalIsOutOfSync(input: {
+  listingStatus: string;
+  listingUpdatedAt?: string | null;
+  rightmoveStatus: string;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  externalId?: string | null;
+  externalUrl?: string | null;
+  mediaCreatedAt?: Array<string | null | undefined>;
+}): boolean {
+  return Boolean(
+    getRightmoveChannelStatus({
+      listing: {
+        status: input.listingStatus,
+        updatedAt: input.listingUpdatedAt,
+      },
+      publications:
+        input.rightmoveStatus && input.rightmoveStatus !== 'none'
+          ? [
+              {
+                portal: 'rightmove',
+                status: input.rightmoveStatus,
+                lastSyncAt: input.lastSyncAt,
+                lastError: input.lastError,
+                externalId: input.externalId,
+                externalUrl: input.externalUrl,
+              },
+            ]
+          : [],
+      mediaCreatedAt: input.mediaCreatedAt,
+    }).outOfSync,
+  );
+}
+
+function rightmoveStatusRank(row: RightmoveDisposalStatusRow): number {
+  if (isRightmoveDisposalFailed(row)) return 0;
+  if (isRightmoveDisposalUnsynced(row)) return 1;
+  if (row.rightmoveStatus === 'none' || !row.rightmoveStatus) return 3;
+  if (row.rightmoveStatus === 'published') return 4;
+  return 2;
+}
+
+export function sortRightmoveDisposalRows(
+  rows: RightmoveDisposalStatusRow[],
+): RightmoveDisposalStatusRow[] {
+  return [...rows].sort((a, b) => {
+    const rank = rightmoveStatusRank(a) - rightmoveStatusRank(b);
+    if (rank !== 0) return rank;
+    return a.name.localeCompare(b.name, 'en');
+  });
 }
