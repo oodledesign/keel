@@ -586,7 +586,7 @@ class MeetingTranscriptsService {
     const created = data as MeetingTranscriptRow;
     queueBrainIndexSource(input.accountId, 'transcript', created.id);
 
-    await notifyMeetingTranscriptSyncedInApp({
+    void notifyMeetingTranscriptSyncedInApp({
       accountId: input.accountId,
       meetingTranscriptId: created.id,
       meetingTitle: created.title,

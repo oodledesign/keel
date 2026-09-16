@@ -56,6 +56,10 @@ async function resolveAccountSlug(
     .maybeSingle();
 
   if (error) {
+    console.warn('[meeting-in-app-notification] slug lookup failed', {
+      accountId,
+      error: error.message,
+    });
     return null;
   }
 
@@ -99,11 +103,15 @@ export async function notifyMeetingTranscriptSyncedInApp(params: {
 }): Promise<boolean> {
   try {
     const slug = await resolveAccountSlug(params.accountId, params.accountSlug);
-    const link = slug
-      ? meetingTranscriptDetailPath(slug, params.meetingTranscriptId)
-      : undefined;
+    if (!slug) {
+      // Canonical deep-link is required for idempotency; skip rather than
+      // insert an un-deduplicated linkless notification.
+      return false;
+    }
 
-    if (link && (await notificationExistsForLink(params.accountId, link))) {
+    const link = meetingTranscriptDetailPath(slug, params.meetingTranscriptId);
+
+    if (await notificationExistsForLink(params.accountId, link)) {
       return false;
     }
 
@@ -143,11 +151,13 @@ export async function notifyMeetingTasksReadyForReviewInApp(params: {
 
   try {
     const slug = await resolveAccountSlug(params.accountId, params.accountSlug);
-    const link = slug
-      ? meetingTasksReviewPath(slug, params.meetingTranscriptId)
-      : undefined;
+    if (!slug) {
+      return false;
+    }
 
-    if (link && (await notificationExistsForLink(params.accountId, link))) {
+    const link = meetingTasksReviewPath(slug, params.meetingTranscriptId);
+
+    if (await notificationExistsForLink(params.accountId, link)) {
       return false;
     }
 

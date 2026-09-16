@@ -344,7 +344,7 @@ export async function createNativeMeeting(input: {
   const row = data as NativeMeetingRow;
   queueBrainIndexSource(input.workspace.id, 'transcript', row.id);
 
-  await notifyMeetingTranscriptSyncedInApp({
+  void notifyMeetingTranscriptSyncedInApp({
     accountId: input.workspace.id,
     accountSlug: input.workspace.slug,
     meetingTranscriptId: row.id,

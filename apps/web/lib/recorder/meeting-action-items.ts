@@ -169,7 +169,7 @@ export async function extractAndPersistMeetingActionItems(
     throw new Error(error.message);
   }
 
-  await notifyMeetingTasksReadyForReviewInApp({
+  void notifyMeetingTasksReadyForReviewInApp({
     accountId: input.accountId,
     meetingTranscriptId: input.meetingTranscriptId,
     meetingTitle: input.title,

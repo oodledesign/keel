@@ -121,6 +121,21 @@ describe('notifyMeetingTranscriptSyncedInApp', () => {
     expect(createInAppNotification).not.toHaveBeenCalled();
   });
 
+  it('skips rather than insert a linkless notification when the slug is unknown', async () => {
+    const accounts = mockLookup({ table: 'accounts', data: { slug: null } });
+    adminFrom.mockReturnValue(accounts);
+
+    const fired = await notifyMeetingTranscriptSyncedInApp({
+      accountId,
+      meetingTranscriptId: meetingId,
+      meetingTitle: 'Weekly review',
+    });
+
+    expect(fired).toBe(false);
+    expect(createInAppNotification).not.toHaveBeenCalled();
+    expect(adminFrom).not.toHaveBeenCalledWith('notifications');
+  });
+
   it('looks up the workspace slug when the caller omits it', async () => {
     const accounts = mockLookup({
       table: 'accounts',
@@ -164,6 +179,22 @@ describe('notifyMeetingTasksReadyForReviewInApp', () => {
     expect(fired).toBe(false);
     expect(createInAppNotification).not.toHaveBeenCalled();
     expect(adminFrom).not.toHaveBeenCalled();
+  });
+
+  it('skips when the workspace slug cannot be resolved', async () => {
+    adminFrom.mockReturnValue(
+      mockLookup({ table: 'accounts', data: { slug: null } }),
+    );
+
+    const fired = await notifyMeetingTasksReadyForReviewInApp({
+      accountId,
+      meetingTranscriptId: meetingId,
+      meetingTitle: 'Kick-off',
+      taskCount: 2,
+    });
+
+    expect(fired).toBe(false);
+    expect(createInAppNotification).not.toHaveBeenCalled();
   });
 
   it('notifies once with a batched body and task-review deep link', async () => {

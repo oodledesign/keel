@@ -252,7 +252,7 @@ export async function POST(request: Request) {
 
   const slug = account?.slug as string | undefined;
   const meetingTitle = input.title?.trim() || 'Meeting transcript';
-  await notifyMeetingTranscriptSyncedInApp({
+  void notifyMeetingTranscriptSyncedInApp({
     accountId: targetAccountId,
     accountSlug: slug,
     meetingTranscriptId: row.id,
