@@ -55,6 +55,7 @@ import { inviteAllContactsToPortalAction } from '~/lib/clients/client-portal-inv
 import type { CommercialClientRole } from '~/lib/commercial/commercial-constants';
 import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
+import { markdownToPlainText } from '~/lib/markdown';
 
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
@@ -182,7 +183,8 @@ type ClientBookingPreview = Pick<
 };
 
 function formatNotePreview(note: string, maxLength = 120) {
-  const trimmed = note.trim().replace(/\s+/g, ' ');
+  const trimmed = markdownToPlainText(note);
+  if (!trimmed) return '';
   if (trimmed.length <= maxLength) return trimmed;
   return `${trimmed.slice(0, maxLength).trim()}…`;
 }

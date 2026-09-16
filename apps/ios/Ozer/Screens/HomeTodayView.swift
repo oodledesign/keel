@@ -569,7 +569,15 @@ struct HomeTodayView: View {
             VStack(spacing: 0) {
                 ForEach(Array(recentNotes.enumerated()), id: \.element.id) { index, note in
                     NavigationLink {
-                        NoteDetailView(note: note)
+                        if note.isPendingSync {
+                            NoteDetailView(note: note)
+                        } else {
+                            NoteEditorView(
+                                existing: note,
+                                categories: NoteCategory.system,
+                                embedsNavigation: false
+                            ) { _ in }
+                        }
                     } label: {
                         compactRow(title: note.displayTitle, subtitle: note.displaySubtitle)
                     }

@@ -15,6 +15,7 @@ export function markdownToPlainText(md: string): string {
     .replace(/^>\s?/gm, '')
     .replace(/^\s*[-*+]\s+/gm, '')
     .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/<\/?u>/gi, '')
     .replace(/(\*\*|__|\*|_|~~)/g, '')
     .replace(/\s+/g, ' ')
     .trim();

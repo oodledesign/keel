@@ -365,14 +365,12 @@ struct NoteDetailView: View {
                 Text(note.displayTitle)
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(OzerPalette.plum)
-                if note.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if NoteMarkdown.isBlank(note.body) {
                     Text("This note has no body yet.")
                         .font(.body)
                         .foregroundStyle(OzerPalette.plumMuted)
                 } else {
-                    Text(note.body)
-                        .font(.body)
-                        .foregroundStyle(OzerPalette.plum)
+                    NoteMarkdownView(markdown: note.body)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
