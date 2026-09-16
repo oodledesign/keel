@@ -26,8 +26,10 @@ import { GripVertical, LayoutGrid } from 'lucide-react';
 
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { toast } from '@kit/ui/sonner';
+import { TooltipProvider } from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
+import { KanbanColumnHeader } from '~/components/kanban/kanban-column-header';
 import {
   applyItemStatus,
   mergePendingStatuses,
@@ -39,7 +41,11 @@ import {
   fallbackProjectStatuses,
 } from '~/lib/projects/project-statuses';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
-import { kanbanColumnClassName } from '~/lib/projects/projects-kanban-layout';
+import {
+  isKanbanColumnMinimized,
+  kanbanBoardClassName,
+  kanbanColumnClassName,
+} from '~/lib/projects/projects-kanban-layout';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { updateJob } from '../_lib/server/server-actions';
@@ -223,8 +229,10 @@ export function ProjectsKanbanView({
       const overItem = localItems.find((row) => row.id === overItemId);
       if (overItem) {
         setOverColumn(columnForItem(overItem, columns, fallbackStatus));
+        return;
       }
     }
+    setOverColumn(null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -284,19 +292,21 @@ export function ProjectsKanbanView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
-        {columns.map((column) => (
-          <KanbanColumn
-            key={column.key}
-            status={column.key}
-            label={column.label}
-            items={itemsByColumn[column.key] ?? []}
-            detailPath={detailPath}
-            canEditJobs={canEditJobs}
-            isOver={overColumn === column.key && Boolean(activeId)}
-          />
-        ))}
-      </div>
+      <TooltipProvider delayDuration={0}>
+        <div className={kanbanBoardClassName}>
+          {columns.map((column) => (
+            <KanbanColumn
+              key={column.key}
+              status={column.key}
+              label={column.label}
+              items={itemsByColumn[column.key] ?? []}
+              detailPath={detailPath}
+              canEditJobs={canEditJobs}
+              isOver={overColumn === column.key && Boolean(activeId)}
+            />
+          ))}
+        </div>
+      </TooltipProvider>
 
       <DragOverlay>
         {activeItem ? <ProjectCardBody item={activeItem} overlay /> : null}
@@ -332,39 +342,33 @@ function KanbanColumn({
     .map((item) => `item:${item.id}`);
 
   const isEmpty = items.length === 0;
+  const columnIsOver = isOver || isDroppableOver;
+  const minimized = isKanbanColumnMinimized({
+    isEmpty,
+    isOver: columnIsOver,
+  });
 
   return (
     <section
       ref={setNodeRef}
       className={kanbanColumnClassName({
         isEmpty,
-        isOver: isOver || isDroppableOver,
+        isOver: columnIsOver,
       })}
     >
-      <header
-        className={cn(
-          'border-b border-[color:var(--workspace-shell-border)] py-2.5',
-          isEmpty ? 'px-1.5' : 'px-3',
-        )}
-      >
-        <h3
-          className={cn(
-            'text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase',
-            isEmpty && 'flex flex-col items-center gap-0.5 text-center',
-          )}
-          title={label}
-        >
-          <span className={cn(isEmpty && 'w-full truncate')}>{label}</span>
-          <span className={cn(!isEmpty && 'ml-2')}>{items.length}</span>
-        </h3>
-      </header>
+      <KanbanColumnHeader
+        label={label}
+        count={items.length}
+        minimized={minimized}
+        className={columnIsOver ? 'bg-[color:var(--ozer-accent)]/5' : undefined}
+      />
       <SortableContext
         items={sortableIds}
         strategy={verticalListSortingStrategy}
       >
         <div
           className={cn(
-            'flex flex-1 flex-col gap-2 overflow-y-auto p-2',
+            'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2',
             isEmpty && 'min-h-[200px]',
           )}
         >

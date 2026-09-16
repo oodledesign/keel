@@ -271,7 +271,7 @@ function BoardColumn({
       }`}
     >
       <div
-        className="flex items-center justify-between rounded-t-2xl px-4 py-3"
+        className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl px-4 py-3 backdrop-blur-sm"
         style={{ backgroundColor: column.tint }}
       >
         <div className="flex items-center gap-2">
