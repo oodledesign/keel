@@ -52,6 +52,7 @@ const panelClass =
 type Props = {
   connectedEmail: string | null;
   mailboxKind?: 'business' | 'personal';
+  accountId?: string | null;
   returnPath?: string;
   initialStyleNotes: string;
   initialSignature: string;
@@ -249,6 +250,7 @@ function TriageRuleList({
 export function EmailSettingsCard({
   connectedEmail,
   mailboxKind = 'personal',
+  accountId = null,
   returnPath = pathsConfig.app.personalEmailAssistant,
   initialStyleNotes,
   initialSignature,
@@ -344,7 +346,14 @@ export function EmailSettingsCard({
 
   const mailboxLabel =
     mailboxKind === 'business' ? 'Business Gmail' : 'Personal Gmail';
-  const connectHref = `/api/google/connect?mailbox=${mailboxKind}&returnPath=${encodeURIComponent(returnPath)}`;
+  const connectParams = new URLSearchParams({
+    mailbox: mailboxKind,
+    returnPath,
+  });
+  if (mailboxKind === 'business' && accountId) {
+    connectParams.set('accountId', accountId);
+  }
+  const connectHref = `/api/google/connect?${connectParams.toString()}`;
   const ignoredRows = flattenRules(rules, 'ignore');
   const priorityRows = flattenRules(rules, 'priority');
 
@@ -361,6 +370,7 @@ export function EmailSettingsCard({
         syncTriageToGmail,
         respectExistingGmailLabels,
         mailboxKind,
+        accountId,
       });
 
       if (!result.success) {
@@ -377,7 +387,10 @@ export function EmailSettingsCard({
     setDisconnecting(true);
     startTransition(async () => {
       try {
-        const result = await disconnectGmailConnection({ mailboxKind });
+        const result = await disconnectGmailConnection({
+          mailboxKind,
+          accountId,
+        });
 
         if (!result.success) {
           toast.error(result.error ?? `Could not disconnect ${mailboxLabel}`);
@@ -402,6 +415,7 @@ export function EmailSettingsCard({
       try {
         const result = await addEmailTriageRuleAction({
           mailboxKind,
+          accountId: accountId ?? undefined,
           action: addAction,
           scope: addScope,
           value,
@@ -429,6 +443,7 @@ export function EmailSettingsCard({
       try {
         const result = await removeEmailTriageRuleAction({
           mailboxKind,
+          accountId: accountId ?? undefined,
           action: row.action,
           scope: row.scope,
           value: row.value,

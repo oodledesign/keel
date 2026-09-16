@@ -1,5 +1,5 @@
 import { gmailFetch } from '@kit/gmail/client';
-import type { MailboxKind } from '@kit/google-auth';
+import type { GoogleMailboxScope, MailboxKind } from '@kit/google-auth';
 
 type GmailMetadataMessage = {
   payload?: {
@@ -20,12 +20,14 @@ export async function loadGmailReplyHeaders(
   userId: string,
   gmailMessageId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ) {
   const message = await gmailFetch<GmailMetadataMessage>(
     userId,
     `/messages/${encodeURIComponent(gmailMessageId)}?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc`,
     undefined,
     mailboxKind,
+    scope,
   );
 
   return {

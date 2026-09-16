@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { MailboxKind } from '@kit/google-auth';
+import type { GoogleMailboxScope, MailboxKind } from '@kit/google-auth';
 
 import { GmailApiError, gmailFetch } from './client';
 import {
@@ -34,6 +34,7 @@ type SyncContext = {
   userId: string;
   connectionId: string;
   mailboxKind: MailboxKind;
+  scope: GoogleMailboxScope;
 };
 
 function isUnread(labelIds: string[] | null | undefined) {
@@ -74,14 +75,20 @@ async function mapPool<T, R>(
 async function requireSyncContext(
   userId: string,
   mailboxKind: MailboxKind,
+  scope?: GoogleMailboxScope,
 ): Promise<SyncContext> {
-  const connectionId = await resolveConnectionId(userId, mailboxKind);
+  const connectionId = await resolveConnectionId(userId, mailboxKind, scope);
 
   if (!connectionId) {
     throw new Error('Google account is not connected');
   }
 
-  return { userId, connectionId, mailboxKind };
+  return {
+    userId,
+    connectionId,
+    mailboxKind,
+    scope: { ...scope, connectionId },
+  };
 }
 
 async function fetchMessage(
@@ -93,6 +100,7 @@ async function fetchMessage(
     `/messages/${encodeURIComponent(messageId)}?format=full`,
     undefined,
     ctx.mailboxKind,
+    ctx.scope,
   );
 }
 
@@ -117,6 +125,7 @@ async function persistMessage(ctx: SyncContext, message: GmailMessage) {
     labelIds: message.labelIds ?? [],
     isUnread: isUnread(message.labelIds),
     lastMessageAt: parsed.internalDate,
+    accountId: ctx.scope.accountId,
   });
 
   await upsertEmailMessage({
@@ -165,6 +174,7 @@ async function listPendingBackfillMessageIds(
       `/messages?${search.toString()}`,
       undefined,
       ctx.mailboxKind,
+      ctx.scope,
     );
 
     const pageIds = (page.messages ?? [])
@@ -206,6 +216,7 @@ async function fetchProfileHistoryId(ctx: SyncContext): Promise<string | null> {
     '/profile',
     undefined,
     ctx.mailboxKind,
+    ctx.scope,
   );
   return profile.historyId ?? null;
 }
@@ -213,8 +224,9 @@ async function fetchProfileHistoryId(ctx: SyncContext): Promise<string | null> {
 export async function backfill(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailSyncResult> {
-  const ctx = await requireSyncContext(userId, mailboxKind);
+  const ctx = await requireSyncContext(userId, mailboxKind, scope);
   const { pending, exhausted } = await listPendingBackfillMessageIds(
     ctx,
     BACKFILL_MAX_MESSAGES_PER_RUN,
@@ -231,7 +243,7 @@ export async function backfill(
 
   if (backfillComplete) {
     const historyId = await fetchProfileHistoryId(ctx);
-    await saveAssistantCursor(userId, historyId, mailboxKind);
+    await saveAssistantCursor(userId, historyId, mailboxKind, ctx.scope);
 
     return {
       mode: 'backfill',
@@ -287,14 +299,15 @@ function collectHistoryMessageIds(
 export async function incrementalSync(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailSyncResult> {
-  const settings = await loadAssistantSettings(userId, mailboxKind);
+  const settings = await loadAssistantSettings(userId, mailboxKind, scope);
 
   if (!settings?.last_history_id) {
-    return backfill(userId, mailboxKind);
+    return backfill(userId, mailboxKind, scope);
   }
 
-  const ctx = await requireSyncContext(userId, mailboxKind);
+  const ctx = await requireSyncContext(userId, mailboxKind, scope);
 
   try {
     let processed = 0;
@@ -319,7 +332,13 @@ export async function incrementalSync(
         history?: Array<Record<string, unknown>>;
         historyId?: string | null;
         nextPageToken?: string | null;
-      }>(ctx.userId, `/history?${search.toString()}`, undefined, mailboxKind);
+      }>(
+        ctx.userId,
+        `/history?${search.toString()}`,
+        undefined,
+        mailboxKind,
+        ctx.scope,
+      );
 
       const messageIds = collectHistoryMessageIds(page.history);
 
@@ -357,7 +376,7 @@ export async function incrementalSync(
     });
     processed += toFetch.length;
 
-    await saveAssistantCursor(userId, latestHistoryId, mailboxKind);
+    await saveAssistantCursor(userId, latestHistoryId, mailboxKind, ctx.scope);
 
     return {
       mode: 'incremental',
@@ -366,7 +385,7 @@ export async function incrementalSync(
     };
   } catch (error) {
     if (error instanceof GmailApiError && error.status === 404) {
-      return backfill(userId, mailboxKind);
+      return backfill(userId, mailboxKind, scope);
     }
 
     throw error;
@@ -376,14 +395,15 @@ export async function incrementalSync(
 export async function syncMailbox(
   userId: string,
   mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<GmailSyncResult> {
-  const settings = await loadAssistantSettings(userId, mailboxKind);
+  const settings = await loadAssistantSettings(userId, mailboxKind, scope);
 
   if (!settings?.last_history_id) {
-    return backfill(userId, mailboxKind);
+    return backfill(userId, mailboxKind, scope);
   }
 
-  return incrementalSync(userId, mailboxKind);
+  return incrementalSync(userId, mailboxKind, scope);
 }
 
 type GmailThreadResponse = {
@@ -403,10 +423,15 @@ export async function syncGmailThread(
   options?: {
     format?: 'full' | 'metadata';
     mailboxKind?: MailboxKind;
+    accountId?: string | null;
+    connectionId?: string | null;
   },
 ): Promise<{ messagesProcessed: number; latestIsSent: boolean }> {
   const mailboxKind = options?.mailboxKind ?? 'business';
-  const ctx = await requireSyncContext(userId, mailboxKind);
+  const ctx = await requireSyncContext(userId, mailboxKind, {
+    accountId: options?.accountId,
+    connectionId: options?.connectionId,
+  });
   const format = options?.format ?? 'full';
   const search = new URLSearchParams({ format });
 
@@ -421,6 +446,7 @@ export async function syncGmailThread(
     `/threads/${encodeURIComponent(gmailThreadId)}?${search.toString()}`,
     undefined,
     mailboxKind,
+    ctx.scope,
   );
 
   const messages = [...(thread.messages ?? [])].sort((a, b) => {

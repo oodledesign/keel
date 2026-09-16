@@ -58,11 +58,17 @@ function googleConnectionsTable() {
 
 export async function loadGoogleConnectionMeta(
   userId: string,
+  accountId?: string | null,
 ): Promise<GoogleConnectionMeta | null> {
+  if (!accountId?.trim()) {
+    return null;
+  }
+
   const { data, error } = await googleConnectionsTable()
     .select('scopes')
     .eq('user_id', userId)
     .eq('mailbox_kind', 'business')
+    .eq('account_id', accountId.trim())
     .maybeSingle();
 
   if (error) {
@@ -83,8 +89,11 @@ export function hasGmailVacationScope(
   return (scopes ?? []).includes(GMAIL_SETTINGS_BASIC_SCOPE);
 }
 
-export async function getValidAccessToken(userId: string): Promise<string> {
-  const connection = await loadGoogleConnectionMeta(userId);
+export async function getValidAccessToken(
+  userId: string,
+  accountId?: string | null,
+): Promise<string> {
+  const connection = await loadGoogleConnectionMeta(userId, accountId);
 
   if (!connection) {
     throw new Error('Google account is not connected');
@@ -96,7 +105,7 @@ export async function getValidAccessToken(userId: string): Promise<string> {
     throw error;
   }
 
-  return refreshGoogleAccessToken(userId, 'business');
+  return refreshGoogleAccessToken(userId, 'business', { accountId });
 }
 
 function isScopeMissingError(error: unknown): boolean {
@@ -139,8 +148,9 @@ function plainTextToHtml(text: string): string {
 async function gmailVacationRequest(
   userId: string,
   init: RequestInit,
+  accountId?: string | null,
 ): Promise<Response> {
-  const accessToken = await getValidAccessToken(userId);
+  const accessToken = await getValidAccessToken(userId, accountId);
 
   return fetch(VACATION_URL, {
     ...init,
@@ -170,8 +180,9 @@ function mapVacationApiError(status: number, body: string): VacationSyncResult {
 
 export async function getGmailVacationSettings(
   userId: string,
+  accountId?: string | null,
 ): Promise<GmailVacationSettings | null> {
-  const connection = await loadGoogleConnectionMeta(userId);
+  const connection = await loadGoogleConnectionMeta(userId, accountId);
 
   if (!connection) {
     return null;
@@ -182,7 +193,11 @@ export async function getGmailVacationSettings(
   }
 
   try {
-    const response = await gmailVacationRequest(userId, { method: 'GET' });
+    const response = await gmailVacationRequest(
+      userId,
+      { method: 'GET' },
+      accountId,
+    );
 
     if (!response.ok) {
       console.error(
@@ -206,6 +221,7 @@ export async function setGmailVacationOn(
   subject?: string,
   endDate?: Date | null,
   senderName?: string | null,
+  accountId?: string | null,
 ): Promise<VacationSyncResult> {
   try {
     const signedMessage = senderName?.trim()
@@ -221,10 +237,14 @@ export async function setGmailVacationOn(
       endTime: endDate ? endDate.getTime().toString() : undefined,
     };
 
-    const response = await gmailVacationRequest(userId, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
+    const response = await gmailVacationRequest(
+      userId,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+      accountId,
+    );
 
     if (!response.ok) {
       return mapVacationApiError(response.status, await response.text());
@@ -258,19 +278,24 @@ export async function setGmailVacationOn(
 
 export async function setGmailVacationOff(
   userId: string,
+  accountId?: string | null,
 ): Promise<VacationSyncResult> {
   try {
-    const existing = await getGmailVacationSettings(userId);
+    const existing = await getGmailVacationSettings(userId, accountId);
 
     const payload: GmailVacationSettings = {
       ...(existing ?? {}),
       enableAutoReply: false,
     };
 
-    const response = await gmailVacationRequest(userId, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
+    const response = await gmailVacationRequest(
+      userId,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+      accountId,
+    );
 
     if (!response.ok) {
       return mapVacationApiError(response.status, await response.text());

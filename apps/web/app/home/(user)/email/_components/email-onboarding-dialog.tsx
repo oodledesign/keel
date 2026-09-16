@@ -12,8 +12,8 @@ import {
   DialogTitle,
 } from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import { completeEmailOnboarding } from '../_lib/actions/email-assistant-actions';
 
@@ -21,19 +21,21 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mailboxKind: 'business' | 'personal';
+  accountId?: string | null;
   accountSlug?: string | null;
   onCompleted?: () => void;
 };
 
-type StepId =
-  | 'welcome'
-  | 'sync'
-  | 'respect'
-  | 'drafts'
-  | 'send'
-  | 'done';
+type StepId = 'welcome' | 'sync' | 'respect' | 'drafts' | 'send' | 'done';
 
-const STEPS: StepId[] = ['welcome', 'sync', 'respect', 'drafts', 'send', 'done'];
+const STEPS: StepId[] = [
+  'welcome',
+  'sync',
+  'respect',
+  'drafts',
+  'send',
+  'done',
+];
 
 function StepToggle({
   id,
@@ -77,6 +79,7 @@ export function EmailOnboardingDialog({
   open,
   onOpenChange,
   mailboxKind,
+  accountId,
   accountSlug,
   onCompleted,
 }: Props) {
@@ -111,6 +114,7 @@ export function EmailOnboardingDialog({
     startTransition(async () => {
       const result = await completeEmailOnboarding({
         mailboxKind,
+        accountId,
         accountSlug: accountSlug ?? undefined,
         syncTriageToGmail: skipped ? false : syncTriageToGmail,
         respectExistingGmailLabels,
@@ -129,7 +133,9 @@ export function EmailOnboardingDialog({
       }
 
       toast.success(
-        skipped ? 'You can finish email setup anytime in Settings' : 'Email setup complete',
+        skipped
+          ? 'You can finish email setup anytime in Settings'
+          : 'Email setup complete',
       );
       onCompleted?.();
       setStepIndex(0);

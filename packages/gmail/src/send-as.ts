@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { GoogleMailboxScope, MailboxKind } from '@kit/google-auth';
+
 import { gmailFetch } from './client';
 import { htmlSignatureToPlain } from './mime';
 
@@ -46,10 +48,15 @@ function resolveSignatureContent(
 /** Default Gmail "Send mail as" signature (requires gmail.settings.basic scope). */
 export async function getGmailDefaultSignature(
   userId: string,
+  mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<ResolvedEmailSignature> {
   const response = await gmailFetch<SendAsListResponse>(
     userId,
     '/settings/sendAs',
+    undefined,
+    mailboxKind,
+    scope,
   );
 
   const entries = response.sendAs ?? [];
@@ -63,10 +70,15 @@ export async function getGmailDefaultSignature(
 
 export async function getGmailDefaultSendAs(
   userId: string,
+  mailboxKind: MailboxKind = 'business',
+  scope?: GoogleMailboxScope,
 ): Promise<{ email: string; displayName: string | null } | null> {
   const response = await gmailFetch<SendAsListResponse>(
     userId,
     '/settings/sendAs',
+    undefined,
+    mailboxKind,
+    scope,
   );
 
   const entries = response.sendAs ?? [];

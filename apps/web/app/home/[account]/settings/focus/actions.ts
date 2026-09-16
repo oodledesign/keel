@@ -322,7 +322,7 @@ export async function autoDisableHolidayMode(accountId: string): Promise<{
     };
   }
 
-  const gmailSync = await setGmailVacationOff(userId);
+  const gmailSync = await setGmailVacationOff(userId, accountId);
   if (!gmailSync.success) {
     console.error(
       '[focus] autoDisableHolidayMode Gmail sync:',
@@ -379,12 +379,12 @@ export async function reconcileGmailVacationWithHolidayMode(
     };
   }
 
-  const gmailStatus = await getGmailVacationSettings(userId);
+  const gmailStatus = await getGmailVacationSettings(userId, accountId);
   if (!gmailStatus?.enableAutoReply) {
     return { success: true };
   }
 
-  return setGmailVacationOff(userId);
+  return setGmailVacationOff(userId, accountId);
 }
 
 async function assertAuthenticatedUserId(
@@ -428,6 +428,7 @@ function buildHolidayGmailMessage(
 
 export async function getGmailVacationStatus(
   userId: string,
+  accountId?: string | null,
 ): Promise<GmailVacationStatus> {
   const authenticatedUserId = await assertAuthenticatedUserId(userId);
 
@@ -435,7 +436,10 @@ export async function getGmailVacationStatus(
     return 'not_connected';
   }
 
-  const connection = await loadGoogleConnectionMeta(authenticatedUserId);
+  const connection = await loadGoogleConnectionMeta(
+    authenticatedUserId,
+    accountId,
+  );
 
   if (!connection) {
     return 'not_connected';
@@ -445,7 +449,7 @@ export async function getGmailVacationStatus(
     return 'scope_missing';
   }
 
-  return getGmailVacationSettings(authenticatedUserId);
+  return getGmailVacationSettings(authenticatedUserId, accountId);
 }
 
 export async function syncHolidayModeToGmail(
@@ -482,14 +486,16 @@ export async function syncHolidayModeToGmail(
       buildHolidayGmailSubject(settings.holiday_mode_label),
       endDate,
       settings.ooo_sender_name,
+      accountId,
     );
   }
 
-  return setGmailVacationOff(authenticatedUserId);
+  return setGmailVacationOff(authenticatedUserId, accountId);
 }
 
 export async function turnOffGmailVacationResponder(
   userId: string,
+  accountId?: string | null,
 ): Promise<VacationSyncResult> {
   const authenticatedUserId = await assertAuthenticatedUserId(userId);
 
@@ -500,5 +506,5 @@ export async function turnOffGmailVacationResponder(
     };
   }
 
-  return setGmailVacationOff(authenticatedUserId);
+  return setGmailVacationOff(authenticatedUserId, accountId);
 }

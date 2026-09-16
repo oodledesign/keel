@@ -148,7 +148,11 @@ export async function suggestPipelineLeadForThread(
     return null;
   }
 
-  const owner = await resolveDraftOwnerContext(params.userId);
+  const owner = await resolveDraftOwnerContext(
+    params.userId,
+    params.mailboxKind ?? 'business',
+    { accountId },
+  );
   if (!owner) {
     return null;
   }

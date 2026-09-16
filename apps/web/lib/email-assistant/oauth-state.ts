@@ -5,6 +5,7 @@ export type GoogleOAuthStatePayload = {
   returnPath: string;
   exp: number;
   mailboxKind?: 'business' | 'personal';
+  accountId?: string;
 };
 
 function stateSecret() {
@@ -74,6 +75,13 @@ export function verifyGoogleOAuthState(
       typeof parsed.returnPath !== 'string' ||
       typeof parsed.exp !== 'number' ||
       Date.now() > parsed.exp
+    ) {
+      return null;
+    }
+
+    if (
+      parsed.accountId != null &&
+      (typeof parsed.accountId !== 'string' || !parsed.accountId.trim())
     ) {
       return null;
     }

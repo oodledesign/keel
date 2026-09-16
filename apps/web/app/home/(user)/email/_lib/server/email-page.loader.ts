@@ -1,12 +1,15 @@
 import 'server-only';
 
-import { isUserVisibleLabel, listLabels } from '@kit/gmail';
-
 import { cache } from 'react';
 
+import { isUserVisibleLabel, listLabels } from '@kit/gmail';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadPersonalSidebarWorkspaces } from '~/home/(user)/_lib/server/personal-sidebar-workspaces.loader';
+import {
+  applyGoogleConnectionScope,
+  isBusinessMailboxUnscoped,
+} from '~/lib/email-assistant/google-connection-scope';
 import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { mapEmailThreadRow } from '~/lib/email-assistant/map-email-thread-row';
 import {
@@ -44,16 +47,23 @@ export type LoadEmailPageOptions = {
 export const loadEmailPageData = cache(
   async (options?: LoadEmailPageOptions): Promise<EmailPageInitialData> => {
     const mailboxKind = options?.mailboxKind ?? 'personal';
+    const preferredAccountId = options?.preferredAccountId ?? null;
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
     const [connectionResult, workspaces] = await Promise.all([
-      client
-        .from('google_connections')
-        .select('id, google_email, connected_at')
-        .eq('user_id', user.id)
-        .eq('mailbox_kind', mailboxKind)
-        .maybeSingle(),
+      isBusinessMailboxUnscoped(mailboxKind, preferredAccountId)
+        ? Promise.resolve({ data: null, error: null })
+        : applyGoogleConnectionScope(
+            client
+              .from('google_connections')
+              .select('id, google_email, connected_at'),
+            {
+              userId: user.id,
+              mailboxKind,
+              accountId: preferredAccountId,
+            },
+          ).maybeSingle(),
       loadPersonalSidebarWorkspaces(),
     ]);
 
@@ -118,7 +128,9 @@ export const loadEmailPageData = cache(
 
     if (connection) {
       try {
-        const labels = await listLabels(user.id, mailboxKind);
+        const labels = await listLabels(user.id, mailboxKind, {
+          accountId: preferredAccountId,
+        });
         gmailLabels = labels
           .filter(isUserVisibleLabel)
           .map((label) => ({
@@ -195,9 +207,7 @@ export async function loadEmailThreadDetailFromDb(
 ): Promise<EmailThreadSummary | null> {
   const client = getSupabaseServerClient();
   const user =
-    userId != null
-      ? { id: userId }
-      : await requireUserInServerComponent();
+    userId != null ? { id: userId } : await requireUserInServerComponent();
 
   const { data, error } = await client
     .from('email_threads')

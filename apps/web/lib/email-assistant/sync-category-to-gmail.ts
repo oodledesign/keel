@@ -96,8 +96,11 @@ export async function syncCategoryToGmail(input: {
       input.userId,
       targetName,
       mailboxKind,
+      { connectionId: threadRow.connection_id },
     );
-    const allLabels = await listLabels(input.userId, mailboxKind);
+    const allLabels = await listLabels(input.userId, mailboxKind, {
+      connectionId: threadRow.connection_id,
+    });
     const otherOzerLabelIds = allLabels
       .filter(
         (label) =>
@@ -120,6 +123,7 @@ export async function syncCategoryToGmail(input: {
       threadRow.gmail_thread_id,
       { addLabelIds, removeLabelIds },
       mailboxKind,
+      { connectionId: threadRow.connection_id },
     );
 
     const nextLabelIds = applyLabelIdChanges(
@@ -186,14 +190,6 @@ async function resolveMailboxKindForThread(
     }
   }
 
-  const { data: connections } = await admin
-    .from('google_connections')
-    .select('mailbox_kind')
-    .eq('user_id', userId);
-
-  const rows = (connections ?? []) as Array<{ mailbox_kind?: string | null }>;
-  const preferred =
-    rows.find((row) => row.mailbox_kind === 'business') ?? rows[0];
-
-  return preferred?.mailbox_kind === 'personal' ? 'personal' : 'business';
+  // Missing or unknown connection — do not guess another workspace's mailbox.
+  return 'business';
 }

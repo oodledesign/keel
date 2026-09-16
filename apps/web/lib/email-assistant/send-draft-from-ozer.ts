@@ -95,6 +95,9 @@ export async function buildSendDraftPreview(input: {
     input.userId,
     gmailMessageId,
     mailboxKind,
+    {
+      connectionId: (thread as { connection_id?: string | null }).connection_id,
+    },
   );
 
   const ownerEmail =
@@ -124,26 +127,6 @@ export async function sendDraftFromOzer(input: {
 }): Promise<{ gmailMessageId: string | null }> {
   const admin = getSupabaseServerAdminClient();
 
-  const { data: settings } = await admin
-    .from('email_assistant_settings')
-    .select('allow_send_from_ozer, connection_id')
-    .eq('user_id', input.userId)
-    .limit(1)
-    .maybeSingle();
-
-  if (
-    !(settings as { allow_send_from_ozer?: boolean } | null)
-      ?.allow_send_from_ozer
-  ) {
-    throw new Error('Send from Ozer is disabled in email settings');
-  }
-
-  const { gmailDraftId } = await saveDraftToGmail({
-    userId: input.userId,
-    draftId: input.draftId,
-    bodyText: input.bodyText,
-  });
-
   const { data: draftRow } = await admin
     .from('email_drafts')
     .select('thread_id')
@@ -162,13 +145,37 @@ export async function sendDraftFromOzer(input: {
     .eq('user_id', input.userId)
     .maybeSingle();
 
+  const settingsConnectionId = (
+    threadForConnection as { connection_id?: string | null } | null
+  )?.connection_id;
+
+  if (!settingsConnectionId) {
+    throw new Error('Gmail is not connected for this workspace');
+  }
+
+  const { data: settings } = await admin
+    .from('email_assistant_settings')
+    .select('allow_send_from_ozer, connection_id')
+    .eq('connection_id', settingsConnectionId)
+    .maybeSingle();
+
+  if (
+    !(settings as { allow_send_from_ozer?: boolean } | null)
+      ?.allow_send_from_ozer
+  ) {
+    throw new Error('Send from Ozer is disabled in email settings');
+  }
+
+  const { gmailDraftId } = await saveDraftToGmail({
+    userId: input.userId,
+    draftId: input.draftId,
+    bodyText: input.bodyText,
+  });
+
   const { data: connection } = await admin
     .from('google_connections')
     .select('mailbox_kind')
-    .eq(
-      'id',
-      (threadForConnection as { connection_id?: string }).connection_id ?? '',
-    )
+    .eq('id', settingsConnectionId)
     .maybeSingle();
 
   const mailboxKind =
@@ -177,7 +184,9 @@ export async function sendDraftFromOzer(input: {
       ? 'personal'
       : 'business';
 
-  const sent = await sendDraft(input.userId, gmailDraftId, mailboxKind);
+  const sent = await sendDraft(input.userId, gmailDraftId, mailboxKind, {
+    connectionId: settingsConnectionId,
+  });
   const gmailMessageId = sent.message?.id ?? null;
   const threadId = draftRow.thread_id as string;
 
@@ -217,6 +226,8 @@ export async function sendDraftFromOzer(input: {
       await syncGmailThread(input.userId, gmailThreadId, {
         format: 'metadata',
         mailboxKind,
+        connectionId: (threadForConnection as { connection_id?: string | null })
+          .connection_id,
       });
     } catch {
       // Best-effort sync after send.

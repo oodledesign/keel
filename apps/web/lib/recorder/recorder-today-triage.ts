@@ -76,13 +76,23 @@ async function loadMailboxConnection(
   admin: SupabaseClient,
   userId: string,
   mailboxKind: MailboxKind,
+  accountId?: string | null,
 ): Promise<string | null> {
-  const { data, error } = await admin
+  if (mailboxKind === 'business' && !accountId) {
+    return null;
+  }
+
+  let query = admin
     .from('google_connections')
     .select('id')
     .eq('user_id', userId)
-    .eq('mailbox_kind', mailboxKind)
-    .maybeSingle();
+    .eq('mailbox_kind', mailboxKind);
+
+  if (mailboxKind === 'business' && accountId) {
+    query = query.eq('account_id', accountId);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     if (isMissingTableError(error)) {
@@ -127,7 +137,7 @@ export async function loadRecorderTodayTriage(
 
   const [personalConnectionId, businessConnectionId] = await Promise.all([
     loadMailboxConnection(admin, userId, 'personal'),
-    loadMailboxConnection(admin, userId, 'business'),
+    loadMailboxConnection(admin, userId, 'business', preferredAccountId),
   ]);
 
   const mailboxKind: MailboxKind | null = personalConnectionId

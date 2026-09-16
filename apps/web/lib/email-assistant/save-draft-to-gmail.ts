@@ -130,23 +130,12 @@ export async function saveDraftToGmail(input: {
     throw new Error('Draft body is required');
   }
 
-  const [{ data: thread }, { data: connection }, { data: settings }] =
-    await Promise.all([
-      admin
-        .from('email_threads')
-        .select('id, gmail_thread_id, subject, connection_id')
-        .eq('id', draftRecord.thread_id)
-        .eq('user_id', input.userId)
-        .maybeSingle(),
-      admin
-        .from('google_connections')
-        .select('id, google_email, mailbox_kind')
-        .eq('user_id', input.userId),
-      admin
-        .from('email_assistant_settings')
-        .select('signature, signature_is_html, connection_id')
-        .eq('user_id', input.userId),
-    ]);
+  const { data: thread } = await admin
+    .from('email_threads')
+    .select('id, gmail_thread_id, subject, connection_id')
+    .eq('id', draftRecord.thread_id)
+    .eq('user_id', input.userId)
+    .maybeSingle();
 
   if (!thread) {
     throw new Error('Thread not found');
@@ -158,51 +147,41 @@ export async function saveDraftToGmail(input: {
     connection_id: string | null;
   };
 
-  const connections = (connection ?? []) as Array<{
-    id?: string;
-    google_email?: string | null;
-    mailbox_kind?: string | null;
-  }>;
+  if (!threadRecord.connection_id) {
+    throw new Error('Gmail is not connected for this workspace');
+  }
 
-  // Prefer the mailbox that owns this thread; fall back to business.
-  let ownerConnection =
-    connections.find((row) => row.id === threadRecord.connection_id) ?? null;
-
-  if (!ownerConnection && threadRecord.connection_id) {
-    const { data: byId } = await admin
+  const [{ data: ownerConnection }, { data: settingsRow }] = await Promise.all([
+    admin
       .from('google_connections')
       .select('id, google_email, mailbox_kind')
       .eq('id', threadRecord.connection_id)
-      .maybeSingle();
-    ownerConnection =
-      (byId as {
-        id?: string;
-        google_email?: string | null;
-        mailbox_kind?: string | null;
-      } | null) ?? null;
-  }
+      .eq('user_id', input.userId)
+      .maybeSingle(),
+    admin
+      .from('email_assistant_settings')
+      .select('signature, signature_is_html, connection_id')
+      .eq('connection_id', threadRecord.connection_id)
+      .maybeSingle(),
+  ]);
 
   if (!ownerConnection) {
-    ownerConnection =
-      connections.find((row) => row.mailbox_kind === 'business') ??
-      connections[0] ??
-      null;
+    throw new Error('Gmail is not connected for this workspace');
   }
 
-  const settingsRows = (settings ?? []) as Array<{
+  const ownerConnectionRow = ownerConnection as {
+    id?: string;
+    google_email?: string | null;
+    mailbox_kind?: string | null;
+  };
+  const settingsRowTyped = settingsRow as {
     signature?: string | null;
     signature_is_html?: boolean | null;
     connection_id?: string | null;
-  }>;
-  const settingsRow =
-    settingsRows.find(
-      (row) => row.connection_id === threadRecord.connection_id,
-    ) ??
-    settingsRows.find((row) => row.connection_id === ownerConnection?.id) ??
-    settingsRows[0];
+  } | null;
 
   const mailboxKind =
-    ownerConnection?.mailbox_kind === 'personal' ? 'personal' : 'business';
+    ownerConnectionRow.mailbox_kind === 'personal' ? 'personal' : 'business';
 
   let replyMessageGmailId: string | null = null;
 
@@ -242,14 +221,17 @@ export async function saveDraftToGmail(input: {
     input.userId,
     replyMessageGmailId,
     mailboxKind,
+    { connectionId: threadRecord.connection_id },
   );
 
-  const ownerEmail = ownerConnection?.google_email ?? undefined;
+  const ownerEmail = ownerConnectionRow.google_email ?? undefined;
 
   const signature = await resolveEmailAssistantSignature(
     input.userId,
-    settingsRow?.signature ?? null,
-    Boolean(settingsRow?.signature_is_html),
+    settingsRowTyped?.signature ?? null,
+    Boolean(settingsRowTyped?.signature_is_html),
+    mailboxKind,
+    { connectionId: threadRecord.connection_id },
   );
 
   const recipients = buildReplyAllRecipients({
@@ -281,6 +263,7 @@ export async function saveDraftToGmail(input: {
         draftRecord.gmail_draft_id,
         raw,
         mailboxKind,
+        { connectionId: threadRecord.connection_id },
       )
     : await createDraft(
         input.userId,
@@ -289,6 +272,7 @@ export async function saveDraftToGmail(input: {
           raw,
         },
         mailboxKind,
+        { connectionId: threadRecord.connection_id },
       );
 
   const gmailDraftId = gmailDraft.id ?? draftRecord.gmail_draft_id;

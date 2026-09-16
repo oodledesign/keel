@@ -33,6 +33,10 @@ import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-sour
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 import { EMAIL_THREAD_CATEGORIES } from './email-thread-categories';
+import {
+  applyGoogleConnectionScope,
+  isBusinessMailboxUnscoped,
+} from './google-connection-scope';
 
 const IgnoreEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),
@@ -54,6 +58,7 @@ const ModifyEmailThreadLabelsSchema = z.object({
 
 const ListGmailLabelsSchema = z.object({
   mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  accountId: z.string().uuid().optional(),
   includeSystem: z.boolean().optional(),
 });
 
@@ -82,6 +87,7 @@ const IgnoreSuggestedEmailRuleSchema = SuggestedEmailTaskSchema.extend({
 
 const RemoveIgnoredEmailRuleSchema = z.object({
   mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  accountId: z.string().uuid().optional(),
   scope: z.enum(['sender', 'domain']),
   value: z.string().min(1).max(320),
 });
@@ -98,6 +104,7 @@ const AddEmailTriageRuleFromThreadSchema = z.object({
 
 const AddEmailTriageRuleSchema = z.object({
   mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  accountId: z.string().uuid().optional(),
   action: EmailTriageActionSchema,
   scope: EmailTriageScopeSchema,
   value: z.string().min(1).max(320),
@@ -105,6 +112,7 @@ const AddEmailTriageRuleSchema = z.object({
 
 const RemoveEmailTriageRuleSchema = z.object({
   mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  accountId: z.string().uuid().optional(),
   action: EmailTriageActionSchema,
   scope: EmailTriageScopeSchema,
   value: z.string().min(1).max(320),
@@ -234,10 +242,12 @@ export const listGmailLabelsAction = enhanceAction(
       ? await listAllMailboxGmailLabels({
           userId: user.id,
           mailboxKind: data.mailboxKind,
+          accountId: data.accountId,
         })
       : await listMailboxGmailLabels({
           userId: user.id,
           mailboxKind: data.mailboxKind,
+          accountId: data.accountId,
         });
 
     return {
@@ -432,12 +442,19 @@ export const ignoreSuggestedEmailSenderAction = enhanceAction(
 export const removeIgnoredEmailSenderAction = enhanceAction(
   async (data, user) => {
     const client = getSupabaseServerClient();
-    const { data: connection, error: connectionError } = await client
-      .from('google_connections')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('mailbox_kind', data.mailboxKind)
-      .maybeSingle();
+    if (isBusinessMailboxUnscoped(data.mailboxKind, data.accountId)) {
+      throw new Error('Connect Gmail from a workspace Emails page');
+    }
+
+    const { data: connection, error: connectionError } =
+      await applyGoogleConnectionScope(
+        client.from('google_connections').select('id'),
+        {
+          userId: user.id,
+          mailboxKind: data.mailboxKind,
+          accountId: data.accountId,
+        },
+      ).maybeSingle();
 
     if (connectionError) {
       throw new Error(connectionError.message);
@@ -499,12 +516,19 @@ export const addEmailTriageRuleFromThreadAction = enhanceAction(
 export const addEmailTriageRuleAction = enhanceAction(
   async (data, user) => {
     const client = getSupabaseServerClient();
-    const { data: connection, error: connectionError } = await client
-      .from('google_connections')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('mailbox_kind', data.mailboxKind)
-      .maybeSingle();
+    if (isBusinessMailboxUnscoped(data.mailboxKind, data.accountId)) {
+      throw new Error('Connect Gmail from a workspace Emails page');
+    }
+
+    const { data: connection, error: connectionError } =
+      await applyGoogleConnectionScope(
+        client.from('google_connections').select('id'),
+        {
+          userId: user.id,
+          mailboxKind: data.mailboxKind,
+          accountId: data.accountId,
+        },
+      ).maybeSingle();
 
     if (connectionError) {
       throw new Error(connectionError.message);
@@ -543,12 +567,19 @@ export const addEmailTriageRuleAction = enhanceAction(
 export const removeEmailTriageRuleAction = enhanceAction(
   async (data, user) => {
     const client = getSupabaseServerClient();
-    const { data: connection, error: connectionError } = await client
-      .from('google_connections')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('mailbox_kind', data.mailboxKind)
-      .maybeSingle();
+    if (isBusinessMailboxUnscoped(data.mailboxKind, data.accountId)) {
+      throw new Error('Connect Gmail from a workspace Emails page');
+    }
+
+    const { data: connection, error: connectionError } =
+      await applyGoogleConnectionScope(
+        client.from('google_connections').select('id'),
+        {
+          userId: user.id,
+          mailboxKind: data.mailboxKind,
+          accountId: data.accountId,
+        },
+      ).maybeSingle();
 
     if (connectionError) {
       throw new Error(connectionError.message);

@@ -3,6 +3,10 @@ import {
   ACTIONABLE_EMAIL_CATEGORIES,
   isActionableEmailCategory,
 } from '~/lib/email-assistant/email-thread-categories';
+import {
+  applyGoogleConnectionScope,
+  isBusinessMailboxUnscoped,
+} from '~/lib/email-assistant/google-connection-scope';
 import { parseMailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { mapEmailThreadRow } from '~/lib/email-assistant/map-email-thread-row';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
@@ -73,14 +77,19 @@ export async function GET(request: Request) {
   const filter = url.searchParams.get('filter');
   const searchQuery = url.searchParams.get('q')?.trim() ?? '';
   const mailboxKind = parseMailboxKind(url.searchParams.get('mailbox'));
+  const accountId = url.searchParams.get('accountId')?.trim() || null;
   const labelId = url.searchParams.get('label')?.trim() || null;
 
-  const { data: connection } = await auth.client
-    .from('google_connections')
-    .select('id')
-    .eq('user_id', auth.user.id)
-    .eq('mailbox_kind', mailboxKind)
-    .maybeSingle();
+  const { data: connection } = isBusinessMailboxUnscoped(mailboxKind, accountId)
+    ? { data: null }
+    : await applyGoogleConnectionScope(
+        auth.client.from('google_connections').select('id'),
+        {
+          userId: auth.user.id,
+          mailboxKind,
+          accountId,
+        },
+      ).maybeSingle();
 
   const connectionId = (connection as { id?: string } | null)?.id;
 

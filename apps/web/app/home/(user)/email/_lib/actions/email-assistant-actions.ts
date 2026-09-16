@@ -10,6 +10,10 @@ import {
   syncSuggestedActionItemsFromThreadLink,
 } from '~/lib/email-assistant/action-item-links';
 import {
+  applyGoogleConnectionScope,
+  isBusinessMailboxUnscoped,
+} from '~/lib/email-assistant/google-connection-scope';
+import {
   loadPendingRetainerSuggestions,
   loadRetainerCatalogue,
 } from '~/lib/retainers/load-suggestions';
@@ -160,17 +164,28 @@ export async function saveEmailAssistantSettings(input: {
   syncTriageToGmail?: boolean;
   respectExistingGmailLabels?: boolean;
   mailboxKind?: 'business' | 'personal';
+  accountId?: string | null;
 }) {
   const client = getSupabaseServerClient();
   const user = await requireEmailAssistantAccess();
   const mailboxKind = input.mailboxKind ?? 'personal';
 
-  const { data: connection, error: connectionError } = await client
-    .from('google_connections')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('mailbox_kind', mailboxKind)
-    .maybeSingle();
+  if (isBusinessMailboxUnscoped(mailboxKind, input.accountId)) {
+    return {
+      success: false as const,
+      error: 'Connect Gmail from a workspace Emails page',
+    };
+  }
+
+  const { data: connection, error: connectionError } =
+    await applyGoogleConnectionScope(
+      client.from('google_connections').select('id'),
+      {
+        userId: user.id,
+        mailboxKind,
+        accountId: input.accountId,
+      },
+    ).maybeSingle();
 
   if (connectionError) {
     return { success: false as const, error: connectionError.message };
@@ -238,16 +253,30 @@ export async function saveEmailAssistantSettings(input: {
 
 export async function disconnectGmailConnection(input?: {
   mailboxKind?: 'business' | 'personal';
+  accountId?: string | null;
 }) {
   const client = getSupabaseServerClient();
   const user = await requireEmailAssistantAccess();
   const mailboxKind = input?.mailboxKind ?? 'personal';
 
-  const { error } = await client
+  if (isBusinessMailboxUnscoped(mailboxKind, input?.accountId)) {
+    return {
+      success: false as const,
+      error: 'Disconnect Gmail from the workspace that owns the connection',
+    };
+  }
+
+  let query = client
     .from('google_connections')
     .delete()
     .eq('user_id', user.id)
     .eq('mailbox_kind', mailboxKind);
+
+  if (mailboxKind === 'business' && input?.accountId) {
+    query = query.eq('account_id', input.accountId);
+  }
+
+  const { error } = await query;
 
   if (error) {
     return { success: false as const, error: error.message };
@@ -257,9 +286,9 @@ export async function disconnectGmailConnection(input?: {
   return { success: true as const, error: null };
 }
 
-
 export async function completeEmailOnboarding(input: {
   mailboxKind?: 'business' | 'personal';
+  accountId?: string | null;
   accountSlug?: string;
   syncTriageToGmail: boolean;
   respectExistingGmailLabels: boolean;
@@ -272,12 +301,22 @@ export async function completeEmailOnboarding(input: {
   const user = await requireEmailAssistantAccess();
   const mailboxKind = input.mailboxKind ?? 'personal';
 
-  const { data: connection, error: connectionError } = await client
-    .from('google_connections')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('mailbox_kind', mailboxKind)
-    .maybeSingle();
+  if (isBusinessMailboxUnscoped(mailboxKind, input.accountId)) {
+    return {
+      success: false as const,
+      error: 'Connect Gmail from a workspace Emails page',
+    };
+  }
+
+  const { data: connection, error: connectionError } =
+    await applyGoogleConnectionScope(
+      client.from('google_connections').select('id'),
+      {
+        userId: user.id,
+        mailboxKind,
+        accountId: input.accountId,
+      },
+    ).maybeSingle();
 
   if (connectionError) {
     return { success: false as const, error: connectionError.message };

@@ -54,13 +54,22 @@ async function refreshAndReconcileNeedsReplyThreadsInner(params: {
   let connectionId = params.connectionId ?? null;
 
   if (!connectionId && params.userId) {
-    const { data: connection } = await admin
-      .from('google_connections')
-      .select('id')
-      .eq('user_id', params.userId)
-      .eq('mailbox_kind', mailboxKind)
-      .maybeSingle();
-    connectionId = (connection as { id?: string } | null)?.id ?? null;
+    if (mailboxKind === 'business' && !params.accountId) {
+      connectionId = null;
+    } else {
+      let connectionQuery = admin
+        .from('google_connections')
+        .select('id')
+        .eq('user_id', params.userId)
+        .eq('mailbox_kind', mailboxKind);
+
+      if (mailboxKind === 'business' && params.accountId) {
+        connectionQuery = connectionQuery.eq('account_id', params.accountId);
+      }
+
+      const { data: connection } = await connectionQuery.maybeSingle();
+      connectionId = (connection as { id?: string } | null)?.id ?? null;
+    }
   }
 
   let query = admin
@@ -102,6 +111,8 @@ async function refreshAndReconcileNeedsReplyThreadsInner(params: {
         const result = await syncGmailThread(mailboxUserId, gmailThreadId, {
           format: 'metadata',
           mailboxKind,
+          connectionId,
+          accountId: params.accountId,
         });
         refreshed += 1;
 

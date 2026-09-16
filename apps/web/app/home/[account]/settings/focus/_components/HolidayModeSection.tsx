@@ -91,7 +91,7 @@ export function HolidayModeSection({
         }
       }
 
-      const status = await getGmailVacationStatus(userId);
+      const status = await getGmailVacationStatus(userId, accountId);
       if (!cancelled) {
         setGmailStatus(status);
       }
@@ -140,7 +140,7 @@ export function HolidayModeSection({
   }, [gmailResponderOn, gmailStatus, holidayEnabled]);
 
   function refreshGmailStatus() {
-    void getGmailVacationStatus(userId).then(setGmailStatus);
+    void getGmailVacationStatus(userId, accountId).then(setGmailStatus);
   }
 
   function runGmailAction(
@@ -316,7 +316,9 @@ export function HolidayModeSection({
           pending={pending}
           reconnectHref={reconnectHref}
           onTurnOffGmail={() =>
-            runGmailAction(() => turnOffGmailVacationResponder(userId))
+            runGmailAction(() =>
+              turnOffGmailVacationResponder(userId, accountId),
+            )
           }
           onTurnOnHolidayMode={() =>
             form.setValue('holiday_mode_enabled', true, { shouldDirty: true })

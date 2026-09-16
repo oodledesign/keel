@@ -350,6 +350,7 @@ async function loadDashboardPageDataImpl(
           .select('id')
           .eq('user_id', userId)
           .eq('mailbox_kind', 'business')
+          .eq('account_id', accountId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     client

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { isSystemLabelId, listLabels, type GmailLabel } from '@kit/gmail';
+import { type GmailLabel, isSystemLabelId, listLabels } from '@kit/gmail';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type { EmailThreadCategory } from './email-thread-categories';
@@ -48,22 +48,31 @@ export async function autoSyncCategoryToGmail(input: {
   }
 
   let labelIds = input.labelIds;
+  let connectionId: string | null = null;
 
-  if (labelIds === undefined) {
+  {
     const admin = getSupabaseServerAdminClient();
     const { data: thread } = await admin
       .from('email_threads')
-      .select('label_ids')
+      .select('label_ids, connection_id')
       .eq('id', input.threadId)
       .eq('user_id', input.userId)
       .maybeSingle();
 
-    labelIds =
-      (thread as { label_ids?: string[] | null } | null)?.label_ids ?? null;
+    connectionId =
+      (thread as { connection_id?: string | null } | null)?.connection_id ??
+      null;
+
+    if (labelIds === undefined) {
+      labelIds =
+        (thread as { label_ids?: string[] | null } | null)?.label_ids ?? null;
+    }
   }
 
   if (input.settings.respect_existing_gmail_labels) {
-    const labels = await listLabels(input.userId, input.mailboxKind);
+    const labels = await listLabels(input.userId, input.mailboxKind, {
+      connectionId,
+    });
     if (threadHasRespectedUserLabel(labelIds, labels)) {
       return {
         ok: true,

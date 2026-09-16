@@ -9,6 +9,10 @@ import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 import { isFromOwner } from './address-utils';
 import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
+import {
+  type AutoSyncGmailSettings,
+  autoSyncCategoryToGmail,
+} from './auto-sync-category-to-gmail';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
 import {
@@ -28,10 +32,6 @@ import type { MailboxKind } from './mailbox-kind';
 import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
 import { categoryForOwnerLatestMessage } from './owner-latest-message-category';
-import {
-  type AutoSyncGmailSettings,
-  autoSyncCategoryToGmail,
-} from './auto-sync-category-to-gmail';
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
 import { resolveEmailAssistantBillingAccountId } from './resolve-email-assistant-billing-account';
 import { suggestPipelineLeadForThread } from './suggest-pipeline-lead';
@@ -117,6 +117,7 @@ export async function runEmailAssistantPipeline(
   options?: {
     mailboxKind?: MailboxKind;
     preferredAccountId?: string | null;
+    connectionId?: string | null;
   },
 ): Promise<EmailAssistantPipelineResult> {
   const mailboxKind = options?.mailboxKind ?? 'business';
@@ -134,7 +135,10 @@ export async function runEmailAssistantPipeline(
   };
 
   const admin = getSupabaseServerAdminClient();
-  const owner = await resolveDraftOwnerContext(userId, mailboxKind);
+  const owner = await resolveDraftOwnerContext(userId, mailboxKind, {
+    accountId: preferredAccountId,
+    connectionId: options?.connectionId,
+  });
 
   if (!owner?.connectionId) {
     result.errors.push('Could not resolve mailbox owner');
@@ -340,7 +344,6 @@ export async function runEmailAssistantPipeline(
           if (fixCategoryError) {
             result.errors.push(fixCategoryError.message);
           } else {
-
             try {
               const syncResult = await autoSyncCategoryToGmail({
                 userId,

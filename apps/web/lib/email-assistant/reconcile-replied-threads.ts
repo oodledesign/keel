@@ -4,14 +4,14 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 import { isFromOwner } from '~/lib/email-assistant/address-utils';
-import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
-import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
 import {
   type AutoSyncGmailSettings,
   autoSyncCategoryToGmail,
 } from '~/lib/email-assistant/auto-sync-category-to-gmail';
-import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
+import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
+import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
 import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
+import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
 
 /**
  * Clears actionable categories when the latest synced message is already from the mailbox owner
@@ -49,7 +49,7 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
     return { cleared: 0 };
   }
 
-  const ownerByUserId = new Map<string, string>();
+  const ownerByConnectionId = new Map<string, string>();
   const settingsByConnectionId = new Map<string, AutoSyncGmailSettings>();
   const mailboxKindByConnectionId = new Map<string, MailboxKind>();
   let cleared = 0;
@@ -57,17 +57,24 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
   for (const row of threads) {
     const threadId = row.id as string;
     const mailboxUserId = row.user_id as string;
-    const connectionId = (row as { connection_id?: string | null }).connection_id ?? null;
+    const connectionId =
+      (row as { connection_id?: string | null }).connection_id ?? null;
     const labelIds = (row as { label_ids?: string[] | null }).label_ids ?? null;
 
-    let ownerEmail = ownerByUserId.get(mailboxUserId);
+    if (!connectionId) {
+      continue;
+    }
+
+    let ownerEmail = ownerByConnectionId.get(connectionId);
     if (!ownerEmail) {
-      const owner = await resolveDraftOwnerContext(mailboxUserId);
+      const owner = await resolveDraftOwnerContext(mailboxUserId, 'business', {
+        connectionId,
+      });
       if (!owner) {
         continue;
       }
       ownerEmail = owner.email;
-      ownerByUserId.set(mailboxUserId, ownerEmail);
+      ownerByConnectionId.set(connectionId, ownerEmail);
     }
 
     const { data: latest, error: latestError } = await admin
@@ -151,8 +158,8 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
         .maybeSingle();
 
       mailboxKind =
-        (connection as { mailbox_kind?: string | null } | null)?.mailbox_kind ===
-        'personal'
+        (connection as { mailbox_kind?: string | null } | null)
+          ?.mailbox_kind === 'personal'
           ? 'personal'
           : 'business';
       mailboxKindByConnectionId.set(connectionId, mailboxKind);

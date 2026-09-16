@@ -51,7 +51,9 @@ export async function createThreadDraft(input: {
     }
   }
 
-  const owner = await resolveDraftOwnerContext(input.userId, mailboxKind);
+  const owner = await resolveDraftOwnerContext(input.userId, mailboxKind, {
+    connectionId: thread.connection_id,
+  });
 
   if (!owner) {
     return null;
@@ -134,6 +136,8 @@ export async function createThreadDraft(input: {
       (settings as { signature_is_html?: boolean | null } | null)
         ?.signature_is_html,
     ),
+    mailboxKind,
+    { connectionId: thread.connection_id },
   );
 
   const voiceBlock = await loadVoicePromptBlock(admin, {

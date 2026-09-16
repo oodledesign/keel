@@ -102,10 +102,14 @@ function buildThreadsUrl(input: {
   searchQuery?: string;
   cursor?: string | null;
   mailboxKind?: 'business' | 'personal';
+  accountId?: string | null;
   labelId?: string | null;
 }) {
   const params = new URLSearchParams({ limit: '25' });
   params.set('mailbox', input.mailboxKind ?? 'personal');
+  if (input.mailboxKind === 'business' && input.accountId) {
+    params.set('accountId', input.accountId);
+  }
 
   if (input.filter !== 'all') {
     params.set('filter', input.filter);
@@ -244,9 +248,16 @@ export function EmailPageClient({ initialData }: Props) {
         searchQuery: debouncedSearch,
         cursor,
         mailboxKind,
+        accountId: initialData.preferredAccountId,
         labelId: labelFilter,
       }),
-    [inboxFilter, debouncedSearch, mailboxKind, labelFilter],
+    [
+      inboxFilter,
+      debouncedSearch,
+      mailboxKind,
+      initialData.preferredAccountId,
+      labelFilter,
+    ],
   );
 
   const reloadThreads = useCallback(async () => {
@@ -758,6 +769,7 @@ export function EmailPageClient({ initialData }: Props) {
           <EmailSettingsCard
             connectedEmail={initialData.connection?.googleEmail ?? null}
             mailboxKind={mailboxKind}
+            accountId={initialData.preferredAccountId}
             returnPath={emailHomePath}
             initialStyleNotes={initialData.settings.styleNotes}
             initialSignature={initialData.settings.signature}
@@ -792,6 +804,7 @@ export function EmailPageClient({ initialData }: Props) {
         open={showEmailOnboarding}
         onOpenChange={setShowEmailOnboarding}
         mailboxKind={mailboxKind}
+        accountId={initialData.preferredAccountId}
         accountSlug={initialData.accountSlug}
         onCompleted={() => {
           setShowEmailOnboarding(false);
