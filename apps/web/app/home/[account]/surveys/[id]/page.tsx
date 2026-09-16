@@ -119,6 +119,11 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
           styleExampleCount={extras.styleExampleCount}
           templates={extras.templates}
           surveyTemplateId={extras.surveyTemplateId}
+          attachedEpc={extras.attachedEpc}
+          propertyLookup={extras.propertyLookup}
+          epcConfigured={extras.epcConfigured}
+          flood={extras.flood}
+          surveyLevel={extras.surveyLevel}
         />
       </PageBody>
     </>

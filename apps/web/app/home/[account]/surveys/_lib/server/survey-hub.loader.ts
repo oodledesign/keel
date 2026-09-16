@@ -2,7 +2,12 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { isGovUkEpcConfigured } from '~/lib/building-surveyor/epc/env';
+import { mapSurveyFloodRow } from '~/lib/building-surveyor/flood/parse';
+import { surveyLevelFromType } from '~/lib/building-surveyor/survey-types';
+
 import { createSurveyCaptureService } from './survey-capture.service';
+import { createSurveyEpcService } from './survey-epc.service';
 import { createSurveyPhrasesService } from './survey-phrases.service';
 import { createSurveyTemplatesService } from './survey-templates.service';
 
@@ -12,10 +17,11 @@ export async function loadSurveyHubExtras(input: {
   clientId?: string | null;
   dealId?: string | null;
 }) {
-  const service = createSurveyCaptureService(getSupabaseServerClient());
+  const client = getSupabaseServerClient();
+  const service = createSurveyCaptureService(client);
+  const epcService = createSurveyEpcService(client);
   await service.assertBuildingSurveyorAccount(input.accountId);
 
-  const client = getSupabaseServerClient();
   const [
     observations,
     transcripts,
@@ -23,6 +29,8 @@ export async function loadSurveyHubExtras(input: {
     styleExamples,
     templates,
     banks,
+    attachedEpc,
+    propertyLookup,
   ] = await Promise.all([
     service.listObservations(input.accountId, input.proposalId),
     service.listLinkedTranscripts(
@@ -35,9 +43,16 @@ export async function loadSurveyHubExtras(input: {
     service.listStyleExamples(input.accountId),
     createSurveyTemplatesService(client).list(input.accountId),
     createSurveyPhrasesService(client).listBanks(input.accountId),
+    epcService.getAttached(input.accountId, input.proposalId),
+    epcService.getLookup(input.accountId, input.proposalId),
   ]);
 
   const survey = await service.getSurvey(input.accountId, input.proposalId);
+  const row = survey as {
+    survey_level?: number | string | null;
+    survey_type?: string | null;
+    survey_template_id?: string | null;
+  };
 
   return {
     observations,
@@ -47,6 +62,14 @@ export async function loadSurveyHubExtras(input: {
     photoShare: service.getPhotoShare(survey),
     templates,
     phraseBankCount: banks.length,
-    surveyTemplateId: survey.survey_template_id ?? null,
+    surveyTemplateId: row.survey_template_id ?? null,
+    attachedEpc,
+    propertyLookup,
+    epcConfigured: isGovUkEpcConfigured(),
+    flood: mapSurveyFloodRow(survey),
+    surveyLevel:
+      row.survey_level === 2 || row.survey_level === 3
+        ? row.survey_level
+        : surveyLevelFromType(row.survey_type),
   };
 }

@@ -2,8 +2,11 @@ import {
   BUILDING_SURVEY_TYPES,
   type BuildingSurveyTypeKey,
   DEFAULT_BUILDING_SURVEY_TYPE,
+  type SurveyLevel,
   buildingSurveyTypeLabel,
+  isSurveyLevel,
   normalizeBuildingSurveyType,
+  surveyLevelFromType,
 } from '~/lib/building-surveyor/survey-types';
 
 import { NativeHttpError } from './http';
@@ -33,6 +36,12 @@ export type NativeSurvey = {
   status: string;
   survey_type: BuildingSurveyTypeKey;
   survey_type_label: string;
+  survey_level: SurveyLevel;
+  survey_property_address: string | null;
+  survey_property_postcode: string | null;
+  survey_uprn: string | null;
+  survey_flood_risk_band: string | null;
+  survey_flood_risk_summary: string | null;
   client_id: string | null;
   client_name: string | null;
   session_count: number;
@@ -70,6 +79,12 @@ export type NativeSurveyRow = {
   title?: string | null;
   status?: string | null;
   survey_type?: string | null;
+  survey_level?: number | string | null;
+  survey_property_address?: string | null;
+  survey_property_postcode?: string | null;
+  survey_uprn?: string | null;
+  survey_flood_risk_band?: string | null;
+  survey_flood_risk_summary?: string | null;
   client_id?: string | null;
   created_at: string;
   updated_at: string;
@@ -109,6 +124,14 @@ export function mapNativeSurvey(
     status: row.status?.trim() || 'draft',
     survey_type: surveyType,
     survey_type_label: buildingSurveyTypeLabel(surveyType),
+    survey_level: isSurveyLevel(row.survey_level)
+      ? row.survey_level
+      : surveyLevelFromType(surveyType),
+    survey_property_address: row.survey_property_address?.trim() || null,
+    survey_property_postcode: row.survey_property_postcode?.trim() || null,
+    survey_uprn: row.survey_uprn?.trim() || null,
+    survey_flood_risk_band: row.survey_flood_risk_band?.trim() || null,
+    survey_flood_risk_summary: row.survey_flood_risk_summary?.trim() || null,
     client_id: row.client_id?.trim() || null,
     client_name: extras?.clientName?.trim() || null,
     session_count: extras?.sessionCount ?? 0,

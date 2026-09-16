@@ -9,7 +9,12 @@ import {
   queueBrainDeleteSource,
   queueBrainIndexSource,
 } from '~/lib/brain/sync';
-import { DEFAULT_BUILDING_SURVEY_TYPE } from '~/lib/building-surveyor/survey-types';
+import {
+  DEFAULT_BUILDING_SURVEY_TYPE,
+  normalizeSurveyLevel,
+  surveyLevelFromType,
+  surveyTypeForLevel,
+} from '~/lib/building-surveyor/survey-types';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { resolveDefaultTemplate } from '~/lib/content-templates/resolve-template';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
@@ -269,10 +274,31 @@ class ProposalsService {
         kind: documentKind,
         survey_type:
           documentKind === 'survey_report'
-            ? (input.survey_type ?? DEFAULT_BUILDING_SURVEY_TYPE)
+            ? input.survey_level
+              ? surveyTypeForLevel(normalizeSurveyLevel(input.survey_level))
+              : (input.survey_type ?? DEFAULT_BUILDING_SURVEY_TYPE)
             : null,
+        survey_level:
+          documentKind === 'survey_report'
+            ? input.survey_level
+              ? normalizeSurveyLevel(input.survey_level)
+              : surveyLevelFromType(
+                  input.survey_type ?? DEFAULT_BUILDING_SURVEY_TYPE,
+                )
+            : null,
+        survey_property_address:
+          documentKind === 'survey_report'
+            ? (input.survey_property_address ?? null)
+            : null,
+        survey_property_postcode:
+          documentKind === 'survey_report'
+            ? (input.survey_property_postcode ?? null)
+            : null,
+        survey_uprn:
+          documentKind === 'survey_report' ? (input.survey_uprn ?? null) : null,
         title:
           input.title ??
+          input.survey_property_address ??
           (documentKind === 'survey_report' ? 'Building survey' : 'Proposal'),
         content_html: input.content_html ?? htmlDefault?.bodyHtml ?? '',
         ...(documentKind === 'survey_report' && input.body_document

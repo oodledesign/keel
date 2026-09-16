@@ -17,15 +17,21 @@ import pathsConfig from '~/config/paths.config';
 import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { documentEditPath } from '~/lib/building-surveyor/document-kind';
+import type {
+  SurveyEpcRecord,
+  SurveyPropertyLookup,
+} from '~/lib/building-surveyor/epc/types';
+import type { SurveyFloodRecord } from '~/lib/building-surveyor/flood/types';
 import {
-  BUILDING_SURVEY_SECTIONS,
-  surveySectionDisplayLabel,
-} from '~/lib/building-surveyor/report-sections';
+  hubSectionDisplayLabel,
+  hubSectionsForLevel,
+} from '~/lib/building-surveyor/survey-section-catalogue';
 import type { SurveyTemplateRecord } from '~/lib/building-surveyor/survey-template';
 import {
-  BUILDING_SURVEY_TYPES,
-  buildingSurveyTypeLabel,
-  normalizeBuildingSurveyType,
+  type SurveyLevel,
+  normalizeSurveyLevel,
+  surveyLevelFromType,
+  surveyTypeForLevel,
 } from '~/lib/building-surveyor/survey-types';
 import {
   workspaceBtnPrimaryMd,
@@ -47,6 +53,7 @@ import {
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
 import { GroupedObservationCard } from './grouped-observation-card';
+import { SurveyPrepPanel } from './survey-prep-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
 type ClientInfo = {
@@ -83,6 +90,11 @@ export function SurveyHubContent({
   styleExampleCount,
   templates = [],
   surveyTemplateId: initialTemplateId,
+  attachedEpc,
+  propertyLookup,
+  epcConfigured,
+  flood,
+  surveyLevel: initialSurveyLevel,
 }: {
   accountSlug: string;
   accountId: string;
@@ -108,16 +120,32 @@ export function SurveyHubContent({
   styleExampleCount: number;
   templates?: SurveyTemplateRecord[];
   surveyTemplateId?: string | null;
+  attachedEpc: SurveyEpcRecord | null;
+  propertyLookup: SurveyPropertyLookup;
+  epcConfigured: boolean;
+  flood: SurveyFloodRecord;
+  surveyLevel: SurveyLevel;
 }) {
   const [observations, setObservations] = useState(initialObservations);
   const [transcripts, setTranscripts] = useState(initialTranscripts);
-  const [surveyType, setSurveyType] = useState(
-    normalizeBuildingSurveyType(proposal.survey_type),
+  const [surveyLevel, setSurveyLevel] = useState<SurveyLevel>(
+    initialSurveyLevel ??
+      surveyLevelFromType(proposal.survey_type) ??
+      normalizeSurveyLevel(proposal.survey_type),
+  );
+  const visibleSections = useMemo(
+    () => hubSectionsForLevel(surveyLevel),
+    [surveyLevel],
   );
   const [pasteTitle, setPasteTitle] = useState('');
   const [pasteContent, setPasteContent] = useState('');
   const [newSectionKey, setNewSectionKey] = useState('overall_opinion');
   const [newBody, setNewBody] = useState('');
+  const selectedSectionKey = visibleSections.some(
+    (section) => section.key === newSectionKey,
+  )
+    ? newSectionKey
+    : (visibleSections[0]?.key ?? 'overall_opinion');
   const [pending, startTransition] = useTransition();
   const [generating, setGenerating] = useState(false);
   const [pasting, setPasting] = useState(false);
@@ -154,15 +182,6 @@ export function SurveyHubContent({
     proposal.client?.company_name?.trim() ||
     proposal.title?.trim() ||
     'Property not set';
-  const address = [
-    proposal.client?.address_line_1,
-    proposal.client?.address_line_2,
-    proposal.client?.city,
-    proposal.client?.postcode,
-  ]
-    .filter(Boolean)
-    .join(', ');
-
   const grouped = useMemo(() => {
     const byKey = new Map<string, SurveyObservation[]>();
     for (const observation of observations) {
@@ -170,11 +189,25 @@ export function SurveyHubContent({
       list.push(observation);
       byKey.set(observation.sectionKey, list);
     }
-    return BUILDING_SURVEY_SECTIONS.map((section) => ({
+    const known = visibleSections.map((section) => ({
       section,
       items: byKey.get(section.key) ?? [],
-    })).filter((group) => group.items.length > 0);
-  }, [observations]);
+    }));
+    const knownKeys = new Set(visibleSections.map((section) => section.key));
+    const hidden = [...byKey.entries()]
+      .filter(([key]) => !knownKeys.has(key))
+      .map(([key, items]) => ({
+        section: {
+          key,
+          heading: key.replaceAll('_', ' '),
+          group: 'Hidden at this level',
+          letter: '',
+          optional: true,
+        },
+        items,
+      }));
+    return [...known, ...hidden].filter((group) => group.items.length > 0);
+  }, [observations, visibleSections]);
 
   const handlePaste = async () => {
     if (!canEdit) return;
@@ -295,107 +328,69 @@ export function SurveyHubContent({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
         <div className="space-y-5">
-          <section className={`${workspacePanelCard} p-4 sm:p-5`}>
-            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-              Property and client
-            </h3>
-            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-              <InfoRow label="Client" value={clientName} />
-              <InfoRow label="Property / enquiry" value={propertyLabel} />
-              <InfoRow label="Address" value={address || 'Not recorded'} />
-              <InfoRow
-                label="Enquiry stage"
-                value={proposal.deal?.stage?.replaceAll('_', ' ') || '—'}
-              />
-              <div className="sm:col-span-2">
-                <Label className={`text-xs ${workspaceTextMuted}`}>
-                  Survey type
-                </Label>
-                {canEdit ? (
-                  <select
-                    value={surveyType}
-                    onChange={(event) => {
-                      const next = normalizeBuildingSurveyType(
-                        event.target.value,
-                      );
-                      setSurveyType(next);
-                      startTransition(async () => {
-                        try {
-                          await updateSurveyTypeAction({
-                            accountId,
-                            accountSlug,
-                            proposalId: proposal.id,
-                            surveyType: next,
-                          });
-                          toast.success('Survey type saved');
-                        } catch (error) {
-                          toast.error(getErrorMessage(error));
-                        }
-                      });
-                    }}
-                    className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
-                  >
-                    {BUILDING_SURVEY_TYPES.map((item) => (
-                      <option key={item.key} value={item.key}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="mt-1 text-sm">
-                    {buildingSurveyTypeLabel(surveyType)}
-                  </p>
-                )}
-                <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                  Assign a cloned RICS shell (or keep the system template for
-                  this survey type).
+          <SurveyPrepPanel
+            accountId={accountId}
+            accountSlug={accountSlug}
+            proposalId={proposal.id}
+            canEdit={canEdit}
+            epcConfigured={epcConfigured}
+            lookup={propertyLookup}
+            attachedEpc={attachedEpc}
+            flood={flood}
+            surveyLevel={surveyLevel}
+            onSurveyLevelChange={setSurveyLevel}
+            clientName={clientName}
+            enquiryStage={proposal.deal?.stage?.replaceAll('_', ' ') || '—'}
+            propertyLabel={propertyLabel}
+          />
+
+          {templates.length > 0 ? (
+            <section className={`${workspacePanelCard} p-4 sm:p-5`}>
+              <Label className={`text-xs ${workspaceTextMuted}`}>
+                Report template
+              </Label>
+              {canEdit ? (
+                <select
+                  value={surveyTemplateId}
+                  onChange={(event) => {
+                    const next = event.target.value || null;
+                    setSurveyTemplateId(next ?? '');
+                    startTransition(async () => {
+                      try {
+                        await updateSurveyTypeAction({
+                          accountId,
+                          accountSlug,
+                          proposalId: proposal.id,
+                          surveyType: surveyTypeForLevel(surveyLevel),
+                          surveyTemplateId: next,
+                        });
+                        toast.success('Template assigned');
+                      } catch (error) {
+                        toast.error(getErrorMessage(error));
+                      }
+                    });
+                  }}
+                  className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm"
+                >
+                  <option value="">System template for type</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="mt-1 text-sm">
+                  {templates.find((item) => item.id === surveyTemplateId)
+                    ?.name ?? 'System template'}
                 </p>
-                {templates.length > 0 ? (
-                  <div className="mt-3">
-                    <Label className={`text-xs ${workspaceTextMuted}`}>
-                      Report template
-                    </Label>
-                    {canEdit ? (
-                      <select
-                        value={surveyTemplateId}
-                        onChange={(event) => {
-                          const next = event.target.value || null;
-                          setSurveyTemplateId(next ?? '');
-                          startTransition(async () => {
-                            try {
-                              await updateSurveyTypeAction({
-                                accountId,
-                                accountSlug,
-                                proposalId: proposal.id,
-                                surveyType,
-                                surveyTemplateId: next,
-                              });
-                              toast.success('Template assigned');
-                            } catch (error) {
-                              toast.error(getErrorMessage(error));
-                            }
-                          });
-                        }}
-                        className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm"
-                      >
-                        <option value="">System template for type</option>
-                        {templates.map((template) => (
-                          <option key={template.id} value={template.id}>
-                            {template.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="mt-1 text-sm">
-                        {templates.find((item) => item.id === surveyTemplateId)
-                          ?.name ?? 'System template'}
-                      </p>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            </dl>
-          </section>
+              )}
+              <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+                Assign a cloned RICS shell, or keep the system template for this
+                survey level.
+              </p>
+            </section>
+          ) : null}
 
           <section className={`${workspacePanelCard} p-4 sm:p-5`}>
             <div className="flex items-start justify-between gap-3">
@@ -476,13 +471,13 @@ export function SurveyHubContent({
               <div className="mt-4 space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-3">
                 <Label className="text-xs">Add observation</Label>
                 <select
-                  value={newSectionKey}
+                  value={selectedSectionKey}
                   onChange={(event) => setNewSectionKey(event.target.value)}
                   className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm"
                 >
-                  {BUILDING_SURVEY_SECTIONS.map((section) => (
+                  {visibleSections.map((section) => (
                     <option key={section.key} value={section.key}>
-                      {surveySectionDisplayLabel(section)}
+                      {hubSectionDisplayLabel(section)}
                     </option>
                   ))}
                 </select>
@@ -504,7 +499,7 @@ export function SurveyHubContent({
                           accountId,
                           accountSlug,
                           proposalId: proposal.id,
-                          sectionKey: newSectionKey,
+                          sectionKey: selectedSectionKey,
                           body: newBody.trim(),
                         });
                         setObservations((prev) => [...prev, created]);
@@ -534,7 +529,7 @@ export function SurveyHubContent({
                           sectionKey={section.key}
                           className="h-3.5 w-3.5 shrink-0"
                         />
-                        {surveySectionDisplayLabel(section)}
+                        {hubSectionDisplayLabel(section)}
                       </h4>
                       <ul className="mt-2 space-y-3">
                         {items.map((item) => (
@@ -545,6 +540,7 @@ export function SurveyHubContent({
                             accountSlug={accountSlug}
                             proposalId={proposal.id}
                             canEdit={canEdit}
+                            sections={visibleSections}
                             onChange={(next) =>
                               setObservations((prev) =>
                                 prev.map((row) =>
@@ -675,17 +671,6 @@ export function SurveyHubContent({
           </section>
         </div>
       </div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className={`text-xs ${workspaceTextMuted}`}>{label}</dt>
-      <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
-        {value}
-      </dd>
     </div>
   );
 }

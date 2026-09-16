@@ -1,123 +1,155 @@
 /**
- * RICS Home Survey section catalogue (Level 2 + Level 3).
- * Keys stay stable for existing observations; ricsCode is the letter/element
- * used by templates, phrase banks, and GoReport imports.
+ * Shared RICS Home Survey section catalogue (Survey Workspace v2).
+ *
+ * One catalogue. `survey_level` 2 | 3 drives field visibility.
+ * On site the surveyor picks a section (sub-item code such as F3),
+ * then dictates and photographs into that section. There is no room
+ * hierarchy. Phase 1–2 `BUILDING_SURVEY_SECTIONS` in report-sections.ts
+ * stays the AI-grouping list until P3/P4 switch capture and desk review.
+ *
+ * Keys match existing observation `section_key` values where they overlap
+ * so dual-write stays possible. `ricsCode` is the letter/element used by
+ * phrase banks and report slots (D2, F3, J.valuation).
+ *
+ * Sourced from the Bracketts L2/L3 PDF audit carried in PR #172; this file
+ * is the v2 source of truth on main.
  */
-import type { BuildingSurveyTypeKey } from './survey-types';
+import { type SurveyLevel, normalizeSurveyLevel } from './survey-types';
 
-export type SurveyLevel = 'l2' | 'l3';
+export type SurveySectionKind = 'section' | 'sub_item' | 'field';
 
-export type BuildingSurveySection = {
+export type SurveySectionCatalogueItem = {
+  /** Stable slug. Dual-writes onto survey_observations.section_key. */
   key: string;
   heading: string;
+  /** Group label for the desk sidebar (not a room, not a chapter picker). */
   group: string;
+  /** Parent letter (D, E, F). Empty for notes. */
   letter: string;
+  /** Sub-item or field code (F3, D2, J.valuation). */
   ricsCode: string;
+  kind: SurveySectionKind;
   keywords: readonly string[];
   allowsRating: boolean;
   allowsPhotos: boolean;
-  levels: readonly SurveyLevel[];
+  /** Levels that show this field. One template; level hides the rest. */
+  visibleOnLevels: readonly SurveyLevel[];
+  /** On-site picker: section then dictate + photos. */
+  onSitePickable: boolean;
 };
 
-function section(partial: BuildingSurveySection): BuildingSurveySection {
-  return partial;
-}
-
-export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
-  section({
+export const SURVEY_SECTION_CATALOGUE = [
+  {
     key: 'about_inspection',
     heading: 'About the inspection',
     group: 'A About the inspection',
     letter: 'A',
     ricsCode: 'A',
+    kind: 'section',
     keywords: ['inspection', 'survey date', 'weather', 'access', 'limitations'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'related_party',
     heading: 'Related party disclosure',
     group: 'A About the inspection',
     letter: 'A',
     ricsCode: 'A.related_party',
+    kind: 'field',
     keywords: ['related party', 'conflict of interest', 'disclosure'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'weather',
     heading: 'Weather',
     group: 'A About the inspection',
     letter: 'A',
     ricsCode: 'A.weather',
+    kind: 'field',
     keywords: ['weather', 'overcast', 'rainfall', 'dry'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'occupancy',
     heading: 'Status of the property',
     group: 'A About the inspection',
     letter: 'A',
     ricsCode: 'A.occupancy',
+    kind: 'field',
     keywords: ['occupied', 'unoccupied', 'vacant', 'furnished', 'vendor'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'overall_opinion',
     heading: 'Overall opinion',
     group: 'B Overall opinion',
     letter: 'B',
     ricsCode: 'B',
+    kind: 'section',
     keywords: ['overall', 'summary', 'opinion', 'condition rating'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'repairs_summary',
     heading: 'Summary of repairs',
     group: 'B Overall opinion',
     letter: 'B',
     ricsCode: 'B.repairs',
+    kind: 'field',
     keywords: ['repairs', 'cost guidance', 'allow £'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'further_investigations',
     heading: 'Further investigations',
     group: 'B Overall opinion',
     letter: 'B',
     ricsCode: 'B.further_investigations',
+    kind: 'field',
     keywords: ['further investigation', 'specialist', 'camera survey'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'documents_suggested',
     heading: 'Documents we may suggest',
     group: 'B Overall opinion',
     letter: 'B',
     ricsCode: 'B.documents',
+    kind: 'field',
     keywords: ['documents we may suggest', 'request before you sign'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'about_property',
     heading: 'About the property',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C',
+    kind: 'section',
     keywords: [
       'property',
       'dwelling',
@@ -128,14 +160,16 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     ],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'property_type',
     heading: 'Type of property',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.type',
+    kind: 'field',
     keywords: [
       'detached',
       'semi-detached',
@@ -147,158 +181,185 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     ],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'year_built',
     heading: 'Approximate year the property was built',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.year_built',
+    kind: 'field',
     keywords: ['year the property was built', 'newly built', 'built in'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'year_extended',
     heading: 'Approximate year the property was extended',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.year_extended',
+    kind: 'field',
     keywords: ['extended', 'extension', 'conservatory added'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'year_converted',
     heading: 'Approximate year the property was converted',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.year_converted',
+    kind: 'field',
     keywords: ['converted', 'conversion'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'flats_info',
     heading: 'Information relevant to flats and maisonettes',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.flats',
+    kind: 'field',
     keywords: ['leasehold', 'service charge', 'managing agent', 'maisonette'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'construction',
     heading: 'Construction',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.construction',
+    kind: 'field',
     keywords: ['cavity', 'solid wall', 'foundations', 'pitched roof'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'means_of_escape',
     heading: 'Means of escape',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.means_of_escape',
+    kind: 'field',
     keywords: ['means of escape', 'fire escape', 'protected stair'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l3'],
-  }),
-  section({
+    visibleOnLevels: [3],
+    onSitePickable: false,
+  },
+  {
     key: 'energy_efficiency_rating',
     heading: 'Energy efficiency rating',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.epc',
-    // GOV.UK EPC auto-pull prefills this slot when empty.
+    kind: 'field',
     keywords: ['epc', 'energy performance', 'energy efficiency rating'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'energy_efficiency_issues',
     heading: 'Issues relating to the energy efficiency rating',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.epc_issues',
+    kind: 'field',
     keywords: ['discrepancies to the assumptions in the epc'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'location',
     heading: 'Location',
     group: 'C Location and facilities',
     letter: 'C',
     ricsCode: 'C.location',
+    kind: 'field',
     keywords: ['location', 'neighbourhood', 'setting'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'location_grounds',
     heading: 'Grounds (location)',
     group: 'C Location and facilities',
     letter: 'C',
     ricsCode: 'C.grounds',
+    kind: 'field',
     keywords: ['plot', 'site', 'front garden', 'rear garden setting'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'facilities',
     heading: 'Facilities',
     group: 'C Location and facilities',
     letter: 'C',
     ricsCode: 'C.facilities',
+    kind: 'field',
     keywords: ['facilities', 'shops', 'transport', 'schools'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'local_environment',
     heading: 'Local environment',
     group: 'C Location and facilities',
     letter: 'C',
     ricsCode: 'C.local_environment',
+    kind: 'field',
     keywords: ['flood', 'radon', 'local environment', 'trees nearby'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'other_local_factors',
     heading: 'Other local factors',
     group: 'C Location and facilities',
     letter: 'C',
     ricsCode: 'C.other_local',
+    kind: 'field',
     keywords: ['other local factors'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l3'],
-  }),
-  section({
+    visibleOnLevels: [3],
+    onSitePickable: false,
+  },
+  {
     key: 'other_energy_sources',
     heading: 'Other services or energy sources',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.other_energy_sources',
+    kind: 'field',
     keywords: [
       'photovoltaic',
       'solar water',
@@ -308,80 +369,94 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     ],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'other_energy_matters',
     heading: 'Other energy matters',
     group: 'C About the property',
     letter: 'C',
     ricsCode: 'C.other_energy',
+    kind: 'field',
     keywords: ['renewable energy', 'co2', 'gas boilers 2035'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'outside_limitations',
     heading: 'Limitations to inspection (outside)',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D.limitations',
+    kind: 'field',
     keywords: ['limitations to inspection', 'outside limitations'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'chimney_stacks',
     heading: 'Chimney stacks',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D1',
+    kind: 'sub_item',
     keywords: ['chimney', 'stack', 'flaunching', 'pot', 'flashing'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'roof_coverings',
     heading: 'Roof coverings',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D2',
+    kind: 'sub_item',
     keywords: ['roof', 'tile', 'slate', 'covering', 'ridge', 'valley'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'rainwater',
     heading: 'Rainwater pipes and gutters',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D3',
+    kind: 'sub_item',
     keywords: ['gutter', 'downpipe', 'rainwater', 'hopper'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'main_walls',
     heading: 'Main walls',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D4',
+    kind: 'sub_item',
     keywords: ['wall', 'brick', 'render', 'pointing', 'damp proof', 'cavity'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'windows',
     heading: 'Windows',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D5',
+    kind: 'sub_item',
     keywords: [
       'window',
       'windows',
@@ -394,124 +469,146 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     ],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'outside_doors',
     heading: 'Outside doors (including patio doors)',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D6',
+    kind: 'sub_item',
     keywords: ['door', 'patio', 'french door', 'threshold'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'conservatory_porches',
     heading: 'Conservatory and porches',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D7',
+    kind: 'sub_item',
     keywords: ['conservatory', 'porch', 'canopy'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'other_joinery',
     heading: 'Other joinery and finishes',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D8',
+    kind: 'sub_item',
     keywords: ['fascia', 'soffit', 'bargeboard', 'cladding', 'joinery'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'other_outside',
     heading: 'Other (outside)',
     group: 'D Outside the property',
     letter: 'D',
     ricsCode: 'D9',
+    kind: 'sub_item',
     keywords: ['other outside', 'external other'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'inside_limitations',
     heading: 'Limitations to inspection (inside)',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E.limitations',
+    kind: 'field',
     keywords: ['inside limitations', 'loft access not'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'roof_structure',
     heading: 'Roof structure',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E1',
+    kind: 'sub_item',
     keywords: ['roof structure', 'rafter', 'truss', 'loft', 'felt'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'ceilings',
     heading: 'Ceilings',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E2',
+    kind: 'sub_item',
     keywords: ['ceiling', 'plasterboard', 'lath and plaster'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'walls_partitions',
     heading: 'Walls and partitions',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E3',
+    kind: 'sub_item',
     keywords: ['partition', 'internal wall', 'plaster', 'lining'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'floors',
     heading: 'Floors',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E4',
+    kind: 'sub_item',
     keywords: ['floor', 'joist', 'screed', 'board', 'deflection'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'fireplaces',
     heading: 'Fireplaces, chimney breasts and flues',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E5',
+    kind: 'sub_item',
     keywords: ['fireplace', 'hearth', 'flue', 'chimney breast'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'built_in_fittings',
     heading: 'Built-in fittings',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E6',
+    kind: 'sub_item',
     keywords: [
       'fitted kitchen',
       'fitted',
@@ -521,446 +618,531 @@ export const BUILDING_SURVEY_SECTIONS: readonly BuildingSurveySection[] = [
     ],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'woodwork',
     heading: 'Woodwork (for example, staircase joinery)',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E7',
+    kind: 'sub_item',
     keywords: ['staircase', 'banister', 'skirting', 'door lining', 'woodwork'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'bathroom_fittings',
     heading: 'Bathroom fittings',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E8',
+    kind: 'sub_item',
     keywords: ['bathroom', 'wc', 'basin', 'bath', 'shower', 'sanitary'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'other_inside',
     heading: 'Other (inside)',
     group: 'E Inside the property',
     letter: 'E',
     ricsCode: 'E9',
+    kind: 'sub_item',
     keywords: ['other inside'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'services_limitations',
     heading: 'Limitations to inspection (services)',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F.limitations',
+    kind: 'field',
     keywords: ['services limitations'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'electricity',
     heading: 'Electricity',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F1',
+    kind: 'sub_item',
     keywords: ['electric', 'consumer unit', 'fuse', 'socket', 'wiring', 'rcd'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'gas_oil',
     heading: 'Gas / oil',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F2',
+    kind: 'sub_item',
     keywords: ['gas', 'oil', 'meter', 'boiler flue'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'water',
     heading: 'Water',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F3',
+    kind: 'sub_item',
     keywords: ['water', 'stopcock', 'rising main', 'pipework'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'heating',
     heading: 'Heating',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F4',
+    kind: 'sub_item',
     keywords: ['heating', 'boiler', 'radiator', 'thermostat', 'heat pump'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'water_heating',
     heading: 'Water heating',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F5',
+    kind: 'sub_item',
     keywords: ['hot water', 'cylinder', 'immersion', 'combi'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'drainage',
     heading: 'Drainage',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F6',
+    kind: 'sub_item',
     keywords: ['drain', 'soil stack', 'manhole', 'foul', 'surface water'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'common_services',
     heading: 'Common services',
     group: 'F Services',
     letter: 'F',
     ricsCode: 'F7',
+    kind: 'sub_item',
     keywords: ['common services', 'communal heating', 'landlord supply'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'grounds_limitations',
     heading: 'Limitations to inspection (grounds)',
     group: 'G Grounds',
     letter: 'G',
     ricsCode: 'G.limitations',
+    kind: 'field',
     keywords: ['grounds limitations'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'garage_outbuildings',
     heading: 'Garage',
     group: 'G Grounds',
     letter: 'G',
     ricsCode: 'G1',
+    kind: 'sub_item',
     keywords: ['garage', 'carport'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'permanent_outbuildings',
     heading: 'Permanent outbuildings and other structures',
     group: 'G Grounds',
     letter: 'G',
     ricsCode: 'G2',
+    kind: 'sub_item',
     keywords: ['outbuilding', 'shed', 'store', 'summer house'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'grounds',
     heading: 'Other (grounds)',
     group: 'G Grounds',
     letter: 'G',
     ricsCode: 'G3',
+    kind: 'sub_item',
     keywords: ['garden', 'grounds', 'drive', 'path', 'boundary', 'fence'],
     allowsRating: true,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: true,
+  },
+  {
     key: 'legal_advisers',
     heading: 'Regulation',
     group: 'H Issues for your legal advisers',
     letter: 'H',
     ricsCode: 'H1',
+    kind: 'sub_item',
     keywords: ['legal', 'easement', 'covenant', 'planning', 'building control'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'legal_guarantees',
     heading: 'Guarantees',
     group: 'H Issues for your legal advisers',
     letter: 'H',
     ricsCode: 'H2',
+    kind: 'sub_item',
     keywords: ['guarantee', 'warranty', 'nhbc', 'fensa'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'legal_other',
     heading: 'Other matters',
     group: 'H Issues for your legal advisers',
     letter: 'H',
     ricsCode: 'H3',
+    kind: 'sub_item',
     keywords: ['other matters', 'legal other'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'risks',
     heading: 'Risks to the building',
     group: 'I Risks',
     letter: 'I',
     ricsCode: 'I1',
+    kind: 'sub_item',
     keywords: ['risks to the building', 'structural risk', 'asbestos'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'risks_grounds',
     heading: 'Risks to the grounds',
     group: 'I Risks',
     letter: 'I',
     ricsCode: 'I2',
+    kind: 'sub_item',
     keywords: ['risks to the grounds', 'contamination', 'Japanese knotweed'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'risks_people',
     heading: 'Risks to people',
     group: 'I Risks',
     letter: 'I',
     ricsCode: 'I3',
+    kind: 'sub_item',
     keywords: ['risks to people', 'safety', 'lead', 'radon'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'risks_other',
     heading: 'Other risks or hazards',
     group: 'I Risks',
     letter: 'I',
     ricsCode: 'I4',
+    kind: 'sub_item',
     keywords: ['other risks', 'hazards'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'energy',
     heading: 'Insulation',
     group: 'J Energy matters',
     letter: 'J',
     ricsCode: 'J1',
+    kind: 'sub_item',
     keywords: ['insulation', 'loft insulation', 'cavity fill'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l3'],
-  }),
-  section({
+    visibleOnLevels: [3],
+    onSitePickable: false,
+  },
+  {
     key: 'energy_heating',
     heading: 'Heating (energy)',
     group: 'J Energy matters',
     letter: 'J',
     ricsCode: 'J2',
+    kind: 'sub_item',
     keywords: ['energy heating', 'heating controls'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l3'],
-  }),
-  section({
+    visibleOnLevels: [3],
+    onSitePickable: false,
+  },
+  {
     key: 'energy_lighting',
     heading: 'Lighting',
     group: 'J Energy matters',
     letter: 'J',
     ricsCode: 'J3',
+    kind: 'sub_item',
     keywords: ['lighting', 'low energy lamps'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l3'],
-  }),
-  section({
+    visibleOnLevels: [3],
+    onSitePickable: false,
+  },
+  {
     key: 'energy_ventilation',
     heading: 'Ventilation',
     group: 'J Energy matters',
     letter: 'J',
     ricsCode: 'J4',
+    kind: 'sub_item',
     keywords: ['ventilation', 'trickle vent', 'extract fan'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l3'],
-  }),
-  section({
+    visibleOnLevels: [3],
+    onSitePickable: false,
+  },
+  {
     key: 'energy_general',
     heading: 'General (energy)',
     group: 'J Energy matters',
     letter: 'J',
     ricsCode: 'J5',
+    kind: 'sub_item',
     keywords: ['energy general', 'energy matters'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l3'],
-  }),
-  section({
+    visibleOnLevels: [3],
+    onSitePickable: false,
+  },
+  {
     key: 'valuation',
     heading: 'Valuation',
     group: 'J Valuation',
     letter: 'J',
     ricsCode: 'J.valuation',
+    kind: 'field',
     keywords: ['valuation', 'tenure', 'market value', 'area of property'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2'],
-  }),
-  section({
+    visibleOnLevels: [2],
+    onSitePickable: false,
+  },
+  {
     key: 'declaration',
-    heading: "Surveyor's declaration",
+    heading: 'Surveyor’s declaration',
     group: 'K Surveyor’s declaration',
     letter: 'K',
     ricsCode: 'K',
+    kind: 'section',
     keywords: ['declaration', 'rics', 'surveyor', 'signed'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'what_to_do_now',
     heading: 'What to do now',
     group: 'L What to do now',
     letter: 'L',
     ricsCode: 'L',
+    kind: 'section',
     keywords: ['next steps', 'what to do', 'further investigation'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'rics_description',
     heading: 'Description of the RICS Home Survey',
     group: 'M Description of the service',
     letter: 'M',
     ricsCode: 'M',
+    kind: 'section',
     keywords: ['rics home survey', 'level 2', 'level 3', 'boilerplate'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'typical_house_diagram',
     heading: 'Typical house diagram',
     group: 'N Typical house diagram',
     letter: 'N',
     ricsCode: 'N',
+    kind: 'section',
     keywords: ['typical house', 'diagram'],
     allowsRating: false,
     allowsPhotos: true,
-    levels: ['l2', 'l3'],
-  }),
-  section({
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+  {
     key: 'notepad',
     heading: 'Note pad',
     group: 'Notes',
     letter: '',
     ricsCode: 'notes',
+    kind: 'field',
     keywords: ['note pad', 'notepad'],
     allowsRating: false,
     allowsPhotos: false,
-    levels: ['l2', 'l3'],
-  }),
-] as const;
+    visibleOnLevels: [2, 3],
+    onSitePickable: false,
+  },
+] as const satisfies readonly SurveySectionCatalogueItem[];
 
-export type BuildingSurveySectionKey =
-  (typeof BUILDING_SURVEY_SECTIONS)[number]['key'];
+export type SurveySectionCatalogueKey =
+  (typeof SURVEY_SECTION_CATALOGUE)[number]['key'];
 
-const SECTIONS_BY_KEY = new Map(
-  BUILDING_SURVEY_SECTIONS.map((section) => [section.key, section]),
+export type SurveySectionRicsCode =
+  (typeof SURVEY_SECTION_CATALOGUE)[number]['ricsCode'];
+
+const BY_KEY = new Map<string, SurveySectionCatalogueItem>(
+  SURVEY_SECTION_CATALOGUE.map((item) => [
+    item.key,
+    item as SurveySectionCatalogueItem,
+  ]),
 );
 
-const SECTIONS_BY_RICS = new Map<string, BuildingSurveySection>();
-for (const item of BUILDING_SURVEY_SECTIONS) {
-  if (!SECTIONS_BY_RICS.has(item.ricsCode)) {
-    SECTIONS_BY_RICS.set(item.ricsCode, item);
+const BY_RICS = new Map<string, SurveySectionCatalogueItem>();
+for (const item of SURVEY_SECTION_CATALOGUE) {
+  if (!BY_RICS.has(item.ricsCode)) {
+    BY_RICS.set(item.ricsCode, item as SurveySectionCatalogueItem);
   }
 }
 
-export function buildingSurveySectionByKey(
-  key: string,
-): BuildingSurveySection | undefined {
-  return SECTIONS_BY_KEY.get(key);
+export function surveySectionByKey(
+  key: string | null | undefined,
+): SurveySectionCatalogueItem | undefined {
+  if (!key) return undefined;
+  return BY_KEY.get(key);
 }
 
-export function buildingSurveySectionByRicsCode(
-  code: string,
-): BuildingSurveySection | undefined {
+export function surveySectionByRicsCode(
+  code: string | null | undefined,
+): SurveySectionCatalogueItem | undefined {
+  if (!code) return undefined;
   const normalized = code.trim();
-  return (
-    SECTIONS_BY_RICS.get(normalized) ??
-    SECTIONS_BY_RICS.get(normalized.toUpperCase())
+  return BY_RICS.get(normalized) ?? BY_RICS.get(normalized.toUpperCase());
+}
+
+export function sectionsVisibleAtLevel(
+  level: SurveyLevel | number | string | null | undefined,
+): readonly SurveySectionCatalogueItem[] {
+  const resolved = normalizeSurveyLevel(level);
+  return SURVEY_SECTION_CATALOGUE.filter((item) =>
+    (item.visibleOnLevels as readonly SurveyLevel[]).includes(resolved),
   );
 }
 
-export function resolveSurveySectionKey(
-  value: string | null | undefined,
-): string | undefined {
-  if (!value) return undefined;
-  if (SECTIONS_BY_KEY.has(value)) return value;
-  return buildingSurveySectionByRicsCode(value)?.key;
-}
-
-export function surveyLevelForType(
-  surveyType: string | null | undefined,
-): SurveyLevel {
-  return surveyType === 'rics_hss_l3' ? 'l3' : 'l2';
-}
-
-export function sectionsForSurveyType(
-  surveyType: BuildingSurveyTypeKey | string | null | undefined,
-): readonly BuildingSurveySection[] {
-  const level = surveyLevelForType(surveyType);
-  return BUILDING_SURVEY_SECTIONS.filter((section) =>
-    section.levels.includes(level),
-  );
-}
-
-export function ratedSurveySections(
-  surveyType?: string | null,
-): readonly BuildingSurveySection[] {
-  return sectionsForSurveyType(surveyType ?? 'rics_hss_l3').filter(
-    (section) => section.allowsRating,
-  );
+export function onSiteCaptureSections(
+  level: SurveyLevel | number | string | null | undefined,
+): readonly SurveySectionCatalogueItem[] {
+  return sectionsVisibleAtLevel(level).filter((item) => item.onSitePickable);
 }
 
 export function surveySectionDisplayLabel(
-  section: Pick<BuildingSurveySection, 'heading' | 'ricsCode' | 'letter'>,
+  item: Pick<SurveySectionCatalogueItem, 'heading' | 'ricsCode' | 'letter'>,
 ): string {
-  if (/^[A-N]\d$/.test(section.ricsCode)) {
-    return `${section.ricsCode} ${section.heading}`;
+  if (/^[A-N]\d$/.test(item.ricsCode)) {
+    return `${item.ricsCode} ${item.heading}`;
   }
-  if (section.letter) {
-    return `${section.letter} · ${section.heading}`;
+  if (item.letter) {
+    return `${item.letter} · ${item.heading}`;
   }
-  return section.heading;
+  return item.heading;
 }
 
-export function ricsCodeForSectionKey(key: string): string | null {
-  return buildingSurveySectionByKey(key)?.ricsCode ?? null;
+export type HubSurveySection = {
+  key: string;
+  heading: string;
+  group: string;
+  letter: string;
+  optional: boolean;
+};
+
+/** One catalogue: level only toggles optional field visibility. */
+export function hubSectionsForLevel(
+  level: SurveyLevel | number | string | null | undefined,
+): HubSurveySection[] {
+  return sectionsVisibleAtLevel(level).map((item) => ({
+    key: item.key,
+    heading: item.heading,
+    group: item.group,
+    letter: item.letter,
+    optional: item.visibleOnLevels.length === 1,
+  }));
+}
+
+export function hubSectionDisplayLabel(section: HubSurveySection): string {
+  const item = surveySectionByKey(section.key);
+  const base = item
+    ? surveySectionDisplayLabel(item)
+    : surveySectionDisplayLabel({
+        heading: section.heading,
+        ricsCode: section.letter,
+        letter: section.letter,
+      });
+  return section.optional ? `${base} (optional)` : base;
 }

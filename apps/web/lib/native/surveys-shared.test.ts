@@ -59,6 +59,7 @@ describe('mapNativeSurvey', () => {
     expect(mapped.title).toBe('12 High Street');
     expect(mapped.survey_type).toBe('rics_hss_l1');
     expect(mapped.survey_type_label).toBe('RICS Home Survey Level 1');
+    expect(mapped.survey_level).toBe(2);
     expect(mapped.client_name).toBe('Hope and Wonder');
     expect(mapped.session_count).toBe(2);
     expect(mapped.photo_count).toBe(4);

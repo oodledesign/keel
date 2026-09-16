@@ -1,0 +1,52 @@
+{
+  "data": [
+    {
+      "certificateNumber": "1111-2222-3333-4444-5555",
+      "addressLine1": "12 Example Street",
+      "addressLine2": null,
+      "addressLine3": null,
+      "addressLine4": null,
+      "postcode": "M20 4AP",
+      "postTown": "MANCHESTER",
+      "council": "Manchester",
+      "constituency": "Manchester Withington",
+      "currentEnergyEfficiencyBand": "D",
+      "registrationDate": "2021-08-11",
+      "uprn": 10094703381,
+      "schemaType": "RdSAP-Schema-20.0.0"
+    },
+    {
+      "certificateNumber": "0000-1672-0000-1732-0000",
+      "addressLine1": "14 Example Street",
+      "addressLine2": null,
+      "addressLine3": null,
+      "addressLine4": null,
+      "postcode": "M20 4AP",
+      "postTown": "MANCHESTER",
+      "council": "Manchester",
+      "currentEnergyEfficiencyBand": "C",
+      "registrationDate": "2023-12-01",
+      "uprn": 10094703399,
+      "schemaType": "RdSAP-Schema-21.0.0"
+    },
+    {
+      "certificateNumber": "9999-8888-7777-6666-5555",
+      "addressLine1": "12 Example Street",
+      "addressLine2": "Flat 2",
+      "postcode": "M20 4AP",
+      "postTown": "MANCHESTER",
+      "currentEnergyEfficiencyBand": "E",
+      "registrationDate": "2018-03-02",
+      "uprn": 10094703381,
+      "schemaType": "RdSAP-Schema-17.1"
+    }
+  ],
+  "pagination": {
+    "totalRecords": 3,
+    "currentPage": 1,
+    "totalPages": 1,
+    "nextPage": null,
+    "prevPage": null,
+    "pageSize": 50
+  }
+}

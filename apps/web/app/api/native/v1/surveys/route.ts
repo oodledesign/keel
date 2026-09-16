@@ -18,6 +18,10 @@ const CreateSurveyBodySchema = z.object({
   workspace: z.string().min(1),
   title: z.string().min(1).max(500),
   survey_type: z.string().max(80).optional().nullable(),
+  survey_level: z.union([z.literal(2), z.literal(3)]).optional(),
+  address: z.string().max(500).optional().nullable(),
+  postcode: z.string().max(16).optional().nullable(),
+  uprn: z.string().max(20).optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
 });
 
@@ -65,6 +69,10 @@ export async function POST(request: Request) {
       workspace,
       title: parsed.data.title,
       surveyType: parsed.data.survey_type,
+      surveyLevel: parsed.data.survey_level,
+      address: parsed.data.address,
+      postcode: parsed.data.postcode,
+      uprn: parsed.data.uprn,
       clientId: parsed.data.client_id,
     });
     return NextResponse.json(survey);
