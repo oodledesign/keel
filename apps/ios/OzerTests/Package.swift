@@ -53,6 +53,7 @@ let package = Package(
             path: "../Ozer/Surveys",
             sources: [
                 "SurveyDisplay.swift",
+                "SurveySectionCatalogue.swift",
             ]
         ),
         .executableTarget(

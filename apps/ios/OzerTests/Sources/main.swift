@@ -375,6 +375,7 @@ struct SpeakerTranscriptTests {
         FinanceMonthPointTests.run(check: check)
         WorkspaceNavigationTests.run(check: check)
         SurveyDisplayTests.run(check: check)
+        SurveySectionCatalogueTests.run(check: check)
 
 
         if failed > 0 {

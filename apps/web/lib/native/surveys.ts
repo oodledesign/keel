@@ -22,6 +22,12 @@ import {
   parseNativeMeetingSource,
 } from './meetings-shared';
 import {
+  appendSurveySectionNote,
+  mapNativeOnSiteSections,
+  requireOnSiteSurveySection,
+  resolveOnSiteSurveySection,
+} from './survey-sections';
+import {
   type NativeSurvey,
   type NativeSurveyDetail,
   type NativeSurveyPhoto,
@@ -37,6 +43,7 @@ import { nativeClientName, parseOptionalClientId } from './task-map';
 import { type NativeWorkspace } from './workspace-shared';
 
 export type {
+  NativeOnSiteSection,
   NativeSurvey,
   NativeSurveyDetail,
   NativeSurveyPhoto,
@@ -48,6 +55,11 @@ export {
   parseNativeSurveyType,
   workspaceShowsNativeSurveys,
 } from './surveys-shared';
+export {
+  appendSurveySectionNote,
+  mapNativeOnSiteSections,
+  requireOnSiteSurveySection,
+} from './survey-sections';
 
 const LIST_LIMIT = 80;
 const SURVEY_SELECT =
@@ -243,7 +255,7 @@ export async function getNativeSurvey(
   requireSurveyWorkspace(workspace);
   const row = await loadSurveyRow(client, workspace, surveyId);
 
-  const [clients, sessionRows, photoRows] = await Promise.all([
+  const [clients, sessionRows, photoRows, observationRows] = await Promise.all([
     loadClientRows(client, [row.client_id ?? ''].filter(Boolean)),
     client
       .from('meeting_transcripts')
@@ -256,12 +268,18 @@ export async function getNativeSurvey(
     client
       .from('docs')
       .select(
-        'id, title, mime_type, created_at, file_path, storage_path, storage_bucket, kind',
+        'id, title, mime_type, created_at, file_path, storage_path, storage_bucket, kind, pinned_section_key',
       )
       .eq('account_id', workspace.id)
       .eq('proposal_id', row.id)
       .eq('kind', 'uploaded')
       .order('created_at', { ascending: false }),
+    client
+      .from('survey_observations')
+      .select('transcript_id, section_key, rics_code, body, sort_order')
+      .eq('account_id', workspace.id)
+      .eq('proposal_id', row.id)
+      .order('sort_order', { ascending: true }),
   ]);
 
   if (sessionRows.error) {
@@ -270,34 +288,88 @@ export async function getNativeSurvey(
   if (photoRows.error) {
     throw new Error(photoRows.error.message);
   }
+  if (observationRows.error) {
+    throw new Error(observationRows.error.message);
+  }
+
+  const observations = (observationRows.data ?? []) as Array<{
+    transcript_id?: string | null;
+    section_key?: string | null;
+    rics_code?: string | null;
+    body?: string | null;
+  }>;
+  const sessionSection = new Map<
+    string,
+    { rics_code: string | null; section_key: string | null }
+  >();
+  const notesByCode = new Map<string, string>();
+  for (const observation of observations) {
+    const sectionKey = observation.section_key?.trim() || null;
+    const ricsCode = observation.rics_code?.trim() || null;
+    const transcriptId = observation.transcript_id?.trim();
+    if (transcriptId && !sessionSection.has(transcriptId)) {
+      sessionSection.set(transcriptId, {
+        rics_code: ricsCode,
+        section_key: sectionKey,
+      });
+    }
+    const body = observation.body?.trim() ?? '';
+    if (!body) continue;
+    for (const key of [ricsCode, sectionKey].filter(Boolean) as string[]) {
+      notesByCode.set(key, appendSurveySectionNote(notesByCode.get(key), body));
+    }
+  }
 
   const sessions: NativeSurveySession[] = (
     (sessionRows.data ?? []) as Array<Record<string, unknown>>
-  ).map((item) => ({
-    id: String(item.id),
-    title: String(item.title ?? 'Site notes').trim() || 'Site notes',
-    content: String(item.content ?? ''),
-    duration_seconds:
-      typeof item.duration_seconds === 'number' ? item.duration_seconds : null,
-    source: (item.source as string | null) ?? null,
-    meeting_date: (item.meeting_date as string | null) ?? null,
-    created_at: String(item.created_at ?? ''),
-  }));
+  ).map((item) => {
+    const id = String(item.id);
+    const linked = sessionSection.get(id);
+    return {
+      id,
+      title: String(item.title ?? 'Site notes').trim() || 'Site notes',
+      content: String(item.content ?? ''),
+      duration_seconds:
+        typeof item.duration_seconds === 'number'
+          ? item.duration_seconds
+          : null,
+      source: (item.source as string | null) ?? null,
+      meeting_date: (item.meeting_date as string | null) ?? null,
+      created_at: String(item.created_at ?? ''),
+      rics_code: linked?.rics_code ?? null,
+      section_key: linked?.section_key ?? null,
+    };
+  });
 
   const photos = await signSurveyPhotos(
     (photoRows.data ?? []) as Array<Record<string, unknown>>,
   );
+  const photoCountByKey = new Map<string, number>();
+  for (const photo of photos) {
+    for (const key of [photo.section_key, photo.rics_code].filter(
+      Boolean,
+    ) as string[]) {
+      photoCountByKey.set(key, (photoCountByKey.get(key) ?? 0) + 1);
+    }
+  }
+
+  const mapped = mapNativeSurvey(row, workspace.slug || workspace.id, {
+    clientName: row.client_id
+      ? nativeClientName(clients.get(row.client_id))
+      : null,
+    sessionCount: sessions.length,
+    photoCount: photos.length,
+  });
 
   return {
-    ...mapNativeSurvey(row, workspace.slug || workspace.id, {
-      clientName: row.client_id
-        ? nativeClientName(clients.get(row.client_id))
-        : null,
-      sessionCount: sessions.length,
-      photoCount: photos.length,
-    }),
+    ...mapped,
     sessions,
     photos,
+    sections: mapNativeOnSiteSections({
+      level: mapped.survey_level,
+      notesByCode,
+      photoCountByKey,
+    }),
   };
 }
 
@@ -321,12 +393,18 @@ async function signSurveyPhotos(
         .createSignedUrl(path, 3600);
       previewUrl = data?.signedUrl ?? null;
     }
+    const sectionKey = String(row.pinned_section_key ?? '').trim() || null;
+    const section = sectionKey
+      ? resolveOnSiteSurveySection(sectionKey)
+      : undefined;
     photos.push({
       id: String(row.id),
       title: String(row.title ?? 'Survey photo'),
       mime_type: mime,
       created_at: (row.created_at as string | null) ?? null,
       preview_url: previewUrl,
+      rics_code: section?.ricsCode ?? null,
+      section_key: section?.key ?? sectionKey,
     });
   }
 
@@ -477,6 +555,7 @@ export async function createNativeSurveySession(input: {
   durationSeconds?: number | null;
   meetingDate?: string | null;
   source?: string | null;
+  ricsCode?: string | null;
   audio?: {
     bytes: Buffer;
     filename: string;
@@ -484,9 +563,12 @@ export async function createNativeSurveySession(input: {
   } | null;
 }): Promise<{
   session: NativeSurveySession;
-  grouping_source: 'ai' | 'keyword_fallback';
+  grouping_source: 'ai' | 'keyword_fallback' | 'user';
 }> {
   requireSurveyWorkspace(input.workspace);
+  const chosenSection = input.ricsCode
+    ? requireOnSiteSurveySection(input.ricsCode)
+    : undefined;
   const survey = await loadSurveyRow(
     input.client,
     input.workspace,
@@ -561,51 +643,73 @@ export async function createNativeSurveySession(input: {
     }
   }
 
-  let groupingSource: 'ai' | 'keyword_fallback' = 'keyword_fallback';
-  try {
-    const grouping = await groupSurveyObservations({
-      transcript: content,
-      accountId: input.workspace.id,
-      supabase: input.client,
-    });
-    groupingSource = grouping.source;
+  let groupingSource: 'ai' | 'keyword_fallback' | 'user' = chosenSection
+    ? 'user'
+    : 'keyword_fallback';
 
-    if (grouping.drafts.length > 0) {
-      const { data: maxRow } = await input.client
-        .from('survey_observations')
-        .select('sort_order')
-        .eq('account_id', input.workspace.id)
-        .eq('proposal_id', survey.id)
-        .order('sort_order', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const startOrder =
-        Number((maxRow as { sort_order?: number } | null)?.sort_order ?? -1) +
-        1;
-
-      const { error: observationError } = await input.client
-        .from('survey_observations')
-        .insert(
-          grouping.drafts.map((draft, index) => ({
-            account_id: input.workspace.id,
-            proposal_id: survey.id,
-            transcript_id: transcriptId,
-            section_key: draft.sectionKey,
-            rics_code: draft.ricsCode ?? null,
-            body: draft.body,
-            sort_order: startOrder + index,
-            created_by: input.userId,
-          })) as never,
-        );
-      if (observationError) {
-        console.warn(
-          '[native/surveys] observation insert failed',
-          observationError,
-        );
-      }
+  if (chosenSection) {
+    try {
+      await upsertUserSectionObservation({
+        client: input.client,
+        userId: input.userId,
+        workspaceId: input.workspace.id,
+        surveyId: survey.id,
+        transcriptId,
+        section: chosenSection,
+        body: rawContent,
+      });
+    } catch (observationError) {
+      console.warn(
+        '[native/surveys] user section observation failed',
+        observationError,
+      );
     }
-  } catch (groupingError) {
-    console.warn('[native/surveys] grouping failed', groupingError);
+  } else {
+    try {
+      const grouping = await groupSurveyObservations({
+        transcript: content,
+        accountId: input.workspace.id,
+        supabase: input.client,
+      });
+      groupingSource = grouping.source;
+
+      if (grouping.drafts.length > 0) {
+        const { data: maxRow } = await input.client
+          .from('survey_observations')
+          .select('sort_order')
+          .eq('account_id', input.workspace.id)
+          .eq('proposal_id', survey.id)
+          .order('sort_order', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const startOrder =
+          Number((maxRow as { sort_order?: number } | null)?.sort_order ?? -1) +
+          1;
+
+        const { error: observationError } = await input.client
+          .from('survey_observations')
+          .insert(
+            grouping.drafts.map((draft, index) => ({
+              account_id: input.workspace.id,
+              proposal_id: survey.id,
+              transcript_id: transcriptId,
+              section_key: draft.sectionKey,
+              rics_code: draft.ricsCode ?? null,
+              body: draft.body,
+              sort_order: startOrder + index,
+              created_by: input.userId,
+            })) as never,
+          );
+        if (observationError) {
+          console.warn(
+            '[native/surveys] observation insert failed',
+            observationError,
+          );
+        }
+      }
+    } catch (groupingError) {
+      console.warn('[native/surveys] grouping failed', groupingError);
+    }
   }
 
   return {
@@ -617,9 +721,88 @@ export async function createNativeSurveySession(input: {
       source: (row.source as string | null) ?? source,
       meeting_date: (row.meeting_date as string | null) ?? meetingDate,
       created_at: String(row.created_at ?? ''),
+      rics_code: chosenSection?.ricsCode ?? null,
+      section_key: chosenSection?.key ?? null,
     },
     grouping_source: groupingSource,
   };
+}
+
+async function upsertUserSectionObservation(input: {
+  client: SupabaseClient;
+  userId: string;
+  workspaceId: string;
+  surveyId: string;
+  transcriptId: string;
+  section: ReturnType<typeof requireOnSiteSurveySection>;
+  body: string;
+}) {
+  const incoming = input.body.trim();
+  if (!incoming) return;
+
+  const existingQuery = await input.client
+    .from('survey_observations')
+    .select('id, body')
+    .eq('account_id', input.workspaceId)
+    .eq('proposal_id', input.surveyId)
+    // Catalogue codes are alphanumeric / underscore only (F3, water).
+    .or(
+      `rics_code.eq.${input.section.ricsCode},section_key.eq.${input.section.key}`,
+    )
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingQuery.error) {
+    throw new Error(existingQuery.error.message);
+  }
+
+  const existing = existingQuery.data as {
+    id: string;
+    body?: string | null;
+  } | null;
+
+  if (existing?.id) {
+    const { error } = await input.client
+      .from('survey_observations')
+      .update({
+        body: appendSurveySectionNote(existing.body, incoming),
+        section_key: input.section.key,
+        rics_code: input.section.ricsCode,
+      } as never)
+      .eq('id', existing.id)
+      .eq('account_id', input.workspaceId)
+      .eq('proposal_id', input.surveyId);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return;
+  }
+
+  const { data: maxRow } = await input.client
+    .from('survey_observations')
+    .select('sort_order')
+    .eq('account_id', input.workspaceId)
+    .eq('proposal_id', input.surveyId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const startOrder =
+    Number((maxRow as { sort_order?: number } | null)?.sort_order ?? -1) + 1;
+
+  const { error } = await input.client.from('survey_observations').insert({
+    account_id: input.workspaceId,
+    proposal_id: input.surveyId,
+    transcript_id: input.transcriptId,
+    section_key: input.section.key,
+    rics_code: input.section.ricsCode,
+    body: incoming,
+    sort_order: startOrder,
+    created_by: input.userId,
+  } as never);
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function addNativeSurveyPhoto(input: {
@@ -631,6 +814,7 @@ export async function addNativeSurveyPhoto(input: {
   filename: string;
   mimeType: string;
   title?: string | null;
+  ricsCode?: string | null;
 }): Promise<NativeSurveyPhoto> {
   requireSurveyWorkspace(input.workspace);
   const survey = await loadSurveyRow(
@@ -646,6 +830,9 @@ export async function addNativeSurveyPhoto(input: {
     );
   }
 
+  const section = input.ricsCode
+    ? requireOnSiteSurveySection(input.ricsCode)
+    : undefined;
   const stored = await storeSurveyFile({
     client: input.client,
     userId: input.userId,
@@ -656,7 +843,10 @@ export async function addNativeSurveyPhoto(input: {
     filename: input.filename,
     mimeType: mime,
     title: input.title?.trim() || input.filename || 'Survey photo',
-    tags: ['survey_photo'],
+    tags: section
+      ? ['survey_photo', `rics:${section.ricsCode}`]
+      : ['survey_photo'],
+    pinnedSectionKey: section?.key ?? null,
   });
 
   return stored;
@@ -673,6 +863,7 @@ async function storeSurveyFile(input: {
   mimeType: string;
   title: string;
   tags?: string[];
+  pinnedSectionKey?: string | null;
 }): Promise<NativeSurveyPhoto> {
   const safeName = input.filename.replace(/[^a-zA-Z0-9._-]/g, '_') || 'file';
   const filePath = `${input.workspace.id}/${input.surveyId}/${Date.now()}_${safeName}`;
@@ -706,8 +897,9 @@ async function storeSurveyFile(input: {
       proposal_id: input.surveyId,
       client_id: input.clientId,
       photo_role: 'archive',
+      pinned_section_key: input.pinnedSectionKey ?? null,
     } as never)
-    .select('id, title, mime_type, created_at')
+    .select('id, title, mime_type, created_at, pinned_section_key')
     .single();
 
   if (error || !data) {
@@ -724,11 +916,21 @@ async function storeSurveyFile(input: {
     previewUrl = signed.data?.signedUrl ?? null;
   }
 
+  const sectionKey =
+    (row.pinned_section_key as string | null)?.trim() ||
+    input.pinnedSectionKey ||
+    null;
+  const section = sectionKey
+    ? resolveOnSiteSurveySection(sectionKey)
+    : undefined;
+
   return {
     id: String(row.id),
     title: String(row.title ?? input.title),
     mime_type: (row.mime_type as string | null) ?? input.mimeType,
     created_at: (row.created_at as string | null) ?? null,
     preview_url: previewUrl,
+    rics_code: section?.ricsCode ?? null,
+    section_key: section?.key ?? sectionKey,
   };
 }

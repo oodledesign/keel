@@ -113,6 +113,7 @@ extension SurveyItem: Encodable {
         try container.encodeIfPresent(clientName, forKey: .clientName)
         try container.encode(sessionCount, forKey: .sessionCount)
         try container.encode(photoCount, forKey: .photoCount)
+        try container.encode(surveyLevel, forKey: .surveyLevel)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
         try container.encode(isLocal, forKey: .isLocal)

@@ -29,6 +29,10 @@ enum SurveyTypeOption: String, CaseIterable, Identifiable, Codable, Equatable {
 
     static let `default`: SurveyTypeOption = .ricsHssL2
 
+    var surveyLevel: Int {
+        self == .ricsHssL3 ? 3 : 2
+    }
+
     static func parse(_ raw: String?) -> SurveyTypeOption {
         guard let raw, let match = SurveyTypeOption(rawValue: raw) else {
             return .default
@@ -64,6 +68,22 @@ enum SurveyQueueStatus: Equatable {
 }
 
 enum SurveyDisplay {
+    static func surveyLevel(from surveyType: String?) -> Int {
+        SurveyTypeOption.parse(surveyType).surveyLevel
+    }
+
+    static func appendNote(existing: String, incoming: String) -> String {
+        let current = existing.trimmingCharacters(in: .whitespacesAndNewlines)
+        let next = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
+        if current.isEmpty { return next }
+        if next.isEmpty { return current }
+        return "\(current)\n\n\(next)"
+    }
+
+    static func accumulatedNote(remote: String, pendingBodies: [String]) -> String {
+        pendingBodies.reduce(remote) { appendNote(existing: $0, incoming: $1) }
+    }
+
     static func sessionTitle(from transcript: String, on date: Date, fallback: String = "Site notes") -> String {
         let first = transcript
             .split(whereSeparator: \.isNewline)

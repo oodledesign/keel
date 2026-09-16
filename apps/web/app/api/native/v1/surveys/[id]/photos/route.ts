@@ -46,6 +46,9 @@ export async function POST(
       filename: file.name || 'photo.jpg',
       mimeType: file.type || 'image/jpeg',
       title: String(form.get('title') ?? '').trim() || file.name,
+      ricsCode:
+        String(form.get('rics_code') ?? form.get('section_key') ?? '').trim() ||
+        null,
     });
     return NextResponse.json(photo);
   } catch (error) {

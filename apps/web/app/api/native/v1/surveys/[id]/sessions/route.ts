@@ -28,6 +28,8 @@ const CreateSessionBodySchema = z.object({
     .enum(['paste', 'upload', 'desktop_recorder', 'iphone'])
     .optional()
     .nullable(),
+  rics_code: z.string().max(40).optional().nullable(),
+  section_key: z.string().max(80).optional().nullable(),
 });
 
 async function readSessionPayload(request: Request): Promise<{
@@ -37,6 +39,7 @@ async function readSessionPayload(request: Request): Promise<{
   durationSeconds?: number | null;
   meetingDate?: string | null;
   source?: string | null;
+  ricsCode?: string | null;
   audio: {
     bytes: Buffer;
     filename: string;
@@ -67,6 +70,9 @@ async function readSessionPayload(request: Request): Promise<{
       durationSeconds: Number(form.get('duration_seconds') ?? '') || null,
       meetingDate: String(form.get('meeting_date') ?? '').trim() || null,
       source: String(form.get('source') ?? '').trim() || 'iphone',
+      ricsCode:
+        String(form.get('rics_code') ?? form.get('section_key') ?? '').trim() ||
+        null,
       audio,
     };
   }
@@ -82,6 +88,8 @@ async function readSessionPayload(request: Request): Promise<{
     durationSeconds: parsed.data.duration_seconds,
     meetingDate: parsed.data.meeting_date,
     source: parsed.data.source,
+    ricsCode:
+      parsed.data.rics_code?.trim() || parsed.data.section_key?.trim() || null,
     audio: null,
   };
 }
@@ -117,6 +125,7 @@ export async function POST(
       durationSeconds: payload.durationSeconds,
       meetingDate: payload.meetingDate,
       source: payload.source,
+      ricsCode: payload.ricsCode,
       audio: payload.audio,
     });
     return NextResponse.json(result);

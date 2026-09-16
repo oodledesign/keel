@@ -26,5 +26,20 @@ enum SurveyDisplayTests {
                 on: Date(timeIntervalSince1970: 0)
             ) == "The sash window is stiff on the landing."
         }
+
+        check("survey level 3 is only RICS Home Survey Level 3") {
+            SurveyDisplay.surveyLevel(from: "rics_hss_l3") == 3
+                && SurveyDisplay.surveyLevel(from: "rics_hss_l2") == 2
+                && SurveyTypeOption.ricsHssL3.surveyLevel == 3
+        }
+
+        check("later visits append to the same section note") {
+            SurveyDisplay.appendNote(existing: "Stopcock is stiff.", incoming: "Supply is copper.")
+                == "Stopcock is stiff.\n\nSupply is copper."
+                && SurveyDisplay.accumulatedNote(
+                    remote: "Stopcock is stiff.",
+                    pendingBodies: ["Supply is copper.", "Tank is lagged."]
+                ) == "Stopcock is stiff.\n\nSupply is copper.\n\nTank is lagged."
+        }
     }
 }

@@ -213,14 +213,21 @@ POST /api/native/v1/surveys
 { "workspace", "title", "survey_type?", "client_id?" }
 
 GET /api/native/v1/surveys/{id}?workspace=<slug-or-uuid>
-→ survey plus "sessions" and "photos" (signed preview URLs)
+→ survey plus "sessions", "photos" (signed preview URLs), and "sections"
+  (on-site L2/L3 catalogue with accumulated `note` and `photo_count`).
+  Sessions and photos include `rics_code` / `section_key` when tagged.
 
 POST /api/native/v1/surveys/{id}/sessions
-JSON { "workspace", "title?", "content?", "duration_seconds?", "meeting_date?", "source?" }
-or multipart fields plus optional audio `file`. Creates a meeting_transcript linked to the survey and groups it into survey_observations.
+JSON { "workspace", "title?", "content?", "duration_seconds?", "meeting_date?", "source?", "rics_code?" }
+or multipart fields plus optional audio `file`.
+When `rics_code` (or `section_key`) is set, the surveyor-chosen section is used:
+the session is attached to that code and the running `survey_observations` note
+is created or appended. AI does not assign the section.
+Without `rics_code`, the legacy keyword/AI grouping path remains.
 
 POST /api/native/v1/surveys/{id}/photos
-multipart `workspace` + image `file` → survey library doc (`photo_role = archive`)
+multipart `workspace` + image `file` + optional `rics_code` / `section_key`
+→ survey library doc (`photo_role = archive`, `pinned_section_key` when tagged)
 ```
 
 ## Task review

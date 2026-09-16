@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NativeHttpError } from './http';
 import {
+  addNativeSurveyPhoto,
   createNativeSurvey,
   createNativeSurveySession,
+  getNativeSurvey,
   listNativeSurveys,
 } from './surveys';
 import type { NativeWorkspace } from './workspace-shared';
@@ -271,5 +273,289 @@ describe('createNativeSurveySession', () => {
     expect(groupSurveyObservations).toHaveBeenCalled();
     expect(result.session.id).toBe('sess-1');
     expect(result.grouping_source).toBe('keyword_fallback');
+    expect(result.session.rics_code).toBeNull();
+  });
+
+  it('uses the surveyor-chosen section and appends to the running note', async () => {
+    const surveyLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          survey_level: 2,
+          client_id: clientId,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const transcriptInsert = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'sess-2',
+          title: 'F3 Water',
+          content: 'Supply pipework is copper.',
+          source: 'desktop_recorder',
+          duration_seconds: 18,
+          meeting_date: '2026-09-16',
+          created_at: '2026-09-16T11:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const existingObservation = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: 'obs-f3', body: 'Stopcock is stiff.' },
+        error: null,
+      }),
+    };
+    const updateChain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+    };
+    updateChain.eq.mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+
+    let observationCalls = 0;
+    const from = vi.fn((table: string) => {
+      if (table === 'proposals') return surveyLookup;
+      if (table === 'meeting_transcripts') return transcriptInsert;
+      if (table === 'survey_observations') {
+        observationCalls += 1;
+        return observationCalls === 1 ? existingObservation : updateChain;
+      }
+      return surveyLookup;
+    });
+
+    const result = await createNativeSurveySession({
+      client: { from } as never,
+      userId: 'user-dan',
+      workspace: surveyor,
+      surveyId,
+      title: 'F3 Water',
+      content: 'Supply pipework is copper.',
+      durationSeconds: 18,
+      meetingDate: '2026-09-16',
+      source: 'iphone',
+      ricsCode: 'F3',
+    });
+
+    expect(groupSurveyObservations).not.toHaveBeenCalled();
+    expect(result.grouping_source).toBe('user');
+    expect(result.session.rics_code).toBe('F3');
+    expect(result.session.section_key).toBe('water');
+    expect(updateChain.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: 'Stopcock is stiff.\n\nSupply pipework is copper.',
+        rics_code: 'F3',
+        section_key: 'water',
+      }),
+    );
+    expect(updateChain.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ transcript_id: 'sess-2' }),
+    );
+  });
+
+  it('rejects a desk-only or unknown section code', async () => {
+    await expect(
+      createNativeSurveySession({
+        client: { from: vi.fn() } as never,
+        userId: 'user-dan',
+        workspace: surveyor,
+        surveyId,
+        title: 'About the inspection',
+        content: 'Weather was dry.',
+        ricsCode: 'A',
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'rics_code must be an on-site survey section',
+    });
+    expect(groupSurveyObservations).not.toHaveBeenCalled();
+  });
+});
+
+describe('addNativeSurveyPhoto', () => {
+  it('pins a photo to the chosen section', async () => {
+    const surveyLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          client_id: clientId,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const docInsert = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'photo-1',
+          title: 'F3 Water',
+          mime_type: 'image/jpeg',
+          created_at: '2026-09-16T11:00:00Z',
+          pinned_section_key: 'water',
+        },
+        error: null,
+      }),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === 'proposals') return surveyLookup;
+      if (table === 'docs') return docInsert;
+      return surveyLookup;
+    });
+
+    const photo = await addNativeSurveyPhoto({
+      client: { from } as never,
+      userId: 'user-dan',
+      workspace: surveyor,
+      surveyId,
+      bytes: Buffer.from('fake-image'),
+      filename: 'stopcock.jpg',
+      mimeType: 'image/jpeg',
+      title: 'F3 Water',
+      ricsCode: 'F3',
+    });
+
+    expect(docInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pinned_section_key: 'water',
+        tags: ['survey_photo', 'rics:F3'],
+      }),
+    );
+    expect(photo.rics_code).toBe('F3');
+    expect(photo.section_key).toBe('water');
+  });
+});
+
+describe('getNativeSurvey', () => {
+  it('returns on-site sections with the accumulated note and tagged photos', async () => {
+    const surveyLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          survey_level: 2,
+          client_id: clientId,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const clientChain = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: clientId,
+            display_name: 'Hope and Wonder',
+            first_name: null,
+            last_name: null,
+            company_name: null,
+            client_type: 'individual',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const sessionChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'sess-1',
+            title: 'F3 Water',
+            content: 'Stopcock is stiff.',
+            source: 'desktop_recorder',
+            duration_seconds: 12,
+            meeting_date: '2026-09-15',
+            created_at: '2026-09-15T11:00:00Z',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const photoChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'photo-1',
+            title: 'F3 Water',
+            mime_type: 'image/jpeg',
+            created_at: '2026-09-16T11:00:00Z',
+            file_path: 'path/stopcock.jpg',
+            pinned_section_key: 'water',
+            kind: 'uploaded',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const observationChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            transcript_id: 'sess-1',
+            section_key: 'water',
+            rics_code: 'F3',
+            body: 'Stopcock is stiff.\n\nSupply pipework is copper.',
+          },
+        ],
+        error: null,
+      }),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === 'proposals') return surveyLookup;
+      if (table === 'clients') return clientChain;
+      if (table === 'meeting_transcripts') return sessionChain;
+      if (table === 'docs') return photoChain;
+      if (table === 'survey_observations') return observationChain;
+      return surveyLookup;
+    });
+
+    const detail = await getNativeSurvey({ from } as never, surveyor, surveyId);
+    const water = detail.sections.find((item) => item.rics_code === 'F3');
+
+    expect(water?.label).toBe('F3 Water');
+    expect(water?.note).toBe(
+      'Stopcock is stiff.\n\nSupply pipework is copper.',
+    );
+    expect(water?.photo_count).toBe(1);
+    expect(detail.sessions[0]?.rics_code).toBe('F3');
+    expect(detail.photos[0]?.rics_code).toBe('F3');
+    expect(detail.photos[0]?.section_key).toBe('water');
   });
 });

@@ -22,6 +22,7 @@ struct PendingSurveySession: Codable, Identifiable, Equatable, Hashable {
     var meetingDate: String
     var audioFileName: String?
     var createdAt: String
+    var ricsCode: String?
 }
 
 struct PendingSurveyPhoto: Codable, Identifiable, Equatable, Hashable {
@@ -33,6 +34,7 @@ struct PendingSurveyPhoto: Codable, Identifiable, Equatable, Hashable {
     var fileName: String
     var mimeType: String
     var createdAt: String
+    var ricsCode: String?
 }
 
 /// Local survey creates, recordings, and photos. Flush never drops an item until the server ACKs.
@@ -72,6 +74,26 @@ final class OfflineSurveyQueue {
         pendingPhotos.filter { $0.surveyId == surveyId && $0.workspace == workspace }
     }
 
+    func sessions(forSurvey surveyId: String, workspace: String, ricsCode: String) -> [PendingSurveySession] {
+        sessions(forSurvey: surveyId, workspace: workspace).filter {
+            matchesSection($0.ricsCode, ricsCode)
+        }
+    }
+
+    func photos(forSurvey surveyId: String, workspace: String, ricsCode: String) -> [PendingSurveyPhoto] {
+        photos(forSurvey: surveyId, workspace: workspace).filter {
+            matchesSection($0.ricsCode, ricsCode)
+        }
+    }
+
+    private func matchesSection(_ stored: String?, _ ricsCode: String) -> Bool {
+        guard let stored, !stored.isEmpty else { return false }
+        if stored.caseInsensitiveCompare(ricsCode) == .orderedSame { return true }
+        let left = SurveySectionCatalogue.section(ricsCodeOrKey: stored)
+        let right = SurveySectionCatalogue.section(ricsCodeOrKey: ricsCode)
+        return left?.ricsCode == right?.ricsCode && left != nil
+    }
+
     func enqueueCreate(
         id: String = UUID().uuidString,
         workspace: String,
@@ -103,7 +125,8 @@ final class OfflineSurveyQueue {
         content: String,
         durationSeconds: Int,
         meetingDate: String,
-        audioURL: URL?
+        audioURL: URL?,
+        ricsCode: String? = nil
     ) -> PendingSurveySession {
         var fileName = audioURL?.lastPathComponent
         if let audioURL {
@@ -123,7 +146,8 @@ final class OfflineSurveyQueue {
             durationSeconds: durationSeconds,
             meetingDate: meetingDate,
             audioFileName: fileName,
-            createdAt: OfflineNoteQueue.isoString(from: Date())
+            createdAt: OfflineNoteQueue.isoString(from: Date()),
+            ricsCode: ricsCode
         )
         pendingSessions.insert(item, at: 0)
         lastFlushError = nil
@@ -137,7 +161,8 @@ final class OfflineSurveyQueue {
         isLocalSurvey: Bool,
         title: String,
         imageData: Data,
-        mimeType: String = "image/jpeg"
+        mimeType: String = "image/jpeg",
+        ricsCode: String? = nil
     ) -> PendingSurveyPhoto {
         let fileName = "\(UUID().uuidString).jpg"
         let url = Self.photoDirectory.appendingPathComponent(fileName)
@@ -150,7 +175,8 @@ final class OfflineSurveyQueue {
             title: title,
             fileName: fileName,
             mimeType: mimeType,
-            createdAt: OfflineNoteQueue.isoString(from: Date())
+            createdAt: OfflineNoteQueue.isoString(from: Date()),
+            ricsCode: ricsCode
         )
         pendingPhotos.insert(item, at: 0)
         lastFlushError = nil
@@ -216,6 +242,7 @@ final class OfflineSurveyQueue {
                     meetingDate: session.meetingDate,
                     audioData: audioData,
                     filename: filename,
+                    ricsCode: session.ricsCode,
                     accessToken: accessToken
                 )
                 if let url = audioURL(for: session) {
@@ -246,6 +273,7 @@ final class OfflineSurveyQueue {
                     filename: photo.fileName,
                     mimeType: photo.mimeType,
                     title: photo.title,
+                    ricsCode: photo.ricsCode,
                     accessToken: accessToken
                 )
                 try? FileManager.default.removeItem(at: url)
