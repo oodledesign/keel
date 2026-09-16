@@ -41,7 +41,11 @@ import pathsConfig from '~/config/paths.config';
 import { LISTING_STATUS_LABELS } from '~/lib/commercial/commercial-constants';
 import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
+  RIGHTMOVE_OVERVIEW_STATUSES,
   type RightmoveDisposalStatusRow,
+  type RightmoveOverviewStatus,
+  countRightmoveOverviewStatuses,
+  formatRightmoveOverviewStatus,
   formatRightmoveUpdatedAt,
 } from '~/lib/commercial/rightmove-publish-status';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
@@ -93,6 +97,9 @@ export function RightmoveBulkPublishPanel({
   const [job, setJob] = useState<RightmoveBulkJobPublic | null>(initialJob);
   const [startPending, startTransition] = useTransition();
   const [statusOpen, setStatusOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | RightmoveOverviewStatus
+  >('all');
   const [rows, setRows] = useState<RightmoveDisposalStatusRow[]>([]);
   const [rowsPending, startRowsTransition] = useTransition();
 
@@ -177,13 +184,19 @@ export function RightmoveBulkPublishPanel({
       .replace('[account]', accountSlug)
       .replace('[id]', listingId)}/publishing`;
 
-  const statusCounts = useMemo(() => {
-    const published = rows.filter(
-      (row) => row.rightmoveStatus === 'published',
-    ).length;
-    const failed = rows.filter((row) => row.rightmoveStatus === 'error').length;
-    return { published, failed, total: rows.length };
-  }, [rows]);
+  const statusCounts = useMemo(
+    () => countRightmoveOverviewStatuses(rows),
+    [rows],
+  );
+  const visibleStatusChips = useMemo(
+    () =>
+      RIGHTMOVE_OVERVIEW_STATUSES.filter((status) => statusCounts[status] > 0),
+    [statusCounts],
+  );
+  const visibleRows = useMemo(() => {
+    if (statusFilter === 'all') return rows;
+    return rows.filter((row) => row.overviewStatus === statusFilter);
+  }, [rows, statusFilter]);
 
   return (
     <div className="space-y-3">
@@ -236,11 +249,18 @@ export function RightmoveBulkPublishPanel({
           open={statusOpen}
           onOpenChange={(open) => {
             setStatusOpen(open);
-            if (open) loadRows();
+            if (open) {
+              setStatusFilter('all');
+              loadRows();
+            }
           }}
         >
           <DialogTrigger asChild>
-            <Button type="button" variant="outline">
+            <Button
+              type="button"
+              variant="outline"
+              data-test="rightmove-status-open"
+            >
               Rightmove status
             </Button>
           </DialogTrigger>
@@ -249,13 +269,45 @@ export function RightmoveBulkPublishPanel({
               <DialogTitle>Rightmove disposals</DialogTitle>
               <DialogDescription>
                 Status, listing URL, and last sync for every disposal in this
-                workspace.
+                workspace. Unsynced is live on Rightmove but behind the latest
+                disposal or media updates.
                 {rows.length > 0
-                  ? ` ${statusCounts.published} published, ${statusCounts.failed} failed, ${statusCounts.total} total.`
+                  ? ` ${visibleStatusChips
+                      .map(
+                        (status) =>
+                          `${statusCounts[status]} ${formatRightmoveOverviewStatus(status).toLowerCase()}`,
+                      )
+                      .join(', ')}, ${rows.length} total.`
                   : null}
               </DialogDescription>
             </DialogHeader>
-            <div className="max-h-[60vh] overflow-auto">
+            {rows.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  data-test="rightmove-status-filter-all"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  All ({rows.length})
+                </Button>
+                {visibleStatusChips.map((status) => (
+                  <Button
+                    key={status}
+                    type="button"
+                    size="sm"
+                    variant={statusFilter === status ? 'default' : 'outline'}
+                    data-test={`rightmove-status-filter-${status}`}
+                    onClick={() => setStatusFilter(status)}
+                  >
+                    {formatRightmoveOverviewStatus(status)} (
+                    {statusCounts[status]})
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+            <div className="max-h-[50vh] overflow-auto">
               {rowsPending && rows.length === 0 ? (
                 <p className="flex items-center gap-2 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -264,6 +316,10 @@ export function RightmoveBulkPublishPanel({
               ) : rows.length === 0 ? (
                 <p className="py-8 text-sm text-[var(--workspace-shell-text-muted)]">
                   No disposals in this workspace yet.
+                </p>
+              ) : visibleRows.length === 0 ? (
+                <p className="py-8 text-sm text-[var(--workspace-shell-text-muted)]">
+                  No disposals with this status.
                 </p>
               ) : (
                 <Table>
@@ -276,13 +332,16 @@ export function RightmoveBulkPublishPanel({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((row) => {
+                    {visibleRows.map((row) => {
                       const listingStatus =
                         LISTING_STATUS_LABELS[
                           row.listingStatus as keyof typeof LISTING_STATUS_LABELS
                         ] ?? row.listingStatus;
                       return (
-                        <TableRow key={row.listingId}>
+                        <TableRow
+                          key={row.listingId}
+                          data-test={`rightmove-status-row-${row.overviewStatus}`}
+                        >
                           <TableCell>
                             <Link
                               href={listingHref(row.listingId)}
@@ -296,11 +355,7 @@ export function RightmoveBulkPublishPanel({
                           </TableCell>
                           <TableCell>
                             <RightmovePublicationStatusBadge
-                              status={
-                                row.rightmoveStatus === 'none'
-                                  ? null
-                                  : row.rightmoveStatus
-                              }
+                              status={row.overviewStatus}
                             />
                             {row.lastError ? (
                               <p className="mt-1 max-w-xs truncate text-xs text-rose-500">

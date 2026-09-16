@@ -37,7 +37,6 @@ import type {
 } from '../_lib/server/listings.service';
 import { useDisposalAccess } from './disposal-access-context';
 import { ListingChannelEnableDialog } from './listing-channel-enable-dialog';
-import { ListingChannelSyncIcon } from './listing-channel-sync-icon';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import { ListingRightmoveFeedToggle } from './listing-rightmove-feed-toggle';
 import { ListingWebsiteFeedToggle } from './listing-website-feed-toggle';
@@ -154,26 +153,15 @@ export function ListingPublishingChannels({
       className={`${workspacePanelCard} scroll-mt-36`}
       data-tour="sop-listing-publish"
     >
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <div className="min-w-0 space-y-1.5">
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-            Channels
-          </CardTitle>
-          <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            Choose where this disposal appears. Website and EACH are live XML
-            feeds. Rightmove publishes when you turn it on, then stays in sync
-            when status or media changes.
-          </p>
-        </div>
-        <ListingChannelSyncIcon
-          channels={[
-            { key: 'website', label: 'Website', status: websiteStatus },
-            { key: 'each', label: 'EACH', status: eachStatus },
-            { key: 'rightmove', label: 'Rightmove', status: rightmoveStatus },
-          ]}
-          accountId={accountId}
-          listingId={listing.id}
-        />
+      <CardHeader className="space-y-1.5">
+        <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+          Channels
+        </CardTitle>
+        <p className="text-sm text-[var(--workspace-shell-text)]/50">
+          Choose where this disposal appears. Website and EACH are live XML
+          feeds. Rightmove publishes when you turn it on, then stays in sync
+          when status or media changes.
+        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         <ChannelRow>

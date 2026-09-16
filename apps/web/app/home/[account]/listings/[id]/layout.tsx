@@ -5,6 +5,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
+import { getWebsiteChannelStatus } from '~/lib/commercial/channel-publish-status';
+import { loadWebsiteChannelUrlState } from '~/lib/commercial/listing-website-url-resolve.server';
 import { collectRightmoveUrls } from '~/lib/commercial/rightmove-publish-status';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -32,19 +34,52 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
 
   const accountId = workspace.account.id as string;
   const canEditDisposals = workspace.canMutateCommercial;
-  const service = createListingsService(getSupabaseServerClient());
+  const client = getSupabaseServerClient();
+  const service = createListingsService(client);
   const listing = await service.getListing(listingId, accountId);
 
   if (!listing) {
     notFound();
   }
 
-  const publications = await service.listPublicationsForListing(listingId);
+  const [publications, mediaRows] = await Promise.all([
+    service.listPublicationsForListing(listingId),
+    client
+      .from('commercial_listing_media')
+      .select('created_at')
+      .eq('listing_id', listingId)
+      .eq('account_id', accountId)
+      .eq('is_private', false),
+  ]);
   const rightmoveUrls = publications
     .filter((publication) => publication.portal === 'rightmove')
     .flatMap((publication) =>
       collectRightmoveUrls({ externalUrl: publication.externalUrl }),
     );
+  const websiteIsLive =
+    getWebsiteChannelStatus({
+      listing: {
+        status: listing.status,
+        externalId: listing.externalId,
+        websiteUrl: listing.websiteUrl,
+      },
+      publications,
+    }).state === 'live';
+  const websiteUrlState = await loadWebsiteChannelUrlState({
+    accountId,
+    listingId,
+    listing: {
+      externalId: listing.externalId,
+      addressLine1: listing.addressLine1,
+      addressLine2: listing.addressLine2,
+      town: listing.town,
+      postcode: listing.postcode,
+      name: listing.name,
+      websiteUrl: listing.websiteUrl,
+    },
+    publications,
+    websiteIsLive,
+  });
 
   return (
     <>
@@ -63,6 +98,10 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
           accountId={accountId}
           canEditDisposals={canEditDisposals}
           rightmoveUrls={rightmoveUrls}
+          publications={publications}
+          mediaCreatedAt={(mediaRows.data ?? []).map((row) => row.created_at)}
+          websitePublicPageUrl={websiteUrlState.publicPageUrl}
+          websiteUrlHealth={websiteUrlState.health}
         >
           {children}
         </ListingDetailShell>
