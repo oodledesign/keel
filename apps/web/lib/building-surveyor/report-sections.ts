@@ -1,6 +1,8 @@
 /**
- * Standard UK building / RICS Home Survey headings.
- * Single source of truth for templates, transcript routing, and photo pins.
+ * Phase 1–2 RICS heading list used by AI grouping and the current hub.
+ * Survey Workspace v2 catalogue (section → sub-item codes, L2/L3 visibility)
+ * lives in `survey-section-catalogue.ts`. Do not replace this list until P3/P4
+ * switch capture and desk review to section-first.
  */
 export type BuildingSurveySection = {
   key: string;

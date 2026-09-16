@@ -1,6 +1,10 @@
 /**
  * Thin survey template keys. Phase 1 still uses BUILDING_SURVEY_SECTIONS
  * for every type so later templates can land without rewriting the hub.
+ *
+ * Survey Workspace v2: one RICS Home Survey template. `survey_level` 2 | 3
+ * is the visibility driver (see survey-section-catalogue.ts). `survey_type`
+ * stays for dual-write until commercial / specialist templates return.
  */
 export const BUILDING_SURVEY_TYPES = [
   {
@@ -66,4 +70,37 @@ export function normalizeBuildingSurveyType(
   value: string | null | undefined,
 ): BuildingSurveyTypeKey {
   return isBuildingSurveyTypeKey(value) ? value : DEFAULT_BUILDING_SURVEY_TYPE;
+}
+
+/** RICS Home Survey level. One template; level hides L2-only or L3-only fields. */
+export const SURVEY_LEVELS = [2, 3] as const;
+
+export type SurveyLevel = (typeof SURVEY_LEVELS)[number];
+
+export const DEFAULT_SURVEY_LEVEL: SurveyLevel = 2;
+
+export function isSurveyLevel(
+  value: number | string | null | undefined,
+): value is SurveyLevel {
+  return value === 2 || value === 3;
+}
+
+export function normalizeSurveyLevel(
+  value: number | string | null | undefined,
+): SurveyLevel {
+  if (value === 3 || value === '3' || value === 'l3' || value === 'L3') {
+    return 3;
+  }
+  return DEFAULT_SURVEY_LEVEL;
+}
+
+/** Dual-write: map the Phase 1 template key onto the v2 visibility driver. */
+export function surveyLevelFromType(
+  surveyType: string | null | undefined,
+): SurveyLevel {
+  return surveyType === 'rics_hss_l3' ? 3 : DEFAULT_SURVEY_LEVEL;
+}
+
+export function surveyTypeForLevel(level: SurveyLevel): BuildingSurveyTypeKey {
+  return level === 3 ? 'rics_hss_l3' : 'rics_hss_l2';
 }
