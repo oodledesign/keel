@@ -72,10 +72,7 @@ export async function fetchGovUkEpc(
 ): Promise<unknown> {
   const token = getGovUkEpcBearerToken();
   if (!token) {
-    throw new EpcApiError(
-      401,
-      'EPC lookup is not configured. Set GOV_UK_EPC_API_BEARER_TOKEN in the server environment.',
-    );
+    throw new EpcApiError(401, 'EPC lookup is unavailable right now.');
   }
 
   const url = new URL(path, GOV_UK_EPC_API_BASE_URL);

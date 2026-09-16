@@ -304,7 +304,10 @@ export function SurveyEpcPanel({
   const overridden = attached?.overriddenFields ?? [];
 
   return (
-    <div className="mt-5 border-t border-[color:var(--workspace-shell-border)] pt-5">
+    <div
+      className="mt-5 border-t border-[color:var(--workspace-shell-border)] pt-5"
+      data-test="survey-epc-prep"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h4 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
@@ -354,6 +357,7 @@ export function SurveyEpcPanel({
               className={workspaceBtnPrimaryMd}
               disabled={saving}
               onClick={() => void handleConfirmAddress()}
+              data-test="survey-epc-confirm-address"
             >
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -368,6 +372,7 @@ export function SurveyEpcPanel({
                   variant="outline"
                   disabled={searching || refreshing}
                   onClick={() => void handleRefresh()}
+                  data-test="survey-epc-refresh"
                 >
                   {refreshing || searching ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -529,6 +534,7 @@ export function SurveyEpcPanel({
                   variant="outline"
                   disabled={savingFields}
                   onClick={() => void handleSaveOverrides()}
+                  data-test="survey-epc-save-edits"
                 >
                   {savingFields ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -540,6 +546,7 @@ export function SurveyEpcPanel({
                   size="sm"
                   variant="ghost"
                   onClick={() => void handleClear()}
+                  data-test="survey-epc-remove"
                 >
                   Remove
                 </Button>
@@ -579,6 +586,7 @@ export function SurveyEpcPanel({
                   variant="outline"
                   disabled={attaching === hit.certificateNumber}
                   onClick={() => void handleAttach(hit.certificateNumber)}
+                  data-test={`survey-epc-use-${hit.certificateNumber}`}
                 >
                   {attaching === hit.certificateNumber ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

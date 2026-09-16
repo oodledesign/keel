@@ -92,13 +92,24 @@ export function mergeEpcWithOverrides(
   const nextPulled = snapshotEpcFields(pulled);
   const nextCurrent = snapshotEpcFields(current);
   const keep = new Set(parseOverriddenFields(overridden));
-  const merged = { ...nextPulled };
-  for (const field of OVERRIDABLE_EPC_FIELDS) {
-    if (keep.has(field)) {
-      merged[field] = nextCurrent[field] as never;
-    }
-  }
-  return merged;
+  return {
+    currentRating: keep.has('currentRating')
+      ? nextCurrent.currentRating
+      : nextPulled.currentRating,
+    potentialRating: keep.has('potentialRating')
+      ? nextCurrent.potentialRating
+      : nextPulled.potentialRating,
+    lodgementDate: keep.has('lodgementDate')
+      ? nextCurrent.lodgementDate
+      : nextPulled.lodgementDate,
+    floorArea: keep.has('floorArea')
+      ? nextCurrent.floorArea
+      : nextPulled.floorArea,
+    fuelType: keep.has('fuelType') ? nextCurrent.fuelType : nextPulled.fuelType,
+    recommendationsSummary: keep.has('recommendationsSummary')
+      ? nextCurrent.recommendationsSummary
+      : nextPulled.recommendationsSummary,
+  };
 }
 
 export function isEpcFieldOverridden(

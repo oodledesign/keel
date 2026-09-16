@@ -1,3 +1,5 @@
+import type { EpcFieldSnapshot, OverridableEpcField } from './overrides';
+
 export const GOV_UK_EPC_API_BASE_URL =
   'https://api.get-energy-performance-data.communities.gov.uk';
 
@@ -60,22 +62,8 @@ export type SurveyEpcRecord = {
   floorArea: number | null;
   fuelType: string | null;
   recommendationsSummary: string | null;
-  pulled: {
-    currentRating: string | null;
-    potentialRating: string | null;
-    lodgementDate: string | null;
-    floorArea: number | null;
-    fuelType: string | null;
-    recommendationsSummary: string | null;
-  };
-  overriddenFields: Array<
-    | 'currentRating'
-    | 'potentialRating'
-    | 'lodgementDate'
-    | 'floorArea'
-    | 'fuelType'
-    | 'recommendationsSummary'
-  >;
+  pulled: EpcFieldSnapshot;
+  overriddenFields: OverridableEpcField[];
   fetchedAt: string;
 };
 
