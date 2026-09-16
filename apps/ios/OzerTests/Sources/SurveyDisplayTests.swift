@@ -33,13 +33,20 @@ enum SurveyDisplayTests {
                 && SurveyTypeOption.ricsHssL3.surveyLevel == 3
         }
 
-        check("later visits append to the same section note") {
+        check("later visits append to the same section note with a divider") {
+            let divider = SurveyDisplay.noteTakeDivider
             SurveyDisplay.appendNote(existing: "Stopcock is stiff.", incoming: "Supply is copper.")
-                == "Stopcock is stiff.\n\nSupply is copper."
+                == "Stopcock is stiff.\n\n\(divider)\n\nSupply is copper."
                 && SurveyDisplay.accumulatedNote(
                     remote: "Stopcock is stiff.",
                     pendingBodies: ["Supply is copper.", "Tank is lagged."]
-                ) == "Stopcock is stiff.\n\nSupply is copper.\n\nTank is lagged."
+                ) == "Stopcock is stiff.\n\n\(divider)\n\nSupply is copper.\n\n\(divider)\n\nTank is lagged."
+                && SurveyDisplay.appendNote(existing: "Stopcock is stiff.", incoming: "   \n")
+                == "Stopcock is stiff."
+                && SurveyDisplay.appendNote(existing: "", incoming: "Stopcock is stiff.")
+                == "Stopcock is stiff."
+                && SurveyDisplay.noteTakes(from: "Stopcock is stiff.\n\n\(divider)\n\nSupply is copper.")
+                == ["Stopcock is stiff.", "Supply is copper."]
         }
     }
 }

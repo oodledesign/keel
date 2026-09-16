@@ -16,6 +16,8 @@ Rules:
 - Do not drop findings, limitations, or condition comments.
 - Do not assign, guess, or change a RICS section or section_key.
 - Ignore any section fields in the user payload for routing. They are context only.
+- One surveyor is dictating to themselves. Output plain prose only.
+- Do not add speaker labels, speaker headings, or names such as Me or Speaker 1.
 - If the text is already clean, return it unchanged.
 - If there is nothing usable, return {"cleanedText": ""}.`;
 

@@ -370,6 +370,46 @@ struct SpeakerTranscriptTests {
                 && !SpeakerTurnSplitter.isSpeakerLabel("Hello there")
         }
 
+        check("survey format omits speaker headings") {
+            let labelled = SpeakerTurnSplitter.format(
+                turns: [
+                    SpeakerTurn(speaker: "Me", text: "The stopcock is stiff.", start: 0, end: 2),
+                    SpeakerTurn(speaker: "Speaker 1", text: "Supply is copper.", start: 3, end: 5),
+                ],
+                liveText: "",
+                liveSpeaker: "Me"
+            )
+            let plain = SpeakerTurnSplitter.formatPlain(
+                turns: [
+                    SpeakerTurn(speaker: "Me", text: "The stopcock is stiff.", start: 0, end: 2),
+                    SpeakerTurn(speaker: "Speaker 1", text: "Supply is copper.", start: 3, end: 5),
+                ],
+                liveText: ""
+            )
+            var splitter = SpeakerTurnSplitter()
+            splitter.ingest(sessionText: "The sash on the landing is stiff.", at: 0.2)
+            splitter.commitOpen()
+            let finished = splitter.finish(includeSpeakerLabels: false)
+            return labelled.contains("## Me")
+                && labelled.contains("## Speaker 1")
+                && !plain.contains("##")
+                && !plain.contains("Me")
+                && plain.contains("The stopcock is stiff.")
+                && plain.contains("Supply is copper.")
+                && finished == "The sash on the landing is stiff."
+                && !finished.contains("##")
+        }
+
+        check("plainProse strips survey speaker labels") {
+            SpeakerTurnSplitter.plainProse(from: "## Me\n\nThe stopcock is stiff.")
+                == "The stopcock is stiff."
+                && SpeakerTurnSplitter.plainProse(from: "Me: Supply is copper.")
+                == "Supply is copper."
+                && SpeakerTurnSplitter.plainProse(from: "Kitchen: the tap drips.")
+                == "Kitchen: the tap drips."
+                && SpeakerTurnSplitter.plainProse(from: "## Me") == ""
+        }
+
         NoteMarkdownTests.run(check: check)
         MeetingDisplayTests.run(check: check)
         FinanceMonthPointTests.run(check: check)

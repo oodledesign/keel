@@ -24,6 +24,8 @@ final class MeetingCaptureSession {
     private(set) var statusMessage: String?
     private(set) var modelProgress: Double?
 
+    /// Meetings keep speaker pills and `## Me` labels. Survey dictation does not.
+    private let labelSpeakers: Bool
     private let audio = SpeechAudioEngine()
     private var recognizer: SFSpeechRecognizer?
     private var request: SFSpeechAudioBufferRecognitionRequest?
@@ -46,6 +48,10 @@ final class MeetingCaptureSession {
     private static let restartHandshake: TimeInterval = 0.35
     private static let restartFallback: TimeInterval = 2.5
     private static let restartBackoff: TimeInterval = 1.5
+
+    init(labelSpeakers: Bool = true) {
+        self.labelSpeakers = labelSpeakers
+    }
 
     var elapsedLabel: String {
         Self.formatElapsed(elapsed)
@@ -97,7 +103,9 @@ final class MeetingCaptureSession {
             try audio.start(writingTo: cafURL)
             isRecording = true
             startElapsedTimer()
-            prepareDiarizerInBackground()
+            if labelSpeakers {
+                prepareDiarizerInBackground()
+            }
         } catch {
             teardown(deactivateAudio: true)
             UIApplication.shared.isIdleTimerDisabled = false
@@ -133,8 +141,10 @@ final class MeetingCaptureSession {
         isRecording = false
         UIApplication.shared.isIdleTimerDisabled = false
 
-        await relabelSpeakersIfPossible()
-        let transcript = splitter.finish()
+        if labelSpeakers {
+            await relabelSpeakersIfPossible()
+        }
+        let transcript = splitter.finish(includeSpeakerLabels: labelSpeakers)
         liveTranscript = transcript
 
         let audioURL = try await Self.persistM4A(from: cafURL, id: recordingID)
@@ -166,8 +176,10 @@ final class MeetingCaptureSession {
         audio.setWritingEnabled(false)
         isPaused = true
         splitter.commitOpen()
-        liveTranscript = splitter.formattedBody
-        await relabelSpeakersIfPossible()
+        refreshLiveTranscript()
+        if labelSpeakers {
+            await relabelSpeakersIfPossible()
+        }
     }
 
     /// New Speech session on the same meeting. Live captions stay Me until the next pause/stop.
@@ -258,7 +270,7 @@ final class MeetingCaptureSession {
             return TimedCaption(start: start, end: start + segment.duration, text: text)
         }
         splitter.ingestCaptions(captions)
-        liveTranscript = splitter.formattedBody
+        refreshLiveTranscript()
         armPauseCommit()
     }
 
@@ -324,7 +336,7 @@ final class MeetingCaptureSession {
                 }
             }
             splitter.applyDiarization(spans)
-            liveTranscript = splitter.formattedBody
+            refreshLiveTranscript()
         } catch {
             splitter.applyDiarization([])
             lastError = SpeechPermissionError.diarizationUnavailable.errorDescription
@@ -337,7 +349,7 @@ final class MeetingCaptureSession {
             try? await Task.sleep(for: .seconds(SpeakerTurnSplitter.paragraphThreshold))
             guard let self, !Task.isCancelled, self.isRecording, !self.isPaused else { return }
             self.splitter.commitOpen()
-            self.liveTranscript = self.splitter.formattedBody
+            self.refreshLiveTranscript()
         }
     }
 
@@ -361,7 +373,7 @@ final class MeetingCaptureSession {
         isRestartingSpeech = true
         splitter.commitOpen()
         splitter.rollSession()
-        liveTranscript = splitter.formattedBody
+        refreshLiveTranscript()
         audio.attach(nil)
         request?.endAudio()
         request = nil
@@ -407,6 +419,12 @@ final class MeetingCaptureSession {
         task?.cancel()
         task = nil
         request = nil
+    }
+
+    private func refreshLiveTranscript() {
+        liveTranscript = labelSpeakers
+            ? splitter.formattedBody
+            : splitter.formattedPlainBody
     }
 
     private func startElapsedTimer() {
