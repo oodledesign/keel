@@ -23,13 +23,59 @@ export const BUILDING_SURVEYOR_PIPELINE_LABELS: Record<
   string
 > = {
   enquiry: 'Enquiry',
-  quoted: 'Quoted',
+  quoted: 'Quote sent',
   accepted: 'Accepted',
   booked: 'Booked',
   surveyed: 'Surveyed',
   reported: 'Report drafted',
   lost: 'Lost',
 };
+
+/** Ben Carey flow. Follow-up call is a card flag, not a stage. */
+export const BUILDING_SURVEYOR_CORE_FLOW_STAGES = [
+  'enquiry',
+  'quoted',
+  'accepted',
+  'booked',
+  'surveyed',
+] as const;
+
+export function isBuildingSurveyorPipelineStage(
+  stage: string | null | undefined,
+): stage is BuildingSurveyorPipelineStage {
+  return Boolean(
+    stage &&
+    BUILDING_SURVEYOR_PIPELINE_STAGES.includes(
+      stage as BuildingSurveyorPipelineStage,
+    ),
+  );
+}
+
+export function surveyorStageOnEnquiry(): BuildingSurveyorPipelineStage {
+  return 'enquiry';
+}
+
+export function surveyorStageOnQuoteSent(): BuildingSurveyorPipelineStage {
+  return 'quoted';
+}
+
+export function surveyorStageOnAccepted(): BuildingSurveyorPipelineStage {
+  return 'accepted';
+}
+
+/** Quote accept or signed Terms of Business can open the Accepted gate. */
+export function canOpenSurveyorAcceptedGate(input: {
+  quoteAccepted?: boolean;
+  termsSigned?: boolean;
+}): boolean {
+  return Boolean(input.quoteAccepted || input.termsSigned);
+}
+
+export function publicFormPipelineStage(
+  spaceType: string | null | undefined,
+): string {
+  return spaceType === 'building-surveyor' ? 'enquiry' : 'lead';
+}
 
 export const BUILDING_SURVEYOR_PIPELINE_BOARD_STAGES =
   BUILDING_SURVEYOR_PIPELINE_STAGES.map((key) => ({

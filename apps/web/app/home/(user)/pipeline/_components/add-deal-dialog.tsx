@@ -284,6 +284,7 @@ export function AddDealDialog({
         completedAt: null,
         ladderPosition: 0,
         boardPosition: 0,
+        followUpCall: false,
       });
 
       setOpen(false);

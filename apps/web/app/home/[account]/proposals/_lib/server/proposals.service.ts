@@ -554,6 +554,16 @@ class ProposalsService {
       } catch (error) {
         console.error('[proposals] draft contract on send failed', error);
       }
+      try {
+        const { maybeMoveSurveyorDealOnQuoteSent } =
+          await import('~/lib/building-surveyor/surveyor-pipeline-sync');
+        await maybeMoveSurveyorDealOnQuoteSent(
+          input.accountId,
+          (updated as { deal_id?: string | null }).deal_id,
+        );
+      } catch (error) {
+        console.error('[proposals] surveyor quote stage update failed', error);
+      }
     }
 
     return updated;

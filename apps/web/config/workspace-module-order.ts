@@ -157,9 +157,11 @@ export type CommercialPropertyWorkspaceModuleOrderKey =
 export const BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER = [
   'dashboard',
   'pipeline',
+  'forms',
   'clients',
   'meetings',
   'surveys',
+  'contracts',
   'notes',
   'docs',
   'tasks',

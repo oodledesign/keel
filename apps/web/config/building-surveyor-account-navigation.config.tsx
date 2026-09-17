@@ -2,7 +2,9 @@ import {
   Bell,
   CheckSquare,
   ClipboardList,
+  FileSignature,
   FileText,
+  FormInput,
   LayoutDashboard,
   Mic,
   Settings,
@@ -69,6 +71,14 @@ export function buildBuildingSurveyorSpaceNavChildren(
             Icon: <ClipboardList className={iconClasses} />,
           }
         : null,
+    forms: () =>
+      access.canViewDashboard && isEnabled(ms, 'forms')
+        ? {
+            label: 'Forms',
+            path: createPath(pathsConfig.app.accountForms, account),
+            Icon: <FormInput className={iconClasses} />,
+          }
+        : null,
     clients: () =>
       access.canViewClients && isEnabled(ms, 'clients')
         ? {
@@ -91,6 +101,15 @@ export function buildBuildingSurveyorSpaceNavChildren(
             label: 'Surveys',
             path: createPath(pathsConfig.app.accountSurveys, account),
             Icon: <FileText className={iconClasses} />,
+          }
+        : null,
+    contracts: () =>
+      access.canViewInvoices &&
+      (isEnabled(ms, 'invoices') || isEnabled(ms, 'contracts'))
+        ? {
+            label: 'Contracts',
+            path: createPath(pathsConfig.app.accountContracts, account),
+            Icon: <FileSignature className={iconClasses} />,
           }
         : null,
     notes: () =>

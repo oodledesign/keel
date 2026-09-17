@@ -427,7 +427,13 @@ export async function buildProposalPdf(
 
   drawLines(
     writer,
-    [isSurvey ? 'Building survey report' : 'Proposal'],
+    [
+      isSurvey
+        ? proposal.brand_name
+          ? `${proposal.brand_name} building survey report`
+          : 'Building survey report'
+        : 'Proposal',
+    ],
     12,
     fontBold,
     18,
@@ -446,6 +452,11 @@ export async function buildProposalPdf(
   } else {
     const bodyText = htmlToPlainText(proposal.content_html);
     drawLines(writer, bodyText.split('\n'), 10, font, 13);
+  }
+
+  if (isSurvey && proposal.brand_name) {
+    writer.y -= 10;
+    drawLines(writer, [`Prepared by ${proposal.brand_name}`], 9, font, 12);
   }
 
   return doc.save();

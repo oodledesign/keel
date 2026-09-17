@@ -5,9 +5,12 @@ import { redirect } from 'next/navigation';
 import pathsConfig from '~/config/paths.config';
 
 import { getTeamAccountAccess } from '../../../_lib/role-access';
-import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
+import { isContractsModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import {
+  CONTRACTS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../_lib/server/workspace-route-guard';
 
 export async function loadContractsPageData(accountSlug: string) {
   const workspace = await loadTeamWorkspace(accountSlug);
@@ -16,7 +19,7 @@ export async function loadContractsPageData(accountSlug: string) {
     redirect(pathsConfig.app.home);
   }
 
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, CONTRACTS_WORKSPACE_SPACE_TYPES);
 
   const account = workspace.account as {
     id: string;
@@ -26,9 +29,9 @@ export async function loadContractsPageData(accountSlug: string) {
     company_role?: string | null;
   };
   const access = getTeamAccountAccess(account);
-  const invoicesModuleEnabled = isWorkModuleEnabled(
+  const invoicesModuleEnabled = isContractsModuleEnabled(
     workspace.moduleSettings,
-    'invoices',
+    workspace.workspaceProfile,
   );
 
   return {

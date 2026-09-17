@@ -4,9 +4,12 @@ import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
-import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
+import { isContractsModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import {
+  CONTRACTS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../_lib/server/workspace-route-guard';
 import { ContractEditContent } from '../../_components/contract-edit-content';
 import { loadContractsPageData } from '../../_lib/server/contracts-page.loader';
 import { getContract } from '../../_lib/server/server-actions';
@@ -22,8 +25,12 @@ export const generateMetadata = async () => {
 async function ContractEditPage({ params }: ContractEditPageProps) {
   const { account: accountSlug, id } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
-  if (!isWorkModuleEnabled(workspace.moduleSettings, 'invoices')) {
+  redirectIfSpaceNotIn(workspace, accountSlug, CONTRACTS_WORKSPACE_SPACE_TYPES);
+  const contractsEnabled = isContractsModuleEnabled(
+    workspace.moduleSettings,
+    workspace.workspaceProfile,
+  );
+  if (!contractsEnabled) {
     notFound();
   }
 

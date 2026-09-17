@@ -144,11 +144,17 @@ export async function signContractRecipientByToken(
   });
 }
 
-export async function loadFrozenContractSnapshot(contract: Record<string, unknown>) {
+export async function loadFrozenContractSnapshot(
+  contract: Record<string, unknown>,
+) {
   const admin = adminDb();
   const sentVersionId = (contract.sent_version_id as string | null) ?? null;
   if (!sentVersionId) {
-    return { contract, version: null, signers: [] as Record<string, unknown>[] };
+    return {
+      contract,
+      version: null,
+      signers: [] as Record<string, unknown>[],
+    };
   }
 
   const { data: version } = await admin
@@ -236,6 +242,18 @@ export async function finalizeContractIfFullySigned(
   const paymentPlan = parsePaymentPlan(updated.payment_plan);
   if (paymentPlan.length > 0 && !updated.invoices_generated_at) {
     await generateInstalmentInvoices(contractId, accountId);
+  }
+
+  try {
+    const { maybeMoveSurveyorDealOnAccepted } =
+      await import('~/lib/building-surveyor/surveyor-pipeline-sync');
+    await maybeMoveSurveyorDealOnAccepted(
+      accountId,
+      (updated as { deal_id?: string | null }).deal_id ??
+        (contract as { deal_id?: string | null }).deal_id,
+    );
+  } catch {
+    // Non-blocking pipeline update for building-surveyor Terms of Business.
   }
 
   return updated;

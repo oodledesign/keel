@@ -120,10 +120,18 @@ export async function createDraftContractForProposal(proposalId: string) {
     .eq('id', proposal.id);
 
   if (proposal.deal_id) {
-    await admin
-      .from('pipeline_deals')
-      .update({ stage: 'proposal_sent' })
-      .eq('id', proposal.deal_id);
+    const { maybeMoveSurveyorDealOnQuoteSent } =
+      await import('~/lib/building-surveyor/surveyor-pipeline-sync');
+    const moved = await maybeMoveSurveyorDealOnQuoteSent(
+      proposal.account_id,
+      proposal.deal_id,
+    );
+    if (!moved) {
+      await admin
+        .from('pipeline_deals')
+        .update({ stage: 'proposal_sent' })
+        .eq('id', proposal.deal_id);
+    }
   }
 
   await admin.from('contract_events').insert({

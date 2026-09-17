@@ -7,11 +7,19 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { confirmSurveyGapCheckWithAi } from '~/lib/ai/survey-gap-check';
+import { deskReviewSections } from '~/lib/building-surveyor/survey-desk-review';
+import {
+  buildSurveyGapCheck,
+  mergeSurveyGapFlags,
+  summariseGapFlags,
+} from '~/lib/building-surveyor/survey-report-gap-check';
 
 import {
   AddSurveyStyleExampleSchema,
   AddSurveyTranscriptSchema,
   AutoCaptionSurveyPhotosSchema,
+  CheckSurveyPublishGapsSchema,
   CreateSurveyObservationSchema,
   DeleteSurveyObservationSchema,
   DeleteSurveyStyleExampleSchema,
@@ -223,6 +231,62 @@ export const deleteSurveyStyleExampleAction = enhanceAction(
     return result;
   },
   { schema: DeleteSurveyStyleExampleSchema },
+);
+
+export const checkSurveyPublishGapsAction = enhanceAction(
+  async (data) => {
+    const service = getService();
+    await service.assertBuildingSurveyorAccount(data.accountId);
+    await service.ensureUserAndPermission(data.accountId, 'invoices.view');
+    const survey = await service.getSurvey(data.accountId, data.proposalId);
+    const [observations, photos] = await Promise.all([
+      service.listObservations(data.accountId, data.proposalId),
+      service.listPinnedPhotos(data.accountId, data.proposalId),
+    ]);
+
+    const noteKeys = observations
+      .filter((row) => row.body.trim())
+      .map((row) => row.sectionKey);
+    const photoCountByKey = new Map<string, number>();
+    for (const photo of photos) {
+      const key = photo.sectionKey;
+      photoCountByKey.set(key, (photoCountByKey.get(key) ?? 0) + 1);
+    }
+
+    const sections = deskReviewSections(
+      survey.survey_level ?? survey.survey_type,
+      {
+        noteKeys,
+        photoCountByKey,
+      },
+    );
+    const deterministic = buildSurveyGapCheck(sections);
+    let flags = deterministic.flags;
+    let source: 'deterministic' | 'ai' | 'passthrough' = 'deterministic';
+
+    if (data.useAi) {
+      const confirmed = await confirmSurveyGapCheckWithAi({
+        accountId: data.accountId,
+        supabase: getSupabaseServerClient(),
+        flags: deterministic.flags,
+        sections: sections.map((section) => ({
+          key: section.key,
+          ricsCode: section.ricsCode,
+          label: section.label,
+          hasNotes: section.hasNotes,
+          photoCount: section.photoCount,
+        })),
+      });
+      flags = mergeSurveyGapFlags(deterministic.flags, confirmed.flags);
+      source = confirmed.source === 'ai' ? 'ai' : 'passthrough';
+    }
+
+    return {
+      ...summariseGapFlags(flags),
+      source,
+    };
+  },
+  { schema: CheckSurveyPublishGapsSchema },
 );
 
 export const generateSurveyDraftAction = enhanceAction(

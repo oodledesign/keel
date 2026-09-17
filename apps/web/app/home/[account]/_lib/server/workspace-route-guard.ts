@@ -47,6 +47,13 @@ export const COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
 export const FORMS_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'work',
   'commercial-property',
+  'building-surveyor',
+];
+
+/** Existing Ozer contracts / e-sign (work + surveyor Terms of Business). */
+export const CONTRACTS_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
+  'work',
+  'building-surveyor',
 ];
 
 /**

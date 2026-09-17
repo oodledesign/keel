@@ -26,6 +26,7 @@ import type { SurveyFloodRecord } from '~/lib/building-surveyor/flood/types';
 import {
   hubSectionDisplayLabel,
   hubSectionsForLevel,
+  surveySectionByKey,
 } from '~/lib/building-surveyor/survey-section-catalogue';
 import type { SurveyTemplateRecord } from '~/lib/building-surveyor/survey-template';
 import {
@@ -54,7 +55,9 @@ import {
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
 import { GroupedObservationCard } from './grouped-observation-card';
+import { SurveyPhrasePanel } from './survey-phrase-panel';
 import { SurveyPrepPanel } from './survey-prep-panel';
+import { SurveyPublishPanel } from './survey-publish-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
 type ClientInfo = {
@@ -559,6 +562,29 @@ export function SurveyHubContent({
                                 prev.filter((row) => row.id !== id),
                               )
                             }
+                            onInsertAsBlock={(body, defaultRating) => {
+                              startTransition(async () => {
+                                try {
+                                  const created =
+                                    await createSurveyObservationAction({
+                                      accountId,
+                                      accountSlug,
+                                      proposalId: proposal.id,
+                                      sectionKey: item.sectionKey,
+                                      body,
+                                      conditionRating: defaultRating
+                                        ? (defaultRating as SurveyObservation['conditionRating'])
+                                        : undefined,
+                                    });
+                                  setObservations((prev) => [...prev, created]);
+                                  toast.success(
+                                    'Phrase added as a new observation',
+                                  );
+                                } catch (error) {
+                                  toast.error(getErrorMessage(error));
+                                }
+                              });
+                            }}
                           />
                         ))}
                       </ul>
@@ -571,6 +597,41 @@ export function SurveyHubContent({
         </div>
 
         <div className="space-y-5">
+          <SurveyPublishPanel
+            accountId={accountId}
+            accountSlug={accountSlug}
+            proposalId={proposal.id}
+            canEdit={canEdit}
+            hasDraft={hasDraft}
+          />
+
+          <SurveyPhrasePanel
+            accountId={accountId}
+            sectionKey={selectedSectionKey}
+            ricsCode={surveySectionByKey(selectedSectionKey)?.ricsCode}
+            canEdit={canEdit}
+            onInsert={(body, defaultRating) => {
+              startTransition(async () => {
+                try {
+                  const created = await createSurveyObservationAction({
+                    accountId,
+                    accountSlug,
+                    proposalId: proposal.id,
+                    sectionKey: selectedSectionKey,
+                    body,
+                    conditionRating: defaultRating
+                      ? (defaultRating as SurveyObservation['conditionRating'])
+                      : undefined,
+                  });
+                  setObservations((prev) => [...prev, created]);
+                  toast.success('Phrase added as a new observation');
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                }
+              });
+            }}
+          />
+
           <section className={`${workspacePanelCard} p-4 sm:p-5`}>
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
               Draft report

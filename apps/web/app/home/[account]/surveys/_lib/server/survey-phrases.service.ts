@@ -17,6 +17,12 @@ import type {
 } from '../schema/survey-phrases.schema';
 
 function mapPhrase(row: Record<string, unknown>): SurveyPhrase {
+  const bank = row.survey_phrase_banks as
+    | { scope?: string | null; name?: string | null }
+    | { scope?: string | null; name?: string | null }[]
+    | null;
+  const bankRow = Array.isArray(bank) ? bank[0] : bank;
+  const scope = bankRow?.scope;
   return {
     id: row.id as string,
     bankId: row.bank_id as string,
@@ -26,6 +32,8 @@ function mapPhrase(row: Record<string, unknown>): SurveyPhrase {
     sectionKey: (row.section_key as string | null) ?? null,
     defaultRating: (row.default_rating as string | null) ?? null,
     goreportPath: (row.goreport_path as string | null) ?? null,
+    bankScope: scope === 'personal' || scope === 'workspace' ? scope : null,
+    bankName: bankRow?.name ?? null,
   };
 }
 
@@ -124,16 +132,22 @@ class SurveyPhrasesService {
     let query = this.db
       .from('survey_phrases')
       .select(
-        'id, bank_id, title, body, rics_code, section_key, default_rating, goreport_path',
+        'id, bank_id, title, body, rics_code, section_key, default_rating, goreport_path, survey_phrase_banks!inner(scope, name)',
       )
       .eq('account_id', input.accountId)
       .order('sort_order', { ascending: true })
-      .limit(80);
+      .limit(input.allSections ? 200 : 80);
 
-    if (input.ricsCode) {
-      query = query.eq('rics_code', input.ricsCode);
-    } else if (input.sectionKey) {
-      query = query.eq('section_key', input.sectionKey);
+    if (input.scope === 'personal' || input.scope === 'workspace') {
+      query = query.eq('survey_phrase_banks.scope', input.scope);
+    }
+
+    if (!input.allSections) {
+      if (input.ricsCode) {
+        query = query.eq('rics_code', input.ricsCode);
+      } else if (input.sectionKey) {
+        query = query.eq('section_key', input.sectionKey);
+      }
     }
 
     const { data, error } = await query;
@@ -146,7 +160,8 @@ class SurveyPhrasesService {
     return rows.filter(
       (row) =>
         row.title.toLowerCase().includes(term) ||
-        row.body.toLowerCase().includes(term),
+        row.body.toLowerCase().includes(term) ||
+        (row.ricsCode ?? '').toLowerCase().includes(term),
     );
   }
 
@@ -191,7 +206,11 @@ class SurveyPhrasesService {
       body: phrase.body.slice(0, 20_000),
       rics_code: phrase.ricsCode,
       section_key: phrase.sectionKey,
-      goreport_path: phrase.goreportPath.slice(0, 500),
+      goreport_path: [phrase.goreportPath, phrase.nestedPath]
+        .map((part) => part?.trim())
+        .filter(Boolean)
+        .join(' / ')
+        .slice(0, 500),
       sort_order: index,
     }));
 

@@ -7,8 +7,12 @@ import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../_lib/role-access';
-import { isWorkModuleEnabled } from '../_lib/server/account-modules';
+import { isContractsModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import {
+  CONTRACTS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../_lib/server/workspace-route-guard';
 import { ContractsPageContent } from './_components/contracts-page-content';
 import { loadContractsPageData } from './_lib/server/contracts-page.loader';
 
@@ -23,6 +27,7 @@ export const generateMetadata = () => {
 async function ContractsPage({ params }: ContractsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
+  redirectIfSpaceNotIn(workspace, accountSlug, CONTRACTS_WORKSPACE_SPACE_TYPES);
   const access = getTeamAccountAccess(
     workspace.account as {
       permissions?: string[] | null;
@@ -31,10 +36,12 @@ async function ContractsPage({ params }: ContractsPageProps) {
     },
   );
 
-  if (
-    !access.canViewInvoices ||
-    !isWorkModuleEnabled(workspace.moduleSettings, 'invoices')
-  ) {
+  const contractsEnabled = isContractsModuleEnabled(
+    workspace.moduleSettings,
+    workspace.workspaceProfile,
+  );
+
+  if (!access.canViewInvoices || !contractsEnabled) {
     redirect(
       getDefaultAccountPath(
         accountSlug,

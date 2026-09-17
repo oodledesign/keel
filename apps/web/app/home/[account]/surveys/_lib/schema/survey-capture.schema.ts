@@ -65,6 +65,10 @@ export const GenerateSurveyDraftSchema = SurveyAccountSchema.extend({
   surveyorName: z.string().min(1).max(500),
 });
 
+export const CheckSurveyPublishGapsSchema = SurveyAccountSchema.extend({
+  useAi: z.boolean().optional(),
+});
+
 export const AutoCaptionSurveyPhotosSchema = SurveyAccountSchema.extend({
   sectionKey: SurveySectionKeySchema,
 });
@@ -131,6 +135,9 @@ export type DeleteSurveyObservationInput = z.infer<
 export type UpdateSurveyTypeInput = z.infer<typeof UpdateSurveyTypeSchema>;
 export type GenerateSurveyDraftInput = z.infer<
   typeof GenerateSurveyDraftSchema
+>;
+export type CheckSurveyPublishGapsInput = z.infer<
+  typeof CheckSurveyPublishGapsSchema
 >;
 export type ProposeSurveyPhotoCurationInput = z.infer<
   typeof ProposeSurveyPhotoCurationSchema

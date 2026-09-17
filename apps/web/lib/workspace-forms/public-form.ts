@@ -10,6 +10,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { publicFormPipelineStage } from '~/lib/building-surveyor/pipeline-stages';
 import { processDueDynamicsSyncJobs } from '~/lib/dynamics/sync.service';
 import { FormSubmitError } from '~/lib/workspace-forms/form-submit-error';
 
@@ -76,6 +77,7 @@ export type PublicWorkspaceForm = {
   emailSettings: WorkspaceFormEmailSettings;
   brand: AccountBrandResolved;
   commercialProperty: boolean;
+  buildingSurveyor: boolean;
 };
 
 type FormRow = {
@@ -177,6 +179,9 @@ export async function loadPublicWorkspaceFormByToken(
     commercialProperty:
       (account as { space_type?: string | null } | null)?.space_type ===
       'commercial-property',
+    buildingSurveyor:
+      (account as { space_type?: string | null } | null)?.space_type ===
+      'building-surveyor',
     name: row.name,
     description: row.description,
     eventAddress: row.event_address?.trim() || null,
@@ -265,7 +270,9 @@ async function createPipelineLead(
       company_name: contact.companyName || contact.contactName || '',
       notes: formatPipelineNotes(contact),
       value: 0,
-      stage: 'lead',
+      stage: publicFormPipelineStage(
+        form.buildingSurveyor ? 'building-surveyor' : null,
+      ),
       source: 'website',
       commercial_listing_id: listingId,
     })
