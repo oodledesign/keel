@@ -219,6 +219,7 @@ export async function fireNewSubscriberAutomations(input: {
   unsubscribeToken: string;
   formId?: string | null;
   audienceListId?: string | null;
+  audienceListIds?: string[] | null;
   includeUnscoped?: boolean;
 }): Promise<void> {
   const logger = await getLogger();
@@ -242,6 +243,7 @@ export async function fireNewSubscriberAutomations(input: {
       automationMatchesNewSubscriberScope(automation, {
         formId: input.formId ?? null,
         audienceListId: input.audienceListId ?? null,
+        audienceListIds: input.audienceListIds ?? null,
         includeUnscoped: input.includeUnscoped,
       }),
     );

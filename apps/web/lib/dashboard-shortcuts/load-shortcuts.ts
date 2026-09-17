@@ -8,9 +8,12 @@ import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 
 import {
   buildPersonalShortcutCatalog,
+  buildWorkspaceLandingCatalog,
   buildWorkspaceShortcutCatalog,
 } from './build-catalog';
 import { enrichPersonalShortcutsWithWorkspaceAvatars } from './enrich-workspace-shortcut-avatars';
+import { resolveDefaultLandingHref } from './resolve-default-landing';
+import type { WorkspaceLandingPageOption } from './resolve-default-landing';
 import { resolveStoredShortcuts } from './resolve-shortcuts';
 import type {
   DefaultLandingPreference,
@@ -138,22 +141,20 @@ export async function loadDefaultLandingPreference(
 ): Promise<DefaultLandingPreference> {
   const { data } = await client
     .from('user_settings')
-    .select('default_landing_type, default_workspace_slug')
+    .select(
+      'default_landing_type, default_workspace_slug, default_landing_catalog_id, default_landing_params',
+    )
     .eq('user_id', userId)
     .maybeSingle();
 
   const row = data as {
     default_landing_type?: string | null;
     default_workspace_slug?: string | null;
+    default_landing_catalog_id?: string | null;
+    default_landing_params?: unknown;
   } | null;
 
-  const type =
-    row?.default_landing_type === 'workspace' ? 'workspace' : 'personal';
-
-  return {
-    type,
-    workspaceSlug: row?.default_workspace_slug?.trim() || null,
-  };
+  return parseDefaultLandingPreference(row);
 }
 
 export async function getUserDefaultLandingPath(
@@ -224,7 +225,10 @@ export async function getUserDefaultLandingPath(
     return pathsConfig.app.home;
   }
 
-  return pathsConfig.app.accountHome.replace('[account]', pref.workspaceSlug);
+  return (
+    resolveDefaultLandingHref(pref) ??
+    pathsConfig.app.accountHome.replace('[account]', pref.workspaceSlug)
+  );
 }
 
 export async function loadPersonalShortcutsSettings(
@@ -236,12 +240,13 @@ export async function loadPersonalShortcutsSettings(
   defaultLanding: DefaultLandingPreference;
   includeWorkspaceTasks: boolean;
   workspaceOptions: Array<{ slug: string; name: string }>;
+  workspaceLandingPages: Record<string, WorkspaceLandingPageOption[]>;
 }> {
   const [settingsRes, workspaces] = await Promise.all([
     client
       .from('user_settings')
       .select(
-        'personal_dashboard_shortcuts, personal_mobile_nav_shortcuts, default_landing_type, default_workspace_slug, personal_include_workspace_tasks',
+        'personal_dashboard_shortcuts, personal_mobile_nav_shortcuts, default_landing_type, default_workspace_slug, default_landing_catalog_id, default_landing_params, personal_include_workspace_tasks',
       )
       .eq('user_id', userId)
       .maybeSingle(),
@@ -253,26 +258,65 @@ export async function loadPersonalShortcutsSettings(
     personal_mobile_nav_shortcuts?: unknown;
     default_landing_type?: string | null;
     default_workspace_slug?: string | null;
+    default_landing_catalog_id?: string | null;
+    default_landing_params?: unknown;
     personal_include_workspace_tasks?: boolean | null;
   } | null;
+
+  const workspaceOptions = workspaces
+    .filter((w) => w.slug)
+    .map((w) => ({
+      slug: w.slug!,
+      name: w.name?.trim() || w.slug!,
+    }));
+
+  const workspaceLandingPages: Record<string, WorkspaceLandingPageOption[]> =
+    {};
+  await Promise.all(
+    workspaceOptions.map(async (workspace) => {
+      workspaceLandingPages[workspace.slug] =
+        await buildWorkspaceLandingCatalog(client, workspace.slug);
+    }),
+  );
 
   return {
     shortcuts: parseStoredShortcuts(row?.personal_dashboard_shortcuts),
     mobileNavShortcuts: parseStoredShortcuts(
       row?.personal_mobile_nav_shortcuts,
     ),
-    defaultLanding: {
-      type:
-        row?.default_landing_type === 'workspace' ? 'workspace' : 'personal',
-      workspaceSlug: row?.default_workspace_slug?.trim() || null,
-    },
+    defaultLanding: parseDefaultLandingPreference(row),
     includeWorkspaceTasks: row?.personal_include_workspace_tasks !== false,
-    workspaceOptions: workspaces
-      .filter((w) => w.slug)
-      .map((w) => ({
-        slug: w.slug!,
-        name: w.name?.trim() || w.slug!,
-      })),
+    workspaceOptions,
+    workspaceLandingPages,
+  };
+}
+
+function parseDefaultLandingPreference(
+  row: {
+    default_landing_type?: string | null;
+    default_workspace_slug?: string | null;
+    default_landing_catalog_id?: string | null;
+    default_landing_params?: unknown;
+  } | null,
+): DefaultLandingPreference {
+  const params =
+    row?.default_landing_params &&
+    typeof row.default_landing_params === 'object' &&
+    !Array.isArray(row.default_landing_params)
+      ? Object.fromEntries(
+          Object.entries(
+            row.default_landing_params as Record<string, unknown>,
+          ).filter(
+            (entry): entry is [string, string] => typeof entry[1] === 'string',
+          ),
+        )
+      : {};
+
+  return {
+    type: row?.default_landing_type === 'workspace' ? 'workspace' : 'personal',
+    workspaceSlug: row?.default_workspace_slug?.trim() || null,
+    catalogId: row?.default_landing_catalog_id?.trim() || null,
+    params,
   };
 }
 

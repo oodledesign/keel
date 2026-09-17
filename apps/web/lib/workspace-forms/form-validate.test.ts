@@ -104,4 +104,15 @@ describe('form validation', () => {
     });
     expect(values).toEqual({ attendance: 'No' });
   });
+
+  it('keeps reserved mailing-list audience picks', () => {
+    const values = sanitizePublicFormValues({
+      fields: [attendance],
+      values: {
+        attendance: 'No',
+        audience_lists: '11111111-1111-4111-8111-111111111111',
+      },
+    });
+    expect(values.audience_lists).toBe('11111111-1111-4111-8111-111111111111');
+  });
 });

@@ -42,6 +42,8 @@ export type DefaultLandingType = 'personal' | 'workspace';
 export type DefaultLandingPreference = {
   type: DefaultLandingType;
   workspaceSlug: string | null;
+  catalogId: string | null;
+  params: Record<string, string>;
 };
 
 export function catalogItemKey(

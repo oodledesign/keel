@@ -1,6 +1,9 @@
 import { PageBody } from '@kit/ui/page';
 
-import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
+import {
+  hasCampaignsGrowthFeatures,
+  hasCampaignsSavedLists,
+} from '~/lib/billing/campaign-pricing';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
@@ -20,7 +23,6 @@ async function AudiencesPage({ params }: AudiencesPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
   const data = await loadCampaignsGrowthHub(workspace.account.id);
-  const growth = hasCampaignsGrowthFeatures(data.snapshot.planTier);
 
   return (
     <>
@@ -31,16 +33,19 @@ async function AudiencesPage({ params }: AudiencesPageProps) {
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
         <CampaignsHubNav accountSlug={accountSlug} />
-        {growth ? (
+        {hasCampaignsSavedLists(data.snapshot.planTier) ? (
           <CampaignAudienceListsHub
             accountSlug={accountSlug}
             lists={data.lists}
+            allowLogicFilters={hasCampaignsGrowthFeatures(
+              data.snapshot.planTier,
+            )}
           />
         ) : (
           <CampaignUpgradeCta
             accountSlug={accountSlug}
-            nextTierName={data.snapshot.nextTierName ?? 'Growth'}
-            message="Saved audience lists and logic filters start on Campaigns Growth."
+            nextTierName={data.snapshot.nextTierName ?? 'Starter'}
+            message="Saved audience lists are included with the Campaigns add-on."
           />
         )}
       </PageBody>

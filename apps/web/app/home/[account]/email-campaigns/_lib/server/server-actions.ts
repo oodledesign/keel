@@ -140,6 +140,9 @@ export const createCampaignAction = enhanceAction(
 export const updateCampaignAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
+    if (data.abEnabled) {
+      await requireGrowthCampaigns(data.accountId);
+    }
     const service = createCampaignsService(client);
     const campaign = await service.update({
       accountId: data.accountId,
@@ -302,15 +305,22 @@ async function requireGrowthCampaigns(accountId: string) {
   const usage = await getCampaignUsage(accountId);
   if (!hasCampaignsGrowthFeatures(usage.pool.plan_tier)) {
     throw new Error(
-      'Saved lists and A/B tests are on Growth and Pro. Upgrade Campaigns in Billing.',
+      'Logic filters, categories, and A/B tests are on Growth and Pro. Upgrade Campaigns in Billing.',
     );
   }
+}
+
+/** Every non-manual source (subscribers/clients/contacts) is Growth+. */
+function isLogicAudienceList(filters: { source: string }) {
+  return filters.source !== 'manual';
 }
 
 export const saveAudienceListAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
+    if (isLogicAudienceList(data.filters)) {
+      await requireGrowthCampaigns(data.accountId);
+    }
     const service = createAudienceListsService(client);
     const list = data.listId
       ? await service.update({
@@ -344,7 +354,6 @@ export const saveAudienceListAction = enhanceAction(
 export const deleteAudienceListAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
     await createAudienceListsService(client).delete(
       data.accountId,
       data.listId,
@@ -358,7 +367,6 @@ export const deleteAudienceListAction = enhanceAction(
 export const addAudienceListMembersAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
     const added = await createAudienceListsService(client).addMembers({
       accountId: data.accountId,
       listId: data.listId,
@@ -373,7 +381,6 @@ export const addAudienceListMembersAction = enhanceAction(
 export const removeAudienceListMembersAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
     await createAudienceListsService(client).removeMembers({
       accountId: data.accountId,
       listId: data.listId,
@@ -388,7 +395,9 @@ export const removeAudienceListMembersAction = enhanceAction(
 export const createListFromCategoryAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
+    if (data.mode === 'logic') {
+      await requireGrowthCampaigns(data.accountId);
+    }
     const contacts = createCampaignContactsService(client);
     const lists = createAudienceListsService(client);
     const categories = await contacts.listCategories(data.accountId);
@@ -499,7 +508,6 @@ export const assignContactCategoriesAction = enhanceAction(
 export const bulkAddContactsToListAction = enhanceAction(
   async function (data, user) {
     const client = await requireCampaignsAddon(user.id, data.accountId);
-    await requireGrowthCampaigns(data.accountId);
     const lists = createAudienceListsService(client);
     const listId = data.listId;
 

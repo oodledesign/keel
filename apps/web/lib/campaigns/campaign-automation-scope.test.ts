@@ -58,6 +58,11 @@ describe('welcome automation scope', () => {
       automationMatchesNewSubscriberScope(scoped, { audienceListId: LIST_B }),
     ).toBe(false);
     expect(
+      automationMatchesNewSubscriberScope(scoped, {
+        audienceListIds: [LIST_A, LIST_B],
+      }),
+    ).toBe(true);
+    expect(
       automationMatchesNewSubscriberScope(scoped, { formId: FORM_A }),
     ).toBe(false);
   });

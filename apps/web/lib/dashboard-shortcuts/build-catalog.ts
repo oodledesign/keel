@@ -18,25 +18,33 @@ import { buildCommunitySpaceNavChildren } from '~/config/community-account-navig
 import { buildFamilySpaceNavChildren } from '~/config/family-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
 import { buildPersonalShortcutRoutes } from '~/config/personal-account-navigation.config';
-import { canUseEmailAssistant } from '~/lib/billing/entitlements';
 import { buildPropertySpaceNavChildren } from '~/config/property-account-navigation.config';
 import {
   buildWorkAppLinks,
   buildWorkSpaceNavChildren,
 } from '~/config/work-account-navigation.config';
-import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 import {
-  getTeamAccountAccess,
   type TeamAccountAccess,
+  getTeamAccountAccess,
 } from '~/home/[account]/_lib/role-access';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import {
-  spaceTypeFromProfile,
   type WorkspaceProfile,
+  spaceTypeFromProfile,
 } from '~/home/[account]/_lib/workspace-profile';
+import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
+import { canUseEmailAssistant } from '~/lib/billing/entitlements';
 
 import { buildDynamicShortcutCatalog } from './dynamic-providers';
-import { flattenNavItems, routeCatalogItem } from './resolve-href';
+import {
+  type WorkspaceLandingPageOption,
+  workspaceHomeLandingPage,
+} from './resolve-default-landing';
+import {
+  catalogItemHref,
+  flattenNavItems,
+  routeCatalogItem,
+} from './resolve-href';
 import type { ShortcutCatalogItem } from './types';
 
 function personalCatalogItems(): ShortcutCatalogItem[] {
@@ -178,6 +186,35 @@ export async function buildWorkspaceShortcutCatalog(
   accountSlug: string,
 ): Promise<ShortcutCatalogItem[]> {
   return catalogForWorkspaceSlug(client, accountSlug);
+}
+
+export async function buildWorkspaceLandingCatalog(
+  client: SupabaseClient,
+  accountSlug: string,
+): Promise<WorkspaceLandingPageOption[]> {
+  const items = await catalogForWorkspaceSlug(client, accountSlug);
+  const home = workspaceHomeLandingPage(accountSlug);
+  const pages: WorkspaceLandingPageOption[] = [home];
+  const seen = new Set([home.href]);
+
+  for (const item of items) {
+    const href = catalogItemHref(item);
+    if (!href || seen.has(href)) continue;
+    seen.add(href);
+    pages.push({
+      catalogId: item.catalogId,
+      params: item.params,
+      label: landingPageLabel(item.label),
+      href,
+    });
+  }
+
+  return pages;
+}
+
+function landingPageLabel(label: string) {
+  const parts = label.split(' — ');
+  return parts.length > 1 ? parts.slice(1).join(' — ') : label;
 }
 
 export function filterCatalog(

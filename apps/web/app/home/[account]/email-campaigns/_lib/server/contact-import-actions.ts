@@ -8,9 +8,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import { canUseAddon } from '~/lib/billing/entitlements';
-import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
 import {
   CampaignContactCsvMappingSchema,
@@ -20,7 +18,7 @@ import {
 } from '~/lib/campaigns/campaign-contact-csv';
 import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
 
-async function requireGrowthImport(userId: string, accountId: string) {
+async function requireCampaignsImport(userId: string, accountId: string) {
   const client = getSupabaseServerClient();
   const allowed = await canUseAddon(
     client,
@@ -31,12 +29,6 @@ async function requireGrowthImport(userId: string, accountId: string) {
   if (!allowed) {
     throw new Error(
       'Campaigns add-on required. Subscribe from Billing in this workspace.',
-    );
-  }
-  const usage = await getCampaignUsage(accountId);
-  if (!hasCampaignsGrowthFeatures(usage.pool.plan_tier)) {
-    throw new Error(
-      'CSV list import is on Growth and Pro. Upgrade Campaigns in Billing.',
     );
   }
   return client;
@@ -96,7 +88,7 @@ export const suggestCampaignContactImportMappingAction = enhanceAction(
 
 export const previewCampaignContactImportAction = enhanceAction(
   async function (data, user) {
-    await requireGrowthImport(user.id, data.accountId);
+    await requireCampaignsImport(user.id, data.accountId);
     const drafts = parseCampaignContactCsvRows(
       data.headers,
       data.rows,
@@ -136,7 +128,7 @@ export const previewCampaignContactImportAction = enhanceAction(
 
 export const commitCampaignContactImportAction = enhanceAction(
   async function (data, user) {
-    const client = await requireGrowthImport(user.id, data.accountId);
+    const client = await requireCampaignsImport(user.id, data.accountId);
     const drafts = parseCampaignContactCsvRows(
       data.headers,
       data.rows,

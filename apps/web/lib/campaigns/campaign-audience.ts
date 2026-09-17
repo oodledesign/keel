@@ -37,7 +37,7 @@ export const AUDIENCE_TYPE_HINT: Record<CampaignAudienceType, string> = {
   clients: 'Workspace clients with an email address on file.',
   contacts: 'First-class CRM contacts with an email address.',
   custom: 'Manual emails plus selected clients and contacts.',
-  list: 'A named Growth list — logic filters or a manual contact list — resolved at send time.',
+  list: 'A named saved list — a manual contact list, or a Growth logic filter — resolved at send time.',
 };
 
 export function parseCampaignAudienceType(

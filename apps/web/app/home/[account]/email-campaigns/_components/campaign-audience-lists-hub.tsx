@@ -36,9 +36,11 @@ function listDetailHref(accountSlug: string, listId: string) {
 export function CampaignAudienceListsHub({
   accountSlug,
   lists,
+  allowLogicFilters = true,
 }: {
   accountSlug: string;
   lists: CampaignAudienceList[];
+  allowLogicFilters?: boolean;
 }) {
   const createHref = newListHref(accountSlug);
   const rows = [...lists].sort(
@@ -69,8 +71,9 @@ export function CampaignAudienceListsHub({
             No lists yet
           </h2>
           <p className={`mx-auto mt-2 max-w-md text-sm ${workspaceTextMuted}`}>
-            Create a logic list, a manual membership list, or start from a
-            category or CSV.
+            {allowLogicFilters
+              ? 'Create a logic list, a manual membership list, or start from a category or CSV.'
+              : 'Create a manual membership list or upload a CSV. Logic filters start on Campaigns Growth.'}
           </p>
           <Button asChild className={`mt-5 ${workspaceBtnPrimary}`}>
             <Link href={createHref}>New list</Link>

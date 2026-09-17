@@ -8,6 +8,8 @@ import pathsConfig from '~/config/paths.config';
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import { isWorkspaceLandingHref } from './resolve-default-landing';
+import { resolveShortcutHref } from './resolve-href';
 import {
   type DefaultLandingType,
   MobileNavShortcutsArraySchema,
@@ -104,12 +106,16 @@ export async function savePersonalIncludeWorkspaceTasksAction(
 export async function saveDefaultLandingAction(input: {
   type: DefaultLandingType;
   workspaceSlug?: string | null;
+  catalogId?: string | null;
+  params?: Record<string, string> | null;
 }) {
   try {
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
     let workspaceSlug: string | null = null;
+    let catalogId: string | null = null;
+    let params: Record<string, string> = {};
     if (input.type === 'workspace') {
       const slug = input.workspaceSlug?.trim();
       if (!slug) {
@@ -126,6 +132,28 @@ export async function saveDefaultLandingAction(input: {
         };
       }
       workspaceSlug = slug;
+
+      const nextCatalogId = input.catalogId?.trim() || null;
+      const nextParams = Object.fromEntries(
+        Object.entries(input.params ?? {}).filter(
+          (entry): entry is [string, string] =>
+            typeof entry[0] === 'string' &&
+            typeof entry[1] === 'string' &&
+            entry[0].length <= 80 &&
+            entry[1].length <= 500,
+        ),
+      );
+      if (nextCatalogId) {
+        const href = resolveShortcutHref(nextCatalogId, nextParams);
+        if (!href || !isWorkspaceLandingHref(href, slug)) {
+          return {
+            success: false as const,
+            error: 'Choose a page in that workspace.',
+          };
+        }
+        catalogId = nextCatalogId;
+        params = nextParams;
+      }
     }
 
     const { error } = await client.from('user_settings').upsert(
@@ -133,6 +161,8 @@ export async function saveDefaultLandingAction(input: {
         user_id: user.id,
         default_landing_type: input.type,
         default_workspace_slug: workspaceSlug,
+        default_landing_catalog_id: catalogId,
+        default_landing_params: params,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' },
