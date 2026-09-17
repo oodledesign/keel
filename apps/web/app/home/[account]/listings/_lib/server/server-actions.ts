@@ -342,6 +342,10 @@ export const createListingMedia = enhanceAction(
     await requireBillableDisposalActor(input.accountId);
     const media = await getService().createMedia(input);
     const [withUrl] = await getService().withSignedMediaUrls([media]);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
     return withUrl ?? media;
   },
   { schema: CreateListingMediaSchema },
@@ -352,6 +356,10 @@ export const setListingMediaCover = enhanceAction(
     await requireBillableDisposalActor(input.accountId);
     const media = await getService().setMediaCover(input);
     const [withUrl] = await getService().withSignedMediaUrls([media]);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
     return withUrl ?? media;
   },
   { schema: SetListingMediaCoverSchema },
@@ -362,6 +370,10 @@ export const updateListingMedia = enhanceAction(
     await requireBillableDisposalActor(input.accountId);
     const media = await getService().updateMedia(input);
     const [withUrl] = await getService().withSignedMediaUrls([media]);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
     return withUrl ?? media;
   },
   { schema: UpdateListingMediaSchema },
@@ -375,6 +387,10 @@ export const deleteListingMedia = enhanceAction(
       input.accountId,
       input.listingId,
     );
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
     return { success: true };
   },
   { schema: DeleteListingMediaSchema },
@@ -384,6 +400,10 @@ export const reorderListingMedia = enhanceAction(
   async (input) => {
     await requireBillableDisposalActor(input.accountId);
     const media = await getService().reorderMedia(input);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
     return getService().withSignedMediaUrls(media);
   },
   { schema: ReorderListingMediaSchema },
@@ -393,6 +413,10 @@ export const syncListingPortalsAfterMedia = enhanceAction(
   async (input) => {
     await requireBillableDisposalActor(input.accountId);
     await getService().syncPortalsAfterMediaChange(input);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
     return { success: true };
   },
   { schema: SyncListingPortalsAfterMediaSchema },

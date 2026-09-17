@@ -2530,10 +2530,9 @@ export function createListingsService(client: SupabaseClient) {
       } catch {
         /* best-effort */
       }
-      await syncLivePortalsAfterMediaChange(client, {
-        accountId: input.accountId,
-        listingId: input.listingId,
-      });
+      if (!isPrivate) {
+        await touchListingUpdatedAt(client, input.listingId, input.accountId);
+      }
       return media;
     },
 

@@ -15,6 +15,12 @@ describe('isRightmoveRateLimitError', () => {
     ).toBe(true);
     expect(
       isRightmoveRateLimitError({
+        httpStatus: 429,
+        message: 'unrelated message',
+      }),
+    ).toBe(true);
+    expect(
+      isRightmoveRateLimitError({
         message: 'Rightmove PUT failed (429): something else',
       }),
     ).toBe(true);
@@ -45,6 +51,14 @@ describe('publicationLooksRateLimited', () => {
       publicationLooksRateLimited({
         last_error: 'Rightmove PUT failed',
         metadata: { httpStatus: 429 },
+      }),
+    ).toBe(true);
+  });
+
+  it('accepts camelCase lastError from mapped rows', () => {
+    expect(
+      publicationLooksRateLimited({
+        lastError: 'Rightmove PUT failed (429)',
       }),
     ).toBe(true);
   });
