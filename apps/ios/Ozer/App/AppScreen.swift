@@ -47,7 +47,7 @@ enum AppScreen: Hashable {
     case messages
     case people
     case clients
-    /// Menu only — studio / surveyor / commercial delivery projects.
+    /// Menu only — studio / property / commercial delivery projects.
     case projects
     /// Menu only — not a default tab-bar pin.
     case invoices

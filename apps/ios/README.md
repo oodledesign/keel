@@ -103,7 +103,7 @@ The list is `{ "items": [{ "id", "title", "status", "due", "duration_minutes", "
 
 ## Task review
 
-Pending extracted tasks from meetings and email — accept, edit then accept, or dismiss. Same workspace + Bearer JSON as Tasks. Entry from Home (card + badge when anything is waiting), Tasks (toolbar tray + banner), and Menu.
+Pending extracted tasks from meetings and email — accept, edit then accept, or dismiss. Same workspace + Bearer JSON as Tasks. Entry from Home (card + badge when anything is waiting), Tasks (toolbar tray + banner), and Menu — except building-surveyor, where Review is omitted from the Menu to match the web sidebar. Suggested tasks still open from Tasks.
 
 ```
 GET {OZER_API_BASE}/api/native/v1/task-review?workspace=<slug-or-uuid>&source=all|meeting|email
@@ -129,7 +129,7 @@ Home is a pocket dashboard (greeting, date, this-month in/out + 6-month chart, o
 
 ## Invoices
 
-Studio / surveyor / commercial property (`work_design`, `commercial_property`, `building_surveyor`) get an **Invoices** item in the Menu. Personal and family do not. The list is read-only: outstanding header, open / overdue / paid chips, then rows. Detail shows client, status, dates, line summary, and **Open in Ozer** when the API returns a hosted or workspace URL. No create, edit, PDF, or Stripe checkout on the phone.
+Studio, property, and commercial (`work_design`, `work_property`, `commercial_property`) get an **Invoices** item in the Menu. Building-surveyor, personal, and family do not — web surveyor has no Invoices module. The list is read-only: outstanding header, open / overdue / paid chips, then rows. Detail shows client, status, dates, line summary, and **Open in Ozer** when the API returns a hosted or workspace URL. No create, edit, PDF, or Stripe checkout on the phone.
 
 ```
 GET {OZER_API_BASE}/api/native/v1/invoices?workspace=<slug-or-uuid>&status=open|paid|overdue|all
@@ -269,7 +269,7 @@ Detail adds `contacts: [{ id, name, role, email, phone, is_primary }]`, scoped t
 
 ## Projects
 
-Studio / surveyor / commercial property (`work_design`, `commercial_property`, `building_surveyor`) get a **Projects** item in the Menu. Personal and family do not. Delivery projects only — not campaign boards.
+Studio, property, and commercial (`work_design`, `work_property`, `commercial_property`) get a **Projects** item in the Menu. Building-surveyor, personal, and family do not — web surveyor has no Projects module. Delivery projects only — not campaign boards.
 
 ```
 GET {OZER_API_BASE}/api/native/v1/projects?workspace=<slug-or-uuid>&status=open|done|all
@@ -305,7 +305,7 @@ Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView`
 - **Personal / family:** Home, Tasks, Review, Notes, Messages, People, Recipes, Meal plan, Shopping
 - **Studio (`work_design`):** Home, Tasks, Review, Notes, Messages, Meetings, Projects, Clients, Invoices
 - **Property / commercial:** same business core, plus Projects, Clients and Invoices; Meetings on those capture spaces
-- **Surveyor:** same as property / commercial, plus **Surveys** (site recording into a survey report)
+- **Surveyor:** Home, Tasks, Notes, Messages, Meetings, Surveys, Clients. No Projects, Invoices, or Review (web surveyor sidebar has none). Messages stays as the global native inbox. Pipeline stays on the Home card — there is no dedicated iOS Pipeline screen. Suggested tasks still open from the Tasks screen.
 - **Community:** Home, Tasks, Review, Notes, Messages — no shopping, meals, people, or clients
 
 Shopping, recipes, and meal plan never appear on studio, commercial, or surveyor. Switching workspace updates the links, leaves the menu open, and if the current screen is not in the new menu the shell falls back to Home.

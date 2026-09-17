@@ -43,15 +43,36 @@ enum WorkspaceNavigationTests {
                 && !screens.contains(.people)
         }
 
-        check("surveyor has meetings surveys and clients not shopping") {
+        check("surveyor matches web primary items without projects invoices or review") {
             let screens = WorkspaceNavigation.menuScreens(
                 profile: "building_surveyor",
                 isPersonal: false
             )
-            containsAll(screens, [.home, .tasks, .notes, .meetings, .surveys, .projects, .clients])
+            screens == [.home, .tasks, .notes, .messages, .meetings, .surveys, .clients]
+                && !screens.contains(.projects)
+                && !screens.contains(.invoices)
+                && !screens.contains(.taskReview)
                 && !screens.contains(.shopping)
                 && !screens.contains(.recipes)
                 && !screens.contains(.mealPlan)
+        }
+
+        check("surveyor keeps clients but not projects or invoices") {
+            let kind = WorkspaceNavigation.kind(profile: "building_surveyor", isPersonal: false)
+            kind.showsClients
+                && kind.showsSurveys
+                && !kind.showsProjects
+                && !kind.showsInvoices
+                && !kind.showsTaskReview
+        }
+
+        check("property and studio still show projects and invoices") {
+            let studio = WorkspaceNavigation.kind(profile: "work_design", isPersonal: false)
+            let property = WorkspaceNavigation.kind(profile: "work_property", isPersonal: false)
+            let commercial = WorkspaceNavigation.kind(profile: "commercial_property", isPersonal: false)
+            studio.showsProjects && studio.showsInvoices
+                && property.showsProjects && property.showsInvoices
+                && commercial.showsProjects && commercial.showsInvoices
         }
 
         check("community is core native only") {

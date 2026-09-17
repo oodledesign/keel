@@ -70,11 +70,24 @@ enum WorkspaceNavigation {
             }
         }
 
-        /// Delivery projects on the same business-like spaces as Clients.
-        var showsProjects: Bool { showsClients }
+        /// Delivery projects — studio, property, and commercial. Not surveyor
+        /// (web surveyor sidebar has no Projects).
+        var showsProjects: Bool {
+            switch self {
+            case .workDesign, .workProperty, .commercialProperty:
+                return true
+            default:
+                return false
+            }
+        }
 
-        /// Invoices / finances on the same business-like spaces as Clients.
-        var showsInvoices: Bool { showsClients }
+        /// Invoices / finances — same business spaces as Projects. Not surveyor
+        /// (web surveyor sidebar has no Invoices).
+        var showsInvoices: Bool { showsProjects }
+
+        /// Review inbox is a native surface on most spaces. Surveyor web has no
+        /// Review item; suggested tasks still open from the Tasks screen.
+        var showsTaskReview: Bool { self != .buildingSurveyor }
 
         /// In-room meetings — business / work / commercial / surveyor, not life spaces.
         var showsMeetings: Bool {
@@ -92,6 +105,7 @@ enum WorkspaceNavigation {
         }
 
         /// Native inbox exists for every workspace even when web omits Messages.
+        /// Surveyor web has no Messages item; the app shell still keeps inbox.
         var showsMessages: Bool { true }
     }
 
@@ -101,7 +115,11 @@ enum WorkspaceNavigation {
 
     static func menuScreens(profile: String, isPersonal: Bool) -> [AppScreen] {
         let kind = Kind(profile: profile, isPersonal: isPersonal)
-        var screens: [AppScreen] = [.home, .tasks, .taskReview, .notes]
+        var screens: [AppScreen] = [.home, .tasks]
+        if kind.showsTaskReview {
+            screens.append(.taskReview)
+        }
+        screens.append(.notes)
         if kind.showsMessages {
             screens.append(.messages)
         }

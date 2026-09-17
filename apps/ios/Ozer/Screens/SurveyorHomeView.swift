@@ -83,7 +83,11 @@ struct SurveyorHomeView: View {
                         Button {
                             onOpenSurvey(survey.asSurveyItem)
                         } label: {
-                            compactRow(title: survey.title, subtitle: survey.subtitle)
+                            compactRow(
+                                title: survey.title,
+                                subtitle: survey.subtitle,
+                                status: survey.status
+                            )
                         }
                         .buttonStyle(.plain)
                         if index < payload.recentSurveys.count - 1 {
@@ -167,7 +171,12 @@ struct SurveyorHomeView: View {
         .padding(.bottom, 8)
     }
 
-    private func compactRow(title: String, subtitle: String?, trailing: String? = nil) -> some View {
+    private func compactRow(
+        title: String,
+        subtitle: String?,
+        trailing: String? = nil,
+        status: String? = nil
+    ) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -182,7 +191,9 @@ struct SurveyorHomeView: View {
                 }
             }
             Spacer(minLength: 0)
-            if let trailing, !trailing.isEmpty {
+            if let status, !status.isEmpty {
+                SurveyStatusBadge(status: status)
+            } else if let trailing, !trailing.isEmpty {
                 Text(trailing)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(OzerPalette.plumMuted)

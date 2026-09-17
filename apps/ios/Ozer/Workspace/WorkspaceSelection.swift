@@ -131,10 +131,10 @@ extension NativeWorkspace {
     /// Clients on studio / surveyor / commercial property — not community.
     var showsClients: Bool { navigationKind.showsClients }
 
-    /// Delivery projects on the same business-like spaces as Clients.
+    /// Delivery projects on studio, property, and commercial — not surveyor.
     var showsProjects: Bool { navigationKind.showsProjects }
 
-    /// Invoices / finances on the same business-like spaces as Clients.
+    /// Invoices / finances on studio, property, and commercial — not surveyor.
     var showsInvoices: Bool { navigationKind.showsInvoices }
 
     /// In-room meetings on business / work / commercial / surveyor. Not personal or family.

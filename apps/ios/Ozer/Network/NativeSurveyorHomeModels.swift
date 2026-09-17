@@ -88,7 +88,7 @@ struct SurveyorHomeSurvey: Decodable, Identifiable, Equatable, Hashable {
     var subtitle: String {
         let date = updatedAt.flatMap { NoteItem.parseISO8601($0) }
             .map { SurveyDisplay.dayFormatter.string(from: $0) }
-        return [clientName, date, status]
+        return [clientName, date]
             .compactMap { value in
                 let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 return trimmed.isEmpty ? nil : trimmed

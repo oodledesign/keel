@@ -7,6 +7,7 @@ import { ClipboardList, FileText, Mic, UserRound } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 
+import { SurveyStatusBadge } from '~/components/surveys/survey-status-badge';
 import pathsConfig from '~/config/paths.config';
 import {
   workspaceBtnPrimaryMd,
@@ -131,8 +132,11 @@ export function SurveyorDashboard({
                         </span>
                       ) : null}
                     </span>
-                    <span className={`text-xs ${workspaceTextMuted}`}>
-                      {formatDate(survey.updatedAt)} · {survey.status}
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className={`text-xs ${workspaceTextMuted}`}>
+                        {formatDate(survey.updatedAt)}
+                      </span>
+                      <SurveyStatusBadge status={survey.status} />
                     </span>
                   </Link>
                 </li>
