@@ -142,7 +142,10 @@ const NAV: Array<{
   { key: 'activity', label: 'Activity', icon: Activity, href: '/activity' },
 ];
 
-const STICKY_OFFSET_CLASS = 'top-0';
+/** Clears the sticky title bar (heading + address + vertical padding). */
+const SIDE_NAV_STICKY_TOP_WITH_TITLE = 'lg:top-24';
+/** Overview before the hero pins — title bar is not sticky on desktop. */
+const SIDE_NAV_STICKY_TOP_DEFAULT = 'lg:top-3';
 
 function listingAddress(listing: CommercialListing) {
   return [
@@ -428,8 +431,8 @@ export function ListingDetailShell({
           className={cn(
             'sticky top-0 z-20 -mx-1 space-y-3 px-1',
             showStickyTitle
-              ? 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3'
-              : 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pb-3 lg:static lg:border-0 lg:bg-transparent lg:pb-0',
+              ? 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] py-3'
+              : 'border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] py-3 lg:static lg:border-0 lg:bg-transparent lg:py-0',
           )}
         >
           {showStickyTitle ? (
@@ -500,8 +503,9 @@ export function ListingDetailShell({
           <nav
             className={cn(
               'hidden shrink-0 lg:sticky lg:flex lg:w-56 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible',
-              STICKY_OFFSET_CLASS,
-              showStickyTitle ? 'lg:top-[4.75rem]' : 'lg:top-3',
+              showStickyTitle
+                ? SIDE_NAV_STICKY_TOP_WITH_TITLE
+                : SIDE_NAV_STICKY_TOP_DEFAULT,
             )}
           >
             <div className="mb-2">
