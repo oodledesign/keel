@@ -44,6 +44,13 @@ import {
 } from './form-validate';
 import type { PublicWorkspaceFormSubmitInput } from './form.schema';
 import {
+  type FormAudienceListOption,
+  audienceListIdsFromFormInput,
+  parseAudienceListIdsFromValues,
+  resolveMailingSignupListIds,
+  subscriberPickableAudienceLists,
+} from './mailing-list-audience';
+import {
   extractMailingListSpec,
   isMailingListOptedIn,
 } from './mailing-list-fields';
@@ -68,6 +75,9 @@ export type PublicWorkspaceForm = {
   destination: WorkspaceFormDestination;
   listingId: string | null;
   audienceListId: string | null;
+  audienceListIds: string[];
+  audienceLists: FormAudienceListOption[];
+  pickableAudienceLists: FormAudienceListOption[];
   shareToken: string;
   embedKey: string;
   submitLabel: string;
@@ -88,6 +98,7 @@ type FormRow = {
   destination: WorkspaceFormDestination;
   listing_id: string | null;
   audience_list_id?: string | null;
+  audience_list_ids?: string[] | null;
   share_token: string;
   embed_key: string;
   enabled: boolean;
@@ -135,7 +146,7 @@ export async function loadPublicWorkspaceFormByToken(
   if (!token || token.length < 16) return null;
 
   const selectColumns =
-    'id, account_id, name, description, event_address, event_date, event_time, destination, listing_id, audience_list_id, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
+    'id, account_id, name, description, event_address, event_date, event_time, destination, listing_id, audience_list_id, audience_list_ids, share_token, embed_key, enabled, status, submit_label, success_message, fields, theme, email_settings';
 
   const byShare = await fromTable(admin, 'workspace_forms')
     .select(selectColumns)
@@ -160,13 +171,18 @@ export async function loadPublicWorkspaceFormByToken(
   const row = data;
   const fields = parseFormFields(row.fields);
   const parsedTheme = parseWorkspaceFormTheme(row.theme);
-  const [{ data: account }, brand] = await Promise.all([
+  const configuredListIds = audienceListIdsFromFormInput({
+    audienceListId: row.audience_list_id,
+    audienceListIds: row.audience_list_ids,
+  });
+  const [{ data: account }, brand, audienceLists] = await Promise.all([
     admin
       .from('accounts')
       .select('name, slug, space_type')
       .eq('id', row.account_id)
       .maybeSingle(),
     loadAccountBrandResolved(row.account_id),
+    loadFormAudienceLists(admin, row.account_id, configuredListIds),
   ]);
 
   return {
@@ -189,7 +205,10 @@ export async function loadPublicWorkspaceFormByToken(
     eventTime: row.event_time?.trim() || null,
     destination: row.destination,
     listingId: row.listing_id,
-    audienceListId: row.audience_list_id ?? null,
+    audienceListId: configuredListIds[0] ?? null,
+    audienceListIds: configuredListIds,
+    audienceLists,
+    pickableAudienceLists: subscriberPickableAudienceLists(audienceLists),
     shareToken: row.share_token,
     embedKey: row.embed_key,
     submitLabel: row.submit_label?.trim() || 'Submit',
@@ -213,6 +232,36 @@ export async function loadPublicWorkspaceFormByToken(
     emailSettings: parseWorkspaceFormEmailSettings(row.email_settings),
     brand,
   };
+}
+
+async function loadFormAudienceLists(
+  admin: SupabaseClient,
+  accountId: string,
+  listIds: string[],
+): Promise<FormAudienceListOption[]> {
+  if (listIds.length === 0) return [];
+
+  const { data, error } = await fromTable(admin, 'campaign_audience_lists')
+    .select('id, name, is_public')
+    .eq('account_id', accountId)
+    .in('id', listIds);
+
+  if (error) throw new Error(error.message);
+
+  const byId = new Map(
+    ((data ?? []) as Array<Record<string, unknown>>).map((row) => [
+      String(row.id),
+      {
+        id: String(row.id),
+        name: String(row.name ?? 'List'),
+        isPublic: Boolean(row.is_public),
+      } satisfies FormAudienceListOption,
+    ]),
+  );
+
+  return listIds
+    .map((id) => byId.get(id))
+    .filter((list): list is FormAudienceListOption => Boolean(list));
 }
 
 export const loadCachedPublicWorkspaceForm = cache(async (token: string) => {
@@ -393,6 +442,11 @@ export async function submitPublicWorkspaceForm(
 
   if (form.destination === 'mailing_list') {
     const spec = extractMailingListSpec(contact);
+    const pickedIds = parseAudienceListIdsFromValues(values);
+    const joinedListIds = resolveMailingSignupListIds({
+      configured: form.audienceLists,
+      pickedIds,
+    });
     const mailing = await submitMailingListSignup({
       admin,
       accountId: form.accountId,
@@ -400,7 +454,8 @@ export async function submitPublicWorkspaceForm(
       spec,
       commercial: form.commercialProperty,
       formId: form.id,
-      audienceListId: form.audienceListId,
+      audienceListId: joinedListIds[0] ?? null,
+      audienceListIds: joinedListIds,
     });
     clientId = mailing.clientId;
     requirementId = mailing.requirementId;

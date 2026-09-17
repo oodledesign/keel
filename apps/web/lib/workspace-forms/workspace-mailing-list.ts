@@ -484,6 +484,7 @@ export async function submitMailingListSignup(input: {
   commercial: boolean;
   formId?: string | null;
   audienceListId?: string | null;
+  audienceListIds?: string[] | null;
 }): Promise<{
   clientId: string;
   requirementId: string | null;
@@ -564,12 +565,20 @@ export async function submitMailingListSignup(input: {
   }
 
   if (preference.marketingStatus === 'subscribed') {
-    if (input.audienceListId) {
+    const listIds = [
+      ...new Set(
+        [...(input.audienceListIds ?? []), input.audienceListId ?? null].filter(
+          (id): id is string => Boolean(id),
+        ),
+      ),
+    ];
+
+    for (const listId of listIds) {
       try {
         await addMailingSignupToAudienceList({
           admin: input.admin,
           accountId: input.accountId,
-          listId: input.audienceListId,
+          listId,
           email,
           contactName: input.contact.contactName,
           companyName: input.contact.companyName ?? input.spec.companyName,
@@ -587,7 +596,8 @@ export async function submitMailingListSignup(input: {
       displayName: input.contact.contactName,
       unsubscribeToken: preference.unsubscribeToken,
       formId: input.formId ?? null,
-      audienceListId: input.audienceListId ?? null,
+      audienceListId: listIds[0] ?? null,
+      audienceListIds: listIds,
       includeUnscoped: created,
     }).catch(() => undefined);
 

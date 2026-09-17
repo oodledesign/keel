@@ -1,5 +1,6 @@
 /**
  * Client-safe v1 logic filters for saved audience lists (Growth+).
+ * Manual saved lists are available on Campaigns Starter.
  */
 import { z } from 'zod';
 

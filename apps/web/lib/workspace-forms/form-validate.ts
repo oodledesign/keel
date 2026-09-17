@@ -7,6 +7,7 @@ import {
   parseFormFileValue,
 } from './form-file';
 import { visibleFieldsForValues } from './form-logic';
+import { MAILING_LIST_AUDIENCE_KEY } from './mailing-list-audience';
 
 export function isWorkspaceFormFieldAnswered(
   field: WorkspaceFormField,
@@ -112,6 +113,14 @@ export function sanitizePublicFormValues(input: {
     ),
   );
   const next: PublicFormValues = {};
+
+  const reservedAudienceLists = input.values[MAILING_LIST_AUDIENCE_KEY];
+  if (
+    typeof reservedAudienceLists === 'string' &&
+    reservedAudienceLists.trim()
+  ) {
+    next[MAILING_LIST_AUDIENCE_KEY] = reservedAudienceLists;
+  }
 
   for (const [key, raw] of Object.entries(input.values)) {
     const field = allowed.get(key);

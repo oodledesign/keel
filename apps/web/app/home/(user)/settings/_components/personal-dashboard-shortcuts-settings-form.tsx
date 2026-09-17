@@ -17,6 +17,11 @@ import {
   saveDefaultLandingAction,
   savePersonalDashboardShortcutsAction,
 } from '~/lib/dashboard-shortcuts/dashboard-shortcuts.actions';
+import {
+  type WorkspaceLandingPageOption,
+  landingPageValue,
+  workspaceHomeLandingPage,
+} from '~/lib/dashboard-shortcuts/resolve-default-landing';
 import type {
   DefaultLandingPreference,
   StoredShortcut,
@@ -28,6 +33,7 @@ type Props = {
   initialDefaultLanding: DefaultLandingPreference;
   initialIncludeWorkspaceTasks: boolean;
   workspaceOptions: Array<{ slug: string; name: string }>;
+  workspaceLandingPages: Record<string, WorkspaceLandingPageOption[]>;
 };
 
 export function PersonalDashboardShortcutsSettingsForm({
@@ -36,6 +42,7 @@ export function PersonalDashboardShortcutsSettingsForm({
   initialDefaultLanding,
   initialIncludeWorkspaceTasks,
   workspaceOptions,
+  workspaceLandingPages,
 }: Props) {
   const [shortcuts, setShortcuts] = useState(initialShortcuts);
   const [mobileNavShortcuts, setMobileNavShortcuts] = useState(
@@ -44,6 +51,9 @@ export function PersonalDashboardShortcutsSettingsForm({
   const [landingType, setLandingType] = useState(initialDefaultLanding.type);
   const [workspaceSlug, setWorkspaceSlug] = useState(
     initialDefaultLanding.workspaceSlug ?? '',
+  );
+  const [landingPage, setLandingPage] = useState(() =>
+    initialLandingPageValue(initialDefaultLanding),
   );
   const [includeWorkspaceTasks, setIncludeWorkspaceTasks] = useState(
     initialIncludeWorkspaceTasks,
@@ -61,6 +71,11 @@ export function PersonalDashboardShortcutsSettingsForm({
         saveDefaultLandingAction({
           type: landingType,
           workspaceSlug: landingType === 'workspace' ? workspaceSlug : null,
+          ...landingPagePayload(
+            landingType === 'workspace' ? workspaceSlug : '',
+            landingPage,
+            workspaceLandingPages,
+          ),
         }),
       ]);
 
@@ -85,11 +100,12 @@ export function PersonalDashboardShortcutsSettingsForm({
             Default landing
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Choose where Ozer opens after you sign in.
+            Choose where Ozer opens after you sign in — personal home, a
+            workspace, or a specific page such as Campaigns.
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
             <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               Open on sign-in
@@ -117,7 +133,12 @@ export function PersonalDashboardShortcutsSettingsForm({
               </p>
               <Select
                 value={workspaceSlug || 'none'}
-                onValueChange={setWorkspaceSlug}
+                onValueChange={(slug) => {
+                  setWorkspaceSlug(slug);
+                  setLandingPage(
+                    landingPageValue(workspaceHomeLandingPage(slug)),
+                  );
+                }}
               >
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Choose workspace" />
@@ -134,6 +155,29 @@ export function PersonalDashboardShortcutsSettingsForm({
                       </SelectItem>
                     ))
                   )}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
+          {landingType === 'workspace' ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                Page
+              </p>
+              <Select value={landingPage} onValueChange={setLandingPage}>
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  <SelectValue placeholder="Workspace home" />
+                </SelectTrigger>
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
+                  {(workspaceLandingPages[workspaceSlug] ?? []).map((page) => (
+                    <SelectItem
+                      key={landingPageValue(page)}
+                      value={landingPageValue(page)}
+                    >
+                      {page.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -220,4 +264,26 @@ export function PersonalDashboardShortcutsSettingsForm({
       </Button>
     </div>
   );
+}
+
+function initialLandingPageValue(pref: DefaultLandingPreference) {
+  const href = pref.params.href?.trim();
+  if (href) return landingPageValue({ href });
+  if (pref.workspaceSlug) {
+    return landingPageValue(workspaceHomeLandingPage(pref.workspaceSlug));
+  }
+  return '';
+}
+
+function landingPagePayload(
+  workspaceSlug: string,
+  landingPage: string,
+  workspaceLandingPages: Record<string, WorkspaceLandingPageOption[]>,
+): { catalogId: string | null; params: Record<string, string> } {
+  if (!workspaceSlug) return { catalogId: null, params: {} };
+  const match = (workspaceLandingPages[workspaceSlug] ?? []).find(
+    (page) => landingPageValue(page) === landingPage,
+  );
+  if (!match) return { catalogId: null, params: {} };
+  return { catalogId: match.catalogId, params: match.params };
 }

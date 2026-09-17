@@ -18,7 +18,10 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
-import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
+import {
+  hasCampaignsGrowthFeatures,
+  hasCampaignsSavedLists,
+} from '~/lib/billing/campaign-pricing';
 import {
   CAMPAIGN_CONTACT_LIST_CHIP_LIMIT,
   visibleNamedChips,
@@ -72,6 +75,7 @@ export function CampaignContactsPage({
 }) {
   const router = useRouter();
   const growth = hasCampaignsGrowthFeatures(planTier);
+  const savedLists = hasCampaignsSavedLists(planTier);
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState(initialQuery ?? '');
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryId ?? '');
@@ -200,7 +204,7 @@ export function CampaignContactsPage({
           >
             New contact
           </Button>
-          {growth ? (
+          {savedLists ? (
             <Button asChild variant="outline">
               <Link
                 href={pathsConfig.app.accountEmailCampaignContactImport.replace(
@@ -214,7 +218,7 @@ export function CampaignContactsPage({
           ) : null}
         </div>
 
-        {selected.length > 0 && growth ? (
+        {selected.length > 0 && savedLists ? (
           <div className={`${workspacePanelCard} space-y-3 p-4`}>
             <p className={`text-sm font-medium ${workspaceText}`}>
               {selected.length} selected
@@ -301,7 +305,7 @@ export function CampaignContactsPage({
                 </Button>
               </div>
             </div>
-            {categories.length > 0 ? (
+            {growth && categories.length > 0 ? (
               <div className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1">
                   <Label>Assign category</Label>
@@ -353,7 +357,7 @@ export function CampaignContactsPage({
           <CampaignUpgradeCta
             accountSlug={accountSlug}
             nextTierName={nextTierName ?? 'Growth'}
-            message="Lists, CSV import, and categories start on Campaigns Growth."
+            message="Categories and logic filters start on Campaigns Growth. Manual lists and CSV import are included on Starter."
           />
         ) : null}
 

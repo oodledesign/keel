@@ -33,6 +33,7 @@ import {
   resolveWorkspaceFormsMode,
   sanitizeAudienceFormFields,
 } from '~/lib/workspace-forms/forms-mode';
+import { audienceListIdsFromFormInput } from '~/lib/workspace-forms/mailing-list-audience';
 import {
   defaultMailingListFormFields,
   ensureMailingListFields,
@@ -57,6 +58,7 @@ export type WorkspaceFormRecord = {
   destination: WorkspaceFormDestination;
   listingId: string | null;
   audienceListId: string | null;
+  audienceListIds: string[];
   shareToken: string;
   embedKey: string;
   enabled: boolean;
@@ -104,6 +106,7 @@ type FormRow = {
   destination: WorkspaceFormDestination;
   listing_id: string | null;
   audience_list_id?: string | null;
+  audience_list_ids?: string[] | null;
   share_token: string;
   embed_key: string;
   enabled: boolean;
@@ -130,7 +133,15 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     status: row.status,
     destination: row.destination,
     listingId: row.listing_id,
-    audienceListId: row.audience_list_id ?? null,
+    audienceListId:
+      audienceListIdsFromFormInput({
+        audienceListId: row.audience_list_id,
+        audienceListIds: row.audience_list_ids,
+      })[0] ?? null,
+    audienceListIds: audienceListIdsFromFormInput({
+      audienceListId: row.audience_list_id,
+      audienceListIds: row.audience_list_ids,
+    }),
     shareToken: row.share_token,
     embedKey: row.embed_key,
     enabled: row.enabled,
@@ -406,22 +417,27 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
       const audienceLite =
         mode === 'audience' && input.destination === 'mailing_list';
 
-      const audienceListId =
+      const audienceListIds =
         input.destination === 'mailing_list'
-          ? input.audienceListId || null
-          : null;
+          ? audienceListIdsFromFormInput({
+              audienceListId: input.audienceListId,
+              audienceListIds: input.audienceListIds,
+            })
+          : [];
 
-      if (audienceListId) {
-        const { data: list, error: listError } = await fromTable(
+      if (audienceListIds.length > 0) {
+        const { data: lists, error: listError } = await fromTable(
           client,
           'campaign_audience_lists',
         )
           .select('id')
           .eq('account_id', input.accountId)
-          .eq('id', audienceListId)
-          .maybeSingle();
+          .in('id', audienceListIds);
         if (listError) throw new Error(listError.message);
-        if (!list) {
+        const found = new Set(
+          ((lists ?? []) as Array<{ id: string }>).map((row) => row.id),
+        );
+        if (audienceListIds.some((id) => !found.has(id))) {
           throw new Error('Audience list not found in this workspace');
         }
       }
@@ -442,7 +458,8 @@ export function createWorkspaceFormsService(client: SupabaseClient) {
         description: input.description?.trim() || null,
         destination: input.destination,
         listing_id: input.listingId || null,
-        audience_list_id: audienceListId,
+        audience_list_id: audienceListIds[0] ?? null,
+        audience_list_ids: audienceListIds,
         submit_label: input.submitLabel?.trim() || 'Submit',
         success_message: input.successMessage?.trim() || null,
         event_address: input.eventAddress?.trim() || null,

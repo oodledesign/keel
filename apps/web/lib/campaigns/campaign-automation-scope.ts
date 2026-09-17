@@ -14,12 +14,21 @@ export type CampaignAutomationScope = {
 export type NewSubscriberAutomationContext = {
   formId?: string | null;
   audienceListId?: string | null;
+  audienceListIds?: string[] | null;
   /**
    * When false, skip workspace-wide automations. Used for a later form signup
    * after the workspace mailing preference already existed.
    */
   includeUnscoped?: boolean;
 };
+
+function contextAudienceListIds(
+  context: NewSubscriberAutomationContext,
+): string[] {
+  const ids = [...(context.audienceListIds ?? [])];
+  if (context.audienceListId) ids.push(context.audienceListId);
+  return ids;
+}
 
 export function isUnscopedWelcomeAutomation(
   automation: CampaignAutomationScope,
@@ -41,7 +50,7 @@ export function automationMatchesNewSubscriberScope(
 
   if (
     automation.audienceListId &&
-    context.audienceListId === automation.audienceListId
+    contextAudienceListIds(context).includes(automation.audienceListId)
   ) {
     return true;
   }

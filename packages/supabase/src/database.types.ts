@@ -15854,6 +15854,8 @@ export type Database = {
           created_at: string | null
           default_landing_type: string
           default_workspace_slug: string | null
+          default_landing_catalog_id: string | null
+          default_landing_params: Json
           email_notification_preferences: Json
           first_name: string | null
           last_name: string | null
@@ -15883,6 +15885,8 @@ export type Database = {
           created_at?: string | null
           default_landing_type?: string
           default_workspace_slug?: string | null
+          default_landing_catalog_id?: string | null
+          default_landing_params?: Json
           email_notification_preferences?: Json
           first_name?: string | null
           last_name?: string | null
@@ -15912,6 +15916,8 @@ export type Database = {
           created_at?: string | null
           default_landing_type?: string
           default_workspace_slug?: string | null
+          default_landing_catalog_id?: string | null
+          default_landing_params?: Json
           email_notification_preferences?: Json
           first_name?: string | null
           last_name?: string | null

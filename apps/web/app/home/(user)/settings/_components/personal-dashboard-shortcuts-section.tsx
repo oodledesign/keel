@@ -17,6 +17,7 @@ export async function PersonalDashboardShortcutsSection() {
       initialDefaultLanding={data.defaultLanding}
       initialIncludeWorkspaceTasks={data.includeWorkspaceTasks}
       workspaceOptions={data.workspaceOptions}
+      workspaceLandingPages={data.workspaceLandingPages}
     />
   );
 }

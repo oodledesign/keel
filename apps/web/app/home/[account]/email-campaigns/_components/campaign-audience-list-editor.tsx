@@ -77,6 +77,7 @@ export function CampaignAudienceListEditor({
   contacts,
   list,
   members = [],
+  allowLogicFilters = true,
 }: {
   mode: 'create' | 'edit';
   accountId: string;
@@ -85,12 +86,14 @@ export function CampaignAudienceListEditor({
   contacts: CampaignWorkspaceContact[];
   list?: CampaignAudienceList;
   members?: CampaignAudienceListMember[];
+  allowLogicFilters?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [kind, setKind] = useState<AudienceListKind>(
-    list ? audienceListKind(list.source) : 'logic',
-  );
+  const [kind, setKind] = useState<AudienceListKind>(() => {
+    if (list) return audienceListKind(list.source);
+    return allowLogicFilters ? 'logic' : 'manual';
+  });
   const [name, setName] = useState(list?.name ?? '');
   const parsed = list
     ? parseAudienceListFilters({
@@ -174,12 +177,15 @@ export function CampaignAudienceListEditor({
               kind === 'logic'
                 ? 'border-[color:var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
                 : 'border-[color:var(--workspace-shell-border)]'
-            } ${workspaceText}`}
-            onClick={() => setKind('logic')}
+            } ${workspaceText} ${!allowLogicFilters ? 'opacity-60' : ''}`}
+            onClick={() => allowLogicFilters && setKind('logic')}
+            disabled={!allowLogicFilters}
           >
             <span className="block font-medium">Logic list</span>
             <span className={`block text-xs ${workspaceTextMuted}`}>
-              Rules on subscribers, clients, or contacts
+              {allowLogicFilters
+                ? 'Rules on subscribers, clients, or contacts'
+                : 'Growth+ — rules on subscribers, clients, or contacts'}
             </span>
           </button>
           <button
@@ -388,7 +394,7 @@ export function CampaignAudienceListEditor({
         </div>
       ) : null}
 
-      {mode === 'create' ? (
+      {mode === 'create' && allowLogicFilters ? (
         <div className={`${workspacePanelCard} space-y-3 p-4`}>
           <h2 className={`font-semibold ${workspaceText}`}>
             List from a category

@@ -64,6 +64,11 @@ import type {
   WorkspaceFormPresentation,
 } from '~/lib/workspace-forms/form-theme';
 import { validateVisibleFormFields } from '~/lib/workspace-forms/form-validate';
+import {
+  type FormAudienceListOption,
+  MAILING_LIST_AUDIENCE_KEY,
+  parseAudienceListIdsFromValues,
+} from '~/lib/workspace-forms/mailing-list-audience';
 
 const EMPTY_PLACEHOLDER =
   'placeholder:text-neutral-400/70 placeholder:opacity-80';
@@ -96,6 +101,7 @@ type Props = {
   chromeOnDark?: boolean;
   /** Wrap event info + form in a soft off-white shell. */
   contentShell?: boolean;
+  pickableAudienceLists?: FormAudienceListOption[];
 };
 
 export function PublicWorkspaceForm({
@@ -123,6 +129,7 @@ export function PublicWorkspaceForm({
   primaryColor,
   chromeOnDark = false,
   contentShell = false,
+  pickableAudienceLists = [],
 }: Props) {
   const [values, setValues] = useState<PublicFormValues>(() => {
     const restored = { ...(initialValues ?? {}) };
@@ -202,6 +209,21 @@ export function PublicWorkspaceForm({
     setValues((current) => ({ ...current, [key]: value }));
     setStepError(null);
   }
+
+  function setPickedAudienceLists(nextIds: string[]) {
+    setField(MAILING_LIST_AUDIENCE_KEY, nextIds.join(','));
+  }
+
+  const showAudiencePicker = pickableAudienceLists.length > 1;
+  const pickedAudienceIds = parseAudienceListIdsFromValues(values);
+  const audiencePicker = showAudiencePicker ? (
+    <AudienceListPicker
+      lists={pickableAudienceLists}
+      selectedIds={pickedAudienceIds}
+      disabled={pending}
+      onChange={setPickedAudienceLists}
+    />
+  ) : null;
 
   function goBack() {
     setStepError(null);
@@ -489,6 +511,7 @@ export function PublicWorkspaceForm({
               onChange={setField}
               onBack={goBack}
               onNext={goNext}
+              listPicker={isLastStep ? audiencePicker : null}
               resume={
                 <ResumeLaterControls
                   saving={savingDraft}
@@ -516,6 +539,8 @@ export function PublicWorkspaceForm({
                   onChange={(value) => setField(field.key, value)}
                 />
               ))}
+
+              {audiencePicker}
 
               {error ? (
                 <p role="alert" className="text-sm text-red-600">
@@ -574,6 +599,7 @@ function PublicFormSteps({
   onChange,
   onBack,
   onNext,
+  listPicker,
   resume,
 }: {
   steps: PublicFormStep[];
@@ -597,6 +623,7 @@ function PublicFormSteps({
   onChange: (key: string, value: PublicFormValue) => void;
   onBack: () => void;
   onNext: () => void;
+  listPicker?: React.ReactNode;
   resume: React.ReactNode;
 }) {
   const total = Math.max(steps.length, 1);
@@ -694,6 +721,8 @@ function PublicFormSteps({
           This form has no questions yet.
         </p>
       )}
+
+      {listPicker}
 
       {stepError ? (
         <p
@@ -1002,6 +1031,57 @@ function FieldHelp({ text }: { text?: string }) {
     <p className="text-sm text-neutral-500" data-test="public-form-field-help">
       {text}
     </p>
+  );
+}
+
+function AudienceListPicker({
+  lists,
+  selectedIds,
+  disabled,
+  onChange,
+}: {
+  lists: FormAudienceListOption[];
+  selectedIds: string[];
+  disabled: boolean;
+  onChange: (ids: string[]) => void;
+}) {
+  const selected = new Set(selectedIds);
+  return (
+    <fieldset className="space-y-2" data-test="public-form-audience-lists">
+      <legend className="text-sm font-medium text-neutral-700">
+        Lists
+        <span className="ml-1 text-neutral-400">(optional)</span>
+      </legend>
+      <p className="text-sm text-neutral-500">
+        Choose the lists you want to join. Leave blank to join all of them.
+      </p>
+      <div className="space-y-2">
+        {lists.map((list) => {
+          const id = `audience-list-${list.id}`;
+          return (
+            <label
+              key={list.id}
+              htmlFor={id}
+              className="flex items-start gap-2 text-sm text-neutral-800"
+            >
+              <input
+                id={id}
+                type="checkbox"
+                checked={selected.has(list.id)}
+                disabled={disabled}
+                onChange={(event) => {
+                  const next = new Set(selected);
+                  if (event.target.checked) next.add(list.id);
+                  else next.delete(list.id);
+                  onChange([...next]);
+                }}
+              />
+              {list.name}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

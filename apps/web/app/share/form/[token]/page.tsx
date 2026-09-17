@@ -127,6 +127,7 @@ async function PublicWorkspaceFormPage({
         primaryColor={themeColors.primaryColor}
         chromeOnDark={brandGradient && !useContentShell}
         contentShell={useContentShell}
+        pickableAudienceLists={form.pickableAudienceLists}
       />
     </main>
   );

@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 
 import { PageBody } from '@kit/ui/page';
 
-import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
+import { hasCampaignsSavedLists } from '~/lib/billing/campaign-pricing';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
@@ -24,8 +24,6 @@ async function ImportPage({ params }: ImportPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
   const data = await loadCampaignsGrowthHub(workspace.account.id);
-  const growth = hasCampaignsGrowthFeatures(data.snapshot.planTier);
-
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -35,7 +33,7 @@ async function ImportPage({ params }: ImportPageProps) {
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
         <CampaignsHubNav accountSlug={accountSlug} />
-        {growth ? (
+        {hasCampaignsSavedLists(data.snapshot.planTier) ? (
           <Suspense fallback={null}>
             <CampaignContactImportClient
               accountId={workspace.account.id}
@@ -46,8 +44,8 @@ async function ImportPage({ params }: ImportPageProps) {
         ) : (
           <CampaignUpgradeCta
             accountSlug={accountSlug}
-            nextTierName={data.snapshot.nextTierName ?? 'Growth'}
-            message="CSV list import starts on Campaigns Growth."
+            nextTierName={data.snapshot.nextTierName ?? 'Starter'}
+            message="CSV list import is included with the Campaigns add-on."
           />
         )}
       </PageBody>

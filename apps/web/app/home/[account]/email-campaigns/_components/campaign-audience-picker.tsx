@@ -11,7 +11,10 @@ import { RadioGroup, RadioGroupItem } from '@kit/ui/radio-group';
 import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
-import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
+import {
+  hasCampaignsGrowthFeatures,
+  hasCampaignsSavedLists,
+} from '~/lib/billing/campaign-pricing';
 import {
   AUDIENCE_TYPE_HINT,
   AUDIENCE_TYPE_LABEL,
@@ -66,12 +69,14 @@ export function CampaignAudiencePicker({
   }) => void;
 }) {
   const growth = hasCampaignsGrowthFeatures(planTier);
+  const savedLists = hasCampaignsSavedLists(planTier);
   const newListHref = pathsConfig.app.accountEmailCampaignAudienceNew.replace(
     '[account]',
     accountSlug,
   );
   const listMissing = campaignAudienceListMissing(audienceType, audienceConfig);
-  const showListRadio = growth && (lists.length > 0 || audienceType === 'list');
+  const showListRadio =
+    savedLists && (lists.length > 0 || audienceType === 'list');
   const [manualText, setManualText] = useState(
     (audienceConfig.emails ?? []).join(', '),
   );
@@ -159,7 +164,7 @@ export function CampaignAudiencePicker({
         ))}
       </RadioGroup>
 
-      {growth && lists.length === 0 && audienceType !== 'list' ? (
+      {savedLists && lists.length === 0 && audienceType !== 'list' ? (
         <div
           className="space-y-1 rounded-md border border-[color:var(--workspace-shell-border)] p-3"
           data-test="campaign-audience-create-list-prompt"
@@ -179,7 +184,7 @@ export function CampaignAudiencePicker({
         </div>
       ) : null}
 
-      {audienceType === 'list' && growth ? (
+      {audienceType === 'list' && savedLists ? (
         <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
           <Label className={workspaceText}>Saved list</Label>
           {lists.length === 0 ? (
@@ -307,7 +312,9 @@ export function CampaignAudiencePicker({
       <p className={`text-xs ${workspaceTextMuted}`}>
         {growth
           ? 'Growth lists apply filters at send time. Unsubscribed and suppressed addresses are never sent.'
-          : 'Upgrade to Growth for saved lists and logic filters.'}
+          : savedLists
+            ? 'Manual and CSV lists are included on Starter. Upgrade to Growth for logic filters.'
+            : 'Subscribe to Campaigns to use saved lists.'}
       </p>
     </div>
   );

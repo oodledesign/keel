@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Inbox, ListChecks, Mail, Plus, Settings2, Share2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -136,8 +137,12 @@ export function FormBuilder({
   const [eventTime, setEventTime] = useState(form.eventTime ?? '');
   const [destination, setDestination] = useState(form.destination);
   const [listingId, setListingId] = useState(form.listingId ?? '');
-  const [audienceListId, setAudienceListId] = useState(
-    form.audienceListId ?? '',
+  const [audienceListIds, setAudienceListIds] = useState<string[]>(
+    form.audienceListIds?.length
+      ? form.audienceListIds
+      : form.audienceListId
+        ? [form.audienceListId]
+        : [],
   );
   const [submitLabel, setSubmitLabel] = useState(form.submitLabel);
   const [successMessage, setSuccessMessage] = useState(
@@ -208,7 +213,8 @@ export function FormBuilder({
           eventTime: eventTime.trim() || null,
           destination,
           listingId: listingId || null,
-          audienceListId: audienceListId || null,
+          audienceListId: audienceListIds[0] ?? null,
+          audienceListIds,
           submitLabel: submitLabel.trim() || 'Submit',
           successMessage: successMessage.trim() || null,
           fields,
@@ -568,30 +574,65 @@ export function FormBuilder({
 
             {destination === 'mailing_list' ? (
               <div className="grid gap-1.5">
-                <Label>Add subscribers to audience list</Label>
-                <Select
-                  value={audienceListId || 'none'}
-                  onValueChange={(value) =>
-                    setAudienceListId(value === 'none' ? '' : value)
-                  }
-                >
-                  <SelectTrigger data-test="form-audience-list">
-                    <SelectValue placeholder="Workspace mailing list only" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">
-                      Workspace mailing list only
-                    </SelectItem>
-                    {audienceLists.map((list) => (
-                      <SelectItem key={list.id} value={list.id}>
-                        {list.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Add subscribers to audience lists</Label>
+                {audienceLists.length === 0 ? (
+                  <p
+                    className={`text-sm ${workspaceTextMuted}`}
+                    data-test="form-audience-lists-empty"
+                  >
+                    No audience lists yet. Create one in Campaigns → Audiences.
+                  </p>
+                ) : (
+                  <div
+                    className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-[color:var(--workspace-shell-border)] p-3"
+                    data-test="form-audience-lists"
+                  >
+                    {audienceLists.map((list) => {
+                      const id = `form-audience-list-${list.id}`;
+                      return (
+                        <label
+                          key={list.id}
+                          htmlFor={id}
+                          className="flex items-start gap-2 text-sm"
+                        >
+                          <Checkbox
+                            id={id}
+                            checked={audienceListIds.includes(list.id)}
+                            onCheckedChange={(value) => {
+                              setAudienceListIds((current) =>
+                                value === true
+                                  ? [...new Set([...current, list.id])]
+                                  : current.filter((item) => item !== list.id),
+                              );
+                            }}
+                          />
+                          <span className="min-w-0">
+                            <span className={`block ${workspaceText}`}>
+                              {list.name}
+                            </span>
+                            {list.isPublic ? (
+                              <span
+                                className={`block text-xs ${workspaceTextMuted}`}
+                              >
+                                Public — subscribers can pick this list
+                              </span>
+                            ) : (
+                              <span
+                                className={`block text-xs ${workspaceTextMuted}`}
+                              >
+                                Private — auto-joined, hidden on the form
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className={`text-xs ${workspaceTextMuted}`}>
-                  Optional. Manual lists get this person as a member. Welcome
-                  automations scoped to the list can fire from this form.
+                  Optional. One list auto-joins on submit. Several lists: public
+                  ones can be offered as an optional picker; private lists
+                  always join. Manual lists get this person as a member.
                 </p>
               </div>
             ) : null}

@@ -14,6 +14,7 @@ import {
   hasCampaignsAutomations,
   hasCampaignsGrowthFeatures,
   hasCampaignsProFeatures,
+  hasCampaignsSavedLists,
   nextCampaignUpgradeTier,
 } from './campaign-pricing';
 import { OZER_STRIPE_PRICES } from './stripe-price-ids';
@@ -85,6 +86,8 @@ describe('campaign pricing', () => {
   });
 
   it('gates Growth+ and Pro features from plan_tier', () => {
+    expect(hasCampaignsSavedLists('starter')).toBe(true);
+    expect(hasCampaignsSavedLists('none')).toBe(false);
     expect(hasCampaignsGrowthFeatures('starter')).toBe(false);
     expect(hasCampaignsGrowthFeatures('growth')).toBe(true);
     expect(hasCampaignsProFeatures('growth')).toBe(false);

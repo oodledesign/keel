@@ -8,8 +8,9 @@
  * grant extra units each cycle and expire with that cycle.
  *
  * Feature ladder:
- * - All plans (Starter+): core builder + welcome / new-subscriber automations
- * - Growth+: saved lists, logic filters, A/B subjects, richer analytics
+ * - All plans (Starter+ / Business Lite + Campaigns add-on): core builder,
+ *   welcome automations, Audiences hub, manual saved lists, CSV lists
+ * - Growth+: logic filters, A/B subjects, richer analytics, categories
  * - Pro: higher caps + comparative reports
  *
  * Stripe price IDs are env placeholders until live products exist.
@@ -183,6 +184,16 @@ export function hasCampaignsGrowthFeatures(
   tier: string | null | undefined,
 ): boolean {
   return campaignTierRank(tier) >= 2;
+}
+
+/**
+ * Audiences hub, manual saved lists, and CSV lists are on every Campaigns
+ * plan, including Starter / Business Lite + Campaigns add-on.
+ */
+export function hasCampaignsSavedLists(
+  tier: string | null | undefined,
+): boolean {
+  return campaignTierRank(tier) >= 1;
 }
 
 /**
