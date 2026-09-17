@@ -25,6 +25,7 @@ import {
   applyAudienceFilters,
   parseAudienceListFilters,
 } from './campaign-audience-filters';
+import { loadListOptOutEmails } from './campaign-list-preferences';
 
 export type ResolvedCampaignRecipient = {
   email: string;
@@ -475,6 +476,11 @@ export async function resolveCampaignAudience(
           preferenceId: extra.preferenceId,
         });
       }
+    }
+
+    const optedOut = await loadListOptOutEmails(client, accountId, list.id);
+    for (const email of optedOut) {
+      byEmail.delete(email);
     }
   }
 

@@ -2,6 +2,12 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  type PublicAudienceListPreference,
+  leaveAllPublicAudienceLists,
+  listPublicAudiencePreferences,
+  setPublicAudienceListSubscription,
+} from '~/lib/campaigns/campaign-list-preferences';
 import { markCampaignRecipientsUnsubscribed } from '~/lib/campaigns/campaigns.service';
 import {
   lookupCampaignRecipientByToken,
@@ -17,7 +23,7 @@ import {
   unsubscribeWorkspaceMailingListByToken,
 } from '~/lib/workspace-forms/workspace-mailing-list';
 
-export type { PublicMailingPreferenceResult };
+export type { PublicAudienceListPreference, PublicMailingPreferenceResult };
 
 export const PUBLIC_MAILING_PREFERENCE_INVALID_LINK =
   'This unsubscribe link is missing or invalid.';
@@ -53,6 +59,8 @@ export async function unsubscribeMailingListPublicPreference(
       (await unsubscribeCampaignRecipientByToken(admin, token));
 
     if (!result) return null;
+
+    await leaveAllPublicAudienceLists(admin, result.accountId, result.email);
 
     if (result.marketingStatus !== 'suppressed') {
       await markCampaignRecipientsUnsubscribed(
@@ -118,6 +126,53 @@ export async function resubscribeMailingListPublicPreference(
     }
 
     return result;
+  } catch (err) {
+    throwMappedPreferenceError(err);
+  }
+}
+
+export async function loadMailingListPublicLists(
+  admin: SupabaseClient,
+  accountId: string,
+  email: string,
+): Promise<PublicAudienceListPreference[]> {
+  try {
+    return await listPublicAudiencePreferences(admin, accountId, email);
+  } catch (err) {
+    throwMappedPreferenceError(err);
+  }
+}
+
+export async function setMailingListPublicListPreference(
+  admin: SupabaseClient,
+  token: string,
+  listId: string,
+  subscribed: boolean,
+): Promise<PublicMailingPreferenceResult | null> {
+  try {
+    const current = await lookupMailingListPublicPreference(admin, token);
+    if (!current) return null;
+
+    // Public tokens must not clear a bounce/complaint suppression.
+    if (subscribed && current.marketingStatus === 'suppressed') {
+      return current;
+    }
+
+    const updated = await setPublicAudienceListSubscription({
+      client: admin,
+      accountId: current.accountId,
+      email: current.email,
+      listId,
+      subscribed,
+    });
+
+    if (!updated) return null;
+
+    if (subscribed && current.marketingStatus !== 'subscribed') {
+      return resubscribeMailingListPublicPreference(admin, token);
+    }
+
+    return current;
   } catch (err) {
     throwMappedPreferenceError(err);
   }

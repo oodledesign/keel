@@ -6,8 +6,10 @@ import {
   MAILING_LIST_TEST_UNSUBSCRIBE_BODY,
   MAILING_LIST_TEST_UNSUBSCRIBE_TITLE,
   MAILING_LIST_UNSUBSCRIBE_INVALID_TITLE,
+  mailingListPreferencePageCopy,
   mailingListUnsubscribePageCopy,
   mailingListUnsubscribePageKind,
+  shouldUnsubscribeMailingListOnPageLoad,
 } from './mailing-list-unsubscribe-page';
 
 describe('mailing-list unsubscribe page', () => {
@@ -32,5 +34,45 @@ describe('mailing-list unsubscribe page', () => {
       title: MAILING_LIST_UNSUBSCRIBE_INVALID_TITLE,
       body: 'This unsubscribe link is missing or invalid.',
     });
+  });
+
+  it('keeps one-click unsubscribe when there are no public lists', () => {
+    expect(shouldUnsubscribeMailingListOnPageLoad({ publicListCount: 0 })).toBe(
+      true,
+    );
+    expect(
+      shouldUnsubscribeMailingListOnPageLoad({
+        publicListCount: 0,
+        status: 'subscribed',
+      }),
+    ).toBe(false);
+  });
+
+  it('uses preference-centre copy when public lists exist', () => {
+    expect(
+      mailingListPreferencePageCopy({
+        errorKind: null,
+        email: 'dana@example.com',
+        workspaceName: 'Ozer',
+        subscribed: true,
+        canResubscribe: true,
+        preferenceCenter: true,
+      }),
+    ).toEqual({
+      title: 'Email preferences',
+      body: 'Choose which lists dana@example.com should receive from Ozer.',
+    });
+  });
+
+  it('opens a preference centre when public lists exist', () => {
+    expect(shouldUnsubscribeMailingListOnPageLoad({ publicListCount: 2 })).toBe(
+      false,
+    );
+    expect(
+      shouldUnsubscribeMailingListOnPageLoad({
+        publicListCount: 1,
+        status: 'subscribed',
+      }),
+    ).toBe(false);
   });
 });

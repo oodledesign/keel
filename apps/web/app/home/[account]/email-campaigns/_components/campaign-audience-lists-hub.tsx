@@ -103,6 +103,13 @@ export function CampaignAudienceListsHub({
                       className={`min-w-0 truncate font-semibold ${workspaceText}`}
                     >
                       {list.name}
+                      {list.isPublic ? (
+                        <span
+                          className={`ml-2 text-xs font-medium ${workspaceTextMuted}`}
+                        >
+                          Public
+                        </span>
+                      ) : null}
                     </span>
                     <span className={`text-sm ${workspaceTextMuted}`}>
                       <span className="md:hidden">Type · </span>

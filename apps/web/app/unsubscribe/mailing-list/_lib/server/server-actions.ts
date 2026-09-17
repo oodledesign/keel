@@ -11,6 +11,7 @@ import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-te
 import {
   PUBLIC_MAILING_PREFERENCE_INVALID_LINK,
   resubscribeMailingListPublicPreference,
+  setMailingListPublicListPreference,
   unsubscribeMailingListPublicPreference,
 } from '~/lib/workspace-forms/mailing-list-public-preference';
 
@@ -64,4 +65,33 @@ export const unsubscribeMailingListAction = enhanceAction(
     redirect(mailingListUnsubscribePath(token));
   },
   { auth: false },
+);
+
+const MailingListPublicListSchema = MailingListPreferenceTokenSchema.extend({
+  listId: z.string().uuid(),
+  subscribed: z.boolean(),
+});
+
+export const setMailingListPublicListAction = enhanceAction(
+  async (data) => {
+    const admin = getSupabaseServerAdminClient();
+    const result = await setMailingListPublicListPreference(
+      admin,
+      data.token,
+      data.listId,
+      data.subscribed,
+    );
+
+    if (!result) {
+      throw new Error(PUBLIC_MAILING_PREFERENCE_INVALID_LINK);
+    }
+
+    redirect(
+      mailingListUnsubscribePath(
+        data.token,
+        result.marketingStatus === 'subscribed',
+      ),
+    );
+  },
+  { auth: false, schema: MailingListPublicListSchema },
 );

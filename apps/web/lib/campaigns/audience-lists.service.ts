@@ -28,6 +28,7 @@ function mapList(
     source: (row.source as CampaignAudienceList['source']) ?? 'subscribers',
     matchMode: (row.match_mode as CampaignAudienceList['matchMode']) ?? 'all',
     filters: row.filters ?? [],
+    isPublic: Boolean(row.is_public),
     memberCount,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -117,6 +118,7 @@ class AudienceListsService {
     name: string;
     filters: AudienceListFilters;
     contactIds?: string[];
+    isPublic?: boolean;
   }): Promise<CampaignAudienceList> {
     const filters = parseAudienceListFilters(input.filters);
     const { data, error } = await fromTable(
@@ -130,6 +132,7 @@ class AudienceListsService {
         source: filters.source,
         match_mode: filters.matchMode,
         filters: filters.source === 'manual' ? [] : filters.rules,
+        is_public: Boolean(input.isPublic),
       })
       .select('*')
       .single();
@@ -155,9 +158,11 @@ class AudienceListsService {
     listId: string;
     name?: string;
     filters?: AudienceListFilters;
+    isPublic?: boolean;
   }): Promise<CampaignAudienceList> {
     const patch: Record<string, unknown> = {};
     if (input.name !== undefined) patch.name = input.name.trim();
+    if (input.isPublic !== undefined) patch.is_public = input.isPublic;
     if (input.filters !== undefined) {
       const filters = parseAudienceListFilters(input.filters);
       patch.source = filters.source;

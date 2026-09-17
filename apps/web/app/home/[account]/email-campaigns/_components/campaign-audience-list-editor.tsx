@@ -10,6 +10,7 @@ import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -119,6 +120,7 @@ export function CampaignAudienceListEditor({
   const [categoryListId, setCategoryListId] = useState(categories[0]?.id ?? '');
   const [categoryListMode, setCategoryListMode] =
     useState<AudienceListKind>('logic');
+  const [isPublic, setIsPublic] = useState(Boolean(list?.isPublic));
 
   const filters = useMemo<AudienceListFilters>(
     () =>
@@ -201,6 +203,23 @@ export function CampaignAudienceListEditor({
             value={name}
             data-test="audience-list-name"
             onChange={(event) => setName(event.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2">
+          <div className="space-y-1">
+            <Label htmlFor="audience-list-public">Public</Label>
+            <p className={`text-xs ${workspaceTextMuted}`}>
+              Subscribers can opt in or out of this list on their preference
+              page. Private lists stay hidden.
+            </p>
+          </div>
+          <Switch
+            id="audience-list-public"
+            checked={isPublic}
+            onCheckedChange={setIsPublic}
+            aria-label="Mark list as public"
+            data-test="audience-list-public"
           />
         </div>
 
@@ -297,6 +316,7 @@ export function CampaignAudienceListEditor({
                     listId: list?.id,
                     name,
                     filters,
+                    isPublic,
                     contactIds:
                       kind === 'manual' ? selectedContactIds : undefined,
                   });

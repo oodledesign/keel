@@ -1,21 +1,25 @@
+import type { ReactNode } from 'react';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
-  PUBLIC_MAILING_PREFERENCE_INVALID_LINK,
-  PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED,
+  loadMailingListPublicLists,
   loadWorkspaceNameForPreference,
   lookupMailingListPublicPreference,
   unsubscribeMailingListPublicPreference,
 } from '~/lib/workspace-forms/mailing-list-public-preference';
 import {
+  mailingListPreferencePageCopy,
   mailingListUnsubscribePageCopy,
   mailingListUnsubscribePageKind,
+  shouldUnsubscribeMailingListOnPageLoad,
 } from '~/lib/workspace-forms/mailing-list-unsubscribe-page';
 
 import { MailingListPreferenceForm } from './_components/mailing-list-preference-form';
+import { MailingListPublicListsForm } from './_components/mailing-list-public-lists-form';
 
 export const metadata = {
-  title: 'Unsubscribe from mailing list',
+  title: 'Email preferences',
 };
 
 export const dynamic = 'force-dynamic';
@@ -33,18 +37,7 @@ export default async function MailingListUnsubscribePage({
       pageKind === 'lookup' ? 'missing_token' : pageKind,
     );
 
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--ozer-surface-canvas)] px-6 py-12">
-        <div className="w-full max-w-lg rounded-3xl bg-[var(--ozer-surface-panel)] p-8 text-center shadow-sm">
-          <h1 className="text-3xl font-bold text-[var(--workspace-shell-text)]">
-            {copy.title}
-          </h1>
-          <p className="mt-4 text-sm leading-6 text-[var(--workspace-shell-text-muted)]">
-            {copy.body}
-          </p>
-        </div>
-      </main>
-    );
+    return <PreferenceShell title={copy.title} body={copy.body} />;
   }
 
   let errorKind: 'invalid' | 'failed' | null = null;
@@ -52,17 +45,35 @@ export default async function MailingListUnsubscribePage({
   let workspaceName = 'this workspace';
   let subscribed = false;
   let canResubscribe = false;
+  let publicLists: Awaited<ReturnType<typeof loadMailingListPublicLists>> = [];
 
   try {
     const admin = getSupabaseServerAdminClient();
-    const result =
-      status === 'subscribed'
-        ? await lookupMailingListPublicPreference(admin, token)
-        : await unsubscribeMailingListPublicPreference(admin, token);
+    let result = await lookupMailingListPublicPreference(admin, token);
 
     if (!result) {
       errorKind = 'invalid';
     } else {
+      publicLists = await loadMailingListPublicLists(
+        admin,
+        result.accountId,
+        result.email,
+      );
+
+      if (
+        shouldUnsubscribeMailingListOnPageLoad({
+          publicListCount: publicLists.length,
+          status,
+        })
+      ) {
+        result = await unsubscribeMailingListPublicPreference(admin, token);
+        if (!result) {
+          errorKind = 'invalid';
+        }
+      }
+    }
+
+    if (result && !errorKind) {
       email = result.email;
       subscribed = result.marketingStatus === 'subscribed';
       canResubscribe = result.marketingStatus !== 'suppressed';
@@ -70,37 +81,77 @@ export default async function MailingListUnsubscribePage({
         admin,
         result.accountId,
       );
+      publicLists = await loadMailingListPublicLists(
+        admin,
+        result.accountId,
+        result.email,
+      );
     }
   } catch {
     errorKind = 'failed';
   }
 
   const success = Boolean(email && !errorKind);
+  const preferenceCenter = success && publicLists.length > 0;
+  const anyListSubscribed = publicLists.some((list) => list.subscribed);
+  const copy = mailingListPreferencePageCopy({
+    errorKind,
+    email,
+    workspaceName,
+    subscribed,
+    canResubscribe,
+    preferenceCenter,
+  });
 
   return (
+    <PreferenceShell
+      title={copy.title}
+      body={copy.body}
+      wide={preferenceCenter}
+    >
+      {success && token && preferenceCenter ? (
+        <MailingListPublicListsForm
+          token={token}
+          lists={publicLists}
+          canManage={canResubscribe}
+          showUnsubscribeAll={
+            canResubscribe && (subscribed || anyListSubscribed)
+          }
+        />
+      ) : null}
+      {success &&
+      token &&
+      !preferenceCenter &&
+      (subscribed || canResubscribe) ? (
+        <MailingListPreferenceForm token={token} subscribed={subscribed} />
+      ) : null}
+    </PreferenceShell>
+  );
+}
+
+function PreferenceShell({
+  title,
+  body,
+  children,
+  wide,
+}: {
+  title: string;
+  body: string;
+  children?: ReactNode;
+  wide?: boolean;
+}) {
+  return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--ozer-surface-canvas)] px-6 py-12">
-      <div className="w-full max-w-lg rounded-3xl bg-[var(--ozer-surface-panel)] p-8 text-center shadow-sm">
+      <div
+        className={`w-full ${wide ? 'max-w-xl' : 'max-w-lg'} rounded-3xl bg-[var(--ozer-surface-panel)] p-8 text-center shadow-sm`}
+      >
         <h1 className="text-3xl font-bold text-[var(--workspace-shell-text)]">
-          {errorKind === 'failed'
-            ? 'Something went wrong'
-            : !success
-              ? 'Invalid unsubscribe link'
-              : subscribed
-                ? "You're subscribed again"
-                : 'You have been unsubscribed'}
+          {title}
         </h1>
         <p className="mt-4 text-sm leading-6 text-[var(--workspace-shell-text-muted)]">
-          {errorKind === 'failed'
-            ? PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED
-            : errorKind === 'invalid'
-              ? PUBLIC_MAILING_PREFERENCE_INVALID_LINK
-              : subscribed
-                ? `${email} will receive mailing-list emails from ${workspaceName} again.`
-                : `${email} will no longer receive mailing-list emails from ${workspaceName}.`}
+          {body}
         </p>
-        {success && token && (subscribed || canResubscribe) ? (
-          <MailingListPreferenceForm token={token} subscribed={subscribed} />
-        ) : null}
+        {children}
       </div>
     </main>
   );
