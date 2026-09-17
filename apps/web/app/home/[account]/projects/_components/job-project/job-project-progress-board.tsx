@@ -374,8 +374,8 @@ export function JobProjectProgressBoard({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-full min-h-0 flex-1 items-stretch gap-4 overflow-auto overscroll-contain pb-2">
+    <div className="flex min-h-full flex-1 flex-col">
+      <div className="flex min-h-full flex-1 items-stretch gap-4 pb-2">
         {STATUS_COLUMNS.map((col) => {
           const columnTasks = byStatus.get(col.key) ?? [];
           const colour = PROGRESS_STATUS_COLOURS[col.key] ?? '#64748B';

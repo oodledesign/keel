@@ -303,7 +303,7 @@ export function JobProjectWorkspace({
     ];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex flex-1 flex-col gap-3">
       <JobProjectHeader
         board={board ? { progressPct: board.progressPct } : { progressPct: 0 }}
       />
@@ -430,9 +430,9 @@ export function JobProjectWorkspace({
       </div>
 
       <div
-        className={`min-h-0 flex-1 ${
-          view === 'board' ? 'flex flex-col overflow-hidden' : 'overflow-auto'
-        }`}
+        className={
+          view === 'board' ? 'flex flex-1 flex-col' : 'flex-1 overflow-auto'
+        }
       >
         {boardLoading ? (
           <div className="space-y-3">

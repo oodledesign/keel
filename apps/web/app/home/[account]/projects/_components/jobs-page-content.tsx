@@ -16,6 +16,7 @@ import {
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import type { PartnerBoardProject } from '~/lib/projects/partner-projects.loader';
@@ -25,6 +26,7 @@ import {
   projectDetailHref,
 } from '~/lib/projects/project-paths';
 import type { ProjectStatus } from '~/lib/projects/project-statuses';
+import { kanbanPageScrollClassName } from '~/lib/projects/projects-kanban-layout';
 import {
   type ProjectsPageView,
   parseProjectsPageView,
@@ -424,7 +426,12 @@ export function JobsPageContent({
   ];
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
+    <div
+      className={cn(
+        'flex h-full min-h-0 w-full flex-1 flex-col rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40',
+        kanbanPageScrollClassName(viewReady && view === 'kanban'),
+      )}
+    >
       {/* Page header — Monday-style */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 md:px-5">
         <div className="flex items-center gap-2">
@@ -564,7 +571,7 @@ export function JobsPageContent({
           statuses={statuses}
         />
       ) : view === 'kanban' ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex flex-1 flex-col">
           <ProjectsKanbanView
             accountSlug={accountSlug}
             accountId={accountId}
