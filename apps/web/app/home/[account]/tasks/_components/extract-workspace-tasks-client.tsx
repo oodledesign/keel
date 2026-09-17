@@ -263,6 +263,7 @@ export function ExtractWorkspaceTasksClient({
       try {
         const result = await extractWorkspaceTasksFromTranscript({
           accountId,
+          accountSlug,
           rawText,
           preferredClientId: defaultClientId ?? undefined,
           instructions: instructions.trim() || undefined,
@@ -281,8 +282,22 @@ export function ExtractWorkspaceTasksClient({
             description:
               'Try a longer email or transcript with clear action items.',
           });
+        } else if (result.reusedExisting) {
+          toast.message(
+            `Loaded ${result.rows.length} suggested task${
+              result.rows.length === 1 ? '' : 's'
+            } already awaiting review`,
+            {
+              description:
+                'This meeting already has pending tasks. They are the same items shown on the task review page.',
+            },
+          );
         } else {
-          toast.success(`Extracted ${result.rows.length} task group(s)`);
+          toast.success(
+            meetingTranscriptId
+              ? `Extracted ${result.rows.length} task group(s) into review`
+              : `Extracted ${result.rows.length} task group(s)`,
+          );
         }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Extraction failed');

@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
+import { MEETING_SUGGESTED_TASK_PENDING_STATUS } from '~/lib/recorder/meeting-suggested-tasks';
 import { loadAccountTaskAutomationSettings } from '~/lib/recorder/task-automation-settings';
 
 export type MeetingReviewMember = {
@@ -71,7 +72,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
         { count: 'exact' },
       )
       .eq('account_id', accountId)
-      .eq('status', 'pending_review')
+      .eq('status', MEETING_SUGGESTED_TASK_PENDING_STATUS)
       .order('created_at', { ascending: false })
       .limit(50),
     client.rpc('get_account_members', { account_slug: accountSlug }),
@@ -225,7 +226,7 @@ export async function loadPendingMeetingTaskReviewCount(
     .from('meeting_action_items')
     .select('id', { count: 'exact', head: true })
     .eq('account_id', accountId)
-    .eq('status', 'pending_review');
+    .eq('status', MEETING_SUGGESTED_TASK_PENDING_STATUS);
 
   if (error) {
     console.error('loadPendingMeetingTaskReviewCount', error.message);

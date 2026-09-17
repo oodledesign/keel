@@ -15,6 +15,10 @@ import {
   type MeetingParticipant,
   resolveMeetingParticipants,
 } from '~/lib/recorder/meeting-participants';
+import {
+  MEETING_VISIBLE_SUGGESTED_TASK_STATUSES,
+  listMeetingSuggestedTasks,
+} from '~/lib/recorder/meeting-suggested-tasks';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
 export type MeetingClientOption = {
@@ -188,7 +192,7 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
         'meeting_transcript_id',
         transcripts.map((transcript) => transcript.id),
       )
-      .in('status', ['pending_review', 'approved', 'auto_published']);
+      .in('status', [...MEETING_VISIBLE_SUGGESTED_TASK_STATUSES]);
 
     if (actionItemsError) {
       throw new Error(actionItemsError.message);
@@ -285,7 +289,7 @@ async function loadMeetingTranscriptPageDataImpl(
     contactsResult,
     membersResult,
     summary,
-    actionItemsResult,
+    actionItemRows,
   ] = await Promise.all([
     transcriptsService.getById({
       accountId,
@@ -302,31 +306,19 @@ async function loadMeetingTranscriptPageDataImpl(
       meetingTranscriptId: transcriptId,
       accountId,
     }),
-    client
-      .from('meeting_action_items')
-      .select(
-        'id, suggested_title, suggested_description, suggested_due_date, suggested_assignee_id, status, planner_task_id',
-      )
-      .eq('meeting_transcript_id', transcriptId)
-      .eq('account_id', accountId)
-      .in('status', ['approved', 'auto_published'])
-      .order('created_at', { ascending: true }),
+    listMeetingSuggestedTasks(client, {
+      accountId,
+      meetingTranscriptId: transcriptId,
+      statuses: [...MEETING_VISIBLE_SUGGESTED_TASK_STATUSES],
+    }),
   ]);
 
   if (membersResult.error) {
     throw new Error(membersResult.error.message);
   }
 
-  if (actionItemsResult.error) {
-    throw new Error(actionItemsResult.error.message);
-  }
-
-  const actionItemRows = (actionItemsResult.data ?? []) as Array<
-    Record<string, unknown>
-  >;
-
   const plannerTaskIds = actionItemRows
-    .map((row) => row.planner_task_id as string | null)
+    .map((row) => row.planner_task_id)
     .filter((id): id is string => Boolean(id));
 
   const plannerById = new Map<
@@ -369,10 +361,9 @@ async function loadMeetingTranscriptPageDataImpl(
 
   const unresolvedUserIds = new Set<string>();
   for (const row of actionItemRows) {
-    const plannerTaskId = (row.planner_task_id as string | null) ?? null;
+    const plannerTaskId = row.planner_task_id;
     const planner = plannerTaskId ? plannerById.get(plannerTaskId) : undefined;
-    const assigneeUserId =
-      planner?.userId ?? (row.suggested_assignee_id as string | null) ?? null;
+    const assigneeUserId = planner?.userId ?? row.suggested_assignee_id ?? null;
     if (assigneeUserId && !memberNameById.has(assigneeUserId)) {
       unresolvedUserIds.add(assigneeUserId);
     }
@@ -397,10 +388,9 @@ async function loadMeetingTranscriptPageDataImpl(
   }
 
   const meetingTasks = actionItemRows.map((row) => {
-    const plannerTaskId = (row.planner_task_id as string | null) ?? null;
+    const plannerTaskId = row.planner_task_id;
     const planner = plannerTaskId ? plannerById.get(plannerTaskId) : undefined;
-    const assigneeUserId =
-      planner?.userId ?? (row.suggested_assignee_id as string | null) ?? null;
+    const assigneeUserId = planner?.userId ?? row.suggested_assignee_id ?? null;
     const assigneeContactId = planner?.contactId ?? null;
     const assigneeName = assigneeUserId
       ? (memberNameById.get(assigneeUserId) ?? null)
@@ -409,15 +399,11 @@ async function loadMeetingTranscriptPageDataImpl(
         : null;
 
     return {
-      id: (plannerTaskId as string) || (row.id as string),
-      title:
-        planner?.title?.trim() ||
-        ((row.suggested_title as string | null) ?? 'Task').trim() ||
-        'Task',
-      description: (row.suggested_description as string | null)?.trim() || null,
-      dueDate:
-        planner?.dueDate ?? (row.suggested_due_date as string | null) ?? null,
-      status: planner?.status ?? (row.status as string) ?? 'approved',
+      id: plannerTaskId || row.id,
+      title: planner?.title?.trim() || row.suggested_title.trim() || 'Task',
+      description: row.suggested_description?.trim() || null,
+      dueDate: planner?.dueDate ?? row.suggested_due_date ?? null,
+      status: planner?.status ?? row.status ?? 'pending_review',
       assigneeName,
       plannerTaskId,
     };

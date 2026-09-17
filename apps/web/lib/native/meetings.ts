@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
+import { MEETING_VISIBLE_SUGGESTED_TASK_STATUSES } from '~/lib/recorder/meeting-suggested-tasks';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 import { parseTranscriptContent } from '~/lib/recorder/transcript-speakers';
 
@@ -141,7 +142,7 @@ async function loadExtractedTranscriptIds(
     .select('meeting_transcript_id')
     .eq('account_id', accountId)
     .in('meeting_transcript_id', unique)
-    .in('status', ['pending_review', 'approved', 'auto_published']);
+    .in('status', [...MEETING_VISIBLE_SUGGESTED_TASK_STATUSES]);
 
   if (error) {
     throw new Error(error.message);
@@ -405,7 +406,7 @@ async function loadNativeMeetingTasks(
     )
     .eq('meeting_transcript_id', transcriptId)
     .eq('account_id', workspace.id)
-    .in('status', ['approved', 'auto_published'])
+    .in('status', [...MEETING_VISIBLE_SUGGESTED_TASK_STATUSES])
     .order('created_at', { ascending: true });
 
   if (error) {

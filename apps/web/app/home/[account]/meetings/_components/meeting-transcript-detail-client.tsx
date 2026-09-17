@@ -64,6 +64,7 @@ import { workspacePageContentClassName } from '~/components/workspace-shell/work
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
+import { MEETING_SUGGESTED_TASK_PENDING_STATUS } from '~/lib/recorder/meeting-suggested-tasks';
 import { buildPublicMeetingShareUrl } from '~/lib/recorder/public-meeting-share';
 import {
   type SpeakerMappings,
@@ -256,6 +257,14 @@ export function MeetingTranscriptDetailClient({
     '[account]',
     accountSlug,
   );
+  const reviewPath = `${pathsConfig.app.accountTasksReview.replace(
+    '[account]',
+    accountSlug,
+  )}?meeting=${encodeURIComponent(transcript.id)}`;
+  const pendingReviewTasks = meetingTasks.filter(
+    (task) => task.status === MEETING_SUGGESTED_TASK_PENDING_STATUS,
+  );
+  const hasPendingSuggestedTasks = pendingReviewTasks.length > 0;
   const clientPath = clientId
     ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${clientId}`
     : null;
@@ -1026,13 +1035,16 @@ export function MeetingTranscriptDetailClient({
                             {task.title}
                           </p>
                           <span className="text-xs text-[var(--workspace-shell-text-muted)] capitalize">
-                            {task.status === 'done'
-                              ? 'Completed'
-                              : task.status === 'todo' ||
-                                  task.status === 'approved' ||
-                                  task.status === 'auto_published'
-                                ? 'Open'
-                                : task.status.replace(/_/g, ' ')}
+                            {task.status ===
+                            MEETING_SUGGESTED_TASK_PENDING_STATUS
+                              ? 'Needs review'
+                              : task.status === 'done'
+                                ? 'Completed'
+                                : task.status === 'todo' ||
+                                    task.status === 'approved' ||
+                                    task.status === 'auto_published'
+                                  ? 'Open'
+                                  : task.status.replace(/_/g, ' ')}
                           </span>
                         </div>
                         {task.description ? (
@@ -1059,7 +1071,15 @@ export function MeetingTranscriptDetailClient({
                             <span>No due date</span>
                           )}
                         </div>
-                        {task.plannerTaskId ? (
+                        {task.status ===
+                        MEETING_SUGGESTED_TASK_PENDING_STATUS ? (
+                          <Link
+                            href={reviewPath}
+                            className="mt-2 inline-block text-xs font-medium text-[var(--ozer-info)] hover:underline"
+                          >
+                            Review suggested task
+                          </Link>
+                        ) : task.plannerTaskId ? (
                           <Link
                             href={tasksPath}
                             className="mt-2 inline-block text-xs font-medium text-[var(--ozer-info)] hover:underline"
@@ -1121,11 +1141,21 @@ export function MeetingTranscriptDetailClient({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setExtractOpen(true)}>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        if (hasPendingSuggestedTasks) {
+                          router.push(reviewPath);
+                          return;
+                        }
+                        setExtractOpen(true);
+                      }}
+                    >
                       <Sparkles className="mr-2 h-4 w-4" />
-                      {meetingTasks.length > 0
-                        ? 'Extract more tasks…'
-                        : 'Extract tasks…'}
+                      {hasPendingSuggestedTasks
+                        ? 'Review suggested tasks'
+                        : meetingTasks.length > 0
+                          ? 'Extract more tasks…'
+                          : 'Extract tasks…'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1375,7 +1405,31 @@ export function MeetingTranscriptDetailClient({
             </section>
           ) : null}
 
-          {canEdit && meetingTasks.length === 0 ? (
+          {canEdit && hasPendingSuggestedTasks ? (
+            <section className={panelClassName}>
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-[var(--ozer-accent)]" />
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Tasks
+                </h2>
+              </div>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                {pendingReviewTasks.length === 1
+                  ? '1 suggested task from this meeting is waiting for review.'
+                  : `${pendingReviewTasks.length} suggested tasks from this meeting are waiting for review.`}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-4 w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                onClick={() => router.push(reviewPath)}
+              >
+                <CheckSquare className="mr-2 h-4 w-4" />
+                Review suggested tasks
+              </Button>
+            </section>
+          ) : canEdit && meetingTasks.length === 0 ? (
             <section className={panelClassName}>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--ozer-accent)]" />

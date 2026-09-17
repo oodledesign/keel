@@ -9,6 +9,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import { MEETING_SUGGESTED_TASK_PENDING_STATUS } from '~/lib/recorder/meeting-suggested-tasks';
 import { isHighConfidenceMeetingSuggestion } from '~/lib/recorder/meeting-task-confidence';
 import { publishMeetingTaskToPlanner } from '~/lib/recorder/publish-meeting-task';
 
@@ -101,7 +102,7 @@ export const rejectMeetingActionItem = enhanceAction(
       })
       .eq('id', input.meetingActionItemId)
       .eq('account_id', input.accountId)
-      .eq('status', 'pending_review')
+      .eq('status', MEETING_SUGGESTED_TASK_PENDING_STATUS)
       .select('id')
       .maybeSingle();
 
@@ -136,7 +137,7 @@ export const bulkApproveHighConfidenceMeetingItems = enhanceAction(
         'id, suggested_title, suggested_description, suggested_due_date, suggested_duration_minutes, assignee_confidence, suggested_assignee_id',
       )
       .eq('account_id', input.accountId)
-      .eq('status', 'pending_review');
+      .eq('status', MEETING_SUGGESTED_TASK_PENDING_STATUS);
 
     if (error) {
       throw new Error(error.message);
