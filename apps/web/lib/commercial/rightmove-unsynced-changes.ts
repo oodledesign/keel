@@ -209,7 +209,9 @@ export function describeRightmoveUnsyncedChanges(input: {
 
   const recentStatusChanges = (input.statusChanges ?? [])
     .filter((change) => isAfterLastSync(change.createdAt, lastSyncMs))
-    .sort((a, b) => (parseTime(b.createdAt) ?? 0) - (parseTime(a.createdAt) ?? 0))
+    .sort(
+      (a, b) => (parseTime(b.createdAt) ?? 0) - (parseTime(a.createdAt) ?? 0),
+    )
     .slice(0, 3);
 
   for (const [index, change] of recentStatusChanges.entries()) {

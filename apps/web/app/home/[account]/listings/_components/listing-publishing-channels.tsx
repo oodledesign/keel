@@ -28,8 +28,8 @@ import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import {
-  describeRightmoveUnsyncedChanges,
   type RightmoveUnsyncedStatusChangeInput,
+  describeRightmoveUnsyncedChanges,
 } from '~/lib/commercial/rightmove-unsynced-changes';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 

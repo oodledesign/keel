@@ -92,9 +92,7 @@ describe('describeRightmoveUnsyncedChanges', () => {
 
     expect(result.lastSyncText).toMatch(/^Last synced /);
     expect(result.items.map((item) => item.text)).toEqual([
-      expect.stringMatching(
-        /^Status changed from Marketing to Under offer \(/,
-      ),
+      expect.stringMatching(/^Status changed from Marketing to Under offer \(/),
       expect.stringMatching(/^Listing details updated \(/),
       'New media since last sync: 1 main photo, 2 gallery photos and 1 EPC',
     ]);

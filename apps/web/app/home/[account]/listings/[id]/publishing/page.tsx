@@ -104,8 +104,7 @@ async function ListingPublishingPage({ params }: PageProps) {
         })
       : Promise.resolve([]),
   ]);
-  const rightmoveStatusChanges =
-    statusChangesFromListingEvents(listingEvents);
+  const rightmoveStatusChanges = statusChangesFromListingEvents(listingEvents);
 
   return (
     <ListingPublishingSection
