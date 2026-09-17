@@ -9,10 +9,15 @@ export const RIGHTMOVE_BULK_JOB_STATUSES = [
 export type RightmoveBulkJobStatus =
   (typeof RIGHTMOVE_BULK_JOB_STATUSES)[number];
 
+export const RIGHTMOVE_BULK_JOB_SCOPES = ['all', 'unsynced'] as const;
+
+export type RightmoveBulkJobScope = (typeof RIGHTMOVE_BULK_JOB_SCOPES)[number];
+
 export type RightmoveBulkJob = {
   id: string;
   accountId: string;
   status: RightmoveBulkJobStatus;
+  scope: RightmoveBulkJobScope;
   listingIds: string[];
   cursor: number;
   total: number;

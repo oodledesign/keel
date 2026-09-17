@@ -16,6 +16,28 @@ export function shouldUnpublishRightmoveForListingStatus(
   return !listingStatusPublishesToPortals(status);
 }
 
+export type RightmoveLiveSyncAction = 'unpublish' | 'enqueue' | 'skip';
+
+/**
+ * Live listings stay on Rightmove via a 15-minute flush, not an immediate PUT.
+ * Off-market statuses still unpublish immediately so sold/let stock is not left live.
+ */
+export function resolveRightmoveLiveSyncAction(input: {
+  publicationStatus: string | null | undefined;
+  listingStatus?: ListingStatus | string | null;
+}): RightmoveLiveSyncAction {
+  if (!isLiveRightmovePublication(input.publicationStatus)) return 'skip';
+  if (
+    input.listingStatus &&
+    shouldUnpublishRightmoveForListingStatus(
+      input.listingStatus as ListingStatus,
+    )
+  ) {
+    return 'unpublish';
+  }
+  return 'enqueue';
+}
+
 function parseTime(value: string | null | undefined): number | null {
   if (!value?.trim()) return null;
   const ms = Date.parse(value);

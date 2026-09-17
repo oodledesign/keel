@@ -18,7 +18,7 @@ import {
 import { setRightmoveListingInclusionAction } from '../../commercial-publishing/_lib/server/server-actions';
 
 const RIGHTMOVE_FEED_HELP =
-  'On = publish this disposal to Rightmove now. Off = remove it from Rightmove. Bulk “push all” in Website & portals is for many listings at once.';
+  'On = publish this disposal to Rightmove now. Off = remove it from Rightmove. Saves on a live listing show as Unsynced and sync in the background about every 15 minutes. Bulk Push all / Resync in Website & portals is for many listings at once.';
 
 export function ListingRightmoveFeedToggle({
   accountId,

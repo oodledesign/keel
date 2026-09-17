@@ -81,7 +81,9 @@ export const SaveRightmoveWorkspaceBranchesSchema = z.object({
 });
 
 /** Start or resume a durable Marketing / Under offer → Rightmove job. */
-export const BulkPublishRightmoveSchema = AccountIdSchema;
+export const BulkPublishRightmoveSchema = AccountIdSchema.extend({
+  scope: z.enum(['all', 'unsynced']).optional().default('all'),
+});
 
 export const RightmoveBulkJobStatusSchema = AccountIdSchema.extend({
   resumeIfStale: z.boolean().optional(),

@@ -2,6 +2,7 @@ import {
   getRightmoveChannelStatus,
   isSafeHttpUrl,
 } from '~/lib/commercial/channel-publish-status';
+import { listingStatusPublishesToPortals } from '~/lib/commercial/commercial-constants';
 
 export const RIGHTMOVE_OVERVIEW_STATUSES = [
   'failed',
@@ -14,6 +15,9 @@ export const RIGHTMOVE_OVERVIEW_STATUSES = [
 
 export type RightmoveOverviewStatus =
   (typeof RIGHTMOVE_OVERVIEW_STATUSES)[number];
+
+/** List-table sync pill, including Off when Rightmove is not enabled. */
+export type RightmoveListSyncStatus = RightmoveOverviewStatus | 'off';
 
 export type RightmoveDisposalStatusRow = {
   listingId: string;
@@ -91,9 +95,7 @@ export function resolveRightmoveOverviewStatus(input: {
   return 'not_pushed';
 }
 
-export function formatRightmoveOverviewStatus(
-  status: RightmoveOverviewStatus,
-) {
+export function formatRightmoveOverviewStatus(status: RightmoveOverviewStatus) {
   switch (status) {
     case 'pushed':
       return 'Pushed';
@@ -108,6 +110,11 @@ export function formatRightmoveOverviewStatus(
     case 'not_pushed':
       return 'Not pushed';
   }
+}
+
+export function formatRightmoveListSyncStatus(status: RightmoveListSyncStatus) {
+  if (status === 'off') return 'Off';
+  return formatRightmoveOverviewStatus(status);
 }
 
 export function formatRightmovePublicationStatus(
@@ -136,6 +143,35 @@ export const RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS: Record<
   Draft:
     'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200/80 dark:bg-slate-500/15 dark:text-slate-200 dark:ring-slate-500/30',
 };
+
+export const RIGHTMOVE_LIST_SYNC_BADGE_CLASS: Record<
+  ReturnType<typeof formatRightmoveListSyncStatus>,
+  string
+> = {
+  ...RIGHTMOVE_PUBLICATION_STATUS_BADGE_CLASS,
+  Off: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/55 ring-1 ring-inset ring-[color:var(--workspace-shell-border)]',
+};
+
+export function rightmoveListSyncBadgeClass(
+  status: RightmoveListSyncStatus | string | null | undefined,
+) {
+  return RIGHTMOVE_LIST_SYNC_BADGE_CLASS[
+    formatRightmoveListSyncStatus(resolveRightmoveListSyncStatusLabel(status))
+  ];
+}
+
+export function resolveRightmoveListSyncStatusLabel(
+  status: RightmoveListSyncStatus | string | null | undefined,
+): RightmoveListSyncStatus {
+  if (status === 'off') return 'off';
+  if (
+    status &&
+    (RIGHTMOVE_OVERVIEW_STATUSES as readonly string[]).includes(status)
+  ) {
+    return status as RightmoveOverviewStatus;
+  }
+  return resolveRightmoveOverviewStatus({ storedStatus: status });
+}
 
 export function rightmovePublicationStatusBadgeClass(
   status: string | null | undefined,
@@ -205,6 +241,26 @@ export function resolveRightmoveDisposalOverviewStatus(input: {
     storedStatus: input.rightmoveStatus,
     outOfSync: rightmoveDisposalIsOutOfSync(input),
   });
+}
+
+export function resolveRightmoveListSyncStatus(input: {
+  listingStatus: string;
+  listingUpdatedAt?: string | null;
+  rightmoveStatus: string;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  externalId?: string | null;
+  externalUrl?: string | null;
+  mediaCreatedAt?: Array<string | null | undefined>;
+}): RightmoveListSyncStatus {
+  const overview = resolveRightmoveDisposalOverviewStatus(input);
+  if (
+    overview === 'not_pushed' &&
+    !listingStatusPublishesToPortals(input.listingStatus)
+  ) {
+    return 'off';
+  }
+  return overview;
 }
 
 export function countRightmoveOverviewStatuses(

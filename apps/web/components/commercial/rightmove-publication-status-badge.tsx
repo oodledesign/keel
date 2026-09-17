@@ -1,8 +1,9 @@
 import { cn } from '@kit/ui/utils';
 
 import {
-  formatRightmovePublicationStatus,
-  rightmovePublicationStatusBadgeClass,
+  formatRightmoveListSyncStatus,
+  resolveRightmoveListSyncStatusLabel,
+  rightmoveListSyncBadgeClass,
 } from '~/lib/commercial/rightmove-publish-status';
 
 export function RightmovePublicationStatusBadge({
@@ -12,13 +13,14 @@ export function RightmovePublicationStatusBadge({
   status: string | null | undefined;
   className?: string;
 }) {
-  const label = formatRightmovePublicationStatus(status);
+  const resolved = resolveRightmoveListSyncStatusLabel(status);
+  const label = formatRightmoveListSyncStatus(resolved);
 
   return (
     <span
       className={cn(
         'inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium',
-        rightmovePublicationStatusBadgeClass(status),
+        rightmoveListSyncBadgeClass(resolved),
         className,
       )}
       data-test={`rightmove-status-pill-${label.toLowerCase().replace(/\s+/g, '-')}`}

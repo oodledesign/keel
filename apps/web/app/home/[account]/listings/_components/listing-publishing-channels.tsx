@@ -159,8 +159,8 @@ export function ListingPublishingChannels({
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
           Choose where this disposal appears. Website and EACH are live XML
-          feeds. Rightmove publishes when you turn it on, then stays in sync
-          when status or media changes.
+          feeds. Rightmove publishes when you turn it on. Later saves show as
+          Unsynced and a background job pushes updates about every 15 minutes.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">

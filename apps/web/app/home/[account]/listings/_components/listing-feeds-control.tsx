@@ -120,6 +120,11 @@ export function ListingFeedsControl({
             </li>
           ))}
         </ul>
+        {needsRightmoveResync ? (
+          <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
+            Updates will sync to Rightmove shortly.
+          </p>
+        ) : null}
         {canEditDisposals && needsRightmoveResync ? (
           <Button
             type="button"
@@ -127,10 +132,10 @@ export function ListingFeedsControl({
             variant="outline"
             disabled={resyncPending}
             data-test="rightmove-out-of-sync"
-            className="mt-3 h-8 px-2.5 text-xs"
+            className="mt-2 h-8 px-2.5 text-xs"
             onClick={resyncRightmove}
           >
-            {resyncPending ? 'Re-syncing…' : 'Re-sync Rightmove'}
+            {resyncPending ? 'Re-syncing…' : 'Re-sync Rightmove now'}
           </Button>
         ) : null}
       </PopoverContent>

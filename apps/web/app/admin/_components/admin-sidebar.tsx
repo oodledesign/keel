@@ -16,6 +16,7 @@ import {
   Mail,
   Palette,
   PiggyBank,
+  Rss,
   ScrollText,
   Users,
 } from 'lucide-react';
@@ -198,6 +199,16 @@ export function AdminSidebar() {
                 <Link className={'flex gap-2.5'} href={'/admin/email-log'}>
                   <Inbox className={'h-4'} />
                   <span>Email log</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
+                isActive={path.includes('/admin/rightmove')}
+                asChild
+              >
+                <Link className={'flex gap-2.5'} href={'/admin/rightmove'}>
+                  <Rss className={'h-4'} />
+                  <span>Rightmove sync</span>
                 </Link>
               </SidebarMenuButton>
 

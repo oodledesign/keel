@@ -344,7 +344,7 @@ export function getRightmoveChannelStatus(input?: {
       canEnable: true,
       label: outOfSync ? 'Live but Unsynced' : 'Live',
       detail: outOfSync
-        ? 'Behind the latest disposal updates — re-sync to push Rightmove'
+        ? 'Behind the latest disposal updates — they will sync to Rightmove shortly. Re-sync now if you need it live immediately'
         : hasUrl
           ? 'On Rightmove (public page can take a few minutes)'
           : 'On Rightmove',

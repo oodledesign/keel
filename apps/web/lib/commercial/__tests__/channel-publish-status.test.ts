@@ -202,6 +202,7 @@ describe('getRightmoveChannelStatus', () => {
     expect(status.outOfSync).toBe(true);
     expect(status.label).toBe('Live but Unsynced');
     expect(status.detail).toMatch(/Behind the latest/);
+    expect(status.detail).toMatch(/shortly/);
     expect(channelNeedsRightmoveResync('rightmove', status)).toBe(true);
   });
 

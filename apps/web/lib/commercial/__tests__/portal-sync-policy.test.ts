@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isLiveRightmovePublication,
   isRightmoveSyncStale,
+  resolveRightmoveLiveSyncAction,
   shouldUnpublishRightmoveForListingStatus,
 } from '../portal-sync-policy';
 
@@ -25,6 +26,41 @@ describe('shouldUnpublishRightmoveForListingStatus', () => {
     expect(shouldUnpublishRightmoveForListingStatus('instructed')).toBe(true);
     expect(shouldUnpublishRightmoveForListingStatus('under_offer')).toBe(false);
     expect(shouldUnpublishRightmoveForListingStatus('marketing')).toBe(false);
+  });
+});
+
+describe('resolveRightmoveLiveSyncAction', () => {
+  it('skips listings that were never pushed', () => {
+    expect(
+      resolveRightmoveLiveSyncAction({
+        publicationStatus: null,
+        listingStatus: 'marketing',
+      }),
+    ).toBe('skip');
+  });
+
+  it('enqueues live Marketing / Under offer updates instead of an immediate PUT', () => {
+    expect(
+      resolveRightmoveLiveSyncAction({
+        publicationStatus: 'published',
+        listingStatus: 'marketing',
+      }),
+    ).toBe('enqueue');
+    expect(
+      resolveRightmoveLiveSyncAction({
+        publicationStatus: 'published',
+        listingStatus: 'under_offer',
+      }),
+    ).toBe('enqueue');
+  });
+
+  it('unpublishes immediately when a live listing leaves portal statuses', () => {
+    expect(
+      resolveRightmoveLiveSyncAction({
+        publicationStatus: 'published',
+        listingStatus: 'sold',
+      }),
+    ).toBe('unpublish');
   });
 });
 

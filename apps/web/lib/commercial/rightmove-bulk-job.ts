@@ -8,11 +8,17 @@ import {
   setPortalPublishersClient,
 } from '~/lib/commercial/portal-publishers';
 import {
-  STALE_HEARTBEAT_MS,
+  type RightmoveBulkScope,
+  parseRightmoveBulkScope,
+  selectRightmoveBulkEligibleRows,
+} from '~/lib/commercial/rightmove-bulk-eligibility';
+import {
   type RightmoveBulkJob,
   type RightmoveBulkJobPublic,
   type RightmoveBulkJobStatus,
+  STALE_HEARTBEAT_MS,
 } from '~/lib/commercial/rightmove-bulk-job-types';
+import { listRightmoveDisposalStatuses } from '~/lib/commercial/rightmove-disposal-status';
 import { isRightmoveOAuthConfigured } from '~/lib/commercial/rightmove-env';
 
 export {
@@ -52,6 +58,9 @@ function mapJob(row: Record<string, unknown>): RightmoveBulkJob {
     id: String(row.id),
     accountId: String(row.account_id),
     status: row.status as RightmoveBulkJobStatus,
+    scope: parseRightmoveBulkScope(
+      typeof row.scope === 'string' ? row.scope : null,
+    ),
     listingIds: asStringArray(row.listing_ids),
     cursor: Number(row.cursor ?? 0),
     total: Number(row.total ?? 0),
@@ -75,6 +84,7 @@ export function toPublicRightmoveBulkJob(
     id: job.id,
     accountId: job.accountId,
     status: job.status,
+    scope: job.scope,
     cursor: job.cursor,
     total: job.total,
     succeeded: job.succeeded,
@@ -145,27 +155,37 @@ export async function loadRightmoveBulkJobById(
 async function listEligibleListingIds(
   client: SupabaseClient,
   accountId: string,
+  scope: RightmoveBulkScope,
 ): Promise<Array<{ id: string; name: string }>> {
-  const { data, error } = await client
-    .from('commercial_listings')
-    .select('id, name')
-    .eq('account_id', accountId)
-    .in('status', [...LISTING_PORTAL_PUBLISH_STATUSES])
-    .order('name', { ascending: true });
+  if (scope === 'all') {
+    const { data, error } = await client
+      .from('commercial_listings')
+      .select('id, name')
+      .eq('account_id', accountId)
+      .in('status', [...LISTING_PORTAL_PUBLISH_STATUSES])
+      .order('name', { ascending: true });
 
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as Array<{ id: string; name: string | null }>).map(
-    (row) => ({
-      id: row.id,
-      name: row.name?.trim() || 'Untitled',
-    }),
-  );
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as Array<{ id: string; name: string | null }>).map(
+      (row) => ({
+        id: row.id,
+        name: row.name?.trim() || 'Untitled',
+      }),
+    );
+  }
+
+  const rows = await listRightmoveDisposalStatuses(client, accountId);
+  return selectRightmoveBulkEligibleRows(rows, scope).map((row) => ({
+    id: row.listingId,
+    name: row.name,
+  }));
 }
 
 export async function startRightmoveBulkJob(input: {
   client: SupabaseClient;
   accountId: string;
   userId?: string | null;
+  scope?: RightmoveBulkScope;
 }): Promise<{ job: RightmoveBulkJob; created: boolean }> {
   if (!isRightmoveOAuthConfigured()) {
     throw new Error(
@@ -181,13 +201,19 @@ export async function startRightmoveBulkJob(input: {
     return { job: existing, created: false };
   }
 
-  const listings = await listEligibleListingIds(input.client, input.accountId);
+  const scope = parseRightmoveBulkScope(input.scope);
+  const listings = await listEligibleListingIds(
+    input.client,
+    input.accountId,
+    scope,
+  );
   const now = new Date().toISOString();
   const { data, error } = await input.client
     .from('commercial_rightmove_bulk_jobs')
     .insert({
       account_id: input.accountId,
       status: listings.length === 0 ? 'completed' : 'queued',
+      scope,
       listing_ids: listings.map((row) => row.id),
       cursor: 0,
       total: listings.length,
@@ -357,8 +383,7 @@ export async function processRightmoveBulkJobBatch(input: {
           .eq('id', listingId)
           .eq('account_id', claimed.accountId)
           .maybeSingle();
-        name =
-          ((listingRow?.name as string | null) ?? '').trim() || 'Untitled';
+        name = ((listingRow?.name as string | null) ?? '').trim() || 'Untitled';
 
         let publication = await publishToRightmove(
           claimed.accountId,
@@ -377,8 +402,7 @@ export async function processRightmoveBulkJobBatch(input: {
           succeeded += 1;
         } else {
           failed += 1;
-          lastError =
-            publication.last_error ?? 'Rightmove publish failed';
+          lastError = publication.last_error ?? 'Rightmove publish failed';
           if (failureNames.length < 40) failureNames.push(name);
         }
       } catch (error) {
@@ -402,7 +426,9 @@ export async function processRightmoveBulkJobBatch(input: {
       succeeded,
       failed,
       lastError:
-        error instanceof Error ? error.message : 'Bulk Rightmove publish failed',
+        error instanceof Error
+          ? error.message
+          : 'Bulk Rightmove publish failed',
       lastListingId,
       lastListingName,
       failureNames,
