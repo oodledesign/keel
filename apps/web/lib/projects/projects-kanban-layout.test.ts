@@ -8,6 +8,7 @@ import {
   kanbanColumnHeaderClassName,
   kanbanColumnInitials,
   kanbanColumnWidthClass,
+  kanbanPageScrollClassName,
 } from './projects-kanban-layout';
 
 describe('kanbanColumnInitials', () => {
@@ -51,7 +52,7 @@ describe('kanbanColumnWidthClass', () => {
 });
 
 describe('kanbanColumnHeaderClassName', () => {
-  it('pins the heading to the board scroller', () => {
+  it('pins the heading to the page scroller', () => {
     expect(kanbanColumnHeaderClassName()).toContain('sticky top-0');
   });
 });
@@ -83,11 +84,21 @@ describe('kanbanColumnClassName', () => {
   });
 });
 
+describe('kanbanPageScrollClassName', () => {
+  it('lets the page scroll when the board is showing', () => {
+    expect(kanbanPageScrollClassName(true)).toBe(
+      'overflow-auto overscroll-contain',
+    );
+    expect(kanbanPageScrollClassName(false)).toBe('overflow-hidden');
+  });
+});
+
 describe('kanbanBoardClassName', () => {
-  it('scrolls the board vertically so sticky headers can pin', () => {
-    expect(kanbanBoardClassName).toContain('overflow-auto');
+  it('does not nest a board scroller that would lock page chrome', () => {
+    expect(kanbanBoardClassName).not.toContain('overflow-auto');
     expect(kanbanBoardClassName).not.toContain('overflow-y-hidden');
     expect(kanbanBoardClassName).toContain('items-stretch');
+    expect(kanbanBoardClassName).toContain('min-h-full');
   });
 });
 

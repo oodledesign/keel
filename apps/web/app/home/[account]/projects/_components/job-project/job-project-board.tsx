@@ -430,7 +430,7 @@ function PhaseColumn({
       </SortableContext>
 
       {canEditJobs && (
-        <div className="sticky bottom-0 z-10 mt-auto border-t border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)] p-2">
+        <div className="mt-auto border-t border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)] p-2">
           <AddProjectTaskForm
             disabled={addingTask}
             onSubmit={(draft) => onAddTask(phase?.id ?? null, draft)}
@@ -799,7 +799,7 @@ export function JobProjectBoard({
   const unphasedTasks = tasksByPhase[UNPHASED_KEY] ?? [];
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
+    <div className="flex min-h-full flex-1 flex-col">
       {isPending && (
         <p className="mb-2 shrink-0 text-xs text-amber-400/90">
           Saving changes…
@@ -811,7 +811,7 @@ export function JobProjectBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-auto pb-1">
+        <div className="flex min-h-full flex-1 items-stretch gap-3 pb-1">
           {phases.map((phase) => (
             <SortablePhaseColumn
               key={phase.id}

@@ -34,6 +34,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import type { PartnerCostLine } from '~/lib/projects/partner-cost-lines.service';
@@ -45,6 +46,7 @@ import {
   type ProjectStatus,
   projectStatusLabel,
 } from '~/lib/projects/project-statuses';
+import { kanbanPageScrollClassName } from '~/lib/projects/projects-kanban-layout';
 
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
@@ -428,7 +430,12 @@ export function JobDetailContent({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+    <div
+      className={cn(
+        'flex h-full min-h-0 w-full flex-1 flex-col',
+        kanbanPageScrollClassName(activeTab === 'project'),
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-1 py-3 md:px-1">
         <div className="min-w-0 flex-1">
           <Link
@@ -557,7 +564,10 @@ export function JobDetailContent({
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
-        className="flex min-h-0 flex-1 flex-col"
+        className={cn(
+          'flex flex-1 flex-col',
+          activeTab !== 'project' && 'min-h-0',
+        )}
       >
         <div className="relative shrink-0">
           <div className="overflow-x-auto border-b border-[color:var(--workspace-shell-border)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -648,7 +658,7 @@ export function JobDetailContent({
 
         <TabsContent
           value="project"
-          className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden p-0 pt-3"
+          className="mt-0 flex flex-1 flex-col p-0 pt-3"
         >
           <JobProjectWorkspace
             accountSlug={accountSlug}

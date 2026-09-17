@@ -391,7 +391,8 @@ function PortalProjectKanbanView({
   }
 
   return (
-    <div className="flex items-stretch gap-3 overflow-auto pb-2">
+    <div className="flex items-stretch gap-3 pb-2">
+      {/* No overflow here: column headers pin to the portal page scroll. */}
       {STATUS_COLUMNS.map((col) => {
         const columnTasks = byStatus.get(col.key) ?? [];
         return (
@@ -716,7 +717,8 @@ function PortalProjectPhaseKanbanView({
   }
 
   return (
-    <div className="flex items-stretch gap-3 overflow-auto pb-2">
+    <div className="flex items-stretch gap-3 pb-2">
+      {/* No overflow here: column headers pin to the portal page scroll. */}
       {columns.map((col, index) => {
         const columnTasks = byPhase.get(col.key) ?? [];
         if (col.key === '__unassigned__' && columnTasks.length === 0) {
