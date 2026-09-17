@@ -1,11 +1,18 @@
 import {
+  EA_FLOOD_ZONES_ATTRIBUTION,
+  EA_FLOOD_ZONES_DISCLAIMER,
+  ENGLAND_COUNTRY,
+  FLOOD_PLANNING_ZONES,
+  FLOOD_PLANNING_ZONE_OPTIONS,
   FLOOD_RISK_BANDS,
   FLOOD_RISK_SOURCES,
   type FloodAssessment,
-  type FloodLayerHit,
+  type FloodCoverage,
   type FloodLiveWarning,
+  type FloodPlanningZone,
   type FloodRiskBand,
   type FloodRiskSource,
+  type FloodZoneHit,
   type SurveyFloodRecord,
 } from './types';
 
@@ -27,6 +34,14 @@ export function isFloodRiskBand(
   return Boolean(value && FLOOD_RISK_BANDS.includes(value as FloodRiskBand));
 }
 
+export function isFloodPlanningZone(
+  value: string | null | undefined,
+): value is FloodPlanningZone {
+  return Boolean(
+    value && FLOOD_PLANNING_ZONES.includes(value as FloodPlanningZone),
+  );
+}
+
 export function isFloodRiskSource(
   value: string | null | undefined,
 ): value is FloodRiskSource {
@@ -35,59 +50,182 @@ export function isFloodRiskSource(
   );
 }
 
-export function floodRiskBandLabel(band: FloodRiskBand | null | undefined) {
-  switch (band) {
-    case 'high':
-      return 'High';
-    case 'medium':
-      return 'Medium';
-    case 'low':
-      return 'Low';
-    case 'very_low':
-      return 'Very low';
+export function isFloodCoverage(
+  value: string | null | undefined,
+): value is FloodCoverage {
+  return value === 'england' || value === 'not_england' || value === 'unknown';
+}
+
+export function normalizeCountryName(
+  value: string | null | undefined,
+): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function isEnglandCountry(country: string | null | undefined): boolean {
+  return (
+    normalizeCountryName(country)?.toLowerCase() ===
+    ENGLAND_COUNTRY.toLowerCase()
+  );
+}
+
+export function isNonEnglandUkCountry(
+  country: string | null | undefined,
+): boolean {
+  const normalized = normalizeCountryName(country)?.toLowerCase();
+  return (
+    normalized === 'wales' ||
+    normalized === 'scotland' ||
+    normalized === 'northern ireland'
+  );
+}
+
+export function planningZoneToBand(
+  zone: FloodPlanningZone | null | undefined,
+): FloodRiskBand | null {
+  const match = FLOOD_PLANNING_ZONE_OPTIONS.find(
+    (option) => option.zone === zone,
+  );
+  return match?.band ?? null;
+}
+
+export function bandToPlanningZone(
+  band: FloodRiskBand | null | undefined,
+): FloodPlanningZone | null {
+  if (band === 'low') return 'zone_1';
+  const match = FLOOD_PLANNING_ZONE_OPTIONS.find(
+    (option) => option.band === band,
+  );
+  return match?.zone ?? null;
+}
+
+export function floodPlanningZoneLabel(
+  zone: FloodPlanningZone | null | undefined,
+) {
+  switch (zone) {
+    case 'zone_3':
+      return 'Zone 3';
+    case 'zone_2':
+      return 'Zone 2';
+    case 'zone_1':
+      return 'Zone 1';
     default:
       return 'Not assessed';
   }
 }
 
-export function classifyRiversAndSeaBand(input: {
-  mediumExtent: boolean;
-  lowExtent: boolean;
-}): FloodRiskBand {
-  if (input.mediumExtent) return 'medium';
-  if (input.lowExtent) return 'low';
-  return 'very_low';
+export function floodRiskBandLabel(band: FloodRiskBand | null | undefined) {
+  const zone = bandToPlanningZone(band);
+  if (zone && band !== 'low') return floodPlanningZoneLabel(zone);
+  if (band === 'low') return 'Low (legacy)';
+  return 'Not assessed';
 }
 
-export function parseOgcFeatureCount(payload: unknown): {
-  hit: boolean;
-  floodSource: string | null;
+export function parseFloodZoneCode(value: unknown): FloodPlanningZone | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return parseFloodZoneCode(String(value));
+  }
+  if (typeof value !== 'string') return null;
+
+  const normalized = value
+    .trim()
+    .toUpperCase()
+    .replace(/[\s_-]/g, '');
+  if (!normalized) return null;
+  if (
+    normalized === 'FZ3' ||
+    normalized === 'FLOODZONE3' ||
+    normalized === 'ZONE3' ||
+    normalized === '3'
+  ) {
+    return 'zone_3';
+  }
+  if (
+    normalized === 'FZ2' ||
+    normalized === 'FLOODZONE2' ||
+    normalized === 'ZONE2' ||
+    normalized === '2'
+  ) {
+    return 'zone_2';
+  }
+  if (
+    normalized === 'FZ1' ||
+    normalized === 'FLOODZONE1' ||
+    normalized === 'ZONE1' ||
+    normalized === '1'
+  ) {
+    return 'zone_1';
+  }
+  return null;
+}
+
+function asOptionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function parseOgcFloodZoneFeatures(payload: unknown): {
+  hits: FloodZoneHit[];
+  highestZone: FloodPlanningZone | null;
 } {
   if (!payload || typeof payload !== 'object') {
-    return { hit: false, floodSource: null };
+    return { hits: [], highestZone: null };
   }
-  const record = payload as {
-    features?: unknown;
-    numberReturned?: unknown;
-    numberMatched?: unknown;
-  };
-  const features = Array.isArray(record.features) ? record.features : [];
-  const first = features[0];
-  const properties =
-    first && typeof first === 'object' && 'properties' in first
-      ? (first as { properties?: { flood_source?: unknown } }).properties
+
+  const features = Array.isArray((payload as { features?: unknown }).features)
+    ? (payload as { features: unknown[] }).features
+    : [];
+
+  const hits: FloodZoneHit[] = [];
+  for (const feature of features) {
+    if (!feature || typeof feature !== 'object') continue;
+    const properties =
+      'properties' in feature &&
+      feature.properties &&
+      typeof feature.properties === 'object'
+        ? (feature.properties as Record<string, unknown>)
+        : null;
+    const zone = parseFloodZoneCode(properties?.flood_zone);
+    if (!zone || zone === 'zone_1') continue;
+    hits.push({
+      zone,
+      floodSource: asOptionalString(properties?.flood_source),
+      origin: asOptionalString(properties?.origin),
+    });
+  }
+
+  const highestZone = hits.some((hit) => hit.zone === 'zone_3')
+    ? 'zone_3'
+    : hits.some((hit) => hit.zone === 'zone_2')
+      ? 'zone_2'
       : null;
-  const floodSource =
-    typeof properties?.flood_source === 'string'
-      ? properties.flood_source.trim() || null
-      : null;
-  const matched =
-    typeof record.numberMatched === 'number'
-      ? record.numberMatched
-      : typeof record.numberReturned === 'number'
-        ? record.numberReturned
-        : features.length;
-  return { hit: matched > 0 || features.length > 0, floodSource };
+
+  return { hits, highestZone };
+}
+
+export function resolvePlanningZone(input: {
+  highestIntersectedZone: FloodPlanningZone | null;
+  country?: string | null;
+}): {
+  planningZone: FloodPlanningZone | null;
+  coverage: FloodCoverage;
+} {
+  if (isNonEnglandUkCountry(input.country)) {
+    return { planningZone: null, coverage: 'not_england' };
+  }
+
+  if (input.highestIntersectedZone) {
+    return {
+      planningZone: input.highestIntersectedZone,
+      coverage: 'england',
+    };
+  }
+
+  if (isEnglandCountry(input.country)) {
+    return { planningZone: 'zone_1', coverage: 'england' };
+  }
+
+  return { planningZone: null, coverage: 'unknown' };
 }
 
 export function parseFloodMonitoringWarnings(
@@ -126,8 +264,10 @@ export function parseFloodMonitoringWarnings(
     .slice(0, 6);
 }
 
-export function summariseFloodAssessment(input: {
-  band: FloodRiskBand;
+export function summarisePlanningFloodAssessment(input: {
+  planningZone: FloodPlanningZone | null;
+  coverage: FloodCoverage;
+  country: string | null;
   floodSource: string | null;
   liveWarnings: FloodLiveWarning[];
 }): string {
@@ -136,22 +276,21 @@ export function summariseFloodAssessment(input: {
       ? 'the sea'
       : input.floodSource === 'river'
         ? 'rivers'
-        : 'rivers and the sea';
+        : input.floodSource === 'river and sea'
+          ? 'rivers and the sea'
+          : 'rivers or the sea';
 
   let summary: string;
-  switch (input.band) {
-    case 'high':
-      summary = `High long-term flood risk from ${source} (present-day defended extents).`;
-      break;
-    case 'medium':
-      summary = `Medium long-term flood risk from ${source} — the property sits in the present-day 1-in-100 rivers / 1-in-200 sea defended extent.`;
-      break;
-    case 'low':
-      summary = `Low long-term flood risk from ${source} — the property sits in the present-day 1-in-1,000 defended extent but not the 1-in-100 rivers / 1-in-200 sea extent.`;
-      break;
-    default:
-      summary =
-        'Very low long-term flood risk from rivers and the sea at this point — it is outside the published present-day defended 1-in-1,000 extent.';
+  if (input.coverage === 'not_england') {
+    summary = `Flood Map for Planning zones are published for England only. This address is in ${input.country ?? 'a nation outside England'}, so no English flood zone has been assigned.`;
+  } else if (input.planningZone === 'zone_3') {
+    summary = `Flood Map for Planning Zone 3 (England) — land with a high probability of flooding from ${source}. ${EA_FLOOD_ZONES_DISCLAIMER}`;
+  } else if (input.planningZone === 'zone_2') {
+    summary = `Flood Map for Planning Zone 2 (England) — land with a medium probability of flooding from ${source}. ${EA_FLOOD_ZONES_DISCLAIMER}`;
+  } else if (input.planningZone === 'zone_1') {
+    summary = `Flood Map for Planning Zone 1 (England) — this point sits outside published Flood Zone 2 and 3 extents, so it is treated as Zone 1 (low probability of flooding from rivers or the sea). ${EA_FLOOD_ZONES_DISCLAIMER}`;
+  } else {
+    summary = `No Flood Zone 2 or 3 polygon intersects this point, but the address could not be confirmed as England, so Zone 1 has not been assumed.`;
   }
 
   if (input.liveWarnings.length > 0) {
@@ -160,7 +299,7 @@ export function summariseFloodAssessment(input: {
       .filter(Boolean)
       .slice(0, 2)
       .join('; ');
-    summary += ` Current Environment Agency warning nearby: ${names}. This is a live alert, not the long-term band.`;
+    summary += ` Current Environment Agency warning nearby: ${names}. This is a live alert, not the planning zone.`;
   }
 
   return summary;
@@ -170,39 +309,51 @@ export function buildFloodAssessment(input: {
   latitude: number;
   longitude: number;
   postcode?: string | null;
-  layers: FloodLayerHit[];
+  country?: string | null;
+  zoneHits: FloodZoneHit[];
+  highestIntersectedZone: FloodPlanningZone | null;
   liveWarnings: FloodLiveWarning[];
   endpoint: string;
 }): FloodAssessment {
-  const medium = input.layers.find((layer) =>
-    layer.collection.includes('1in100'),
-  );
-  const low = input.layers.find((layer) =>
-    layer.collection.includes('1in1000'),
-  );
-  const mediumExtent = Boolean(medium);
-  const lowExtent = Boolean(low);
-  const band = classifyRiversAndSeaBand({ mediumExtent, lowExtent });
-  const floodSource = medium?.floodSource ?? low?.floodSource ?? null;
+  const country = normalizeCountryName(input.country);
+  const resolved = resolvePlanningZone({
+    highestIntersectedZone: input.highestIntersectedZone,
+    country,
+  });
+  const floodSource =
+    input.zoneHits.find((hit) => hit.zone === resolved.planningZone)
+      ?.floodSource ??
+    input.zoneHits[0]?.floodSource ??
+    null;
 
   return {
-    band,
-    summary: summariseFloodAssessment({
-      band,
+    band: planningZoneToBand(resolved.planningZone),
+    planningZone: resolved.planningZone,
+    coverage: resolved.coverage,
+    country,
+    summary: summarisePlanningFloodAssessment({
+      planningZone: resolved.planningZone,
+      coverage: resolved.coverage,
+      country,
       floodSource,
       liveWarnings: input.liveWarnings,
     }),
     latitude: input.latitude,
     longitude: input.longitude,
     postcode: input.postcode ?? null,
-    riversAndSea: {
-      mediumExtent,
-      lowExtent,
-      floodSource,
-    },
+    floodSource,
+    zoneHits: input.zoneHits,
     liveWarnings: input.liveWarnings,
     endpoint: input.endpoint,
+    attribution: EA_FLOOD_ZONES_ATTRIBUTION,
+    disclaimer: EA_FLOOD_ZONES_DISCLAIMER,
   };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 export function mapSurveyFloodRow(row: {
@@ -212,19 +363,20 @@ export function mapSurveyFloodRow(row: {
   survey_flood_raw_json?: unknown;
   survey_flood_fetched_at?: string | null;
 }): SurveyFloodRecord {
-  const raw =
-    row.survey_flood_raw_json &&
-    typeof row.survey_flood_raw_json === 'object' &&
-    !Array.isArray(row.survey_flood_raw_json)
-      ? (row.survey_flood_raw_json as Record<string, unknown>)
-      : null;
-  const pulled = raw?.pulled;
-  const pulledBand =
-    pulled && typeof pulled === 'object' && 'band' in pulled
-      ? isFloodRiskBand(String((pulled as { band?: unknown }).band))
-        ? ((pulled as { band: FloodRiskBand }).band ?? null)
-        : null
-      : null;
+  const raw = asRecord(row.survey_flood_raw_json);
+  const pulled = asRecord(raw?.pulled);
+  const pulledBandValue = typeof pulled?.band === 'string' ? pulled.band : null;
+  const pulledBand = isFloodRiskBand(pulledBandValue) ? pulledBandValue : null;
+  const planningZoneValue =
+    typeof pulled?.planningZone === 'string' ? pulled.planningZone : null;
+  const planningZone = isFloodPlanningZone(planningZoneValue)
+    ? planningZoneValue
+    : bandToPlanningZone(pulledBand);
+  const coverageValue =
+    typeof pulled?.coverage === 'string' ? pulled.coverage : null;
+  const coverage = isFloodCoverage(coverageValue) ? coverageValue : null;
+  const country =
+    typeof pulled?.country === 'string' ? pulled.country.trim() || null : null;
   const source = isFloodRiskSource(row.survey_flood_source)
     ? row.survey_flood_source
     : null;
@@ -238,6 +390,9 @@ export function mapSurveyFloodRow(row: {
     fetchedAt: row.survey_flood_fetched_at ?? null,
     overridden: source === 'manual',
     pulledBand,
+    planningZone,
+    coverage,
+    country,
     raw,
   };
 }

@@ -13,7 +13,7 @@ A demo version of this project can be found at [makerkit/next-supabase-saas-kit-
 Building-surveyor `survey_report` rows confirm a property in **project prep**, then auto-pull flood risk and (when configured) the GOV.UK Energy Performance Certificate. L2 and L3 share one section template — level only toggles optional field visibility.
 
 - **Address:** Mapbox search-as-you-type (same token stack as commercial listings). Fields stay editable. UPRN is stored when the surveyor enters it or an EPC match returns one.
-- **Flood risk:** Environment Agency present-day rivers-and-sea extents via the public OGC Features API (no key), plus nearby live warnings from the flood-monitoring API. Marked auto-pulled and overridable.
+- **Flood risk:** Environment Agency Flood Map for Planning zones (England only) via the public OGC Features API (no key). Zone 2/3 polygon intersect, otherwise Zone 1. Nearby live warnings from the flood-monitoring API are appended when present. Marked auto-pulled and overridable. Not a property-specific flood risk assessment.
 - **EPC:** Server-only fetch from `get-energy-performance-data.communities.gov.uk`. Env name (exact): `GOV_UK_EPC_API_BEARER_TOKEN`. Turbo `globalEnv` allowlists this name. Do not prefix with `NEXT_PUBLIC_`.
 - **Native:** `POST /api/native/v1/surveys` accepts address / level; `PATCH /api/native/v1/surveys/:id/prep`, `POST .../flood-risk`, `POST .../epc` reuse the same services.
 

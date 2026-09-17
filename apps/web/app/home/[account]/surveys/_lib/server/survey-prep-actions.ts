@@ -75,7 +75,7 @@ export const pullSurveyFloodAction = enhanceAction(
         userId: user.id,
         proposalId: data.proposalId,
       },
-      'Pulling Environment Agency flood risk',
+      'Pulling Environment Agency Flood Map for Planning zone',
     );
     try {
       const result = await getService().pullFlood(data);
