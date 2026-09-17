@@ -11,6 +11,7 @@ struct SurveyDetailView: View {
     @State private var isLoading = false
     @State private var loadError: String?
     @State private var allowMobileData = SurveyPhotoSyncPreference.current.allowsMobileData
+    @State private var showAddressEditor = false
 
     private let api = NativeAPIClient()
 
@@ -103,6 +104,17 @@ struct SurveyDetailView: View {
                 await load()
             }
         }
+        .sheet(isPresented: $showAddressEditor) {
+            EditSurveyAddressSheet(survey: survey) { updated in
+                survey = updated
+                SurveyStore.shared.updateAddress(
+                    id: updated.id,
+                    title: updated.title,
+                    propertyAddress: updated.propertyAddress,
+                    propertyPostcode: updated.propertyPostcode
+                )
+            }
+        }
     }
 
     private var header: some View {
@@ -110,6 +122,11 @@ struct SurveyDetailView: View {
             Text(survey.title)
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(OzerPalette.plum)
+            if let postcode = survey.propertyPostcode, !postcode.isEmpty {
+                Text(postcode)
+                    .font(.subheadline)
+                    .foregroundStyle(OzerPalette.plumMuted)
+            }
             Text(survey.typeLabel)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(OzerPalette.plum)
@@ -118,6 +135,14 @@ struct SurveyDetailView: View {
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
             }
+            Button {
+                showAddressEditor = true
+            } label: {
+                Text("Edit address")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(OzerPalette.coral)
+            }
+            .accessibilityLabel("Edit property address")
         }
     }
 
@@ -313,6 +338,152 @@ struct SurveyCameraPicker: UIViewControllerRepresentable {
         ) {
             let image = (info[.editedImage] ?? info[.originalImage]) as? UIImage
             onCapture(image?.jpegData(compressionQuality: 0.92))
+        }
+    }
+}
+
+struct EditSurveyAddressSheet: View {
+    var survey: SurveyItem
+    var onSaved: (SurveyItem) -> Void
+
+    @Environment(AppSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
+    @State private var title: String
+    @State private var postcode: String
+    @State private var latitude: Double?
+    @State private var longitude: Double?
+    @State private var selectedAddress: String?
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @State private var network = NetworkPathMonitor.shared
+
+    private let api = NativeAPIClient()
+
+    init(survey: SurveyItem, onSaved: @escaping (SurveyItem) -> Void) {
+        self.survey = survey
+        self.onSaved = onSaved
+        _title = State(initialValue: survey.displayAddress)
+        _postcode = State(initialValue: survey.propertyPostcode ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    AddressSearchField(
+                        text: $title,
+                        isOnline: network.isOnline,
+                        onSelect: applySuggestion
+                    ) { query in
+                        try await suggestAddresses(query)
+                    }
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.subheadline)
+                            .foregroundStyle(OzerPalette.plumMuted)
+                    }
+
+                    Button {
+                        Task { await save() }
+                    } label: {
+                        Text(isSaving ? "Saving…" : "Save address")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .buttonStyle(OzerPrimaryButtonStyle())
+                    .disabled(isSaving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding(20)
+            }
+            .background(OzerPalette.cream.ignoresSafeArea())
+            .navigationTitle("Edit address")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(OzerPalette.plumMuted)
+                }
+            }
+            .onChange(of: title) { _, newValue in
+                if let selectedAddress, newValue != selectedAddress {
+                    latitude = nil
+                    longitude = nil
+                    self.selectedAddress = nil
+                    postcode = SurveyAddress.extractUkPostcode(from: newValue) ?? ""
+                }
+            }
+        }
+        .presentationDetents([.large])
+    }
+
+    private func applySuggestion(_ suggestion: AddressSuggestion) {
+        title = SurveyAddress.formatted(suggestion)
+        selectedAddress = title
+        postcode = suggestion.postcode?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        latitude = suggestion.latitude
+        longitude = suggestion.longitude
+        errorMessage = nil
+    }
+
+    private func suggestAddresses(_ query: String) async throws -> [AddressSuggestion] {
+        let token = try await session.validAccessToken()
+        let workspace = session.workspaceQueryValue
+        guard !workspace.isEmpty else { return [] }
+        return try await api.suggestAddresses(
+            query: query,
+            workspace: workspace,
+            accessToken: token
+        )
+    }
+
+    private func save() async {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let resolvedPostcode = postcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? SurveyAddress.extractUkPostcode(from: trimmed)
+            : postcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        isSaving = true
+        defer { isSaving = false }
+
+        if survey.isLocal {
+            OfflineSurveyQueue.shared.updateCreate(
+                id: survey.id,
+                title: trimmed,
+                address: trimmed,
+                postcode: resolvedPostcode,
+                latitude: latitude,
+                longitude: longitude
+            )
+            var local = survey
+            local.title = trimmed
+            local.propertyAddress = trimmed
+            local.propertyPostcode = resolvedPostcode
+            onSaved(local)
+            dismiss()
+            return
+        }
+
+        do {
+            let token = try await session.validAccessToken()
+            let updated = try await api.updateSurveyPrep(
+                id: survey.id,
+                workspace: session.workspaceQueryValue,
+                address: trimmed,
+                postcode: resolvedPostcode,
+                latitude: latitude,
+                longitude: longitude,
+                confirm: latitude != nil && longitude != nil,
+                titleFromAddress: true,
+                accessToken: token
+            )
+            onSaved(survey.mergingAddress(from: updated))
+            dismiss()
+        } catch let error as NativeAPIError where error == .unauthorized {
+            await session.handleUnauthorized()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

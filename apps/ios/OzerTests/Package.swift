@@ -55,6 +55,7 @@ let package = Package(
                 "SurveyDisplay.swift",
                 "SurveySectionCatalogue.swift",
                 "SurveyPhotoSync.swift",
+                "SurveyAddress.swift",
             ]
         ),
         .executableTarget(

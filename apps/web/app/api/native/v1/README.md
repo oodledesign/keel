@@ -210,7 +210,15 @@ GET /api/native/v1/surveys?workspace=<slug-or-uuid>
 → { "items": [{ "id", "title", "status", "survey_type", "survey_type_label", "client_id", "client_name", "session_count", "photo_count", "created_at", "updated_at" }] }
 
 POST /api/native/v1/surveys
-{ "workspace", "title", "survey_type?", "client_id?" }
+{ "workspace", "title", "survey_type?", "address?", "postcode?", "uprn?", "client_id?" }
+
+GET /api/native/v1/address-suggest?workspace=<slug-or-uuid>&q=<text>&limit=6
+→ { "suggestions": [{ "id", "label", "nameHint", "addressLine1", "addressLine2", "town", "county", "postcode", "country", "latitude", "longitude" }] }
+  Same Mapbox UK geocoder as `/api/commercial/address-suggest`. Bearer + workspace required. Tokens stay server-side. `q` must be at least 3 characters.
+
+PATCH /api/native/v1/surveys/{id}/prep
+{ "workspace", "address?", "postcode?", "uprn?", "survey_level?", "latitude?", "longitude?", "confirm?", "title_from_address?" }
+  Saves structured property fields. When `confirm` is true or lat/lng are present, also runs the web confirm-address path (EPC + flood) as a best-effort extra.
 
 GET /api/native/v1/surveys/{id}?workspace=<slug-or-uuid>
 → survey plus "sessions", "photos" (signed preview URLs), and "sections"

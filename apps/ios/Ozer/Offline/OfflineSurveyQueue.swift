@@ -8,6 +8,10 @@ struct PendingSurveyCreate: Codable, Identifiable, Equatable, Hashable {
     var surveyType: String
     var clientId: String?
     var clientName: String?
+    var address: String?
+    var postcode: String?
+    var latitude: Double?
+    var longitude: Double?
     var createdAt: String
 }
 
@@ -101,7 +105,11 @@ final class OfflineSurveyQueue {
         title: String,
         surveyType: String,
         clientId: String?,
-        clientName: String?
+        clientName: String?,
+        address: String? = nil,
+        postcode: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil
     ) -> PendingSurveyCreate {
         let item = PendingSurveyCreate(
             id: id,
@@ -110,12 +118,33 @@ final class OfflineSurveyQueue {
             surveyType: surveyType,
             clientId: clientId,
             clientName: clientName,
+            address: address,
+            postcode: postcode,
+            latitude: latitude,
+            longitude: longitude,
             createdAt: OfflineNoteQueue.isoString(from: Date())
         )
         pendingCreates.insert(item, at: 0)
         lastFlushError = nil
         persistCreates()
         return item
+    }
+
+    func updateCreate(
+        id: String,
+        title: String,
+        address: String?,
+        postcode: String?,
+        latitude: Double?,
+        longitude: Double?
+    ) {
+        guard let index = pendingCreates.firstIndex(where: { $0.id == id }) else { return }
+        pendingCreates[index].title = title
+        pendingCreates[index].address = address
+        pendingCreates[index].postcode = postcode
+        pendingCreates[index].latitude = latitude
+        pendingCreates[index].longitude = longitude
+        persistCreates()
     }
 
     func enqueueSession(
@@ -212,13 +241,42 @@ final class OfflineSurveyQueue {
 
         for create in pendingCreates {
             do {
-                let remote = try await client.createSurvey(
+                let address = create.address?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let postcode = create.postcode?.trimmingCharacters(in: .whitespacesAndNewlines)
+                var remote = try await client.createSurvey(
                     title: create.title,
                     workspace: create.workspace,
                     surveyType: create.surveyType,
                     clientId: create.clientId,
+                    address: (address?.isEmpty == false) ? address : create.title,
+                    postcode: (postcode?.isEmpty == false) ? postcode : nil,
                     accessToken: accessToken
                 )
+                if create.latitude != nil || create.longitude != nil || (postcode?.isEmpty == false) {
+                    do {
+                        let prepared = try await client.updateSurveyPrep(
+                            id: remote.id,
+                            workspace: create.workspace,
+                            address: address ?? create.title,
+                            postcode: postcode,
+                            latitude: create.latitude,
+                            longitude: create.longitude,
+                            confirm: true,
+                            titleFromAddress: false,
+                            accessToken: accessToken
+                        )
+                        remote = remote.mergingAddress(from: prepared)
+                    } catch let error as NativeAPIError where error == .unauthorized {
+                        remapSurveyId(from: create.id, to: remote.id, workspace: create.workspace)
+                        pendingCreates.removeAll { $0.id == create.id }
+                        persistCreates()
+                        SurveyStore.shared.markRemote(localId: create.id, remote: remote)
+                        lastFlushError = error.localizedDescription
+                        return
+                    } catch {
+                        if error.isTaskCancellation { return }
+                    }
+                }
                 remapSurveyId(from: create.id, to: remote.id, workspace: create.workspace)
                 pendingCreates.removeAll { $0.id == create.id }
                 persistCreates()

@@ -495,6 +495,7 @@ export async function updateNativeSurveyPrep(input: {
   postcode?: string | null;
   uprn?: string | null;
   surveyLevel?: number | string | null;
+  titleFromAddress?: boolean;
 }): Promise<NativeSurvey> {
   requireSurveyWorkspace(input.workspace);
   const survey = await loadSurveyRow(
@@ -508,21 +509,29 @@ export async function updateNativeSurveyPrep(input: {
       ? undefined
       : normalizeSurveyLevel(input.surveyLevel);
 
+  const nextAddress =
+    input.address !== undefined ? input.address?.trim() || null : undefined;
+  const titleFromAddress =
+    input.titleFromAddress && nextAddress ? nextAddress : undefined;
+
   const { data, error } = await input.client
     .from('proposals')
     .update({
-      ...(input.address !== undefined
-        ? { survey_property_address: input.address?.trim() || null }
+      ...(nextAddress !== undefined
+        ? { survey_property_address: nextAddress }
         : {}),
       ...(input.postcode !== undefined
         ? {
             survey_property_postcode:
-              input.postcode?.trim() || extractUkPostcode(input.postcode),
+              input.postcode?.trim() ||
+              extractUkPostcode(input.postcode) ||
+              extractUkPostcode(nextAddress),
           }
         : {}),
       ...(input.uprn !== undefined
         ? { survey_uprn: input.uprn?.trim() || null }
         : {}),
+      ...(titleFromAddress ? { title: titleFromAddress } : {}),
       ...(surveyLevel
         ? {
             survey_level: surveyLevel,

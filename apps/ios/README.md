@@ -323,11 +323,13 @@ Matches the web PWA: **Home | 3 pin slots | Menu**. Pins follow the open workspa
 
 ### Path A — survey recording (building-surveyor only)
 
-Pick or create a survey (address, optional client, survey type). On the survey, pick a **section** (L2/L3 RICS catalogue, e.g. F3 Water or D2 Roof coverings). Record dictation into that section, fully offline, with pause / resume. Returning to the same section later **appends** to the same running note. Photos taken while a section is selected are tagged with that `rics_code`. Audio, captions, and photos queue on the phone and upload on reconnect. The server attaches or appends `survey_observations` for the chosen code — the phone does not assign sections with AI — then a cleanup pass strips filler without changing the section. Large photo uploads wait for Wi-Fi unless the surveyor turns on **Upload large photos on mobile data**. The copy sent to Ozer is JPEG-compressed (longest edge 2048, quality 0.72) for the report library; the higher-resolution original stays in the on-device archive (`OzerSurveyPhotos/originals`). The Meetings / Notes recorder is unchanged — survey save does not offer Meeting or Note.
+Pick or create a survey (address, optional client, survey type). The create sheet typeaheads UK addresses after three characters via `GET /api/native/v1/address-suggest` (Mapbox on the server — no token in the app). Selecting a result fills address, postcode, and coordinates; you can still type an address by hand when offline or search fails. On the survey, pick a **section** (L2/L3 RICS catalogue, e.g. F3 Water or D2 Roof coverings). Record dictation into that section, fully offline, with pause / resume. Returning to the same section later **appends** to the same running note. Photos taken while a section is selected are tagged with that `rics_code`. Audio, captions, and photos queue on the phone and upload on reconnect. The server attaches or appends `survey_observations` for the chosen code — the phone does not assign sections with AI — then a cleanup pass strips filler without changing the section. Large photo uploads wait for Wi-Fi unless the surveyor turns on **Upload large photos on mobile data**. The copy sent to Ozer is JPEG-compressed (longest edge 2048, quality 0.72) for the report library; the higher-resolution original stays in the on-device archive (`OzerSurveyPhotos/originals`). The Meetings / Notes recorder is unchanged — survey save does not offer Meeting or Note.
 
 ```
+GET /api/native/v1/address-suggest?workspace=<slug-or-uuid>&q=<text>&limit=6
 GET /api/native/v1/surveys?workspace=<slug-or-uuid>
 POST /api/native/v1/surveys
+PATCH /api/native/v1/surveys/{id}/prep
 GET /api/native/v1/surveys/{id}?workspace=<slug-or-uuid>
 POST /api/native/v1/surveys/{id}/sessions   (JSON or multipart audio; include rics_code)
 POST /api/native/v1/surveys/{id}/photos     (multipart image; include rics_code)

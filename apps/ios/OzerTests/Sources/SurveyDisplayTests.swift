@@ -56,5 +56,25 @@ enum SurveyDisplayTests {
                     pendingBodies: ["Supply is copper.", "Tank is lagged."]
                 ) == "Stopcock is stiff.\n\nSupply is copper.\n\nTank is lagged."
         }
+
+        check("formats a Mapbox street address like web survey prep") {
+            SurveyAddress.formatted(
+                AddressSuggestion(
+                    id: "address.1",
+                    label: "12 High Street, Bath, BA1 1AA, United Kingdom",
+                    addressLine1: "12 High Street",
+                    town: "Bath",
+                    county: "Somerset",
+                    postcode: "BA1 1AA",
+                    latitude: 51.381,
+                    longitude: -2.359
+                )
+            ) == "12 High Street, Bath, Somerset"
+        }
+
+        check("extracts a UK postcode from a typed address") {
+            SurveyAddress.extractUkPostcode(from: "12 High Street, Bath BA1 1AA") == "BA1 1AA"
+                && SurveyAddress.extractUkPostcode(from: "No postcode here") == nil
+        }
     }
 }
