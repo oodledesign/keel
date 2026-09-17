@@ -434,6 +434,7 @@ export const bulkPublishRightmoveAction = enhanceAction(
       client: client as never,
       accountId: input.accountId,
       userId: user.id,
+      scope: input.scope,
     });
 
     if (job.status === 'queued' || job.status === 'running') {

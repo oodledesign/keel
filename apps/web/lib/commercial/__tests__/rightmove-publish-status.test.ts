@@ -5,12 +5,15 @@ import {
   type RightmoveDisposalStatusRow,
   collectRightmoveUrls,
   countRightmoveOverviewStatuses,
+  formatRightmoveListSyncStatus,
   formatRightmoveOverviewStatus,
   formatRightmovePublicationStatus,
   isRightmoveDisposalFailed,
   isRightmoveDisposalUnsynced,
   resolveRightmoveDisposalOverviewStatus,
+  resolveRightmoveListSyncStatus,
   resolveRightmoveOverviewStatus,
+  rightmoveListSyncBadgeClass,
   rightmovePublicationStatusBadgeClass,
   sortRightmoveDisposalRows,
 } from '../rightmove-publish-status';
@@ -228,6 +231,28 @@ describe('isRightmoveDisposalUnsynced', () => {
         statusRow({ name: 'Camden Road', overviewStatus: 'pushed' }),
       ),
     ).toBe(false);
+  });
+});
+
+describe('resolveRightmoveListSyncStatus', () => {
+  it('shows Off when Rightmove is not enabled and the listing cannot publish', () => {
+    expect(
+      resolveRightmoveListSyncStatus({
+        listingStatus: 'instructed',
+        rightmoveStatus: 'none',
+      }),
+    ).toBe('off');
+    expect(formatRightmoveListSyncStatus('off')).toBe('Off');
+    expect(rightmoveListSyncBadgeClass('off')).not.toMatch(/amber/);
+  });
+
+  it('keeps Not pushed for Marketing listings that have never been sent', () => {
+    expect(
+      resolveRightmoveListSyncStatus({
+        listingStatus: 'marketing',
+        rightmoveStatus: 'none',
+      }),
+    ).toBe('not_pushed');
   });
 });
 

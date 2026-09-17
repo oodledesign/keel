@@ -26,6 +26,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@kit/ui/dialog';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import {
   Table,
@@ -39,6 +41,7 @@ import {
 import { RightmovePublicationStatusBadge } from '~/components/commercial/rightmove-publication-status-badge';
 import pathsConfig from '~/config/paths.config';
 import { LISTING_STATUS_LABELS } from '~/lib/commercial/commercial-constants';
+import type { RightmoveBulkScope } from '~/lib/commercial/rightmove-bulk-eligibility';
 import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
   RIGHTMOVE_OVERVIEW_STATUSES,
@@ -56,18 +59,27 @@ import {
   listRightmoveDisposalStatusesAction,
 } from '../_lib/server/server-actions';
 
+const PUSH_ALL_CONFIRM_WORD = 'CONFIRM';
+
 function jobProgressLabel(job: RightmoveBulkJobPublic | null): string | null {
   if (!job) return null;
+  const isResync = job.scope === 'unsynced';
   if (job.total === 0) {
-    return 'No Marketing / Under offer disposals to push';
+    return isResync
+      ? 'No unsynced disposals to re-sync'
+      : 'No Marketing / Under offer disposals to push';
   }
   if (job.isActive) {
     const current = job.lastListingName ? ` — ${job.lastListingName}` : '';
-    return `Pushing ${job.processed} of ${job.total}${current}`;
+    return isResync
+      ? `Re-syncing ${job.processed} of ${job.total}${current}`
+      : `Pushing ${job.processed} of ${job.total}${current}`;
   }
   if (job.status === 'completed') {
     if (job.failed === 0) {
-      return `Pushed ${job.succeeded} of ${job.total} to Rightmove`;
+      return isResync
+        ? `Re-synced ${job.succeeded} of ${job.total} on Rightmove`
+        : `Pushed ${job.succeeded} of ${job.total} to Rightmove`;
     }
     return `Finished: ${job.succeeded} ok, ${job.failed} failed`;
   }
@@ -97,6 +109,8 @@ export function RightmoveBulkPublishPanel({
   const [job, setJob] = useState<RightmoveBulkJobPublic | null>(initialJob);
   const [startPending, startTransition] = useTransition();
   const [statusOpen, setStatusOpen] = useState(false);
+  const [pushAllOpen, setPushAllOpen] = useState(false);
+  const [pushAllConfirm, setPushAllConfirm] = useState('');
   const [statusFilter, setStatusFilter] = useState<
     'all' | RightmoveOverviewStatus
   >('all');
@@ -149,18 +163,24 @@ export function RightmoveBulkPublishPanel({
     });
   };
 
-  const runBulk = () => {
+  const runBulk = (scope: RightmoveBulkScope) => {
     startTransition(async () => {
       try {
-        const result = await bulkPublishRightmoveAction({ accountId });
+        const result = await bulkPublishRightmoveAction({ accountId, scope });
         setJob(result.job);
         if (result.job.total === 0) {
-          toast.message('No Marketing or Under offer disposals to push');
+          toast.message(
+            scope === 'unsynced'
+              ? 'No unsynced disposals to re-sync'
+              : 'No Marketing or Under offer disposals to push',
+          );
           return;
         }
         if (result.created) {
           toast.success(
-            'Rightmove push started — you can leave this page; it keeps running',
+            scope === 'unsynced'
+              ? 'Rightmove re-sync started — you can leave this page; it keeps running'
+              : 'Rightmove push started — you can leave this page; it keeps running',
           );
         } else {
           toast.message('A Rightmove push is already running');
@@ -178,6 +198,13 @@ export function RightmoveBulkPublishPanel({
   const progress = jobProgressLabel(job);
   const percent =
     job && job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
+  const canStart =
+    !startPending &&
+    !job?.isActive &&
+    portalPublishingUnlocked &&
+    oauthConfigured &&
+    branchConfigured;
+  const pushAllConfirmed = pushAllConfirm.trim() === PUSH_ALL_CONFIRM_WORD;
 
   const listingHref = (listingId: string) =>
     `${pathsConfig.app.accountListingDetail
@@ -201,24 +228,27 @@ export function RightmoveBulkPublishPanel({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <AlertDialog>
+        <AlertDialog
+          open={pushAllOpen}
+          onOpenChange={(open) => {
+            setPushAllOpen(open);
+            if (!open) setPushAllConfirm('');
+          }}
+        >
           <AlertDialogTrigger asChild>
             <Button
               type="button"
               className={workspaceBtnPrimaryMd}
-              disabled={
-                startPending ||
-                job?.isActive ||
-                !portalPublishingUnlocked ||
-                !oauthConfigured ||
-                !branchConfigured
-              }
+              disabled={!canStart}
+              data-test="rightmove-push-all-open"
             >
               {startPending || job?.isActive ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : null}
               {job?.isActive
-                ? 'Pushing to Rightmove…'
+                ? job.scope === 'unsynced'
+                  ? 'Re-syncing Rightmove…'
+                  : 'Pushing to Rightmove…'
                 : 'Push all to Rightmove'}
             </Button>
           </AlertDialogTrigger>
@@ -228,18 +258,80 @@ export function RightmoveBulkPublishPanel({
                 Push all disposals to Rightmove?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This sends every Marketing and Under offer disposal that has an
-                office assigned to Rightmove (
-                {environment === 'production' ? 'live' : 'test'} API). The job
+                This sends every eligible Marketing and Under offer disposal to
+                Rightmove ({environment === 'production' ? 'live' : 'test'}{' '}
+                API), including listings that have never been pushed. The job
                 keeps running if you leave this page — come back here to see
                 progress. Rightmove may take a short time to show listings
-                publicly.
+                publicly. Type {PUSH_ALL_CONFIRM_WORD} to continue.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="rightmove-push-all-confirm">
+                Type{' '}
+                <span className="font-semibold">{PUSH_ALL_CONFIRM_WORD}</span>{' '}
+                to confirm
+              </Label>
+              <Input
+                id="rightmove-push-all-confirm"
+                value={pushAllConfirm}
+                onChange={(event) => setPushAllConfirm(event.target.value)}
+                placeholder={`Type ${PUSH_ALL_CONFIRM_WORD} to confirm`}
+                autoComplete="off"
+                data-test="rightmove-push-all-confirm"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={startPending || !pushAllConfirmed}
+                data-test="rightmove-push-all-confirm-submit"
+                onClick={(event) => {
+                  if (!pushAllConfirmed) {
+                    event.preventDefault();
+                    return;
+                  }
+                  runBulk('all');
+                }}
+              >
+                Push all
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canStart}
+              data-test="rightmove-resync-unsynced-open"
+            >
+              Resync unsynced disposals
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Resync unsynced disposals on Rightmove?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This re-pushes disposals that are already live on Rightmove but
+                behind the latest disposal or media updates. Listings that have
+                never been pushed (Not pushed) and listings already in sync are
+                skipped. First-time publishing still happens from each
+                disposal’s Publishing page, or with Push all.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction disabled={startPending} onClick={runBulk}>
-                Push all
+              <AlertDialogAction
+                disabled={startPending}
+                data-test="rightmove-resync-unsynced-confirm"
+                onClick={() => runBulk('unsynced')}
+              >
+                Resync unsynced
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -417,9 +509,11 @@ export function RightmoveBulkPublishPanel({
         </p>
       ) : (
         <p className="text-xs text-[var(--workspace-shell-text)]/45">
-          Bulk push covers Marketing / Under offer only. Each disposal needs an
+          Push all covers every Marketing / Under offer disposal, including
+          first-time Not pushed listings. Resync unsynced only updates listings
+          already live on Rightmove that are behind. Each disposal needs an
           Office set on Management. Leaving this page does not stop a running
-          push.
+          job.
         </p>
       )}
     </div>

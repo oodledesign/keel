@@ -40,6 +40,10 @@ import {
   pushListingToPropertyHive,
   unpublishListingFromPropertyHive,
 } from '~/lib/commercial/property-hive-sync';
+import {
+  type RightmoveListSyncStatus,
+  resolveRightmoveListSyncStatus,
+} from '~/lib/commercial/rightmove-publish-status';
 
 import type {
   CreateListingEnquiryInput,
@@ -322,6 +326,8 @@ export type CommercialListing = {
   coAgents?: ListingCoAgent[];
   /** Suggested fits + linked interest count when loaded with list match counts. */
   matchCount?: number;
+  /** Rightmove list-column status when loaded with list sync data. */
+  rightmoveSyncStatus?: RightmoveListSyncStatus;
 };
 
 export type ListingMemberOption = {
@@ -1289,18 +1295,92 @@ async function attachMatchCounts(
   });
 }
 
+async function attachRightmoveSyncStatuses(
+  client: SupabaseClient,
+  accountId: string,
+  listings: CommercialListing[],
+): Promise<CommercialListing[]> {
+  if (listings.length === 0) return listings;
+
+  const listingIds = listings.map((listing) => listing.id);
+  const [{ data: pubs, error: pubsError }, { data: media, error: mediaError }] =
+    await Promise.all([
+      client
+        .from('commercial_portal_publications')
+        .select(
+          'listing_id, status, external_id, external_url, last_sync_at, last_error',
+        )
+        .eq('account_id', accountId)
+        .eq('portal', 'rightmove')
+        .in('listing_id', listingIds),
+      client
+        .from('commercial_listing_media')
+        .select('listing_id, created_at')
+        .eq('account_id', accountId)
+        .eq('is_private', false)
+        .in('listing_id', listingIds),
+    ]);
+
+  if (pubsError) {
+    console.error('[listings] attachRightmoveSyncStatuses:', pubsError.message);
+    return listings;
+  }
+  if (mediaError) {
+    console.error(
+      '[listings] attachRightmoveSyncStatuses media:',
+      mediaError.message,
+    );
+  }
+
+  const pubByListing = new Map(
+    ((pubs ?? []) as Array<Record<string, unknown>>).map((row) => [
+      String(row.listing_id),
+      row,
+    ]),
+  );
+  const mediaByListing = new Map<string, string[]>();
+  for (const row of (media ?? []) as Array<Record<string, unknown>>) {
+    const listingId = String(row.listing_id);
+    const createdAt =
+      typeof row.created_at === 'string' ? row.created_at : null;
+    if (!createdAt) continue;
+    const current = mediaByListing.get(listingId) ?? [];
+    current.push(createdAt);
+    mediaByListing.set(listingId, current);
+  }
+
+  return listings.map((listing) => {
+    const pub = pubByListing.get(listing.id);
+    return {
+      ...listing,
+      rightmoveSyncStatus: resolveRightmoveListSyncStatus({
+        listingStatus: listing.status,
+        listingUpdatedAt: listing.updatedAt,
+        rightmoveStatus: pub ? String(pub.status ?? '') : 'none',
+        lastSyncAt: (pub?.last_sync_at as string | null) ?? null,
+        lastError: (pub?.last_error as string | null) ?? null,
+        externalId: (pub?.external_id as string | null) ?? null,
+        externalUrl: (pub?.external_url as string | null) ?? null,
+        mediaCreatedAt: mediaByListing.get(listing.id) ?? [],
+      }),
+    };
+  });
+}
+
 /** Merge parallel attach results that share the same listing order. */
 function mergeListingEnrichment(
   base: CommercialListing[],
   covers: CommercialListing[],
   agents: CommercialListing[],
   coAgents: CommercialListing[],
+  rightmove: CommercialListing[] = [],
 ): CommercialListing[] {
   return base.map((listing, index) => ({
     ...listing,
     coverUrl: covers[index]?.coverUrl ?? null,
     actingAgents: agents[index]?.actingAgents ?? [],
     coAgents: coAgents[index]?.coAgents ?? [],
+    rightmoveSyncStatus: rightmove[index]?.rightmoveSyncStatus,
   }));
 }
 
@@ -1329,16 +1409,18 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
-      const [covers, agents, coAgents] = await Promise.all([
+      const [covers, agents, coAgents, rightmove] = await Promise.all([
         attachCoverUrls(client, listings),
         attachActingAgents(client, accountId, listings),
         attachCoAgents(client, accountId, listings),
+        attachRightmoveSyncStatuses(client, accountId, listings),
       ]);
       const enriched = mergeListingEnrichment(
         listings,
         covers,
         agents,
         coAgents,
+        rightmove,
       );
       return attachMatchCounts(client, accountId, enriched, {
         includeSuggestions: true,
@@ -1456,12 +1538,19 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
-      const [covers, agents, coAgents] = await Promise.all([
+      const [covers, agents, coAgents, rightmove] = await Promise.all([
         attachCoverUrls(client, listings),
         attachActingAgents(client, input.accountId, listings),
         attachCoAgents(client, input.accountId, listings),
+        attachRightmoveSyncStatuses(client, input.accountId, listings),
       ]);
-      const merged = mergeListingEnrichment(listings, covers, agents, coAgents);
+      const merged = mergeListingEnrichment(
+        listings,
+        covers,
+        agents,
+        coAgents,
+        rightmove,
+      );
       const enriched = await attachMatchCounts(
         client,
         input.accountId,
@@ -1551,11 +1640,18 @@ export function createListingsService(client: SupabaseClient) {
 
       if (error || !data) return null;
       const mapped = mapListing(data as ListingRow);
-      const [covers, agents] = await Promise.all([
+      const [covers, agents, rightmove] = await Promise.all([
         attachCoverUrls(client, [mapped]),
         attachActingAgents(client, accountId, [mapped]),
+        attachRightmoveSyncStatuses(client, accountId, [mapped]),
       ]);
-      const merged = mergeListingEnrichment([mapped], covers, agents, [mapped]);
+      const merged = mergeListingEnrichment(
+        [mapped],
+        covers,
+        agents,
+        [mapped],
+        rightmove,
+      );
       const [enriched] = await attachMatchCounts(client, accountId, merged, {
         includeSuggestions: true,
       });
@@ -1777,15 +1873,14 @@ export function createListingsService(client: SupabaseClient) {
         listingId,
         status: input.status,
       });
-      // Rightmove is push-only and opt-in. Re-PUT when status changes on an
-      // already-published listing (e.g. Marketing ↔ Under offer). Marketing
-      // copy / price edits do not auto-push — use the Publishing toggle.
+      // Live Rightmove updates enqueue for the 15-minute flush (updated_at
+      // already marks Unsynced). Off-market still unpublishes immediately.
+      await syncRightmoveIfLive({
+        accountId,
+        listingId,
+        status: listing.status,
+      });
       if (input.status && input.status !== existing.status) {
-        await syncRightmoveIfLive({
-          accountId,
-          listingId,
-          status: input.status,
-        });
         try {
           await recordListingEvent(client, {
             accountId,
@@ -2206,7 +2301,12 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to create unit');
       }
 
-      return mapUnit(data as UnitRow);
+      const unit = mapUnit(data as UnitRow);
+      await syncLivePortalsAfterMediaChange(client, {
+        accountId: input.accountId,
+        listingId: input.listingId,
+      });
+      return unit;
     },
 
     async updateUnit(
@@ -2274,10 +2374,24 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to update unit');
       }
 
-      return mapUnit(data as UnitRow);
+      const unit = mapUnit(data as UnitRow);
+      await syncLivePortalsAfterMediaChange(client, {
+        accountId,
+        listingId: unit.listingId,
+      });
+      return unit;
     },
 
     async deleteUnit(unitId: string, accountId: string): Promise<void> {
+      const { data: existing, error: fetchError } = await client
+        .from('commercial_listing_units')
+        .select('listing_id')
+        .eq('id', unitId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (fetchError) throw new Error(fetchError.message);
+
       const { error } = await client
         .from('commercial_listing_units')
         .delete()
@@ -2285,6 +2399,14 @@ export function createListingsService(client: SupabaseClient) {
         .eq('account_id', accountId);
 
       if (error) throw new Error(error.message);
+
+      const listingId = (existing?.listing_id as string | undefined) ?? null;
+      if (listingId) {
+        await syncLivePortalsAfterMediaChange(client, {
+          accountId,
+          listingId,
+        });
+      }
     },
 
     async listMedia(
@@ -2408,7 +2530,9 @@ export function createListingsService(client: SupabaseClient) {
       } catch {
         /* best-effort */
       }
-      await touchListingUpdatedAt(client, input.listingId, input.accountId);
+      if (!isPrivate) {
+        await touchListingUpdatedAt(client, input.listingId, input.accountId);
+      }
       return media;
     },
 

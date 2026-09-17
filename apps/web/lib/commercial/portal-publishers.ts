@@ -24,10 +24,7 @@ import {
 import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import { resolveLiveWordpressListingUrl } from '~/lib/commercial/listing-website-url-resolve.server';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
-import {
-  isLiveRightmovePublication,
-  shouldUnpublishRightmoveForListingStatus,
-} from '~/lib/commercial/portal-sync-policy';
+import { resolveRightmoveLiveSyncAction } from '~/lib/commercial/portal-sync-policy';
 import {
   RightmoveApiError,
   deleteCommercialProperty,
@@ -46,6 +43,10 @@ import {
   mapListingToRightmovePayload,
   resolveRightmovePropertyReference,
 } from '~/lib/commercial/rightmove-mapper';
+import {
+  RIGHTMOVE_RATE_LIMIT_RETRY_MS,
+  publicationLooksRateLimited,
+} from '~/lib/commercial/rightmove-rate-limit';
 import type { RightmoveRemovalReason } from '~/lib/commercial/rightmove-types';
 
 const require = createRequire(import.meta.url);
@@ -801,9 +802,9 @@ export async function bulkPublishToRightmove(input: {
     let publication = await publishToRightmove(input.accountId, listingId);
     if (
       publication.status === 'error' &&
-      (publication.last_error ?? '').toLowerCase().includes('rate limit')
+      publicationLooksRateLimited(publication)
     ) {
-      await sleep(5_000);
+      await sleep(RIGHTMOVE_RATE_LIMIT_RETRY_MS);
       publication = await publishToRightmove(input.accountId, listingId);
     }
 
@@ -935,15 +936,15 @@ export async function unpublishFromRightmove(
 }
 
 /**
- * Re-PUT (or remove) a listing that is already live on Rightmove.
- * No-ops when the channel was never published — turning Rightmove on stays
- * an explicit Publishing toggle.
+ * Keep a live Rightmove listing in the Unsynced flush queue after save.
+ * Immediate PUT is reserved for off-market unpublish. First-time publish
+ * stays an explicit Publishing toggle or Push all.
  */
 export async function syncRightmoveIfLive(input: {
   accountId: string;
   listingId: string;
   status?: ListingStatus;
-}): Promise<void> {
+}): Promise<'unpublished' | 'queued' | 'skipped'> {
   const { data, error } = await db()
     .from('commercial_portal_publications')
     .select('status')
@@ -954,46 +955,36 @@ export async function syncRightmoveIfLive(input: {
 
   if (error) {
     console.error('[portal] rightmove live-sync lookup failed', error.message);
-    return;
+    return 'skipped';
   }
 
-  if (!isLiveRightmovePublication((data?.status as string | null) ?? null)) {
-    return;
+  const action = resolveRightmoveLiveSyncAction({
+    publicationStatus: (data?.status as string | null) ?? null,
+    listingStatus: input.status,
+  });
+
+  if (action === 'skip' || action === 'enqueue') {
+    return action === 'enqueue' ? 'queued' : 'skipped';
   }
 
   try {
-    if (
-      input.status &&
-      shouldUnpublishRightmoveForListingStatus(input.status)
-    ) {
-      const publication = await unpublishFromRightmove(
-        input.accountId,
-        input.listingId,
-      );
-      if (publication.status === 'error') {
-        console.error(
-          '[portal] rightmove live-sync unpublish failed',
-          publication.last_error,
-        );
-      }
-      return;
-    }
-
-    const publication = await publishToRightmove(
+    const publication = await unpublishFromRightmove(
       input.accountId,
       input.listingId,
     );
     if (publication.status === 'error') {
       console.error(
-        '[portal] rightmove live-sync put failed',
+        '[portal] rightmove live-sync unpublish failed',
         publication.last_error,
       );
     }
+    return 'unpublished';
   } catch (err) {
     console.error(
       '[portal] rightmove live-sync failed',
       err instanceof Error ? err.message : err,
     );
+    return 'skipped';
   }
 }
 
