@@ -937,7 +937,7 @@ export function ListingMarketingEditor({
         </Card>
       </div>
 
-      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+      <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
         <MarketingReadinessCard
           listing={listing}
           accountSlug={accountSlug}
