@@ -112,15 +112,14 @@ export function ListingPublishingChannels({
   const rightmovePublication = publications.find(
     (publication) => publication.portal === 'rightmove',
   );
-  const rightmoveUnsyncedChanges =
-    rightmoveStatus.outOfSync || rightmoveStatus.issue === 'rightmove_stale'
-      ? describeRightmoveUnsyncedChanges({
-          lastSyncAt: rightmovePublication?.lastSyncAt,
-          listingUpdatedAt: listing.updatedAt,
-          media,
-          statusChanges: rightmoveStatusChanges,
-        })
-      : null;
+  const rightmoveUnsyncedChanges = rightmoveStatus.outOfSync
+    ? describeRightmoveUnsyncedChanges({
+        lastSyncAt: rightmovePublication?.lastSyncAt,
+        listingUpdatedAt: listing.updatedAt,
+        media,
+        statusChanges: rightmoveStatusChanges,
+      })
+    : null;
   const readiness = getMarketingReadiness({ listing, media, publications });
   const eachPublication = publications.find(
     (publication) => publication.portal === 'each',
