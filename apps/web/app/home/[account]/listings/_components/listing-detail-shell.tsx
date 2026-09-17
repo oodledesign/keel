@@ -144,6 +144,7 @@ const NAV: Array<{
 
 /** Clears the sticky title bar (heading + address + vertical padding). */
 const SIDE_NAV_STICKY_TOP_WITH_TITLE = 'lg:top-24';
+/** Overview before the hero pins — title bar is not sticky on desktop. */
 const SIDE_NAV_STICKY_TOP_DEFAULT = 'lg:top-3';
 
 function listingAddress(listing: CommercialListing) {
