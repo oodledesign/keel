@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { MEETING_PUBLISHED_SUGGESTED_TASK_STATUSES } from '~/lib/recorder/meeting-suggested-tasks';
 import {
   type TranscriptSegment,
   normalizeSpeakerMappings,
@@ -130,7 +131,7 @@ async function assembleMeetingSharePayload(
             'id, suggested_title, suggested_description, suggested_due_date, status, planner_task_id',
           )
           .eq('meeting_transcript_id', transcriptId)
-          .in('status', ['approved', 'auto_published'])
+          .in('status', [...MEETING_PUBLISHED_SUGGESTED_TASK_STATUSES])
           .order('created_at', { ascending: true })
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     loadAccountBrandResolved(accountId),

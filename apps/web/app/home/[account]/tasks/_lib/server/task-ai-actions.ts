@@ -20,6 +20,13 @@ import {
   extractWorkspaceTasksWithAnthropic,
   resolveDraftAssignment,
 } from '~/lib/ai/workspace-task-extract';
+import { notifyMeetingTasksReadyForReviewInApp } from '~/lib/notifications/meeting-in-app-notifications';
+import {
+  MEETING_SUGGESTED_TASK_PENDING_STATUS,
+  type MeetingSuggestedTaskRow,
+  listPendingMeetingSuggestedTasks,
+  mergeNewMeetingSuggestedTasks,
+} from '~/lib/recorder/meeting-suggested-tasks';
 import {
   parsePersonAssigneeSelectValue,
   personAssigneeSelectValue,
@@ -61,8 +68,10 @@ const extractSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
-  /** When set, load calendar attendees for assignee suggestions. */
+  /** When set, load calendar attendees and persist into the shared review pool. */
   meetingTranscriptId: z.string().uuid().optional(),
+  /** Used to revalidate meeting + review pages after persisting suggestions. */
+  accountSlug: z.string().min(1).max(200).optional(),
 });
 
 export type ExtractedTaskReviewRow = {
@@ -90,6 +99,47 @@ export type ExtractedTaskReviewRow = {
 
 function randomId() {
   return `draft-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function isPersistedSuggestedTaskId(id: string) {
+  return z.string().uuid().safeParse(id).success;
+}
+
+function suggestedTaskRowToExtractDraft(
+  row: MeetingSuggestedTaskRow,
+  preferredClientId: string | null,
+): ExtractedTaskReviewRow {
+  return {
+    id: row.id,
+    title: row.suggested_title.trim() || 'Task',
+    notes: row.suggested_description,
+    dueDate: row.suggested_due_date,
+    durationMinutes: row.suggested_duration_minutes,
+    priority: 'medium',
+    projectId: null,
+    clientId: preferredClientId,
+    included: true,
+    personAssignee: row.suggested_assignee_id
+      ? personAssigneeSelectValue({
+          kind: 'member',
+          userId: row.suggested_assignee_id,
+        })
+      : '__none__',
+    subtasks: [],
+  };
+}
+
+function revalidateMeetingAndReviewPages(
+  accountSlug: string,
+  meetingTranscriptId?: string,
+) {
+  revalidateWorkspaceTaskPages(accountSlug);
+  if (!meetingTranscriptId) return;
+  revalidatePath(
+    `/home/${accountSlug}/meetings/${meetingTranscriptId}`,
+    'page',
+  );
+  revalidatePath(`/app/${accountSlug}/meetings/${meetingTranscriptId}`, 'page');
 }
 
 async function assertWorkspaceMember(accountId: string, userId: string) {
@@ -124,6 +174,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       ? (clients.find((c) => c.id === input.preferredClientId) ?? null)
       : null;
 
+    const client = getSupabaseServerClient();
     const admin = getSupabaseServerAdminClient();
     const personOptions = await loadTaskPersonAssigneeOptions(
       admin,
@@ -132,15 +183,36 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
     );
 
     let attendees: Array<{ name: string | null; email: string | null }> = [];
+    let meetingTitle: string | null = null;
     if (input.meetingTranscriptId) {
+      const existingPending = await listPendingMeetingSuggestedTasks(client, {
+        accountId: input.accountId,
+        meetingTranscriptId: input.meetingTranscriptId,
+      });
+
+      if (existingPending.length > 0) {
+        return {
+          rows: existingPending.map((row) =>
+            suggestedTaskRowToExtractDraft(
+              row,
+              preferredClient?.id ?? input.preferredClientId ?? null,
+            ),
+          ),
+          personAssigneeOptions: personOptions,
+          reusedExisting: true,
+        };
+      }
+
       const { data: transcript } = await admin
         .from('meeting_transcripts')
-        .select('calendar_attendees')
+        .select('calendar_attendees, title')
         .eq('id', input.meetingTranscriptId)
         .eq('account_id', input.accountId)
         .maybeSingle();
       const raw = (transcript as { calendar_attendees?: unknown } | null)
         ?.calendar_attendees;
+      meetingTitle =
+        (transcript as { title?: string | null } | null)?.title?.trim() || null;
       if (Array.isArray(raw)) {
         attendees = raw.map((row) => {
           const r = row as { name?: unknown; email?: unknown };
@@ -214,7 +286,82 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       };
     });
 
-    return { rows, personAssigneeOptions: personOptions };
+    if (input.meetingTranscriptId && rows.length > 0) {
+      const preferredClientId =
+        preferredClient?.id ?? input.preferredClientId ?? null;
+      const { inserted } = await mergeNewMeetingSuggestedTasks(client, {
+        accountId: input.accountId,
+        meetingTranscriptId: input.meetingTranscriptId,
+        items: rows.map((row) => {
+          const person = parsePersonAssigneeSelectValue(row.personAssignee);
+          return {
+            suggestedTitle: row.title,
+            suggestedDescription: row.notes,
+            suggestedDueDate: row.dueDate,
+            suggestedDurationMinutes: row.durationMinutes,
+            suggestedAssigneeId: person.kind === 'member' ? person.id : null,
+          };
+        }),
+      });
+
+      if (inserted.length > 0) {
+        void notifyMeetingTasksReadyForReviewInApp({
+          accountId: input.accountId,
+          meetingTranscriptId: input.meetingTranscriptId,
+          meetingTitle,
+          taskCount: inserted.length,
+          accountSlug: input.accountSlug,
+        }).catch((error) => {
+          console.error(
+            '[extractWorkspaceTasksFromTranscript] review notify failed',
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+
+        if (input.accountSlug) {
+          revalidateMeetingAndReviewPages(
+            input.accountSlug,
+            input.meetingTranscriptId,
+          );
+        }
+      }
+
+      const allPending = await listPendingMeetingSuggestedTasks(client, {
+        accountId: input.accountId,
+        meetingTranscriptId: input.meetingTranscriptId,
+      });
+      const pendingByTitle = new Map(
+        allPending.map((row) => [
+          row.suggested_title.trim().toLowerCase(),
+          row,
+        ]),
+      );
+      const usedIds = new Set<string>();
+      const persistedRows = rows.map((row) => {
+        const persisted = pendingByTitle.get(row.title.trim().toLowerCase());
+        if (persisted) usedIds.add(persisted.id);
+        return persisted ? { ...row, id: persisted.id } : row;
+      });
+      for (const row of allPending) {
+        if (!usedIds.has(row.id)) {
+          persistedRows.push(
+            suggestedTaskRowToExtractDraft(row, preferredClientId),
+          );
+        }
+      }
+
+      return {
+        rows: persistedRows,
+        personAssigneeOptions: personOptions,
+        reusedExisting: inserted.length === 0,
+      };
+    }
+
+    return {
+      rows,
+      personAssigneeOptions: personOptions,
+      reusedExisting: false,
+    };
   },
   { schema: extractSchema },
 );
@@ -370,26 +517,54 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
           .eq('id', parentResult.id)
           .eq('account_id', input.accountId);
 
-        const { error: actionItemError } = await client
-          .from('meeting_action_items')
-          .insert({
-            account_id: input.accountId,
-            meeting_transcript_id: input.meetingTranscriptId,
-            suggested_title: item.title.trim(),
-            suggested_description: item.notes?.trim() || null,
-            suggested_due_date: item.dueDate || null,
-            suggested_duration_minutes: item.durationMinutes ?? null,
-            status: 'approved',
-            planner_task_id: parentResult.id,
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: user.id,
-          });
+        const reviewedPatch = {
+          suggested_title: item.title.trim(),
+          suggested_description: item.notes?.trim() || null,
+          suggested_due_date: item.dueDate || null,
+          suggested_duration_minutes: item.durationMinutes ?? null,
+          suggested_assignee_id: assigneeUserId ?? null,
+          status: 'approved' as const,
+          planner_task_id: parentResult.id,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user.id,
+        };
 
-        if (actionItemError) {
-          console.error(
-            '[commitWorkspaceExtractedTasks] meeting_action_items:',
-            actionItemError.message,
-          );
+        let linkedExisting = false;
+        if (isPersistedSuggestedTaskId(item.id)) {
+          const { data: updated, error: updateError } = await client
+            .from('meeting_action_items')
+            .update(reviewedPatch)
+            .eq('id', item.id)
+            .eq('account_id', input.accountId)
+            .eq('meeting_transcript_id', input.meetingTranscriptId)
+            .eq('status', MEETING_SUGGESTED_TASK_PENDING_STATUS)
+            .select('id')
+            .maybeSingle();
+
+          if (updateError) {
+            console.error(
+              '[commitWorkspaceExtractedTasks] meeting_action_items:',
+              updateError.message,
+            );
+          }
+          linkedExisting = Boolean(updated);
+        }
+
+        if (!linkedExisting && !isPersistedSuggestedTaskId(item.id)) {
+          const { error: actionItemError } = await client
+            .from('meeting_action_items')
+            .insert({
+              account_id: input.accountId,
+              meeting_transcript_id: input.meetingTranscriptId,
+              ...reviewedPatch,
+            });
+
+          if (actionItemError) {
+            console.error(
+              '[commitWorkspaceExtractedTasks] meeting_action_items:',
+              actionItemError.message,
+            );
+          }
         }
       }
 
@@ -432,17 +607,10 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
       }
     }
 
-    revalidateWorkspaceTaskPages(input.accountSlug);
-    if (input.meetingTranscriptId) {
-      revalidatePath(
-        `/home/${input.accountSlug}/meetings/${input.meetingTranscriptId}`,
-        'page',
-      );
-      revalidatePath(
-        `/app/${input.accountSlug}/meetings/${input.meetingTranscriptId}`,
-        'page',
-      );
-    }
+    revalidateMeetingAndReviewPages(
+      input.accountSlug,
+      input.meetingTranscriptId,
+    );
     return { created };
   },
   { schema: commitSchema },

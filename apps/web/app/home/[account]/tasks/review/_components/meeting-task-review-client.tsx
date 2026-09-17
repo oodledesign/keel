@@ -58,6 +58,8 @@ type Props = {
   initialItems: MeetingReviewItem[];
   members: MeetingReviewMember[];
   automationSettings: AccountTaskAutomationSettings;
+  /** When set (from ?meeting=), focus that meeting's pending suggestions. */
+  focusMeetingId?: string;
 };
 
 type ItemDraft = {
@@ -123,8 +125,22 @@ export function MeetingTaskReviewClient({
   initialItems,
   members,
   automationSettings,
+  focusMeetingId,
 }: Props) {
   const [items, setItems] = useState(initialItems);
+  const [ignoreMeetingFilter, setIgnoreMeetingFilter] = useState(false);
+  const meetingFilter =
+    focusMeetingId &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      focusMeetingId,
+    )
+      ? focusMeetingId
+      : null;
+  const visibleItems =
+    meetingFilter && !ignoreMeetingFilter
+      ? items.filter((item) => item.meetingTranscriptId === meetingFilter)
+      : items;
+  const focusedMeetingTitle = visibleItems[0]?.meetingTitle ?? null;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, ItemDraft>>(() =>
@@ -145,8 +161,9 @@ export function MeetingTaskReviewClient({
       : 'Require my review';
 
   const highConfidenceItems = useMemo(
-    () => items.filter((item) => isHighConfidenceMeetingSuggestion(item)),
-    [items],
+    () =>
+      visibleItems.filter((item) => isHighConfidenceMeetingSuggestion(item)),
+    [visibleItems],
   );
 
   function updateDraft(itemId: string, patch: Partial<ItemDraft>) {
@@ -338,6 +355,31 @@ export function MeetingTaskReviewClient({
         </div>
       </div>
 
+      {meetingFilter && !ignoreMeetingFilter ? (
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-2.5 text-sm text-[var(--workspace-shell-text-muted)]">
+          Showing suggested tasks
+          {focusedMeetingTitle ? (
+            <>
+              {' '}
+              from{' '}
+              <span className="text-[var(--workspace-shell-text)]">
+                {focusedMeetingTitle}
+              </span>
+            </>
+          ) : (
+            ' for this meeting'
+          )}
+          .{' '}
+          <button
+            type="button"
+            className="font-medium text-[var(--ozer-accent)] hover:underline"
+            onClick={() => setIgnoreMeetingFilter(true)}
+          >
+            Show all meetings
+          </button>
+        </div>
+      ) : null}
+
       <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-2.5 text-sm text-[var(--workspace-shell-text-muted)]">
         Meeting tasks:{' '}
         <span className="text-[var(--workspace-shell-text)]">
@@ -355,19 +397,21 @@ export function MeetingTaskReviewClient({
         </Link>
       </div>
 
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-center">
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            No meeting tasks waiting for review.
+            {meetingFilter && !ignoreMeetingFilter
+              ? 'No suggested tasks waiting for review from this meeting.'
+              : 'No meeting tasks waiting for review.'}
           </p>
           <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            New suggestions appear here after KeelAssistant syncs a meeting
-            transcript.
+            Suggestions appear here when a meeting syncs or when you extract
+            tasks from a meeting page.
           </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          {items.map((item, index) => {
+          {visibleItems.map((item, index) => {
             const draft = drafts[item.id] ?? buildDraft(item);
             const isExpanded = expandedIds.has(item.id);
             const isEditing = editingIds.has(item.id);

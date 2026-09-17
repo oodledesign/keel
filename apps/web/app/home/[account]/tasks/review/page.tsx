@@ -13,6 +13,7 @@ import { loadMeetingTaskReviewPageData } from './_lib/server/meeting-review.load
 
 interface PageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ meeting?: string }>;
 }
 
 export const dynamic = 'force-dynamic';
@@ -23,8 +24,9 @@ export const generateMetadata = async () => {
   };
 };
 
-async function MeetingTaskReviewPage({ params }: PageProps) {
+async function MeetingTaskReviewPage({ params, searchParams }: PageProps) {
   const accountSlug = (await params).account;
+  const { meeting: focusMeetingId } = await searchParams;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
 
@@ -43,6 +45,7 @@ async function MeetingTaskReviewPage({ params }: PageProps) {
           initialItems={data.items}
           members={data.members}
           automationSettings={data.automationSettings}
+          focusMeetingId={focusMeetingId}
         />
       </PageBody>
     </>
