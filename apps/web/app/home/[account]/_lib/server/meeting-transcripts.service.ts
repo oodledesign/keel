@@ -10,6 +10,7 @@ import {
   queueBrainIndexSource,
 } from '~/lib/brain/sync';
 import type { Database } from '~/lib/database.types';
+import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import {
   type SpeakerBinding,
   type SpeakerMappings,
@@ -582,13 +583,16 @@ class MeetingTranscriptsService {
       throw new Error(error?.message ?? 'Failed to create meeting transcript');
     }
 
-    queueBrainIndexSource(
-      input.accountId,
-      'transcript',
-      (data as MeetingTranscriptRow).id,
-    );
+    const created = data as MeetingTranscriptRow;
+    queueBrainIndexSource(input.accountId, 'transcript', created.id);
 
-    return mapMeetingTranscript(data as MeetingTranscriptRow);
+    void notifyMeetingTranscriptSyncedInApp({
+      accountId: input.accountId,
+      meetingTranscriptId: created.id,
+      meetingTitle: created.title,
+    });
+
+    return mapMeetingTranscript(created);
   }
 
   async update(input: {
