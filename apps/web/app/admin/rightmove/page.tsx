@@ -12,14 +12,16 @@ async function AdminRightmovePage({
 }: {
   searchParams: Promise<{
     status?: string;
+    account?: string;
     query?: string;
     page?: string;
   }>;
 }) {
   const params = await searchParams;
   const filter = params.status ?? 'all';
+  const accountId = params.account?.trim() ?? '';
   const query = params.query?.trim() ?? '';
-  const page = params.page ? Math.max(1, parseInt(params.page, 10)) : 1;
+  const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
   const pageSize = 40;
   const data = await loadAdminRightmoveSync({
     overviewStatus: filter as
@@ -31,6 +33,7 @@ async function AdminRightmovePage({
       | 'draft'
       | 'not_pushed'
       | 'pushed',
+    accountId,
     query,
     page,
     pageSize,
@@ -58,9 +61,11 @@ async function AdminRightmovePage({
           listings={data.listings}
           total={data.total}
           statusCounts={data.statusCounts}
+          workspaces={data.workspaces}
           jobs={data.jobs}
           flushRuns={data.flushRuns}
           currentFilter={filter}
+          currentAccountId={accountId}
           currentQuery={query}
           page={page}
           pageSize={pageSize}

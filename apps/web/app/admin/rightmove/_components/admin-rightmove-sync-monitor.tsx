@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Badge } from '@kit/ui/badge';
+import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import {
   Table,
@@ -15,13 +16,18 @@ import {
 } from '@kit/ui/table';
 
 import { RightmovePublicationStatusBadge } from '~/components/commercial/rightmove-publication-status-badge';
+import type { AdminRightmoveWorkspaceOption } from '~/lib/commercial/admin-rightmove-sync';
+import { formatRightmoveBulkJobStatus } from '~/lib/commercial/admin-rightmove-sync';
 import { LISTING_STATUS_LABELS } from '~/lib/commercial/commercial-constants';
-import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
+import { listingTabHref } from '~/lib/commercial/listing-routes';
 import type { RightmoveFlushRun } from '~/lib/commercial/rightmove-flush-job-types';
 import type { RightmoveOverviewStatus } from '~/lib/commercial/rightmove-publish-status';
 import { formatUkDateTime } from '~/lib/format/uk-datetime';
 
-import type { AdminRightmoveListingRow } from '../_lib/load-admin-rightmove-sync';
+import type {
+  AdminRightmoveJobRow,
+  AdminRightmoveListingRow,
+} from '../_lib/load-admin-rightmove-sync';
 
 const FILTERS: Array<{
   value: 'all' | 'pending' | RightmoveOverviewStatus;
@@ -40,9 +46,11 @@ export function AdminRightmoveSyncMonitor({
   listings,
   total,
   statusCounts,
+  workspaces,
   jobs,
   flushRuns,
   currentFilter,
+  currentAccountId,
   currentQuery,
   page,
   pageSize,
@@ -50,9 +58,11 @@ export function AdminRightmoveSyncMonitor({
   listings: AdminRightmoveListingRow[];
   total: number;
   statusCounts: Record<RightmoveOverviewStatus, number>;
-  jobs: RightmoveBulkJobPublic[];
+  workspaces: AdminRightmoveWorkspaceOption[];
+  jobs: AdminRightmoveJobRow[];
   flushRuns: RightmoveFlushRun[];
   currentFilter: string;
+  currentAccountId: string;
   currentQuery: string;
   page: number;
   pageSize: number;
@@ -63,14 +73,17 @@ export function AdminRightmoveSyncMonitor({
 
   const pushFilter = (next: {
     filter?: string;
+    accountId?: string;
     query?: string;
     page?: number;
   }) => {
     const params = new URLSearchParams();
     const filter = next.filter ?? currentFilter;
+    const accountId = next.accountId ?? currentAccountId;
     const query = next.query ?? currentQuery;
     const nextPage = next.page ?? 1;
     if (filter && filter !== 'all') params.set('status', filter);
+    if (accountId.trim()) params.set('account', accountId.trim());
     if (query.trim()) params.set('query', query.trim());
     if (nextPage > 1) params.set('page', String(nextPage));
     const qs = params.toString();
@@ -94,7 +107,7 @@ export function AdminRightmoveSyncMonitor({
           label="Last flush"
           value={
             latestFlush
-              ? `${latestFlush.succeeded} ok / ${latestFlush.failed} failed`
+              ? `${latestFlush.succeeded} succeeded / ${latestFlush.failed} failed`
               : '—'
           }
           hint={
@@ -105,9 +118,14 @@ export function AdminRightmoveSyncMonitor({
         />
       </section>
 
-      {flushRuns.length > 0 ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Recent flush runs</h2>
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Recent flush runs</h2>
+        {flushRuns.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No flush runs recorded yet. The 15-minute cron writes a row here
+            after each pass.
+          </p>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -132,20 +150,25 @@ export function AdminRightmoveSyncMonitor({
               ))}
             </TableBody>
           </Table>
-        </section>
-      ) : null}
+        )}
+      </section>
 
-      {jobs.length > 0 ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Recent bulk jobs</h2>
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold">Recent bulk jobs</h2>
+        {jobs.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No Push all or Resync jobs yet.
+          </p>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Started</TableHead>
+                <TableHead>Workspace</TableHead>
                 <TableHead>Scope</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Progress</TableHead>
-                <TableHead>Last listing</TableHead>
+                <TableHead>Failures</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -153,22 +176,50 @@ export function AdminRightmoveSyncMonitor({
                 <TableRow key={job.id}>
                   <TableCell>{formatUkDateTime(job.startedAt)}</TableCell>
                   <TableCell>
+                    {job.accountSlug ? (
+                      <Link
+                        href={`/home/${job.accountSlug}/commercial-publishing`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {job.accountName}
+                      </Link>
+                    ) : (
+                      job.accountName
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {job.scope === 'unsynced' ? 'Resync' : 'Push all'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{job.status}</Badge>
+                    <Badge variant="outline">
+                      {formatRightmoveBulkJobStatus(job.status)}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    {job.processed}/{job.total} · {job.succeeded} ok /{' '}
+                    {job.processed}/{job.total} · {job.succeeded} succeeded /{' '}
                     {job.failed} failed
                   </TableCell>
-                  <TableCell>{job.lastListingName ?? '—'}</TableCell>
+                  <TableCell className="max-w-xs text-xs">
+                    {job.lastError ? (
+                      <p className="text-rose-600">{job.lastError}</p>
+                    ) : null}
+                    {job.failureNames.length > 0 ? (
+                      <p className="text-muted-foreground">
+                        {job.failureNames.slice(0, 4).join(', ')}
+                        {job.failureNames.length > 4
+                          ? ` +${job.failureNames.length - 4} more`
+                          : ''}
+                      </p>
+                    ) : job.lastError ? null : (
+                      '—'
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </section>
-      ) : null}
+        )}
+      </section>
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -176,21 +227,39 @@ export function AdminRightmoveSyncMonitor({
             <h2 className="text-sm font-semibold">Publications</h2>
             <p className="text-muted-foreground text-xs">
               {total} matching · {statusCounts.pushed} pushed,{' '}
-              {statusCounts.unsynced} unsynced
+              {statusCounts.unsynced} unsynced, {statusCounts.not_pushed} not
+              pushed
             </p>
           </div>
-          <Input
-            defaultValue={currentQuery}
-            placeholder="Search disposal or workspace"
-            className="w-64"
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                pushFilter({
-                  query: (event.target as HTMLInputElement).value,
-                });
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={currentAccountId}
+              onChange={(event) =>
+                pushFilter({ accountId: event.target.value })
               }
-            }}
-          />
+              className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+              aria-label="Filter by workspace"
+            >
+              <option value="">All workspaces</option>
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
+            <Input
+              defaultValue={currentQuery}
+              placeholder="Search disposal or workspace"
+              className="w-64"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  pushFilter({
+                    query: (event.target as HTMLInputElement).value,
+                  });
+                }
+              }}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((filter) => (
@@ -209,7 +278,9 @@ export function AdminRightmoveSyncMonitor({
                 ? ` (${statusCounts.unsynced})`
                 : filter.value === 'failed'
                   ? ` (${statusCounts.failed})`
-                  : ''}
+                  : filter.value === 'not_pushed'
+                    ? ` (${statusCounts.not_pushed})`
+                    : ''}
             </button>
           ))}
         </div>
@@ -222,13 +293,14 @@ export function AdminRightmoveSyncMonitor({
               <TableHead>Last sync</TableHead>
               <TableHead>Listing updated</TableHead>
               <TableHead>Pending flush</TableHead>
+              <TableHead>Last error</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {listings.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-muted-foreground py-8 text-center"
                 >
                   No Rightmove publications match these filters.
@@ -238,12 +310,26 @@ export function AdminRightmoveSyncMonitor({
               listings.map((row) => (
                 <TableRow key={`${row.accountId}:${row.listingId}`}>
                   <TableCell>
-                    <div className="font-medium">{row.listingName}</div>
+                    <div className="font-medium">
+                      {row.accountSlug ? (
+                        <Link
+                          href={listingTabHref(
+                            row.accountSlug,
+                            row.listingId,
+                            'publishing',
+                          )}
+                          className="underline-offset-2 hover:underline"
+                        >
+                          {row.listingName}
+                        </Link>
+                      ) : (
+                        row.listingName
+                      )}
+                    </div>
                     <div className="text-muted-foreground text-xs">
                       {LISTING_STATUS_LABELS[
                         row.listingStatus as keyof typeof LISTING_STATUS_LABELS
-                      ] ?? row.listingStatus}
-                      {row.lastError ? ` · ${row.lastError}` : ''}
+                      ] ?? 'Unknown'}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -268,6 +354,9 @@ export function AdminRightmoveSyncMonitor({
                     {formatUkDateTime(row.listingUpdatedAt)}
                   </TableCell>
                   <TableCell>{row.pendingFlush ? 'Yes' : 'No'}</TableCell>
+                  <TableCell className="max-w-xs truncate text-rose-600">
+                    {row.lastError ?? '—'}
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -279,20 +368,24 @@ export function AdminRightmoveSyncMonitor({
               Page {page} of {pageCount}
             </span>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={page <= 1}
                 onClick={() => pushFilter({ page: page - 1 })}
               >
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 disabled={page >= pageCount}
                 onClick={() => pushFilter({ page: page + 1 })}
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
