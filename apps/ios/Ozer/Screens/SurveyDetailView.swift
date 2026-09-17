@@ -45,9 +45,12 @@ struct SurveyDetailView: View {
             let pendingBodies = pendingSessions
                 .filter { matches(section, ricsCode: $0.ricsCode) }
                 .sorted { $0.createdAt < $1.createdAt }
-                .map(\.content)
+                .map { SpeakerTurnSplitter.plainProse(from: $0.content) }
             var copy = section
-            copy.note = SurveyDisplay.accumulatedNote(remote: section.note, pendingBodies: pendingBodies)
+            copy.note = SurveyDisplay.accumulatedNote(
+                remote: SpeakerTurnSplitter.plainProse(from: section.note),
+                pendingBodies: pendingBodies
+            )
             copy.photoCount = section.photoCount
                 + pendingPhotos.filter { matches(section, ricsCode: $0.ricsCode) }.count
             return copy

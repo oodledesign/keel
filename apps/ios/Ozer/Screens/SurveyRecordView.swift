@@ -11,7 +11,7 @@ struct SurveyRecordView: View {
     @Environment(AppSession.self) private var session
     @Environment(\.dismiss) private var dismiss
     @State private var selectedSection: SurveySectionItem
-    @State private var capture = MeetingCaptureSession()
+    @State private var capture = MeetingCaptureSession(labelSpeakers: false)
     @State private var isStopping = false
     @State private var isPausing = false
     @State private var startError: String?
@@ -210,9 +210,19 @@ struct SurveyRecordView: View {
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
             } else {
-                Text(pendingNote)
-                    .font(.subheadline)
-                    .foregroundStyle(OzerPalette.plum)
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(SurveyDisplay.noteTakes(from: pendingNote).enumerated()), id: \.offset) { index, take in
+                        if index > 0 {
+                            Rectangle()
+                                .fill(OzerPalette.border)
+                                .frame(height: 1)
+                                .padding(.vertical, 2)
+                        }
+                        Text(take)
+                            .font(.subheadline)
+                            .foregroundStyle(OzerPalette.plum)
+                    }
+                }
             }
         }
         .padding(14)
@@ -226,13 +236,11 @@ struct SurveyRecordView: View {
 
     private var captions: some View {
         ScrollView {
-            SpeakerTranscriptView(
-                turns: capture.displayTurns,
-                emptyMessage: capture.isRecording
-                    ? "Live captions will land here. The audio is saved even if captions miss a word."
-                    : "Tap Record to dictate into this section. Photos can be added at the same time."
-            )
-            .padding(16)
+            Text(liveCaption.isEmpty ? emptyCaptionMessage : liveCaption)
+                .font(.body)
+                .foregroundStyle(liveCaption.isEmpty ? OzerPalette.plumMuted : OzerPalette.plum)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
@@ -327,6 +335,23 @@ struct SurveyRecordView: View {
         }
     }
 
+    private var liveCaption: String {
+        let live = capture.liveTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !live.isEmpty {
+            return SpeakerTurnSplitter.plainProse(from: live)
+        }
+        return capture.displayTurns
+            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+    }
+
+    private var emptyCaptionMessage: String {
+        capture.isRecording
+            ? "Live captions will land here. The audio is saved even if captions miss a word."
+            : "Tap Record to dictate into this section. Photos can be added at the same time."
+    }
+
     private var pauseResumeTitle: String {
         if isPausing || (capture.isLabelling && capture.isPaused) {
             return "Pausing…"
@@ -348,9 +373,9 @@ struct SurveyRecordView: View {
             ricsCode: item.ricsCode
         )
         .sorted { $0.createdAt < $1.createdAt }
-        .map(\.content)
+        .map { SpeakerTurnSplitter.plainProse(from: $0.content) }
         localNotes[item.ricsCode] = SurveyDisplay.accumulatedNote(
-            remote: item.note,
+            remote: SpeakerTurnSplitter.plainProse(from: item.note),
             pendingBodies: bodies
         )
     }
@@ -385,8 +410,8 @@ struct SurveyRecordView: View {
         do {
             let result = try await capture.stop()
             let fallback = selectedSection.displayLabel
-            let title = SurveyDisplay.sessionTitle(from: result.transcript, on: Date(), fallback: fallback)
-            let body = result.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+            let body = SpeakerTurnSplitter.plainProse(from: result.transcript)
+            let title = SurveyDisplay.sessionTitle(from: body, on: Date(), fallback: fallback)
             _ = OfflineSurveyQueue.shared.enqueueSession(
                 workspace: workspace,
                 surveyId: survey.id,

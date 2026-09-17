@@ -84,6 +84,9 @@ struct SurveyStatusPresentation: Equatable {
 }
 
 enum SurveyDisplay {
+    /// Matches `SURVEY_SECTION_NOTE_DIVIDER` on the native API.
+    static let noteTakeDivider = "\u{2014}\u{2014}\u{2014}\u{2014}"
+
     static func surveyLevel(from surveyType: String?) -> Int {
         SurveyTypeOption.parse(surveyType).surveyLevel
     }
@@ -93,11 +96,18 @@ enum SurveyDisplay {
         let next = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
         if current.isEmpty { return next }
         if next.isEmpty { return current }
-        return "\(current)\n\n\(next)"
+        return "\(current)\n\n\(noteTakeDivider)\n\n\(next)"
     }
 
     static func accumulatedNote(remote: String, pendingBodies: [String]) -> String {
         pendingBodies.reduce(remote) { appendNote(existing: $0, incoming: $1) }
+    }
+
+    static func noteTakes(from note: String) -> [String] {
+        note
+            .components(separatedBy: noteTakeDivider)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     static func sessionTitle(from transcript: String, on date: Date, fallback: String = "Site notes") -> String {

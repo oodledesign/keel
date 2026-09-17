@@ -8,6 +8,7 @@ import {
   cleanedTextOrSource,
   parseSurveyTranscriptCleanup,
 } from '~/lib/ai/survey-transcript-cleanup-parse';
+import { stripSurveySpeakerLabels } from '~/lib/native/survey-sections';
 
 export type SurveyTranscriptCleanupResult = {
   cleanedText: string;
@@ -22,7 +23,7 @@ export async function cleanSurveyTranscript(input: {
   accountId: string;
   supabase: SupabaseClient;
 }): Promise<SurveyTranscriptCleanupResult> {
-  const sourceText = input.sourceText.trim();
+  const sourceText = stripSurveySpeakerLabels(input.sourceText);
   if (!sourceText) {
     return { cleanedText: '', source: 'passthrough', fallbackReason: 'empty' };
   }
@@ -42,9 +43,8 @@ export async function cleanSurveyTranscript(input: {
       supabase: input.supabase,
     });
 
-    const cleanedText = cleanedTextOrSource(
-      parseSurveyTranscriptCleanup(text),
-      sourceText,
+    const cleanedText = stripSurveySpeakerLabels(
+      cleanedTextOrSource(parseSurveyTranscriptCleanup(text), sourceText),
     );
 
     if (!cleanedText) {

@@ -60,6 +60,11 @@ struct SpeakerTurnSplitter {
         Self.format(turns: turns, liveText: openText, liveSpeaker: liveSpeaker)
     }
 
+    /// Committed paragraphs plus the open live caption, without speaker headings.
+    var formattedPlainBody: String {
+        Self.formatPlain(turns: turns, liveText: openText)
+    }
+
     /// Committed paragraphs plus the open live caption, for pill UI.
     var displayTurns: [SpeakerTurn] {
         var result = turns
@@ -153,10 +158,13 @@ struct SpeakerTurnSplitter {
         committedSessionText = currentSessionText
     }
 
-    mutating func finish() -> String {
+    mutating func finish(includeSpeakerLabels: Bool = true) -> String {
         commitOpen()
         turns = Self.polish(turns)
-        return Self.format(turns: turns, liveText: "", liveSpeaker: liveSpeaker)
+        if includeSpeakerLabels {
+            return Self.format(turns: turns, liveText: "", liveSpeaker: liveSpeaker)
+        }
+        return Self.formatPlain(turns: turns, liveText: "")
     }
 
     /// Relabel committed paragraphs. One speaker per paragraph unless a
@@ -461,6 +469,35 @@ struct SpeakerTurnSplitter {
         flush()
 
         return blocks.joined(separator: "\n\n")
+    }
+
+    /// Join turn text only — survey dictation has no speaker headings.
+    static func formatPlain(turns: [SpeakerTurn], liveText: String) -> String {
+        var prepared = polish(turns)
+        let live = liveText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !live.isEmpty {
+            let liveTurn = SpeakerTurn(
+                id: liveTurnID,
+                speaker: speakerName(for: 0),
+                text: live,
+                start: prepared.last?.end ?? 0,
+                end: (prepared.last?.end ?? 0) + 0.1
+            )
+            prepared = polish(prepared + [liveTurn])
+        }
+
+        return prepared
+            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+    }
+
+    /// Drop `## Me` / `Me:` style labels and keep the spoken prose.
+    static func plainProse(from body: String) -> String {
+        parseTurns(from: body)
+            .map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
     }
 
     static func title(from body: String, fallback: String) -> String {

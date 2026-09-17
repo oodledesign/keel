@@ -15,7 +15,6 @@ import {
   surveyLevelFromType,
   surveyTypeForLevel,
 } from '~/lib/building-surveyor/survey-types';
-import { parseTranscriptContent } from '~/lib/recorder/transcript-speakers';
 
 import { NativeHttpError } from './http';
 import {
@@ -27,6 +26,7 @@ import {
   mapNativeOnSiteSections,
   requireOnSiteSurveySection,
   resolveOnSiteSurveySection,
+  stripSurveySpeakerLabels,
 } from './survey-sections';
 import {
   type NativeSurvey,
@@ -60,6 +60,7 @@ export {
   appendSurveySectionNote,
   mapNativeOnSiteSections,
   requireOnSiteSurveySection,
+  stripSurveySpeakerLabels,
 } from './survey-sections';
 
 const LIST_LIMIT = 80;
@@ -314,7 +315,7 @@ export async function getNativeSurvey(
         section_key: sectionKey,
       });
     }
-    const body = observation.body?.trim() ?? '';
+    const body = stripSurveySpeakerLabels(observation.body);
     if (!body) continue;
     for (const key of [ricsCode, sectionKey].filter(Boolean) as string[]) {
       notesByCode.set(key, appendSurveySectionNote(notesByCode.get(key), body));
@@ -586,7 +587,7 @@ export async function createNativeSurveySession(input: {
     input.surveyId,
   );
 
-  const rawContent = input.content.trim();
+  const rawContent = stripSurveySpeakerLabels(input.content);
   const placeholder =
     'Site recording saved. Captions were not available on this device — the audio is in the survey library.';
   const content = rawContent || (input.audio ? placeholder : '');
@@ -594,8 +595,8 @@ export async function createNativeSurveySession(input: {
     throw new NativeHttpError(400, 'Recording transcript or audio is required');
   }
 
-  const parsed = parseTranscriptContent(content);
-  const speakerSegments = parsed.hasSpeakerLabels ? parsed.segments : null;
+  // Survey dictation is one surveyor talking to themselves — no speaker pills.
+  const speakerSegments = null;
   const source = parseNativeMeetingSource(input.source ?? 'iphone');
   const meetingDate = parseNativeMeetingDate(input.meetingDate);
   const title = input.title?.trim() || 'Site notes';
