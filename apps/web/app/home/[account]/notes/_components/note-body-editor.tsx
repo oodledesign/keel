@@ -10,6 +10,8 @@ import StarterKit from '@tiptap/starter-kit';
 
 import { cn } from '@kit/ui/utils';
 
+import { noteMarkdownToHtml } from '~/lib/notes/note-markdown';
+
 import { BulletFromDot } from './note-bullet-from-dot';
 import { NoteMarkdownToolbar } from './note-markdown-toolbar';
 
@@ -51,8 +53,10 @@ export function NoteBodyEditor({
       Markdown,
       BulletFromDot,
     ],
-    content: initialMarkdown,
-    contentType: 'markdown',
+    // Parse the stored markdown ourselves. TipTap's `contentType: 'markdown'`
+    // path is easy to miss (string content is then treated as HTML), which
+    // leaves `**`, `##`, and `- ` visible as literal text.
+    content: noteMarkdownToHtml(initialMarkdown),
     editorProps: {
       attributes: {
         class: cn(

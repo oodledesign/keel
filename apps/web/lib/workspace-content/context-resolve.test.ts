@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveNoteAssignmentLabels } from '~/home/[account]/_lib/workspace-content/context-resolve';
+import {
+  displayTitle,
+  previewContent,
+  resolveNoteAssignmentLabels,
+} from '~/home/[account]/_lib/workspace-content/context-resolve';
 
 describe('resolveNoteAssignmentLabels', () => {
   it('returns client and project names when both are linked', () => {
@@ -39,5 +43,13 @@ describe('resolveNoteAssignmentLabels', () => {
       clientName: 'Northwind',
       projectName: null,
     });
+  });
+});
+
+describe('note list previews', () => {
+  it('strips markdown markers from previews and untitled fallbacks', () => {
+    const markdown = '## Me\nHello **there**';
+    expect(previewContent(markdown, 80)).toBe('Me Hello there');
+    expect(displayTitle('', markdown)).toBe('Me Hello there');
   });
 });

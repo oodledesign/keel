@@ -73,5 +73,20 @@ enum NoteMarkdownTests {
         check("plainText strips markers") {
             NoteMarkdown.plainText(from: "# Title\n**bold**") == "Title\nbold"
         }
+
+        check("speaker note body has no visible markdown markers") {
+            let source = """
+            ## Me
+            Hello **there**
+            ## Speaker 1
+            How are you
+            """
+            let plain = NoteMarkdown.plainText(from: source)
+            !plain.contains("#")
+                && !plain.contains("*")
+                && plain.contains("Me")
+                && plain.contains("Hello there")
+                && plain.contains("Speaker 1")
+        }
     }
 }

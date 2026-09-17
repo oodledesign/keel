@@ -1,3 +1,5 @@
+import { markdownToPlainText } from '~/lib/markdown';
+
 import type { NoteContextLink } from './types';
 
 type ProjectClientEmbed = {
@@ -42,12 +44,12 @@ export function resolveContextLogoUrl(row: RawNoteRow): string | null {
 export function displayTitle(title: string, content: string): string {
   const t = title.trim();
   if (t) return t;
-  const first = content.replace(/\s+/g, ' ').trim().split('\n')[0] ?? '';
+  const first = markdownToPlainText(content);
   return first.slice(0, 80) || 'Untitled';
 }
 
 export function previewContent(content: string, max = 100): string {
-  const plain = content.replace(/\s+/g, ' ').trim();
+  const plain = markdownToPlainText(content);
   if (!plain) return '';
   if (plain.length <= max) return plain;
   return `${plain.slice(0, max)}…`;

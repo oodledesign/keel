@@ -4,6 +4,7 @@ import { Download } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
+import { NoteMarkdownBody } from '~/components/notes/note-markdown-body';
 import {
   NOTE_FILE_CATEGORY_LABELS,
   type NoteFileCategory,
@@ -75,9 +76,10 @@ export function PortalSharedItemView({
       </header>
 
       {item.type === 'note' ? (
-        <div className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text)]">
-          {item.content || 'No content.'}
-        </div>
+        <NoteMarkdownBody
+          markdown={item.content ?? ''}
+          className="text-sm text-[var(--workspace-shell-text)]"
+        />
       ) : item.kind === 'uploaded' ? (
         <div className="space-y-4">
           {isImage ? (
