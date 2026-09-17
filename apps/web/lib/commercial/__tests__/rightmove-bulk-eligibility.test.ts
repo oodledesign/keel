@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isRightmoveBulkListingEligible,
   isRightmoveBulkRowEligible,
+  isRightmoveFlushCandidate,
   parseRightmoveBulkScope,
   selectRightmoveBulkEligibleRows,
 } from '../rightmove-bulk-eligibility';
@@ -95,6 +96,45 @@ describe('isRightmoveBulkListingEligible', () => {
     };
     expect(isRightmoveBulkListingEligible(inSync, 'all')).toBe(true);
     expect(isRightmoveBulkListingEligible(inSync, 'unsynced')).toBe(false);
+  });
+});
+
+describe('isRightmoveFlushCandidate', () => {
+  it('includes live Unsynced listings for the 15-minute cron', () => {
+    expect(
+      isRightmoveFlushCandidate({
+        listingStatus: 'marketing',
+        listingUpdatedAt: '2026-09-15T11:28:00.000Z',
+        rightmoveStatus: 'published',
+        lastSyncAt: '2026-09-07T11:47:00.000Z',
+      }),
+    ).toBe(true);
+  });
+
+  it('skips Not pushed, in-sync Pushed, and off-market listings', () => {
+    expect(
+      isRightmoveFlushCandidate({
+        listingStatus: 'marketing',
+        listingUpdatedAt: '2026-09-15T11:28:00.000Z',
+        rightmoveStatus: 'none',
+      }),
+    ).toBe(false);
+    expect(
+      isRightmoveFlushCandidate({
+        listingStatus: 'marketing',
+        listingUpdatedAt: '2026-09-15T11:28:00.000Z',
+        rightmoveStatus: 'published',
+        lastSyncAt: '2026-09-15T12:00:00.000Z',
+      }),
+    ).toBe(false);
+    expect(
+      isRightmoveFlushCandidate({
+        listingStatus: 'sold',
+        listingUpdatedAt: '2026-09-15T11:28:00.000Z',
+        rightmoveStatus: 'published',
+        lastSyncAt: '2026-09-07T11:47:00.000Z',
+      }),
+    ).toBe(false);
   });
 });
 

@@ -43,6 +43,10 @@ import {
   mapListingToRightmovePayload,
   resolveRightmovePropertyReference,
 } from '~/lib/commercial/rightmove-mapper';
+import {
+  RIGHTMOVE_RATE_LIMIT_RETRY_MS,
+  publicationLooksRateLimited,
+} from '~/lib/commercial/rightmove-rate-limit';
 import type { RightmoveRemovalReason } from '~/lib/commercial/rightmove-types';
 
 const require = createRequire(import.meta.url);
@@ -798,9 +802,9 @@ export async function bulkPublishToRightmove(input: {
     let publication = await publishToRightmove(input.accountId, listingId);
     if (
       publication.status === 'error' &&
-      (publication.last_error ?? '').toLowerCase().includes('rate limit')
+      publicationLooksRateLimited(publication)
     ) {
-      await sleep(5_000);
+      await sleep(RIGHTMOVE_RATE_LIMIT_RETRY_MS);
       publication = await publishToRightmove(input.accountId, listingId);
     }
 

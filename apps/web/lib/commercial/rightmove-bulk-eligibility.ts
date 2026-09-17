@@ -37,6 +37,20 @@ export function isRightmoveBulkRowEligible(
   return row.overviewStatus === 'unsynced';
 }
 
+/** Cron flush: already-live Unsynced only — never first-time Not pushed. */
+export function isRightmoveFlushCandidate(input: {
+  listingStatus: string;
+  listingUpdatedAt?: string | null;
+  rightmoveStatus: string;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  externalId?: string | null;
+  externalUrl?: string | null;
+  mediaCreatedAt?: Array<string | null | undefined>;
+}): boolean {
+  return isRightmoveBulkListingEligible(input, 'unsynced');
+}
+
 export function isRightmoveBulkListingEligible(
   input: {
     listingStatus: string;

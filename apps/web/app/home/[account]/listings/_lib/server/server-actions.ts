@@ -301,7 +301,12 @@ export const setAutoCirculateMatches = enhanceAction(
 export const createListingUnit = enhanceAction(
   async (input) => {
     await requireBillableDisposalActor(input.accountId);
-    return getService().createUnit(input);
+    const unit = await getService().createUnit(input);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: input.listingId,
+    });
+    return unit;
   },
   { schema: CreateListingUnitSchema },
 );
@@ -310,7 +315,12 @@ export const updateListingUnit = enhanceAction(
   async (input) => {
     await requireBillableDisposalActor(input.accountId);
     const { unitId, accountId, ...rest } = input;
-    return getService().updateUnit(unitId, accountId, rest);
+    const unit = await getService().updateUnit(unitId, accountId, rest);
+    await invalidateDisposalsData({
+      accountId,
+      listingId: unit.listingId,
+    });
+    return unit;
   },
   { schema: UpdateListingUnitSchema },
 );
@@ -319,6 +329,9 @@ export const deleteListingUnit = enhanceAction(
   async (input) => {
     await requireBillableDisposalActor(input.accountId);
     await getService().deleteUnit(input.unitId, input.accountId);
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+    });
     return { success: true };
   },
   { schema: DeleteListingUnitSchema },

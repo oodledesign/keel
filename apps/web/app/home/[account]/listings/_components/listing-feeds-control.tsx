@@ -122,7 +122,7 @@ export function ListingFeedsControl({
         </ul>
         {needsRightmoveResync ? (
           <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
-            Updates will sync to Rightmove shortly.
+            Updates will sync shortly.
           </p>
         ) : null}
         {canEditDisposals && needsRightmoveResync ? (

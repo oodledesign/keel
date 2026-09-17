@@ -20,6 +20,10 @@ import {
 } from '~/lib/commercial/rightmove-bulk-job-types';
 import { listRightmoveDisposalStatuses } from '~/lib/commercial/rightmove-disposal-status';
 import { isRightmoveOAuthConfigured } from '~/lib/commercial/rightmove-env';
+import {
+  RIGHTMOVE_RATE_LIMIT_RETRY_MS,
+  publicationLooksRateLimited,
+} from '~/lib/commercial/rightmove-rate-limit';
 
 export {
   STALE_HEARTBEAT_MS,
@@ -391,9 +395,9 @@ export async function processRightmoveBulkJobBatch(input: {
         );
         if (
           publication.status === 'error' &&
-          (publication.last_error ?? '').toLowerCase().includes('rate limit')
+          publicationLooksRateLimited(publication)
         ) {
-          await sleep(5_000);
+          await sleep(RIGHTMOVE_RATE_LIMIT_RETRY_MS);
           publication = await publishToRightmove(claimed.accountId, listingId);
         }
 

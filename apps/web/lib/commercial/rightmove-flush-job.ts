@@ -6,9 +6,13 @@ import {
   publishToRightmove,
   setPortalPublishersClient,
 } from '~/lib/commercial/portal-publishers';
-import { isRightmoveBulkListingEligible } from '~/lib/commercial/rightmove-bulk-eligibility';
+import { isRightmoveFlushCandidate } from '~/lib/commercial/rightmove-bulk-eligibility';
 import { loadActiveRightmoveBulkJob } from '~/lib/commercial/rightmove-bulk-job';
 import type { RightmoveFlushRun } from '~/lib/commercial/rightmove-flush-job-types';
+import {
+  RIGHTMOVE_RATE_LIMIT_RETRY_MS,
+  publicationLooksRateLimited,
+} from '~/lib/commercial/rightmove-rate-limit';
 
 export type { RightmoveFlushRun } from '~/lib/commercial/rightmove-flush-job-types';
 
@@ -137,19 +141,16 @@ export async function listRightmoveFlushCandidates(
     const listing = listingById.get(listingId);
     if (!listing) continue;
     if (
-      !isRightmoveBulkListingEligible(
-        {
-          listingStatus: String(listing.status ?? ''),
-          listingUpdatedAt: (listing.updated_at as string | null) ?? null,
-          rightmoveStatus: String(pub.status ?? ''),
-          lastSyncAt: (pub.last_sync_at as string | null) ?? null,
-          lastError: (pub.last_error as string | null) ?? null,
-          externalId: (pub.external_id as string | null) ?? null,
-          externalUrl: (pub.external_url as string | null) ?? null,
-          mediaCreatedAt: mediaByListing.get(listingId) ?? [],
-        },
-        'unsynced',
-      )
+      !isRightmoveFlushCandidate({
+        listingStatus: String(listing.status ?? ''),
+        listingUpdatedAt: (listing.updated_at as string | null) ?? null,
+        rightmoveStatus: String(pub.status ?? ''),
+        lastSyncAt: (pub.last_sync_at as string | null) ?? null,
+        lastError: (pub.last_error as string | null) ?? null,
+        externalId: (pub.external_id as string | null) ?? null,
+        externalUrl: (pub.external_url as string | null) ?? null,
+        mediaCreatedAt: mediaByListing.get(listingId) ?? [],
+      })
     ) {
       continue;
     }
@@ -214,9 +215,9 @@ export async function processRightmoveFlushBatch(input: {
         );
         if (
           publication.status === 'error' &&
-          (publication.last_error ?? '').toLowerCase().includes('rate limit')
+          publicationLooksRateLimited(publication)
         ) {
-          await sleep(5_000);
+          await sleep(RIGHTMOVE_RATE_LIMIT_RETRY_MS);
           publication = await publishToRightmove(
             candidate.accountId,
             candidate.listingId,
@@ -226,6 +227,9 @@ export async function processRightmoveFlushBatch(input: {
         if (publication.status === 'error') {
           failed += 1;
           lastError = publication.last_error ?? 'Rightmove publish failed';
+          if (publicationLooksRateLimited(publication)) {
+            break;
+          }
         } else {
           succeeded += 1;
         }

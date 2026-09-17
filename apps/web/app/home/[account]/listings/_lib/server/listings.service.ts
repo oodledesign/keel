@@ -1873,14 +1873,14 @@ export function createListingsService(client: SupabaseClient) {
         listingId,
         status: input.status,
       });
-      // Rightmove is push-only and opt-in. Off-market statuses unpublish
-      // immediately. Other live updates stay Unsynced until the 15-minute flush.
+      // Live Rightmove updates enqueue for the 15-minute flush (updated_at
+      // already marks Unsynced). Off-market still unpublishes immediately.
+      await syncRightmoveIfLive({
+        accountId,
+        listingId,
+        status: listing.status,
+      });
       if (input.status && input.status !== existing.status) {
-        await syncRightmoveIfLive({
-          accountId,
-          listingId,
-          status: input.status,
-        });
         try {
           await recordListingEvent(client, {
             accountId,
@@ -2301,7 +2301,12 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to create unit');
       }
 
-      return mapUnit(data as UnitRow);
+      const unit = mapUnit(data as UnitRow);
+      await syncLivePortalsAfterMediaChange(client, {
+        accountId: input.accountId,
+        listingId: input.listingId,
+      });
+      return unit;
     },
 
     async updateUnit(
@@ -2369,10 +2374,24 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to update unit');
       }
 
-      return mapUnit(data as UnitRow);
+      const unit = mapUnit(data as UnitRow);
+      await syncLivePortalsAfterMediaChange(client, {
+        accountId,
+        listingId: unit.listingId,
+      });
+      return unit;
     },
 
     async deleteUnit(unitId: string, accountId: string): Promise<void> {
+      const { data: existing, error: fetchError } = await client
+        .from('commercial_listing_units')
+        .select('listing_id')
+        .eq('id', unitId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (fetchError) throw new Error(fetchError.message);
+
       const { error } = await client
         .from('commercial_listing_units')
         .delete()
@@ -2380,6 +2399,14 @@ export function createListingsService(client: SupabaseClient) {
         .eq('account_id', accountId);
 
       if (error) throw new Error(error.message);
+
+      const listingId = (existing?.listing_id as string | undefined) ?? null;
+      if (listingId) {
+        await syncLivePortalsAfterMediaChange(client, {
+          accountId,
+          listingId,
+        });
+      }
     },
 
     async listMedia(
@@ -2503,7 +2530,10 @@ export function createListingsService(client: SupabaseClient) {
       } catch {
         /* best-effort */
       }
-      await touchListingUpdatedAt(client, input.listingId, input.accountId);
+      await syncLivePortalsAfterMediaChange(client, {
+        accountId: input.accountId,
+        listingId: input.listingId,
+      });
       return media;
     },
 

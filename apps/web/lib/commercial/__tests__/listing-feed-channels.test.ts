@@ -58,7 +58,7 @@ describe('buildListingFeedChannels', () => {
     const statuses = channels.map((channel) => channel.status);
     const rightmove = channels.find((channel) => channel.key === 'rightmove');
 
-    expect(rightmove?.status.label).toBe('Live but Unsynced');
+    expect(rightmove?.status.label).toBe('Pending sync');
     expect(switchedOnChannelsHaveIssue(statuses)).toBe(true);
     expect(channelNeedsRightmoveResync('rightmove', rightmove!.status)).toBe(
       true,

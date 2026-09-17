@@ -183,7 +183,7 @@ describe('getRightmoveChannelStatus', () => {
     expect(status.outOfSync).toBeFalsy();
   });
 
-  it('is Live but Unsynced when last push is older than the listing', () => {
+  it('is Pending sync when last push is older than the listing', () => {
     const status = getRightmoveChannelStatus({
       listing: {
         status: 'marketing',
@@ -200,9 +200,8 @@ describe('getRightmoveChannelStatus', () => {
     });
     expect(status.state).toBe('live');
     expect(status.outOfSync).toBe(true);
-    expect(status.label).toBe('Live but Unsynced');
-    expect(status.detail).toMatch(/Behind the latest/);
-    expect(status.detail).toMatch(/shortly/);
+    expect(status.label).toBe('Pending sync');
+    expect(status.detail).toMatch(/Updates will sync shortly/);
     expect(channelNeedsRightmoveResync('rightmove', status)).toBe(true);
   });
 
@@ -221,7 +220,7 @@ describe('getRightmoveChannelStatus', () => {
     expect(status.outOfSync).toBe(false);
   });
 
-  it('is Live but Unsynced when last push is older than new media', () => {
+  it('is Pending sync when last push is older than new media', () => {
     const status = getRightmoveChannelStatus({
       listing: { status: 'marketing' },
       publications: [
@@ -234,7 +233,7 @@ describe('getRightmoveChannelStatus', () => {
       mediaCreatedAt: ['2026-09-15T10:00:00.000Z'],
     });
     expect(status.outOfSync).toBe(true);
-    expect(status.label).toBe('Live but Unsynced');
+    expect(status.label).toBe('Pending sync');
   });
 
   it('stays Live when last sync is after listing and media updates', () => {

@@ -37,6 +37,18 @@ describe('resolveRightmoveLiveSyncAction', () => {
         listingStatus: 'marketing',
       }),
     ).toBe('skip');
+    expect(
+      resolveRightmoveLiveSyncAction({
+        publicationStatus: 'unpublished',
+        listingStatus: 'marketing',
+      }),
+    ).toBe('skip');
+    expect(
+      resolveRightmoveLiveSyncAction({
+        publicationStatus: 'draft',
+        listingStatus: 'marketing',
+      }),
+    ).toBe('skip');
   });
 
   it('enqueues live Marketing / Under offer updates instead of an immediate PUT', () => {
