@@ -86,23 +86,15 @@ describe('campaign list preferences', () => {
     ).resolves.toEqual(new Set(['dana@example.com']));
   });
 
-  it('only returns public lists and hides private membership', async () => {
+  it('marks a manual list subscribed only when this contact is a member', async () => {
     const { client } = createClient({
       lists: [
         { id: LIST_ID, name: 'News', source: 'manual' },
-        { id: PRIVATE_ID, name: 'Investors', source: 'logic' },
+        { id: PRIVATE_ID, name: 'Investors', source: 'subscribers' },
       ],
       optOuts: [],
-      members: [
-        {
-          list_id: LIST_ID,
-          contacts: { email: 'dana@example.com' },
-        },
-        {
-          list_id: PRIVATE_ID,
-          contacts: { email: 'other@example.com' },
-        },
-      ],
+      contacts: [{ id: 'contact-1' }],
+      members: [{ list_id: LIST_ID }],
     });
 
     await expect(

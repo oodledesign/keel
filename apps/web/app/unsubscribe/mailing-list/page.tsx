@@ -69,6 +69,12 @@ export default async function MailingListUnsubscribePage({
         result = await unsubscribeMailingListPublicPreference(admin, token);
         if (!result) {
           errorKind = 'invalid';
+        } else {
+          publicLists = await loadMailingListPublicLists(
+            admin,
+            result.accountId,
+            result.email,
+          );
         }
       }
     }
@@ -80,11 +86,6 @@ export default async function MailingListUnsubscribePage({
       workspaceName = await loadWorkspaceNameForPreference(
         admin,
         result.accountId,
-      );
-      publicLists = await loadMailingListPublicLists(
-        admin,
-        result.accountId,
-        result.email,
       );
     }
   } catch {

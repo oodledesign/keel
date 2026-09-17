@@ -75,39 +75,34 @@ export async function listPublicAudiencePreferences(
 
   const listIds = lists.map((list) => list.id);
 
-  const [
-    { data: optOuts, error: optOutError },
-    { data: members, error: memberError },
-  ] = await Promise.all([
+  const contactIds = await findContactIdsByEmail(client, accountId, normalized);
+
+  const [{ data: optOuts, error: optOutError }, members] = await Promise.all([
     fromTable(client, 'campaign_audience_list_opt_outs')
       .select('list_id')
       .eq('account_id', accountId)
       .eq('email', normalized)
       .in('list_id', listIds),
-    fromTable(client, 'campaign_audience_list_members')
-      .select('list_id, contacts ( email )')
-      .eq('account_id', accountId)
-      .in('list_id', listIds),
+    contactIds.length === 0
+      ? Promise.resolve({ data: [] as Array<{ list_id: string }>, error: null })
+      : fromTable(client, 'campaign_audience_list_members')
+          .select('list_id')
+          .eq('account_id', accountId)
+          .in('list_id', listIds)
+          .in('contact_id', contactIds),
   ]);
 
   if (optOutError) throw new Error(optOutError.message);
-  if (memberError) throw new Error(memberError.message);
+  if (members.error) throw new Error(members.error.message);
 
   const optedOut = new Set(
     ((optOuts ?? []) as Array<{ list_id: string }>).map((row) => row.list_id),
   );
-  const memberListIds = new Set<string>();
-  for (const row of (members ?? []) as Array<Record<string, unknown>>) {
-    const contact = (
-      Array.isArray(row.contacts) ? row.contacts[0] : row.contacts
-    ) as { email?: string | null } | null;
-    const memberEmail = contact?.email
-      ? normalizeCirculationEmail(contact.email)
-      : '';
-    if (memberEmail === normalized) {
-      memberListIds.add(String(row.list_id));
-    }
-  }
+  const memberListIds = new Set(
+    ((members.data ?? []) as Array<{ list_id: string }>).map((row) =>
+      String(row.list_id),
+    ),
+  );
 
   return lists.map((list) => {
     const left = optedOut.has(list.id);
@@ -292,6 +287,7 @@ async function addManualListMemberByEmail(input: {
     if (error || !data) {
       throw new Error(error?.message ?? 'Could not save contact');
     }
+    // Public opt-in is scoped to the token email — never invent another address.
     contactId = String((data as { id: string }).id);
   }
 

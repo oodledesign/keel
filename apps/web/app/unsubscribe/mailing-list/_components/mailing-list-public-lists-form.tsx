@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 import { Switch } from '@kit/ui/switch';
 
@@ -24,9 +24,15 @@ export function MailingListPublicListsForm({
   showUnsubscribeAll: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="mt-8 space-y-4 text-left">
+      {error ? (
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          {error}
+        </p>
+      ) : null}
       <ul className="space-y-3">
         {lists.map((list) => (
           <li
@@ -41,11 +47,18 @@ export function MailingListPublicListsForm({
               disabled={!canManage || pending}
               onCheckedChange={(next) => {
                 startTransition(async () => {
-                  await setMailingListPublicListAction({
-                    token,
-                    listId: list.id,
-                    subscribed: next,
-                  });
+                  setError(null);
+                  try {
+                    await setMailingListPublicListAction({
+                      token,
+                      listId: list.id,
+                      subscribed: next,
+                    });
+                  } catch {
+                    setError(
+                      'We could not update your email preference. Please try again.',
+                    );
+                  }
                 });
               }}
               aria-label={

@@ -7,7 +7,7 @@ COMMENT ON COLUMN public.campaign_audience_lists.is_public IS
   'When true, the list appears on the public subscriber preference page so contacts can opt in or out.';
 
 CREATE INDEX IF NOT EXISTS ix_campaign_audience_lists_public
-  ON public.campaign_audience_lists (account_id, created_at DESC)
+  ON public.campaign_audience_lists (account_id, name)
   WHERE is_public;
 
 CREATE TABLE IF NOT EXISTS public.campaign_audience_list_opt_outs (
