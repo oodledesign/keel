@@ -85,7 +85,7 @@ function notificationIcon(notification: Notification): {
   if (
     body.includes('email thread') ||
     body.includes('needs a reply') ||
-    (body.includes('still need attention') and body.includes('email'))
+    (body.includes('still need attention') && body.includes('email'))
   ) {
     return {
       Icon: Mail,
