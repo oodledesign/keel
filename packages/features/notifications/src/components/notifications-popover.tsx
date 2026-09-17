@@ -5,10 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Banknote,
   Bell,
+  Captions,
   CheckCircle2,
   CircleAlert,
   Info,
+  ListTodo,
   type LucideIcon,
+  Mail,
   TriangleAlert,
   XIcon,
 } from 'lucide-react';
@@ -62,6 +65,31 @@ function notificationIcon(notification: Notification): {
     return {
       Icon: CheckCircle2,
       className: 'h-4 w-4 shrink-0 text-emerald-600',
+    };
+  }
+
+  if (body.includes('meeting transcript synced')) {
+    return {
+      Icon: Captions,
+      className: 'h-4 w-4 shrink-0 text-violet-600',
+    };
+  }
+
+  if (body.includes('ready for review')) {
+    return {
+      Icon: ListTodo,
+      className: 'h-4 w-4 shrink-0 text-[var(--ozer-accent)]',
+    };
+  }
+
+  if (
+    body.includes('email thread') ||
+    body.includes('needs a reply') ||
+    (body.includes('still need attention') and body.includes('email'))
+  ) {
+    return {
+      Icon: Mail,
+      className: 'h-4 w-4 shrink-0 text-sky-600',
     };
   }
 
