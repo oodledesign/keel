@@ -328,6 +328,17 @@ export type CommercialListing = {
   matchCount?: number;
   /** Rightmove list-column status when loaded with list sync data. */
   rightmoveSyncStatus?: RightmoveListSyncStatus;
+  /** Website / EACH / Rightmove rows for card feed overview. */
+  feedPublications?: Array<{
+    portal: string;
+    status: string;
+    lastError?: string | null;
+    externalId?: string | null;
+    externalUrl?: string | null;
+    lastSyncAt?: string | null;
+  }>;
+  /** Public media timestamps used for Rightmove stale-sync on cards. */
+  feedMediaCreatedAt?: string[];
 };
 
 export type ListingMemberOption = {
@@ -1295,6 +1306,8 @@ async function attachMatchCounts(
   });
 }
 
+const LIST_FEED_PORTALS = ['rightmove', 'property_hive', 'each'] as const;
+
 async function attachRightmoveSyncStatuses(
   client: SupabaseClient,
   accountId: string,
@@ -1308,10 +1321,10 @@ async function attachRightmoveSyncStatuses(
       client
         .from('commercial_portal_publications')
         .select(
-          'listing_id, status, external_id, external_url, last_sync_at, last_error',
+          'listing_id, portal, status, external_id, external_url, last_sync_at, last_error',
         )
         .eq('account_id', accountId)
-        .eq('portal', 'rightmove')
+        .in('portal', [...LIST_FEED_PORTALS])
         .in('listing_id', listingIds),
       client
         .from('commercial_listing_media')
@@ -1332,12 +1345,23 @@ async function attachRightmoveSyncStatuses(
     );
   }
 
-  const pubByListing = new Map(
-    ((pubs ?? []) as Array<Record<string, unknown>>).map((row) => [
-      String(row.listing_id),
-      row,
-    ]),
-  );
+  const pubsByListing = new Map<
+    string,
+    NonNullable<CommercialListing['feedPublications']>
+  >();
+  for (const row of (pubs ?? []) as Array<Record<string, unknown>>) {
+    const listingId = String(row.listing_id);
+    const current = pubsByListing.get(listingId) ?? [];
+    current.push({
+      portal: String(row.portal ?? ''),
+      status: String(row.status ?? ''),
+      lastError: (row.last_error as string | null) ?? null,
+      externalId: (row.external_id as string | null) ?? null,
+      externalUrl: (row.external_url as string | null) ?? null,
+      lastSyncAt: (row.last_sync_at as string | null) ?? null,
+    });
+    pubsByListing.set(listingId, current);
+  }
   const mediaByListing = new Map<string, string[]>();
   for (const row of (media ?? []) as Array<Record<string, unknown>>) {
     const listingId = String(row.listing_id);
@@ -1350,18 +1374,22 @@ async function attachRightmoveSyncStatuses(
   }
 
   return listings.map((listing) => {
-    const pub = pubByListing.get(listing.id);
+    const feedPublications = pubsByListing.get(listing.id) ?? [];
+    const feedMediaCreatedAt = mediaByListing.get(listing.id) ?? [];
+    const pub = feedPublications.find((row) => row.portal === 'rightmove');
     return {
       ...listing,
+      feedPublications,
+      feedMediaCreatedAt,
       rightmoveSyncStatus: resolveRightmoveListSyncStatus({
         listingStatus: listing.status,
         listingUpdatedAt: listing.updatedAt,
         rightmoveStatus: pub ? String(pub.status ?? '') : 'none',
-        lastSyncAt: (pub?.last_sync_at as string | null) ?? null,
-        lastError: (pub?.last_error as string | null) ?? null,
-        externalId: (pub?.external_id as string | null) ?? null,
-        externalUrl: (pub?.external_url as string | null) ?? null,
-        mediaCreatedAt: mediaByListing.get(listing.id) ?? [],
+        lastSyncAt: pub?.lastSyncAt ?? null,
+        lastError: pub?.lastError ?? null,
+        externalId: pub?.externalId ?? null,
+        externalUrl: pub?.externalUrl ?? null,
+        mediaCreatedAt: feedMediaCreatedAt,
       }),
     };
   });
@@ -1381,6 +1409,8 @@ function mergeListingEnrichment(
     actingAgents: agents[index]?.actingAgents ?? [],
     coAgents: coAgents[index]?.coAgents ?? [],
     rightmoveSyncStatus: rightmove[index]?.rightmoveSyncStatus,
+    feedPublications: rightmove[index]?.feedPublications,
+    feedMediaCreatedAt: rightmove[index]?.feedMediaCreatedAt,
   }));
 }
 

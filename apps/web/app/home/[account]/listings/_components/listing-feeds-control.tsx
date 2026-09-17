@@ -20,7 +20,7 @@ import type { ListingFeedChannel } from '~/lib/commercial/listing-feed-channels'
 
 import { republishRightmoveListingAction } from '../../commercial-publishing/_lib/server/server-actions';
 import { useDisposalAccess } from './disposal-access-context';
-import { ChannelStatusPill } from './listing-channel-status-pill';
+import { ListingFeedsOverview } from './listing-feeds-overview';
 
 export function ListingFeedsControl({
   channels,
@@ -104,22 +104,7 @@ export function ListingFeedsControl({
         className="w-80 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 text-[var(--workspace-shell-text)]"
         data-test="listing-feeds-popover"
       >
-        <p className="mb-2 text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-          Feeds
-        </p>
-        <ul className="flex flex-wrap gap-2">
-          {channels.map((channel) => (
-            <li
-              key={channel.key}
-              data-test={`listing-feeds-row-${channel.key}`}
-            >
-              <ChannelStatusPill
-                label={channel.label}
-                status={channel.status}
-              />
-            </li>
-          ))}
-        </ul>
+        <ListingFeedsOverview channels={channels} />
         {needsRightmoveResync ? (
           <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
             Updates will sync shortly.
