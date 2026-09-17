@@ -43,6 +43,7 @@ export const SaveAudienceListSchema = z.object({
   name: z.string().trim().min(1).max(120),
   filters: AudienceListFiltersSchema,
   contactIds: z.array(z.string().uuid()).max(5000).optional(),
+  isPublic: z.boolean().optional().default(false),
 });
 
 export const DeleteAudienceListSchema = z.object({

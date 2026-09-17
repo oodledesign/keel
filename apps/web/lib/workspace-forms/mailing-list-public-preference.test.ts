@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PUBLIC_MAILING_PREFERENCE_UPDATE_FAILED,
   resubscribeMailingListPublicPreference,
+  setMailingListPublicListPreference,
   unsubscribeMailingListPublicPreference,
 } from './mailing-list-public-preference';
 
+const lookupWorkspaceMailingListByToken = vi.fn();
 const unsubscribeWorkspaceMailingListByToken = vi.fn();
 const resubscribeWorkspaceMailingListByToken = vi.fn();
 const unsubscribeCampaignRecipientByToken = vi.fn();
@@ -13,9 +15,22 @@ const resubscribeCampaignRecipientByToken = vi.fn();
 const markCampaignRecipientsUnsubscribed = vi.fn();
 const circulationUnsubscribe = vi.fn();
 const circulationResubscribe = vi.fn();
+const leaveAllPublicAudienceLists = vi.fn();
+const listPublicAudiencePreferences = vi.fn();
+const setPublicAudienceListSubscription = vi.fn();
+
+vi.mock('~/lib/campaigns/campaign-list-preferences', () => ({
+  leaveAllPublicAudienceLists: (...args: unknown[]) =>
+    leaveAllPublicAudienceLists(...args),
+  listPublicAudiencePreferences: (...args: unknown[]) =>
+    listPublicAudiencePreferences(...args),
+  setPublicAudienceListSubscription: (...args: unknown[]) =>
+    setPublicAudienceListSubscription(...args),
+}));
 
 vi.mock('./workspace-mailing-list', () => ({
-  lookupWorkspaceMailingListByToken: vi.fn(),
+  lookupWorkspaceMailingListByToken: (...args: unknown[]) =>
+    lookupWorkspaceMailingListByToken(...args),
   unsubscribeWorkspaceMailingListByToken: (...args: unknown[]) =>
     unsubscribeWorkspaceMailingListByToken(...args),
   resubscribeWorkspaceMailingListByToken: (...args: unknown[]) =>
@@ -63,6 +78,10 @@ describe('mailing list public preference', () => {
     circulationUnsubscribe.mockResolvedValue(undefined);
     circulationResubscribe.mockResolvedValue(undefined);
     scheduleDynamicsMailingListSync.mockResolvedValue({ enqueued: true });
+    leaveAllPublicAudienceLists.mockResolvedValue(undefined);
+    listPublicAudiencePreferences.mockResolvedValue([]);
+    setPublicAudienceListSubscription.mockResolvedValue(null);
+    lookupWorkspaceMailingListByToken.mockResolvedValue(null);
   });
 
   it('maps preference write failures to a calm public error', async () => {
@@ -106,6 +125,11 @@ describe('mailing list public preference', () => {
       marketingStatus: 'unsubscribed',
     });
 
+    expect(leaveAllPublicAudienceLists).toHaveBeenCalledWith(
+      admin,
+      ACCOUNT_ID,
+      EMAIL,
+    );
     expect(circulationUnsubscribe).toHaveBeenCalledWith(ACCOUNT_ID, EMAIL);
     expect(markCampaignRecipientsUnsubscribed).toHaveBeenCalledWith(
       admin,
@@ -169,9 +193,90 @@ describe('mailing list public preference', () => {
       resubscribeMailingListPublicPreference(admin, TOKEN),
     ).resolves.toMatchObject({ marketingStatus: 'suppressed' });
 
+    expect(leaveAllPublicAudienceLists).toHaveBeenCalledWith(
+      admin,
+      ACCOUNT_ID,
+      EMAIL,
+    );
     expect(circulationUnsubscribe).not.toHaveBeenCalled();
     expect(circulationResubscribe).not.toHaveBeenCalled();
     expect(markCampaignRecipientsUnsubscribed).not.toHaveBeenCalled();
     expect(scheduleDynamicsMailingListSync).not.toHaveBeenCalled();
+  });
+
+  it('opts into a public list and resubscribes marketing when needed', async () => {
+    const listId = '22222222-2222-4222-8222-222222222222';
+    lookupWorkspaceMailingListByToken.mockResolvedValue({
+      email: EMAIL,
+      accountId: ACCOUNT_ID,
+      marketingStatus: 'unsubscribed',
+    });
+    setPublicAudienceListSubscription.mockResolvedValue({
+      id: listId,
+      name: 'News',
+      subscribed: true,
+    });
+    resubscribeWorkspaceMailingListByToken.mockResolvedValue({
+      email: EMAIL,
+      accountId: ACCOUNT_ID,
+      marketingStatus: 'subscribed',
+    });
+
+    await expect(
+      setMailingListPublicListPreference(admin, TOKEN, listId, true),
+    ).resolves.toMatchObject({ marketingStatus: 'subscribed' });
+
+    expect(setPublicAudienceListSubscription).toHaveBeenCalledWith({
+      client: admin,
+      accountId: ACCOUNT_ID,
+      email: EMAIL,
+      listId,
+      subscribed: true,
+    });
+    expect(resubscribeWorkspaceMailingListByToken).toHaveBeenCalled();
+  });
+
+  it('does not clear a suppression when opting into a public list', async () => {
+    const listId = '22222222-2222-4222-8222-222222222222';
+    lookupWorkspaceMailingListByToken.mockResolvedValue({
+      email: EMAIL,
+      accountId: ACCOUNT_ID,
+      marketingStatus: 'suppressed',
+    });
+
+    await expect(
+      setMailingListPublicListPreference(admin, TOKEN, listId, true),
+    ).resolves.toMatchObject({ marketingStatus: 'suppressed' });
+
+    expect(setPublicAudienceListSubscription).not.toHaveBeenCalled();
+    expect(resubscribeWorkspaceMailingListByToken).not.toHaveBeenCalled();
+  });
+
+  it('leaves a public list without changing marketing when already subscribed', async () => {
+    const listId = '22222222-2222-4222-8222-222222222222';
+    lookupWorkspaceMailingListByToken.mockResolvedValue({
+      email: EMAIL,
+      accountId: ACCOUNT_ID,
+      marketingStatus: 'subscribed',
+    });
+    setPublicAudienceListSubscription.mockResolvedValue({
+      id: listId,
+      name: 'News',
+      subscribed: false,
+    });
+
+    await expect(
+      setMailingListPublicListPreference(admin, TOKEN, listId, false),
+    ).resolves.toMatchObject({ marketingStatus: 'subscribed' });
+
+    expect(setPublicAudienceListSubscription).toHaveBeenCalledWith({
+      client: admin,
+      accountId: ACCOUNT_ID,
+      email: EMAIL,
+      listId,
+      subscribed: false,
+    });
+    expect(resubscribeWorkspaceMailingListByToken).not.toHaveBeenCalled();
+    expect(unsubscribeWorkspaceMailingListByToken).not.toHaveBeenCalled();
   });
 });

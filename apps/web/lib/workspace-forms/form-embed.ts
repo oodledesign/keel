@@ -39,44 +39,70 @@ export function buildInlineIframeSnippet(listingUrl: string): string {
   return `<iframe src="${listingUrl}" title="Enquiry form" style="width:100%;min-height:720px;border:0;"></iframe>`;
 }
 
+function listingAttr(bind: FormEmbedListingBind): string {
+  return bind.bindsListing
+    ? ` data-listing="${bind.listingId || 'LISTING_ID'}"`
+    : '';
+}
+
+function appendListingSrcExpr(baseExpr: string): string {
+  return `${baseExpr}+(listing?(${baseExpr}.indexOf('?')>=0?'&':'?')+'listing='+encodeURIComponent(listing):'')`;
+}
+
+export function buildInlineHostSnippet(input: {
+  shareToken: string;
+  bind: FormEmbedListingBind;
+}): string {
+  return `<div data-ozer-form="${input.shareToken}"${listingAttr(input.bind)}></div>`;
+}
+
+function buildInlineRuntimeScript(input: {
+  shareToken: string;
+  publicUrl: string;
+}): string {
+  const { shareToken, publicUrl } = input;
+  return [
+    `(function(){`,
+    `  var token=${JSON.stringify(shareToken)};`,
+    `  var key='__ozerFormInline_'+token;`,
+    `  var base=${JSON.stringify(publicUrl)};`,
+    `  function mount(){`,
+    `    document.querySelectorAll('[data-ozer-form="'+token+'"]').forEach(function(el){`,
+    `      if(el.getAttribute('data-ozer-form-mounted')==='1'||el.querySelector('iframe')) return;`,
+    `      el.setAttribute('data-ozer-form-mounted','1');`,
+    `      var listing=el.getAttribute('data-listing')||'';`,
+    `      var iframe=document.createElement('iframe');`,
+    `      iframe.src=${appendListingSrcExpr('base')};`,
+    `      iframe.style='width:100%;min-height:720px;border:0;';`,
+    `      iframe.title='Enquiry form';`,
+    `      el.appendChild(iframe);`,
+    `    });`,
+    `  }`,
+    `  if(window[key]){ mount(); return; }`,
+    `  window[key]=true;`,
+    `  mount();`,
+    `})();`,
+  ].join('\n');
+}
+
 export function buildInlineScriptSnippet(input: {
   shareToken: string;
   publicUrl: string;
   bind: FormEmbedListingBind;
 }): string {
-  const { shareToken, publicUrl, bind } = input;
   return [
-    `<div data-ozer-form="${shareToken}"${
-      bind.bindsListing
-        ? ` data-listing="${bind.listingId || 'LISTING_ID'}"`
-        : ''
-    }></div>`,
+    buildInlineHostSnippet(input),
     `<script>`,
-    `(function(){`,
-    `  var el=document.querySelector('[data-ozer-form="${shareToken}"]');`,
-    `  if(!el||el.querySelector('iframe')) return;`,
-    `  var listing=el.getAttribute('data-listing')||'';`,
-    `  var iframe=document.createElement('iframe');`,
-    `  iframe.src='${publicUrl}'+(listing?'?listing='+encodeURIComponent(listing):'');`,
-    `  iframe.style='width:100%;min-height:720px;border:0;';`,
-    `  iframe.title='Enquiry form';`,
-    `  el.appendChild(iframe);`,
-    `})();`,
+    buildInlineRuntimeScript(input),
     `</script>`,
   ].join('\n');
 }
 
-export function buildPopupEmbedSnippet(input: {
+function buildPopupRuntimeScript(input: {
   shareToken: string;
   publicUrl: string;
-  bind: FormEmbedListingBind;
-  buttonLabel?: string;
 }): string {
-  const { shareToken, publicUrl, bind } = input;
-  const buttonLabel = input.buttonLabel?.trim() || 'Open form';
-  const listingAttr = bind.bindsListing
-    ? ` data-listing="${bind.listingId || 'LISTING_ID'}"`
-    : '';
+  const { shareToken, publicUrl } = input;
   const embedSrc = formEmbedUrl(
     publicUrl,
     { bindsListing: false, listingId: null },
@@ -84,10 +110,9 @@ export function buildPopupEmbedSnippet(input: {
   );
 
   return [
-    `<button type="button" data-ozer-form-popup="${shareToken}"${listingAttr}>${buttonLabel}</button>`,
-    `<script>`,
     `(function(){`,
     `  var token=${JSON.stringify(shareToken)};`,
+    `  var key='__ozerFormPopup_'+token;`,
     `  var base=${JSON.stringify(embedSrc)};`,
     `  function close(){`,
     `    var overlay=document.querySelector('[data-ozer-form-overlay="'+token+'"]');`,
@@ -95,11 +120,10 @@ export function buildPopupEmbedSnippet(input: {
     `    document.removeEventListener('keydown', onKey);`,
     `  }`,
     `  function onKey(e){ if(e.key==='Escape') close(); }`,
-    `  function open(){`,
+    `  function open(trigger){`,
     `    if(document.querySelector('[data-ozer-form-overlay="'+token+'"]')) return;`,
-    `    var trigger=document.querySelector('[data-ozer-form-popup="'+token+'"]');`,
     `    var listing=(trigger && trigger.getAttribute('data-listing'))||'';`,
-    `    var src=base+(listing?(base.indexOf('?')>=0?'&':'?')+'listing='+encodeURIComponent(listing):'');`,
+    `    var src=${appendListingSrcExpr('base')};`,
     `    var overlay=document.createElement('div');`,
     `    overlay.setAttribute('data-ozer-form-overlay', token);`,
     `    overlay.setAttribute('style','position:fixed;inset:0;z-index:2147483646;background:rgba(42,23,32,.55);display:flex;align-items:center;justify-content:center;padding:24px;');`,
@@ -122,14 +146,45 @@ export function buildPopupEmbedSnippet(input: {
     `    document.body.appendChild(overlay);`,
     `    document.addEventListener('keydown', onKey);`,
     `  }`,
-    `  document.querySelectorAll('[data-ozer-form-popup="'+token+'"]').forEach(function(el){`,
-    `    if(el.getAttribute('data-ozer-form-bound')==='1') return;`,
-    `    el.setAttribute('data-ozer-form-bound','1');`,
-    `    el.addEventListener('click', open);`,
-    `  });`,
+    `  function bindAll(){`,
+    `    document.querySelectorAll('[data-ozer-form-popup="'+token+'"]').forEach(function(el){`,
+    `      if(el.getAttribute('data-ozer-form-bound')==='1') return;`,
+    `      el.setAttribute('data-ozer-form-bound','1');`,
+    `      el.addEventListener('click', function(){ open(el); });`,
+    `    });`,
+    `  }`,
+    `  if(window[key]){ bindAll(); return; }`,
+    `  window[key]=true;`,
+    `  bindAll();`,
     `})();`,
-    `</script>`,
   ].join('\n');
+}
+
+export function buildPopupTriggerSnippet(input: {
+  shareToken: string;
+  bind: FormEmbedListingBind;
+  buttonLabel?: string;
+}): string {
+  const buttonLabel = input.buttonLabel?.trim() || 'Open form';
+  return `<button type="button" data-ozer-form-popup="${input.shareToken}"${listingAttr(input.bind)}>${buttonLabel}</button>`;
+}
+
+export function buildPopupScriptSnippet(input: {
+  shareToken: string;
+  publicUrl: string;
+}): string {
+  return [`<script>`, buildPopupRuntimeScript(input), `</script>`].join('\n');
+}
+
+export function buildPopupEmbedSnippet(input: {
+  shareToken: string;
+  publicUrl: string;
+  bind: FormEmbedListingBind;
+  buttonLabel?: string;
+}): string {
+  return [buildPopupTriggerSnippet(input), buildPopupScriptSnippet(input)].join(
+    '\n',
+  );
 }
 
 export function buildPropertyHiveSnippet(publicUrl: string): string {

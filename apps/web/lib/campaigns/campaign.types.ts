@@ -124,6 +124,7 @@ export type CampaignAudienceList = {
   source: 'subscribers' | 'clients' | 'contacts' | 'manual';
   matchMode: 'all' | 'any';
   filters: unknown;
+  isPublic: boolean;
   memberCount?: number;
   createdAt: string;
   updatedAt: string;

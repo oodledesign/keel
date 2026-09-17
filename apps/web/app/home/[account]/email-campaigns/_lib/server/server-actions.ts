@@ -318,6 +318,7 @@ export const saveAudienceListAction = enhanceAction(
           listId: data.listId,
           name: data.name,
           filters: data.filters,
+          isPublic: data.isPublic,
         })
       : await service.create({
           accountId: data.accountId,
@@ -325,6 +326,7 @@ export const saveAudienceListAction = enhanceAction(
           name: data.name,
           filters: data.filters,
           contactIds: data.contactIds,
+          isPublic: data.isPublic,
         });
     if (data.listId && data.filters.source === 'manual' && data.contactIds) {
       await service.replaceMembers({

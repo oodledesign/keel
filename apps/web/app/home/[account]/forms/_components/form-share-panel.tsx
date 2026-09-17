@@ -19,9 +19,12 @@ import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  buildInlineHostSnippet,
   buildInlineIframeSnippet,
   buildInlineScriptSnippet,
   buildPopupEmbedSnippet,
+  buildPopupScriptSnippet,
+  buildPopupTriggerSnippet,
   buildPropertyHiveSnippet,
   formUrlWithListing,
   publicFormPath,
@@ -86,6 +89,10 @@ export function FormSharePanel({
       }),
     [bind, publicUrl, shareToken],
   );
+  const extraHostSnippet = useMemo(
+    () => buildInlineHostSnippet({ shareToken, bind }),
+    [bind, shareToken],
+  );
   const popupSnippet = useMemo(
     () =>
       buildPopupEmbedSnippet({
@@ -94,6 +101,23 @@ export function FormSharePanel({
         bind,
       }),
     [bind, publicUrl, shareToken],
+  );
+  const popupScriptSnippet = useMemo(
+    () =>
+      buildPopupScriptSnippet({
+        shareToken,
+        publicUrl,
+      }),
+    [publicUrl, shareToken],
+  );
+  const extraPopupButtonSnippet = useMemo(
+    () =>
+      buildPopupTriggerSnippet({
+        shareToken,
+        bind,
+        buttonLabel: 'Open form',
+      }),
+    [bind, shareToken],
   );
   const propertyHiveSnippet = useMemo(
     () => buildPropertyHiveSnippet(publicUrl),
@@ -219,13 +243,17 @@ export function FormSharePanel({
           if (!next) setEmbedKind(null);
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl">
           {embedKind === 'inline' ? (
             <>
               <DialogHeader>
                 <DialogTitle>Inline embed</DialogTitle>
                 <DialogDescription>
-                  Paste either snippet where the form should appear on the page.
+                  Include the script once. Every{' '}
+                  <code className="text-xs">
+                    data-ozer-form=&quot;{shareToken}&quot;
+                  </code>{' '}
+                  host on the page gets an iframe, including a second paste.
                 </DialogDescription>
               </DialogHeader>
               <SnippetBlock
@@ -240,6 +268,12 @@ export function FormSharePanel({
                 rows={8}
                 copyLabel="Script snippet"
               />
+              <SnippetBlock
+                label="Extra host (no script)"
+                value={extraHostSnippet}
+                rows={2}
+                copyLabel="Extra host"
+              />
             </>
           ) : null}
           {embedKind === 'popup' ? (
@@ -247,15 +281,31 @@ export function FormSharePanel({
               <DialogHeader>
                 <DialogTitle>Popup embed</DialogTitle>
                 <DialogDescription>
-                  Paste this on your site. The button opens the form in a modal.
-                  Change the button label if you want.
+                  Include the script once. Any button with{' '}
+                  <code className="text-xs">
+                    data-ozer-form-popup=&quot;{shareToken}&quot;
+                  </code>{' '}
+                  opens the form. Optional{' '}
+                  <code className="text-xs">data-listing</code> on each button.
                 </DialogDescription>
               </DialogHeader>
               <SnippetBlock
-                label="Popup snippet"
+                label="Button + script"
                 value={popupSnippet}
-                rows={12}
+                rows={10}
                 copyLabel="Popup snippet"
+              />
+              <SnippetBlock
+                label="Script only (include once)"
+                value={popupScriptSnippet}
+                rows={8}
+                copyLabel="Popup script"
+              />
+              <SnippetBlock
+                label="Extra button"
+                value={extraPopupButtonSnippet}
+                rows={2}
+                copyLabel="Extra button"
               />
             </>
           ) : null}
