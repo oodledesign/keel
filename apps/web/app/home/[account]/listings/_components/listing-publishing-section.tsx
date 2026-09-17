@@ -15,7 +15,6 @@ import pathsConfig from '~/config/paths.config';
 import { workspacePublishingHref as workspacePublishingPath } from '~/lib/commercial/listing-routes';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
-import type { RightmoveUnsyncedStatusChangeInput } from '~/lib/commercial/rightmove-unsynced-changes';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type {
@@ -45,7 +44,6 @@ export function ListingPublishingSection({
   media = [],
   websitePublicPageUrl = null,
   websiteUrlHealth = null,
-  rightmoveStatusChanges = [],
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
@@ -54,7 +52,6 @@ export function ListingPublishingSection({
   media?: CommercialListingMedia[];
   websitePublicPageUrl?: string | null;
   websiteUrlHealth?: WebsiteUrlHealth | null;
-  rightmoveStatusChanges?: RightmoveUnsyncedStatusChangeInput[];
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const [listing, setListing] = useState(initial);
@@ -101,7 +98,6 @@ export function ListingPublishingSection({
         media={media}
         websitePublicPageUrl={websitePublicPageUrl}
         websiteUrlHealth={websiteUrlHealth}
-        rightmoveStatusChanges={rightmoveStatusChanges}
       />
 
       <Card id="brochure" className={`${workspacePanelCard} scroll-mt-36`}>

@@ -2,14 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import {
-  getRightmoveChannelStatus,
-  getWebsiteChannelStatus,
-} from '~/lib/commercial/channel-publish-status';
-import { listListingEvents } from '~/lib/commercial/listing-events';
+import { getWebsiteChannelStatus } from '~/lib/commercial/channel-publish-status';
 import { LISTING_URL_TEMPLATE_META_KEY } from '~/lib/commercial/listing-website-url';
 import { loadWebsiteChannelUrlState } from '~/lib/commercial/listing-website-url-resolve.server';
-import { statusChangesFromListingEvents } from '~/lib/commercial/rightmove-unsynced-changes';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -64,21 +59,8 @@ async function ListingPublishingPage({ params }: PageProps) {
       },
       publications,
     }).state === 'live';
-  const rightmoveIsUnsynced = Boolean(
-    getRightmoveChannelStatus({
-      listing: {
-        status: listing.status,
-        name: listing.name,
-        postcode: listing.postcode,
-        addressLine1: listing.addressLine1,
-        updatedAt: listing.updatedAt,
-      },
-      publications,
-      mediaCreatedAt: media.map((item) => item.createdAt),
-    }).outOfSync,
-  );
 
-  const [websiteUrlState, mediaWithUrls, listingEvents] = await Promise.all([
+  const [websiteUrlState, mediaWithUrls] = await Promise.all([
     loadWebsiteChannelUrlState({
       accountId,
       listingId,
@@ -96,15 +78,7 @@ async function ListingPublishingPage({ params }: PageProps) {
       websiteIsLive,
     }),
     service.withSignedMediaUrls(media),
-    rightmoveIsUnsynced
-      ? listListingEvents(client, {
-          accountId,
-          listingId,
-          limit: 50,
-        })
-      : Promise.resolve([]),
   ]);
-  const rightmoveStatusChanges = statusChangesFromListingEvents(listingEvents);
 
   return (
     <ListingPublishingSection
@@ -115,7 +89,6 @@ async function ListingPublishingPage({ params }: PageProps) {
       media={mediaWithUrls}
       websitePublicPageUrl={websiteUrlState.publicPageUrl}
       websiteUrlHealth={websiteUrlState.health}
-      rightmoveStatusChanges={rightmoveStatusChanges}
     />
   );
 }

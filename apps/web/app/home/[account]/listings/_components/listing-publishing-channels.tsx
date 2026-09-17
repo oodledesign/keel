@@ -27,10 +27,6 @@ import {
 import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
-import {
-  type RightmoveUnsyncedStatusChangeInput,
-  describeRightmoveUnsyncedChanges,
-} from '~/lib/commercial/rightmove-unsynced-changes';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import { ensureWebsiteFeedReadyAction } from '../../commercial-publishing/_lib/server/server-actions';
@@ -43,7 +39,6 @@ import { useDisposalAccess } from './disposal-access-context';
 import { ListingChannelEnableDialog } from './listing-channel-enable-dialog';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import { ListingRightmoveFeedToggle } from './listing-rightmove-feed-toggle';
-import { ListingRightmoveWhatsChanged } from './listing-rightmove-whats-changed';
 import { ListingWebsiteFeedToggle } from './listing-website-feed-toggle';
 import { RightmoveListingLinks } from './rightmove-listing-links';
 
@@ -55,7 +50,6 @@ export function ListingPublishingChannels({
   media = [],
   websitePublicPageUrl = null,
   websiteUrlHealth = null,
-  rightmoveStatusChanges = [],
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
@@ -64,7 +58,6 @@ export function ListingPublishingChannels({
   media?: CommercialListingMedia[];
   websitePublicPageUrl?: string | null;
   websiteUrlHealth?: WebsiteUrlHealth | null;
-  rightmoveStatusChanges?: RightmoveUnsyncedStatusChangeInput[];
 }) {
   const router = useRouter();
   const { canEditDisposals } = useDisposalAccess();
@@ -109,17 +102,6 @@ export function ListingPublishingChannels({
     publications,
     mediaCreatedAt: media.map((item) => item.createdAt),
   });
-  const rightmovePublication = publications.find(
-    (publication) => publication.portal === 'rightmove',
-  );
-  const rightmoveUnsyncedChanges = rightmoveStatus.outOfSync
-    ? describeRightmoveUnsyncedChanges({
-        lastSyncAt: rightmovePublication?.lastSyncAt,
-        listingUpdatedAt: listing.updatedAt,
-        media,
-        statusChanges: rightmoveStatusChanges,
-      })
-    : null;
   const readiness = getMarketingReadiness({ listing, media, publications });
   const eachPublication = publications.find(
     (publication) => publication.portal === 'each',
@@ -250,13 +232,6 @@ export function ListingPublishingChannels({
           />
           <ChannelStatusBanner status={rightmoveStatus} />
           <RightmoveListingLinks publications={publications} />
-          {rightmoveUnsyncedChanges ? (
-            <ListingRightmoveWhatsChanged
-              accountId={accountId}
-              listingId={listing.id}
-              changes={rightmoveUnsyncedChanges}
-            />
-          ) : null}
         </ChannelRow>
       </CardContent>
 
