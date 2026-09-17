@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { fetchPlanningFloodZones } from './client';
+import { floodBbox } from './parse';
 import { EA_FLOOD_ZONES_COLLECTION } from './types';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -48,11 +49,11 @@ describe('fetchPlanningFloodZones', () => {
     expect(assessment.band).toBe('high');
     expect(assessment.coverage).toBe('england');
     expect(assessment.summary).toMatch(/Zone 3/);
-    expect(
-      fetchMock.mock.calls.some((call) =>
-        String(call[0]).includes(EA_FLOOD_ZONES_COLLECTION),
-      ),
-    ).toBe(true);
+    const zoneUrl = fetchMock.mock.calls
+      .map((call) => String(call[0]))
+      .find((url) => url.includes(EA_FLOOD_ZONES_COLLECTION));
+    expect(zoneUrl).toContain(`bbox=${floodBbox(-1.0819, 53.9615)}`);
+    expect(zoneUrl).not.toContain('%2C');
   });
 
   it('returns Zone 1 when England has no Zone 2 or 3 polygon', async () => {

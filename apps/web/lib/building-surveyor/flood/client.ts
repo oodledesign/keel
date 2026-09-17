@@ -14,6 +14,7 @@ import {
   EA_FLOOD_MONITORING_BASE_URL,
   EA_FLOOD_ZONES_COLLECTION,
   EA_FLOOD_ZONES_OGC_BASE_URL,
+  ENGLAND_COUNTRY,
   FloodApiError,
   type FloodAssessment,
   type FloodCoordinates,
@@ -32,6 +33,7 @@ type ZoneCacheEntry = {
   payload: unknown;
 };
 
+/** Process-local best-effort cache. Next.js `fetch` revalidate is the durable cache. */
 const zoneQueryCache = new Map<string, ZoneCacheEntry>();
 
 function asFiniteNumber(value: unknown): number | null {
@@ -226,9 +228,10 @@ async function queryPlanningFloodZones(
   }
 
   const bbox = floodBbox(coordinates.longitude, coordinates.latitude);
+  // OGC bbox is comma-separated; do not encode the commas.
   const url = `${EA_FLOOD_ZONES_OGC_BASE_URL}/collections/${encodeURIComponent(
     EA_FLOOD_ZONES_COLLECTION,
-  )}/items?bbox=${encodeURIComponent(bbox)}&limit=50`;
+  )}/items?bbox=${bbox}&limit=50`;
   const payload = await fetchJson(url, { Accept: 'application/geo+json' });
   rememberZoneQuery(key, payload);
   return payload;
@@ -280,7 +283,7 @@ export async function fetchPlanningFloodZones(input: {
     country: isEnglandCountry(coordinates.country)
       ? coordinates.country
       : parsed.highestZone
-        ? 'England'
+        ? ENGLAND_COUNTRY
         : coordinates.country,
     zoneHits: parsed.hits,
     highestIntersectedZone: parsed.highestZone,

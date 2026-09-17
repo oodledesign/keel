@@ -19,6 +19,8 @@ export const FLOOD_PLANNING_ZONE_OPTIONS = [
 
 export type FloodCoverage = 'england' | 'not_england' | 'unknown';
 
+export const ENGLAND_COUNTRY = 'England';
+
 export const FLOOD_RISK_SOURCES = ['placeholder', 'manual', 'gov_uk'] as const;
 
 export type FloodRiskSource = (typeof FLOOD_RISK_SOURCES)[number];

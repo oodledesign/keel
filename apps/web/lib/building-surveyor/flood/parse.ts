@@ -1,6 +1,7 @@
 import {
   EA_FLOOD_ZONES_ATTRIBUTION,
   EA_FLOOD_ZONES_DISCLAIMER,
+  ENGLAND_COUNTRY,
   FLOOD_PLANNING_ZONES,
   FLOOD_PLANNING_ZONE_OPTIONS,
   FLOOD_RISK_BANDS,
@@ -63,7 +64,10 @@ export function normalizeCountryName(
 }
 
 export function isEnglandCountry(country: string | null | undefined): boolean {
-  return normalizeCountryName(country)?.toLowerCase() === 'england';
+  return (
+    normalizeCountryName(country)?.toLowerCase() ===
+    ENGLAND_COUNTRY.toLowerCase()
+  );
 }
 
 export function isNonEnglandUkCountry(
