@@ -10,7 +10,7 @@ import type {
   SurveyEpcRecord,
   SurveyPropertyLookup,
 } from '~/lib/building-surveyor/epc/types';
-import { fetchLongTermFloodRisk } from '~/lib/building-surveyor/flood/client';
+import { fetchPlanningFloodZones } from '~/lib/building-surveyor/flood/client';
 import {
   isFloodRiskBand,
   mapSurveyFloodRow,
@@ -107,7 +107,7 @@ class SurveyPrepService {
       survey_flood_raw_json?: unknown;
     };
 
-    const assessment = await fetchLongTermFloodRisk({
+    const assessment = await fetchPlanningFloodZones({
       latitude: input.latitude,
       longitude: input.longitude,
       postcode:
@@ -154,6 +154,9 @@ class SurveyPrepService {
       fetchedAt,
       overridden: Boolean(keepManual),
       pulledBand: assessment.band,
+      planningZone: assessment.planningZone,
+      coverage: assessment.coverage,
+      country: assessment.country,
       raw,
     };
   }

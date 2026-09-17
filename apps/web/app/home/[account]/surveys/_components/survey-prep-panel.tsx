@@ -17,12 +17,18 @@ import type {
   SurveyPropertyLookup,
 } from '~/lib/building-surveyor/epc/types';
 import {
+  floodPlanningZoneLabel,
   floodRiskBandLabel,
   isFloodRiskBand,
 } from '~/lib/building-surveyor/flood/parse';
 import {
-  FLOOD_RISK_BANDS,
-  GOV_UK_LONG_TERM_FLOOD_URL,
+  EA_FLOOD_ZONES_ATTRIBUTION,
+  EA_FLOOD_ZONES_DATASET_URL,
+  EA_FLOOD_ZONES_DISCLAIMER,
+  EA_SURFACE_WATER_NOTE,
+  FLOOD_PLANNING_ZONE_OPTIONS,
+  GOV_UK_FLOOD_MAP_FOR_PLANNING_URL,
+  OPEN_GOVERNMENT_LICENCE_URL,
   type SurveyFloodRecord,
 } from '~/lib/building-surveyor/flood/types';
 import {
@@ -389,9 +395,9 @@ export function SurveyPrepPanel({
               ) : null}
             </h4>
             <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-              Auto-pulled from the Environment Agency present-day rivers and sea
-              extents (OGC Features, no key) once the address is confirmed.
-              Override if the site inspection differs.
+              Auto-pulled from the Environment Agency Flood Map for Planning
+              zones for England (OGC Features, no key) once the address is
+              confirmed. Override if the site inspection differs.
             </p>
           </div>
           <Droplets className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`} />
@@ -400,7 +406,7 @@ export function SurveyPrepPanel({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div>
             <Label className={`text-xs ${workspaceTextMuted}`}>
-              Long-term band
+              Flood zone
             </Label>
             <select
               className="mt-1 w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
@@ -410,18 +416,25 @@ export function SurveyPrepPanel({
               data-test="survey-flood-band"
             >
               <option value="">—</option>
-              {FLOOD_RISK_BANDS.map((band) => (
-                <option key={band} value={band}>
-                  {floodRiskBandLabel(band)}
+              {FLOOD_PLANNING_ZONE_OPTIONS.map((option) => (
+                <option key={option.band} value={option.band}>
+                  {option.label}
                 </option>
               ))}
+              {floodBand === 'low' ? (
+                <option value="low">{floodRiskBandLabel('low')}</option>
+              ) : null}
             </select>
           </div>
           <div className="flex items-end">
             <p className={`text-sm ${workspaceTextMuted}`}>
-              {flood.pulledBand
-                ? `Register band: ${floodRiskBandLabel(flood.pulledBand)}`
-                : 'Confirm the address to pull a band.'}
+              {flood.coverage === 'not_england'
+                ? `England only — this address is in ${flood.country ?? 'a nation outside England'}.`
+                : flood.planningZone
+                  ? `EA zone: ${floodPlanningZoneLabel(flood.planningZone)}`
+                  : flood.pulledBand
+                    ? `EA zone: ${floodRiskBandLabel(flood.pulledBand)}`
+                    : 'Confirm the address to pull a Flood Map for Planning zone.'}
             </p>
           </div>
           <div className="sm:col-span-2">
@@ -436,14 +449,41 @@ export function SurveyPrepPanel({
           </div>
         </div>
 
+        <p
+          className={`mt-3 text-xs ${workspaceTextMuted}`}
+          data-test="survey-flood-disclaimer"
+        >
+          {EA_FLOOD_ZONES_DISCLAIMER} {EA_SURFACE_WATER_NOTE}
+        </p>
+        <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+          {EA_FLOOD_ZONES_ATTRIBUTION}{' '}
+          <a
+            href={EA_FLOOD_ZONES_DATASET_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]"
+          >
+            Dataset
+          </a>
+          {' · '}
+          <a
+            href={OPEN_GOVERNMENT_LICENCE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]"
+          >
+            OGL v3.0
+          </a>
+        </p>
+
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <a
-            href={GOV_UK_LONG_TERM_FLOOD_URL}
+            href={GOV_UK_FLOOD_MAP_FOR_PLANNING_URL}
             target="_blank"
             rel="noreferrer"
             className="text-xs text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]"
           >
-            Check your long-term flood risk on GOV.UK
+            Flood Map for Planning on GOV.UK
           </a>
           {canEdit ? (
             <div className="flex flex-wrap gap-2">
