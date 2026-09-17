@@ -134,7 +134,15 @@ export async function saveDefaultLandingAction(input: {
       workspaceSlug = slug;
 
       const nextCatalogId = input.catalogId?.trim() || null;
-      const nextParams = input.params ?? {};
+      const nextParams = Object.fromEntries(
+        Object.entries(input.params ?? {}).filter(
+          (entry): entry is [string, string] =>
+            typeof entry[0] === 'string' &&
+            typeof entry[1] === 'string' &&
+            entry[0].length <= 80 &&
+            entry[1].length <= 500,
+        ),
+      );
       if (nextCatalogId) {
         const href = resolveShortcutHref(nextCatalogId, nextParams);
         if (!href || !isWorkspaceLandingHref(href, slug)) {

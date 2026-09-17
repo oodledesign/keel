@@ -532,7 +532,7 @@ export function FormBuilder({
                           }),
                         );
                       } else {
-                        setAudienceListId('');
+                        setAudienceListIds([]);
                       }
                       if (next === 'listing_enquiry') {
                         setFields((current) => ensureListingField(current));

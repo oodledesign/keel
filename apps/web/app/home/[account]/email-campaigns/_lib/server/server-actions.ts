@@ -310,6 +310,7 @@ async function requireGrowthCampaigns(accountId: string) {
   }
 }
 
+/** Every non-manual source (subscribers/clients/contacts) is Growth+. */
 function isLogicAudienceList(filters: { source: string }) {
   return filters.source !== 'manual';
 }

@@ -125,6 +125,10 @@ type FormRow = {
 function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
   const fields = parseFormFields(row.fields);
   const parsedTheme = parseWorkspaceFormTheme(row.theme);
+  const resolvedAudienceListIds = audienceListIdsFromFormInput({
+    audienceListId: row.audience_list_id,
+    audienceListIds: row.audience_list_ids,
+  });
   return {
     id: row.id,
     accountId: row.account_id,
@@ -133,15 +137,8 @@ function mapForm(row: FormRow, submissionCount = 0): WorkspaceFormRecord {
     status: row.status,
     destination: row.destination,
     listingId: row.listing_id,
-    audienceListId:
-      audienceListIdsFromFormInput({
-        audienceListId: row.audience_list_id,
-        audienceListIds: row.audience_list_ids,
-      })[0] ?? null,
-    audienceListIds: audienceListIdsFromFormInput({
-      audienceListId: row.audience_list_id,
-      audienceListIds: row.audience_list_ids,
-    }),
+    audienceListId: resolvedAudienceListIds[0] ?? null,
+    audienceListIds: resolvedAudienceListIds,
     shareToken: row.share_token,
     embedKey: row.embed_key,
     enabled: row.enabled,
