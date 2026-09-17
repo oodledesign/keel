@@ -4,7 +4,11 @@ import {
   channelNeedsRightmoveResync,
   switchedOnChannelsHaveIssue,
 } from '../channel-publish-status';
-import { buildListingFeedChannels } from '../listing-feed-channels';
+import {
+  buildListingFeedChannels,
+  listingCardFeedChannels,
+  listingCardFeedsHaveIssue,
+} from '../listing-feed-channels';
 
 const listing = {
   id: 'listing-1',
@@ -63,5 +67,70 @@ describe('buildListingFeedChannels', () => {
     expect(channelNeedsRightmoveResync('rightmove', rightmove!.status)).toBe(
       true,
     );
+  });
+
+  it('card overview uses Website/EACH/Rightmove and turns orange on issues', () => {
+    const healthy = buildListingFeedChannels({
+      listing,
+      accountSlug: 'bracketts',
+      publications: [
+        { portal: 'property_hive', status: 'published' },
+        { portal: 'each', status: 'published' },
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-16T12:00:00.000Z',
+        },
+      ],
+    });
+    const unsynced = buildListingFeedChannels({
+      listing,
+      accountSlug: 'bracketts',
+      publications: [
+        { portal: 'property_hive', status: 'published' },
+        { portal: 'each', status: 'published' },
+        {
+          portal: 'rightmove',
+          status: 'published',
+          lastSyncAt: '2026-09-15T09:00:00.000Z',
+        },
+      ],
+      mediaCreatedAt: ['2026-09-16T11:00:00.000Z'],
+    });
+    const blockedWebsite = buildListingFeedChannels({
+      listing: { ...listing, externalId: null },
+      accountSlug: 'bracketts',
+      publications: [
+        { portal: 'property_hive', status: 'published' },
+        { portal: 'each', status: 'published' },
+      ],
+    });
+
+    expect(
+      listingCardFeedChannels(healthy).map((channel) => channel.key),
+    ).toEqual(['website', 'each', 'rightmove']);
+    expect(listingCardFeedsHaveIssue(healthy)).toBe(false);
+    expect(listingCardFeedsHaveIssue(unsynced)).toBe(true);
+    expect(listingCardFeedsHaveIssue(blockedWebsite)).toBe(true);
+  });
+
+  it('does not treat circulation blockers as a card feed issue', () => {
+    const channels = buildListingFeedChannels({
+      listing: {
+        ...listing,
+        status: 'draft',
+        autoCirculateMatches: true,
+      },
+      accountSlug: 'bracketts',
+      publications: [
+        { portal: 'property_hive', status: 'unpublished' },
+        { portal: 'each', status: 'unpublished' },
+      ],
+    });
+
+    expect(
+      switchedOnChannelsHaveIssue(channels.map((channel) => channel.status)),
+    ).toBe(true);
+    expect(listingCardFeedsHaveIssue(channels)).toBe(false);
   });
 });

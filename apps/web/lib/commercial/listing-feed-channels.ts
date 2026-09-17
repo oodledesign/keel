@@ -4,6 +4,7 @@ import {
   getEachChannelStatus,
   getRightmoveChannelStatus,
   getWebsiteChannelStatus,
+  switchedOnChannelsHaveIssue,
 } from '~/lib/commercial/channel-publish-status';
 import { listingTabHref } from '~/lib/commercial/listing-routes';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
@@ -118,4 +119,28 @@ export function buildListingFeedChannels(input: {
       }),
     },
   ];
+}
+
+/** Card chrome shows marketing feeds only — not circulation mailouts. */
+export const LISTING_CARD_FEED_KEYS = ['website', 'each', 'rightmove'] as const;
+
+const LISTING_CARD_FEED_KEY_SET: ReadonlySet<string> = new Set(
+  LISTING_CARD_FEED_KEYS,
+);
+
+export function listingCardFeedChannels(
+  channels: ListingFeedChannel[],
+): ListingFeedChannel[] {
+  return channels.filter((channel) =>
+    LISTING_CARD_FEED_KEY_SET.has(channel.key),
+  );
+}
+
+/** Accepts the full feed list; circulation is ignored for card chrome. */
+export function listingCardFeedsHaveIssue(
+  channels: ListingFeedChannel[],
+): boolean {
+  return switchedOnChannelsHaveIssue(
+    listingCardFeedChannels(channels).map((channel) => channel.status),
+  );
 }

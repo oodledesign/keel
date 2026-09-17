@@ -98,6 +98,7 @@ import {
   listListings,
 } from '../_lib/server/server-actions';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
+import { ListingCardFeedsIcon } from './listing-card-feeds-icon';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingPublicPreviewSheet } from './listing-public-preview-sheet';
 import { ListingSectorPills } from './listing-sector-pills';
@@ -1538,14 +1539,10 @@ function ListingCard({
         ) : (
           <Building2 className="h-10 w-10 text-[var(--workspace-shell-text)]/15" />
         )}
-        <div className="absolute top-3 left-3 flex flex-col items-start gap-1">
-          <ListingStatusBadge status={listing.status} className="shadow-sm" />
-          <ListingRightmoveSyncBadge
-            listing={listing}
-            empty="none"
-            className="shadow-sm"
-          />
-        </div>
+        <ListingStatusBadge
+          status={listing.status}
+          className="absolute top-3 left-3 shadow-sm"
+        />
         <span
           className={`absolute top-3 right-3 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm ${DISPOSAL_TYPE_BADGE_CLASS[listing.disposalType]}`}
         >
@@ -1562,8 +1559,13 @@ function ListingCard({
         ) : null}
       </Link>
 
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-2">
+      <CardContent className="relative space-y-3 p-4">
+        <ListingCardFeedsIcon
+          listing={listing}
+          accountSlug={accountSlug}
+          className="absolute top-3 right-3 z-10"
+        />
+        <div className="flex items-start justify-between gap-2 pr-10">
           <div className="min-w-0">
             <Link
               href={href}
