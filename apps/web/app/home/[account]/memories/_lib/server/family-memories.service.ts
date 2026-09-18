@@ -2,11 +2,12 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { HouseholdMemberRow } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
+import { DEFAULT_PERSON_CIRCLE_TIER } from '~/home/(user)/people/_lib/schema/people.schema';
 
 import {
   MEMORY_NOTE_CATEGORY,
   type MemoryKind,
+  birthdayIsoFromParts,
   withMemoryKindTags,
 } from '../memory-constants';
 import type { SaveFamilyMemoryInput } from '../schemas/family-memories.schema';
@@ -50,7 +51,7 @@ export type FamilyMemoryNoteRow = {
 
 export type FamilyMemoryChildLink = {
   note_id: string;
-  household_member_id: string;
+  person_id: string;
 };
 
 export type FamilyMemoryDocRow = {
@@ -61,6 +62,35 @@ export type FamilyMemoryDocRow = {
   file_path: string | null;
   storage_path: string | null;
   storage_bucket: string | null;
+};
+
+export type FamilyMemoryPersonRow = {
+  id: string;
+  account_id: string;
+  user_id: string;
+  full_name: string;
+  nickname: string | null;
+  relationship_label: string | null;
+  avatar_url: string | null;
+  is_child: boolean;
+};
+
+export type FamilyMemoryPersonDateRow = {
+  id: string;
+  person_id: string;
+  kind: string;
+  month: number;
+  day: number;
+  year_optional: number | null;
+};
+
+export type UpsertFamilyChildValues = {
+  accountId: string;
+  userId: string;
+  id?: string;
+  fullName: string;
+  dateOfBirth?: string | null;
+  isChild?: boolean;
 };
 
 function looseFrom(client: SupabaseClient, table: string): LooseQuery {
@@ -75,6 +105,34 @@ function throwIfError(error: LooseResult['error'], fallback: string) {
   }
 }
 
+function parseIsoDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!year || !month || !day) return null;
+
+  return { year, month, day };
+}
+
+export function birthdayIsoFromPersonDates(
+  dates: FamilyMemoryPersonDateRow[],
+  personId: string,
+) {
+  const birthday = dates.find(
+    (date) => date.person_id === personId && date.kind === 'birthday',
+  );
+  if (!birthday) return null;
+
+  return birthdayIsoFromParts(
+    birthday.year_optional,
+    birthday.month,
+    birthday.day,
+  );
+}
+
 export function createFamilyMemoriesService(client: SupabaseClient) {
   return new FamilyMemoriesService(client);
 }
@@ -82,32 +140,53 @@ export function createFamilyMemoriesService(client: SupabaseClient) {
 class FamilyMemoriesService {
   constructor(private readonly client: SupabaseClient) {}
 
-  async listHouseholdMembers(accountId: string): Promise<HouseholdMemberRow[]> {
-    const result = (await looseFrom(this.client, 'family_household_members')
+  async listAccountPeople(accountId: string): Promise<FamilyMemoryPersonRow[]> {
+    const result = (await looseFrom(this.client, 'personal_people')
       .select(
-        'id, user_id, account_id, display_name, member_user_id, dietary_tags, excluded_ingredients, sort_order, date_of_birth, avatar_path, is_child, created_at, updated_at',
+        'id, account_id, user_id, full_name, nickname, relationship_label, avatar_url, is_child',
       )
       .eq('account_id', accountId)
-      .order('sort_order', { ascending: true })) as LooseResult;
+      .order('full_name', { ascending: true })) as LooseResult;
 
-    throwIfError(result.error, 'Could not load household members');
-    return (result.data as HouseholdMemberRow[] | null) ?? [];
+    throwIfError(result.error, 'Could not load people');
+    return ((result.data as FamilyMemoryPersonRow[] | null) ?? []).map(
+      (person) => ({
+        ...person,
+        is_child: Boolean(person.is_child),
+      }),
+    );
   }
 
-  async getHouseholdMember(
+  async getAccountPerson(
     accountId: string,
-    memberId: string,
-  ): Promise<HouseholdMemberRow | null> {
-    const result = await looseFrom(this.client, 'family_household_members')
+    personId: string,
+  ): Promise<FamilyMemoryPersonRow | null> {
+    const result = await looseFrom(this.client, 'personal_people')
       .select(
-        'id, user_id, account_id, display_name, member_user_id, dietary_tags, excluded_ingredients, sort_order, date_of_birth, avatar_path, is_child, created_at, updated_at',
+        'id, account_id, user_id, full_name, nickname, relationship_label, avatar_url, is_child',
       )
       .eq('account_id', accountId)
-      .eq('id', memberId)
+      .eq('id', personId)
       .maybeSingle();
 
-    throwIfError(result.error, 'Could not load household member');
-    return (result.data as HouseholdMemberRow | null) ?? null;
+    throwIfError(result.error, 'Could not load person');
+    const person = result.data as FamilyMemoryPersonRow | null;
+    if (!person) return null;
+
+    return { ...person, is_child: Boolean(person.is_child) };
+  }
+
+  async listPersonDates(
+    personIds: string[],
+  ): Promise<FamilyMemoryPersonDateRow[]> {
+    if (personIds.length === 0) return [];
+
+    const result = (await looseFrom(this.client, 'personal_person_dates')
+      .select('id, person_id, kind, month, day, year_optional')
+      .in('person_id', personIds)) as LooseResult;
+
+    throwIfError(result.error, 'Could not load birthdays');
+    return (result.data as FamilyMemoryPersonDateRow[] | null) ?? [];
   }
 
   async listMemoryNotes(options: {
@@ -144,7 +223,7 @@ class FamilyMemoriesService {
     if (noteIds.length === 0) return [];
 
     const result = (await looseFrom(this.client, 'family_memory_children')
-      .select('note_id, household_member_id')
+      .select('note_id, person_id')
       .in('note_id', noteIds)) as LooseResult;
 
     throwIfError(result.error, 'Could not load memory children');
@@ -233,12 +312,104 @@ class FamilyMemoriesService {
       this.client,
       'family_memory_children',
     ).insert(
-      uniqueIds.map((household_member_id) => ({
+      uniqueIds.map((person_id) => ({
         note_id: noteId,
-        household_member_id,
+        person_id,
       })),
     );
     throwIfError(inserted.error, 'Could not assign children to this memory');
+  }
+
+  async upsertChild(input: UpsertFamilyChildValues): Promise<{ id: string }> {
+    const fullName = input.fullName.trim();
+    const isChild = input.isChild ?? true;
+
+    if (input.id) {
+      const existing = await this.getAccountPerson(input.accountId, input.id);
+      if (!existing) {
+        throw new Error('Person not found');
+      }
+
+      const { error } = await looseFrom(this.client, 'personal_people')
+        .update({
+          full_name: fullName,
+          is_child: isChild,
+          relationship_label:
+            existing.relationship_label?.trim() || (isChild ? 'Child' : null),
+        })
+        .eq('id', input.id)
+        .eq('account_id', input.accountId);
+
+      throwIfError(error, 'Could not update person');
+      await this.syncBirthday(input.id, input.dateOfBirth);
+      return { id: input.id };
+    }
+
+    const inserted = await looseFrom(this.client, 'personal_people')
+      .insert({
+        user_id: input.userId,
+        account_id: input.accountId,
+        full_name: fullName,
+        relationship_label: isChild ? 'Child' : null,
+        is_child: isChild,
+        circle_tier: isChild ? 'core' : DEFAULT_PERSON_CIRCLE_TIER,
+      })
+      .select('id')
+      .single();
+
+    throwIfError(inserted.error, 'Could not add child');
+    const id = (inserted.data as { id: string }).id;
+    await this.syncBirthday(id, input.dateOfBirth);
+    return { id };
+  }
+
+  private async syncBirthday(
+    personId: string,
+    dateOfBirth: string | null | undefined,
+  ) {
+    if (dateOfBirth === undefined) return;
+
+    const dates = await this.listPersonDates([personId]);
+    const existing = dates.find((date) => date.kind === 'birthday') ?? null;
+
+    if (!dateOfBirth) {
+      if (!existing) return;
+
+      const deleted = await looseFrom(this.client, 'personal_person_dates')
+        .delete()
+        .eq('id', existing.id);
+      throwIfError(deleted.error, 'Could not clear birthday');
+      return;
+    }
+
+    const parsed = parseIsoDate(dateOfBirth);
+    if (!parsed) {
+      throw new Error('Birthday must be a valid date');
+    }
+
+    if (existing) {
+      const { error } = await looseFrom(this.client, 'personal_person_dates')
+        .update({
+          month: parsed.month,
+          day: parsed.day,
+          year_optional: parsed.year,
+        })
+        .eq('id', existing.id);
+      throwIfError(error, 'Could not update birthday');
+      return;
+    }
+
+    const inserted = await looseFrom(
+      this.client,
+      'personal_person_dates',
+    ).insert({
+      person_id: personId,
+      kind: 'birthday',
+      month: parsed.month,
+      day: parsed.day,
+      year_optional: parsed.year,
+    });
+    throwIfError(inserted.error, 'Could not save birthday');
   }
 
   private async getMemoryNote(accountId: string, noteId: string) {

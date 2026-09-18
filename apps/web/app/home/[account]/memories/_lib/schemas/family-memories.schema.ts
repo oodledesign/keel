@@ -24,7 +24,6 @@ export const UpsertFamilyChildSchema = z.object({
   id: z.string().uuid().optional(),
   displayName: z.string().trim().min(1).max(80),
   dateOfBirth: IsoDateSchema.nullable().optional(),
-  avatarPath: z.string().trim().max(500).nullable().optional(),
   isChild: z.boolean().optional().default(true),
 });
 

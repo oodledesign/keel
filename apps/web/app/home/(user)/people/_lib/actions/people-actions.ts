@@ -59,6 +59,7 @@ export async function createPersonAction(input: unknown) {
       generalNotes: parsed.generalNotes,
       catchupCadenceDays: parsed.catchupCadenceDays ?? null,
       circleTier: parsed.circleTier,
+      isChild: parsed.isChild ?? parsed.relationshipLabel === 'Child',
     });
     revalidatePeople(id);
     return { success: true as const, id, error: null };
@@ -83,6 +84,9 @@ export async function updatePersonAction(input: unknown) {
       generalNotes: parsed.generalNotes,
       catchupCadenceDays: parsed.catchupCadenceDays ?? null,
       circleTier: parsed.circleTier,
+      isChild:
+        parsed.isChild ??
+        (parsed.relationshipLabel === 'Child' ? true : undefined),
     });
     revalidatePeople(parsed.id);
     return { success: true as const, error: null };

@@ -17,7 +17,7 @@ import { ChildProfileClient } from '../../_components/child-profile-client';
 import { loadFamilyMemoriesPage } from '../../_lib/server/family-memories.loader';
 
 interface FamilyChildProfilePageProps {
-  params: Promise<{ account: string; memberId: string }>;
+  params: Promise<{ account: string; personId: string }>;
 }
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +29,7 @@ export const generateMetadata = async () => {
 };
 
 async function FamilyChildProfilePage({ params }: FamilyChildProfilePageProps) {
-  const { account: slug, memberId } = await params;
+  const { account: slug, personId } = await params;
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(workspace, slug, ['family']);
   const accountAccess = workspace.account as {
@@ -48,9 +48,9 @@ async function FamilyChildProfilePage({ params }: FamilyChildProfilePageProps) {
 
   const data = await loadFamilyMemoriesPage({
     accountSlug: slug,
-    childId: memberId,
+    childId: personId,
   });
-  const child = data.members.find((member) => member.id === memberId) ?? null;
+  const child = data.people.find((person) => person.id === personId) ?? null;
 
   if (!child) {
     notFound();
@@ -68,7 +68,7 @@ async function FamilyChildProfilePage({ params }: FamilyChildProfilePageProps) {
           accountId={data.accountId}
           accountSlug={data.accountSlug}
           child={child}
-          members={data.members}
+          people={data.people}
           memories={data.memories}
         />
       </PageBody>

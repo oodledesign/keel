@@ -7,7 +7,6 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { upsertHouseholdMemberAction } from '~/home/(user)/life/family/_lib/household-actions';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
@@ -28,6 +27,8 @@ function revalidateMemoryPaths(accountSlug: string, noteId?: string) {
   revalidatePath(
     pathsConfig.app.accountNotes.replace('[account]', accountSlug),
   );
+  revalidatePath('/home/people');
+  revalidatePath('/app/people');
 
   if (noteId) {
     revalidatePath(
@@ -58,41 +59,31 @@ export const saveFamilyMemoryAction = enhanceAction(
 );
 
 export const upsertFamilyChildAction = enhanceAction(
-  async (data) => {
-    let dietaryTags: string[] = [];
-    let excludedIngredients: string[] = [];
-
-    if (data.id) {
-      const scope = await resolveMealPlanScope(data.accountSlug);
-      if (scope.kind === 'workspace') {
-        const client = getSupabaseServerClient();
-        const service = createFamilyMemoriesService(client);
-        const existing = await service.getHouseholdMember(
-          scope.accountId,
-          data.id,
-        );
-        dietaryTags = existing?.dietary_tags ?? [];
-        excludedIngredients = existing?.excluded_ingredients ?? [];
-      }
+  async (data, user) => {
+    const scope = await resolveMealPlanScope(data.accountSlug);
+    if (scope.kind !== 'workspace') {
+      throw new Error('Children belong to a family workspace');
     }
 
-    const result = await upsertHouseholdMemberAction({
+    const client = getSupabaseServerClient();
+    const service = createFamilyMemoriesService(client);
+    const result = await service.upsertChild({
+      accountId: scope.accountId,
+      userId: user.id,
       id: data.id,
-      accountSlug: data.accountSlug,
-      displayName: data.displayName,
-      dietaryTags,
-      excludedIngredients,
-      isChild: data.isChild ?? true,
+      fullName: data.displayName,
       dateOfBirth: data.dateOfBirth,
-      avatarPath: data.avatarPath,
+      isChild: data.isChild ?? true,
     });
 
-    if (!result.success) {
-      throw new Error(result.error);
-    }
-
     revalidateMemoryPaths(data.accountSlug);
-    return result.data;
+    revalidatePath(
+      pathsConfig.app.accountMemoryChild
+        .replace('[account]', data.accountSlug)
+        .replace('[personId]', result.id),
+    );
+
+    return result;
   },
   { schema: UpsertFamilyChildSchema },
 );

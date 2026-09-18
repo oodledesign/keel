@@ -68,6 +68,18 @@ export function isMemoryNoteCategory(category: string | null | undefined) {
   return category === MEMORY_NOTE_CATEGORY;
 }
 
+export function birthdayIsoFromParts(
+  year: number | null | undefined,
+  month: number,
+  day: number,
+) {
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 export function formatChildAge(
   dateOfBirth: string | null | undefined,
   now = new Date(),

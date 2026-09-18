@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import pathsConfig from '~/config/paths.config';
 import { FAMILY_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
 import {
+  birthdayIsoFromParts,
   childInitials,
   formatChildAge,
   isMemoryNoteCategory,
@@ -33,6 +34,13 @@ describe('withMemoryKindTags', () => {
       'poet',
     ]);
     expect(withMemoryKindTags(['holiday'], null)).toEqual([]);
+  });
+});
+
+describe('birthdayIsoFromParts', () => {
+  it('builds an ISO date when the year is present', () => {
+    expect(birthdayIsoFromParts(2020, 9, 8)).toBe('2020-09-08');
+    expect(birthdayIsoFromParts(null, 9, 8)).toBeNull();
   });
 });
 
@@ -76,7 +84,7 @@ describe('family memories wiring', () => {
     );
     expect(pathsConfig.app.accountMemories).toBe('/app/[account]/memories');
     expect(pathsConfig.app.accountMemoryChild).toBe(
-      '/app/[account]/memories/children/[memberId]',
+      '/app/[account]/memories/children/[personId]',
     );
   });
 });

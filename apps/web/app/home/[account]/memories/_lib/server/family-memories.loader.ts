@@ -5,9 +5,9 @@ import { cache } from 'react';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import type { HouseholdMemberRow } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 import {
   type MemoryKind,
@@ -16,11 +16,24 @@ import {
   memoryOccurredOn,
 } from '../memory-constants';
 import type { FamilyMemoryMediaItem } from '../schemas/family-memories.schema';
-import { createFamilyMemoriesService } from './family-memories.service';
+import {
+  type FamilyMemoryPersonRow,
+  birthdayIsoFromPersonDates,
+  createFamilyMemoriesService,
+} from './family-memories.service';
 
-export type FamilyMemoryChild = HouseholdMemberRow & {
-  ageLabel: string | null;
+export type FamilyMemoryChild = {
+  id: string;
+  accountId: string;
+  fullName: string;
+  display_name: string;
+  nickname: string | null;
+  relationshipLabel: string | null;
+  is_child: boolean;
+  date_of_birth: string | null;
+  avatar_url: string | null;
   avatarUrl: string | null;
+  ageLabel: string | null;
   memoryCount: number;
 };
 
@@ -40,7 +53,7 @@ export type FamilyMemoryItem = {
 export type FamilyMemoriesPageData = {
   accountId: string;
   accountSlug: string;
-  members: FamilyMemoryChild[];
+  people: FamilyMemoryChild[];
   children: FamilyMemoryChild[];
   memories: FamilyMemoryItem[];
 };
@@ -57,16 +70,33 @@ async function signStoragePath(path: string | null | undefined) {
   return data.signedUrl ?? null;
 }
 
+function personDisplayName(person: FamilyMemoryPersonRow) {
+  return person.nickname?.trim() || person.full_name;
+}
+
 function toChild(
-  member: HouseholdMemberRow,
+  person: FamilyMemoryPersonRow,
+  dateOfBirth: string | null,
   memoryCount: number,
-  avatarUrl: string | null,
 ): FamilyMemoryChild {
+  const displayName = personDisplayName(person);
+  const avatarUrl =
+    toSupabasePublicStorageUrl(person.avatar_url) ??
+    person.avatar_url?.trim() ??
+    null;
+
   return {
-    ...member,
-    is_child: Boolean(member.is_child),
-    ageLabel: formatChildAge(member.date_of_birth),
+    id: person.id,
+    accountId: person.account_id,
+    fullName: person.full_name,
+    display_name: displayName,
+    nickname: person.nickname,
+    relationshipLabel: person.relationship_label,
+    is_child: Boolean(person.is_child),
+    date_of_birth: dateOfBirth,
+    avatar_url: avatarUrl,
     avatarUrl,
+    ageLabel: formatChildAge(dateOfBirth),
     memoryCount,
   };
 }
@@ -83,30 +113,28 @@ async function loadFamilyMemoriesPageUncached(options: {
 
   const client = getSupabaseServerClient();
   const service = createFamilyMemoriesService(client);
-  const members = await service.listHouseholdMembers(scope.accountId);
+  const peopleRows = await service.listAccountPeople(scope.accountId);
   const notes = await service.listMemoryNotes({
     accountId: scope.accountId,
     kind: options.kind,
   });
   const noteIds = notes.map((note) => note.id);
-  const [links, docs] = await Promise.all([
+  const [links, docs, dates] = await Promise.all([
     service.listChildLinks(noteIds),
     service.listDocsForNotes({
       accountId: scope.accountId,
       noteIds,
     }),
+    service.listPersonDates(peopleRows.map((person) => person.id)),
   ]);
 
   const linksByNote = new Map<string, string[]>();
   const counts = new Map<string, number>();
   for (const link of links) {
     const current = linksByNote.get(link.note_id) ?? [];
-    current.push(link.household_member_id);
+    current.push(link.person_id);
     linksByNote.set(link.note_id, current);
-    counts.set(
-      link.household_member_id,
-      (counts.get(link.household_member_id) ?? 0) + 1,
-    );
+    counts.set(link.person_id, (counts.get(link.person_id) ?? 0) + 1);
   }
 
   const docsByNote = new Map<string, typeof docs>();
@@ -117,25 +145,15 @@ async function loadFamilyMemoriesPageUncached(options: {
     docsByNote.set(doc.note_id, current);
   }
 
-  const avatarUrls = new Map<string, string | null>();
-  await Promise.all(
-    members.map(async (member) => {
-      avatarUrls.set(member.id, await signStoragePath(member.avatar_path));
-    }),
-  );
-
-  const enrichedMembers = members.map((member) =>
+  const people = peopleRows.map((person) =>
     toChild(
-      member,
-      counts.get(member.id) ?? 0,
-      avatarUrls.get(member.id) ?? null,
+      person,
+      birthdayIsoFromPersonDates(dates, person.id),
+      counts.get(person.id) ?? 0,
     ),
   );
-
-  const children = enrichedMembers.filter((member) => member.is_child);
-  const memberById = new Map(
-    enrichedMembers.map((member) => [member.id, member]),
-  );
+  const children = people.filter((person) => person.is_child);
+  const personById = new Map(people.map((person) => [person.id, person]));
 
   const mediaByDocId = new Map<string, string | null>();
   await Promise.all(
@@ -157,7 +175,7 @@ async function loadFamilyMemoriesPageUncached(options: {
       kind: memoryKindFromTags(note.tags),
       childIds,
       children: childIds
-        .map((id) => memberById.get(id))
+        .map((id) => personById.get(id))
         .filter(Boolean)
         .map((child) => ({
           id: child!.id,
@@ -184,7 +202,7 @@ async function loadFamilyMemoriesPageUncached(options: {
   return {
     accountId: scope.accountId,
     accountSlug: scope.accountSlug,
-    members: enrichedMembers,
+    people,
     children,
     memories,
   };

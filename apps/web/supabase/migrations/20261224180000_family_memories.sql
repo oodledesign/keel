@@ -1,5 +1,7 @@
--- Family Memories: dated kid notes (reuse public.notes) with household
--- children, an event date, and optional photo/video docs on the note.
+-- Family Memories: dated kid notes (reuse public.notes) with an event date
+-- and optional photo/video docs on the note. Household child columns and the
+-- first join table are superseded by 20261224190000_family_memories_people.sql
+-- (children are People records).
 
 -- ---------------------------------------------------------------------------
 -- Household members: child profile fields (shared with meal-plan cooks)

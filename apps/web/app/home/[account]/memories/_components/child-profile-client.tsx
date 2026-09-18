@@ -1,20 +1,19 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Plus } from 'lucide-react';
 
-import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
-import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
+import { PersonImageUploader } from '~/home/(user)/people/_components/person-image-uploader';
 import {
   workspaceBtnPrimaryMd,
   workspacePanelCard,
@@ -27,7 +26,6 @@ import type {
   FamilyMemoryChild,
   FamilyMemoryItem,
 } from '../_lib/server/family-memories.loader';
-import { ChildAvatar } from './child-avatar';
 import { MemoryCard } from './memory-card';
 import { QuickMemorySheet } from './quick-memory-sheet';
 
@@ -35,18 +33,16 @@ export function ChildProfileClient({
   accountId,
   accountSlug,
   child,
-  members,
+  people,
   memories,
 }: {
   accountId: string;
   accountSlug: string;
   child: FamilyMemoryChild;
-  members: FamilyMemoryChild[];
+  people: FamilyMemoryChild[];
   memories: FamilyMemoryItem[];
 }) {
   const router = useRouter();
-  const supabase = useSupabase();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [displayName, setDisplayName] = useState(child.display_name);
@@ -64,12 +60,12 @@ export function ChildProfileClient({
     pathsConfig.app.accountNoteDetail
       .replace('[account]', accountSlug)
       .replace('[noteId]', noteId);
-  const childHref = (memberId: string) =>
+  const childHref = (personId: string) =>
     pathsConfig.app.accountMemoryChild
       .replace('[account]', accountSlug)
-      .replace('[memberId]', memberId);
+      .replace('[personId]', personId);
 
-  function saveProfile(avatarPath?: string | null) {
+  function saveProfile() {
     startTransition(async () => {
       try {
         await upsertFamilyChildAction({
@@ -77,48 +73,13 @@ export function ChildProfileClient({
           id: child.id,
           displayName: displayName.trim() || child.display_name,
           dateOfBirth: dateOfBirth || null,
-          avatarPath: avatarPath === undefined ? child.avatar_path : avatarPath,
           isChild: true,
         });
-        toast.success('Profile saved');
+        toast.success('Person saved');
         router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not save profile',
-        );
-      }
-    });
-  }
-
-  function uploadAvatar(list: FileList | null) {
-    const file = list?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Choose a photo');
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const filePath = `${accountId}/children/${child.id}_${Date.now()}_${safeName}`;
-        const { error } = await supabase.storage
-          .from(ACCOUNT_DOCS_BUCKET)
-          .upload(filePath, file, { upsert: false });
-        if (error) throw error;
-        await upsertFamilyChildAction({
-          accountSlug,
-          id: child.id,
-          displayName: displayName.trim() || child.display_name,
-          dateOfBirth: dateOfBirth || null,
-          avatarPath: filePath,
-          isChild: true,
-        });
-        toast.success('Photo updated');
-        router.refresh();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Could not upload photo',
         );
       }
     });
@@ -144,24 +105,23 @@ export function ChildProfileClient({
 
       <section className={`${workspacePanelCard} p-5`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="shrink-0"
-            aria-label="Change photo"
-          >
-            <ChildAvatar
-              name={child.display_name}
-              url={child.avatarUrl}
-              size="lg"
-            />
-          </button>
+          <PersonImageUploader
+            personId={child.id}
+            personName={child.display_name}
+            avatarUrl={child.avatarUrl}
+            size="md"
+            onUpdated={() => router.refresh()}
+          />
           <div className="min-w-0 flex-1">
             <h2 className="font-heading text-2xl font-semibold tracking-tight">
               {child.display_name}
             </h2>
             <p className={`text-sm ${workspaceTextMuted}`}>
               {child.ageLabel ?? 'Add a birthday to show their age'}
+            </p>
+            <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
+              This is their People profile. Memories below are tagged to this
+              Person.
             </p>
           </div>
           <Button
@@ -173,14 +133,6 @@ export function ChildProfileClient({
             Quick memory
           </Button>
         </div>
-
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(event) => uploadAvatar(event.target.files)}
-        />
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -205,10 +157,10 @@ export function ChildProfileClient({
           type="button"
           variant="outline"
           className="mt-3"
-          onClick={() => saveProfile()}
+          onClick={saveProfile}
           disabled={isPending}
         >
-          Save profile
+          Save person
         </Button>
       </section>
 
@@ -252,7 +204,7 @@ export function ChildProfileClient({
         onOpenChange={setSheetOpen}
         accountId={accountId}
         accountSlug={accountSlug}
-        members={members}
+        people={people}
         defaultChildIds={[child.id]}
       />
     </div>

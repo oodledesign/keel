@@ -35,7 +35,7 @@ export type PersonProfile = PersonRow & {
 
 export async function resolvePersonalAccountContext(
   client: SupabaseClient,
-  userId: string,
+  _userId: string,
 ): Promise<{ accountId: string }> {
   const api = createAccountsApi(client);
   const workspace = await api.getAccountWorkspace();
@@ -287,6 +287,7 @@ class PeopleService {
       generalNotes?: string | null;
       catchupCadenceDays?: number | null;
       circleTier?: PersonCircleTier;
+      isChild?: boolean;
     },
   ): Promise<string> {
     const { data, error } = await this.db
@@ -302,7 +303,8 @@ class PeopleService {
         general_notes: input.generalNotes ?? null,
         catchup_cadence_days: input.catchupCadenceDays ?? null,
         circle_tier: input.circleTier ?? DEFAULT_PERSON_CIRCLE_TIER,
-      })
+        is_child: input.isChild ?? false,
+      } as never)
       .select('id')
       .single();
 
@@ -322,6 +324,7 @@ class PeopleService {
       generalNotes?: string | null;
       catchupCadenceDays?: number | null;
       circleTier?: PersonCircleTier;
+      isChild?: boolean;
     },
   ): Promise<void> {
     const { error } = await this.db
@@ -335,7 +338,8 @@ class PeopleService {
         general_notes: input.generalNotes ?? null,
         catchup_cadence_days: input.catchupCadenceDays ?? null,
         circle_tier: input.circleTier ?? DEFAULT_PERSON_CIRCLE_TIER,
-      })
+        ...(input.isChild !== undefined ? { is_child: input.isChild } : {}),
+      } as never)
       .eq('id', input.id)
       .eq('user_id', userId);
 

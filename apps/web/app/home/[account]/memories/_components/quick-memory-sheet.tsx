@@ -34,7 +34,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   accountId: string;
   accountSlug: string;
-  members: FamilyMemoryChild[];
+  people: FamilyMemoryChild[];
   defaultChildIds?: string[];
 };
 
@@ -43,7 +43,7 @@ export function QuickMemorySheet({
   onOpenChange,
   accountId,
   accountSlug,
-  members,
+  people,
   defaultChildIds = [],
 }: Props) {
   const router = useRouter();
@@ -57,8 +57,7 @@ export function QuickMemorySheet({
   const [childIds, setChildIds] = useState<string[]>(defaultChildIds);
   const [files, setFiles] = useState<File[]>([]);
 
-  const children = members.filter((member) => member.is_child);
-  const pickerMembers = children.length > 0 ? children : members;
+  const children = people.filter((person) => person.is_child);
 
   useEffect(() => {
     if (!open) return;
@@ -178,20 +177,20 @@ export function QuickMemorySheet({
 
           <div className="space-y-1.5">
             <p className="text-sm font-medium">Who is in this memory</p>
-            {pickerMembers.length === 0 ? (
+            {children.length === 0 ? (
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Add children from the Children page, or mark someone as a child
-                in Meal plan household setup.
+                Add children from the Children page. Each child is a Person —
+                memories attach to them.
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {pickerMembers.map((member) => {
-                  const active = childIds.includes(member.id);
+                {children.map((person) => {
+                  const active = childIds.includes(person.id);
                   return (
                     <button
-                      key={member.id}
+                      key={person.id}
                       type="button"
-                      onClick={() => toggleChild(member.id)}
+                      onClick={() => toggleChild(person.id)}
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
                         active
                           ? `${workspaceFilterActive} border-transparent`
@@ -199,11 +198,11 @@ export function QuickMemorySheet({
                       }`}
                     >
                       <ChildAvatar
-                        name={member.display_name}
-                        url={member.avatarUrl}
+                        name={person.display_name}
+                        url={person.avatarUrl}
                         size="sm"
                       />
-                      {member.display_name}
+                      {person.display_name}
                     </button>
                   );
                 })}

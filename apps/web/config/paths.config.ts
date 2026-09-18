@@ -402,7 +402,7 @@ const pathsConfig = PathsSchema.parse({
     accountMealPlan: `/app/[account]/meal-plan`,
     accountMemories: `/app/[account]/memories`,
     accountMemoryChildren: `/app/[account]/memories/children`,
-    accountMemoryChild: `/app/[account]/memories/children/[memberId]`,
+    accountMemoryChild: `/app/[account]/memories/children/[personId]`,
     accountCommunitySchedule: `/app/[account]/community/schedule`,
     accountCommunityMeetupDetail: `/app/[account]/community/schedule/[eventId]`,
     accountCommunityTasks: `/app/[account]/community/tasks`,

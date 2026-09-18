@@ -35,7 +35,6 @@ export function HouseholdSetupPanel({
 }: Props) {
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [name, setName] = useState('');
-  const [newIsChild, setNewIsChild] = useState(false);
   const [pantryName, setPantryName] = useState('');
   const [avoidDraft, setAvoidDraft] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
@@ -48,7 +47,6 @@ export function HouseholdSetupPanel({
         displayName,
         dietaryTags: [],
         excludedIngredients: [],
-        isChild: newIsChild,
         ...scopeFields,
       });
       if (!result.success) {
@@ -56,7 +54,6 @@ export function HouseholdSetupPanel({
         return;
       }
       setName('');
-      setNewIsChild(false);
       onSaved();
     });
   }
@@ -66,7 +63,6 @@ export function HouseholdSetupPanel({
     patch: {
       dietaryTags?: string[];
       excludedIngredients?: string[];
-      isChild?: boolean;
     },
   ) {
     startTransition(async () => {
@@ -76,7 +72,6 @@ export function HouseholdSetupPanel({
         dietaryTags: patch.dietaryTags ?? member.dietary_tags,
         excludedIngredients:
           patch.excludedIngredients ?? member.excluded_ingredients,
-        isChild: patch.isChild ?? member.is_child,
         ...scopeFields,
       });
       if (!result.success) {
@@ -168,29 +163,14 @@ export function HouseholdSetupPanel({
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-medium">{member.display_name}</p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      saveMember(member, { isChild: !member.is_child })
-                    }
-                    className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                      member.is_child
-                        ? 'border-transparent bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                        : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'
-                    }`}
-                  >
-                    Child
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeMember(member.id)}
-                    aria-label={`Remove ${member.display_name}`}
-                    className="text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => removeMember(member.id)}
+                  aria-label={`Remove ${member.display_name}`}
+                  className="text-[var(--workspace-shell-text-muted)] hover:text-rose-300"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {dietaryChoices.map((tag) => {
@@ -249,15 +229,6 @@ export function HouseholdSetupPanel({
             placeholder="e.g. Dan"
             className="h-9 text-sm"
           />
-          <label className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
-            <input
-              type="checkbox"
-              checked={newIsChild}
-              onChange={(event) => setNewIsChild(event.target.checked)}
-              className="h-3.5 w-3.5 accent-[var(--ozer-accent)]"
-            />
-            Child
-          </label>
           <Button
             type="button"
             variant="outline"

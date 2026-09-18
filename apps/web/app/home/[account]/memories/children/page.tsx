@@ -53,7 +53,7 @@ async function FamilyChildrenPage({ params }: FamilyChildrenPageProps) {
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Children"
-        description="Profiles for the kids. Same household people as meal plan."
+        description="Each child is a Person. Memories attach to them."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-0 text-[var(--workspace-shell-text)] lg:px-0">
         <ChildrenIndexClient data={data} />

@@ -35,11 +35,11 @@ export function ChildrenIndexClient({
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [markId, setMarkId] = useState('');
 
-  const unmarked = data.members.filter((member) => !member.is_child);
-  const childrenHref = (memberId: string) =>
+  const unmarked = data.people.filter((person) => !person.is_child);
+  const childHref = (personId: string) =>
     pathsConfig.app.accountMemoryChild
       .replace('[account]', data.accountSlug)
-      .replace('[memberId]', memberId);
+      .replace('[personId]', personId);
 
   function addChild() {
     const displayName = name.trim();
@@ -55,7 +55,7 @@ export function ChildrenIndexClient({
         });
         setName('');
         setDateOfBirth('');
-        toast.success('Child added');
+        toast.success('Child added as a Person');
         router.refresh();
       } catch (error) {
         toast.error(
@@ -66,24 +66,23 @@ export function ChildrenIndexClient({
   }
 
   function markExisting() {
-    const member = unmarked.find((item) => item.id === markId);
-    if (!member) return;
+    const person = unmarked.find((item) => item.id === markId);
+    if (!person) return;
 
     startTransition(async () => {
       try {
         await upsertFamilyChildAction({
           accountSlug: data.accountSlug,
-          id: member.id,
-          displayName: member.display_name,
-          dateOfBirth: member.date_of_birth ?? null,
+          id: person.id,
+          displayName: person.display_name,
           isChild: true,
         });
         setMarkId('');
-        toast.success(`${member.display_name} is now on Children`);
+        toast.success(`${person.display_name} is now on Children`);
         router.refresh();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not update child',
+          error instanceof Error ? error.message : 'Could not update person',
         );
       }
     });
@@ -96,7 +95,7 @@ export function ChildrenIndexClient({
           {data.children.map((child) => (
             <Link
               key={child.id}
-              href={childrenHref(child.id)}
+              href={childHref(child.id)}
               className={`${workspacePanelCard} ${workspaceCardHover} flex items-center gap-3 p-4`}
             >
               <ChildAvatar
@@ -123,14 +122,18 @@ export function ChildrenIndexClient({
         <div className={`${workspacePanelCard} px-6 py-10 text-center`}>
           <p className="font-heading text-xl font-semibold">Add the kids</p>
           <p className={`mx-auto mt-2 max-w-sm text-sm ${workspaceTextMuted}`}>
-            Same household people as meal plan — mark Poet as a child here so
-            you do not enter them twice.
+            Each child is a Person in this family workspace. Memories attach to
+            that Person — no second household profile.
           </p>
         </div>
       )}
 
       <div className={`${workspacePanelCard} space-y-4 p-5`}>
         <h2 className="text-sm font-semibold">Add a child</h2>
+        <p className={`text-xs ${workspaceTextMuted}`}>
+          Creates a People record marked as a child. Name and photo live on that
+          Person.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="child-name">Name</Label>
@@ -164,10 +167,10 @@ export function ChildrenIndexClient({
 
       {unmarked.length > 0 ? (
         <div className={`${workspacePanelCard} space-y-3 p-5`}>
-          <h2 className="text-sm font-semibold">Already in household setup</h2>
+          <h2 className="text-sm font-semibold">Already in People</h2>
           <p className={`text-xs ${workspaceTextMuted}`}>
-            Meal-plan people can be marked as children without creating a second
-            profile.
+            Mark an existing Person as a child. Meal-plan household stays
+            separate.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <select
@@ -176,9 +179,9 @@ export function ChildrenIndexClient({
               className="h-9 flex-1 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-3 text-sm"
             >
               <option value="">Choose someone</option>
-              {unmarked.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.display_name}
+              {unmarked.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.display_name}
                 </option>
               ))}
             </select>

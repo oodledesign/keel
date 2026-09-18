@@ -71,7 +71,7 @@ export function MemoriesPageClient({
   const kindParam = initialKind ?? searchParams.get('kind');
   const kind = kindParam && isMemoryKind(kindParam) ? kindParam : null;
 
-  const pickerMembers = data.children.length > 0 ? data.children : data.members;
+  const pickerMembers = data.children;
 
   const filtered = useMemo(() => {
     return data.memories.filter((memory) => {
@@ -106,10 +106,10 @@ export function MemoriesPageClient({
     pathsConfig.app.accountNoteDetail
       .replace('[account]', data.accountSlug)
       .replace('[noteId]', noteId);
-  const childHref = (memberId: string) =>
+  const childHref = (personId: string) =>
     pathsConfig.app.accountMemoryChild
       .replace('[account]', data.accountSlug)
-      .replace('[memberId]', memberId);
+      .replace('[personId]', personId);
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-16 lg:px-6">
@@ -254,7 +254,7 @@ export function MemoriesPageClient({
         onOpenChange={setSheetOpen}
         accountId={data.accountId}
         accountSlug={data.accountSlug}
-        members={data.members}
+        people={data.people}
         defaultChildIds={childId ? [childId] : []}
       />
     </div>
