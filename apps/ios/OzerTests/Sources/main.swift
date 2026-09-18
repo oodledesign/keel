@@ -1,6 +1,7 @@
 import Foundation
 @testable import OzerFinance
 @testable import OzerMeetings
+@testable import OzerMemories
 @testable import OzerNotes
 @testable import OzerSpeech
 @testable import OzerSurveys
@@ -414,6 +415,7 @@ struct SpeakerTranscriptTests {
         MeetingDisplayTests.run(check: check)
         FinanceMonthPointTests.run(check: check)
         WorkspaceNavigationTests.run(check: check)
+        MemoryDisplayTests.run(check: check)
         SurveyDisplayTests.run(check: check)
         SurveySectionCatalogueTests.run(check: check)
         SurveyPhotoSyncTests.run(check: check)

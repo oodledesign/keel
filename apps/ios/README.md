@@ -302,7 +302,8 @@ New chat searches teammates, contacts, clients, and projects. A new-message APNs
 
 Workspace picker at the **top** (logo + name). Tap opens `WorkspaceSwitcherView` — memberships are not listed inline. Nav links follow the selected space’s profile (same idea as the web sidebar, mapped onto screens that exist on iOS):
 
-- **Personal / family:** Home, Tasks, Review, Notes, Messages, People, Recipes, Meal plan, Shopping
+- **Personal:** Home, Tasks, Review, Notes, Messages, People, Recipes, Meal plan, Shopping
+- **Family:** same life items, plus Memories and Children (People with `is_child`)
 - **Studio (`work_design`):** Home, Tasks, Review, Notes, Messages, Meetings, Projects, Clients, Invoices
 - **Property / commercial:** same business core, plus Projects, Clients and Invoices; Meetings on those capture spaces
 - **Surveyor:** Home, Tasks, Notes, Messages, Meetings, Surveys, Clients. No Projects, Invoices, or Review (web surveyor sidebar has none). Messages stays as the global native inbox. Pipeline stays on the Home card — there is no dedicated iOS Pipeline screen. Suggested tasks still open from the Tasks screen.
@@ -334,6 +335,24 @@ GET /api/native/v1/surveys/{id}?workspace=<slug-or-uuid>
 POST /api/native/v1/surveys/{id}/sessions   (JSON or multipart audio; include rics_code)
 POST /api/native/v1/surveys/{id}/photos     (multipart image; include rics_code)
 ```
+
+## Memories
+
+Family workspaces only. Same People + `is_child` + `family_memory_children` model as the web Memories page.
+
+```
+GET /api/native/v1/memories?workspace=<slug-or-uuid>&child=&kind=
+POST /api/native/v1/memories
+{ "workspace", "content", "title?", "occurred_at?", "kind?", "child_ids?" }
+
+POST /api/native/v1/memories/children
+{ "workspace", "display_name", "id?", "date_of_birth?", "is_child?" }
+
+POST /api/native/v1/memories/photos
+multipart workspace + note_id + file
+```
+
+The timeline lists dated memory cards (text, child chips, photo when present). Quick capture writes a memory note and optional child tags + photo. Children is the `is_child` People index; a child profile shows that child’s memories.
 
 Out of scope: PowerSync, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
 

@@ -10,11 +10,13 @@ enum WorkspaceNavigationTests {
                 && !screens.contains(.projects)
                 && !screens.contains(.invoices)
                 && !screens.contains(.meetings)
+                && !screens.contains(.memories)
+                && !screens.contains(.children)
         }
 
-        check("family menu matches personal life items") {
+        check("family menu adds memories and children") {
             let screens = WorkspaceNavigation.menuScreens(profile: "family", isPersonal: false)
-            containsAll(screens, [.home, .tasks, .mealPlan, .shopping, .people, .recipes, .notes])
+            containsAll(screens, [.home, .tasks, .mealPlan, .shopping, .people, .recipes, .notes, .memories, .children])
                 && !screens.contains(.clients)
                 && !screens.contains(.projects)
                 && !screens.contains(.invoices)
@@ -29,6 +31,8 @@ enum WorkspaceNavigationTests {
                 && !screens.contains(.mealPlan)
                 && !screens.contains(.people)
                 && !screens.contains(.surveys)
+                && !screens.contains(.memories)
+                && !screens.contains(.children)
         }
 
         check("commercial property has clients not shopping") {
@@ -85,6 +89,8 @@ enum WorkspaceNavigationTests {
                 && !screens.contains(.meetings)
                 && !screens.contains(.surveys)
                 && !screens.contains(.people)
+                && !screens.contains(.memories)
+                && !screens.contains(.children)
         }
 
         check("unknown profile does not invent shopping") {
@@ -107,6 +113,12 @@ enum WorkspaceNavigationTests {
         check("family pins shopping and meal plan") {
             WorkspaceNavigation.tabPins(profile: "family", isPersonal: false)
                 == [.tasks, .shopping, .mealPlan]
+        }
+
+        check("only family kind shows memories") {
+            WorkspaceNavigation.kind(profile: "family", isPersonal: false).showsMemories
+                && !WorkspaceNavigation.kind(profile: "personal", isPersonal: true).showsMemories
+                && !WorkspaceNavigation.kind(profile: "work_design", isPersonal: false).showsMemories
         }
 
         check("studio keeps tasks notes messages") {

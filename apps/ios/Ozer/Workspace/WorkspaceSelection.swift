@@ -143,6 +143,9 @@ extension NativeWorkspace {
     /// Site surveys on building-surveyor workspaces only.
     var showsSurveys: Bool { navigationKind.showsSurveys }
 
+    /// Family Memories + Children — family team workspace only.
+    var showsMemories: Bool { navigationKind.showsMemories }
+
     var isSurveyorWorkspace: Bool {
         profile == "building_surveyor"
     }

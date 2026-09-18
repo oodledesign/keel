@@ -389,6 +389,39 @@ PATCH /api/native/v1/shopping/items/{id}
 
 `week` is Monday `YYYY-MM-DD` and defaults to the current week. Shopping ticks use the same list as the web app. Recipes and meal plan are read-only on the phone in this MVP.
 
+## Family memories
+
+Family team workspaces only (`profile = family`). Personal, studio, surveyor, and community get `403`. Children are People (`personal_people.is_child`), not meal-plan household members. Memories are `notes` with `category = memory`, linked through `family_memory_children`.
+
+```
+GET /api/native/v1/memories?workspace=<slug-or-uuid>&child=<optional-person-uuid>&kind=funny_quote|milestone|firsts|holiday|everyday|school
+→ {
+  "account_id", "account_slug",
+  "people": [{ "id", "display_name", "is_child", "date_of_birth", "age_label", "memory_count", "avatar_url", … }],
+  "children": [same, is_child only],
+  "memories": [{
+    "id", "title", "content", "occurred_on", "kind",
+    "child_ids", "children": [{ "id", "display_name", "avatar_url" }],
+    "media": [{ "id", "title", "mime_type", "url" }],
+    "created_at", "updated_at"
+  }]
+}
+
+POST /api/native/v1/memories
+{ "workspace", "content", "title?", "occurred_at?", "kind?", "child_ids?" }
+→ { "ok": true, "id" }
+
+POST /api/native/v1/memories/children
+{ "workspace", "display_name", "id?", "date_of_birth?", "is_child?" }
+→ { "ok": true, "id" }
+
+POST /api/native/v1/memories/photos
+multipart: workspace, note_id, file
+→ { "id", "title", "mime_type", "url" }
+```
+
+`occurred_at` / `date_of_birth` are `YYYY-MM-DD`. Photo URLs are signed for an hour. Create a Person with `is_child: true`, or pass an existing People `id` to mark them as a child.
+
 ## Apple Sign In (optional)
 
 Web OAuth shows Apple only when `NEXT_PUBLIC_AUTH_APPLE=true`. Configure the Apple **Services ID** in the Supabase Auth Apple provider (dashboard). Use `NEXT_PUBLIC_APPLE_SERVICE_ID` as the public Services ID if the native app needs it — do not put the Apple secret in this repo. Google OAuth is unchanged.

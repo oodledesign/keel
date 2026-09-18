@@ -61,6 +61,10 @@ enum AppScreen: Hashable {
     case recipes
     /// Personal / family week meal plan. Family also pins it.
     case mealPlan
+    /// Family memories timeline. Menu only — not a default tab-bar pin.
+    case memories
+    /// Family children index (`personal_people.is_child`). Menu only.
+    case children
 
     init(feature: FeatureStub) {
         switch feature {
@@ -88,6 +92,8 @@ enum AppScreen: Hashable {
         case .shopping: "Shopping"
         case .recipes: "Recipes"
         case .mealPlan: "Meal plan"
+        case .memories: "Memories"
+        case .children: "Children"
         }
     }
 
@@ -107,6 +113,8 @@ enum AppScreen: Hashable {
         case .shopping: "cart"
         case .recipes: "book"
         case .mealPlan: "calendar"
+        case .memories: "heart"
+        case .children: "figure.and.child.holdinghands"
         }
     }
 }

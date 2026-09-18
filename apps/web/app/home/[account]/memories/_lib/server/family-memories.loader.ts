@@ -2,6 +2,8 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -101,28 +103,26 @@ function toChild(
   };
 }
 
-async function loadFamilyMemoriesPageUncached(options: {
-  accountSlug: string;
-  childId?: string;
-  kind?: MemoryKind | null;
-}): Promise<FamilyMemoriesPageData> {
-  const scope = await resolveMealPlanScope(options.accountSlug);
-  if (scope.kind !== 'workspace') {
-    throw new Error('Memories is a family workspace feature');
-  }
-
-  const client = getSupabaseServerClient();
+export async function assembleFamilyMemoriesPage(
+  client: SupabaseClient,
+  options: {
+    accountId: string;
+    accountSlug: string;
+    childId?: string;
+    kind?: MemoryKind | null;
+  },
+): Promise<FamilyMemoriesPageData> {
   const service = createFamilyMemoriesService(client);
-  const peopleRows = await service.listAccountPeople(scope.accountId);
+  const peopleRows = await service.listAccountPeople(options.accountId);
   const notes = await service.listMemoryNotes({
-    accountId: scope.accountId,
+    accountId: options.accountId,
     kind: options.kind,
   });
   const noteIds = notes.map((note) => note.id);
   const [links, docs, dates] = await Promise.all([
     service.listChildLinks(noteIds),
     service.listDocsForNotes({
-      accountId: scope.accountId,
+      accountId: options.accountId,
       noteIds,
     }),
     service.listPersonDates(peopleRows.map((person) => person.id)),
@@ -200,12 +200,31 @@ async function loadFamilyMemoriesPageUncached(options: {
   }
 
   return {
-    accountId: scope.accountId,
-    accountSlug: scope.accountSlug,
+    accountId: options.accountId,
+    accountSlug: options.accountSlug,
     people,
     children,
     memories,
   };
+}
+
+async function loadFamilyMemoriesPageUncached(options: {
+  accountSlug: string;
+  childId?: string;
+  kind?: MemoryKind | null;
+}): Promise<FamilyMemoriesPageData> {
+  const scope = await resolveMealPlanScope(options.accountSlug);
+  if (scope.kind !== 'workspace') {
+    throw new Error('Memories is a family workspace feature');
+  }
+
+  const client = getSupabaseServerClient();
+  return assembleFamilyMemoriesPage(client, {
+    accountId: scope.accountId,
+    accountSlug: scope.accountSlug,
+    childId: options.childId,
+    kind: options.kind,
+  });
 }
 
 export const loadFamilyMemoriesPage = cache(loadFamilyMemoriesPageUncached);
