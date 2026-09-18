@@ -27,18 +27,26 @@ struct NotesListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading && displayedItems.isEmpty && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let loadError, displayedItems.isEmpty {
-                    statusCard(error: loadError)
-                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                switch ContentLoadPhase.resolve(
+                    workspacesLoaded: session.workspacesLoaded,
+                    workspaceQueryEmpty: session.workspaceQueryValue.isEmpty,
+                    hasContent: !displayedItems.isEmpty || payload != nil,
+                    hasError: loadError != nil && displayedItems.isEmpty
+                ) {
+                case .skeleton:
+                    OzerListSkeleton(accessibilityLabel: "Loading notes")
+                case .error:
+                    if let loadError {
+                        statusCard(error: loadError)
+                    }
+                case .noWorkspaces:
                     membershipsEmptyCard
-                } else if !displayedItems.isEmpty {
-                    content(displayedItems)
-                } else {
-                    emptyCard()
+                case .content:
+                    if !displayedItems.isEmpty {
+                        content(displayedItems)
+                    } else {
+                        emptyCard()
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -77,6 +85,7 @@ struct NotesListView: View {
                 isShowingStaleCache = false
                 hydrateFromCache()
             }
+            .onAppear { hydrateFromCache() }
             .task(id: reloadKey) {
                 hydrateFromCache()
                 await session.flushOfflineWork()

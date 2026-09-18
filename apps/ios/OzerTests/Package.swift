@@ -45,6 +45,7 @@ let package = Package(
             path: "../Ozer",
             sources: [
                 "App/AppScreen.swift",
+                "App/ContentLoadPhase.swift",
                 "Workspace/WorkspaceNavigation.swift",
             ]
         ),

@@ -45,10 +45,7 @@ struct ProjectDetailView: View {
                 }
 
                 if isLoading && tasks.isEmpty && loadError == nil && detail.phases.isEmpty {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 24)
+                    OzerListSkeleton(rows: 4, accessibilityLabel: "Loading project")
                 } else if let loadError, tasks.isEmpty && detail.phases.isEmpty {
                     Text(loadError.localizedDescription)
                         .font(.body)

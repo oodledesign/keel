@@ -125,7 +125,7 @@ Accept creates a planner task. Meeting items assign to the signed-in user. Dismi
 
 The iPhone list searches the loaded rows (title and client name) as you type, and filters by due (All / Today / Overdue / Upcoming / No date) and status (Open / Done / All). Business workspaces add a client chip (all, no client, or one client from `/clients`). `?client=` is sent only for a specific client. Completing a task still works; Add stays in the toolbar. Filter state resets when the workspace changes.
 
-Home is a pocket dashboard (greeting, date, this-month in/out + 6-month chart, outstanding invoices, tasks due / overdue, recent notes, meetings, quick actions). It reads the expanded `/today` payload — not a flat dump of Mac Assistant items. “See all” and the finance card switch Menu screens the same way the Menu does. Totals use the current calendar month; the chart is the last 6 months — the same windows as the web business Home dashboard.
+Home is a pocket dashboard (greeting, date, this-month in/out + 6-month chart, outstanding invoices, tasks due / overdue, recent notes, meetings, quick actions). It reads the expanded `/today` payload — not a flat dump of Mac Assistant items. “See all” and the finance card switch Menu screens the same way the Menu does. Totals use the current calendar month; the chart is the last 6 months — the same windows as the web business Home dashboard. The last successful Home payload (including finances) is cached on disk per workspace so a cold launch shows last-known-good cards immediately, then refreshes. First paint without a cache uses cream/plum skeleton loaders — not empty copy or “Finances aren’t available yet.” That unavailable card is reserved for a real failed fetch after load.
 
 ## Invoices
 

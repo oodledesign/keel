@@ -30,6 +30,10 @@ struct HomeTodayView: View {
     @State private var loadError: NativeAPIError?
     @State private var financesError: NativeAPIError?
     @State private var isLoading = false
+    @State private var financesLoadFinished = false
+    @State private var loadGeneration = 0
+    @State private var cachedIsSurveyor = false
+    @State private var cachedShowsInvoices = false
     @State private var editorTask: TaskItem?
     @State private var showTaskEditor = false
     @State private var showDictation = false
@@ -72,15 +76,17 @@ struct HomeTodayView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading && payload == nil && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let loadError {
-                    statusCard(error: loadError)
-                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                switch homePhase {
+                case .skeleton:
+                    OzerHomeSkeleton(
+                        showsFinances: workspace?.showsInvoices == true || cachedShowsInvoices,
+                        isSurveyor: workspace?.isSurveyorWorkspace == true || cachedIsSurveyor
+                    )
+                case .error:
+                    statusCard(error: loadError ?? .transport("Couldn’t load today"))
+                case .noWorkspaces:
                     membershipsEmptyCard
-                } else {
+                case .content:
                     dashboard
                 }
             }
@@ -94,6 +100,7 @@ struct HomeTodayView: View {
                     WorkspaceChip()
                 }
             }
+            .onAppear { hydrateFromCache() }
             .task(id: session.workspaceContentKey) {
                 await load()
             }
@@ -102,6 +109,7 @@ struct HomeTodayView: View {
                 await load()
             }
             .onChange(of: session.workspaceContentKey) {
+                resetForWorkspaceChange()
                 if !visibleTabs.contains(overviewTab) {
                     overviewTab = .tasks
                 }
@@ -128,7 +136,9 @@ struct HomeTodayView: View {
 
     private var dashboard: some View {
         Group {
-            if workspace?.isSurveyorWorkspace == true {
+            if workspace?.isSurveyorWorkspace == true
+                || (workspace == nil && payload?.surveyor != nil)
+            {
                 SurveyorHomeView(
                     payload: payload?.surveyor ?? .empty,
                     onOpen: onOpen,
@@ -142,7 +152,7 @@ struct HomeTodayView: View {
                         if let review = payload?.taskReview, review.pendingCount > 0 {
                             reviewCard(review)
                         }
-                        if workspace?.showsInvoices == true {
+                        if workspace?.showsInvoices == true || finances != nil {
                             financeSection
                         }
                         overviewCard
@@ -275,13 +285,29 @@ struct HomeTodayView: View {
         .accessibilityLabel("Task review, \(review.pendingCount) waiting")
     }
 
+    private var homePhase: ContentLoadPhase {
+        ContentLoadPhase.resolve(
+            workspacesLoaded: session.workspacesLoaded,
+            workspaceQueryEmpty: session.workspaceQueryValue.isEmpty,
+            hasContent: payload != nil,
+            hasError: loadError != nil
+        )
+    }
+
     @ViewBuilder
     private var financeSection: some View {
-        if let finances {
-            financeCard(finances)
-        } else if isLoading {
-            financeLoadingCard
-        } else {
+        switch FinanceLoadPhase.resolve(
+            hasFinances: finances != nil,
+            isLoading: isLoading,
+            loadFinished: financesLoadFinished
+        ) {
+        case .content:
+            if let finances {
+                financeCard(finances)
+            }
+        case .skeleton:
+            OzerFinanceSkeleton()
+        case .unavailable:
             financeUnavailableCard
         }
     }
@@ -380,33 +406,13 @@ struct HomeTodayView: View {
         )
     }
 
-    private var financeLoadingCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("This month")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(OzerPalette.plumMuted)
-                .textCase(.uppercase)
-            ProgressView()
-                .tint(OzerPalette.coral)
-                .frame(maxWidth: .infinity, minHeight: 120)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous)
-                .stroke(OzerPalette.border, lineWidth: 1)
-        }
-        .accessibilityLabel("Loading finances")
-    }
-
     private var financeUnavailableCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("This month")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(OzerPalette.plumMuted)
                 .textCase(.uppercase)
-            Text(financesError == nil ? "Finances aren’t available yet." : "Couldn’t load finances")
+            Text("Couldn’t load finances")
                 .font(.body.weight(.medium))
                 .foregroundStyle(OzerPalette.plum)
             if let financesError {
@@ -537,7 +543,9 @@ struct HomeTodayView: View {
     @ViewBuilder
     private var tasksTab: some View {
         let items = dashboardTasks
-        if items.isEmpty {
+        if items.isEmpty && isLoading {
+            overviewSkeletonRows()
+        } else if items.isEmpty {
             emptyRow("Nothing due today")
         } else {
             VStack(spacing: 0) {
@@ -563,7 +571,9 @@ struct HomeTodayView: View {
 
     @ViewBuilder
     private var notesTab: some View {
-        if recentNotes.isEmpty {
+        if recentNotes.isEmpty && isLoading {
+            overviewSkeletonRows()
+        } else if recentNotes.isEmpty {
             emptyRow("No notes yet")
         } else {
             VStack(spacing: 0) {
@@ -592,7 +602,9 @@ struct HomeTodayView: View {
 
     @ViewBuilder
     private var invoicesTab: some View {
-        if invoiceItems.isEmpty {
+        if invoiceItems.isEmpty && (isLoading || !financesLoadFinished) {
+            overviewSkeletonRows()
+        } else if invoiceItems.isEmpty {
             emptyRow("No open invoices")
         } else {
             VStack(spacing: 0) {
@@ -620,7 +632,9 @@ struct HomeTodayView: View {
         let remote = payload?.meetingsToday ?? []
         let local = MeetingStore.shared.meetings(for: session.workspaceQueryValue)
             .filter { Self.isToday($0.createdAt) }
-        if remote.isEmpty && local.isEmpty {
+        if remote.isEmpty && local.isEmpty && isLoading {
+            overviewSkeletonRows()
+        } else if remote.isEmpty && local.isEmpty {
             Button {
                 onOpen(.meetings)
             } label: {
@@ -690,6 +704,21 @@ struct HomeTodayView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func overviewSkeletonRows(_ count: Int = 4) -> some View {
+        VStack(spacing: 0) {
+            ForEach(0 ..< count, id: \.self) { index in
+                OzerSkeletonRow(
+                    titleWidth: index.isMultiple(of: 2) ? 168 : 132,
+                    subtitleWidth: 96
+                )
+                if index < count - 1 {
+                    Divider().overlay(OzerPalette.border)
+                }
+            }
+        }
+        .accessibilityLabel("Loading")
+    }
+
     private var membershipsEmptyCard: some View {
         VStack(spacing: 12) {
             Text("No workspaces yet")
@@ -744,28 +773,106 @@ struct HomeTodayView: View {
         }
     }
 
+    private func cacheIdentity() -> (userId: String, workspaceId: String)? {
+        guard let userId = session.userId else { return nil }
+        let workspaceId = session.selectedWorkspace?.id
+            ?? WorkspaceSelection.storedRef
+            ?? ""
+        guard !workspaceId.isEmpty else { return nil }
+        return (userId, workspaceId)
+    }
+
+    private func hydrateFromCache() {
+        guard payload == nil, let identity = cacheIdentity() else { return }
+        guard let snapshot = WorkspaceListCache.loadHome(
+            userId: identity.userId,
+            workspaceId: identity.workspaceId
+        ) else {
+            return
+        }
+        payload = snapshot.todayPayload
+        extraFinances = snapshot.restoredExtraFinances
+        recentNotes = snapshot.restoredNotes
+        invoiceItems = snapshot.restoredInvoices
+        cachedIsSurveyor = snapshot.isSurveyor == true || snapshot.surveyor != nil
+        cachedShowsInvoices = snapshot.showsInvoices == true
+            || snapshot.finances != nil
+            || snapshot.extraFinances != nil
+        loadError = nil
+        if extraFinances != nil || snapshot.finances != nil {
+            financesLoadFinished = true
+            financesError = nil
+        }
+        if let review = snapshot.todayPayload.taskReview {
+            session.setPendingTaskReviewCount(review.pendingCount)
+        }
+    }
+
+    private func persistCache() {
+        guard let payload, let identity = cacheIdentity() else { return }
+        WorkspaceListCache.saveHome(
+            userId: identity.userId,
+            workspaceId: identity.workspaceId,
+            snapshot: .capture(
+                payload: payload,
+                extraFinances: extraFinances,
+                recentNotes: recentNotes,
+                invoiceItems: invoiceItems,
+                isSurveyor: workspace?.isSurveyorWorkspace == true || cachedIsSurveyor,
+                showsInvoices: workspace?.showsInvoices == true || cachedShowsInvoices
+            )
+        )
+    }
+
+    private func resetForWorkspaceChange() {
+        payload = nil
+        extraFinances = nil
+        recentNotes = []
+        invoiceItems = []
+        loadError = nil
+        financesError = nil
+        financesLoadFinished = false
+        cachedIsSurveyor = false
+        cachedShowsInvoices = false
+        hydrateFromCache()
+    }
+
     private func load() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
+        func isCurrent() -> Bool { generation == loadGeneration }
+
         do {
             let token = try await session.validAccessToken()
+            guard isCurrent() else { return }
             if !session.workspacesLoaded {
                 await session.refreshWorkspaces()
             }
             try Task.checkCancellation()
+            guard isCurrent() else { return }
             let workspace = session.workspaceQueryValue
             guard !workspace.isEmpty else {
-                payload = nil
-                extraFinances = nil
-                recentNotes = []
-                invoiceItems = []
-                loadError = nil
-                financesError = nil
+                if session.workspacesLoaded {
+                    payload = nil
+                    extraFinances = nil
+                    recentNotes = []
+                    invoiceItems = []
+                    loadError = nil
+                    financesError = nil
+                    financesLoadFinished = false
+                }
                 return
             }
             async let todayCall = client.today(workspace: workspace, accessToken: token)
             async let notesCall = client.notes(workspace: workspace, accessToken: token)
             let today = try await todayCall
+            guard isCurrent() else { return }
             payload = today
             loadError = nil
             if let review = today.taskReview {
@@ -775,8 +882,9 @@ struct HomeTodayView: View {
             if !today.recentNotes.isEmpty {
                 recentNotes = Array(today.recentNotes.prefix(5))
             } else if let notes = try? await notesCall {
+                guard isCurrent() else { return }
                 recentNotes = Array(notes.items.prefix(5))
-            } else {
+            } else if recentNotes.isEmpty {
                 recentNotes = []
             }
 
@@ -795,15 +903,20 @@ struct HomeTodayView: View {
                             workspace: workspace,
                             accessToken: token
                         )
+                        guard isCurrent() else { return }
                         extraFinances = pocket
                         if invoiceItems.isEmpty {
                             invoiceItems = Array(pocket.recent.prefix(5))
                         }
+                    } catch is CancellationError {
+                        throw CancellationError()
                     } catch let error as NativeAPIError {
+                        guard isCurrent() else { return }
                         if extraFinances == nil {
                             financesError = error
                         }
                     } catch {
+                        guard isCurrent() else { return }
                         if extraFinances == nil {
                             financesError = .transport(error.localizedDescription)
                         }
@@ -813,25 +926,45 @@ struct HomeTodayView: View {
                     workspace: workspace,
                     accessToken: token
                 ) {
+                    guard isCurrent() else { return }
                     invoiceItems = Array(list.items.prefix(5))
                 }
+                financesLoadFinished = true
             } else {
                 extraFinances = nil
                 invoiceItems = []
                 financesError = nil
+                financesLoadFinished = true
             }
+            persistCache()
         } catch is CancellationError {
+            if isCurrent(), payload != nil, extraFinances == nil,
+               session.selectedWorkspace?.showsInvoices == true
+            {
+                financesLoadFinished = true
+            }
             return
         } catch let error as NativeAPIError {
+            guard isCurrent() else { return }
             if error == .unauthorized {
                 await session.handleUnauthorized()
             }
-            payload = nil
-            loadError = error
+            if payload == nil {
+                loadError = error
+            }
         } catch {
-            if error.isTaskCancellation { return }
-            payload = nil
-            loadError = .transport(error.localizedDescription)
+            guard isCurrent() else { return }
+            if error.isTaskCancellation {
+                if payload != nil, extraFinances == nil,
+                   session.selectedWorkspace?.showsInvoices == true
+                {
+                    financesLoadFinished = true
+                }
+                return
+            }
+            if payload == nil {
+                loadError = .transport(error.localizedDescription)
+            }
         }
     }
 

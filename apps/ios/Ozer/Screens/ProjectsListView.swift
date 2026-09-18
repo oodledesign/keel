@@ -100,10 +100,11 @@ struct ProjectsListView: View {
         if !showsProjects && session.workspacesLoaded {
             unavailableCard
                 .padding(.horizontal, 20)
-        } else if isLoading && payload == nil && loadError == nil {
-            ProgressView()
-                .tint(OzerPalette.coral)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if payload == nil && loadError == nil &&
+            !(session.workspacesLoaded && session.workspaceQueryValue.isEmpty)
+        {
+            OzerListSkeleton(accessibilityLabel: "Loading projects")
+                .padding(.horizontal, 20)
         } else if let loadError {
             statusCard(error: loadError)
                 .padding(.horizontal, 20)

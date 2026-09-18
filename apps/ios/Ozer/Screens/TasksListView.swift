@@ -62,18 +62,26 @@ struct TasksListView: View {
                     filterBar
                 }
                 Group {
-                    if isLoading && payload == nil && loadError == nil {
-                        ProgressView()
-                            .tint(OzerPalette.coral)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let loadError {
-                        statusCard(error: loadError)
-                    } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                    switch ContentLoadPhase.resolve(
+                        workspacesLoaded: session.workspacesLoaded,
+                        workspaceQueryEmpty: session.workspaceQueryValue.isEmpty,
+                        hasContent: payload != nil,
+                        hasError: loadError != nil
+                    ) {
+                    case .skeleton:
+                        OzerListSkeleton(accessibilityLabel: "Loading tasks")
+                    case .error:
+                        if let loadError {
+                            statusCard(error: loadError)
+                        }
+                    case .noWorkspaces:
                         membershipsEmptyCard
-                    } else if !visibleItems.isEmpty {
-                        content(visibleItems)
-                    } else {
-                        emptyCard()
+                    case .content:
+                        if !visibleItems.isEmpty {
+                            content(visibleItems)
+                        } else {
+                            emptyCard()
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -132,6 +140,7 @@ struct TasksListView: View {
                 isShowingStaleCache = false
                 hydrateFromCache()
             }
+            .onAppear { hydrateFromCache() }
             .task(id: fetchKey) {
                 hydrateFromCache()
                 await load()

@@ -11,8 +11,10 @@ struct MealPlanView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading && payload == nil && loadError == nil {
-                    ProgressView().tint(OzerPalette.coral)
+                if payload == nil && loadError == nil &&
+                    !(session.workspacesLoaded && session.workspaceQueryValue.isEmpty)
+                {
+                    OzerListSkeleton(accessibilityLabel: "Loading meal plan")
                 } else if let loadError {
                     Text(loadError.localizedDescription)
                         .foregroundStyle(OzerPalette.plumMuted)

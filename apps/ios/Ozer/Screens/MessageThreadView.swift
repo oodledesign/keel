@@ -33,9 +33,7 @@ struct MessageThreadView: View {
                     .foregroundStyle(OzerPalette.plumMuted)
                     .padding()
             } else if isLoading && messages.isEmpty {
-                ProgressView()
-                    .tint(OzerPalette.coral)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                OzerThreadSkeleton()
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {

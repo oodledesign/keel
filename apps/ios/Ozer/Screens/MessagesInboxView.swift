@@ -29,18 +29,26 @@ struct MessagesInboxView: View {
     var body: some View {
         NavigationStack(path: $path) {
             Group {
-                if isLoading && payload == nil && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let loadError {
-                    statusCard(error: loadError)
-                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                switch ContentLoadPhase.resolve(
+                    workspacesLoaded: session.workspacesLoaded,
+                    workspaceQueryEmpty: session.workspaceQueryValue.isEmpty,
+                    hasContent: payload != nil,
+                    hasError: loadError != nil
+                ) {
+                case .skeleton:
+                    OzerListSkeleton(accessibilityLabel: "Loading messages")
+                case .error:
+                    if let loadError {
+                        statusCard(error: loadError)
+                    }
+                case .noWorkspaces:
                     membershipsEmptyCard
-                } else if threads.isEmpty {
-                    emptyCard()
-                } else {
-                    content
+                case .content:
+                    if threads.isEmpty {
+                        emptyCard()
+                    } else {
+                        content
+                    }
                 }
             }
             .padding(.horizontal, 20)

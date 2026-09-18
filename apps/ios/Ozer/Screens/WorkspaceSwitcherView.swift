@@ -8,9 +8,8 @@ struct WorkspaceSwitcherView: View {
         NavigationStack {
             Group {
                 if !session.workspacesLoaded && session.workspaces.isEmpty {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    OzerListSkeleton(rows: 4, accessibilityLabel: "Loading workspaces")
+                        .padding(.horizontal, 20)
                 } else if session.workspaces.isEmpty {
                     emptyState
                 } else {
