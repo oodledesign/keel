@@ -1,28 +1,47 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo, useState, useSyncExternalStore } from 'react';
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { CaretSortIcon } from '@radix-ui/react-icons';
-import { CheckCircle, Mail, Plus } from 'lucide-react';
+import {
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Mail,
+  MoreHorizontal,
+  Plus,
+} from 'lucide-react';
 
 import { usePersonalAccountData } from '@kit/accounts/hooks/use-personal-account-data';
 import { CreateTeamAccountDialog } from '@kit/team-accounts/components';
 import { Button } from '@kit/ui/button';
 import {
   Command,
+  CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,
 } from '@kit/ui/command';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { SidebarContext } from '@kit/ui/shadcn-sidebar';
 import { cn } from '@kit/ui/utils';
 
-import { workspaceComboboxListClass } from '~/components/workspace-shell/workspace-combobox-styles';
+import {
+  workspaceComboboxInputClass,
+  workspaceComboboxListClass,
+} from '~/components/workspace-shell/workspace-combobox-styles';
 import { useWorkspaceFocusSettings } from '~/components/workspace-shell/workspace-focus-context';
 import { getWorkspaceFocusMutedClassName } from '~/components/workspace-shell/workspace-focus-sidebar-decorations';
 import pathsConfig from '~/config/paths.config';
@@ -35,6 +54,14 @@ import {
   PERSONAL_WORKSPACE_VALUE,
   isPersonalWorkspaceValue,
 } from '~/lib/workspace-personal-switcher';
+import {
+  applyWorkspaceOrder,
+  getWorkspaceSwitcherPrefsSnapshot,
+  moveWorkspaceInOrder,
+  parseWorkspaceSwitcherPrefs,
+  subscribeWorkspaceSwitcherPrefs,
+  writeWorkspaceSwitcherPrefs,
+} from '~/lib/workspace-switcher/workspace-switcher-prefs';
 
 type PersonalAccountSeed = {
   id: string | null;
@@ -83,23 +110,39 @@ export function WorkspaceAccountsSelector({
   const collapsed = !ctx?.open;
   const [open, setOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [rearranging, setRearranging] = useState(false);
+  const prefsSnapshot = useSyncExternalStore(
+    subscribeWorkspaceSwitcherPrefs,
+    () => getWorkspaceSwitcherPrefsSnapshot(userId),
+    () => '',
+  );
+  const prefs = useMemo(
+    () => parseWorkspaceSwitcherPrefs(prefsSnapshot),
+    [prefsSnapshot],
+  );
+  const workspaceOrder = prefs.order;
+  const showSearch = prefs.showSearch;
   const { data: personalData } = usePersonalAccountData(
     userId,
     personalAccount,
   );
 
+  function persistPrefs(next: { order: string[]; showSearch: boolean }) {
+    writeWorkspaceSwitcherPrefs(userId, next);
+  }
+
   const accountsWithPersonalPhoto = useMemo(() => {
     const personalImage = personalData?.picture_url ?? null;
-    if (!personalImage) {
-      return accounts;
-    }
+    const withPhoto = !personalImage
+      ? accounts
+      : accounts.map((account) =>
+          isPersonalWorkspaceValue(account.value) && !account.image
+            ? { ...account, image: personalImage }
+            : account,
+        );
 
-    return accounts.map((account) =>
-      isPersonalWorkspaceValue(account.value) && !account.image
-        ? { ...account, image: personalImage }
-        : account,
-    );
-  }, [accounts, personalData?.picture_url]);
+    return applyWorkspaceOrder(withPhoto, workspaceOrder);
+  }, [accounts, personalData?.picture_url, workspaceOrder]);
 
   const selected = accountsWithPersonalPhoto.find(
     (a) => a.value === selectedAccount,
@@ -127,6 +170,19 @@ export function WorkspaceAccountsSelector({
     );
   }
 
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      setRearranging(false);
+    }
+  }
+
+  function moveWorkspace(accountId: string, direction: -1 | 1) {
+    const ids = accountsWithPersonalPhoto.map((account) => account.id);
+    const nextOrder = moveWorkspaceInOrder(ids, accountId, direction);
+    persistPrefs({ order: nextOrder, showSearch });
+  }
+
   const trigger = (
     <Button
       data-test="account-selector-trigger"
@@ -135,7 +191,7 @@ export function WorkspaceAccountsSelector({
       role="combobox"
       aria-expanded={open}
       type="button"
-      onClick={variant === 'inline' ? () => setOpen((v) => !v) : undefined}
+      onClick={variant === 'inline' ? () => handleOpenChange(!open) : undefined}
       className={cn(
         'group mr-1 w-full min-w-0 px-2 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] lg:w-auto lg:max-w-fit',
         collapsed && variant === 'popover'
@@ -178,20 +234,152 @@ export function WorkspaceAccountsSelector({
   );
 
   const list = (
-    <Command className="bg-transparent text-[var(--workspace-shell-text)]">
-      <CommandList className={workspaceComboboxListClass}>
-        <CommandGroup heading="Your workspaces">
-          {accountsWithPersonalPhoto.map((account) => (
-            <WorkspaceSwitcherAccountRow
-              key={account.id}
-              account={account}
-              selectedAccount={selectedAccount}
-              onSelect={() => navigateTo(account)}
-            />
-          ))}
-        </CommandGroup>
+    <Command className="bg-transparent text-[var(--workspace-shell-text)] [&_[cmdk-input-wrapper]]:border-[color:var(--workspace-shell-border)]">
+      <div className="flex items-center gap-1 border-b border-[color:var(--workspace-shell-border)] px-2 py-1.5">
+        <p className="min-w-0 flex-1 truncate px-1 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+          {rearranging ? 'Rearrange workspaces' : 'Your workspaces'}
+        </p>
+        {rearranging ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+            onClick={() => setRearranging(false)}
+          >
+            Done
+          </Button>
+        ) : (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-test="workspace-selector-menu"
+                className="h-7 w-7 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                aria-label="Workspace list options"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="z-[220] w-56 border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+              onCloseAutoFocus={(event) => event.preventDefault()}
+            >
+              <DropdownMenuItem
+                className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                disabled={accountsWithPersonalPhoto.length < 2}
+                onSelect={() => {
+                  persistPrefs({
+                    order: accountsWithPersonalPhoto.map(
+                      (account) => account.id,
+                    ),
+                    showSearch,
+                  });
+                  setRearranging(true);
+                }}
+              >
+                Rearrange workspace list
+              </DropdownMenuItem>
+              <DropdownMenuCheckboxItem
+                className="focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                checked={showSearch}
+                onCheckedChange={(checked) =>
+                  persistPrefs({
+                    order:
+                      workspaceOrder.length > 0
+                        ? workspaceOrder
+                        : accountsWithPersonalPhoto.map(
+                            (account) => account.id,
+                          ),
+                    showSearch: checked === true,
+                  })
+                }
+                onSelect={(event) => event.preventDefault()} // keep menu open on toggle
+              >
+                Display search bar
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
 
-        {portals.length > 0 ? (
+      {showSearch && !rearranging ? (
+        <CommandInput
+          placeholder="Search workspaces…"
+          className={workspaceComboboxInputClass}
+        />
+      ) : null}
+
+      <CommandList className={workspaceComboboxListClass}>
+        {showSearch && !rearranging ? (
+          <CommandEmpty>No matching workspaces.</CommandEmpty>
+        ) : null}
+
+        {rearranging ? (
+          <div className="p-1" role="list">
+            {accountsWithPersonalPhoto.map((account, index) => (
+              <div
+                key={account.id}
+                role="listitem"
+                className="my-1 flex items-center gap-2 rounded-xs px-2 py-1.5"
+              >
+                <WorkspaceAvatar
+                  name={account.label}
+                  color={account.accentColor}
+                  image={account.image}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {account.label}
+                  </p>
+                  <p className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
+                    {account.typeLabel}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                    disabled={index === 0}
+                    aria-label={`Move ${account.label} up`}
+                    onClick={() => moveWorkspace(account.id, -1)}
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                    disabled={index === accountsWithPersonalPhoto.length - 1}
+                    aria-label={`Move ${account.label} down`}
+                    onClick={() => moveWorkspace(account.id, 1)}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <CommandGroup>
+            {accountsWithPersonalPhoto.map((account) => (
+              <WorkspaceSwitcherAccountRow
+                key={account.id}
+                account={account}
+                selectedAccount={selectedAccount}
+                onSelect={() => navigateTo(account)}
+              />
+            ))}
+          </CommandGroup>
+        )}
+
+        {!rearranging && portals.length > 0 ? (
           <>
             <CommandSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
             <CommandGroup heading="Client portals">
@@ -226,7 +414,7 @@ export function WorkspaceAccountsSelector({
           </>
         ) : null}
 
-        {enableTeamCreation ? (
+        {!rearranging && enableTeamCreation ? (
           <>
             <CommandSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
             <CommandGroup>
@@ -259,7 +447,7 @@ export function WorkspaceAccountsSelector({
           ) : null}
         </div>
       ) : (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={handleOpenChange}>
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>
           <PopoverContent
             data-test="account-selector-content"
