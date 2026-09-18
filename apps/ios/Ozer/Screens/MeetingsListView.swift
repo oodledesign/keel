@@ -5,7 +5,7 @@ struct MeetingsListView: View {
     @State private var remoteMeetings: [MeetingItem] = []
     @State private var upcoming: [UpcomingMeetingItem] = []
     @State private var loadError: NativeAPIError?
-    @State private var isLoading = false
+    @State private var isLoading = true
     @State private var isRecording = false
     @State private var selectedMeeting: LocalMeeting?
     @State private var meetingStore = MeetingStore.shared
@@ -39,10 +39,10 @@ struct MeetingsListView: View {
             Group {
                 if !showsMeetings && session.workspacesLoaded {
                     unavailableCard
-                } else if isLoading && rows.isEmpty && upcoming.isEmpty && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if rows.isEmpty && upcoming.isEmpty && loadError == nil &&
+                    (isLoading || !session.workspacesLoaded)
+                {
+                    OzerListSkeleton(accessibilityLabel: "Loading meetings")
                 } else if let loadError, rows.isEmpty && upcoming.isEmpty {
                     statusCard(error: loadError)
                 } else if session.workspacesLoaded && workspace.isEmpty {

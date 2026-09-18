@@ -290,11 +290,10 @@ struct TaskClientFilterSheet: View {
     @ViewBuilder
     private var clientRows: some View {
         if isLoading && clients.isEmpty && loadError == nil {
-            HStack {
-                Spacer()
-                ProgressView()
-                    .tint(OzerPalette.coral)
-                Spacer()
+            VStack(alignment: .leading, spacing: 0) {
+                OzerSkeletonRow(titleWidth: 140, subtitleWidth: 90)
+                OzerSkeletonRow(titleWidth: 120, subtitleWidth: 70)
+                OzerSkeletonRow(titleWidth: 156, subtitleWidth: 80)
             }
             .listRowBackground(OzerPalette.panel)
             .accessibilityLabel("Loading clients")

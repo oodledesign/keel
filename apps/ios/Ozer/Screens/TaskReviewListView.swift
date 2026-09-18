@@ -60,10 +60,10 @@ struct TaskReviewListView: View {
             VStack(spacing: 0) {
                 filterBar
                 Group {
-                    if isLoading && payload == nil && loadError == nil {
-                        ProgressView()
-                            .tint(OzerPalette.coral)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if payload == nil && loadError == nil &&
+                        !(session.workspacesLoaded && session.workspaceQueryValue.isEmpty)
+                    {
+                        OzerListSkeleton(accessibilityLabel: "Loading task review")
                     } else if let loadError {
                         statusCard(error: loadError)
                     } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {

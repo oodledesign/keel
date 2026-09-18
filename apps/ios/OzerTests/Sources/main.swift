@@ -414,6 +414,7 @@ struct SpeakerTranscriptTests {
         MeetingDisplayTests.run(check: check)
         FinanceMonthPointTests.run(check: check)
         WorkspaceNavigationTests.run(check: check)
+        ContentLoadPhaseTests.run(check: check)
         SurveyDisplayTests.run(check: check)
         SurveySectionCatalogueTests.run(check: check)
         SurveyPhotoSyncTests.run(check: check)

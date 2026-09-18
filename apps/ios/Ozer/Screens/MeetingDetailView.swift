@@ -214,9 +214,13 @@ struct MeetingDetailView: View {
     private var notesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             if isLoadingDetail && notesText == nil {
-                ProgressView()
-                    .tint(OzerPalette.coral)
-                    .frame(maxWidth: .infinity)
+                VStack(alignment: .leading, spacing: 8) {
+                    OzerSkeletonBar(width: 220, height: 12)
+                    OzerSkeletonBar(width: 180, height: 12)
+                    OzerSkeletonBar(width: 200, height: 12)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityLabel("Loading notes")
             } else if let notesText {
                 notesMarkdown(notesText)
             } else {
@@ -277,9 +281,11 @@ struct MeetingDetailView: View {
     private var tasksCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             if isLoadingDetail && tasks.isEmpty {
-                ProgressView()
-                    .tint(OzerPalette.coral)
-                    .frame(maxWidth: .infinity)
+                VStack(spacing: 0) {
+                    OzerSkeletonRow(titleWidth: 160, subtitleWidth: 90)
+                    OzerSkeletonRow(titleWidth: 140, subtitleWidth: 80)
+                }
+                .accessibilityLabel("Loading tasks")
             } else if tasks.isEmpty {
                 Text("No saved tasks from this meeting yet. Extract them on Mac or web.")
                     .font(.body)

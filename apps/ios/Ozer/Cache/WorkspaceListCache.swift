@@ -74,6 +74,24 @@ enum WorkspaceListCache {
         saveTasks(userId: userId, workspaceId: workspaceId, items: items)
     }
 
+    static func loadHome(userId: String, workspaceId: String) -> HomeDashboardSnapshot? {
+        guard let url = fileURL(userId: userId, workspaceId: workspaceId, kind: "home"),
+              let data = try? Data(contentsOf: url),
+              let snapshot = try? JSONDecoder().decode(HomeDashboardSnapshot.self, from: data)
+        else {
+            return nil
+        }
+        return snapshot
+    }
+
+    static func saveHome(userId: String, workspaceId: String, snapshot: HomeDashboardSnapshot) {
+        guard let url = fileURL(userId: userId, workspaceId: workspaceId, kind: "home") else {
+            return
+        }
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
     private static func fileURL(userId: String, workspaceId: String, kind: String) -> URL? {
         let user = sanitize(userId)
         let workspace = sanitize(workspaceId)

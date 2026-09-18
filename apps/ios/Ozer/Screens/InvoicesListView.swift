@@ -28,18 +28,28 @@ struct InvoicesListView: View {
                 Group {
                     if !showsInvoices && session.workspacesLoaded {
                         unavailableCard
-                    } else if isLoading && payload == nil && loadError == nil {
-                        ProgressView()
-                            .tint(OzerPalette.coral)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let loadError {
-                        statusCard(error: loadError)
-                    } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
-                        membershipsEmptyCard
-                    } else if let payload, !payload.items.isEmpty {
-                        content(payload)
                     } else {
-                        emptyCard()
+                        switch ContentLoadPhase.resolve(
+                            workspacesLoaded: session.workspacesLoaded,
+                            workspaceQueryEmpty: session.workspaceQueryValue.isEmpty,
+                            hasContent: payload != nil,
+                            hasError: loadError != nil
+                        ) {
+                        case .skeleton:
+                            OzerListSkeleton(accessibilityLabel: "Loading invoices")
+                        case .error:
+                            if let loadError {
+                                statusCard(error: loadError)
+                            }
+                        case .noWorkspaces:
+                            membershipsEmptyCard
+                        case .content:
+                            if let payload, !payload.items.isEmpty {
+                                content(payload)
+                            } else {
+                                emptyCard()
+                            }
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

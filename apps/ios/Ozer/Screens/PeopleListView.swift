@@ -16,18 +16,26 @@ struct PeopleListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading && payload == nil && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let loadError {
-                    statusCard(error: loadError)
-                } else if session.workspacesLoaded && session.workspaceQueryValue.isEmpty {
+                switch ContentLoadPhase.resolve(
+                    workspacesLoaded: session.workspacesLoaded,
+                    workspaceQueryEmpty: session.workspaceQueryValue.isEmpty,
+                    hasContent: payload != nil,
+                    hasError: loadError != nil
+                ) {
+                case .skeleton:
+                    OzerListSkeleton(accessibilityLabel: "Loading people")
+                case .error:
+                    if let loadError {
+                        statusCard(error: loadError)
+                    }
+                case .noWorkspaces:
                     membershipsEmptyCard
-                } else if let payload, !payload.items.isEmpty {
-                    content(payload)
-                } else {
-                    emptyCard()
+                case .content:
+                    if let payload, !payload.items.isEmpty {
+                        content(payload)
+                    } else {
+                        emptyCard()
+                    }
                 }
             }
             .padding(.horizontal, 20)

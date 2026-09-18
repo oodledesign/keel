@@ -66,6 +66,20 @@ struct SurveyorHomeSurvey: Decodable, Identifiable, Equatable, Hashable {
         case clientName = "client_name"
     }
 
+    init(
+        id: String,
+        title: String,
+        status: String,
+        updatedAt: String? = nil,
+        clientName: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.status = status
+        self.updatedAt = updatedAt
+        self.clientName = clientName
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
@@ -108,6 +122,20 @@ struct SurveyorHomeDeal: Decodable, Identifiable, Equatable, Hashable {
         case id, title, stage
         case stageLabel = "stage_label"
         case clientName = "client_name"
+    }
+
+    init(
+        id: String,
+        title: String,
+        stage: String,
+        stageLabel: String,
+        clientName: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.stage = stage
+        self.stageLabel = stageLabel
+        self.clientName = clientName
     }
 
     init(from decoder: Decoder) throws {

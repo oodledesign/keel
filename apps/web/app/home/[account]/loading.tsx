@@ -1,3 +1,5 @@
-import WorkspaceRouteLoading from '~/components/workspace-route-loading';
+import { BusinessDashboardSkeleton } from './_components/business-dashboard-skeleton';
 
-export default WorkspaceRouteLoading;
+export default function Loading() {
+  return <BusinessDashboardSkeleton />;
+}

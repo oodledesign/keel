@@ -23,10 +23,10 @@ struct RecipesListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading && payload == nil && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if payload == nil && loadError == nil &&
+                    !(session.workspacesLoaded && session.workspaceQueryValue.isEmpty)
+                {
+                    OzerListSkeleton(accessibilityLabel: "Loading recipes")
                 } else if let loadError {
                     statusCard(title: "Couldn’t load recipes", message: loadError.localizedDescription)
                 } else if items.isEmpty {

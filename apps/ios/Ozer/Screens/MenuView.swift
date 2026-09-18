@@ -93,13 +93,12 @@ struct MenuView: View {
     @ViewBuilder
     private var workspacePickerRow: some View {
         if !session.workspacesLoaded && session.workspaces.isEmpty {
-            HStack {
-                ProgressView()
-                    .tint(OzerPalette.coral)
-                Text("Loading memberships")
-                    .foregroundStyle(OzerPalette.plumMuted)
+            HStack(spacing: 10) {
+                OzerSkeletonBar(width: 28, height: 28, cornerRadius: 8)
+                OzerSkeletonBar(width: 140, height: 12)
             }
             .listRowBackground(OzerPalette.panel)
+            .accessibilityLabel("Loading memberships")
         } else if session.workspaces.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 Text("No workspaces yet")

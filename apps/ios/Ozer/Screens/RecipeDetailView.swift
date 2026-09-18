@@ -75,7 +75,7 @@ struct RecipeDetailView: View {
                     .foregroundStyle(OzerPalette.plumMuted)
                     .padding()
             } else {
-                ProgressView().tint(OzerPalette.coral)
+                OzerListSkeleton(rows: 5, accessibilityLabel: "Loading recipe")
             }
         }
         .background(OzerPalette.cream.ignoresSafeArea())

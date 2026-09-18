@@ -6,7 +6,7 @@ struct SurveysListView: View {
     @State private var queue = OfflineSurveyQueue.shared
     @State private var network = NetworkPathMonitor.shared
     @State private var loadError: NativeAPIError?
-    @State private var isLoading = false
+    @State private var isLoading = true
     @State private var showCreate = false
     @State private var selected: SurveyItem?
 
@@ -37,10 +37,10 @@ struct SurveysListView: View {
             Group {
                 if !showsSurveys && session.workspacesLoaded {
                     unavailableCard
-                } else if isLoading && rows.isEmpty && loadError == nil {
-                    ProgressView()
-                        .tint(OzerPalette.coral)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if rows.isEmpty && loadError == nil &&
+                    (isLoading || !session.workspacesLoaded)
+                {
+                    OzerListSkeleton(accessibilityLabel: "Loading surveys")
                 } else if let loadError, rows.isEmpty {
                     statusCard(error: loadError)
                 } else if session.workspacesLoaded && workspace.isEmpty {
