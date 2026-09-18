@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -75,6 +75,8 @@ type Props = {
   onEditInstruction: (deal: PipelineDeal) => void;
   onDealWon?: (deal: PipelineDeal) => void;
   onActivityChanged?: () => void;
+  expandedIds: Set<string>;
+  onExpandedIdsChange: (next: Set<string>) => void;
 };
 
 function formatCurrency(value: number) {
@@ -125,8 +127,9 @@ export function WipLadderView({
   onEditInstruction,
   onDealWon,
   onActivityChanged,
+  expandedIds,
+  onExpandedIdsChange,
 }: Props) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [, startTransition] = useTransition();
 
   const listingById = useMemo(() => {
@@ -244,25 +247,11 @@ export function WipLadderView({
     [dealsByStage, persistLadderOrder],
   );
 
-  const allDealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
-  const allExpanded =
-    allDealIds.length > 0 && allDealIds.every((id) => expandedIds.has(id));
-
   const toggleExpanded = (dealId: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(dealId)) next.delete(dealId);
-      else next.add(dealId);
-      return next;
-    });
-  };
-
-  const expandAll = () => {
-    setExpandedIds(new Set(allDealIds));
-  };
-
-  const collapseAll = () => {
-    setExpandedIds(new Set());
+    const next = new Set(expandedIds);
+    if (next.has(dealId)) next.delete(dealId);
+    else next.add(dealId);
+    onExpandedIdsChange(next);
   };
 
   const changeStage = (deal: PipelineDeal, nextStage: string) => {
@@ -317,18 +306,6 @@ export function WipLadderView({
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 md:px-6 lg:px-8">
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs"
-          disabled={allDealIds.length === 0}
-          onClick={allExpanded ? collapseAll : expandAll}
-        >
-          {allExpanded ? 'Collapse all' : 'Expand all'}
-        </Button>
-      </div>
       {ladderStages.map((stage) => {
         const stageDeals = dealsByStage.get(stage.key) ?? [];
         const colour = wipStageColour(stage.key);

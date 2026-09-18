@@ -129,6 +129,7 @@ import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
 import { WipLadderView } from './wip-ladder-view';
 import { WipNeedsAttentionStrip } from './wip-needs-attention-strip';
 import { WipRecentUpdatesStrip } from './wip-recent-updates-strip';
+import { WipRunningTotalsCards } from './wip-running-totals-cards';
 import { WipSheetView } from './wip-sheet-view';
 
 const panelClass =
@@ -303,6 +304,9 @@ export function CommercialWipBoard({
   const [, startTransition] = useTransition();
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [ladderExpandedIds, setLadderExpandedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -978,6 +982,10 @@ export function CommercialWipBoard({
   const instructionCount = activeInstructions.length;
   const requirementCount = filteredRequirements.length;
   const wipTotals = useMemo(() => computeWipInstructionTotals(deals), [deals]);
+  const ladderDealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
+  const allLadderExpanded =
+    ladderDealIds.length > 0 &&
+    ladderDealIds.every((id) => ladderExpandedIds.has(id));
 
   const tabCounts: Record<WipBoardView, number | null> = {
     instructions: instructionCount,
@@ -1002,101 +1010,57 @@ export function CommercialWipBoard({
             : ''
         }`}
       >
-        <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
-          {VIEW_OPTIONS.map((option) => {
-            const count = tabCounts[option.key];
-            const bothDisabled =
-              option.key === 'both' &&
-              (layout === 'sheet' || layout === 'ladder');
-            const requirementsOnLadder =
-              option.key === 'requirements' && layout === 'ladder';
-            const disabled = bothDisabled || requirementsOnLadder;
-            return (
-              <button
-                key={option.key}
-                type="button"
-                aria-pressed={view === option.key}
-                disabled={disabled}
-                title={
-                  bothDisabled
-                    ? 'Sheet and ladder show one stream at a time'
-                    : requirementsOnLadder
-                      ? 'Ladder is for instructions — use Sheet for requirements'
-                      : undefined
-                }
-                onClick={() => setView(option.key)}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-                  disabled
-                    ? 'cursor-not-allowed text-[var(--workspace-shell-text-muted)]/40'
-                    : view === option.key
-                      ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
-                }`}
-              >
-                <span>{option.label}</span>
-                {count != null ? (
-                  <span
-                    className={`tabular-nums ${
-                      disabled
-                        ? 'text-[var(--workspace-shell-text-muted)]/40'
-                        : view === option.key
-                          ? 'text-[var(--workspace-shell-text)]/70'
-                          : 'text-[var(--workspace-shell-text-muted)]'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        <div
-          className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm tabular-nums"
-          data-test="wip-running-totals"
-        >
-          <p className="text-[var(--workspace-shell-text-muted)]">
-            <span className="font-medium text-[var(--workspace-shell-text)]">
-              {formatCurrency(wipTotals.billed)}
-            </span>
-            <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
-              billed
-            </span>
-          </p>
-          <p className="text-[var(--workspace-shell-text-muted)]">
-            <span className="font-medium text-[var(--workspace-shell-text)]">
-              {formatCurrency(wipTotals.underOffer)}
-            </span>
-            <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
-              under offer
-            </span>
-          </p>
-          <p className="text-[var(--workspace-shell-text-muted)]">
-            <span className="font-medium text-[var(--workspace-shell-text)]">
-              {formatCurrency(wipTotals.total)}
-            </span>
-            <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
-              total
-            </span>
-          </p>
-        </div>
-
-        {showRequirementSearch ? (
-          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
-            <Input
-              type="search"
-              value={requirementSearch}
-              onChange={(e) => setRequirementSearch(e.target.value)}
-              placeholder="Search by name…"
-              aria-label="Search requirements by name"
-              className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-8 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
-            />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
+            {VIEW_OPTIONS.map((option) => {
+              const count = tabCounts[option.key];
+              const bothDisabled =
+                option.key === 'both' &&
+                (layout === 'sheet' || layout === 'ladder');
+              const requirementsOnLadder =
+                option.key === 'requirements' && layout === 'ladder';
+              const disabled = bothDisabled || requirementsOnLadder;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  aria-pressed={view === option.key}
+                  disabled={disabled}
+                  title={
+                    bothDisabled
+                      ? 'Sheet and ladder show one stream at a time'
+                      : requirementsOnLadder
+                        ? 'Ladder is for instructions — use Sheet for requirements'
+                        : undefined
+                  }
+                  onClick={() => setView(option.key)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                    disabled
+                      ? 'cursor-not-allowed text-[var(--workspace-shell-text-muted)]/40'
+                      : view === option.key
+                        ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                        : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
+                  }`}
+                >
+                  <span>{option.label}</span>
+                  {count != null ? (
+                    <span
+                      className={`tabular-nums ${
+                        disabled
+                          ? 'text-[var(--workspace-shell-text-muted)]/40'
+                          : view === option.key
+                            ? 'text-[var(--workspace-shell-text)]/70'
+                            : 'text-[var(--workspace-shell-text-muted)]'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
-        ) : null}
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
             <button
               type="button"
@@ -1138,7 +1102,23 @@ export function CommercialWipBoard({
               Ladder
             </button>
           </div>
+        </div>
 
+        {showRequirementSearch ? (
+          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+            <Input
+              type="search"
+              value={requirementSearch}
+              onChange={(e) => setRequirementSearch(e.target.value)}
+              placeholder="Search by name…"
+              aria-label="Search requirements by name"
+              className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-8 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
+            />
+          </div>
+        ) : null}
+
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -1341,8 +1321,32 @@ export function CommercialWipBoard({
         }}
       />
 
+      <div
+        className={`flex shrink-0 flex-wrap items-center gap-2 px-4 md:px-6 lg:px-8 ${
+          fullscreen ? '' : 'pt-1'
+        }`}
+      >
+        <WipRunningTotalsCards totals={wipTotals} />
+        {layout === 'ladder' ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="ml-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs"
+            disabled={ladderDealIds.length === 0}
+            onClick={() =>
+              setLadderExpandedIds(
+                allLadderExpanded ? new Set() : new Set(ladderDealIds),
+              )
+            }
+          >
+            {allLadderExpanded ? 'Collapse all' : 'Expand all'}
+          </Button>
+        ) : null}
+      </div>
+
       {layout === 'sheet' ? (
-        <WipSheetView
+        <WipSheetView>
           accountId={accountId}
           accountSlug={accountSlug}
           view={view}
@@ -1382,6 +1386,8 @@ export function CommercialWipBoard({
           }}
           onDealWon={onDealWon}
           onActivityChanged={() => router.refresh()}
+          expandedIds={ladderExpandedIds}
+          onExpandedIdsChange={setLadderExpandedIds}
         />
       ) : (
         <DndContext
