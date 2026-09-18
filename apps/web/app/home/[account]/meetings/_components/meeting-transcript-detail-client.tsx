@@ -64,6 +64,10 @@ import { workspacePageContentClassName } from '~/components/workspace-shell/work
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
+import {
+  formatEmailParticipantLabel,
+  resolveEmailParticipantName,
+} from '~/lib/recorder/email-participant-label';
 import { MEETING_SUGGESTED_TASK_PENDING_STATUS } from '~/lib/recorder/meeting-suggested-tasks';
 import { buildPublicMeetingShareUrl } from '~/lib/recorder/public-meeting-share';
 import {
@@ -159,6 +163,48 @@ function isValidEmail(email: string) {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function EmailRecipientRow({
+  email,
+  displayName,
+  checked,
+  onCheckedChange,
+}: {
+  email: string;
+  displayName: string | null;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  const { displayName: name, label } = formatEmailParticipantLabel(
+    displayName,
+    email,
+  );
+
+  return (
+    <label className="flex min-w-0 cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]">
+      <Checkbox
+        className="shrink-0"
+        checked={checked}
+        onCheckedChange={(value) => {
+          onCheckedChange(value === true);
+        }}
+      />
+      <span className="min-w-0 flex-1 truncate" title={label}>
+        {name ? (
+          <>
+            <span className="font-medium">{name}</span>
+            <span className="text-[var(--workspace-shell-text-muted)]">
+              {' '}
+              - {email}
+            </span>
+          </>
+        ) : (
+          email
+        )}
+      </span>
+    </label>
+  );
 }
 
 export function MeetingTranscriptDetailClient({
@@ -1576,7 +1622,7 @@ export function MeetingTranscriptDetailClient({
       </Dialog>
 
       <Dialog open={emailNotesOpen} onOpenChange={setEmailNotesOpen}>
-        <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <DialogContent className="max-w-lg overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
             <DialogTitle>Email meeting notes</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -1591,43 +1637,28 @@ export function MeetingTranscriptDetailClient({
                 <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                   Participants
                 </p>
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                <div className="max-h-48 space-y-2 overflow-y-auto overflow-x-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
                   {callParticipantEmails.map((email) => {
                     const checked = selectedRecipientEmails.includes(email);
-                    const attendeeName = transcript.calendarAttendees.find(
-                      (row) => normalizeEmail(row.email) === email,
-                    )?.name;
+                    const displayName = resolveEmailParticipantName(email, {
+                      contacts,
+                      calendarAttendees: transcript.calendarAttendees,
+                      members,
+                    });
                     return (
-                      <label
+                      <EmailRecipientRow
                         key={email}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(value) => {
-                            setSelectedRecipientEmails((current) =>
-                              value === true
-                                ? Array.from(new Set([...current, email]))
-                                : current.filter((item) => item !== email),
-                            );
-                          }}
-                        />
-                        <span className="min-w-0 truncate">
-                          {attendeeName?.trim() ? (
-                            <>
-                              <span className="font-medium">
-                                {attendeeName}
-                              </span>
-                              <span className="text-[var(--workspace-shell-text-muted)]">
-                                {' '}
-                                · {email}
-                              </span>
-                            </>
-                          ) : (
-                            email
-                          )}
-                        </span>
-                      </label>
+                        email={email}
+                        displayName={displayName}
+                        checked={checked}
+                        onCheckedChange={(nextChecked) => {
+                          setSelectedRecipientEmails((current) =>
+                            nextChecked
+                              ? Array.from(new Set([...current, email]))
+                              : current.filter((item) => item !== email),
+                          );
+                        }}
+                      />
                     );
                   })}
                 </div>
@@ -1651,38 +1682,29 @@ export function MeetingTranscriptDetailClient({
                     : `Add from contacts (${contactEmailOptions.length})`}
                 </button>
                 {showContactPicker ? (
-                  <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                  <div className="max-h-40 space-y-2 overflow-y-auto overflow-x-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
                     {contactEmailOptions.map((contact) => {
                       const checked = selectedRecipientEmails.includes(
                         contact.email,
                       );
                       return (
-                        <label
+                        <EmailRecipientRow
                           key={contact.id}
-                          className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={(value) => {
-                              setSelectedRecipientEmails((current) =>
-                                value === true
-                                  ? Array.from(
-                                      new Set([...current, contact.email]),
-                                    )
-                                  : current.filter(
-                                      (item) => item !== contact.email,
-                                    ),
-                              );
-                            }}
-                          />
-                          <span className="min-w-0 truncate">
-                            <span className="font-medium">{contact.name}</span>
-                            <span className="text-[var(--workspace-shell-text-muted)]">
-                              {' '}
-                              · {contact.email}
-                            </span>
-                          </span>
-                        </label>
+                          email={contact.email}
+                          displayName={contact.name}
+                          checked={checked}
+                          onCheckedChange={(nextChecked) => {
+                            setSelectedRecipientEmails((current) =>
+                              nextChecked
+                                ? Array.from(
+                                    new Set([...current, contact.email]),
+                                  )
+                                : current.filter(
+                                    (item) => item !== contact.email,
+                                  ),
+                            );
+                          }}
+                        />
                       );
                     })}
                   </div>
