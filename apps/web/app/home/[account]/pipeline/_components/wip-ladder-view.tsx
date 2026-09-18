@@ -247,12 +247,15 @@ export function WipLadderView({
     [dealsByStage, persistLadderOrder],
   );
 
-  const toggleExpanded = (dealId: string) => {
-    const next = new Set(expandedIds);
-    if (next.has(dealId)) next.delete(dealId);
-    else next.add(dealId);
-    onExpandedIdsChange(next);
-  };
+  const toggleExpanded = useCallback(
+    (dealId: string) => {
+      const next = new Set(expandedIds);
+      if (next.has(dealId)) next.delete(dealId);
+      else next.add(dealId);
+      onExpandedIdsChange(next);
+    },
+    [expandedIds, onExpandedIdsChange],
+  );
 
   const changeStage = (deal: PipelineDeal, nextStage: string) => {
     if (nextStage === deal.stage) return;

@@ -33,6 +33,8 @@ const METRICS = [
     label: 'Total',
     testId: 'wip-running-total-combined',
     hint: 'Billed plus under offer',
+    // Navy / --ozer-info — same swatch as Potential columns, used here as
+    // combined emphasis rather than the early-funnel stage meaning.
     colour: WIP_STAGE_COLOURS.potential,
     emphasize: true,
   },

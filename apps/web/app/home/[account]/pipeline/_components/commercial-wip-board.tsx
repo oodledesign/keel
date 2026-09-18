@@ -1346,7 +1346,7 @@ export function CommercialWipBoard({
       </div>
 
       {layout === 'sheet' ? (
-        <WipSheetView>
+        <WipSheetView
           accountId={accountId}
           accountSlug={accountSlug}
           view={view}
