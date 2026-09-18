@@ -182,35 +182,45 @@ function formatNotesSentAt(value: string | null) {
 function MeetingNotesRecipientRow({
   email,
   name,
+  lastSentAt,
   checked,
   onCheckedChange,
 }: {
   email: string;
   name?: string | null;
+  lastSentAt?: string | null;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }) {
   const display = formatMeetingNotesRecipientLabel({ name, email });
+  const emailedOn = formatNotesSentAt(lastSentAt ?? null);
 
   return (
-    <label className="flex min-w-0 cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]">
+    <label className="flex min-w-0 cursor-pointer items-start gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]">
       <Checkbox
-        className="shrink-0"
+        className="mt-0.5 shrink-0"
         checked={checked}
         onCheckedChange={(value) => onCheckedChange(value === true)}
       />
-      <span className="min-w-0 truncate" title={display.label}>
-        {display.name ? (
-          <>
-            <span className="font-medium">{display.name}</span>
-            <span className="text-[var(--workspace-shell-text-muted)]">
-              {' '}
-              - {display.email}
-            </span>
-          </>
-        ) : (
-          display.email
-        )}
+      <span className="min-w-0 flex-1">
+        <span className="block min-w-0 truncate" title={display.label}>
+          {display.name ? (
+            <>
+              <span className="font-medium">{display.name}</span>
+              <span className="text-[var(--workspace-shell-text-muted)]">
+                {' '}
+                - {display.email}
+              </span>
+            </>
+          ) : (
+            display.email
+          )}
+        </span>
+        {emailedOn ? (
+          <span className="mt-0.5 block truncate text-xs text-[var(--workspace-shell-text-muted)]">
+            Emailed on {emailedOn}
+          </span>
+        ) : null}
       </span>
     </label>
   );
@@ -354,6 +364,10 @@ export function MeetingTranscriptDetailClient({
         !callParticipantEmails.includes(contact.email),
     )
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const sentNoteEmailByAddress = new Map(
+    sentNoteEmails.map((row) => [normalizeEmail(row.email), row] as const),
+  );
 
   const openEmailNotesDialog = (preselectParticipants = true) => {
     setSelectedRecipientEmails(
@@ -705,7 +719,7 @@ export function MeetingTranscriptDetailClient({
             current.map((row) => [normalizeEmail(row.email), row] as const),
           );
           for (const email of recipientEmails) {
-            if (failed.has(email) || next.has(email)) continue;
+            if (failed.has(email)) continue;
             next.set(email, { email, sentAt });
           }
           return [...next.values()].sort((a, b) =>
@@ -1707,6 +1721,9 @@ export function MeetingTranscriptDetailClient({
                         key={email}
                         email={email}
                         name={name}
+                        lastSentAt={
+                          sentNoteEmailByAddress.get(email)?.sentAt ?? null
+                        }
                         checked={checked}
                         onCheckedChange={(nextChecked) => {
                           setSelectedRecipientEmails((current) =>
