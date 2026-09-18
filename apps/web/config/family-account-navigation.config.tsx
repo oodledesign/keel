@@ -1,6 +1,7 @@
 import {
   Calendar,
   CheckSquare,
+  Heart,
   Kanban,
   LayoutDashboard,
   Settings,
@@ -84,6 +85,14 @@ export function buildFamilySpaceNavChildren(
             label: 'Shopping',
             path: createPath(pathsConfig.app.accountShopping, account),
             Icon: <ShoppingCart className={iconClasses} />,
+          }
+        : null,
+    memories: () =>
+      access.canViewDashboard && isFamilyNavModuleEnabled(ms, 'memories')
+        ? {
+            label: 'Memories',
+            path: createPath(pathsConfig.app.accountMemories, account),
+            Icon: <Heart className={iconClasses} />,
           }
         : null,
     notes: () =>

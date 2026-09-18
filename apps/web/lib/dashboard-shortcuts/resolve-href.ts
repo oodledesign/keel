@@ -1,10 +1,10 @@
 import pathsConfig from '~/config/paths.config';
 
-import { normalizeAppHref } from './personal-home-url';
 import {
   SHORTCUT_CATALOG_RANKLY_PROJECT,
   SHORTCUT_CATALOG_ROUTE,
 } from './catalog-ids';
+import { normalizeAppHref } from './personal-home-url';
 import type { ShortcutCatalogItem } from './types';
 
 function accountPath(template: string, accountSlug: string) {
@@ -34,6 +34,7 @@ const LEGACY_WORKSPACE_MODULE_PATHS: Record<string, string> = {
   calendar: pathsConfig.app.accountFamilyCalendar,
   shopping: pathsConfig.app.accountShopping,
   meal_plan: pathsConfig.app.accountMealPlan,
+  memories: pathsConfig.app.accountMemories,
   community_schedule: pathsConfig.app.accountCommunitySchedule,
   community_tasks: pathsConfig.app.accountCommunityTasks,
   community_notes: pathsConfig.app.accountCommunityNotes,
@@ -66,10 +67,10 @@ export function resolveShortcutHref(
     const slug = params.accountSlug;
     const projectId = params.projectId;
     if (!slug || !projectId) return null;
-    return accountPath(pathsConfig.app.accountRanklyProjectDetail, slug).replace(
-      '[projectId]',
-      projectId,
-    );
+    return accountPath(
+      pathsConfig.app.accountRanklyProjectDetail,
+      slug,
+    ).replace('[projectId]', projectId);
   }
 
   // Legacy personal catalog ids
@@ -79,9 +80,9 @@ export function resolveShortcutHref(
   // Legacy workspace.module
   if (catalogId === 'workspace.module') {
     const slug = params.accountSlug;
-    const module = params.module;
-    if (!slug || !module) return null;
-    const template = LEGACY_WORKSPACE_MODULE_PATHS[module];
+    const moduleKey = params.module;
+    if (!slug || !moduleKey) return null;
+    const template = LEGACY_WORKSPACE_MODULE_PATHS[moduleKey];
     if (!template) return null;
     return accountPath(template, slug);
   }

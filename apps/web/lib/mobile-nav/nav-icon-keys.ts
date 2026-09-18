@@ -41,6 +41,7 @@ export type MobileNavIconKey =
   | 'calendar'
   | 'shopping'
   | 'meal'
+  | 'memories'
   | 'workspace';
 
 const PERSONAL_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
@@ -88,6 +89,7 @@ const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   calendar: 'calendar',
   shopping: 'shopping',
   meal: 'meal',
+  memories: 'memories',
   community: 'calendar',
   settings: 'apps',
   billing: 'finances',
@@ -127,6 +129,7 @@ const MOBILE_NAV_ICON_KEY_SET = new Set<string>([
   'calendar',
   'shopping',
   'meal',
+  'memories',
   'workspace',
 ]);
 

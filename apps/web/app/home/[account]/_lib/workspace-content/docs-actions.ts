@@ -124,6 +124,7 @@ const RegisterUploadSchema = z.object({
   proposalId: z.string().uuid().optional(),
   pinnedSectionKey: z.string().max(80).nullable().optional(),
   photoRole: z.enum(['archive', 'curated']).optional(),
+  noteId: z.string().uuid().optional(),
 });
 
 export const registerUploadedWorkspaceDocAction = enhanceAction(
@@ -131,6 +132,19 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
     const client = getSupabaseServerClient();
     const linkCols = linkToColumns(data.link);
     const tags = (data.tags ?? []).map((t) => t.trim()).filter(Boolean);
+
+    if (data.noteId) {
+      const { data: note, error: noteError } = await client
+        .from('notes')
+        .select('id')
+        .eq('id', data.noteId)
+        .eq('account_id', data.accountId)
+        .maybeSingle();
+      if (noteError) throw noteError;
+      if (!note) {
+        throw new Error('Note not found in this workspace');
+      }
+    }
 
     const { data: inserted, error } = await client
       .from('docs')
@@ -154,6 +168,7 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
         pinned_section_key: data.pinnedSectionKey ?? null,
         photo_role:
           data.photoRole ?? (data.pinnedSectionKey ? 'curated' : 'archive'),
+        ...(data.noteId ? { note_id: data.noteId } : {}),
         ...linkCols,
       } as never)
       .select('id')

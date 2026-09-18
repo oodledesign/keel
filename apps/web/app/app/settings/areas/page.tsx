@@ -16,7 +16,7 @@ type SpaceType = 'work' | 'family' | 'community';
 
 const SPACE_MODULES: Record<SpaceType, Array<string>> = {
   work: ['clients', 'pipeline', 'jobs', 'invoices', 'team', 'schedule'],
-  family: ['calendar', 'shopping', 'meal_plan'],
+  family: ['calendar', 'shopping', 'meal_plan', 'memories'],
   community: ['schedule', 'tasks', 'notes'],
 };
 

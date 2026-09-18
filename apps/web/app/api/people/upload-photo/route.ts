@@ -23,14 +23,13 @@ function personPhotoPath(accountId: string, personId: string) {
   return `${accountId}/person-${personId}`;
 }
 
-async function loadOwnedPerson(userId: string, personId: string) {
+async function loadAccessiblePerson(personId: string) {
   const client = getSupabaseServerClient();
 
   const { data, error } = await client
     .from('personal_people')
     .select('id, account_id, avatar_url')
     .eq('id', personId)
-    .eq('user_id', userId)
     .maybeSingle();
 
   if (error) {
@@ -76,7 +75,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const person = await loadOwnedPerson(user.id, personId.trim());
+  const person = await loadAccessiblePerson(personId.trim());
 
   if (!person) {
     return NextResponse.json({ error: 'Person not found' }, { status: 404 });

@@ -13,6 +13,7 @@ import {
   FileText,
   FormInput,
   Globe,
+  Heart,
   Home,
   Kanban,
   LayoutDashboard,
@@ -79,6 +80,7 @@ const ICON_BY_KEY: Record<MobileNavIconKey, LucideIcon> = {
   calendar: Calendar,
   shopping: ShoppingCart,
   meal: CalendarDays,
+  memories: Heart,
   workspace: LayoutDashboard,
 };
 

@@ -37,6 +37,11 @@ export function revalidateMealPlanPaths(scope: MealPlanScope) {
 
   // Public /app/* URLs rewrite to /home/* — invalidate both route caches.
   revalidatePath(scope.basePath);
+
+  if (scope.kind === 'workspace') {
+    revalidatePath(`/home/${scope.accountSlug}/memories`);
+    revalidatePath(`/app/${scope.accountSlug}/memories`);
+  }
 }
 
 export function revalidateShoppingPaths(scope: MealPlanScope) {

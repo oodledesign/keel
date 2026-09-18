@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const RELATIONSHIP_PRESETS = [
   'Family',
+  'Child',
   'Friend',
   'Partner',
   'Colleague',
@@ -48,6 +49,7 @@ export const CreatePersonSchema = z.object({
   generalNotes: z.string().trim().max(5000).optional().nullable(),
   catchupCadenceDays: z.number().int().positive().optional().nullable(),
   circleTier: z.enum(PERSON_CIRCLE_TIERS).optional(),
+  isChild: z.boolean().optional(),
 });
 
 export const UpdatePersonSchema = CreatePersonSchema.extend({
@@ -144,6 +146,7 @@ export type PersonRow = {
   catchup_cadence_days: number | null;
   last_catchup_on: string | null;
   circle_tier: PersonCircleTier;
+  is_child?: boolean;
   created_at: string;
   updated_at: string;
 };
