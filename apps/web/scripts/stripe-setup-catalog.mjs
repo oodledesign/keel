@@ -484,6 +484,23 @@ const CATALOG = [
     ],
   },
   {
+    catalogId: 'ozer-campaigns-pack-send-50k-scale',
+    productName: 'Ozer Campaigns pack — +50,000 sends (Scale)',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_SCALE',
+        lookupKey: 'keel.campaigns.pack.send_50k_scale',
+        amount: 2400,
+      },
+      {
+        envKey: 'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_SCALE_MONTHLY',
+        lookupKey: 'keel.campaigns.pack.send_50k_scale.monthly',
+        amount: 2000,
+        interval: 'month',
+      },
+    ],
+  },
+  {
     catalogId: 'ozer-campaigns-pack-send-200k',
     productName: 'Ozer Campaigns pack — +200,000 sends',
     prices: [
@@ -496,23 +513,6 @@ const CATALOG = [
         envKey: 'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_200K_MONTHLY',
         lookupKey: 'keel.campaigns.pack.send_200k.monthly',
         amount: 6900,
-        interval: 'month',
-      },
-    ],
-  },
-  {
-    catalogId: 'ozer-campaigns-pack-send-500k',
-    productName: 'Ozer Campaigns pack — +500,000 sends',
-    prices: [
-      {
-        envKey: 'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_500K',
-        lookupKey: 'keel.campaigns.pack.send_500k',
-        amount: 17900,
-      },
-      {
-        envKey: 'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_500K_MONTHLY',
-        lookupKey: 'keel.campaigns.pack.send_500k.monthly',
-        amount: 14900,
         interval: 'month',
       },
     ],
@@ -537,18 +537,6 @@ const CATALOG = [
         envKey: 'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2500_MONTHLY',
         lookupKey: 'keel.campaigns.bump.contacts_2500.monthly',
         amount: 2900,
-        interval: 'month',
-      },
-    ],
-  },
-  {
-    catalogId: 'ozer-campaigns-bump-contacts-2000',
-    productName: 'Ozer Campaigns bump — +2,000 contacts',
-    prices: [
-      {
-        envKey: 'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2000_MONTHLY',
-        lookupKey: 'keel.campaigns.bump.contacts_2000.monthly',
-        amount: 800,
         interval: 'month',
       },
     ],

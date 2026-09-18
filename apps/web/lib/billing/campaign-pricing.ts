@@ -121,6 +121,23 @@ export const CAMPAIGN_SEND_PACKS = [
     },
   },
   {
+    id: 'send-50k-scale' as const,
+    name: '+50,000 sends',
+    sendUnits: 50_000,
+    oneTime: {
+      productId: 'ozer-campaigns-pack-send-50k-scale',
+      planId: 'campaigns-pack-send-50k-scale',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_50k_scale,
+      priceGbp: 24,
+    },
+    monthly: {
+      productId: 'ozer-campaigns-pack-send-50k-scale',
+      planId: 'campaigns-pack-send-50k-scale-monthly',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_50k_scale_monthly,
+      priceGbp: 20,
+    },
+  },
+  {
     id: 'send-200k' as const,
     name: '+200,000 sends',
     sendUnits: 200_000,
@@ -137,23 +154,6 @@ export const CAMPAIGN_SEND_PACKS = [
       priceGbp: 69,
     },
   },
-  {
-    id: 'send-500k' as const,
-    name: '+500,000 sends',
-    sendUnits: 500_000,
-    oneTime: {
-      productId: 'ozer-campaigns-pack-send-500k',
-      planId: 'campaigns-pack-send-500k',
-      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_500k,
-      priceGbp: 179,
-    },
-    monthly: {
-      productId: 'ozer-campaigns-pack-send-500k',
-      planId: 'campaigns-pack-send-500k-monthly',
-      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_500k_monthly,
-      priceGbp: 149,
-    },
-  },
 ] as const;
 
 /** Recurring contact-cap bumps. Stack forever. Do not grant send units. */
@@ -166,17 +166,6 @@ export const CAMPAIGN_CONTACT_BUMPS = [
       productId: 'ozer-campaigns-bump-contacts-500',
       planId: 'campaigns-bump-contacts-500-monthly',
       stripePriceId: OZER_STRIPE_PRICES.campaigns_bump_contacts_500_monthly,
-      priceGbp: 8,
-    },
-  },
-  {
-    id: 'contacts-2000' as const,
-    name: '+2,000 contacts',
-    maxContacts: 2_000,
-    monthly: {
-      productId: 'ozer-campaigns-bump-contacts-2000',
-      planId: 'campaigns-bump-contacts-2000-monthly',
-      stripePriceId: OZER_STRIPE_PRICES.campaigns_bump_contacts_2000_monthly,
       priceGbp: 8,
     },
   },

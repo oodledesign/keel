@@ -72,8 +72,12 @@ describe('campaign pricing', () => {
 
   it('keeps send-pack per-unit worse than Starter', () => {
     expect(assertCampaignPacksWorseThanStarter()).toBe(true);
-    expect(CAMPAIGN_SEND_PACKS.map((pack) => pack.sendUnits)).toEqual([
-      2000, 10000, 50000, 200000, 500000,
+    expect(CAMPAIGN_SEND_PACKS.map((pack) => pack.id)).toEqual([
+      'send-2k',
+      'send-10k',
+      'send-50k',
+      'send-50k-scale',
+      'send-200k',
     ]);
     expect(
       CAMPAIGN_SEND_PACKS.find((pack) => pack.id === 'send-10k'),
@@ -88,24 +92,26 @@ describe('campaign pricing', () => {
       monthly: { priceGbp: 99 },
     });
     expect(
+      CAMPAIGN_SEND_PACKS.find((pack) => pack.id === 'send-50k-scale'),
+    ).toMatchObject({
+      oneTime: { priceGbp: 24 },
+      monthly: { priceGbp: 20 },
+    });
+    expect(
       CAMPAIGN_SEND_PACKS.find((pack) => pack.id === 'send-200k'),
     ).toMatchObject({
       oneTime: { priceGbp: 79 },
       monthly: { priceGbp: 69 },
     });
-    expect(
-      CAMPAIGN_SEND_PACKS.find((pack) => pack.id === 'send-500k'),
-    ).toMatchObject({
-      oneTime: { priceGbp: 179 },
-      monthly: { priceGbp: 149 },
-    });
+    expect(CAMPAIGN_SEND_PACKS.some((pack) => pack.id === 'send-500k')).toBe(
+      false,
+    );
     expect(CAMPAIGN_CONTACT_BUMPS.map((bump) => bump.maxContacts)).toEqual([
-      500, 2000, 2500, 10000, 50000,
+      500, 2500, 10000, 50000,
     ]);
     expect(
-      CAMPAIGN_CONTACT_BUMPS.find((bump) => bump.id === 'contacts-2000')
-        ?.monthly.priceGbp,
-    ).toBe(8);
+      CAMPAIGN_CONTACT_BUMPS.find((bump) => bump.id === 'contacts-2000'),
+    ).toBeUndefined();
     expect(
       CAMPAIGN_CONTACT_BUMPS.find((bump) => bump.id === 'contacts-10000')
         ?.monthly.priceGbp,
@@ -132,12 +138,17 @@ describe('campaign pricing', () => {
       )?.maxContacts,
     ).toBe(500);
     expect(
+      findCampaignSendPackByPriceId(
+        OZER_STRIPE_PRICES.campaigns_pack_send_50k_scale,
+      )?.sendUnits,
+    ).toBe(50000);
+    expect(
       findCampaignSendPackByPriceId(OZER_STRIPE_PRICES.campaigns_pack_send_200k)
         ?.sendUnits,
     ).toBe(200000);
     expect(
       findCampaignSendPackByPriceId(
-        OZER_STRIPE_PRICES.campaigns_pack_send_500k_monthly,
+        OZER_STRIPE_PRICES.campaigns_pack_send_200k_monthly,
       )?.mode,
     ).toBe('monthly');
     expect(
@@ -241,6 +252,16 @@ describe('campaign pricing', () => {
         2900,
       ],
       [
+        'ozer-campaigns-pack-send-50k-scale',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_SCALE',
+        2400,
+      ],
+      [
+        'ozer-campaigns-pack-send-50k-scale',
+        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_SCALE_MONTHLY',
+        2000,
+      ],
+      [
         'ozer-campaigns-pack-send-200k',
         'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_200K',
         7900,
@@ -249,21 +270,6 @@ describe('campaign pricing', () => {
         'ozer-campaigns-pack-send-200k',
         'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_200K_MONTHLY',
         6900,
-      ],
-      [
-        'ozer-campaigns-pack-send-500k',
-        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_500K',
-        17900,
-      ],
-      [
-        'ozer-campaigns-pack-send-500k',
-        'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_500K_MONTHLY',
-        14900,
-      ],
-      [
-        'ozer-campaigns-bump-contacts-2000',
-        'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2000_MONTHLY',
-        800,
       ],
       [
         'ozer-campaigns-bump-contacts-10000',
@@ -289,5 +295,9 @@ describe('campaign pricing', () => {
     }
 
     expect(OZER_STRIPE_PRICES.addon_campaigns_starter_monthly).toBeTruthy();
+    expect(catalog).not.toContain('STRIPE_PRICE_CAMPAIGNS_PACK_SEND_500K');
+    expect(catalog).not.toContain(
+      'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2000_MONTHLY',
+    );
   });
 });
