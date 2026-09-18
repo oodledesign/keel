@@ -45,4 +45,25 @@ describe('campaign usage snapshot', () => {
     expect(snapshot.monthlyRemaining).toBe(10000);
     expect(snapshot.nextTierName).toBe('Pro');
   });
+
+  it('offers Scale after Pro and treats Scale as the top of the ladder', () => {
+    const pro = buildCampaignUsageSnapshot({
+      planTier: 'pro',
+      monthlyAllowance: 60000,
+      maxContacts: 10000,
+      balance: 1000,
+      contactsUsed: 100,
+    });
+    expect(pro.nextTierName).toBe('Scale');
+
+    const scale = buildCampaignUsageSnapshot({
+      planTier: 'scale',
+      monthlyAllowance: 360000,
+      maxContacts: 30000,
+      balance: 1000,
+      contactsUsed: 100,
+    });
+    expect(scale.nextTierId).toBeNull();
+    expect(scale.nextTierName).toBeNull();
+  });
 });

@@ -114,8 +114,8 @@ export function CampaignsBillingCard(props: CampaignsBillingCardProps) {
           </CardTitle>
           <CardDescription>
             Monthly send allotment plus optional send packs and contact bumps.
-            Unused monthly units expire at cycle end. Circulation is a separate
-            meter.
+            Packs and bumps stack. Unused monthly units expire at cycle end.
+            Circulation is a separate meter.
           </CardDescription>
         </div>
         {snapshot ? (
@@ -183,11 +183,6 @@ export function CampaignsBillingCard(props: CampaignsBillingCardProps) {
               ))}
             </div>
             <p className="text-sm font-medium">Send packs</p>
-            <p className="text-muted-foreground text-xs">
-              TODO for Dan: create these Stripe prices and set the matching
-              STRIPE_PRICE_CAMPAIGNS_* env vars. Checkout uses catalog
-              placeholders until then.
-            </p>
             <div className="flex flex-wrap gap-2">
               {CAMPAIGN_SEND_PACKS.map((pack) => (
                 <Button

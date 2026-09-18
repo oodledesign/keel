@@ -11,7 +11,9 @@
  * - All plans (Starter+ / Business Lite + Campaigns add-on): core builder,
  *   welcome automations, Audiences hub, manual saved lists, CSV lists
  * - Growth+: logic filters, A/B subjects, richer analytics, categories
+ *   (Scale ranks above Growth, so it includes Growth+)
  * - Pro: higher caps + comparative reports
+ * - Scale: 30k contacts / 360k sends; includes Growth+ and Pro features
  *
  * Stripe price IDs are env placeholders until live products exist.
  */
@@ -20,7 +22,7 @@ import { OZER_STRIPE_PRICES } from './stripe-price-ids';
 export const CAMPAIGNS_MODULE_KEY = 'campaigns';
 export const CAMPAIGNS_ENTITLEMENT_KEY = 'addon_campaigns';
 
-export type CampaignPlanTierId = 'starter' | 'growth' | 'pro';
+export type CampaignPlanTierId = 'starter' | 'growth' | 'pro' | 'scale';
 
 export const CAMPAIGN_SUBSCRIPTION_TIERS = [
   {
@@ -50,9 +52,22 @@ export const CAMPAIGN_SUBSCRIPTION_TIERS = [
     planTier: 'pro' as const,
     features: ['core', 'growth', 'pro'] as const,
   },
+  {
+    id: 'scale' as const,
+    name: 'Scale',
+    priceGbp: 149,
+    maxContacts: 30_000,
+    sendUnits: 360_000,
+    planTier: 'scale' as const,
+    features: ['core', 'growth', 'pro', 'scale'] as const,
+  },
 ] as const;
 
-/** One-off and/or recurring send top-ups. Per-send cost is worse than Starter. */
+/**
+ * One-off and/or recurring send top-ups. Packs stack (quantity or repeat
+ * purchase). Starter–Pro packs stay worse-than-Starter per send; Scale-sized
+ * packs are volume-priced.
+ */
 export const CAMPAIGN_SEND_PACKS = [
   {
     id: 'send-2k' as const,
@@ -105,9 +120,43 @@ export const CAMPAIGN_SEND_PACKS = [
       priceGbp: 99,
     },
   },
+  {
+    id: 'send-50k-scale' as const,
+    name: '+50,000 sends',
+    sendUnits: 50_000,
+    oneTime: {
+      productId: 'ozer-campaigns-pack-send-50k-scale',
+      planId: 'campaigns-pack-send-50k-scale',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_50k_scale,
+      priceGbp: 24,
+    },
+    monthly: {
+      productId: 'ozer-campaigns-pack-send-50k-scale',
+      planId: 'campaigns-pack-send-50k-scale-monthly',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_50k_scale_monthly,
+      priceGbp: 20,
+    },
+  },
+  {
+    id: 'send-200k' as const,
+    name: '+200,000 sends',
+    sendUnits: 200_000,
+    oneTime: {
+      productId: 'ozer-campaigns-pack-send-200k',
+      planId: 'campaigns-pack-send-200k',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_200k,
+      priceGbp: 79,
+    },
+    monthly: {
+      productId: 'ozer-campaigns-pack-send-200k',
+      planId: 'campaigns-pack-send-200k-monthly',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_pack_send_200k_monthly,
+      priceGbp: 69,
+    },
+  },
 ] as const;
 
-/** Recurring contact-cap bumps. Do not grant send units. */
+/** Recurring contact-cap bumps. Stack forever. Do not grant send units. */
 export const CAMPAIGN_CONTACT_BUMPS = [
   {
     id: 'contacts-500' as const,
@@ -131,6 +180,28 @@ export const CAMPAIGN_CONTACT_BUMPS = [
       priceGbp: 29,
     },
   },
+  {
+    id: 'contacts-10000' as const,
+    name: '+10,000 contacts',
+    maxContacts: 10_000,
+    monthly: {
+      productId: 'ozer-campaigns-bump-contacts-10000',
+      planId: 'campaigns-bump-contacts-10000-monthly',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_bump_contacts_10000_monthly,
+      priceGbp: 29,
+    },
+  },
+  {
+    id: 'contacts-50000' as const,
+    name: '+50,000 contacts',
+    maxContacts: 50_000,
+    monthly: {
+      productId: 'ozer-campaigns-bump-contacts-50000',
+      planId: 'campaigns-bump-contacts-50000-monthly',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_bump_contacts_50000_monthly,
+      priceGbp: 99,
+    },
+  },
 ] as const;
 
 export const CAMPAIGN_USAGE_SOFT_WARN_RATIO = 0.8;
@@ -149,34 +220,34 @@ export function campaignTierForPlanId(planId: string): {
   maxContacts: number;
   planTier: CampaignPlanTierId;
 } | null {
-  if (planId.startsWith('campaigns-starter')) {
-    return {
-      sendUnits: CAMPAIGN_SUBSCRIPTION_TIERS[0].sendUnits,
-      maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[0].maxContacts,
-      planTier: 'starter',
-    };
-  }
-  if (planId.startsWith('campaigns-growth')) {
-    return {
-      sendUnits: CAMPAIGN_SUBSCRIPTION_TIERS[1].sendUnits,
-      maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[1].maxContacts,
-      planTier: 'growth',
-    };
-  }
-  if (planId.startsWith('campaigns-pro')) {
-    return {
-      sendUnits: CAMPAIGN_SUBSCRIPTION_TIERS[2].sendUnits,
-      maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[2].maxContacts,
-      planTier: 'pro',
-    };
+  for (const tier of CAMPAIGN_SUBSCRIPTION_TIERS) {
+    if (planId.startsWith(`campaigns-${tier.id}`)) {
+      return {
+        sendUnits: tier.sendUnits,
+        maxContacts: tier.maxContacts,
+        planTier: tier.id,
+      };
+    }
   }
   return null;
 }
 
+const CAMPAIGN_TIER_RANK: Record<CampaignPlanTierId, number> = {
+  starter: 1,
+  growth: 2,
+  pro: 3,
+  scale: 4,
+};
+
 export function campaignTierRank(tier: string | null | undefined): number {
-  if (tier === 'pro') return 3;
-  if (tier === 'growth') return 2;
-  if (tier === 'starter') return 1;
+  if (
+    tier === 'scale' ||
+    tier === 'pro' ||
+    tier === 'growth' ||
+    tier === 'starter'
+  ) {
+    return CAMPAIGN_TIER_RANK[tier];
+  }
   return 0;
 }
 
@@ -215,10 +286,11 @@ export function hasCampaignsProFeatures(
 export function nextCampaignUpgradeTier(
   tier: string | null | undefined,
 ): (typeof CAMPAIGN_SUBSCRIPTION_TIERS)[number] | null {
-  if (tier === 'starter') return CAMPAIGN_SUBSCRIPTION_TIERS[1];
-  if (tier === 'growth') return CAMPAIGN_SUBSCRIPTION_TIERS[2];
-  if (tier === 'pro') return null;
-  return CAMPAIGN_SUBSCRIPTION_TIERS[0];
+  const index = CAMPAIGN_SUBSCRIPTION_TIERS.findIndex(
+    (item) => item.id === tier,
+  );
+  if (index === -1) return CAMPAIGN_SUBSCRIPTION_TIERS[0];
+  return CAMPAIGN_SUBSCRIPTION_TIERS[index + 1] ?? null;
 }
 
 export function findCampaignSendPackByPriceId(
@@ -262,8 +334,17 @@ const starterPerSend =
   CAMPAIGN_SUBSCRIPTION_TIERS[0].priceGbp /
   CAMPAIGN_SUBSCRIPTION_TIERS[0].sendUnits;
 
+/** Starter–Pro send packs that must stay more expensive per send than Starter. */
+const STARTER_COMPARABLE_SEND_PACK_IDS = new Set([
+  'send-2k',
+  'send-10k',
+  'send-50k',
+]);
+
 export function assertCampaignPacksWorseThanStarter(): boolean {
-  return CAMPAIGN_SEND_PACKS.every((pack) => {
+  return CAMPAIGN_SEND_PACKS.filter((pack) =>
+    STARTER_COMPARABLE_SEND_PACK_IDS.has(pack.id),
+  ).every((pack) => {
     const oneTime = pack.oneTime.priceGbp / pack.sendUnits;
     const monthly = pack.monthly.priceGbp / pack.sendUnits;
     return oneTime > starterPerSend && monthly > starterPerSend;
