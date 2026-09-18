@@ -161,6 +161,9 @@ export type HouseholdMemberRow = {
   dietary_tags: string[];
   excluded_ingredients: string[];
   sort_order: number;
+  date_of_birth?: string | null;
+  avatar_path?: string | null;
+  is_child?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -261,6 +264,13 @@ export const HouseholdMemberInputSchema = AccountSlugFieldSchema.extend({
     .array(z.string().trim().min(1).max(60))
     .max(40)
     .default([]),
+  isChild: z.boolean().optional(),
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  avatarPath: z.string().trim().max(500).nullable().optional(),
 });
 export type HouseholdMemberInput = z.infer<typeof HouseholdMemberInputSchema>;
 

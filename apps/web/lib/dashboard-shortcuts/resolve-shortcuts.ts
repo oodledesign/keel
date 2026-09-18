@@ -40,6 +40,7 @@ const LEGACY_MODULE_ICON_KEYS: Record<string, MobileNavIconKey> = {
   calendar: 'calendar',
   shopping: 'shopping',
   meal_plan: 'meal',
+  memories: 'memories',
   community_schedule: 'calendar',
   community_tasks: 'tasks',
   community_notes: 'notes',

@@ -36,6 +36,7 @@ export type AccountModuleKey =
   | 'calendar'
   | 'shopping'
   | 'meal_plan'
+  | 'memories'
   | 'listings'
   | 'requirements'
   | 'viewings'

@@ -57,6 +57,13 @@ export async function upsertHouseholdMemberAction(
       dietary_tags: parsed.dietaryTags,
       excluded_ingredients: parsed.excludedIngredients,
       updated_at: now,
+      ...(parsed.isChild !== undefined ? { is_child: parsed.isChild } : {}),
+      ...(parsed.dateOfBirth !== undefined
+        ? { date_of_birth: parsed.dateOfBirth }
+        : {}),
+      ...(parsed.avatarPath !== undefined
+        ? { avatar_path: parsed.avatarPath }
+        : {}),
     };
 
     if (parsed.id) {

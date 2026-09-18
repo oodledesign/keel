@@ -238,6 +238,10 @@ function revalidateNotesPaths(
   const base = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
   revalidatePath(base);
   revalidatePath(workAccountPath(pathsConfig.app.accountHome, accountSlug));
+  revalidatePath(
+    pathsConfig.app.accountMemories.replace('[account]', accountSlug),
+  );
+  revalidatePath(`/home/${accountSlug}/memories`);
   if (noteId) {
     revalidatePath(
       pathsConfig.app.accountNoteDetail
