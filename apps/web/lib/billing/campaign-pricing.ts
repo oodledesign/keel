@@ -59,7 +59,7 @@ export const CAMPAIGN_SUBSCRIPTION_TIERS = [
     maxContacts: 30_000,
     sendUnits: 360_000,
     planTier: 'scale' as const,
-    features: ['core', 'growth', 'pro'] as const,
+    features: ['core', 'growth', 'pro', 'scale'] as const,
   },
 ] as const;
 
@@ -170,17 +170,6 @@ export const CAMPAIGN_CONTACT_BUMPS = [
     },
   },
   {
-    id: 'contacts-2500' as const,
-    name: '+2,500 contacts',
-    maxContacts: 2_500,
-    monthly: {
-      productId: 'ozer-campaigns-bump-contacts-2500',
-      planId: 'campaigns-bump-contacts-2500-monthly',
-      stripePriceId: OZER_STRIPE_PRICES.campaigns_bump_contacts_2500_monthly,
-      priceGbp: 29,
-    },
-  },
-  {
     id: 'contacts-2000' as const,
     name: '+2,000 contacts',
     maxContacts: 2_000,
@@ -189,6 +178,17 @@ export const CAMPAIGN_CONTACT_BUMPS = [
       planId: 'campaigns-bump-contacts-2000-monthly',
       stripePriceId: OZER_STRIPE_PRICES.campaigns_bump_contacts_2000_monthly,
       priceGbp: 8,
+    },
+  },
+  {
+    id: 'contacts-2500' as const,
+    name: '+2,500 contacts',
+    maxContacts: 2_500,
+    monthly: {
+      productId: 'ozer-campaigns-bump-contacts-2500',
+      planId: 'campaigns-bump-contacts-2500-monthly',
+      stripePriceId: OZER_STRIPE_PRICES.campaigns_bump_contacts_2500_monthly,
+      priceGbp: 29,
     },
   },
   {

@@ -100,7 +100,7 @@ describe('campaign pricing', () => {
       monthly: { priceGbp: 149 },
     });
     expect(CAMPAIGN_CONTACT_BUMPS.map((bump) => bump.maxContacts)).toEqual([
-      500, 2500, 2000, 10000, 50000,
+      500, 2000, 2500, 10000, 50000,
     ]);
     expect(
       CAMPAIGN_CONTACT_BUMPS.find((bump) => bump.id === 'contacts-2000')
@@ -132,9 +132,8 @@ describe('campaign pricing', () => {
       )?.maxContacts,
     ).toBe(500);
     expect(
-      findCampaignSendPackByPriceId(
-        OZER_STRIPE_PRICES.campaigns_pack_send_200k,
-      )?.sendUnits,
+      findCampaignSendPackByPriceId(OZER_STRIPE_PRICES.campaigns_pack_send_200k)
+        ?.sendUnits,
     ).toBe(200000);
     expect(
       findCampaignSendPackByPriceId(
