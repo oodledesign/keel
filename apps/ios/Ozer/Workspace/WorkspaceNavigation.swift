@@ -107,6 +107,11 @@ enum WorkspaceNavigation {
         /// Native inbox exists for every workspace even when web omits Messages.
         /// Surveyor web has no Messages item; the app shell still keeps inbox.
         var showsMessages: Bool { true }
+
+        /// Family Memories + Children — family team workspaces only (not personal).
+        var showsMemories: Bool {
+            self == .family
+        }
     }
 
     static func kind(profile: String, isPersonal: Bool) -> Kind {
@@ -147,6 +152,10 @@ enum WorkspaceNavigation {
         }
         if kind.showsShopping {
             screens.append(.shopping)
+        }
+        if kind.showsMemories {
+            screens.append(.memories)
+            screens.append(.children)
         }
         return screens
     }

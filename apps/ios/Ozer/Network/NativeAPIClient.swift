@@ -1113,6 +1113,134 @@ actor NativeAPIClient {
         }
     }
 
+    func memories(
+        workspace: String,
+        childId: String? = nil,
+        kind: String? = nil,
+        accessToken: String
+    ) async throws -> NativeMemoriesPayload {
+        var query = [URLQueryItem(name: "workspace", value: workspace)]
+        if let childId, !childId.isEmpty {
+            query.append(URLQueryItem(name: "child", value: childId))
+        }
+        if let kind, !kind.isEmpty {
+            query.append(URLQueryItem(name: "kind", value: kind))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/memories",
+            queryItems: query,
+            body: nil,
+            accessToken: accessToken
+        )
+        if data.isEmpty {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(NativeMemoriesPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func createMemory(
+        workspace: String,
+        content: String,
+        title: String?,
+        occurredAt: String?,
+        kind: String?,
+        childIds: [String],
+        accessToken: String
+    ) async throws -> NativeMemoryWriteResult {
+        var body: [String: Any] = [
+            "workspace": workspace,
+            "content": content,
+        ]
+        if let title, !title.isEmpty {
+            body["title"] = title
+        }
+        if let occurredAt, !occurredAt.isEmpty {
+            body["occurred_at"] = occurredAt
+        }
+        if let kind, !kind.isEmpty {
+            body["kind"] = kind
+        }
+        if !childIds.isEmpty {
+            body["child_ids"] = childIds
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/memories",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NativeMemoryWriteResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func upsertFamilyChild(
+        workspace: String,
+        id: String? = nil,
+        displayName: String,
+        dateOfBirth: String? = nil,
+        isChild: Bool = true,
+        accessToken: String
+    ) async throws -> NativeMemoryWriteResult {
+        var body: [String: Any] = [
+            "workspace": workspace,
+            "display_name": displayName,
+            "is_child": isChild,
+        ]
+        if let id, !id.isEmpty {
+            body["id"] = id
+        }
+        if let dateOfBirth {
+            body["date_of_birth"] = dateOfBirth.isEmpty ? NSNull() : dateOfBirth
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/memories/children",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NativeMemoryWriteResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func uploadMemoryPhoto(
+        workspace: String,
+        noteId: String,
+        imageData: Data,
+        filename: String,
+        mimeType: String,
+        accessToken: String
+    ) async throws -> NativeMemoryPhotoResult {
+        let data = try await sendMultipartFields(
+            path: "api/native/v1/memories/photos",
+            fields: [
+                "workspace": workspace,
+                "note_id": noteId,
+            ],
+            fileData: imageData,
+            filename: filename,
+            mimeType: mimeType,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NativeMemoryPhotoResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func people(workspace: String, accessToken: String) async throws -> PeoplePayload {
         let data = try await send(
             method: "GET",

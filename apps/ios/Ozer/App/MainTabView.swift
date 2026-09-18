@@ -37,6 +37,10 @@ struct MainTabView: View {
                 RecipesListView()
             case .mealPlan:
                 MealPlanView()
+            case .memories:
+                MemoriesListView(onOpen: { screen = $0 })
+            case .children:
+                ChildrenListView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

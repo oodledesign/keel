@@ -50,6 +50,13 @@ let package = Package(
             ]
         ),
         .target(
+            name: "OzerMemories",
+            path: "../Ozer/Memories",
+            sources: [
+                "MemoryDisplay.swift",
+            ]
+        ),
+        .target(
             name: "OzerSurveys",
             path: "../Ozer/Surveys",
             sources: [
@@ -61,7 +68,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "OzerSpeechTests",
-            dependencies: ["OzerSpeech", "OzerNotes", "OzerMeetings", "OzerFinance", "OzerWorkspace", "OzerSurveys"],
+            dependencies: ["OzerSpeech", "OzerNotes", "OzerMeetings", "OzerFinance", "OzerWorkspace", "OzerSurveys", "OzerMemories"],
             path: "Sources"
         ),
     ]
