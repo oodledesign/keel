@@ -1637,7 +1637,7 @@ export function MeetingTranscriptDetailClient({
                 <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                   Participants
                 </p>
-                <div className="max-h-48 space-y-2 overflow-y-auto overflow-x-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                <div className="max-h-48 space-y-2 overflow-x-hidden overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
                   {callParticipantEmails.map((email) => {
                     const checked = selectedRecipientEmails.includes(email);
                     const displayName = resolveEmailParticipantName(email, {
@@ -1682,7 +1682,7 @@ export function MeetingTranscriptDetailClient({
                     : `Add from contacts (${contactEmailOptions.length})`}
                 </button>
                 {showContactPicker ? (
-                  <div className="max-h-40 space-y-2 overflow-y-auto overflow-x-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                  <div className="max-h-40 space-y-2 overflow-x-hidden overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
                     {contactEmailOptions.map((contact) => {
                       const checked = selectedRecipientEmails.includes(
                         contact.email,
