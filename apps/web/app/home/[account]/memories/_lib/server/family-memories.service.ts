@@ -334,8 +334,7 @@ class FamilyMemoriesService {
         .update({
           full_name: fullName,
           is_child: isChild,
-          relationship_label:
-            existing.relationship_label?.trim() || (isChild ? 'Child' : null),
+          relationship_label: isChild ? 'Child' : existing.relationship_label,
         })
         .eq('id', input.id)
         .eq('account_id', input.accountId);

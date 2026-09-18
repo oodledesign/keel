@@ -27,8 +27,6 @@ function revalidateMemoryPaths(accountSlug: string, noteId?: string) {
   revalidatePath(
     pathsConfig.app.accountNotes.replace('[account]', accountSlug),
   );
-  revalidatePath('/home/people');
-  revalidatePath('/app/people');
 
   if (noteId) {
     revalidatePath(
@@ -77,6 +75,8 @@ export const upsertFamilyChildAction = enhanceAction(
     });
 
     revalidateMemoryPaths(data.accountSlug);
+    revalidatePath('/home/people');
+    revalidatePath('/app/people');
     revalidatePath(
       pathsConfig.app.accountMemoryChild
         .replace('[account]', data.accountSlug)

@@ -117,7 +117,7 @@ CREATE OR REPLACE FUNCTION public.family_memory_children_same_account()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY INVOKER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   note_account uuid;
