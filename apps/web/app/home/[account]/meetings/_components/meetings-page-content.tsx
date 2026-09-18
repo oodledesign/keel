@@ -66,18 +66,13 @@ import {
   todayIsoDate,
   yesterdayIsoDate,
 } from '../_lib/format-meeting-date';
-import type { MeetingTranscriptListRow } from '../_lib/server/meetings-page.loader';
+import type {
+  MeetingTranscriptListRow,
+  UpcomingMeetingRow,
+} from '../_lib/server/meetings-page.loader';
 import { MeetingParticipantAvatars } from './meeting-participant-avatars';
 
 type TranscriptRow = MeetingTranscriptListRow;
-
-type UpcomingMeetingRow = {
-  id: string;
-  title: string;
-  startAt: string;
-  inviteeName: string;
-  conferencingUrl: string | null;
-};
 
 type ClientOption = { id: string; name: string };
 
@@ -167,19 +162,13 @@ export function MeetingsPageContent({
   }, []);
 
   const upcomingRows = useMemo(() => {
-    const now = Date.now();
     return [...upcomingMeetings]
-      .filter((row) => new Date(row.startAt).getTime() >= now)
       .sort(
         (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
       )
       .slice(0, 8);
   }, [upcomingMeetings]);
 
-  const bookingsPath = pathsConfig.app.accountSchedulingBookings.replace(
-    '[account]',
-    accountSlug,
-  );
   const handleSave = () => {
     if (!canEdit) return;
     if (!clientId) {
@@ -567,24 +556,65 @@ export function MeetingsPageContent({
               </p>
             ) : (
               <ul className="mt-3 space-y-3">
-                {upcomingRows.map((row) => (
-                  <li key={row.id}>
-                    <Link
-                      href={bookingsPath}
-                      className="block rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                    >
+                {upcomingRows.map((row) => {
+                  const href = row.conferencingUrl || row.detailHref;
+                  const isExternal = Boolean(
+                    href && /^https?:\/\//i.test(href),
+                  );
+                  const body = (
+                    <>
                       <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                         {row.title}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
                         {formatUpcomingWhen(row.startAt)}
                       </p>
-                      <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
-                        {row.inviteeName}
-                      </p>
-                    </Link>
-                  </li>
-                ))}
+                      {row.inviteeName ? (
+                        <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
+                          {row.inviteeName}
+                        </p>
+                      ) : null}
+                    </>
+                  );
+
+                  return (
+                    <li key={`${row.source}-${row.id}`}>
+                      <div className="flex items-start gap-2">
+                        {href && isExternal ? (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="min-w-0 flex-1 rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                          >
+                            {body}
+                          </a>
+                        ) : href ? (
+                          <Link
+                            href={href}
+                            className="min-w-0 flex-1 rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                          >
+                            {body}
+                          </Link>
+                        ) : (
+                          <div className="min-w-0 flex-1 px-1 py-0.5">
+                            {body}
+                          </div>
+                        )}
+                        {row.conferencingUrl ? (
+                          <a
+                            href={row.conferencingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 pt-0.5 text-xs font-semibold text-[var(--ozer-accent)] hover:text-[var(--ozer-accent-hover)]"
+                          >
+                            Join
+                          </a>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

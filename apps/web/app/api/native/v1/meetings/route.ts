@@ -49,6 +49,7 @@ export async function GET(request: Request) {
     const payload = await loadNativeMeetingsHub(
       auth.context.supabase,
       workspace,
+      auth.context.userId,
     );
     return NextResponse.json(payload);
   } catch (error) {

@@ -16,15 +16,25 @@ import type {
   ScheduledPlannerBlock,
 } from './types';
 
+export type { RecorderCalendarEvent } from './types';
+import {
+  type UpcomingMeetingItem,
+  calendarEventHasOtherParticipants,
+  isUpcomingMeetingActive,
+  otherParticipantLabel,
+} from './upcoming-meetings';
+
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 const PLANNER_CALENDAR_NAME = 'Ozer Planner';
 
 type GoogleEvent = {
   id?: string;
+  status?: string;
   summary?: string;
   description?: string;
   location?: string;
   hangoutLink?: string;
+  htmlLink?: string;
   conferenceData?: {
     entryPoints?: Array<{
       entryPointType?: string;
@@ -33,10 +43,21 @@ type GoogleEvent = {
   };
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
-  organizer?: { displayName?: string; email?: string };
-  attendees?: Array<{ displayName?: string; email?: string }>;
+  organizer?: { displayName?: string; email?: string; self?: boolean };
+  attendees?: Array<{
+    displayName?: string;
+    email?: string;
+    self?: boolean;
+    resource?: boolean;
+    responseStatus?: string;
+  }>;
   /** Google status events (working location, OOO, etc.) — not real time blocks. */
   eventType?: string;
+};
+
+type GoogleEventWithCalendar = {
+  item: GoogleEvent;
+  calendarId: string;
 };
 
 /** Status/metadata events Google returns but users don't treat as calendar blocks. */
@@ -61,7 +82,10 @@ type GoogleCalendarListEntry = {
 const RECORDER_CALENDAR_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 const RECORDER_CALENDAR_LOOKAHEAD_MS = 2 * 60 * 60 * 1000;
 const RECORDER_CALENDAR_NEXT_LOOKAHEAD_MS = 24 * 60 * 60 * 1000;
+const UPCOMING_MEETING_LOOKBACK_MS = 12 * 60 * 60 * 1000;
+const UPCOMING_MEETING_LOOKAHEAD_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_RECORDER_CALENDARS = 20;
+const UPCOMING_MEETING_LIMIT = 8;
 
 export type RecorderCalendarEventResult = {
   connected: boolean;
@@ -188,6 +212,7 @@ function mapRecorderCalendarEvent(
       email: attendee.email?.trim() || '',
     })),
     meeting_url: extractMeetingUrl(event),
+    html_link: event.htmlLink?.trim() || null,
   };
 }
 
@@ -293,7 +318,7 @@ function pickCurrentOrNextRecorderEvent(
   events: RecorderCalendarEvent[],
   nowMs = Date.now(),
 ): RecorderCalendarEvent | null {
-  const horizonMs = nowMs + 2 * 60 * 60 * 1000;
+  const horizonMs = nowMs + RECORDER_CALENDAR_LOOKAHEAD_MS;
 
   const current = events.find((event) => {
     const start = Date.parse(event.start);
@@ -316,7 +341,7 @@ async function listGoogleCalendarEventsInRange(
   connection: GoogleCalendarConnection,
   timeMin: string,
   timeMax: string,
-): Promise<GoogleEvent[]> {
+): Promise<GoogleEventWithCalendar[]> {
   const calendars = await googleJson<{ items?: GoogleCalendarListEntry[] }>(
     connection,
     '/users/me/calendarList',
@@ -371,6 +396,7 @@ function mockRecorderEvents(nowMs: number): RecorderCalendarEvent[] {
       { name: 'Sam Example', email: 'sam@example.com' },
     ],
     meeting_url: 'https://meet.google.com/abc-defg-hij',
+    html_link: null,
   }));
 
   return [
@@ -384,6 +410,7 @@ function mockRecorderEvents(nowMs: number): RecorderCalendarEvent[] {
         { name: 'Sam Example', email: 'sam@example.com' },
       ],
       meeting_url: 'https://zoom.us/j/123456789',
+      html_link: null,
     },
     ...scheduled,
   ];
@@ -424,17 +451,175 @@ export async function getRecorderCalendarEvent(
     timeMin,
     timeMax,
   );
+  const userEmails = connection.googleAccountEmail
+    ? [connection.googleAccountEmail]
+    : [];
 
-  const events = items
-    .map(({ item, calendarId }) => mapRecorderCalendarEvent(item, calendarId))
-    .filter((event): event is RecorderCalendarEvent => Boolean(event))
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  const paired = items
+    .map(({ item, calendarId }) => ({
+      item,
+      mapped: mapRecorderCalendarEvent(item, calendarId),
+    }))
+    .filter(
+      (
+        row,
+      ): row is {
+        item: GoogleEvent;
+        mapped: RecorderCalendarEvent;
+      } => Boolean(row.mapped),
+    )
+    .sort((a, b) => Date.parse(a.mapped.start) - Date.parse(b.mapped.start));
+
+  const events = paired.map((row) => row.mapped);
+  const meetingEvents = paired
+    .filter((row) =>
+      calendarEventHasOtherParticipants(row.item.attendees, userEmails),
+    )
+    .map((row) => row.mapped);
 
   return {
     connected: true,
     event: pickCurrentOrNextRecorderEvent(events, nowMs),
     next_event: pickNextUpcomingRecorderEvent(events, nowMs),
-    upcoming_events: pickUpcomingRecorderEvents(events, nowMs),
+    upcoming_events: pickUpcomingRecorderEvents(meetingEvents, nowMs),
+  };
+}
+
+export type UpcomingSyncedMeetingsResult = {
+  connected: boolean;
+  meetings: UpcomingMeetingItem[];
+};
+
+function mapUpcomingSyncedMeeting(
+  event: GoogleEvent,
+  calendarId: string,
+  userEmails: string[],
+): UpcomingMeetingItem | null {
+  if (event.status === 'cancelled') return null;
+  if (!isPlannerCalendarBlock(event)) return null;
+  if (!calendarEventHasOtherParticipants(event.attendees, userEmails)) {
+    return null;
+  }
+
+  const start = event.start?.dateTime ?? event.start?.date;
+  const end = event.end?.dateTime ?? event.end?.date;
+  if (!start) return null;
+
+  const title = event.summary?.trim() || 'Meeting';
+  return {
+    id: event.id?.trim() || `${calendarId}-${start}-${title}`,
+    title,
+    startAt: start,
+    endAt: end ?? null,
+    inviteeName: otherParticipantLabel(event.attendees, userEmails),
+    conferencingUrl: extractMeetingUrl(event),
+    detailHref: event.htmlLink?.trim() || null,
+    source: 'calendar',
+  };
+}
+
+function recorderEventToUpcomingMeeting(
+  event: RecorderCalendarEvent,
+): UpcomingMeetingItem {
+  return {
+    id: event.id,
+    title: event.title,
+    startAt: event.start,
+    endAt: event.end,
+    inviteeName: otherParticipantLabel(
+      event.attendees.map((attendee) => ({
+        name: attendee.name,
+        email: attendee.email,
+      })),
+    ),
+    conferencingUrl: event.meeting_url,
+    detailHref: event.html_link ?? null,
+    source: 'calendar',
+  };
+}
+
+/** Upcoming synced calendar events that have other people on the invite. */
+export async function listUpcomingSyncedMeetings(
+  client: SupabaseClient,
+  input: {
+    userId: string;
+    limit?: number;
+    lookbackMs?: number;
+    lookaheadMs?: number;
+    nowMs?: number;
+  },
+): Promise<UpcomingSyncedMeetingsResult> {
+  const nowMs = input.nowMs ?? Date.now();
+  const limit = input.limit ?? UPCOMING_MEETING_LIMIT;
+  const timeMin = new Date(
+    nowMs - (input.lookbackMs ?? UPCOMING_MEETING_LOOKBACK_MS),
+  ).toISOString();
+  const timeMax = new Date(
+    nowMs + (input.lookaheadMs ?? UPCOMING_MEETING_LOOKAHEAD_MS),
+  ).toISOString();
+
+  if (isPlannerMockCalendarEnabled()) {
+    return {
+      connected: true,
+      meetings: mockRecorderEvents(nowMs)
+        .map(recorderEventToUpcomingMeeting)
+        .filter((meeting) => isUpcomingMeetingActive(meeting, nowMs))
+        .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
+        .slice(0, limit),
+    };
+  }
+
+  const connections = await validConnections(client, input.userId);
+  if (connections.length === 0) {
+    return { connected: false, meetings: [] };
+  }
+
+  const userEmails = connections
+    .map((connection) => connection.googleAccountEmail)
+    .filter((email): email is string => Boolean(email));
+
+  if (userEmails.length === 0) {
+    console.warn(
+      '[calendar] upcoming meetings have no Google account email; attendee filter uses self flags only',
+    );
+  }
+
+  const batches = await Promise.all(
+    connections.map(async (connection) => {
+      try {
+        return await listGoogleCalendarEventsInRange(
+          connection,
+          timeMin,
+          timeMax,
+        );
+      } catch (error) {
+        console.warn('[calendar] list upcoming meetings failed', error);
+        return [];
+      }
+    }),
+  );
+
+  const seen = new Set<string>();
+  const meetings: UpcomingMeetingItem[] = [];
+
+  for (const item of batches.flat()) {
+    const meeting = mapUpcomingSyncedMeeting(
+      item.item,
+      item.calendarId,
+      userEmails,
+    );
+    if (!meeting) continue;
+    if (seen.has(meeting.id)) continue;
+    seen.add(meeting.id);
+    meetings.push(meeting);
+  }
+
+  return {
+    connected: true,
+    meetings: meetings
+      .filter((meeting) => isUpcomingMeetingActive(meeting, nowMs))
+      .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
+      .slice(0, limit),
   };
 }
 
