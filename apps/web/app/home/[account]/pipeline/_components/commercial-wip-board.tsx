@@ -119,6 +119,7 @@ import {
   sharedBoardStages,
   toSharedStatus,
 } from '~/lib/commercial/wip-board-mapping';
+import { computeWipInstructionTotals } from '~/lib/commercial/wip-running-totals';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
@@ -976,10 +977,7 @@ export function CommercialWipBoard({
   );
   const instructionCount = activeInstructions.length;
   const requirementCount = filteredRequirements.length;
-  const totalValue = useMemo(
-    () => activeInstructions.reduce((sum, deal) => sum + (deal.value || 0), 0),
-    [activeInstructions],
-  );
+  const wipTotals = useMemo(() => computeWipInstructionTotals(deals), [deals]);
 
   const tabCounts: Record<WipBoardView, number | null> = {
     instructions: instructionCount,
@@ -1054,12 +1052,35 @@ export function CommercialWipBoard({
           })}
         </div>
 
-        <p className="text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
-          {formatCurrency(totalValue)}
-          <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
-            total value
-          </span>
-        </p>
+        <div
+          className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm tabular-nums"
+          data-test="wip-running-totals"
+        >
+          <p className="text-[var(--workspace-shell-text-muted)]">
+            <span className="font-medium text-[var(--workspace-shell-text)]">
+              {formatCurrency(wipTotals.billed)}
+            </span>
+            <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
+              billed
+            </span>
+          </p>
+          <p className="text-[var(--workspace-shell-text-muted)]">
+            <span className="font-medium text-[var(--workspace-shell-text)]">
+              {formatCurrency(wipTotals.underOffer)}
+            </span>
+            <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
+              under offer
+            </span>
+          </p>
+          <p className="text-[var(--workspace-shell-text-muted)]">
+            <span className="font-medium text-[var(--workspace-shell-text)]">
+              {formatCurrency(wipTotals.total)}
+            </span>
+            <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
+              total
+            </span>
+          </p>
+        </div>
 
         {showRequirementSearch ? (
           <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
