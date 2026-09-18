@@ -29,6 +29,7 @@ function formatMeetingDate(value: string | null) {
 export async function sendMeetingNotesEmails(params: {
   accountId: string;
   accountName?: string | null;
+  meetingTranscriptId: string;
   meetingTitle: string;
   meetingDate: string | null;
   publicShareToken: string;
@@ -109,6 +110,7 @@ export async function sendMeetingNotesEmails(params: {
         },
         metadata: {
           event: 'meeting_notes_shared',
+          meeting_transcript_id: params.meetingTranscriptId,
           public_share_token: params.publicShareToken,
         },
       });

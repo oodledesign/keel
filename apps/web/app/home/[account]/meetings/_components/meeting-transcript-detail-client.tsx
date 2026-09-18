@@ -64,6 +64,11 @@ import { workspacePageContentClassName } from '~/components/workspace-shell/work
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
+import type { MeetingNotesSentEmail } from '~/lib/recorder/meeting-notes-email-recipients.shared';
+import {
+  formatMeetingNotesRecipientLabel,
+  resolveMeetingNotesRecipientName,
+} from '~/lib/recorder/meeting-notes-recipient-label';
 import { MEETING_SUGGESTED_TASK_PENDING_STATUS } from '~/lib/recorder/meeting-suggested-tasks';
 import { buildPublicMeetingShareUrl } from '~/lib/recorder/public-meeting-share';
 import {
@@ -132,6 +137,7 @@ type MeetingTask = {
 type ClientOption = {
   id: string;
   name: string;
+  email?: string | null;
   pictureUrl?: string | null;
 };
 type ContactOption = { id: string; name: string; email?: string | null };
@@ -145,6 +151,7 @@ type Props = {
   clients: ClientOption[];
   contacts: ContactOption[];
   members: SpeakerPickerMember[];
+  notesSentEmails?: MeetingNotesSentEmail[];
   currentUserId: string;
   canEdit: boolean;
   assignmentOptions: TaskAssignmentOption[];
@@ -161,6 +168,54 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function formatNotesSentAt(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
+
+function MeetingNotesRecipientRow({
+  email,
+  name,
+  checked,
+  onCheckedChange,
+}: {
+  email: string;
+  name?: string | null;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  const display = formatMeetingNotesRecipientLabel({ name, email });
+
+  return (
+    <label className="flex min-w-0 cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]">
+      <Checkbox
+        className="shrink-0"
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+      />
+      <span className="min-w-0 truncate" title={display.label}>
+        {display.name ? (
+          <>
+            <span className="font-medium">{display.name}</span>
+            <span className="text-[var(--workspace-shell-text-muted)]">
+              {' '}
+              - {display.email}
+            </span>
+          </>
+        ) : (
+          display.email
+        )}
+      </span>
+    </label>
+  );
+}
+
 export function MeetingTranscriptDetailClient({
   accountId,
   accountSlug,
@@ -170,6 +225,7 @@ export function MeetingTranscriptDetailClient({
   clients,
   contacts: initialContacts,
   members,
+  notesSentEmails = [],
   currentUserId,
   canEdit,
   assignmentOptions,
@@ -205,6 +261,8 @@ export function MeetingTranscriptDetailClient({
   >([]);
   const [extraRecipientEmail, setExtraRecipientEmail] = useState('');
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [sentNoteEmails, setSentNoteEmails] =
+    useState<MeetingNotesSentEmail[]>(notesSentEmails);
   const [editingTranscript, setEditingTranscript] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
@@ -242,6 +300,10 @@ export function MeetingTranscriptDetailClient({
   useEffect(() => {
     setContacts(initialContacts);
   }, [initialContacts]);
+
+  useEffect(() => {
+    setSentNoteEmails(notesSentEmails);
+  }, [notesSentEmails]);
 
   useEffect(() => {
     setDraftSegments(transcript.speakerSegments);
@@ -636,7 +698,22 @@ export function MeetingTranscriptDetailClient({
         toast.success(
           `Sent meeting notes to ${result.sent} recipient${result.sent === 1 ? '' : 's'}${failedNote}`,
         );
+        const failed = new Set(result.failed.map(normalizeEmail));
+        const sentAt = new Date().toISOString();
+        setSentNoteEmails((current) => {
+          const next = new Map(
+            current.map((row) => [normalizeEmail(row.email), row] as const),
+          );
+          for (const email of recipientEmails) {
+            if (failed.has(email) || next.has(email)) continue;
+            next.set(email, { email, sentAt });
+          }
+          return [...next.values()].sort((a, b) =>
+            a.email.localeCompare(b.email),
+          );
+        });
         setEmailNotesOpen(false);
+        router.refresh();
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -1306,7 +1383,7 @@ export function MeetingTranscriptDetailClient({
           </section>
 
           {canEdit ? (
-            <section className={panelClassName}>
+            <section className={cn(panelClassName, 'min-w-0')}>
               <div className="flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-[var(--ozer-accent)]" />
                 <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
@@ -1370,6 +1447,30 @@ export function MeetingTranscriptDetailClient({
                     <Mail className="mr-2 h-4 w-4" />
                     Email to participants
                   </Button>
+                </div>
+              ) : null}
+              {sentNoteEmails.length > 0 ? (
+                <div className="mt-4 min-w-0 space-y-1.5">
+                  <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+                    Emails sent
+                  </p>
+                  <ul className="min-w-0 space-y-1">
+                    {sentNoteEmails.map((row) => {
+                      const sentAt = formatNotesSentAt(row.sentAt);
+                      const title = sentAt
+                        ? `${row.email} · sent ${sentAt}`
+                        : row.email;
+                      return (
+                        <li
+                          key={row.email}
+                          className="min-w-0 truncate text-sm text-[var(--workspace-shell-text)]"
+                          title={title}
+                        >
+                          {row.email}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
               ) : null}
             </section>
@@ -1576,7 +1677,7 @@ export function MeetingTranscriptDetailClient({
       </Dialog>
 
       <Dialog open={emailNotesOpen} onOpenChange={setEmailNotesOpen}>
-        <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <DialogContent className="max-w-lg overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
             <DialogTitle>Email meeting notes</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -1585,49 +1686,36 @@ export function MeetingTranscriptDetailClient({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             {callParticipantEmails.length > 0 ? (
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                   Participants
                 </p>
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                <div className="max-h-48 min-w-0 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
                   {callParticipantEmails.map((email) => {
                     const checked = selectedRecipientEmails.includes(email);
-                    const attendeeName = transcript.calendarAttendees.find(
-                      (row) => normalizeEmail(row.email) === email,
-                    )?.name;
+                    const name = resolveMeetingNotesRecipientName({
+                      email,
+                      contacts,
+                      attendees: transcript.calendarAttendees,
+                      members,
+                      clients,
+                    });
                     return (
-                      <label
+                      <MeetingNotesRecipientRow
                         key={email}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(value) => {
-                            setSelectedRecipientEmails((current) =>
-                              value === true
-                                ? Array.from(new Set([...current, email]))
-                                : current.filter((item) => item !== email),
-                            );
-                          }}
-                        />
-                        <span className="min-w-0 truncate">
-                          {attendeeName?.trim() ? (
-                            <>
-                              <span className="font-medium">
-                                {attendeeName}
-                              </span>
-                              <span className="text-[var(--workspace-shell-text-muted)]">
-                                {' '}
-                                · {email}
-                              </span>
-                            </>
-                          ) : (
-                            email
-                          )}
-                        </span>
-                      </label>
+                        email={email}
+                        name={name}
+                        checked={checked}
+                        onCheckedChange={(nextChecked) => {
+                          setSelectedRecipientEmails((current) =>
+                            nextChecked
+                              ? Array.from(new Set([...current, email]))
+                              : current.filter((item) => item !== email),
+                          );
+                        }}
+                      />
                     );
                   })}
                 </div>
@@ -1651,38 +1739,29 @@ export function MeetingTranscriptDetailClient({
                     : `Add from contacts (${contactEmailOptions.length})`}
                 </button>
                 {showContactPicker ? (
-                  <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
+                  <div className="max-h-40 min-w-0 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
                     {contactEmailOptions.map((contact) => {
                       const checked = selectedRecipientEmails.includes(
                         contact.email,
                       );
                       return (
-                        <label
+                        <MeetingNotesRecipientRow
                           key={contact.id}
-                          className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 text-sm text-[var(--workspace-shell-text)]"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={(value) => {
-                              setSelectedRecipientEmails((current) =>
-                                value === true
-                                  ? Array.from(
-                                      new Set([...current, contact.email]),
-                                    )
-                                  : current.filter(
-                                      (item) => item !== contact.email,
-                                    ),
-                              );
-                            }}
-                          />
-                          <span className="min-w-0 truncate">
-                            <span className="font-medium">{contact.name}</span>
-                            <span className="text-[var(--workspace-shell-text-muted)]">
-                              {' '}
-                              · {contact.email}
-                            </span>
-                          </span>
-                        </label>
+                          email={contact.email}
+                          name={contact.name}
+                          checked={checked}
+                          onCheckedChange={(nextChecked) => {
+                            setSelectedRecipientEmails((current) =>
+                              nextChecked
+                                ? Array.from(
+                                    new Set([...current, contact.email]),
+                                  )
+                                : current.filter(
+                                    (item) => item !== contact.email,
+                                  ),
+                            );
+                          }}
+                        />
                       );
                     })}
                   </div>
