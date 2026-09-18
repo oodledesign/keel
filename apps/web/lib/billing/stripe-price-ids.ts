@@ -196,6 +196,10 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_ADDON_CAMPAIGNS_PRO_MONTHLY',
     'price_ozer_addon_campaigns_pro_monthly',
   ),
+  addon_campaigns_scale_monthly: price(
+    'STRIPE_PRICE_ADDON_CAMPAIGNS_SCALE_MONTHLY',
+    'price_ozer_addon_campaigns_scale_monthly',
+  ),
   campaigns_pack_send_2k: price(
     'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_2K',
     'price_ozer_campaigns_pack_send_2k',
@@ -220,6 +224,22 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_50K_MONTHLY',
     'price_ozer_campaigns_pack_send_50k_monthly',
   ),
+  campaigns_pack_send_200k: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_200K',
+    'price_ozer_campaigns_pack_send_200k',
+  ),
+  campaigns_pack_send_200k_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_200K_MONTHLY',
+    'price_ozer_campaigns_pack_send_200k_monthly',
+  ),
+  campaigns_pack_send_500k: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_500K',
+    'price_ozer_campaigns_pack_send_500k',
+  ),
+  campaigns_pack_send_500k_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_PACK_SEND_500K_MONTHLY',
+    'price_ozer_campaigns_pack_send_500k_monthly',
+  ),
   campaigns_bump_contacts_500_monthly: price(
     'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_500_MONTHLY',
     'price_ozer_campaigns_bump_contacts_500_monthly',
@@ -227,6 +247,18 @@ export const OZER_STRIPE_PRICES = {
   campaigns_bump_contacts_2500_monthly: price(
     'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2500_MONTHLY',
     'price_ozer_campaigns_bump_contacts_2500_monthly',
+  ),
+  campaigns_bump_contacts_2000_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_2000_MONTHLY',
+    'price_ozer_campaigns_bump_contacts_2000_monthly',
+  ),
+  campaigns_bump_contacts_10000_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_10000_MONTHLY',
+    'price_ozer_campaigns_bump_contacts_10000_monthly',
+  ),
+  campaigns_bump_contacts_50000_monthly: price(
+    'STRIPE_PRICE_CAMPAIGNS_BUMP_CONTACTS_50000_MONTHLY',
+    'price_ozer_campaigns_bump_contacts_50000_monthly',
   ),
 } as const;
 

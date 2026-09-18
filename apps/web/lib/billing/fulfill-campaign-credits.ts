@@ -38,6 +38,11 @@ const CAMPAIGN_MONTHLY_BY_PRICE: Record<
     maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[2].maxContacts,
     planTier: 'pro',
   },
+  [OZER_STRIPE_PRICES.addon_campaigns_scale_monthly]: {
+    sendUnits: CAMPAIGN_SUBSCRIPTION_TIERS[3].sendUnits,
+    maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[3].maxContacts,
+    planTier: 'scale',
+  },
 };
 
 function addMonths(date: Date, months: number): Date {

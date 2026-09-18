@@ -114,8 +114,8 @@ export function CampaignsBillingCard(props: CampaignsBillingCardProps) {
           </CardTitle>
           <CardDescription>
             Monthly send allotment plus optional send packs and contact bumps.
-            Unused monthly units expire at cycle end. Circulation is a separate
-            meter.
+            Packs and bumps stack. Unused monthly units expire at cycle end.
+            Circulation is a separate meter.
           </CardDescription>
         </div>
         {snapshot ? (

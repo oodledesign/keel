@@ -494,6 +494,20 @@ const ADDONS: OzerPlanDefinition[] = [
       maxEmails: 60000,
     },
   },
+  {
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-scale-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.addon_campaigns_scale_monthly,
+    family: 'addon_campaigns',
+    entitlementKey: 'addon_campaigns',
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxContacts: 30000,
+      maxEmails: 360000,
+    },
+  },
 ];
 
 export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [
