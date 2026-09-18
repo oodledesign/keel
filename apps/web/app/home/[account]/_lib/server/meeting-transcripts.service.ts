@@ -1117,6 +1117,7 @@ class MeetingTranscriptsService {
     return sendMeetingNotesEmails({
       accountId: input.accountId,
       accountName: (account as { name?: string | null } | null)?.name ?? null,
+      meetingTranscriptId: input.transcriptId,
       meetingTitle: transcript.title,
       meetingDate: transcript.meetingDate,
       publicShareToken: transcript.publicShareToken,

@@ -17,6 +17,7 @@ import {
   type UpcomingMeetingItem,
   mergeUpcomingMeetings,
 } from '~/lib/integrations/google-calendar/upcoming-meetings';
+import { loadMeetingNotesSentEmails } from '~/lib/recorder/meeting-notes-email-recipients';
 import {
   type MeetingParticipant,
   resolveMeetingParticipants,
@@ -30,6 +31,7 @@ import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 export type MeetingClientOption = {
   id: string;
   name: string;
+  email?: string | null;
   pictureUrl?: string | null;
 };
 export type MeetingContactOption = {
@@ -69,6 +71,7 @@ function mapClientOptions(
     first_name?: string | null;
     last_name?: string | null;
     company_name?: string | null;
+    email?: string | null;
     picture_url?: string | null;
   }>,
 ): MeetingClientOption[] {
@@ -83,6 +86,7 @@ function mapClientOptions(
           .join(' ')
           .trim() ||
         'Unnamed client',
+      email: row.email?.trim() || null,
       pictureUrl: row.picture_url ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -334,6 +338,15 @@ async function loadMeetingTranscriptPageDataImpl(
     }),
   ]);
 
+  const notesSentEmails =
+    transcript && access.canEditClients
+      ? await loadMeetingNotesSentEmails(client, {
+          accountId,
+          transcriptId,
+          publicShareToken: transcript.publicShareToken,
+        })
+      : [];
+
   if (membersResult.error) {
     throw new Error(membersResult.error.message);
   }
@@ -455,6 +468,7 @@ async function loadMeetingTranscriptPageDataImpl(
     clients: mapClientOptions(clientsResult.data ?? []),
     contacts,
     members,
+    notesSentEmails,
     currentUserId: workspace.user.id,
     canEdit: access.canEditClients,
     canView: access.canViewClients,
