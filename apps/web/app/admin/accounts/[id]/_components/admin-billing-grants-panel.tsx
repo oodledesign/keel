@@ -130,6 +130,11 @@ const QUICK_PLANS = [
     productId: 'ozer-addon-campaigns',
     planId: 'campaigns-pro-monthly',
   },
+  {
+    label: 'Campaigns Scale',
+    productId: 'ozer-addon-campaigns',
+    planId: 'campaigns-scale-monthly',
+  },
 ];
 
 export function AdminBillingGrantsPanel(props: {

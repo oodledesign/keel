@@ -305,7 +305,7 @@ async function requireGrowthCampaigns(accountId: string) {
   const usage = await getCampaignUsage(accountId);
   if (!hasCampaignsGrowthFeatures(usage.pool.plan_tier)) {
     throw new Error(
-      'Logic filters, categories, and A/B tests are on Growth and Pro. Upgrade Campaigns in Billing.',
+      'Logic filters, categories, and A/B tests are on Growth and above. Upgrade Campaigns in Billing.',
     );
   }
 }

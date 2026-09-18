@@ -1,5 +1,6 @@
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
+import { CAMPAIGN_SUBSCRIPTION_TIERS } from './campaign-pricing';
 import { OZER_STRIPE_PRICES } from './stripe-price-ids';
 
 export type OzerPlanFamily =
@@ -452,48 +453,20 @@ const ADDONS: OzerPlanDefinition[] = [
     entitlementKey: 'addon_media_generate',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null },
   },
-  {
+  ...CAMPAIGN_SUBSCRIPTION_TIERS.map((tier) => ({
     productId: 'ozer-addon-campaigns',
-    planId: 'campaigns-starter-monthly',
-    stripePriceId: OZER_STRIPE_PRICES.addon_campaigns_starter_monthly,
-    family: 'addon_campaigns',
-    entitlementKey: 'addon_campaigns',
+    planId: `campaigns-${tier.id}-monthly`,
+    stripePriceId: tier.monthlyStripePriceId,
+    family: 'addon_campaigns' as const,
+    entitlementKey: 'addon_campaigns' as const,
     limits: {
       maxMembers: null,
       maxProperties: null,
       maxVideos: null,
-      maxContacts: 500,
-      maxEmails: 5000,
+      maxContacts: tier.maxContacts,
+      maxEmails: tier.sendUnits,
     },
-  },
-  {
-    productId: 'ozer-addon-campaigns',
-    planId: 'campaigns-growth-monthly',
-    stripePriceId: OZER_STRIPE_PRICES.addon_campaigns_growth_monthly,
-    family: 'addon_campaigns',
-    entitlementKey: 'addon_campaigns',
-    limits: {
-      maxMembers: null,
-      maxProperties: null,
-      maxVideos: null,
-      maxContacts: 2500,
-      maxEmails: 20000,
-    },
-  },
-  {
-    productId: 'ozer-addon-campaigns',
-    planId: 'campaigns-pro-monthly',
-    stripePriceId: OZER_STRIPE_PRICES.addon_campaigns_pro_monthly,
-    family: 'addon_campaigns',
-    entitlementKey: 'addon_campaigns',
-    limits: {
-      maxMembers: null,
-      maxProperties: null,
-      maxVideos: null,
-      maxContacts: 10000,
-      maxEmails: 60000,
-    },
-  },
+  })),
 ];
 
 export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [

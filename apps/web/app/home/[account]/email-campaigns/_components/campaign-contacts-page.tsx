@@ -474,7 +474,7 @@ export function CampaignContactsPage({
           />
         ) : (
           <div className={`${workspacePanelCard} p-4 ${workspaceTextMuted}`}>
-            Categories are available on Growth and Pro.
+            Categories are available on Growth and above.
           </div>
         )}
       </div>

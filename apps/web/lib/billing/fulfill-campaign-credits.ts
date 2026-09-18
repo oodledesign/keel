@@ -13,7 +13,6 @@ import {
   findCampaignContactBumpByPriceId,
   findCampaignSendPackByPriceId,
 } from '~/lib/billing/campaign-pricing';
-import { OZER_STRIPE_PRICES } from '~/lib/billing/stripe-price-ids';
 import {
   grantCampaignCredits,
   updateCampaignCreditPoolMetadata,
@@ -22,23 +21,16 @@ import {
 const CAMPAIGN_MONTHLY_BY_PRICE: Record<
   string,
   { sendUnits: number; maxContacts: number; planTier: string }
-> = {
-  [OZER_STRIPE_PRICES.addon_campaigns_starter_monthly]: {
-    sendUnits: CAMPAIGN_SUBSCRIPTION_TIERS[0].sendUnits,
-    maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[0].maxContacts,
-    planTier: 'starter',
-  },
-  [OZER_STRIPE_PRICES.addon_campaigns_growth_monthly]: {
-    sendUnits: CAMPAIGN_SUBSCRIPTION_TIERS[1].sendUnits,
-    maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[1].maxContacts,
-    planTier: 'growth',
-  },
-  [OZER_STRIPE_PRICES.addon_campaigns_pro_monthly]: {
-    sendUnits: CAMPAIGN_SUBSCRIPTION_TIERS[2].sendUnits,
-    maxContacts: CAMPAIGN_SUBSCRIPTION_TIERS[2].maxContacts,
-    planTier: 'pro',
-  },
-};
+> = Object.fromEntries(
+  CAMPAIGN_SUBSCRIPTION_TIERS.map((tier) => [
+    tier.monthlyStripePriceId,
+    {
+      sendUnits: tier.sendUnits,
+      maxContacts: tier.maxContacts,
+      planTier: tier.planTier,
+    },
+  ]),
+);
 
 function addMonths(date: Date, months: number): Date {
   const next = new Date(date);
