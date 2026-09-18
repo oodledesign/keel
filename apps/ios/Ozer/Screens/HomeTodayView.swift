@@ -31,6 +31,9 @@ struct HomeTodayView: View {
     @State private var financesError: NativeAPIError?
     @State private var isLoading = false
     @State private var financesLoadFinished = false
+    @State private var loadGeneration = 0
+    @State private var cachedIsSurveyor = false
+    @State private var cachedShowsInvoices = false
     @State private var editorTask: TaskItem?
     @State private var showTaskEditor = false
     @State private var showDictation = false
@@ -76,13 +79,11 @@ struct HomeTodayView: View {
                 switch homePhase {
                 case .skeleton:
                     OzerHomeSkeleton(
-                        showsFinances: workspace?.showsInvoices == true,
-                        isSurveyor: workspace?.isSurveyorWorkspace == true
+                        showsFinances: workspace?.showsInvoices == true || cachedShowsInvoices,
+                        isSurveyor: workspace?.isSurveyorWorkspace == true || cachedIsSurveyor
                     )
                 case .error:
-                    if let loadError {
-                        statusCard(error: loadError)
-                    }
+                    statusCard(error: loadError ?? .transport("Couldn’t load today"))
                 case .noWorkspaces:
                     membershipsEmptyCard
                 case .content:
@@ -101,7 +102,6 @@ struct HomeTodayView: View {
             }
             .onAppear { hydrateFromCache() }
             .task(id: session.workspaceContentKey) {
-                hydrateFromCache()
                 await load()
             }
             .refreshable {
@@ -412,7 +412,7 @@ struct HomeTodayView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(OzerPalette.plumMuted)
                 .textCase(.uppercase)
-            Text(financesError == nil ? "Finances aren’t available yet." : "Couldn’t load finances")
+            Text("Couldn’t load finances")
                 .font(.body.weight(.medium))
                 .foregroundStyle(OzerPalette.plum)
             if let financesError {
@@ -794,6 +794,10 @@ struct HomeTodayView: View {
         extraFinances = snapshot.restoredExtraFinances
         recentNotes = snapshot.restoredNotes
         invoiceItems = snapshot.restoredInvoices
+        cachedIsSurveyor = snapshot.isSurveyor == true || snapshot.surveyor != nil
+        cachedShowsInvoices = snapshot.showsInvoices == true
+            || snapshot.finances != nil
+            || snapshot.extraFinances != nil
         loadError = nil
         if extraFinances != nil || snapshot.finances != nil {
             financesLoadFinished = true
@@ -813,7 +817,9 @@ struct HomeTodayView: View {
                 payload: payload,
                 extraFinances: extraFinances,
                 recentNotes: recentNotes,
-                invoiceItems: invoiceItems
+                invoiceItems: invoiceItems,
+                isSurveyor: workspace?.isSurveyorWorkspace == true || cachedIsSurveyor,
+                showsInvoices: workspace?.showsInvoices == true || cachedShowsInvoices
             )
         )
     }
@@ -826,18 +832,30 @@ struct HomeTodayView: View {
         loadError = nil
         financesError = nil
         financesLoadFinished = false
+        cachedIsSurveyor = false
+        cachedShowsInvoices = false
         hydrateFromCache()
     }
 
     private func load() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
+        func isCurrent() -> Bool { generation == loadGeneration }
+
         do {
             let token = try await session.validAccessToken()
+            guard isCurrent() else { return }
             if !session.workspacesLoaded {
                 await session.refreshWorkspaces()
             }
             try Task.checkCancellation()
+            guard isCurrent() else { return }
             let workspace = session.workspaceQueryValue
             guard !workspace.isEmpty else {
                 if session.workspacesLoaded {
@@ -854,6 +872,7 @@ struct HomeTodayView: View {
             async let todayCall = client.today(workspace: workspace, accessToken: token)
             async let notesCall = client.notes(workspace: workspace, accessToken: token)
             let today = try await todayCall
+            guard isCurrent() else { return }
             payload = today
             loadError = nil
             if let review = today.taskReview {
@@ -863,6 +882,7 @@ struct HomeTodayView: View {
             if !today.recentNotes.isEmpty {
                 recentNotes = Array(today.recentNotes.prefix(5))
             } else if let notes = try? await notesCall {
+                guard isCurrent() else { return }
                 recentNotes = Array(notes.items.prefix(5))
             } else if recentNotes.isEmpty {
                 recentNotes = []
@@ -883,15 +903,20 @@ struct HomeTodayView: View {
                             workspace: workspace,
                             accessToken: token
                         )
+                        guard isCurrent() else { return }
                         extraFinances = pocket
                         if invoiceItems.isEmpty {
                             invoiceItems = Array(pocket.recent.prefix(5))
                         }
+                    } catch is CancellationError {
+                        throw CancellationError()
                     } catch let error as NativeAPIError {
+                        guard isCurrent() else { return }
                         if extraFinances == nil {
                             financesError = error
                         }
                     } catch {
+                        guard isCurrent() else { return }
                         if extraFinances == nil {
                             financesError = .transport(error.localizedDescription)
                         }
@@ -901,6 +926,7 @@ struct HomeTodayView: View {
                     workspace: workspace,
                     accessToken: token
                 ) {
+                    guard isCurrent() else { return }
                     invoiceItems = Array(list.items.prefix(5))
                 }
                 financesLoadFinished = true
@@ -912,8 +938,14 @@ struct HomeTodayView: View {
             }
             persistCache()
         } catch is CancellationError {
+            if isCurrent(), payload != nil, extraFinances == nil,
+               session.selectedWorkspace?.showsInvoices == true
+            {
+                financesLoadFinished = true
+            }
             return
         } catch let error as NativeAPIError {
+            guard isCurrent() else { return }
             if error == .unauthorized {
                 await session.handleUnauthorized()
             }
@@ -921,7 +953,15 @@ struct HomeTodayView: View {
                 loadError = error
             }
         } catch {
-            if error.isTaskCancellation { return }
+            guard isCurrent() else { return }
+            if error.isTaskCancellation {
+                if payload != nil, extraFinances == nil,
+                   session.selectedWorkspace?.showsInvoices == true
+                {
+                    financesLoadFinished = true
+                }
+                return
+            }
             if payload == nil {
                 loadError = .transport(error.localizedDescription)
             }

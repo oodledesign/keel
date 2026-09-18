@@ -76,5 +76,14 @@ enum ContentLoadPhaseTests {
                 loadFinished: false
             ) == .content
         }
+
+        check("cached home content shows while workspaces are still loading") {
+            ContentLoadPhase.resolve(
+                workspacesLoaded: false,
+                workspaceQueryEmpty: false,
+                hasContent: true,
+                hasError: false
+            ) == .content
+        }
     }
 }

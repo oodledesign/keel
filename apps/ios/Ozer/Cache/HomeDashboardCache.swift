@@ -17,6 +17,8 @@ struct HomeDashboardSnapshot: Codable, Equatable {
     var invoiceItems: [CachedInvoice]
     var taskReview: CachedTaskReview?
     var surveyor: CachedSurveyor?
+    var isSurveyor: Bool?
+    var showsInvoices: Bool?
 
     struct CachedMeeting: Codable, Equatable {
         var id: String
@@ -101,7 +103,9 @@ struct HomeDashboardSnapshot: Codable, Equatable {
         payload: TodayPayload,
         extraFinances: FinancesPayload?,
         recentNotes: [NoteItem],
-        invoiceItems: [InvoiceItem]
+        invoiceItems: [InvoiceItem],
+        isSurveyor: Bool,
+        showsInvoices: Bool
     ) -> HomeDashboardSnapshot {
         HomeDashboardSnapshot(
             greeting: payload.greeting,
@@ -125,7 +129,9 @@ struct HomeDashboardSnapshot: Codable, Equatable {
                     emailCount: $0.emailCount
                 )
             },
-            surveyor: payload.surveyor.map(CachedSurveyor.init)
+            surveyor: payload.surveyor.map(CachedSurveyor.init),
+            isSurveyor: isSurveyor || payload.surveyor != nil,
+            showsInvoices: showsInvoices || extraFinances != nil || payload.finances != nil
         )
     }
 
