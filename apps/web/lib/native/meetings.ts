@@ -3,6 +3,11 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import { listUpcomingSyncedMeetings } from '~/lib/integrations/google-calendar/events';
+import {
+  type UpcomingMeetingItem,
+  mergeUpcomingMeetings,
+} from '~/lib/integrations/google-calendar/upcoming-meetings';
 import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import { MEETING_VISIBLE_SUGGESTED_TASK_STATUSES } from '~/lib/recorder/meeting-suggested-tasks';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
@@ -181,15 +186,15 @@ function bookingTitle(row: Record<string, unknown>): string {
   );
 }
 
-export async function listNativeUpcomingMeetings(
+async function listNativeUpcomingBookings(
   client: SupabaseClient,
   workspace: NativeWorkspace,
-): Promise<NativeUpcomingMeeting[]> {
+): Promise<UpcomingMeetingItem[]> {
   try {
     const { data, error } = await client
       .from('bookings')
       .select(
-        'id, start_at, invitee_name, conferencing_url, status, event_types(name), booking_pages(title)',
+        'id, start_at, end_at, invitee_name, conferencing_url, status, event_types(name), booking_pages(title)',
       )
       .eq('account_id', workspace.id)
       .eq('status', 'confirmed')
@@ -202,28 +207,59 @@ export async function listNativeUpcomingMeetings(
       return [];
     }
 
-    const now = Date.now();
-    return ((data ?? []) as Record<string, unknown>[])
-      .filter((row) => {
-        const start = Date.parse(String(row.start_at ?? ''));
-        return !Number.isNaN(start) && start >= now;
-      })
-      .slice(0, UPCOMING_LIMIT)
-      .map((row) => ({
-        id: String(row.id),
-        title: bookingTitle(row),
-        start_at: String(row.start_at),
-        invitee_name: String(row.invitee_name ?? '').trim() || 'Guest',
-        conferencing_url:
-          typeof row.conferencing_url === 'string' &&
-          row.conferencing_url.trim()
-            ? row.conferencing_url.trim()
-            : null,
-      }));
+    return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      title: bookingTitle(row),
+      startAt: String(row.start_at),
+      endAt: typeof row.end_at === 'string' ? row.end_at : null,
+      inviteeName: String(row.invitee_name ?? '').trim() || 'Guest',
+      conferencingUrl:
+        typeof row.conferencing_url === 'string' && row.conferencing_url.trim()
+          ? row.conferencing_url.trim()
+          : null,
+      detailHref: null,
+      source: 'booking',
+    }));
   } catch (error) {
     console.warn('[native/meetings] load upcoming bookings failed', error);
     return [];
   }
+}
+
+export async function listNativeUpcomingMeetings(
+  client: SupabaseClient,
+  workspace: NativeWorkspace,
+  userId?: string,
+): Promise<NativeUpcomingMeeting[]> {
+  let calendarMeetings: UpcomingMeetingItem[] = [];
+  if (userId) {
+    try {
+      const calendar = await listUpcomingSyncedMeetings(client, {
+        userId,
+        limit: 20,
+      });
+      calendarMeetings = calendar.meetings;
+    } catch (error) {
+      console.warn(
+        '[native/meetings] load upcoming calendar meetings failed',
+        error,
+      );
+    }
+  }
+
+  const bookingMeetings = await listNativeUpcomingBookings(client, workspace);
+
+  return mergeUpcomingMeetings(
+    calendarMeetings,
+    bookingMeetings,
+    UPCOMING_LIMIT,
+  ).map((row) => ({
+    id: row.id,
+    title: row.title,
+    start_at: row.startAt,
+    invitee_name: row.inviteeName || 'Guest',
+    conferencing_url: row.conferencingUrl,
+  }));
 }
 
 export async function listNativeMeetings(
@@ -270,13 +306,14 @@ export async function listNativeMeetings(
 export async function loadNativeMeetingsHub(
   client: SupabaseClient,
   workspace: NativeWorkspace,
+  userId?: string,
 ): Promise<{
   items: NativeMeetingListItem[];
   upcoming: NativeUpcomingMeeting[];
 }> {
   const [items, upcoming] = await Promise.all([
     listNativeMeetings(client, workspace),
-    listNativeUpcomingMeetings(client, workspace),
+    listNativeUpcomingMeetings(client, workspace, userId),
   ]);
   return { items, upcoming };
 }

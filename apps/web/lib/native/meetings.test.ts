@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { listUpcomingSyncedMeetings } from '~/lib/integrations/google-calendar/events';
 import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
@@ -29,6 +30,13 @@ vi.mock('~/lib/recorder/meeting-summary', () => ({
 
 vi.mock('~/lib/notifications/meeting-in-app-notifications', () => ({
   notifyMeetingTranscriptSyncedInApp: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('~/lib/integrations/google-calendar/events', () => ({
+  listUpcomingSyncedMeetings: vi.fn().mockResolvedValue({
+    connected: false,
+    meetings: [],
+  }),
 }));
 
 const studio: NativeWorkspace = {
@@ -267,6 +275,68 @@ describe('listNativeUpcomingMeetings', () => {
         start_at: '2099-01-02T10:00:00Z',
         invitee_name: 'Alex Example',
         conferencing_url: 'https://meet.google.com/abc',
+      },
+    ]);
+  });
+
+  it('merges synced calendar meetings that have other attendees', async () => {
+    vi.mocked(listUpcomingSyncedMeetings).mockResolvedValueOnce({
+      connected: true,
+      meetings: [
+        {
+          id: 'gcal-1',
+          title: 'External standup',
+          startAt: '2099-01-03T09:00:00Z',
+          endAt: '2099-01-03T09:15:00Z',
+          inviteeName: 'Sam Example',
+          conferencingUrl: 'https://zoom.us/j/99',
+          detailHref: 'https://calendar.google.com/event?eid=1',
+          source: 'calendar',
+        },
+      ],
+    });
+
+    const bookingChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'b1',
+            start_at: '2099-01-02T10:00:00Z',
+            invitee_name: 'Alex Example',
+            conferencing_url: 'https://meet.google.com/abc',
+            status: 'confirmed',
+            event_types: { name: 'Discovery call' },
+            booking_pages: { title: 'Studio' },
+          },
+        ],
+        error: null,
+      }),
+    };
+
+    await expect(
+      listNativeUpcomingMeetings(
+        { from: () => bookingChain } as never,
+        studio,
+        'user-1',
+      ),
+    ).resolves.toEqual([
+      {
+        id: 'b1',
+        title: 'Discovery call',
+        start_at: '2099-01-02T10:00:00Z',
+        invitee_name: 'Alex Example',
+        conferencing_url: 'https://meet.google.com/abc',
+      },
+      {
+        id: 'gcal-1',
+        title: 'External standup',
+        start_at: '2099-01-03T09:00:00Z',
+        invitee_name: 'Sam Example',
+        conferencing_url: 'https://zoom.us/j/99',
       },
     ]);
   });

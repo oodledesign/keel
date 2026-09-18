@@ -87,4 +87,6 @@ export type RecorderCalendarEvent = {
   end: string;
   /** Best join URL for Meet / Zoom / Teams / etc., when present on the invite. */
   meeting_url: string | null;
+  /** Google Calendar event page, when the API returned htmlLink. */
+  html_link?: string | null;
 };

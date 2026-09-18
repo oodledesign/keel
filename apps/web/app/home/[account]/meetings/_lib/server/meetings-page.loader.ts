@@ -4,6 +4,7 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
   type MeetingTranscriptListItem,
@@ -11,6 +12,11 @@ import {
 } from '~/home/[account]/_lib/server/meeting-transcripts.service';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
+import { listUpcomingSyncedMeetings } from '~/lib/integrations/google-calendar/events';
+import {
+  type UpcomingMeetingItem,
+  mergeUpcomingMeetings,
+} from '~/lib/integrations/google-calendar/upcoming-meetings';
 import {
   type MeetingParticipant,
   resolveMeetingParticipants,
@@ -32,6 +38,8 @@ export type MeetingContactOption = {
   email?: string | null;
   pictureUrl?: string | null;
 };
+
+export type { UpcomingMeetingItem as UpcomingMeetingRow };
 
 export type MeetingMemberOption = {
   userId: string;
@@ -210,36 +218,49 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
   const clients = mapClientOptions(clientsResult.data ?? []);
   const contacts = mapContactOptions(contactsResult.data ?? []);
 
-  let upcomingMeetings: Array<{
-    id: string;
-    title: string;
-    startAt: string;
-    inviteeName: string;
-    conferencingUrl: string | null;
-  }> = [];
+  const bookingsPath = pathsConfig.app.accountSchedulingBookings.replace(
+    '[account]',
+    accountSlug,
+  );
+
+  let calendarMeetings: UpcomingMeetingItem[] = [];
+  let bookingMeetings: UpcomingMeetingItem[] = [];
+
+  try {
+    const calendar = await listUpcomingSyncedMeetings(client, {
+      userId: workspace.user.id,
+      limit: 20,
+    });
+    calendarMeetings = calendar.meetings;
+  } catch (error) {
+    console.warn('[meetings] load upcoming calendar meetings failed', error);
+  }
 
   try {
     const { createSchedulingService } =
       await import('~/home/[account]/scheduling/_lib/server/scheduling.service');
     const { upcoming } =
       await createSchedulingService(client).listBookings(accountId);
-    const now = Date.now();
-    upcomingMeetings = upcoming
-      .filter((row) => new Date(row.startAt).getTime() >= now)
-      .slice(0, 8)
-      .map((row) => ({
-        id: row.id,
-        title:
-          row.eventTypeName?.trim() ||
-          row.bookingPageTitle?.trim() ||
-          'Meeting',
-        startAt: row.startAt,
-        inviteeName: row.inviteeName,
-        conferencingUrl: row.conferencingUrl,
-      }));
+    bookingMeetings = upcoming.map((row) => ({
+      id: row.id,
+      title:
+        row.eventTypeName?.trim() || row.bookingPageTitle?.trim() || 'Meeting',
+      startAt: row.startAt,
+      endAt: row.endAt ?? null,
+      inviteeName: row.inviteeName,
+      conferencingUrl: row.conferencingUrl,
+      detailHref: bookingsPath,
+      source: 'booking',
+    }));
   } catch (error) {
     console.warn('[meetings] load upcoming bookings failed', error);
   }
+
+  const upcomingMeetings = mergeUpcomingMeetings(
+    calendarMeetings,
+    bookingMeetings,
+    8,
+  );
 
   return {
     accountId,

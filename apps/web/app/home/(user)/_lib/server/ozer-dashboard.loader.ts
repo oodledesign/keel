@@ -23,6 +23,7 @@ import {
   loadBusinessIdsForTeamAccount,
   loadUserWorkspaceAccounts,
 } from '~/home/_lib/server/workspace-scope';
+import { listUpcomingSyncedMeetings } from '~/lib/integrations/google-calendar/events';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
 import { createPersonalVisionService } from '~/lib/personal-vision/personal-vision.service';
 import { getPersonalAccountId } from '~/lib/recorder/personal-account';
@@ -51,6 +52,8 @@ export type PersonalCalendarEvent = {
   timeLabel: string;
   workspaceName: string;
   workspaceColor: string;
+  conferencingUrl?: string | null;
+  inviteeName?: string | null;
 };
 
 export type WorkspaceOverviewStat = {
@@ -98,6 +101,7 @@ export type OzerDashboardData = {
   todaysFocus: PersonalDashboardTask[];
   upcoming: PersonalDashboardTask[];
   myDayEvents: PersonalCalendarEvent[];
+  comingUpMeetings: PersonalCalendarEvent[];
   peopleUpcoming: PersonalPeopleUpcomingItem[];
   workspaceOverview: WorkspaceOverviewCard[];
   recentNotes: PersonalRecentNote[];
@@ -187,6 +191,18 @@ function formatTimeLabel(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatComingUpLabel(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const date = d.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  const time = formatTimeLabel(iso);
+  return time ? `${date} · ${time}` : date;
 }
 
 function parseYmdLocal(ymd: string): Date {
@@ -296,8 +312,6 @@ async function mapTasksToDashboard(
     jobs.set(j.id, j);
   }
 
-  const today = todayLocalYmd();
-
   return rows.map((row) => {
     let accountId: string | null = row.account_id ?? null;
     let accent: string | null = null;
@@ -384,14 +398,14 @@ async function countOpenTasksForAccount(
   return count ?? 0;
 }
 
-async function buildWorkspaceOverview(
+async function _buildWorkspaceOverview(
   client: ReturnType<typeof getSupabaseServerClient>,
   userId: string,
   workspaces: WorkspaceAccountRow[],
   bizIdsByWorkspace: Map<string, string[]>,
 ): Promise<WorkspaceOverviewCard[]> {
   const weekEnd = weekFromNowIso();
-  const { start: todayStart, end: todayEnd } = localDayBounds();
+  const { start: todayStart } = localDayBounds();
 
   return Promise.all(
     workspaces.map(async (w) => {
@@ -701,7 +715,9 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     ),
   ]);
 
-  let myDayEvents: PersonalCalendarEvent[] = [];
+  type TimedDashboardEvent = PersonalCalendarEvent & { sortAt: number };
+  const myDayTimed: TimedDashboardEvent[] = [];
+  let comingUpMeetings: PersonalCalendarEvent[] = [];
   if (workspaceIds.length > 0) {
     const { data: eventRows } = await client
       .from('job_events')
@@ -712,7 +728,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
       .order('scheduled_start_at', { ascending: true })
       .limit(20);
 
-    myDayEvents = (eventRows ?? []).map((row) => {
+    for (const row of eventRows ?? []) {
       const r = row as {
         id: string;
         title?: string | null;
@@ -720,15 +736,56 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
         account_id?: string;
       };
       const ws = r.account_id ? workspaceById.get(r.account_id) : null;
-      return {
+      myDayTimed.push({
         id: r.id,
         title: r.title?.trim() || 'Event',
         timeLabel: formatTimeLabel(r.scheduled_start_at ?? ''),
         workspaceName: ws?.name?.trim() || ws?.slug || 'Workspace',
         workspaceColor: workspaceColorForSpaceType(ws?.space_type),
-      };
-    });
+        sortAt: Date.parse(r.scheduled_start_at ?? '') || 0,
+      });
+    }
   }
+
+  try {
+    const calendar = await listUpcomingSyncedMeetings(client, {
+      userId,
+      limit: 20,
+    });
+    const todayStartMs = Date.parse(todayStart);
+    const todayEndMs = Date.parse(todayEnd);
+    const calendarLater: PersonalCalendarEvent[] = [];
+
+    for (const meeting of calendar.meetings) {
+      const startMs = Date.parse(meeting.startAt);
+      if (Number.isNaN(startMs)) continue;
+      const event: PersonalCalendarEvent = {
+        id: `cal-${meeting.id}`,
+        title: meeting.title,
+        timeLabel:
+          startMs >= todayStartMs && startMs <= todayEndMs
+            ? formatTimeLabel(meeting.startAt)
+            : formatComingUpLabel(meeting.startAt),
+        workspaceName: 'Calendar',
+        workspaceColor: 'var(--ozer-accent)',
+        conferencingUrl: meeting.conferencingUrl,
+        inviteeName: meeting.inviteeName,
+      };
+      if (startMs >= todayStartMs && startMs <= todayEndMs) {
+        myDayTimed.push({ ...event, sortAt: startMs });
+      } else if (startMs > todayEndMs) {
+        calendarLater.push(event);
+      }
+    }
+
+    comingUpMeetings = calendarLater.slice(0, 6);
+  } catch (error) {
+    console.warn('[dashboard] load upcoming calendar meetings failed', error);
+  }
+
+  const myDayEvents = myDayTimed
+    .sort((a, b) => a.sortAt - b.sortAt)
+    .map(({ sortAt: _sortAt, ...event }) => event);
 
   const workspaceOverview: WorkspaceOverviewCard[] = [];
 
@@ -831,6 +888,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     todaysFocus: filterPersonalOnly(todaysFocus),
     upcoming: filterPersonalOnly(upcoming),
     myDayEvents,
+    comingUpMeetings,
     peopleUpcoming,
     workspaceOverview,
     recentNotes,

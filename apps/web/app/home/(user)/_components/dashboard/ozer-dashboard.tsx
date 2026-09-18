@@ -116,7 +116,7 @@ export function OzerDashboard({ data }: Props) {
           </DashboardSection>
         </div>
 
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-6">
           <DashboardSection title="My Day">
             {data.myDayEvents.length > 0 ? (
               <div
@@ -128,6 +128,23 @@ export function OzerDashboard({ data }: Props) {
               </div>
             ) : (
               <EmptyPanel message="No events on your calendar today." />
+            )}
+          </DashboardSection>
+
+          <DashboardSection
+            title="Coming up"
+            subtitle="Synced meetings with other people"
+          >
+            {data.comingUpMeetings.length > 0 ? (
+              <div
+                className={`${panelClass} divide-y divide-[color:var(--workspace-shell-border)]`}
+              >
+                {data.comingUpMeetings.map((event) => (
+                  <CalendarEventRow key={event.id} event={event} />
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel message="No upcoming meetings with other people." />
             )}
           </DashboardSection>
         </div>
@@ -241,11 +258,13 @@ function EmptyPanel(props: React.PropsWithChildren<{ message: string }>) {
 }
 
 function CalendarEventRow(props: { event: PersonalCalendarEvent }) {
+  const timeClassName = props.event.timeLabel.includes('·')
+    ? 'w-28 shrink-0 text-sm font-medium text-[var(--ozer-accent)] tabular-nums'
+    : 'w-14 shrink-0 text-sm font-medium text-[var(--ozer-accent)] tabular-nums';
+
   return (
     <div className="flex min-w-0 items-start gap-3 px-4 py-3">
-      <span className="w-14 shrink-0 text-sm font-medium text-[var(--ozer-accent)] tabular-nums">
-        {props.event.timeLabel || '—'}
-      </span>
+      <span className={timeClassName}>{props.event.timeLabel || '—'}</span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
           {props.event.title}
@@ -255,9 +274,19 @@ function CalendarEventRow(props: { event: PersonalCalendarEvent }) {
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: props.event.workspaceColor }}
           />
-          {props.event.workspaceName}
+          {props.event.inviteeName || props.event.workspaceName}
         </span>
       </div>
+      {props.event.conferencingUrl ? (
+        <a
+          href={props.event.conferencingUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="shrink-0 text-xs font-semibold text-[var(--ozer-accent)] hover:text-[var(--ozer-accent-hover)]"
+        >
+          Join
+        </a>
+      ) : null}
     </div>
   );
 }
