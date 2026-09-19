@@ -165,7 +165,10 @@ struct MemoriesListView: View {
                         selectedChildId = nil
                     }
                     ForEach(children) { child in
-                        filterChip(title: child.displayName, active: selectedChildId == child.id) {
+                        filterChip(
+                            title: child.ageLabel.map { "\(child.displayName) · \($0)" } ?? child.displayName,
+                            active: selectedChildId == child.id
+                        ) {
                             selectedChildId = selectedChildId == child.id ? nil : child.id
                         }
                     }

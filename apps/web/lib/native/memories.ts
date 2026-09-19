@@ -6,8 +6,18 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { MEMORY_NOTE_CATEGORY } from '~/home/[account]/memories/_lib/memory-constants';
+import {
+  MEMORY_MEDIA_MAX_BYTES,
+  MemoryMediaError,
+  assertMemoryMedia,
+  formFileMeta,
+  memoryMediaStoragePath,
+  memoryMediaTags,
+  normalizeMemoryMimeType,
+} from '~/home/[account]/memories/_lib/memory-media';
 import { assembleFamilyMemoriesPage } from '~/home/[account]/memories/_lib/server/family-memories.loader';
 import { createFamilyMemoriesService } from '~/home/[account]/memories/_lib/server/family-memories.service';
+import { requireUploadedMemoryObject } from '~/home/[account]/memories/_lib/server/memory-media-storage';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
 import { NativeHttpError } from './http';
@@ -137,63 +147,57 @@ export async function upsertNativeFamilyChild(input: {
   });
 }
 
-export async function uploadNativeMemoryPhoto(input: {
-  client: SupabaseClient;
-  userId: string;
-  workspace: NativeWorkspace;
-  noteId: string;
-  bytes: Buffer;
-  filename: string;
-  mimeType: string;
-  title?: string;
-}) {
-  requireFamilyMemoriesWorkspace(input.workspace);
+function memoryMediaHttpError(error: unknown): never {
+  if (error instanceof MemoryMediaError) {
+    throw new NativeHttpError(400, error.message);
+  }
+  throw error;
+}
 
-  const existing = await input.client
+async function requireMemoryNote(
+  client: SupabaseClient,
+  workspaceId: string,
+  noteId: string,
+) {
+  const existing = await client
     .from('notes')
     .select('id, category')
-    .eq('id', input.noteId)
-    .eq('account_id', input.workspace.id)
+    .eq('id', noteId)
+    .eq('account_id', workspaceId)
     .maybeSingle();
   const memory = existing.data as { id: string; category: string } | null;
   if (existing.error || !memory || memory.category !== MEMORY_NOTE_CATEGORY) {
     throw new NativeHttpError(404, 'Memory not found');
   }
 
-  const mime = input.mimeType || 'image/jpeg';
-  if (!mime.startsWith('image/') && !mime.startsWith('video/')) {
-    throw new NativeHttpError(400, 'Only photos or videos can be attached');
-  }
+  return memory;
+}
 
-  const safeName =
-    input.filename.replace(/[^a-zA-Z0-9._-]/g, '_') || 'memory.jpg';
-  const filePath = `${input.workspace.id}/memories/${Date.now()}_${safeName}`;
-  const admin = getSupabaseServerAdminClient();
-  const { error: uploadError } = await admin.storage
-    .from(ACCOUNT_DOCS_BUCKET)
-    .upload(filePath, input.bytes, {
-      contentType: mime,
-      upsert: false,
-    });
-  if (uploadError) {
-    throw new NativeHttpError(400, uploadError.message);
-  }
-
-  const title = input.title?.trim() || input.filename || 'Memory photo';
+async function registerMemoryMediaDoc(input: {
+  client: SupabaseClient;
+  userId: string;
+  workspaceId: string;
+  noteId: string;
+  title: string;
+  filePath: string;
+  mimeType: string;
+  size: number;
+  kind: 'image' | 'video' | 'audio';
+}) {
   const { data, error } = await input.client
     .from('docs')
     .insert({
-      account_id: input.workspace.id,
-      title,
+      account_id: input.workspaceId,
+      title: input.title,
       kind: 'uploaded',
       doc_type: 'general',
       category: 'idea',
-      tags: ['memory'],
+      tags: memoryMediaTags(input.kind),
       storage_bucket: ACCOUNT_DOCS_BUCKET,
-      file_path: filePath,
-      storage_path: filePath,
-      mime_type: mime,
-      file_size_bytes: input.bytes.length,
+      file_path: input.filePath,
+      storage_path: input.filePath,
+      mime_type: input.mimeType,
+      file_size_bytes: input.size,
       file_url: null,
       user_id: input.userId,
       created_by: input.userId,
@@ -204,21 +208,234 @@ export async function uploadNativeMemoryPhoto(input: {
     .single();
 
   if (error || !data) {
-    await admin.storage.from(ACCOUNT_DOCS_BUCKET).remove([filePath]);
-    throw new NativeHttpError(400, error?.message || 'Could not attach photo');
+    throw new NativeHttpError(400, error?.message || 'Could not attach media');
   }
+
+  return data as { id: string; title: string; mime_type: string | null };
+}
+
+export async function uploadNativeMemoryPhoto(input: {
+  client: SupabaseClient;
+  userId: string;
+  workspace: NativeWorkspace;
+  noteId: string;
+  bytes: Buffer | Uint8Array;
+  filename: string;
+  mimeType: string;
+  title?: string;
+}) {
+  return uploadNativeMemoryMedia(input);
+}
+
+export async function uploadNativeMemoryMedia(input: {
+  client: SupabaseClient;
+  userId: string;
+  workspace: NativeWorkspace;
+  noteId: string;
+  bytes: Buffer | Uint8Array;
+  filename: string;
+  mimeType: string;
+  title?: string;
+}) {
+  requireFamilyMemoriesWorkspace(input.workspace);
+  await requireMemoryNote(input.client, input.workspace.id, input.noteId);
+
+  const mime = normalizeMemoryMimeType(input.mimeType, input.filename);
+  let kind: 'image' | 'video' | 'audio';
+  try {
+    kind = assertMemoryMedia({
+      mimeType: mime,
+      filename: input.filename,
+      size: input.bytes.byteLength,
+    });
+  } catch (error) {
+    memoryMediaHttpError(error);
+  }
+
+  const filePath = memoryMediaStoragePath(input.workspace.id, input.filename);
+  const admin = getSupabaseServerAdminClient();
+  const body =
+    input.bytes instanceof Uint8Array
+      ? input.bytes
+      : new Uint8Array(input.bytes);
+  const { error: uploadError } = await admin.storage
+    .from(ACCOUNT_DOCS_BUCKET)
+    .upload(filePath, body, {
+      contentType: mime || 'application/octet-stream',
+      upsert: false,
+    });
+  if (uploadError) {
+    throw new NativeHttpError(400, uploadError.message);
+  }
+
+  const title =
+    input.title?.trim() || input.filename || defaultMemoryMediaTitle(kind);
+
+  try {
+    const row = await registerMemoryMediaDoc({
+      client: input.client,
+      userId: input.userId,
+      workspaceId: input.workspace.id,
+      noteId: input.noteId,
+      title,
+      filePath,
+      mimeType: mime,
+      size: input.bytes.byteLength,
+      kind,
+    });
+
+    const signed = await admin.storage
+      .from(ACCOUNT_DOCS_BUCKET)
+      .createSignedUrl(filePath, 3600);
+
+    return {
+      id: row.id,
+      title: row.title,
+      mime_type: row.mime_type,
+      url: signed.data?.signedUrl ?? null,
+      kind,
+    };
+  } catch (error) {
+    await admin.storage.from(ACCOUNT_DOCS_BUCKET).remove([filePath]);
+    throw error;
+  }
+}
+
+export async function prepareNativeMemoryMediaUpload(input: {
+  client: SupabaseClient;
+  workspace: NativeWorkspace;
+  noteId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+}) {
+  requireFamilyMemoriesWorkspace(input.workspace);
+  await requireMemoryNote(input.client, input.workspace.id, input.noteId);
+
+  const mime = normalizeMemoryMimeType(input.mimeType, input.filename);
+  try {
+    assertMemoryMedia({
+      mimeType: mime,
+      filename: input.filename,
+      size: input.size,
+    });
+  } catch (error) {
+    memoryMediaHttpError(error);
+  }
+
+  const path = memoryMediaStoragePath(input.workspace.id, input.filename);
+  const admin = getSupabaseServerAdminClient();
+  const { data, error } = await admin.storage
+    .from(ACCOUNT_DOCS_BUCKET)
+    .createSignedUploadUrl(path);
+
+  if (error || !data?.token || !data.signedUrl) {
+    throw new NativeHttpError(
+      400,
+      error?.message || 'Could not prepare the upload',
+    );
+  }
+
+  return {
+    bucket: ACCOUNT_DOCS_BUCKET,
+    path,
+    token: data.token,
+    signed_url: data.signedUrl,
+    mime_type: mime,
+    max_bytes: MEMORY_MEDIA_MAX_BYTES,
+  };
+}
+
+export async function completeNativeMemoryMediaUpload(input: {
+  client: SupabaseClient;
+  userId: string;
+  workspace: NativeWorkspace;
+  noteId: string;
+  path: string;
+  filename: string;
+  mimeType: string;
+  title?: string;
+  size: number;
+}) {
+  requireFamilyMemoriesWorkspace(input.workspace);
+  await requireMemoryNote(input.client, input.workspace.id, input.noteId);
+
+  if (!input.path.startsWith(`${input.workspace.id}/memories/`)) {
+    throw new NativeHttpError(400, 'Invalid memory storage path');
+  }
+
+  const mime = normalizeMemoryMimeType(input.mimeType, input.filename);
+  let kind: 'image' | 'video' | 'audio';
+  try {
+    kind = assertMemoryMedia({
+      mimeType: mime,
+      filename: input.filename,
+      size: input.size,
+    });
+  } catch (error) {
+    memoryMediaHttpError(error);
+  }
+
+  try {
+    await requireUploadedMemoryObject(input.path);
+  } catch (error) {
+    throw new NativeHttpError(
+      400,
+      error instanceof Error
+        ? error.message
+        : 'Upload did not finish. Try again.',
+    );
+  }
+
+  const admin = getSupabaseServerAdminClient();
+
+  const title =
+    input.title?.trim() || input.filename || defaultMemoryMediaTitle(kind);
+  const row = await registerMemoryMediaDoc({
+    client: input.client,
+    userId: input.userId,
+    workspaceId: input.workspace.id,
+    noteId: input.noteId,
+    title,
+    filePath: input.path,
+    mimeType: mime,
+    size: input.size,
+    kind,
+  });
 
   const signed = await admin.storage
     .from(ACCOUNT_DOCS_BUCKET)
-    .createSignedUrl(filePath, 3600);
+    .createSignedUrl(input.path, 3600);
 
-  const row = data as { id: string; title: string; mime_type: string | null };
   return {
     id: row.id,
     title: row.title,
     mime_type: row.mime_type,
     url: signed.data?.signedUrl ?? null,
+    kind,
   };
+}
+
+export function parseNativeMemoryFormFile(file: Blob) {
+  const meta = formFileMeta(file);
+
+  try {
+    assertMemoryMedia({
+      mimeType: meta.mimeType,
+      filename: meta.filename,
+      size: meta.size || file.size,
+    });
+  } catch (error) {
+    memoryMediaHttpError(error);
+  }
+
+  return meta;
+}
+
+function defaultMemoryMediaTitle(kind: 'image' | 'video' | 'audio') {
+  if (kind === 'audio') return 'Voice note';
+  if (kind === 'video') return 'Memory video';
+  return 'Memory photo';
 }
 
 async function assertPeopleInWorkspace(

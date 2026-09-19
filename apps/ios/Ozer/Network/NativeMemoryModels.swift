@@ -198,13 +198,21 @@ struct NativeMemoryItem: Decodable, Identifiable, Equatable, Hashable {
         MemoryKind.parse(kind)?.label
     }
 
+    var previewVisual: NativeMemoryMedia? {
+        media.first(where: { $0.kind == .image || $0.kind == .video || ($0.mimeType ?? "").hasPrefix("image/") || ($0.mimeType ?? "").hasPrefix("video/") })
+    }
+
     var previewPhotoURL: URL? {
-        media.first(where: { ($0.mimeType ?? "").hasPrefix("image/") })?.httpsURL
-            ?? media.first?.httpsURL
+        media.first(where: { $0.resolvedKind == .image })?.httpsURL
+            ?? media.first(where: { ($0.mimeType ?? "").hasPrefix("image/") })?.httpsURL
     }
 
     var extraMediaCount: Int {
-        max(0, media.count - 1)
+        max(0, media.filter { $0.resolvedKind != .audio }.count - 1)
+    }
+
+    var audioItems: [NativeMemoryMedia] {
+        media.filter { $0.resolvedKind == .audio }
     }
 
     var displayTitle: String? {
@@ -217,17 +225,20 @@ struct NativeMemoryLinkedChild: Decodable, Identifiable, Equatable, Hashable {
     var id: String
     var displayName: String
     var avatarUrl: String?
+    var ageLabel: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case displayName = "display_name"
         case avatarUrl = "avatar_url"
+        case ageLabel = "age_label"
     }
 
-    init(id: String, displayName: String, avatarUrl: String? = nil) {
+    init(id: String, displayName: String, avatarUrl: String? = nil, ageLabel: String? = nil) {
         self.id = id
         self.displayName = displayName
         self.avatarUrl = avatarUrl
+        self.ageLabel = ageLabel
     }
 
     init(from decoder: Decoder) throws {
@@ -235,6 +246,7 @@ struct NativeMemoryLinkedChild: Decodable, Identifiable, Equatable, Hashable {
         id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
         displayName = try container.decodeIfPresent(String.self, forKey: .displayName) ?? ""
         avatarUrl = try container.decodeIfPresent(String.self, forKey: .avatarUrl)
+        ageLabel = try container.decodeIfPresent(String.self, forKey: .ageLabel)
     }
 
     var httpsAvatarURL: URL? {
@@ -257,17 +269,25 @@ struct NativeMemoryMedia: Decodable, Identifiable, Equatable, Hashable {
     var title: String
     var mimeType: String?
     var url: String?
+    var kind: MemoryMediaKind?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, url
+        case id, title, url, kind
         case mimeType = "mime_type"
     }
 
-    init(id: String, title: String, mimeType: String? = nil, url: String? = nil) {
+    init(
+        id: String,
+        title: String,
+        mimeType: String? = nil,
+        url: String? = nil,
+        kind: MemoryMediaKind? = nil
+    ) {
         self.id = id
         self.title = title
         self.mimeType = mimeType
         self.url = url
+        self.kind = kind
     }
 
     init(from decoder: Decoder) throws {
@@ -276,6 +296,15 @@ struct NativeMemoryMedia: Decodable, Identifiable, Equatable, Hashable {
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
         mimeType = try container.decodeIfPresent(String.self, forKey: .mimeType)
         url = try container.decodeIfPresent(String.self, forKey: .url)
+        if let raw = try container.decodeIfPresent(String.self, forKey: .kind) {
+            kind = MemoryMediaKind(rawValue: raw)
+        } else {
+            kind = MemoryMedia.kind(mimeType: mimeType, filename: title)
+        }
+    }
+
+    var resolvedKind: MemoryMediaKind? {
+        kind ?? MemoryMedia.kind(mimeType: mimeType, filename: title)
     }
 
     var httpsURL: URL? {
@@ -317,9 +346,26 @@ struct NativeMemoryPhotoResult: Decodable, Equatable {
     var title: String
     var mimeType: String?
     var url: String?
+    var kind: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, url
+        case id, title, url, kind
         case mimeType = "mime_type"
+    }
+}
+
+struct NativeMemoryMediaPrepare: Decodable, Equatable {
+    var bucket: String
+    var path: String
+    var token: String
+    var signedUrl: String
+    var mimeType: String?
+    var maxBytes: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case bucket, path, token
+        case signedUrl = "signed_url"
+        case mimeType = "mime_type"
+        case maxBytes = "max_bytes"
     }
 }

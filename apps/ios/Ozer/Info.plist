@@ -9,13 +9,13 @@
 	<key>OZER_SUPABASE_ANON_KEY</key>
 	<string>$(OZER_SUPABASE_ANON_KEY)</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Ozer uses the microphone so you can dictate survey notes in the field and record in-room meetings. Audio stays on this iPhone.</string>
+	<string>Ozer uses the microphone so you can dictate family memories, survey notes, and in-room meetings. Audio stays on this iPhone unless you choose to keep a recording with the memory or survey.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Ozer transcribes dictation and meetings on this iPhone in British English, so notes still work offline. Speech is not sent to a cloud service.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Ozer uses the camera so you can add site photos to a building survey. Photos stay on this iPhone until they upload to that survey.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Ozer lets you add existing site photos from your camera roll to a building survey library.</string>
+	<string>Ozer lets you add photos, video, and voice notes from this iPhone to family memories and building surveys.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

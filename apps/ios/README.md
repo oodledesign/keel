@@ -350,9 +350,16 @@ POST /api/native/v1/memories/children
 
 POST /api/native/v1/memories/photos
 multipart workspace + note_id + file
+# photos, video (mp4/mov), or audio (m4a/caf/mp3/wav), max 50 MB
+
+POST /api/native/v1/memories/media/prepare
+{ "workspace", "note_id", "filename", "mime_type?", "size" }
+
+POST /api/native/v1/memories/media/complete
+{ "workspace", "note_id", "path", "filename", "mime_type?", "title?", "size" }
 ```
 
-The timeline lists dated memory cards (text, child chips, photo when present). Quick capture writes a memory note and optional child tags + photo. Children is the `is_child` People index; a child profile shows that child’s memories.
+The timeline lists dated memory cards (text, child chips with age-at-memory when a birthday exists, photo/video/voice note). Quick capture writes a memory note, optional child tags, and media. In-app Record uses the same on-device `MeetingCaptureSession` as surveys (captions into the note; **Keep recording** defaults on, matching survey audio retention). Library + Files cover photos, mp4/mov, and Voice Memos. Children is the `is_child` People index; a child profile shows that child’s memories.
 
 Out of scope: PowerSync, the Mac Whisper stack, cloud STT / `/api/recorder/transcribe-session`, invoice create/edit, Stripe card entry, secrets, App Store submit, `WKWebView` of the web app.
 

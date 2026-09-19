@@ -32,6 +32,7 @@ export type NativeMemoryLinkedChild = {
   id: string;
   display_name: string;
   avatar_url: string | null;
+  age_label: string | null;
 };
 
 export type NativeMemoryMedia = {
@@ -39,6 +40,7 @@ export type NativeMemoryMedia = {
   title: string;
   mime_type: string | null;
   url: string | null;
+  kind: 'image' | 'video' | 'audio' | null;
 };
 
 export type NativeMemoryItem = {
@@ -133,12 +135,14 @@ export function toNativeMemoryItem(memory: FamilyMemoryItem): NativeMemoryItem {
       id: child.id,
       display_name: child.display_name,
       avatar_url: child.avatarUrl,
+      age_label: child.ageLabel ?? null,
     })),
     media: memory.media.map((item) => ({
       id: item.id,
       title: item.title,
       mime_type: item.mimeType,
       url: item.url,
+      kind: item.kind,
     })),
     created_at: memory.createdAt,
     updated_at: memory.updatedAt,

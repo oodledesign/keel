@@ -89,6 +89,30 @@ enum MemoryDisplay {
         return years == 1 ? "1 year old" : "\(years) years old"
     }
 
+    static func formatAgeOn(
+        dateOfBirth: String?,
+        occurredOn: String?,
+        fallbackNow: Date = Date(),
+        calendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> String? {
+        guard let occurredOn,
+              let onDate = date(fromIso: occurredOn, calendar: calendar)
+        else {
+            return formatAge(dateOfBirth: dateOfBirth, now: fallbackNow, calendar: calendar)
+        }
+        return formatAge(dateOfBirth: dateOfBirth, now: onDate, calendar: calendar)
+    }
+
+    static func date(fromIso isoDate: String, calendar: Calendar = Calendar(identifier: .gregorian)) -> Date? {
+        let parts = isoDate.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        var components = DateComponents()
+        components.year = parts[0]
+        components.month = parts[1]
+        components.day = parts[2]
+        return calendar.date(from: components)
+    }
+
     static func initials(_ name: String) -> String {
         let parts = name.split { $0.isWhitespace }.prefix(2)
         if parts.isEmpty { return "?" }
