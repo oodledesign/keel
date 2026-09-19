@@ -70,6 +70,9 @@ describe('isAllowedUploadImage', () => {
     expect(
       isAllowedUploadImage({ type: 'application/pdf', name: 'doc.pdf' }),
     ).toBe(false);
+    expect(
+      isAllowedUploadImage({ type: 'image/tiff', name: 'scan.tiff' }),
+    ).toBe(false);
     expect(isAllowedUploadImage({ type: '', name: 'notes.txt' })).toBe(false);
   });
 });
