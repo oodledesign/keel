@@ -27,6 +27,8 @@ import type {
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
 import type { RecipeImageCandidate } from '~/lib/ai/recipe-extract-utils';
 import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
+import { prepareRecipeImageDataUrl } from '~/lib/meals/prepare-recipe-image';
+import { RECIPE_IMAGE_ACCEPT } from '~/lib/meals/recipe-image-limits';
 
 import type { RecipeFormDraft } from './RecipeDialog';
 import { ACCENT } from './meal-ui';
@@ -49,8 +51,6 @@ const SOURCE_TABS: Array<{
   { id: 'url', label: 'Link', icon: Link2 },
   { id: 'image', label: 'Photo', icon: ImageIcon },
 ];
-
-const MAX_IMAGE_BYTES = 4_000_000;
 
 function resolveImportedDraftOrigin(
   recipe: {
@@ -79,18 +79,6 @@ function resolveImportedDraftOrigin(
   return { source: 'ai', source_label: recipe.source_label ?? null };
 }
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') resolve(reader.result);
-      else reject(new Error('Could not read image'));
-    };
-    reader.onerror = () => reject(new Error('Could not read image'));
-    reader.readAsDataURL(file);
-  });
-}
-
 export function RecipeImportDialog({
   open,
   onOpenChange,
@@ -105,6 +93,7 @@ export function RecipeImportDialog({
   const [url, setUrl] = useState('');
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
 
@@ -114,6 +103,7 @@ export function RecipeImportDialog({
     setUrl('');
     setImageName(null);
     setImageDataUrl(null);
+    setIsPreparingImage(false);
     setIsExtracting(false);
     setExtractError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -131,22 +121,21 @@ export function RecipeImportDialog({
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please choose a photo or screenshot');
-      return;
-    }
-
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast.error('Image is too large — please use a smaller photo');
-      return;
-    }
-
+    setIsPreparingImage(true);
+    setExtractError(null);
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await prepareRecipeImageDataUrl(file);
       setImageName(file.name);
       setImageDataUrl(dataUrl);
-    } catch {
-      toast.error('Could not read that image');
+    } catch (error) {
+      setImageName(null);
+      setImageDataUrl(null);
+      const message =
+        error instanceof Error ? error.message : 'Could not read that image';
+      setExtractError(message);
+      toast.error(message);
+    } finally {
+      setIsPreparingImage(false);
     }
   }
 
@@ -307,7 +296,7 @@ export function RecipeImportDialog({
               <button
                 key={tab.id}
                 type="button"
-                disabled={isExtracting}
+                disabled={isExtracting || isPreparingImage}
                 onClick={() => setSource(tab.id)}
                 className={cn(
                   'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium transition-colors',
@@ -366,8 +355,8 @@ export function RecipeImportDialog({
                 ref={fileInputRef}
                 id="recipe-import-image"
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                disabled={isExtracting}
+                accept={RECIPE_IMAGE_ACCEPT}
+                disabled={isExtracting || isPreparingImage}
                 className="hidden"
                 onChange={(e) =>
                   void handleImageChange(e.target.files?.[0] ?? null)
@@ -375,13 +364,21 @@ export function RecipeImportDialog({
               />
               <button
                 type="button"
-                disabled={isExtracting}
+                disabled={isExtracting || isPreparingImage}
                 onClick={() => fileInputRef.current?.click()}
                 className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-10 text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[color:var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
               >
                 <ImageIcon className="h-6 w-6" />
-                {imageName ? imageName : 'Choose image'}
+                {isPreparingImage
+                  ? 'Preparing photo…'
+                  : imageName
+                    ? imageName
+                    : 'Choose image'}
               </button>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Phone screenshots and HEIC photos are compressed automatically
+                before we read them.
+              </p>
             </div>
           ) : null}
 
@@ -405,7 +402,7 @@ export function RecipeImportDialog({
           </Button>
           <Button
             onClick={() => void handleExtract()}
-            disabled={isExtracting || !canSubmit}
+            disabled={isExtracting || isPreparingImage || !canSubmit}
             style={{ backgroundColor: ACCENT }}
             className="text-[var(--workspace-shell-text)] hover:opacity-90"
           >
