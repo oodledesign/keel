@@ -127,6 +127,11 @@ function parseImagePayload(payload: string): {
   data: string;
 } {
   const trimmed = payload.trim();
+  if (/^data:image\/(heic|heif)/i.test(trimmed)) {
+    throw new Error(
+      'iPhone HEIC photos need to be converted first — try again, or save as JPEG/PNG.',
+    );
+  }
   const dataUrl = /^data:(image\/(?:jpeg|png|gif|webp));base64,(.+)$/i.exec(
     trimmed,
   );
@@ -161,7 +166,7 @@ export async function extractRecipeFromImage(
   const MAX_IMAGE_BASE64_CHARS = 5_500_000;
   if (data.length > MAX_IMAGE_BASE64_CHARS) {
     throw new Error(
-      'Image is too large to process — please use a smaller photo',
+      'Image is still too large after compression — try a tighter crop or a different screenshot.',
     );
   }
 

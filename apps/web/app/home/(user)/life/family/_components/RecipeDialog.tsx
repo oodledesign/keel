@@ -27,6 +27,8 @@ import {
   tidyInstructionText,
 } from '~/lib/ai/recipe-import-polish';
 import { resolveExtractOrigin } from '~/lib/ai/recipe-source-label';
+import { prepareRecipeImageDataUrl } from '~/lib/meals/prepare-recipe-image';
+import { RECIPE_IMAGE_ACCEPT } from '~/lib/meals/recipe-image-limits';
 
 import { upsertRecipeAction } from '../_lib/actions';
 import {
@@ -43,8 +45,6 @@ import {
   mealTypeLabels,
   priorityChoices,
 } from './meal-ui';
-
-const MAX_COVER_BYTES = 4_000_000;
 
 /** Prefill for a new recipe (e.g. after AI extract) — never has an id. */
 export type RecipeFormDraft = {
@@ -103,18 +103,6 @@ function toForm(recipe: RecipeRow | null, draft?: RecipeFormDraft | null) {
     image_data: null as string | null,
     image_candidates: candidates,
   };
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') resolve(reader.result);
-      else reject(new Error('Could not read image'));
-    };
-    reader.onerror = () => reject(new Error('Could not read image'));
-    reader.readAsDataURL(file);
-  });
 }
 
 function isStoredCoverUrl(url: string | null | undefined) {
@@ -671,22 +659,20 @@ function RecipeCoverFields({
 }) {
   const preview = form.image_data ?? form.image_url;
   const hasCandidates = form.image_candidates.length > 0;
+  const [isPreparing, setIsPreparing] = useState(false);
 
   async function handleUpload(file: File | null) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please choose a photo');
-      return;
-    }
-    if (file.size > MAX_COVER_BYTES) {
-      toast.error('Image is too large — please use a smaller photo');
-      return;
-    }
+    setIsPreparing(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const dataUrl = await prepareRecipeImageDataUrl(file);
       onChange({ image_data: dataUrl, image_url: null });
-    } catch {
-      toast.error('Could not read that image');
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not read that image',
+      );
+    } finally {
+      setIsPreparing(false);
     }
   }
 
@@ -742,7 +728,7 @@ function RecipeCoverFields({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={RECIPE_IMAGE_ACCEPT}
           className="hidden"
           onChange={(e) => {
             void handleUpload(e.target.files?.[0] ?? null);
@@ -754,10 +740,15 @@ function RecipeCoverFields({
           variant="outline"
           size="sm"
           data-test="recipe-cover-upload"
+          disabled={isPreparing}
           onClick={() => fileInputRef.current?.click()}
         >
           <ImageIcon className="mr-1.5 h-3.5 w-3.5" />
-          {preview ? 'Replace photo' : 'Upload photo'}
+          {isPreparing
+            ? 'Preparing photo…'
+            : preview
+              ? 'Replace photo'
+              : 'Upload photo'}
         </Button>
         {preview ? (
           <Button
@@ -772,11 +763,11 @@ function RecipeCoverFields({
           </Button>
         ) : null}
       </div>
-      {hasCandidates ? (
-        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          Pick a photo from the page, upload your own, or skip.
-        </p>
-      ) : null}
+      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+        {hasCandidates
+          ? 'Pick a photo from the page, upload your own, or skip. Large phone photos are compressed automatically.'
+          : 'Large phone photos and HEIC files are compressed automatically.'}
+      </p>
     </div>
   );
 }

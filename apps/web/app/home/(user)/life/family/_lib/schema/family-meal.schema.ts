@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { RECIPE_IMAGE_DATA_URL_MAX_CHARS } from '~/lib/meals/recipe-image-limits';
+
 export const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
@@ -202,8 +204,18 @@ export const RecipeInputSchema = AccountSlugFieldSchema.extend({
   image_url: z.string().trim().max(2_000).nullable().optional(),
   /** Remote candidate (Instagram thumbnail / page image) to copy into storage. */
   remote_image_url: RecipeHttpUrlSchema,
-  /** User-uploaded data URL to copy into storage. */
-  image_data: z.string().max(6_000_000).nullable().optional(),
+  /** User-uploaded data URL to copy into storage (already client-compressed). */
+  image_data: z
+    .string()
+    .max(RECIPE_IMAGE_DATA_URL_MAX_CHARS)
+    .refine(
+      (value) => /^data:image\/(jpeg|jpg|png|gif|webp);base64,/i.test(value),
+      {
+        message: 'Cover photo must be a JPEG, PNG, GIF, or WebP.',
+      },
+    )
+    .nullable()
+    .optional(),
 });
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
 
