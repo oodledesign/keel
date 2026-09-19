@@ -240,7 +240,10 @@ struct QuickMemorySheet: View {
                 try appendFile(
                     data: Data(contentsOf: audioURL),
                     filename: audioURL.lastPathComponent,
-                    mimeType: "audio/mp4"
+                    mimeType: MemoryMedia.mimeType(
+                        filename: audioURL.lastPathComponent,
+                        fallback: "audio/mp4"
+                    )
                 )
             }
         } catch {

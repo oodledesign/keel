@@ -13,7 +13,6 @@ import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/doc
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
 import {
-  MemoryMediaError,
   assertMemoryMedia,
   memoryMediaStoragePath,
   memoryMediaTags,
@@ -83,16 +82,11 @@ export const prepareFamilyMemoryMediaAction = enhanceAction(
     }
 
     const mime = normalizeMemoryMimeType(data.mimeType, data.filename);
-    try {
-      assertMemoryMedia({
-        mimeType: mime,
-        filename: data.filename,
-        size: data.fileSizeBytes,
-      });
-    } catch (error) {
-      if (error instanceof MemoryMediaError) throw error;
-      throw error;
-    }
+    assertMemoryMedia({
+      mimeType: mime,
+      filename: data.filename,
+      size: data.fileSizeBytes,
+    });
 
     const filePath = memoryMediaStoragePath(data.accountId, data.filename);
     const admin = getSupabaseServerAdminClient();
