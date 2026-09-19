@@ -2,6 +2,7 @@
  * Client-side listing photo compression before upload.
  * Keeps portal/gallery payloads reasonable without a separate original store.
  */
+import { uploadImageTargetDimensions } from '~/lib/images/compress-upload-image';
 
 export const LISTING_IMAGE_MAX_LONG_EDGE = 2400;
 export const LISTING_IMAGE_JPEG_QUALITY = 0.8;
@@ -13,30 +14,7 @@ export function listingImageTargetDimensions(
   height: number,
   maxLongEdge: number = LISTING_IMAGE_MAX_LONG_EDGE,
 ): { width: number; height: number; scaled: boolean } {
-  if (
-    !Number.isFinite(width) ||
-    !Number.isFinite(height) ||
-    width <= 0 ||
-    height <= 0
-  ) {
-    return { width: 0, height: 0, scaled: false };
-  }
-
-  const longEdge = Math.max(width, height);
-  if (longEdge <= maxLongEdge) {
-    return {
-      width: Math.round(width),
-      height: Math.round(height),
-      scaled: false,
-    };
-  }
-
-  const scale = maxLongEdge / longEdge;
-  return {
-    width: Math.max(1, Math.round(width * scale)),
-    height: Math.max(1, Math.round(height * scale)),
-    scaled: true,
-  };
+  return uploadImageTargetDimensions(width, height, maxLongEdge);
 }
 
 export function shouldCompressListingImage(file: {

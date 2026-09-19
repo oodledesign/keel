@@ -1,9 +1,12 @@
 import 'server-only';
 
 import { isPrivateOrLocalUrl } from '~/lib/ai/recipe-extract-utils';
+import {
+  RECIPE_IMAGE_MAX_OUTPUT_BYTES,
+  RECIPE_IMAGE_REMOTE_MAX_BYTES,
+} from '~/lib/meals/recipe-image-limits';
 
 const FETCH_TIMEOUT_MS = 12_000;
-const MAX_IMAGE_BYTES = 4_000_000;
 const RECIPE_FETCH_UA = 'OzerRecipeBot/1.0 (+https://ozer.so; recipe-extract)';
 
 const ALLOWED_TYPES = new Set([
@@ -80,7 +83,10 @@ export async function fetchPublicRecipeImage(url: string): Promise<{
     if (!response.ok) return null;
 
     const buffer = Buffer.from(await response.arrayBuffer());
-    if (!buffer.byteLength || buffer.byteLength > MAX_IMAGE_BYTES) {
+    if (
+      !buffer.byteLength ||
+      buffer.byteLength > RECIPE_IMAGE_REMOTE_MAX_BYTES
+    ) {
       return null;
     }
 
@@ -112,7 +118,9 @@ export function parseRecipeImageDataUrl(payload: string): {
       : dataUrl[1].toLowerCase();
   try {
     const bytes = Buffer.from(dataUrl[2].replace(/\s/g, ''), 'base64');
-    if (!bytes.byteLength || bytes.byteLength > MAX_IMAGE_BYTES) return null;
+    if (!bytes.byteLength || bytes.byteLength > RECIPE_IMAGE_MAX_OUTPUT_BYTES) {
+      return null;
+    }
     return { bytes, contentType };
   } catch {
     return null;

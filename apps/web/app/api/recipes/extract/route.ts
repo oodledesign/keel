@@ -13,6 +13,7 @@ import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
 } from '~/lib/ai/router';
+import { RECIPE_IMAGE_DATA_URL_MAX_CHARS } from '~/lib/meals/recipe-image-limits';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export const maxDuration = 60;
 
 const MAX_PAYLOAD_BYTES = {
   text: 50_000,
-  image: 6_000_000,
+  image: RECIPE_IMAGE_DATA_URL_MAX_CHARS,
   url: 2_000,
 } as const;
 
@@ -80,7 +81,12 @@ export async function POST(request: NextRequest) {
 
   if (payload.length > MAX_PAYLOAD_BYTES[source]) {
     return NextResponse.json(
-      { error: 'Payload is too large' },
+      {
+        error:
+          source === 'image'
+            ? 'That photo is still too large after compression. Try a tighter crop or a different screenshot.'
+            : 'Payload is too large',
+      },
       { status: 413 },
     );
   }
@@ -136,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     const raw = err instanceof Error ? err.message : '';
     const isSafeMessage =
-      /cannot be fetched|too large|empty or invalid|No recipe|No readable|Could not fetch|Could not read this Instagram|paywalled|login-gated|could not be found|slow down|Paste the recipe|screenshot|private/i.test(
+      /cannot be fetched|too large|empty or invalid|No recipe|No readable|Could not fetch|Could not read this Instagram|paywalled|login-gated|could not be found|slow down|Paste the recipe|screenshot|private|heic/i.test(
         raw,
       );
 

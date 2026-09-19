@@ -298,11 +298,13 @@ async function resolveRecipeCoverUrl(input: {
   existingImageUrl: string | null;
   input: RecipeInput;
 }): Promise<{ imageUrl: string | null; warning: string | null }> {
-  const uploaded = input.input.image_data
-    ? parseRecipeImageDataUrl(input.input.image_data)
-    : null;
-
-  if (uploaded) {
+  if (input.input.image_data) {
+    const uploaded = parseRecipeImageDataUrl(input.input.image_data);
+    if (!uploaded) {
+      throw new Error(
+        'Could not save the cover photo — the image was too large or an unsupported format.',
+      );
+    }
     const imageUrl = await storeRecipeCoverBytes({
       ownerAccountId: input.ownerAccountId,
       recipeId: input.recipeId,
