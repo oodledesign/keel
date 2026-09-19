@@ -364,6 +364,7 @@ export function RecipeImportDialog({
               />
               <button
                 type="button"
+                data-test="recipe-import-image-picker"
                 disabled={isExtracting || isPreparingImage}
                 onClick={() => fileInputRef.current?.click()}
                 className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-10 text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[color:var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"

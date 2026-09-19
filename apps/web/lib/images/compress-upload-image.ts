@@ -102,7 +102,6 @@ export function isAllowedUploadImage(file: {
   const type = (file.type || '').toLowerCase();
   if (type === 'image/svg+xml') return false;
   if (ALLOWED_TYPES.has(type)) return true;
-  if (type.startsWith('image/')) return true;
   if (type) return false;
   return ALLOWED_EXTENSIONS.has(fileExtension(file.name || ''));
 }

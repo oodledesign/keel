@@ -15,6 +15,7 @@ export const RECIPE_IMAGE_MAX_LONG_EDGE = 2048;
 export const RECIPE_IMAGE_JPEG_QUALITY = 0.82;
 /** ~1.5 MB binary as a data URL, with headroom for the prefix. */
 export const RECIPE_IMAGE_DATA_URL_MAX_CHARS = 2_800_000;
+/** Server-to-server OG/cover fetch — not a JSON body, so this can be larger. */
 export const RECIPE_IMAGE_REMOTE_MAX_BYTES = 8_000_000;
 
 export const RECIPE_IMAGE_ACCEPT =

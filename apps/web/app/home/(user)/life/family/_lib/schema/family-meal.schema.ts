@@ -208,6 +208,12 @@ export const RecipeInputSchema = AccountSlugFieldSchema.extend({
   image_data: z
     .string()
     .max(RECIPE_IMAGE_DATA_URL_MAX_CHARS)
+    .refine(
+      (value) => /^data:image\/(jpeg|jpg|png|gif|webp);base64,/i.test(value),
+      {
+        message: 'Cover photo must be a JPEG, PNG, GIF, or WebP.',
+      },
+    )
     .nullable()
     .optional(),
 });
