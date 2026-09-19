@@ -10,7 +10,9 @@ import {
   isFormBlob,
   memoryMediaStoragePath,
   memoryMediaTags,
+  memoryObjectIsListed,
   normalizeMemoryMimeType,
+  splitMemoryStoragePath,
 } from '~/home/[account]/memories/_lib/memory-media';
 
 describe('classifyMemoryMedia', () => {
@@ -76,6 +78,7 @@ describe('memory media helpers', () => {
     (blob as Blob & { name?: string }).name = 'note.m4a';
     expect(isFormBlob(blob)).toBe(true);
     expect(isFormBlob('workspace')).toBe(false);
+    expect(isFormBlob(null)).toBe(false);
     expect(formFileMeta(blob)).toMatchObject({
       filename: 'note.m4a',
       mimeType: 'audio/mp4',
@@ -83,5 +86,26 @@ describe('memory media helpers', () => {
     expect(
       getUnknownErrorMessage({ message: 'new row violates rls' }, 'fallback'),
     ).toBe('new row violates rls');
+  });
+
+  it('proves a storage object from list results, not a signed URL', () => {
+    expect(
+      splitMemoryStoragePath(
+        '11111111-1111-4111-8111-111111111111/memories/1_poet.jpg',
+      ),
+    ).toEqual({
+      folder: '11111111-1111-4111-8111-111111111111/memories',
+      objectName: '1_poet.jpg',
+    });
+    expect(splitMemoryStoragePath('poet.jpg')).toBeNull();
+    expect(
+      memoryObjectIsListed(
+        [{ name: '1_poet.jpg' }, { name: 'other.jpg' }],
+        '1_poet.jpg',
+      ),
+    ).toBe(true);
+    expect(memoryObjectIsListed([{ name: 'other.jpg' }], '1_poet.jpg')).toBe(
+      false,
+    );
   });
 });

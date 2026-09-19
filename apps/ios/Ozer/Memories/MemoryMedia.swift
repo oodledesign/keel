@@ -48,6 +48,27 @@ enum MemoryMedia {
     static let typeMessage =
         "Attach a photo, video (mp4/mov), or voice note (m4a, caf, mp3, wav)."
 
+    static func mimeType(filename: String, fallback: String = "application/octet-stream") -> String {
+        switch (filename as NSString).pathExtension.lowercased() {
+        case "jpg", "jpeg": "image/jpeg"
+        case "png": "image/png"
+        case "webp": "image/webp"
+        case "gif": "image/gif"
+        case "heic": "image/heic"
+        case "heif": "image/heif"
+        case "mp4", "m4v": "video/mp4"
+        case "mov": "video/quicktime"
+        case "webm": "video/webm"
+        case "m4a": "audio/mp4"
+        case "caf": "audio/x-caf"
+        case "mp3": "audio/mpeg"
+        case "wav": "audio/wav"
+        case "aac": "audio/aac"
+        case "ogg": "audio/ogg"
+        default: fallback
+        }
+    }
+
     static func kind(mimeType: String?, filename: String = "") -> MemoryMediaKind? {
         let mime = (mimeType ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let ext = (filename as NSString).pathExtension.lowercased()

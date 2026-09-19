@@ -218,7 +218,10 @@ export function MemoryVoiceRecorder({
             onCheckedChange={onKeepRecordingChange}
             disabled={disabled || isRecording}
           />
-          <Label htmlFor="keep-memory-recording" className="text-xs font-normal">
+          <Label
+            htmlFor="keep-memory-recording"
+            className="text-xs font-normal"
+          >
             Keep recording
           </Label>
         </div>

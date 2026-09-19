@@ -9,9 +9,9 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
+import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
-import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import {
   MemoryMediaError,
   assertMemoryMedia,
@@ -26,6 +26,7 @@ import {
   UpsertFamilyChildSchema,
 } from '../schemas/family-memories.schema';
 import { createFamilyMemoriesService } from './family-memories.service';
+import { requireUploadedMemoryObject } from './memory-media-storage';
 
 function revalidateMemoryPaths(accountSlug: string, noteId?: string) {
   revalidatePath(
@@ -139,13 +140,7 @@ export const completeFamilyMemoryMediaAction = enhanceAction(
       size: data.fileSizeBytes,
     });
 
-    const admin = getSupabaseServerAdminClient();
-    const { data: uploaded, error: lookupError } = await admin.storage
-      .from(ACCOUNT_DOCS_BUCKET)
-      .createSignedUrl(data.filePath, 60);
-    if (lookupError || !uploaded?.signedUrl) {
-      throw new Error('Upload did not finish. Try again.');
-    }
+    await requireUploadedMemoryObject(data.filePath);
 
     const { data: inserted, error } = await client
       .from('docs')

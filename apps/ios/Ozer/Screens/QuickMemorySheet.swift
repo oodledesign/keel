@@ -310,7 +310,7 @@ struct QuickMemorySheet: View {
                     try appendFile(
                         data: data,
                         filename: url.lastPathComponent,
-                        mimeType: url.pathExtension.lowercased() == "caf" ? "audio/x-caf" : "audio/mp4"
+                        mimeType: MemoryMedia.mimeType(filename: url.lastPathComponent, fallback: "audio/mp4")
                     )
                 } catch {
                     errorMessage = error.localizedDescription

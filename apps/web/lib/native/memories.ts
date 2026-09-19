@@ -17,6 +17,7 @@ import {
 } from '~/home/[account]/memories/_lib/memory-media';
 import { assembleFamilyMemoriesPage } from '~/home/[account]/memories/_lib/server/family-memories.loader';
 import { createFamilyMemoriesService } from '~/home/[account]/memories/_lib/server/family-memories.service';
+import { requireUploadedMemoryObject } from '~/home/[account]/memories/_lib/server/memory-media-storage';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
 import { NativeHttpError } from './http';
@@ -375,14 +376,18 @@ export async function completeNativeMemoryMediaUpload(input: {
     memoryMediaHttpError(error);
   }
 
-  const admin = getSupabaseServerAdminClient();
-  const { data: uploaded, error: lookupError } = await admin.storage
-    .from(ACCOUNT_DOCS_BUCKET)
-    .createSignedUrl(input.path, 60);
-
-  if (lookupError || !uploaded?.signedUrl) {
-    throw new NativeHttpError(400, 'Upload did not finish. Try again.');
+  try {
+    await requireUploadedMemoryObject(input.path);
+  } catch (error) {
+    throw new NativeHttpError(
+      400,
+      error instanceof Error
+        ? error.message
+        : 'Upload did not finish. Try again.',
+    );
   }
+
+  const admin = getSupabaseServerAdminClient();
 
   const title =
     input.title?.trim() || input.filename || defaultMemoryMediaTitle(kind);

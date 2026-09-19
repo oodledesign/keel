@@ -198,12 +198,31 @@ export function memoryMediaTags(kind: MemoryMediaKind) {
   return [MEMORY_NOTE_MEDIA_TAG];
 }
 
-export function isFormBlob(value: FormDataEntryValue | null): value is Blob {
+export function isFormBlob(value: unknown): value is Blob {
   return (
-    Boolean(value) &&
-    typeof value !== 'string' &&
+    typeof value === 'object' &&
+    value !== null &&
     typeof (value as Blob).arrayBuffer === 'function'
   );
+}
+
+export function splitMemoryStoragePath(filePath: string) {
+  const slash = filePath.lastIndexOf('/');
+  if (slash <= 0 || slash === filePath.length - 1) {
+    return null;
+  }
+
+  return {
+    folder: filePath.slice(0, slash),
+    objectName: filePath.slice(slash + 1),
+  };
+}
+
+export function memoryObjectIsListed(
+  objects: Array<{ name?: string | null }> | null | undefined,
+  objectName: string,
+) {
+  return Boolean(objects?.some((obj) => obj.name === objectName));
 }
 
 export function formFileMeta(value: Blob) {

@@ -6,6 +6,7 @@ import type { NativeWorkspace } from './workspace-shared';
 
 const upload = vi.fn();
 const remove = vi.fn();
+const list = vi.fn();
 const createSignedUrl = vi.fn();
 const createSignedUploadUrl = vi.fn();
 
@@ -19,6 +20,7 @@ vi.mock('@kit/supabase/server-admin-client', () => ({
       from: () => ({
         upload,
         remove,
+        list,
         createSignedUrl,
         createSignedUploadUrl,
       }),
@@ -61,6 +63,7 @@ describe('uploadNativeMemoryMedia', () => {
   beforeEach(() => {
     upload.mockReset();
     remove.mockReset();
+    list.mockReset();
     createSignedUrl.mockReset();
     createSignedUploadUrl.mockReset();
   });
@@ -133,5 +136,89 @@ describe('uploadNativeMemoryMedia', () => {
       }),
     ).rejects.toBeInstanceOf(NativeHttpError);
     expect(upload).not.toHaveBeenCalled();
+  });
+});
+
+describe('completeNativeMemoryMediaUpload', () => {
+  it('links the doc only after storage.list finds the object', async () => {
+    const { completeNativeMemoryMediaUpload } = await import('./memories');
+    list.mockResolvedValue({
+      data: [{ name: '1_poet.jpg' }],
+      error: null,
+    });
+    createSignedUrl.mockResolvedValue({
+      data: { signedUrl: 'https://files.example/memory.jpg' },
+    });
+
+    const from = vi.fn((table: string) => {
+      if (table === 'notes') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { id: 'note-1', category: 'memory' },
+            error: null,
+          }),
+        };
+      }
+      return {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'doc-1', title: 'poet.jpg', mime_type: 'image/jpeg' },
+          error: null,
+        }),
+      };
+    });
+
+    const result = await completeNativeMemoryMediaUpload({
+      client: { from } as never,
+      userId: 'user-1',
+      workspace: family,
+      noteId: 'note-1',
+      path: `${family.id}/memories/1_poet.jpg`,
+      filename: 'poet.jpg',
+      mimeType: 'image/jpeg',
+      size: 12,
+    });
+
+    expect(list).toHaveBeenCalledWith(`${family.id}/memories`, {
+      search: '1_poet.jpg',
+      limit: 100,
+    });
+    expect(from).toHaveBeenCalledWith('docs');
+    expect(result).toMatchObject({
+      id: 'doc-1',
+      kind: 'image',
+      url: 'https://files.example/memory.jpg',
+    });
+  });
+
+  it('rejects complete when the object is missing', async () => {
+    const { completeNativeMemoryMediaUpload } = await import('./memories');
+    list.mockResolvedValue({ data: [], error: null });
+
+    const from = vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: 'note-1', category: 'memory' },
+        error: null,
+      }),
+    }));
+
+    await expect(
+      completeNativeMemoryMediaUpload({
+        client: { from } as never,
+        userId: 'user-1',
+        workspace: family,
+        noteId: 'note-1',
+        path: `${family.id}/memories/missing.jpg`,
+        filename: 'missing.jpg',
+        mimeType: 'image/jpeg',
+        size: 12,
+      }),
+    ).rejects.toBeInstanceOf(NativeHttpError);
+    expect(from).not.toHaveBeenCalledWith('docs');
   });
 });

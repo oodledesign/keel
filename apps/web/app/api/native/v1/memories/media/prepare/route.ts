@@ -31,7 +31,9 @@ export async function POST(request: Request) {
   try {
     const parsed = BodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
-      return nativeBadRequest('workspace, note_id, filename, and size are required');
+      return nativeBadRequest(
+        'workspace, note_id, filename, and size are required',
+      );
     }
 
     const workspace = await requireNativeWorkspace(

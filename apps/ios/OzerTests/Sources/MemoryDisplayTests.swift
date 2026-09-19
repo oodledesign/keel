@@ -35,6 +35,10 @@ enum MemoryDisplayTests {
                 && MemoryMedia.kind(mimeType: nil, filename: "note.caf") == .audio
                 && MemoryMedia.kind(mimeType: "video/quicktime", filename: "clip.mov") == .video
                 && ((try? MemoryMedia.validate(size: 12, mimeType: "audio/mp4", filename: "note.m4a")) == .audio)
+                && MemoryMedia.mimeType(filename: "voice.caf") == "audio/x-caf"
+                && MemoryMedia.mimeType(filename: "note.wav") == "audio/wav"
+                && MemoryMedia.mimeType(filename: "clip.mp3") == "audio/mpeg"
+                && MemoryMedia.mimeType(filename: "memo.m4a") == "audio/mp4"
                 && (try? MemoryMedia.validate(size: MemoryMedia.maxBytes + 1, mimeType: "image/jpeg", filename: "huge.jpg")) == nil
         }
 
