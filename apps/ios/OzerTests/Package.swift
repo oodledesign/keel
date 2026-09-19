@@ -54,6 +54,7 @@ let package = Package(
             path: "../Ozer/Memories",
             sources: [
                 "MemoryDisplay.swift",
+                "MemoryMedia.swift",
             ]
         ),
         .target(

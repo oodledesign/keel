@@ -80,6 +80,25 @@ export function birthdayIsoFromParts(
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+export function parseIsoDateLocal(value: string | null | undefined) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+export function formatChildAgeOn(
+  dateOfBirth: string | null | undefined,
+  onDate: string | null | undefined,
+  fallbackNow = new Date(),
+) {
+  return formatChildAge(dateOfBirth, parseIsoDateLocal(onDate) ?? fallbackNow);
+}
+
 export function formatChildAge(
   dateOfBirth: string | null | undefined,
   now = new Date(),

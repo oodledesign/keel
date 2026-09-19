@@ -14,9 +14,11 @@ import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 import {
   type MemoryKind,
   formatChildAge,
+  formatChildAgeOn,
   memoryKindFromTags,
   memoryOccurredOn,
 } from '../memory-constants';
+import { classifyMemoryMedia } from '../memory-media';
 import type { FamilyMemoryMediaItem } from '../schemas/family-memories.schema';
 import {
   type FamilyMemoryPersonRow,
@@ -46,7 +48,11 @@ export type FamilyMemoryItem = {
   occurredOn: string;
   kind: MemoryKind | null;
   childIds: string[];
-  children: Array<Pick<FamilyMemoryChild, 'id' | 'display_name' | 'avatarUrl'>>;
+  children: Array<
+    Pick<FamilyMemoryChild, 'id' | 'display_name' | 'avatarUrl'> & {
+      ageLabel: string | null;
+    }
+  >;
   media: FamilyMemoryMediaItem[];
   createdAt: string;
   updatedAt: string;
@@ -167,11 +173,12 @@ export async function assembleFamilyMemoriesPage(
 
   let memories: FamilyMemoryItem[] = notes.map((note) => {
     const childIds = linksByNote.get(note.id) ?? [];
+    const occurredOn = memoryOccurredOn(note.occurred_at, note.created_at);
     return {
       id: note.id,
       title: note.title,
       content: note.content,
-      occurredOn: memoryOccurredOn(note.occurred_at, note.created_at),
+      occurredOn,
       kind: memoryKindFromTags(note.tags),
       childIds,
       children: childIds
@@ -181,12 +188,14 @@ export async function assembleFamilyMemoriesPage(
           id: child!.id,
           display_name: child!.display_name,
           avatarUrl: child!.avatarUrl,
+          ageLabel: formatChildAgeOn(child!.date_of_birth, occurredOn),
         })),
       media: (docsByNote.get(note.id) ?? []).map((doc) => ({
         id: doc.id,
         title: doc.title,
         mimeType: doc.mime_type,
         url: mediaByDocId.get(doc.id) ?? null,
+        kind: classifyMemoryMedia(doc.mime_type, doc.title),
       })),
       createdAt: note.created_at,
       updatedAt: note.updated_at,

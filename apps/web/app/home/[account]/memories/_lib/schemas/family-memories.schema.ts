@@ -29,11 +29,42 @@ export const UpsertFamilyChildSchema = z.object({
 
 export type UpsertFamilyChildInput = z.infer<typeof UpsertFamilyChildSchema>;
 
+export const FamilyMemoryMediaKindSchema = z.enum(['image', 'video', 'audio']);
+
 export const FamilyMemoryMediaItemSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
   mimeType: z.string().nullable(),
   url: z.string().nullable(),
+  kind: FamilyMemoryMediaKindSchema.nullable(),
 });
 
 export type FamilyMemoryMediaItem = z.infer<typeof FamilyMemoryMediaItemSchema>;
+
+export const PrepareFamilyMemoryMediaSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  noteId: z.string().uuid(),
+  filename: z.string().min(1).max(500),
+  mimeType: z.string().max(200).nullable().optional(),
+  fileSizeBytes: z.number().int().nonnegative(),
+});
+
+export type PrepareFamilyMemoryMediaInput = z.infer<
+  typeof PrepareFamilyMemoryMediaSchema
+>;
+
+export const CompleteFamilyMemoryMediaSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  noteId: z.string().uuid(),
+  filePath: z.string().min(1).max(1000),
+  filename: z.string().min(1).max(500),
+  mimeType: z.string().max(200).nullable().optional(),
+  title: z.string().max(500).optional(),
+  fileSizeBytes: z.number().int().nonnegative(),
+});
+
+export type CompleteFamilyMemoryMediaInput = z.infer<
+  typeof CompleteFamilyMemoryMediaSchema
+>;

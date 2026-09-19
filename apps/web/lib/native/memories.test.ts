@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { NativeHttpError } from './http';
 import {
@@ -140,6 +140,7 @@ describe('toNativeMemoriesPayload', () => {
               id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
               display_name: 'Poet',
               avatarUrl: 'https://example.com/poet.jpg',
+              ageLabel: '8 years old',
             },
           ],
           media: [
@@ -148,6 +149,7 @@ describe('toNativeMemoriesPayload', () => {
               title: 'photo.jpg',
               mimeType: 'image/jpeg',
               url: 'https://example.com/photo.jpg',
+              kind: 'image',
             },
           ],
           createdAt: '2026-09-18T10:00:00Z',
@@ -164,5 +166,7 @@ describe('toNativeMemoriesPayload', () => {
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     ]);
     expect(payload.memories[0]?.media[0]?.mime_type).toBe('image/jpeg');
+    expect(payload.memories[0]?.media[0]?.kind).toBe('image');
+    expect(payload.memories[0]?.children[0]?.age_label).toBe('8 years old');
   });
 });

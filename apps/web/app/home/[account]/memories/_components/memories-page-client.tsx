@@ -167,6 +167,7 @@ export function MemoriesPageClient({
                   size="sm"
                 />
                 {member.display_name}
+                {member.ageLabel ? ` · ${member.ageLabel}` : ''}
               </button>
             );
           })}

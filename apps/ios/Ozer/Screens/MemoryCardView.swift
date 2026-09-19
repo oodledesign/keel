@@ -1,3 +1,4 @@
+import AVKit
 import SwiftUI
 
 struct MemoryChildAvatarView: View {
@@ -40,21 +41,25 @@ struct MemoryCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let url = memory.previewPhotoURL {
+            if let visual = memory.previewVisual, let url = visual.httpsURL {
                 ZStack(alignment: .bottomTrailing) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        default:
-                            OzerPalette.creamDeep
+                    if visual.resolvedKind == .video {
+                        MemoryVideoPreview(url: url)
+                    } else {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            default:
+                                OzerPalette.creamDeep
+                            }
                         }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                        .clipped()
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 180)
-                    .clipped()
 
                     if memory.extraMediaCount > 0 {
                         Text("+\(memory.extraMediaCount) more")
@@ -94,6 +99,12 @@ struct MemoryCardView: View {
                     .foregroundStyle(OzerPalette.plum)
                     .fixedSize(horizontal: false, vertical: true)
 
+                ForEach(memory.audioItems) { item in
+                    if let url = item.httpsURL {
+                        MemoryAudioPreview(title: item.title, url: url)
+                    }
+                }
+
                 if !memory.children.isEmpty {
                     HStack(spacing: 8) {
                         ForEach(memory.children) { child in
@@ -106,9 +117,16 @@ struct MemoryCardView: View {
                                         url: child.httpsAvatarURL,
                                         size: 20
                                     )
-                                    Text(child.displayName)
-                                        .font(.caption.weight(.medium))
-                                        .foregroundStyle(OzerPalette.plum)
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        Text(child.displayName)
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(OzerPalette.plum)
+                                        if let age = child.ageLabel, !age.isEmpty {
+                                            Text(age)
+                                                .font(.caption2)
+                                                .foregroundStyle(OzerPalette.plumMuted)
+                                        }
+                                    }
                                 }
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 5)
@@ -132,5 +150,60 @@ struct MemoryCardView: View {
                 .stroke(OzerPalette.border, lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: OzerRadius.card, style: .continuous))
+    }
+}
+
+private struct MemoryVideoPreview: View {
+    let url: URL
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        VideoPlayer(player: player)
+            .frame(maxWidth: .infinity)
+            .frame(height: 180)
+            .onAppear {
+                if player == nil {
+                    player = AVPlayer(url: url)
+                }
+            }
+            .onDisappear {
+                player?.pause()
+            }
+    }
+}
+
+private struct MemoryAudioPreview: View {
+    let title: String
+    let url: URL
+    @State private var player: AVPlayer?
+    @State private var isPlaying = false
+
+    var body: some View {
+        Button {
+            if player == nil {
+                player = AVPlayer(url: url)
+            }
+            if isPlaying {
+                player?.pause()
+                isPlaying = false
+            } else {
+                player?.play()
+                isPlaying = true
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .foregroundStyle(OzerPalette.coral)
+                Text(title.isEmpty ? "Voice note" : title)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(OzerPalette.plum)
+                    .lineLimit(1)
+                Spacer()
+            }
+        }
+        .buttonStyle(.plain)
+        .onDisappear {
+            player?.pause()
+        }
     }
 }

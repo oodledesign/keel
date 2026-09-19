@@ -1223,19 +1223,134 @@ actor NativeAPIClient {
         mimeType: String,
         accessToken: String
     ) async throws -> NativeMemoryPhotoResult {
+        try await uploadMemoryMedia(
+            workspace: workspace,
+            noteId: noteId,
+            fileData: imageData,
+            filename: filename,
+            mimeType: mimeType,
+            title: filename,
+            accessToken: accessToken
+        )
+    }
+
+    func uploadMemoryMedia(
+        workspace: String,
+        noteId: String,
+        fileData: Data,
+        filename: String,
+        mimeType: String,
+        title: String,
+        accessToken: String
+    ) async throws -> NativeMemoryPhotoResult {
+        _ = try MemoryMedia.validate(size: fileData.count, mimeType: mimeType, filename: filename)
+        if fileData.count > MemoryMedia.multipartMaxBytes {
+            return try await uploadMemoryMediaSigned(
+                workspace: workspace,
+                noteId: noteId,
+                fileData: fileData,
+                filename: filename,
+                mimeType: mimeType,
+                title: title,
+                accessToken: accessToken
+            )
+        }
+
         let data = try await sendMultipartFields(
             path: "api/native/v1/memories/photos",
             fields: [
                 "workspace": workspace,
                 "note_id": noteId,
+                "title": title,
             ],
-            fileData: imageData,
+            fileData: fileData,
             filename: filename,
             mimeType: mimeType,
             accessToken: accessToken
         )
         do {
             return try JSONDecoder().decode(NativeMemoryPhotoResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func uploadMemoryMediaSigned(
+        workspace: String,
+        noteId: String,
+        fileData: Data,
+        filename: String,
+        mimeType: String,
+        title: String,
+        accessToken: String
+    ) async throws -> NativeMemoryPhotoResult {
+        let preparedData = try await send(
+            method: "POST",
+            path: "api/native/v1/memories/media/prepare",
+            queryItems: [],
+            body: [
+                "workspace": workspace,
+                "note_id": noteId,
+                "filename": filename,
+                "mime_type": mimeType,
+                "size": fileData.count,
+            ],
+            accessToken: accessToken
+        )
+        let prepared: NativeMemoryMediaPrepare
+        do {
+            prepared = try JSONDecoder().decode(NativeMemoryMediaPrepare.self, from: preparedData)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+
+        guard let uploadURL = URL(string: prepared.signedUrl) else {
+            throw NativeAPIError.transport("Could not build the upload URL.")
+        }
+
+        var request = URLRequest(url: uploadURL)
+        request.httpMethod = "PUT"
+        request.setValue(prepared.mimeType ?? mimeType, forHTTPHeaderField: "Content-Type")
+        request.httpBody = fileData
+        request.httpShouldHandleCookies = false
+
+        let uploaded: Data
+        let http: HTTPURLResponse
+        do {
+            let result = try await session.data(for: request)
+            uploaded = result.0
+            guard let response = result.1 as? HTTPURLResponse else {
+                throw NativeAPIError.transport("No HTTP response.")
+            }
+            http = response
+        } catch let error as NativeAPIError {
+            throw error
+        } catch {
+            throw NativeAPIError.transport(error.localizedDescription)
+        }
+
+        guard (200...299).contains(http.statusCode) else {
+            let message = String(data: uploaded, encoding: .utf8)
+            throw NativeAPIError.badRequest(message ?? "Could not upload that file.")
+        }
+
+        let completed = try await send(
+            method: "POST",
+            path: "api/native/v1/memories/media/complete",
+            queryItems: [],
+            body: [
+                "workspace": workspace,
+                "note_id": noteId,
+                "path": prepared.path,
+                "filename": filename,
+                "mime_type": prepared.mimeType ?? mimeType,
+                "title": title,
+                "size": fileData.count,
+            ],
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(NativeMemoryPhotoResult.self, from: completed)
         } catch {
             throw NativeAPIError.decoding
         }
