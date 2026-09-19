@@ -6,10 +6,12 @@ import {
   birthdayIsoFromParts,
   childInitials,
   formatChildAge,
+  formatChildAgeOn,
   isMemoryNoteCategory,
   memoryKindFromTags,
   memoryKindTag,
   memoryOccurredOn,
+  parseIsoDateLocal,
   withMemoryKindTags,
 } from '~/home/[account]/memories/_lib/memory-constants';
 
@@ -61,6 +63,13 @@ describe('formatChildAge', () => {
     expect(formatChildAge(null, now)).toBeNull();
     expect(formatChildAge('2027-01-01', now)).toBeNull();
     expect(formatChildAge('18-09-2020', now)).toBeNull();
+  });
+
+  it('uses the memory date when both dates exist', () => {
+    expect(formatChildAgeOn('2018-04-02', '2020-04-02')).toBe('2 years old');
+    expect(formatChildAgeOn('2018-04-02', '2018-04-10')).toBe('8 days old');
+    expect(formatChildAgeOn(null, '2020-04-02')).toBeNull();
+    expect(parseIsoDateLocal('2020-04-02')?.getFullYear()).toBe(2020);
   });
 });
 

@@ -38,6 +38,19 @@ export async function readJsonBody(request: Request): Promise<unknown> {
   }
 }
 
+export function readFormBlob(form: FormData, key = 'file') {
+  const value = form.get(key);
+  if (!value || typeof value === 'string') {
+    return null;
+  }
+
+  if (typeof (value as Blob).arrayBuffer !== 'function') {
+    return null;
+  }
+
+  return value as Blob;
+}
+
 export function handleNativeError(error: unknown, context: string) {
   if (error instanceof NativeHttpError) {
     return nativeJsonError(error.status, error.message);

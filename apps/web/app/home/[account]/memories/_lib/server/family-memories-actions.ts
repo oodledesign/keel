@@ -4,13 +4,24 @@ import { revalidatePath } from 'next/cache';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getLogger } from '@kit/shared/logger';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
+import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import {
+  MemoryMediaError,
+  assertMemoryMedia,
+  memoryMediaStoragePath,
+  memoryMediaTags,
+  normalizeMemoryMimeType,
+} from '../memory-media';
+import {
+  CompleteFamilyMemoryMediaSchema,
+  PrepareFamilyMemoryMediaSchema,
   SaveFamilyMemorySchema,
   UpsertFamilyChildSchema,
 } from '../schemas/family-memories.schema';
@@ -54,6 +65,119 @@ export const saveFamilyMemoryAction = enhanceAction(
     return result;
   },
   { schema: SaveFamilyMemorySchema },
+);
+
+export const prepareFamilyMemoryMediaAction = enhanceAction(
+  async (data) => {
+    const client = getSupabaseServerClient();
+    const { data: note, error: noteError } = await client
+      .from('notes')
+      .select('id')
+      .eq('id', data.noteId)
+      .eq('account_id', data.accountId)
+      .maybeSingle();
+    if (noteError) throw noteError;
+    if (!note) {
+      throw new Error('Memory not found in this workspace');
+    }
+
+    const mime = normalizeMemoryMimeType(data.mimeType, data.filename);
+    try {
+      assertMemoryMedia({
+        mimeType: mime,
+        filename: data.filename,
+        size: data.fileSizeBytes,
+      });
+    } catch (error) {
+      if (error instanceof MemoryMediaError) throw error;
+      throw error;
+    }
+
+    const filePath = memoryMediaStoragePath(data.accountId, data.filename);
+    const admin = getSupabaseServerAdminClient();
+    const { data: signed, error } = await admin.storage
+      .from(ACCOUNT_DOCS_BUCKET)
+      .createSignedUploadUrl(filePath);
+
+    if (error || !signed?.token || !signed.signedUrl) {
+      throw new Error(error?.message || 'Could not prepare the upload');
+    }
+
+    return {
+      bucket: ACCOUNT_DOCS_BUCKET,
+      filePath,
+      token: signed.token,
+      signedUrl: signed.signedUrl,
+      mimeType: mime,
+    };
+  },
+  { schema: PrepareFamilyMemoryMediaSchema },
+);
+
+export const completeFamilyMemoryMediaAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    const { data: note, error: noteError } = await client
+      .from('notes')
+      .select('id')
+      .eq('id', data.noteId)
+      .eq('account_id', data.accountId)
+      .maybeSingle();
+    if (noteError) throw noteError;
+    if (!note) {
+      throw new Error('Memory not found in this workspace');
+    }
+
+    if (!data.filePath.startsWith(`${data.accountId}/memories/`)) {
+      throw new Error('Invalid memory storage path');
+    }
+
+    const mime = normalizeMemoryMimeType(data.mimeType, data.filename);
+    const kind = assertMemoryMedia({
+      mimeType: mime,
+      filename: data.filename,
+      size: data.fileSizeBytes,
+    });
+
+    const admin = getSupabaseServerAdminClient();
+    const { data: uploaded, error: lookupError } = await admin.storage
+      .from(ACCOUNT_DOCS_BUCKET)
+      .createSignedUrl(data.filePath, 60);
+    if (lookupError || !uploaded?.signedUrl) {
+      throw new Error('Upload did not finish. Try again.');
+    }
+
+    const { data: inserted, error } = await client
+      .from('docs')
+      .insert({
+        account_id: data.accountId,
+        title: data.title?.trim() || data.filename,
+        kind: 'uploaded',
+        doc_type: 'general',
+        category: 'idea',
+        tags: memoryMediaTags(kind),
+        storage_bucket: ACCOUNT_DOCS_BUCKET,
+        file_path: data.filePath,
+        storage_path: data.filePath,
+        mime_type: mime,
+        file_size_bytes: data.fileSizeBytes,
+        file_url: null,
+        user_id: user.id,
+        created_by: user.id,
+        note_id: data.noteId,
+        photo_role: 'archive',
+      } as never)
+      .select('id')
+      .single();
+
+    if (error || !inserted) {
+      throw new Error(error?.message || 'Could not attach media');
+    }
+
+    revalidateMemoryPaths(data.accountSlug, data.noteId);
+    return { docId: inserted.id as string, kind };
+  },
+  { schema: CompleteFamilyMemoryMediaSchema },
 );
 
 export const upsertFamilyChildAction = enhanceAction(

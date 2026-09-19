@@ -23,6 +23,19 @@ enum MemoryDisplayTests {
                 && MemoryDisplay.formatAge(dateOfBirth: "2026-03-18", now: now, calendar: calendar) == "6 months old"
                 && MemoryDisplay.formatAge(dateOfBirth: "2026-09-10", now: now, calendar: calendar) == "8 days old"
                 && MemoryDisplay.formatAge(dateOfBirth: nil, now: now, calendar: calendar) == nil
+                && MemoryDisplay.formatAgeOn(
+                    dateOfBirth: "2018-04-02",
+                    occurredOn: "2020-04-02",
+                    calendar: calendar
+                ) == "2 years old"
+        }
+
+        check("memory media kinds and size limit") {
+            MemoryMedia.kind(mimeType: "image/jpeg", filename: "p.jpg") == .image
+                && MemoryMedia.kind(mimeType: nil, filename: "note.caf") == .audio
+                && MemoryMedia.kind(mimeType: "video/quicktime", filename: "clip.mov") == .video
+                && ((try? MemoryMedia.validate(size: 12, mimeType: "audio/mp4", filename: "note.m4a")) == .audio)
+                && (try? MemoryMedia.validate(size: MemoryMedia.maxBytes + 1, mimeType: "image/jpeg", filename: "huge.jpg")) == nil
         }
 
         check("initials and excerpt") {
