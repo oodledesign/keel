@@ -50,6 +50,7 @@ import {
   listContactPortalAccessAction,
 } from '~/lib/clients/client-portal-invites-actions';
 import type { ContactPortalAccessStatus } from '~/lib/clients/client-portal-invites.types';
+import { isVisiblePortalStatus } from '~/lib/clients/contact-portal-status';
 import {
   CONTACT_ROLE_LABELS,
   CONTACT_ROLE_PRESETS,
@@ -70,6 +71,7 @@ import {
   updateContactLink,
 } from '../_lib/server/server-actions';
 import { ContactImageUploader } from './contact-image-uploader';
+import { PortalStatusBadge } from './portal-status-badge';
 
 type Contact = {
   id: string;
@@ -1037,13 +1039,6 @@ export function ClientContactsBlock({
     }
   };
 
-  const portalStatusLabel = (status?: ContactPortalAccessStatus) => {
-    if (status === 'active') return 'Active';
-    if (status === 'invited') return 'Invited';
-    if (status === 'revoked') return 'Revoked';
-    return null;
-  };
-
   if (loading) {
     return (
       <p className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -1264,10 +1259,10 @@ export function ClientContactsBlock({
                     )}
                   </td>
                   <td className="hidden px-3 py-2.5 text-xs lg:table-cell">
-                    {portalStatusLabel(accessByContactId[contact.id]) ? (
-                      <span className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
-                        {portalStatusLabel(accessByContactId[contact.id])}
-                      </span>
+                    {isVisiblePortalStatus(accessByContactId[contact.id]) ? (
+                      <PortalStatusBadge
+                        status={accessByContactId[contact.id]}
+                      />
                     ) : (
                       <span className="text-[var(--workspace-shell-text-muted)]">
                         —
