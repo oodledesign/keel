@@ -60,7 +60,11 @@ function etagFor(row: MediaRow): string {
   return `"${Buffer.from(stamp).toString('base64url')}"`;
 }
 
-/** Versioned by ETag — safe to cache across navigations and CDN. */
+/**
+ * Versioned by ETag (`commercialListingMediaVersion`). Replacing a file
+ * updates `storage_path`, so a same-path overwrite without a DB change is
+ * the only case that could stay stale for the SWR window.
+ */
 const STORAGE_CACHE_CONTROL =
   'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';
 const EXTERNAL_CACHE_CONTROL = 'public, max-age=300, s-maxage=300';
@@ -164,6 +168,7 @@ async function serveMedia(
  * Only non-private rows are served.
  */
 export async function GET(request: Request, { params }: RouteParams) {
+  // `:file` is decorative (Rightmove needs a filename / .pdf). The DB row wins.
   const { id } = await params;
   return serveMedia(request, id, 'GET');
 }

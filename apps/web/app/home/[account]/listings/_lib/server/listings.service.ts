@@ -28,9 +28,9 @@ import {
   type ListingMediaPreviewSize,
   type ListingMediaTransform,
   encodeStorageSignedUrl,
-  listingMediaSignedUrlTransform,
   listingMediaSignedUrlTtlSeconds,
   listingMediaSupportsPreviewTransform,
+  listingMediaTransformFor,
   pickListingCoverMedia,
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
@@ -341,7 +341,11 @@ export type CommercialListing = {
     externalUrl?: string | null;
     lastSyncAt?: string | null;
   }>;
-  /** Public media timestamps used for Rightmove stale-sync on cards. */
+  /**
+   * Optional media timestamps for Rightmove stale-sync.
+   * List pages leave this unset — media mutations bump
+   * `commercial_listings.updated_at`, which is enough for the list heuristic.
+   */
   feedMediaCreatedAt?: string[];
 };
 
@@ -1146,17 +1150,15 @@ async function signMediaUrls(
     }
   }
 
-  const transform = listingMediaSignedUrlTransform(
-    transformable[0]?.mimeType ?? 'image/jpeg',
-    size,
-  );
-
   const [transformed, untransformed] = await Promise.all([
     transformable.length > 0
       ? signStoragePaths(
           client,
           transformable.map((item) => item.storagePath!).filter(Boolean),
-          { transform, expiresIn },
+          {
+            transform: listingMediaTransformFor(size),
+            expiresIn,
+          },
         )
       : Promise.resolve(new Map<string, string>()),
     plain.length > 0
@@ -1496,7 +1498,6 @@ function mergeListingEnrichment(
     coAgents: coAgents[index]?.coAgents ?? [],
     rightmoveSyncStatus: rightmove[index]?.rightmoveSyncStatus,
     feedPublications: rightmove[index]?.feedPublications,
-    feedMediaCreatedAt: rightmove[index]?.feedMediaCreatedAt,
   }));
 }
 
