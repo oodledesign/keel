@@ -18,6 +18,8 @@ describe('contact portal status pills', () => {
 
   it('colours Active green, Invited gold, and Revoked destructive', () => {
     expect(isVisiblePortalStatus('active')).toBe(true);
+    expect(isVisiblePortalStatus('invited')).toBe(true);
+    expect(isVisiblePortalStatus('revoked')).toBe(true);
     expect(portalStatusBadgeClass('active')).toBe(
       PORTAL_STATUS_BADGE_CLASS.active,
     );

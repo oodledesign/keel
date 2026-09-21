@@ -22,7 +22,7 @@ export function PortalStatusBadge({
   const label = portalStatusDisplayLabel(status);
   const colorClass = portalStatusBadgeClass(status);
 
-  if (!label || !colorClass) return null;
+  if (!label) return null;
 
   return (
     <span

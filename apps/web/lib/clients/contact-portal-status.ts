@@ -19,11 +19,11 @@ export const PORTAL_STATUS_LABELS: Record<VisiblePortalStatus, string> = {
  */
 export const PORTAL_STATUS_BADGE_CLASS: Record<VisiblePortalStatus, string> = {
   active:
-    'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
+    'bg-emerald-500/15 text-emerald-900 ring-1 ring-inset ring-emerald-500/30 dark:text-emerald-300',
   invited:
-    'bg-[color-mix(in_srgb,var(--ozer-gold-500)_20%,transparent)] text-[var(--ozer-plum-800)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-gold-500)_42%,transparent)] dark:bg-[color-mix(in_srgb,var(--ozer-gold-500)_18%,transparent)] dark:text-[var(--ozer-gold-500)]',
+    'bg-[color-mix(in_srgb,var(--ozer-gold-500)_20%,transparent)] text-[var(--ozer-plum-800)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-gold-500)_42%,transparent)] dark:bg-[color-mix(in_srgb,var(--ozer-gold-500)_18%,transparent)] dark:text-[var(--ozer-gold-500)] dark:ring-[color-mix(in_srgb,var(--ozer-gold-500)_30%,transparent)]',
   revoked:
-    'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200/80 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/25',
+    'bg-red-500/15 text-red-700 ring-1 ring-inset ring-red-500/25 dark:text-red-400',
 };
 
 export function isVisiblePortalStatus(
