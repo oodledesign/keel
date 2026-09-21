@@ -11,12 +11,6 @@ import {
 } from '~/lib/commercial/listing-media-extension';
 import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
 
-export {
-  extensionFromMime,
-  extensionFromUrlOrName,
-  mimeFromExtension,
-};
-
 export const COMMERCIAL_LISTING_MEDIA_BUCKET = 'commercial-listing-media';
 export const EXTERNAL_MEDIA_MAX_BYTES = 50 * 1024 * 1024;
 export const EXTERNAL_MEDIA_FETCH_TIMEOUT_MS = 30_000;
