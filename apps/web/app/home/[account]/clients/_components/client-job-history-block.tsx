@@ -10,6 +10,10 @@ import pathsConfig from '~/config/paths.config';
 import { projectStatusLabel } from '~/lib/projects/project-statuses';
 
 import { getJobHistory } from '../_lib/server/server-actions';
+import {
+  CreateClientProjectButton,
+  CreateClientProjectDialog,
+} from './create-client-project-control';
 
 type JobRow = {
   id: string;
@@ -23,13 +27,18 @@ export function ClientJobHistoryBlock({
   accountSlug,
   accountId,
   clientId,
+  clientName,
+  canCreate = false,
 }: {
   accountSlug: string;
   accountId: string;
   clientId: string;
+  clientName?: string;
+  canCreate?: boolean;
 }) {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -53,17 +62,27 @@ export function ClientJobHistoryBlock({
 
   return (
     <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
-      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-        Projects
-      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          Projects
+        </h3>
+        {canCreate && jobs.length > 0 ? (
+          <CreateClientProjectButton onClick={() => setCreateOpen(true)} />
+        ) : null}
+      </div>
       {loading ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Loading…
         </p>
       ) : jobs.length === 0 ? (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No projects linked to this client yet.
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            No projects yet.
+          </p>
+          {canCreate ? (
+            <CreateClientProjectButton onClick={() => setCreateOpen(true)} />
+          ) : null}
+        </div>
       ) : (
         <ul className="space-y-2">
           {jobs.map((job) => (
@@ -93,6 +112,17 @@ export function ClientJobHistoryBlock({
           ))}
         </ul>
       )}
+      {canCreate ? (
+        <CreateClientProjectDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          accountId={accountId}
+          accountSlug={accountSlug}
+          clientId={clientId}
+          clientName={clientName}
+          onSuccess={fetchJobs}
+        />
+      ) : null}
     </div>
   );
 }

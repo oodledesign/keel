@@ -110,6 +110,10 @@ import { ClientSupportBlock } from './client-support-block';
 import { ClientTasksBlock } from './client-tasks-block';
 import { ClientUpcomingBookingsBlock } from './client-upcoming-bookings-block';
 import { ClientWebsitesBlock } from './client-websites-block';
+import {
+  CreateClientProjectButton,
+  CreateClientProjectDialog,
+} from './create-client-project-control';
 
 type Client = {
   id: string;
@@ -336,6 +340,7 @@ export function ClientDetailSidebar({
     (overviewSeed?.jobs as ClientJobSummary[] | undefined) ?? [],
   );
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [loading, setLoading] = useState(!hasServerSeed);
   const [showEditForm, setShowEditForm] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -971,15 +976,29 @@ export function ClientDetailSidebar({
                 <h2 className="text-sm font-medium text-[var(--workspace-shell-text)]">
                   Projects
                 </h2>
-                <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  {jobsCount} total · {formatMoney(totalValuePence)}
-                </span>
+                <div className="flex items-center gap-3">
+                  {canEditClients && jobs.length > 0 ? (
+                    <CreateClientProjectButton
+                      onClick={() => setCreateProjectOpen(true)}
+                    />
+                  ) : null}
+                  <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    {jobsCount} total · {formatMoney(totalValuePence)}
+                  </span>
+                </div>
               </div>
 
               {jobs.length === 0 ? (
-                <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-                  No projects yet.
-                </p>
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                    No projects yet.
+                  </p>
+                  {canEditClients ? (
+                    <CreateClientProjectButton
+                      onClick={() => setCreateProjectOpen(true)}
+                    />
+                  ) : null}
+                </div>
               ) : (
                 <ul className="mt-3 divide-y divide-[color:var(--workspace-shell-border)]">
                   {jobs.map((job) => (
@@ -999,6 +1018,19 @@ export function ClientDetailSidebar({
                   ))}
                 </ul>
               )}
+              {canEditClients ? (
+                <CreateClientProjectDialog
+                  open={createProjectOpen}
+                  onOpenChange={setCreateProjectOpen}
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  clientId={client.id}
+                  clientName={displayName}
+                  onSuccess={() => {
+                    void fetchClient({ silent: true });
+                  }}
+                />
+              ) : null}
             </div>
           </div>
 
@@ -1196,6 +1228,8 @@ export function ClientDetailSidebar({
           accountSlug={accountSlug}
           accountId={accountId}
           clientId={client.id}
+          clientName={displayName}
+          canCreate={canEditClients}
         />
       );
     }
