@@ -1,11 +1,10 @@
 import Link from 'next/link';
 
-import { ExternalLink } from 'lucide-react';
-
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import { shouldNamePortalPlanProject } from '~/lib/billing/client-subscription-lifecycle';
 import { clientSubscriptionStatusLabel } from '~/lib/billing/client-subscription-status';
 import { formatMinorUnits } from '~/lib/billing/plan-templates-types';
 
@@ -14,11 +13,13 @@ import {
   formatPortalDate,
   portalExternalHref,
 } from '../_components/portal-badges';
+import { PortalPendingRetainerPayList } from '../_components/portal-pending-retainer-pay-card';
 import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import { createPortalBillingService } from '../_lib/server/portal-billing.service';
 
 interface PortalBillingPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ paid?: string; checkout?: string }>;
 }
 
 function statusLabel(status: string) {
@@ -27,12 +28,19 @@ function statusLabel(status: string) {
 
 export default async function PortalBillingPage({
   params,
+  searchParams,
 }: PortalBillingPageProps) {
   const { slug } = await params;
+  const query = await searchParams;
   const ctx = await loadClientPortalContext(slug);
   const billing = await createPortalBillingService(
     getSupabaseServerClient(),
   ).getBillingBundle(ctx.accountId, ctx.clientOrgId);
+  const paid = query.paid === '1';
+  const checkoutCancelled = query.checkout === 'cancelled';
+  const showProject = shouldNamePortalPlanProject(
+    billing.pendingSetup.length + billing.activeSubscriptions.length,
+  );
 
   return (
     <div className="space-y-6">
@@ -54,43 +62,39 @@ export default async function PortalBillingPage({
         ) : null}
       </div>
 
+      {paid ? (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          Payment received. Your retainer will show as active once Stripe
+          confirms it.
+        </p>
+      ) : null}
+      {checkoutCancelled ? (
+        <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm text-[var(--ozer-text-on-light-muted)]">
+          Checkout was cancelled. You can complete payment whenever you&apos;re
+          ready.
+        </p>
+      ) : null}
+
       {billing.pendingSetup.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Set up payment</CardTitle>
+            <CardTitle className="text-base">Awaiting payment</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {billing.pendingSetup.map((sub) => {
-              const href = portalExternalHref(sub.checkoutUrl);
-              return (
-                <div
-                  key={sub.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-[var(--ozer-text-on-light)]">
-                      {sub.planName}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      {formatMinorUnits(
-                        sub.amountPence,
-                        sub.currency,
-                        sub.interval,
-                      )}{' '}
-                      · {statusLabel(sub.status)}
-                    </p>
-                  </div>
-                  {href ? (
-                    <Button asChild size="sm">
-                      <a href={href} target="_blank" rel="noopener noreferrer">
-                        Set up payment
-                        <ExternalLink className="ml-1 size-3.5" />
-                      </a>
-                    </Button>
-                  ) : null}
-                </div>
-              );
-            })}
+            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+              These retainers are not active yet. Pay now to unlock the plan.
+            </p>
+            <PortalPendingRetainerPayList
+              items={billing.pendingSetup.map((sub) => ({
+                id: sub.id,
+                planName: sub.planName,
+                amountPence: sub.amountPence,
+                currency: sub.currency,
+                interval: sub.interval,
+                projectName: sub.projectName,
+                showProject,
+              }))}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -113,6 +117,11 @@ export default async function PortalBillingPage({
                 <p className="font-medium text-[var(--ozer-text-on-light)]">
                   {sub.planName}
                 </p>
+                {showProject && sub.projectName ? (
+                  <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+                    {sub.projectName}
+                  </p>
+                ) : null}
                 <p className="mt-1 text-sm text-slate-600">
                   {formatMinorUnits(
                     sub.amountPence,

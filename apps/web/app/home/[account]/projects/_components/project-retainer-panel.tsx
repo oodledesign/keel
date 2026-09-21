@@ -11,6 +11,8 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
 import { RetainerServiceListEditor } from '~/components/retainers/retainer-service-list-editor';
+import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
+import { AttachRetainerPlanButton } from '~/home/[account]/clients/_components/attach-retainer-plan-button';
 import type {
   CatalogueService,
   EffectiveService,
@@ -233,14 +235,39 @@ export function ProjectRetainerPanel({
 
   return (
     <div className="space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 p-4">
-      <div>
-        <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
-          Project services
-        </h3>
-        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-          Credits live on this project. Matching never emails the client.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            Retainer
+          </h3>
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+            Attach a plan, manage services, and track credits on this project.
+            Matching never emails the client.
+          </p>
+        </div>
+        {clientId ? (
+          <AttachRetainerPlanButton
+            accountId={accountId}
+            clientId={clientId}
+            projectId={projectId}
+            canEdit={canEdit}
+          />
+        ) : null}
       </div>
+
+      {!clientId ? (
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Link a client to this project before attaching a retainer plan.
+        </p>
+      ) : (
+        <ClientSubscriptionStatusList
+          accountId={accountId}
+          clientId={clientId}
+          projectId={projectId}
+          canEdit={canEdit}
+          emptyLabel="No plan on this project yet. Add a retainer to collect payment."
+        />
+      )}
 
       <p className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
         {retainer.creditBalance}

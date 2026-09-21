@@ -41,6 +41,7 @@ export function CreateClientProjectDialog({
   clientId,
   clientName,
   onSuccess,
+  projectDetailPathBuilder,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +50,7 @@ export function CreateClientProjectDialog({
   clientId: string;
   clientName?: string;
   onSuccess: () => void;
+  projectDetailPathBuilder?: (id: string) => string;
 }) {
   return (
     <CreateProjectDialog
@@ -60,6 +62,7 @@ export function CreateClientProjectDialog({
       lockClient
       lockedClientLabel={clientName}
       defaults={{ clientId }}
+      projectDetailPathBuilder={projectDetailPathBuilder}
       dialogDescription={
         clientName
           ? `Create a delivery project already linked to ${clientName}.`

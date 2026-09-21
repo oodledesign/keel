@@ -49,7 +49,6 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
-import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
 import { websiteHref } from '~/lib/clients/client-logo-domain';
 import { inviteAllContactsToPortalAction } from '~/lib/clients/client-portal-invites-actions';
 import type { CommercialClientRole } from '~/lib/commercial/commercial-constants';
@@ -87,7 +86,6 @@ import {
   listContacts,
   listNotes,
 } from '../_lib/server/server-actions';
-import { AttachRetainerPlanButton } from './attach-retainer-plan-button';
 import {
   ClientDisposalsBlock,
   ClientLeasesBlock,
@@ -106,7 +104,7 @@ import { ClientMediaRollup } from './client-media-rollup';
 import { ClientMessagesBlock } from './client-messages-block';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientRanklyBlock } from './client-rankly-block';
-import { ClientRetainerServicesPanel } from './client-retainer-services-panel';
+import { ClientRetainerSummary } from './client-retainer-summary';
 import { ClientSupportBlock } from './client-support-block';
 import { ClientTasksBlock } from './client-tasks-block';
 import { ClientUpcomingBookingsBlock } from './client-upcoming-bookings-block';
@@ -921,7 +919,7 @@ export function ClientDetailSidebar({
                   onClick={() => setActiveTab('retainer')}
                   className="mt-4 text-xs font-medium text-[var(--ozer-accent-pressed)] hover:underline"
                 >
-                  Manage retainer →
+                  View retainers →
                 </button>
 
                 {client.email ? (
@@ -1255,31 +1253,22 @@ export function ClientDetailSidebar({
     if (activeTab === 'retainer') {
       return (
         <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Retainer
-              </h2>
-              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-                Recurring retainers via Stripe or invoiced offline. Cancel +
-                recreate to change price.
-              </p>
-            </div>
-            <AttachRetainerPlanButton
-              accountId={accountId}
-              clientId={client.id}
-              canEdit={canEditClients}
-            />
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Retainer
+            </h2>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+              Summary of this client&apos;s project retainers. Attach, edit, and
+              remove plans on the project.
+            </p>
           </div>
-          <ClientSubscriptionStatusList
+          <ClientRetainerSummary
             accountId={accountId}
+            accountSlug={accountSlug}
             clientId={client.id}
+            clientName={displayName}
             canEdit={canEditClients}
-          />
-          <ClientRetainerServicesPanel
-            accountId={accountId}
-            clientId={client.id}
-            canEdit={canEditClients}
+            onViewProjects={() => setActiveTab('projects')}
           />
         </div>
       );

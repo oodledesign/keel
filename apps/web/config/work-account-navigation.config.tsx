@@ -22,6 +22,7 @@ import {
   MessageSquareText,
   Mic,
   PenLine,
+  Repeat,
   Settings,
   Share2,
   Sparkles,
@@ -341,6 +342,15 @@ function buildWorkNavItemsForKeys(
             label: 'Contracts',
             path: createPath(pathsConfig.app.accountContracts, account),
             Icon: <FileSignature className={iconClasses} />,
+          }
+        : null,
+    retainers: () =>
+      access.canViewClients && isWorkNavModuleEnabled(ms, 'retainers')
+        ? {
+            label: 'Retainers',
+            path: createPath(pathsConfig.app.accountRetainers, account),
+            Icon: <Repeat className={iconClasses} />,
+            description: 'Project retainers across this workspace.',
           }
         : null,
     team: () =>

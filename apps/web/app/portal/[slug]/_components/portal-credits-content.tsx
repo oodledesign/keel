@@ -11,12 +11,14 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { shouldNamePortalPlanProject } from '~/lib/billing/client-subscription-lifecycle';
 
 import { createPortalCreditTopupAction } from '../_lib/server/server-actions';
 import type {
   PortalCreditTopupPackId,
   PortalCreditsBundle,
 } from '../_lib/types/portal-credits.types';
+import { PortalPendingRetainerPayList } from './portal-pending-retainer-pay-card';
 
 function formatPounds(pence: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -85,6 +87,9 @@ export function PortalCreditsContent({
     '[clientSlug]',
     clientSlug,
   );
+  const showProject = shouldNamePortalPlanProject(
+    bundle.pendingPlans.length + (bundle.planName ? 1 : 0),
+  );
 
   function buyPack(packId: PortalCreditTopupPackId) {
     startTransition(async () => {
@@ -149,6 +154,9 @@ export function PortalCreditsContent({
           {bundle.planName ? (
             <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
               {bundle.planName}
+              {showProject && bundle.planProjectName
+                ? ` · ${bundle.planProjectName}`
+                : null}
               {bundle.creditsPerCycle != null
                 ? ` · ${bundle.creditsPerCycle}/cycle`
                 : null}
@@ -164,6 +172,25 @@ export function PortalCreditsContent({
           </p>
         </div>
       </div>
+
+      {bundle.pendingPlans.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+            Awaiting payment
+          </h3>
+          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+            {bundle.pendingPlans.length === 1
+              ? 'This retainer is not active yet. Credits from the plan stay locked until you complete payment.'
+              : 'These retainers are not active yet. Credits from the plans stay locked until you complete payment.'}
+          </p>
+          <PortalPendingRetainerPayList
+            items={bundle.pendingPlans.map((item) => ({
+              ...item,
+              showProject,
+            }))}
+          />
+        </div>
+      ) : null}
 
       {bundle.pendingCreditTicketCount > 0 ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">

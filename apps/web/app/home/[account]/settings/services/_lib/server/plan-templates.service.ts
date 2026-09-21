@@ -70,6 +70,7 @@ function mapSubscription(
     clientId: row.client_id ? String(row.client_id) : null,
     clientOrgId: row.client_org_id ? String(row.client_org_id) : null,
     websiteId: row.website_id ? String(row.website_id) : null,
+    projectId: row.project_id ? String(row.project_id) : null,
     planTemplateId: row.plan_template_id ? String(row.plan_template_id) : null,
     planName: row.plan_name ? String(row.plan_name) : null,
     subscriptionKind: (row.subscription_kind as PlanTemplateKind) ?? null,
@@ -495,6 +496,7 @@ class PlanTemplatesService {
     planTemplateId: string;
     clientId: string;
     websiteId?: string | null;
+    projectId?: string | null;
     collection?: ClientSubscriptionBillingCollection;
   }): Promise<{
     subscription: ClientSubscriptionRecord;
@@ -574,6 +576,21 @@ class PlanTemplatesService {
 
     const businessId = await this.resolveBusinessId(input.accountId);
 
+    if (input.projectId) {
+      const { data: project } = await this.db
+        .from('projects')
+        .select('id, client_id')
+        .eq('id', input.projectId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      if (!project) throw new Error('Project not found');
+      const projectClientId = (project as { client_id?: string | null })
+        .client_id;
+      if (projectClientId && projectClientId !== input.clientId) {
+        throw new Error('Project does not belong to this client');
+      }
+    }
+
     let existingQuery = this.db
       .from('client_subscriptions')
       .select('*')
@@ -588,6 +605,11 @@ class PlanTemplatesService {
     } else {
       existingQuery = existingQuery.is('website_id', null);
     }
+    if (input.projectId) {
+      existingQuery = existingQuery.eq('project_id', input.projectId);
+    } else {
+      existingQuery = existingQuery.is('project_id', null);
+    }
 
     const { data: existingSub } = await existingQuery.maybeSingle();
 
@@ -601,6 +623,7 @@ class PlanTemplatesService {
           client_id: input.clientId,
           client_org_id: clientOrgId,
           website_id: input.websiteId ?? null,
+          project_id: input.projectId ?? null,
           plan_template_id: template.id,
           plan_name: template.name,
           subscription_kind: template.kind,
@@ -871,7 +894,7 @@ class PlanTemplatesService {
 
   async listSubscriptions(
     accountId: string,
-    filters?: { clientId?: string; websiteId?: string },
+    filters?: { clientId?: string; websiteId?: string; projectId?: string },
   ): Promise<ClientSubscriptionRecord[]> {
     await this.ensureMember(accountId);
     let query = this.db
@@ -881,6 +904,7 @@ class PlanTemplatesService {
       .order('created_at', { ascending: false });
     if (filters?.clientId) query = query.eq('client_id', filters.clientId);
     if (filters?.websiteId) query = query.eq('website_id', filters.websiteId);
+    if (filters?.projectId) query = query.eq('project_id', filters.projectId);
     const { data, error } = await query;
     if (error) throw error;
     return ((data ?? []) as Array<Record<string, unknown>>).map(
@@ -899,22 +923,38 @@ class PlanTemplatesService {
     if (!row) throw new Error('Subscription not found');
 
     const sub = mapSubscription(row as Record<string, unknown>);
+    if (sub.status === 'cancelled') {
+      return sub;
+    }
+
+    // Immediate cancel (not at period end) — matches existing Connect helper
+    // and workspace Stripe strategy. Credit burn history is left intact.
     if (sub.stripeSubscriptionId) {
       try {
         const connect = await this.resolveConnectAccount(accountId);
         await stripe().subscriptions.cancel(sub.stripeSubscriptionId, {
           stripeAccount: connect.stripeAccountId,
         });
-      } catch {
-        // Local cancel still marked; Stripe may already be cancelled
+      } catch (error) {
+        console.error('[plan-templates] stripe cancel failed', {
+          subscriptionId,
+          error,
+        });
       }
     }
+
+    await this.expireCheckoutSessionIfPossible(
+      accountId,
+      sub.stripeCheckoutSessionId,
+    );
 
     const { data, error } = await this.db
       .from('client_subscriptions')
       .update({
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),
+        stripe_payment_link: null,
+        stripe_checkout_session_id: null,
       })
       .eq('id', subscriptionId)
       .eq('account_id', accountId)
@@ -922,6 +962,44 @@ class PlanTemplatesService {
       .single();
     if (error) throw error;
     return mapSubscription(data as Record<string, unknown>);
+  }
+
+  /**
+   * Start or resume Stripe Checkout for a pending retainer.
+   * Trusted callers only (public checkout route) — no membership check.
+   */
+  async resumePendingCheckoutUrl(subscriptionId: string): Promise<string> {
+    const { data: row } = await this.db
+      .from('client_subscriptions')
+      .select('*')
+      .eq('id', subscriptionId)
+      .maybeSingle();
+    if (!row) throw new Error('Subscription not found');
+
+    const sub = mapSubscription(row as Record<string, unknown>);
+    if (isOfflineBillingCollection(sub.billingCollection)) {
+      throw new Error(
+        'This plan is billed offline and is not collected via Stripe',
+      );
+    }
+    if (sub.status === 'cancelled') {
+      throw new Error('This subscription has been cancelled');
+    }
+    if (sub.status !== 'pending' && sub.status !== 'incomplete') {
+      throw new Error('This subscription is not awaiting payment');
+    }
+
+    if (sub.stripePaymentLink) {
+      return sub.stripePaymentLink;
+    }
+
+    if (!sub.accountId) {
+      const { createClientSubscriptionCheckout } =
+        await import('~/lib/billing/subscription-checkout');
+      return createClientSubscriptionCheckout(subscriptionId);
+    }
+
+    return (await this.createPendingCheckoutSession(sub)).url;
   }
 
   /**
@@ -1004,14 +1082,28 @@ class PlanTemplatesService {
       );
     }
 
+    return this.createPendingCheckoutSession(sub);
+  }
+
+  private async createPendingCheckoutSession(
+    sub: ClientSubscriptionRecord,
+  ): Promise<{
+    url: string;
+    kind: 'checkout';
+  }> {
+    if (!sub.accountId) {
+      throw new Error('Subscription missing account');
+    }
+
+    const connect = await this.resolveConnectAccount(sub.accountId);
     const priceId =
       sub.stripePriceId ??
       (
         await this.db
           .from('subscription_line_items')
           .select('stripe_price_id')
-          .eq('client_subscription_id', subscriptionId)
-          .eq('account_id', accountId)
+          .eq('client_subscription_id', sub.id)
+          .eq('account_id', sub.accountId)
           .limit(1)
           .maybeSingle()
       ).data?.stripe_price_id;
@@ -1029,8 +1121,8 @@ class PlanTemplatesService {
     }
 
     const origin = getSiteOrigin();
-    const successUrl = `${origin}/api/client-subscriptions/checkout?subscriptionId=${encodeURIComponent(subscriptionId)}&completed=1&session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${origin}/api/client-subscriptions/checkout?subscriptionId=${encodeURIComponent(subscriptionId)}&cancelled=1`;
+    const successUrl = `${origin}/api/client-subscriptions/checkout?subscriptionId=${encodeURIComponent(sub.id)}&completed=1&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${origin}/api/client-subscriptions/checkout?subscriptionId=${encodeURIComponent(sub.id)}&cancelled=1`;
 
     const session = await stripe().checkout.sessions.create(
       {
@@ -1039,23 +1131,23 @@ class PlanTemplatesService {
         line_items: [{ price: String(priceId), quantity: 1 }],
         success_url: successUrl,
         cancel_url: cancelUrl,
-        client_reference_id: subscriptionId,
+        client_reference_id: sub.id,
         metadata: {
-          ozer_account_id: accountId,
+          ozer_account_id: sub.accountId,
           client_id: sub.clientId,
           website_id: sub.websiteId ?? '',
           subscription_kind: sub.subscriptionKind ?? '',
-          client_subscription_id: subscriptionId,
+          client_subscription_id: sub.id,
           plan_template_id: sub.planTemplateId ?? '',
         },
         subscription_data: {
           application_fee_percent: connect.applicationFeePercent,
           metadata: {
-            ozer_account_id: accountId,
+            ozer_account_id: sub.accountId,
             client_id: sub.clientId,
             website_id: sub.websiteId ?? '',
             subscription_kind: sub.subscriptionKind ?? '',
-            client_subscription_id: subscriptionId,
+            client_subscription_id: sub.id,
             plan_template_id: sub.planTemplateId ?? '',
           },
         },
@@ -1074,8 +1166,8 @@ class PlanTemplatesService {
         stripe_checkout_session_id: session.id,
         status: 'incomplete',
       })
-      .eq('id', subscriptionId)
-      .eq('account_id', accountId);
+      .eq('id', sub.id)
+      .eq('account_id', sub.accountId);
 
     return { url: session.url, kind: 'checkout' };
   }

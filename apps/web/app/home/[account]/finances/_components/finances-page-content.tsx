@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -123,9 +124,11 @@ function initialDateRange() {
 export function FinancesPageContent({
   accountId,
   accountSlug,
+  retainers,
 }: {
   accountId: string;
   accountSlug: string;
+  retainers?: ReactNode;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -740,6 +743,8 @@ export function FinancesPageContent({
               tone={data.summary.netPence >= 0 ? 'positive' : 'negative'}
             />
           </div>
+
+          {retainers}
 
           {data.mixedCurrencies ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">

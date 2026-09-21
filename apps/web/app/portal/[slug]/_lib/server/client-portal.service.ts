@@ -8,6 +8,8 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { selectPortalPlanSubscriptions } from '~/lib/billing/client-subscription-lifecycle';
+import { isOfflineBillingCollection } from '~/lib/billing/plan-templates-types';
 import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import {
   type WebsiteBrief,
@@ -52,6 +54,8 @@ export type PortalSubscription = {
   status: string | null;
   nextBillingDate: string | null;
   stripePaymentLink: string | null;
+  projectId: string | null;
+  projectName: string | null;
 };
 
 export type PortalNotice = {
@@ -255,6 +259,8 @@ export type PortalOverviewData = {
   website: PortalWebsite | null;
   openTicketCount: number;
   subscription: PortalSubscription | null;
+  liveSubscriptions: PortalSubscription[];
+  pendingSubscriptions: PortalSubscription[];
   notices: PortalNotice[];
 };
 
@@ -412,6 +418,87 @@ class ClientPortalService {
     };
   }
 
+  private async loadSubscriptionProjectNames(
+    rows: Array<Record<string, unknown>>,
+  ): Promise<Map<string, string>> {
+    const ids = [
+      ...new Set(
+        rows
+          .map((row) => (row.project_id ? String(row.project_id) : null))
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const map = new Map<string, string>();
+    if (ids.length === 0) return map;
+
+    // After ensureMember: portal RLS may hide projects that are not shared.
+    const admin = getSupabaseServerAdminClient();
+    const { data } = await admin
+      .from('projects')
+      .select('id, name, title')
+      .in('id', ids);
+
+    for (const row of (data ?? []) as Array<{
+      id: string;
+      name?: string | null;
+      title?: string | null;
+    }>) {
+      const name = row.name?.trim() || row.title?.trim();
+      if (name) map.set(row.id, name);
+    }
+
+    return map;
+  }
+
+  private mapPortalSubscription(
+    row: Record<string, unknown>,
+    projectNames: Map<string, string>,
+  ): PortalSubscription {
+    const projectId = row.project_id ? String(row.project_id) : null;
+    return {
+      id: String(row.id),
+      planName:
+        String(row.plan_name ?? 'Subscription').trim() || 'Subscription',
+      monthlyAmount:
+        typeof row.monthly_amount === 'number' ? row.monthly_amount : null,
+      currency: row.currency ? String(row.currency) : null,
+      status: row.status ? String(row.status) : null,
+      nextBillingDate: row.next_billing_date
+        ? String(row.next_billing_date)
+        : null,
+      stripePaymentLink: isOfflineBillingCollection(
+        row.billing_collection as string | null,
+      )
+        ? null
+        : row.stripe_payment_link
+          ? String(row.stripe_payment_link)
+          : null,
+      projectId,
+      projectName: projectId ? (projectNames.get(projectId) ?? null) : null,
+    };
+  }
+
+  private classifyPortalSubscriptions(
+    rows: Array<Record<string, unknown>>,
+    projectNames: Map<string, string>,
+  ): {
+    subscription: PortalSubscription | null;
+    liveSubscriptions: PortalSubscription[];
+    pendingSubscriptions: PortalSubscription[];
+  } {
+    const mapped = rows.map((row) => ({
+      ...this.mapPortalSubscription(row, projectNames),
+      billingCollection: String(row.billing_collection ?? 'stripe'),
+    }));
+    const { active, live, pending } = selectPortalPlanSubscriptions(mapped);
+
+    return {
+      subscription: active,
+      liveSubscriptions: live,
+      pendingSubscriptions: pending,
+    };
+  }
+
   async getOverview(clientOrgId: string): Promise<PortalOverviewData> {
     await this.ensureMember(clientOrgId);
 
@@ -439,12 +526,11 @@ class ClientPortalService {
       this.db
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection, project_id',
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(20),
       this.db
         .from('client_portal_items')
         .select('id, title, content, item_type, created_at')
@@ -454,25 +540,22 @@ class ClientPortalService {
     ]);
 
     const websiteRow = websiteResult.data as Record<string, unknown> | null;
+    const subscriptionRows = (subscriptionResult.data ?? []) as Array<
+      Record<string, unknown>
+    >;
+    const projectNames =
+      await this.loadSubscriptionProjectNames(subscriptionRows);
+    const plans = this.classifyPortalSubscriptions(
+      subscriptionRows,
+      projectNames,
+    );
 
     return {
       website: websiteRow ? this.mapWebsite(websiteRow) : null,
       openTicketCount: ticketCountResult.count ?? 0,
-      subscription: subscriptionResult.data
-        ? {
-            id: subscriptionResult.data.id,
-            planName:
-              subscriptionResult.data.plan_name?.trim() || 'Subscription',
-            monthlyAmount: subscriptionResult.data.monthly_amount ?? null,
-            currency: subscriptionResult.data.currency ?? null,
-            status: subscriptionResult.data.status ?? null,
-            nextBillingDate: subscriptionResult.data.next_billing_date ?? null,
-            stripePaymentLink:
-              subscriptionResult.data.billing_collection === 'offline'
-                ? null
-                : (subscriptionResult.data.stripe_payment_link ?? null),
-          }
-        : null,
+      subscription: plans.subscription,
+      liveSubscriptions: plans.liveSubscriptions,
+      pendingSubscriptions: plans.pendingSubscriptions,
       notices: (
         (noticesResult.data ?? []) as Array<Record<string, unknown>>
       ).map((row) => ({
@@ -1883,29 +1966,23 @@ class ClientPortalService {
       this.db
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection, project_id',
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(20),
       this.db.from('clients').select('id').eq('client_org_id', clientOrgId),
     ]);
 
-    const subscription = subscriptionResult.data
-      ? {
-          id: subscriptionResult.data.id,
-          planName: subscriptionResult.data.plan_name?.trim() || 'Subscription',
-          monthlyAmount: subscriptionResult.data.monthly_amount ?? null,
-          currency: subscriptionResult.data.currency ?? null,
-          status: subscriptionResult.data.status ?? null,
-          nextBillingDate: subscriptionResult.data.next_billing_date ?? null,
-          stripePaymentLink:
-            subscriptionResult.data.billing_collection === 'offline'
-              ? null
-              : (subscriptionResult.data.stripe_payment_link ?? null),
-        }
-      : null;
+    const subscriptionRows = (subscriptionResult.data ?? []) as Array<
+      Record<string, unknown>
+    >;
+    const projectNames =
+      await this.loadSubscriptionProjectNames(subscriptionRows);
+    const { subscription } = this.classifyPortalSubscriptions(
+      subscriptionRows,
+      projectNames,
+    );
 
     const clientIds = ((clientsResult.data ?? []) as Array<{ id: string }>).map(
       (row) => row.id,

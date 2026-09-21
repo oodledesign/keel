@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -29,8 +31,10 @@ import { PlanBillingCollectionChoice } from '~/home/[account]/_components/plan-b
 import { notifyClientSubscriptionsChanged } from '~/home/[account]/_lib/client-subscriptions-events';
 import {
   attachRetainerPlanAction,
+  listClientSubscriptionsAction,
   listPlanTemplatesAction,
 } from '~/home/[account]/settings/services/_lib/server/plan-templates-actions';
+import { isVisibleAgencyClientSubscription } from '~/lib/billing/client-subscription-lifecycle';
 import {
   type ClientSubscriptionBillingCollection,
   type PlanTemplateRecord,
@@ -41,10 +45,12 @@ import {
 export function AttachRetainerPlanButton({
   accountId,
   clientId,
+  projectId,
   canEdit,
 }: {
   accountId: string;
   clientId: string;
+  projectId?: string;
   canEdit: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -58,6 +64,46 @@ export function AttachRetainerPlanButton({
   const [collection, setCollection] =
     useState<ClientSubscriptionBillingCollection>('stripe');
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!canEdit || !projectId || searchParams.get('attach') !== '1') return;
+    let cancelled = false;
+
+    void listClientSubscriptionsAction({
+      accountId,
+      clientId,
+      projectId,
+    })
+      .then((rows) => {
+        if (cancelled) return;
+        const hasPlan = rows.some((row) =>
+          isVisibleAgencyClientSubscription(row.status),
+        );
+        if (!hasPlan) setOpen(true);
+        const next = new URLSearchParams(searchParams.toString());
+        next.delete('attach');
+        const query = next.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const next = new URLSearchParams(searchParams.toString());
+        next.delete('attach');
+        const query = next.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, canEdit, clientId, pathname, projectId, router, searchParams]);
 
   useEffect(() => {
     if (!open) return;
@@ -81,6 +127,7 @@ export function AttachRetainerPlanButton({
         const result = await attachRetainerPlanAction({
           accountId,
           clientId,
+          projectId,
           planTemplateId: createNew ? undefined : planTemplateId || undefined,
           newTemplate: createNew
             ? {
@@ -142,10 +189,10 @@ export function AttachRetainerPlanButton({
         <DialogHeader>
           <DialogTitle>Add retainer</DialogTitle>
           <DialogDescription>
-            Attach any active Services plan (hosting, retainer, care plan, or
-            custom). Collect via Stripe Checkout, or activate now if you invoice
-            the client outside Stripe. To change amount later, cancel and create
-            a new subscription — no upgrades or prorations in this version.
+            Attach a plan to this project. Collect via Stripe Checkout, or
+            activate now if you invoice the client outside Stripe. To change
+            amount later, remove and create a new subscription — no upgrades or
+            prorations in this version.
           </DialogDescription>
         </DialogHeader>
 
