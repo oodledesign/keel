@@ -5,7 +5,14 @@
 import 'server-only';
 
 import {
+  type ResolvedMapboxToken,
+  isPublicMapboxTokenSource,
+  listMapboxTokens,
+  logMapboxServerAuthFailure,
+} from '~/lib/commercial/brochure-pdf/mapbox-token';
+import {
   type BrochureAmenityItem,
+  amenityDedupeKey,
   buildFallbackNearbyAmenities,
   formatAmenityDistanceMiles,
   formatNearbyAmenityLabel,
@@ -13,6 +20,7 @@ import {
 
 export type { BrochureAmenityItem } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 export {
+  amenityDedupeKey,
   buildFallbackNearbyAmenities,
   formatAmenityDistanceMiles,
   formatNearbyAmenityLabel,
@@ -26,23 +34,38 @@ const MAX_AMENITIES = 8;
 const MAX_DISTANCE_KM = 12;
 const POI_LIMIT = 5;
 
-const POI_SEARCHES = [
-  { query: 'railway station', suffix: 'station', limit: 1 },
-  { query: 'supermarket', suffix: null, limit: 3 },
-  { query: 'hospital', suffix: null, limit: 1 },
-  { query: 'school', suffix: null, limit: 2 },
-  { query: 'park', suffix: null, limit: 1 },
-] as const;
+type PoiSearch = {
+  queries: readonly string[];
+  suffix: string | null;
+  take: number;
+  reject?: RegExp;
+};
 
-function mapboxToken(): string | null {
-  return (
-    process.env.MAPBOX_SECRET_TOKEN?.trim() ||
-    process.env.MAPBOX_ACCESS_TOKEN?.trim() ||
-    process.env.MAPBOX_TOKEN?.trim() ||
-    process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() ||
-    null
-  );
-}
+const POI_SEARCHES: readonly PoiSearch[] = [
+  {
+    queries: ['railway station', 'train station'],
+    suffix: 'station',
+    take: 1,
+  },
+  {
+    queries: ['supermarket', 'grocery'],
+    suffix: null,
+    take: 3,
+  },
+  { queries: ['hospital'], suffix: null, take: 1 },
+  {
+    queries: ['school'],
+    suffix: null,
+    take: 2,
+    reject: /\bdriving school\b/i,
+  },
+  {
+    queries: ['park'],
+    suffix: null,
+    take: 1,
+    reject: /\b(car park|parking|park and ride)\b/i,
+  },
+];
 
 function haversineKm(
   a: { latitude: number; longitude: number },
@@ -59,9 +82,26 @@ function haversineKm(
   return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
+function proximityBbox(
+  origin: { latitude: number; longitude: number },
+  km: number,
+): string {
+  const latDelta = km / 111.32;
+  const lngDenom = 111.32 * Math.cos((origin.latitude * Math.PI) / 180);
+  const lngDelta = lngDenom === 0 ? km / 111.32 : km / lngDenom;
+  const minLon = Math.max(-180, origin.longitude - lngDelta);
+  const minLat = Math.max(-90, origin.latitude - latDelta);
+  const maxLon = Math.min(180, origin.longitude + lngDelta);
+  const maxLat = Math.min(90, origin.latitude + latDelta);
+  return `${minLon},${minLat},${maxLon},${maxLat}`;
+}
+
 function humanPoiName(text: string, suffix: string | null): string {
-  const name = text.trim();
+  let name = text.trim();
   if (!name) return '';
+  if (suffix === 'station') {
+    name = name.replace(/\s+(?:railway|train)\s+station$/i, ' station');
+  }
   if (suffix && !new RegExp(suffix, 'i').test(name)) {
     return `${name} ${suffix}`;
   }
@@ -74,16 +114,24 @@ type MapboxFeature = {
   center?: [number, number];
 };
 
+type PoiHit = { name: string; km: number };
+
+type SearchOutcome = {
+  hits: PoiHit[];
+  authFailed: boolean;
+  status?: number;
+};
+
 async function searchNearbyPois(
   query: string,
   origin: { latitude: number; longitude: number },
-  token: string,
+  resolved: ResolvedMapboxToken,
   limit: number,
-): Promise<Array<{ name: string; km: number }>> {
+): Promise<SearchOutcome> {
   const url = new URL(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   );
-  url.searchParams.set('access_token', token);
+  url.searchParams.set('access_token', resolved.token);
   url.searchParams.set('country', 'GB');
   url.searchParams.set(
     'limit',
@@ -91,6 +139,9 @@ async function searchNearbyPois(
   );
   url.searchParams.set('types', 'poi');
   url.searchParams.set('proximity', `${origin.longitude},${origin.latitude}`);
+  url.searchParams.set('autocomplete', 'false');
+  url.searchParams.set('language', 'en');
+  url.searchParams.set('bbox', proximityBbox(origin, MAX_DISTANCE_KM));
 
   const res = await fetch(url.toString(), {
     headers: { Accept: 'application/json' },
@@ -99,17 +150,20 @@ async function searchNearbyPois(
   });
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {
-      console.error(
-        '[brochure-pdf] nearby amenities Mapbox',
-        res.status,
-        '— set MAPBOX_SECRET_TOKEN if NEXT_PUBLIC_MAPBOX_TOKEN is URL-restricted',
-      );
+      return { hits: [], authFailed: true, status: res.status };
     }
-    return [];
+    console.error(
+      '[brochure-pdf] nearby amenities Mapbox',
+      res.status,
+      `query="${query}"`,
+      `tokenSource=${resolved.source}`,
+      `tokenIsPublic=${isPublicMapboxTokenSource(resolved.source)}`,
+    );
+    return { hits: [], authFailed: false };
   }
 
   const body = (await res.json()) as { features?: MapboxFeature[] };
-  const hits: Array<{ name: string; km: number }> = [];
+  const hits: PoiHit[] = [];
 
   for (const feature of body.features ?? []) {
     const center = feature.center;
@@ -134,7 +188,65 @@ async function searchNearbyPois(
     hits.push({ name, km });
   }
 
-  return hits;
+  hits.sort((a, b) => a.km - b.km);
+  return { hits, authFailed: false };
+}
+
+function labelsFromHits(hits: PoiHit[], search: PoiSearch): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+
+  for (const hit of hits) {
+    if (search.reject?.test(hit.name)) continue;
+    const name = humanPoiName(hit.name, search.suffix);
+    if (!name) continue;
+    const key = amenityDedupeKey(name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    labels.push(
+      formatNearbyAmenityLabel(name, formatAmenityDistanceMiles(hit.km)),
+    );
+    if (labels.length >= search.take) break;
+  }
+
+  return labels;
+}
+
+async function fetchAmenitiesWithToken(
+  origin: { latitude: number; longitude: number },
+  resolved: ResolvedMapboxToken,
+): Promise<{ labels: string[]; authFailed: boolean; status?: number }> {
+  const groups = await Promise.all(
+    POI_SEARCHES.map(async (search) => {
+      const outcomes = await Promise.all(
+        search.queries.map((query) =>
+          searchNearbyPois(query, origin, resolved, POI_LIMIT),
+        ),
+      );
+      const authFailure = outcomes.find((outcome) => outcome.authFailed);
+      if (authFailure) {
+        return {
+          labels: [] as string[],
+          authFailed: true,
+          status: authFailure.status,
+        };
+      }
+      const mergedHits = outcomes
+        .flatMap((outcome) => outcome.hits)
+        .sort((a, b) => a.km - b.km);
+      return {
+        labels: labelsFromHits(mergedHits, search),
+        authFailed: false,
+      };
+    }),
+  );
+
+  const authFailure = groups.find((group) => group.authFailed);
+  if (authFailure) {
+    return { labels: [], authFailed: true, status: authFailure.status };
+  }
+
+  return { labels: groups.flatMap((group) => group.labels), authFailed: false };
 }
 
 /**
@@ -150,52 +262,61 @@ export async function fetchNearbyBrochureAmenities(input: {
     return fallback;
   }
 
-  const token = mapboxToken();
-  if (!token) return fallback;
+  const tokens = listMapboxTokens();
+  if (tokens.length === 0) {
+    console.warn(
+      '[brochure-pdf] nearby amenities skipped: no Mapbox token. Set MAPBOX_SECRET_TOKEN (preferred, unrestricted) or NEXT_PUBLIC_MAPBOX_TOKEN',
+    );
+    return fallback;
+  }
 
   try {
     const origin = {
       latitude: input.latitude,
       longitude: input.longitude,
     };
-    const groups = await Promise.all(
-      POI_SEARCHES.map(async (search) => {
-        const hits = await searchNearbyPois(
-          search.query,
-          origin,
-          token,
-          search.limit,
+
+    for (const resolved of tokens) {
+      const result = await fetchAmenitiesWithToken(origin, resolved);
+      if (result.authFailed) {
+        logMapboxServerAuthFailure(
+          resolved.source,
+          result.status ?? 401,
+          'nearby amenities',
         );
-        return hits
-          .map((hit) => {
-            const name = humanPoiName(hit.name, search.suffix);
-            if (!name) return null;
-            return formatNearbyAmenityLabel(
-              name,
-              formatAmenityDistanceMiles(hit.km),
-            );
-          })
-          .filter((label): label is string => Boolean(label));
-      }),
-    );
+        continue;
+      }
 
-    const poiLabels = groups.flat();
-    if (poiLabels.length === 0) return fallback;
+      if (result.labels.length === 0) {
+        console.warn(
+          '[brochure-pdf] nearby amenities: Mapbox returned no POIs within range; using town-centre fallback',
+          `tokenSource=${resolved.source}`,
+        );
+        return fallback;
+      }
 
-    return buildFallbackNearbyAmenities(input.town, poiLabels).slice(
-      0,
-      MAX_AMENITIES,
+      return buildFallbackNearbyAmenities(input.town, result.labels).slice(
+        0,
+        MAX_AMENITIES,
+      );
+    }
+
+    console.warn(
+      '[brochure-pdf] nearby amenities: every Mapbox token was rejected; using town-centre fallback',
     );
+    return fallback;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const preferred = tokens[0];
     console.error('[brochure-pdf] nearby amenities failed:', message);
+    // Last resort: unexpected throw with a status in the message. HTTP 401/403
+    // from Mapbox is handled via authFailed and never reaches this catch.
     if (
-      token === process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() &&
+      preferred &&
+      isPublicMapboxTokenSource(preferred.source) &&
       (message.includes('401') || message.includes('403'))
     ) {
-      console.error(
-        '[brochure-pdf] Hint: NEXT_PUBLIC_MAPBOX_TOKEN may have URL restrictions. Set MAPBOX_SECRET_TOKEN for server-side geocoding.',
-      );
+      logMapboxServerAuthFailure(preferred.source, 401, 'nearby amenities');
     }
     return fallback;
   }
