@@ -39,7 +39,9 @@ export function mapRetainerService(
         ? Math.round(row.default_duration_minutes)
         : null,
     isActive: Boolean(row.is_active ?? true),
+    isVisible: row.is_visible == null ? true : Boolean(row.is_visible),
     sortOrder: Number(row.sort_order ?? 0),
+    categoryId: row.category_id ? String(row.category_id) : null,
     scope: asScope(row.scope),
     clientId: row.client_id ? String(row.client_id) : null,
     projectId: row.project_id ? String(row.project_id) : null,

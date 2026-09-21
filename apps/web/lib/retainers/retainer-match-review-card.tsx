@@ -164,6 +164,7 @@ export function RetainerMatchReviewCard({
               {activeServices.map((service) => (
                 <SelectItem key={service.id} value={service.id}>
                   {service.name} · {service.creditCost}c
+                  {service.isVisible === false ? ' · hidden' : ''}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -16,7 +16,9 @@ export type RetainerServiceRecord = {
   defaultAssigneeId: string | null;
   defaultDurationMinutes: number | null;
   isActive: boolean;
+  isVisible: boolean;
   sortOrder: number;
+  categoryId: string | null;
   scope: RetainerServiceScope;
   clientId: string | null;
   projectId: string | null;

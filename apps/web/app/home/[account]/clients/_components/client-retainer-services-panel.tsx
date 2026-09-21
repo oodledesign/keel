@@ -9,6 +9,7 @@ import type {
   CatalogueService,
   EffectiveService,
   EffectiveServiceList,
+  ServiceCategory,
 } from '~/lib/retainers/effective-services';
 import { clientInheritanceLabel } from '~/lib/retainers/effective-services';
 
@@ -30,6 +31,7 @@ export function ClientRetainerServicesPanel({
 }) {
   const [list, setList] = useState<EffectiveServiceList | null>(null);
   const [library, setLibrary] = useState<CatalogueService[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +42,7 @@ export function ClientRetainerServicesPanel({
         if (cancelled) return;
         setList(data.list);
         setLibrary(data.library);
+        setCategories(data.categories);
       })
       .catch((error) => {
         if (!cancelled) {
@@ -61,9 +64,11 @@ export function ClientRetainerServicesPanel({
   function apply(data: {
     list: EffectiveServiceList;
     library: CatalogueService[];
+    categories: ServiceCategory[];
   }) {
     setList(data.list);
     setLibrary(data.library);
+    setCategories(data.categories);
   }
 
   function replaceServices(services: EffectiveService[]) {
@@ -80,6 +85,7 @@ export function ClientRetainerServicesPanel({
             creditCost: row.creditCost,
             requestTypeId: row.requestTypeId,
             isActive: row.isActive,
+            isVisible: row.isVisible,
             sortOrder: row.sortOrder,
           })),
         });
@@ -114,6 +120,8 @@ export function ClientRetainerServicesPanel({
     name: string;
     description: string | null;
     creditCost: number;
+    categoryId?: string | null;
+    isVisible?: boolean;
   }) {
     if (!canEdit) return;
     startTransition(async () => {
@@ -157,6 +165,7 @@ export function ClientRetainerServicesPanel({
       <RetainerServiceListEditor
         services={list.services}
         library={library}
+        categories={categories}
         inheritanceLabel={clientInheritanceLabel(list.source === 'client')}
         resetLabel="Reset to workspace library"
         customized={list.source === 'client'}

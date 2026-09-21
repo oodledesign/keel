@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
-import { Loader2, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -20,12 +20,19 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
+import type { ServiceCategory } from '~/lib/retainers/effective-services';
+import { groupServicesByCategory } from '~/lib/retainers/effective-services';
 import type { RetainerServiceRecord } from '~/lib/retainers/types';
 
 import {
   deleteRetainerServiceAction,
+  deleteRetainerServiceCategoryAction,
+  listRetainerServiceCategoriesAction,
+  patchRetainerServiceAction,
+  reorderRetainerServiceCategoriesAction,
   seedDefaultRetainerServicesAction,
   upsertRetainerServiceAction,
+  upsertRetainerServiceCategoryAction,
 } from '../_lib/server/retainer-services-actions';
 
 type Draft = {
@@ -36,7 +43,9 @@ type Draft = {
   defaultStatus: string;
   defaultDurationMinutes: string;
   requestTypeId: string;
+  categoryId: string;
   isActive: boolean;
+  isVisible: boolean;
 };
 
 const emptyDraft = (): Draft => ({
@@ -46,32 +55,42 @@ const emptyDraft = (): Draft => ({
   defaultStatus: '',
   defaultDurationMinutes: '',
   requestTypeId: '',
+  categoryId: '',
   isActive: true,
+  isVisible: true,
 });
 
 export function RetainerServicesPanel({
   accountId,
   initialServices,
+  initialCategories = [],
   requestTypes = [],
   canEdit,
 }: {
   accountId: string;
   initialServices: RetainerServiceRecord[];
+  initialCategories?: ServiceCategory[];
   requestTypes?: RequestTypeRecord[];
   canEdit: boolean;
 }) {
   const [services, setServices] = useState(initialServices);
+  const [categories, setCategories] = useState(initialCategories);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [categoryName, setCategoryName] = useState('');
   const [pending, startTransition] = useTransition();
 
-  const sorted = useMemo(
+  const grouped = useMemo(
     () =>
-      [...services].sort(
-        (a, b) =>
-          a.sortOrder - b.sortOrder ||
-          a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' }),
+      groupServicesByCategory(
+        services.map((row) => ({
+          ...row,
+          categorySortOrder:
+            categories.find((category) => category.id === row.categoryId)
+              ?.sortOrder ?? 1_000_000,
+        })),
+        categories,
       ),
-    [services],
+    [services, categories],
   );
 
   function startCreate() {
@@ -89,7 +108,9 @@ export function RetainerServicesPanel({
         ? String(row.defaultDurationMinutes)
         : '',
       requestTypeId: row.requestTypeId ?? '',
+      categoryId: row.categoryId ?? '',
       isActive: row.isActive,
+      isVisible: row.isVisible,
     });
   }
 
@@ -134,6 +155,8 @@ export function RetainerServicesPanel({
           defaultDurationMinutes: duration,
           sortOrder: existing?.sortOrder ?? 0,
           isActive: draft.isActive,
+          isVisible: draft.isVisible,
+          categoryId: draft.categoryId || null,
           requestTypeId: draft.requestTypeId || null,
         });
         setServices((current) => {
@@ -168,11 +191,134 @@ export function RetainerServicesPanel({
     });
   }
 
+  function toggleVisible(row: RetainerServiceRecord, isVisible: boolean) {
+    startTransition(async () => {
+      try {
+        const saved = await patchRetainerServiceAction({
+          accountId,
+          id: row.id,
+          isVisible,
+        });
+        setServices((current) =>
+          current.map((item) => (item.id === saved.id ? saved : item)),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not update visibility',
+        );
+      }
+    });
+  }
+
+  function addCategory() {
+    const name = categoryName.trim();
+    if (!name) return;
+    startTransition(async () => {
+      try {
+        const saved = await upsertRetainerServiceCategoryAction({
+          accountId,
+          name,
+        });
+        setCategories((current) => [...current, saved]);
+        setCategoryName('');
+        toast.success('Category added');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not add category',
+        );
+      }
+    });
+  }
+
+  function renameCategory(row: ServiceCategory) {
+    const name = window.prompt('Rename category', row.name)?.trim();
+    if (!name || name === row.name) return;
+    startTransition(async () => {
+      try {
+        const saved = await upsertRetainerServiceCategoryAction({
+          accountId,
+          id: row.id,
+          name,
+          sortOrder: row.sortOrder,
+        });
+        setCategories((current) =>
+          current.map((item) => (item.id === saved.id ? saved : item)),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not rename category',
+        );
+      }
+    });
+  }
+
+  function removeCategory(row: ServiceCategory) {
+    startTransition(async () => {
+      try {
+        await deleteRetainerServiceCategoryAction({
+          accountId,
+          id: row.id,
+        });
+        setCategories((current) =>
+          current.filter((item) => item.id !== row.id),
+        );
+        setServices((current) =>
+          current.map((item) =>
+            item.categoryId === row.id ? { ...item, categoryId: null } : item,
+          ),
+        );
+        toast.success('Category removed. Services are now uncategorized.');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not delete category',
+        );
+      }
+    });
+  }
+
+  function moveCategory(index: number, delta: number) {
+    const previous = categories;
+    const next = [...categories].sort(
+      (a, b) =>
+        a.sortOrder - b.sortOrder ||
+        a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' }),
+    );
+    const target = index + delta;
+    if (target < 0 || target >= next.length) return;
+    const [moved] = next.splice(index, 1);
+    if (!moved) return;
+    next.splice(target, 0, moved);
+    const ids = next.map((row) => row.id);
+    setCategories(next.map((row, sortOrder) => ({ ...row, sortOrder })));
+    startTransition(async () => {
+      try {
+        const saved = await reorderRetainerServiceCategoriesAction({
+          accountId,
+          ids,
+        });
+        setCategories(saved);
+      } catch (error) {
+        setCategories(previous);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not reorder categories',
+        );
+      }
+    });
+  }
+
   function seedDefaults() {
     startTransition(async () => {
       try {
         const seeded = await seedDefaultRetainerServicesAction({ accountId });
+        const nextCategories = await listRetainerServiceCategoriesAction({
+          accountId,
+        });
         setServices(seeded);
+        setCategories(nextCategories);
         toast.success('Starter catalogue added');
       } catch (error) {
         toast.error(
@@ -184,6 +330,12 @@ export function RetainerServicesPanel({
     });
   }
 
+  const sortedCategories = [...categories].sort(
+    (a, b) =>
+      a.sortOrder - b.sortOrder ||
+      a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' }),
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -193,13 +345,12 @@ export function RetainerServicesPanel({
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Default catalogue for new clients, matching, and the portal when
-            nothing is customized. Clients and projects can trim, rename, or
-            reprice from here.
+            nothing is customized. Hidden services stay here for internal use.
           </p>
         </div>
         {canEdit ? (
           <div className="flex flex-wrap gap-2">
-            {sorted.length === 0 ? (
+            {services.length === 0 ? (
               <Button
                 type="button"
                 size="sm"
@@ -219,6 +370,94 @@ export function RetainerServicesPanel({
             >
               <Plus className="mr-1 size-4" />
               Add service
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
+        <p className="text-sm font-medium">Categories</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Workspace-only groups. Deleting a category leaves its services
+          uncategorized.
+        </p>
+        {sortedCategories.length === 0 ? (
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            No categories yet. Add Web, Support, or Calls — or load the starter
+            catalogue.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {sortedCategories.map((row, index) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2"
+              >
+                <span className="text-sm">{row.name}</span>
+                {canEdit ? (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending || index === 0}
+                      onClick={() => moveCategory(index, -1)}
+                    >
+                      <ChevronUp className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={
+                        pending || index === sortedCategories.length - 1
+                      }
+                      onClick={() => moveCategory(index, 1)}
+                    >
+                      <ChevronDown className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pending}
+                      onClick={() => renameCategory(row)}
+                    >
+                      Rename
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending}
+                      onClick={() => removeCategory(row)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        {canEdit ? (
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[160px] flex-1 space-y-1">
+              <Label className="text-xs">New category</Label>
+              <Input
+                value={categoryName}
+                onChange={(event) => setCategoryName(event.target.value)}
+                placeholder="e.g. Web"
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending || !categoryName.trim()}
+              onClick={addCategory}
+            >
+              Add
             </Button>
           </div>
         ) : null}
@@ -259,6 +498,30 @@ export function RetainerServicesPanel({
                   setDraft({ ...draft, creditCost: event.target.value })
                 }
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select
+                value={draft.categoryId || '__none__'}
+                onValueChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    categoryId: value === '__none__' ? '' : value,
+                  })
+                }
+              >
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="Uncategorized" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Uncategorized</SelectItem>
+                  {sortedCategories.map((row) => (
+                    <SelectItem key={row.id} value={row.id}>
+                      {row.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Default duration (minutes)</Label>
@@ -320,6 +583,16 @@ export function RetainerServicesPanel({
               </Select>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
+              <Label htmlFor="rs-visible">Visible to client</Label>
+              <Switch
+                id="rs-visible"
+                checked={draft.isVisible}
+                onCheckedChange={(checked) =>
+                  setDraft({ ...draft, isVisible: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
               <Label htmlFor="rs-active">Active</Label>
               <Switch
                 id="rs-active"
@@ -349,66 +622,89 @@ export function RetainerServicesPanel({
         </div>
       ) : null}
 
-      <ul className="space-y-2">
-        {sorted.length === 0 ? (
-          <li className="text-sm text-[var(--workspace-shell-text-muted)]">
+      <div className="space-y-4">
+        {grouped.length === 0 ? (
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             No workspace services yet. Add the work you sell on retainers, or
             load a starter catalogue. Existing client and project lists are
             never overwritten.
-          </li>
+          </p>
         ) : (
-          sorted.map((row) => (
-            <li
-              key={row.id}
-              className={cn(
-                'flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-3',
-                row.isActive
-                  ? 'border-[color:var(--workspace-shell-border)]'
-                  : 'border-dashed opacity-60',
-              )}
-            >
-              <div>
-                <p className="text-sm font-medium">{row.name}</p>
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                  {row.creditCost} credit{row.creditCost === 1 ? '' : 's'}
-                  {row.defaultDurationMinutes
-                    ? ` · ${row.defaultDurationMinutes} min`
-                    : ''}
-                  {!row.isActive ? ' · archived' : null}
-                </p>
-                {row.description ? (
-                  <p className="mt-1 max-w-xl text-xs text-[var(--workspace-shell-text-muted)]">
-                    {row.description}
-                  </p>
-                ) : null}
-              </div>
-              {canEdit ? (
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => startEdit(row)}
+          grouped.map((group) => (
+            <div key={group.id ?? 'uncategorized'} className="space-y-2">
+              <p className="text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                {group.name}
+              </p>
+              <ul className="space-y-2">
+                {group.services.map((row) => (
+                  <li
+                    key={row.id}
+                    className={cn(
+                      'flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-3',
+                      row.isActive && row.isVisible
+                        ? 'border-[color:var(--workspace-shell-border)]'
+                        : 'border-dashed opacity-70',
+                    )}
                   >
-                    Edit
-                  </Button>
-                  {row.isActive ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={pending}
-                      onClick={() => archive(row.id)}
-                    >
-                      Archive
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-            </li>
+                    <div>
+                      <p className="text-sm font-medium">{row.name}</p>
+                      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                        {row.creditCost} credit
+                        {row.creditCost === 1 ? '' : 's'}
+                        {row.defaultDurationMinutes
+                          ? ` · ${row.defaultDurationMinutes} min`
+                          : ''}
+                        {!row.isVisible ? ' · hidden' : null}
+                        {!row.isActive ? ' · archived' : null}
+                      </p>
+                      {row.description ? (
+                        <p className="mt-1 max-w-xl text-xs text-[var(--workspace-shell-text-muted)]">
+                          {row.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    {canEdit ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                            Visible
+                          </span>
+                          <Switch
+                            checked={row.isVisible}
+                            disabled={pending}
+                            onCheckedChange={(checked) =>
+                              toggleVisible(row, checked)
+                            }
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => startEdit(row)}
+                        >
+                          Edit
+                        </Button>
+                        {row.isActive ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={pending}
+                            onClick={() => archive(row.id)}
+                          >
+                            Archive
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))
         )}
-      </ul>
+      </div>
     </div>
   );
 }

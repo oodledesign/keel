@@ -9,7 +9,9 @@ import type {
   CatalogueService,
   EffectiveService,
   EffectiveServiceList,
+  ServiceCategory,
 } from '~/lib/retainers/effective-services';
+import { UNCATEGORIZED_SORT } from '~/lib/retainers/effective-services';
 import {
   layersToEffectiveList,
   loadEffectiveLayers,
@@ -24,6 +26,7 @@ import {
 export type ClientRetainerServicesBundle = {
   list: EffectiveServiceList;
   library: CatalogueService[];
+  categories: ServiceCategory[];
 };
 
 function db(client: SupabaseClient) {
@@ -82,6 +85,7 @@ class ClientRetainerServicesService {
         projectId: null,
       }),
       library: layers.workspace.filter((row) => row.scope === 'workspace'),
+      categories: layers.categories,
     };
   }
 
@@ -110,11 +114,16 @@ class ClientRetainerServicesService {
     description?: string | null;
     creditCost: number;
     requestTypeId?: string | null;
+    categoryId?: string | null;
+    isVisible?: boolean;
   }): Promise<ClientRetainerServicesBundle> {
     await this.ensureMember(input.accountId);
     await this.requireClient(input.accountId, input.clientId);
 
     const current = await this.load(input.accountId, input.clientId);
+    const category = input.categoryId
+      ? (current.categories.find((row) => row.id === input.categoryId) ?? null)
+      : null;
     const serviceId = await insertScopedRetainerService(db(this.client), {
       accountId: input.accountId,
       scope: 'client',
@@ -123,6 +132,8 @@ class ClientRetainerServicesService {
       description: input.description,
       creditCost: input.creditCost,
       requestTypeId: input.requestTypeId,
+      categoryId: input.categoryId,
+      isVisible: input.isVisible ?? true,
       sortOrder: current.list.services.length,
     });
 
@@ -139,8 +150,12 @@ class ClientRetainerServicesService {
           creditCost: input.creditCost,
           requestTypeId: input.requestTypeId ?? null,
           isActive: true,
+          isVisible: input.isVisible ?? true,
           sortOrder: current.list.services.length,
           scope: 'client',
+          categoryId: category?.id ?? null,
+          categoryName: category?.name ?? null,
+          categorySortOrder: category?.sortOrder ?? UNCATEGORIZED_SORT,
         },
       ],
     });

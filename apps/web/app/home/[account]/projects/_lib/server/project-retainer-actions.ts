@@ -61,8 +61,12 @@ export const replaceProjectRetainerServicesAction = enhanceAction(
         creditCost: row.creditCost,
         requestTypeId: row.requestTypeId ?? null,
         isActive: row.isActive,
+        isVisible: row.isVisible,
         sortOrder: row.sortOrder,
         scope: 'project',
+        categoryId: null,
+        categoryName: null,
+        categorySortOrder: 1_000_000,
       })),
     });
     revalidatePath('/home/[account]/projects/[id]', 'page');

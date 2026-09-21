@@ -1492,7 +1492,7 @@ class ClientPortalService {
         await import('@kit/supabase/server-admin-client');
       const { loadEffectiveLayers, layersToEffectiveList } =
         await import('~/lib/retainers/load-effective-layers');
-      const { activeEffectiveServices } =
+      const { clientFacingEffectiveServices } =
         await import('~/lib/retainers/effective-services');
       const { looseClient } = await import('~/lib/retainers/loose-client');
       const admin = getSupabaseServerAdminClient();
@@ -1508,9 +1508,9 @@ class ClientPortalService {
         clientId: crmClient?.id ? String(crmClient.id) : null,
         projectId: input.project_id ?? null,
       });
-      const hit = activeEffectiveServices(layersToEffectiveList(layers)).find(
-        (row) => row.id === retainerServiceId,
-      );
+      const hit = clientFacingEffectiveServices(
+        layersToEffectiveList(layers),
+      ).find((row) => row.id === retainerServiceId);
       if (!hit) {
         throw new Error('That service is not available on this project');
       }

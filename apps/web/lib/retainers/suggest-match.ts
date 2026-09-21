@@ -6,7 +6,11 @@ import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 
 import { applyRetainerMatch } from './apply-match';
-import { buildMatchPools, toLadderServices } from './effective-services';
+import {
+  buildMatchPools,
+  clientFacingEffectiveServices,
+  toLadderServices,
+} from './effective-services';
 import {
   layersToEffectiveList,
   loadEffectiveLayers,
@@ -100,7 +104,7 @@ export async function suggestRetainerMatchForActionItem(input: {
   });
   const effective = layersToEffectiveList(layers);
   const catalogue = layers.workspace
-    .filter((row) => row.scope === 'workspace' && row.isActive)
+    .filter((row) => row.scope === 'workspace' && row.isActive && row.isVisible)
     .map((row) => ({
       id: row.id,
       name: row.name,
@@ -121,7 +125,7 @@ export async function suggestRetainerMatchForActionItem(input: {
     previouslyUsedIds,
   });
   const effectiveLadder = toLadderServices(
-    effective.services.filter((row) => row.isActive),
+    clientFacingEffectiveServices(effective),
   );
 
   const { data: thread } = item.thread_id

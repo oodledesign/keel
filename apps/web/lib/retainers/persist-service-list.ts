@@ -7,6 +7,21 @@ import {
 } from './load-effective-layers';
 import type { LooseClient } from './loose-client';
 
+export async function assertCategoryOnAccount(
+  client: LooseClient,
+  input: { accountId: string; categoryId?: string | null },
+) {
+  if (!input.categoryId) return;
+  const { data, error } = await client
+    .from('retainer_service_categories')
+    .select('id')
+    .eq('id', input.categoryId)
+    .eq('account_id', input.accountId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Category not found');
+}
+
 export function snapshotMembershipRows(services: EffectiveService[]) {
   return services.map((service, index) => ({
     service_id: service.id,
@@ -15,6 +30,7 @@ export function snapshotMembershipRows(services: EffectiveService[]) {
     credit_cost: service.creditCost,
     request_type_id: service.requestTypeId,
     is_active: service.isActive,
+    is_visible: service.isVisible,
     sort_order: service.sortOrder || index,
   }));
 }
@@ -136,9 +152,15 @@ export async function insertScopedRetainerService(
     description?: string | null;
     creditCost: number;
     requestTypeId?: string | null;
+    categoryId?: string | null;
+    isVisible?: boolean;
     sortOrder?: number;
   },
 ): Promise<string> {
+  await assertCategoryOnAccount(client, {
+    accountId: input.accountId,
+    categoryId: input.categoryId,
+  });
   const { data, error } = await client
     .from('retainer_services')
     .insert({
@@ -150,7 +172,9 @@ export async function insertScopedRetainerService(
       description: input.description?.trim() || null,
       credit_cost: input.creditCost,
       request_type_id: input.requestTypeId ?? null,
+      category_id: input.categoryId ?? null,
       is_active: true,
+      is_visible: input.isVisible ?? true,
       sort_order: input.sortOrder ?? 0,
     })
     .select('id')
@@ -188,8 +212,12 @@ export async function addServiceToProjectEffectiveList(
     creditCost: catalogue.creditCost,
     requestTypeId: catalogue.requestTypeId,
     isActive: true,
+    isVisible: catalogue.isVisible,
     sortOrder: effective.services.length,
     scope: catalogue.scope,
+    categoryId: catalogue.categoryId,
+    categoryName: catalogue.categoryName,
+    categorySortOrder: catalogue.categorySortOrder,
   };
 
   // Inherited workspace default: keep the existing allowlist behaviour

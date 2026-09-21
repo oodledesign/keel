@@ -21,7 +21,9 @@ import { cn } from '@kit/ui/utils';
 import type {
   CatalogueService,
   EffectiveService,
+  ServiceCategory,
 } from '~/lib/retainers/effective-services';
+import { groupServicesByCategory } from '~/lib/retainers/effective-services';
 
 type Draft = {
   id?: string;
@@ -29,6 +31,8 @@ type Draft = {
   description: string;
   creditCost: string;
   isActive: boolean;
+  isVisible: boolean;
+  categoryId: string;
 };
 
 const emptyDraft = (): Draft => ({
@@ -36,11 +40,14 @@ const emptyDraft = (): Draft => ({
   description: '',
   creditCost: '1',
   isActive: true,
+  isVisible: true,
+  categoryId: '',
 });
 
 export function RetainerServiceListEditor({
   services,
   library,
+  categories = [],
   inheritanceLabel,
   resetLabel,
   customized,
@@ -53,6 +60,7 @@ export function RetainerServiceListEditor({
 }: {
   services: EffectiveService[];
   library: CatalogueService[];
+  categories?: ServiceCategory[];
   inheritanceLabel: string;
   resetLabel: string;
   customized: boolean;
@@ -65,6 +73,8 @@ export function RetainerServiceListEditor({
     name: string;
     description: string | null;
     creditCost: number;
+    categoryId?: string | null;
+    isVisible?: boolean;
   }) => void;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -76,6 +86,10 @@ export function RetainerServiceListEditor({
   );
   const availableLibrary = library.filter(
     (row) => row.isActive && !inList.has(row.id),
+  );
+  const groups = useMemo(
+    () => groupServicesByCategory(services, categories),
+    [services, categories],
   );
 
   function persist(next: EffectiveService[]) {
@@ -103,6 +117,7 @@ export function RetainerServiceListEditor({
                 description: draft.description.trim() || null,
                 creditCost: Math.round(creditCost),
                 isActive: draft.isActive,
+                isVisible: draft.isVisible,
               }
             : row,
         ),
@@ -115,6 +130,8 @@ export function RetainerServiceListEditor({
       name: draft.name.trim(),
       description: draft.description.trim() || null,
       creditCost: Math.round(creditCost),
+      categoryId: draft.categoryId || null,
+      isVisible: draft.isVisible,
     });
     setDraft(null);
   }
@@ -132,8 +149,12 @@ export function RetainerServiceListEditor({
         creditCost: picked.creditCost,
         requestTypeId: picked.requestTypeId,
         isActive: true,
+        isVisible: picked.isVisible,
         sortOrder: services.length,
         scope: picked.scope,
+        categoryId: picked.categoryId,
+        categoryName: picked.categoryName,
+        categorySortOrder: picked.categorySortOrder,
       },
     ]);
     setLibraryId('');
@@ -143,9 +164,9 @@ export function RetainerServiceListEditor({
     persist(services.filter((row) => row.id !== id));
   }
 
-  function toggleActive(id: string, isActive: boolean) {
+  function toggleVisible(id: string, isVisible: boolean) {
     persist(
-      services.map((row) => (row.id === id ? { ...row, isActive } : row)),
+      services.map((row) => (row.id === id ? { ...row, isVisible } : row)),
     );
   }
 
@@ -157,8 +178,8 @@ export function RetainerServiceListEditor({
             {inheritanceLabel}
           </p>
           <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-            Credits only — no time shown to clients. 10 credits ≈ 15 minutes is
-            internal packing.
+            Credits only — no time shown to clients. Hidden services stay on
+            this list for internal burns.
           </p>
         </div>
         {canEdit && customized ? (
@@ -188,6 +209,7 @@ export function RetainerServiceListEditor({
                     {availableLibrary.map((row) => (
                       <SelectItem key={row.id} value={row.id}>
                         {row.name} · {row.creditCost}c
+                        {!row.isVisible ? ' · hidden' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -251,7 +273,32 @@ export function RetainerServiceListEditor({
                 }
               />
             </div>
-            {draft.id ? (
+            {!draft.id ? (
+              <div className="space-y-1">
+                <Label className="text-xs">Category</Label>
+                <Select
+                  value={draft.categoryId || '__none__'}
+                  onValueChange={(value) =>
+                    setDraft({
+                      ...draft,
+                      categoryId: value === '__none__' ? '' : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Uncategorized" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Uncategorized</SelectItem>
+                    {categories.map((row) => (
+                      <SelectItem key={row.id} value={row.id}>
+                        {row.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
               <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
                 <Label className="text-xs">Active</Label>
                 <Switch
@@ -261,7 +308,21 @@ export function RetainerServiceListEditor({
                   }
                 />
               </div>
-            ) : null}
+            )}
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2 sm:col-span-2">
+              <div>
+                <Label className="text-xs">Visible to client</Label>
+                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                  Off hides it from the portal and inbound matching.
+                </p>
+              </div>
+              <Switch
+                checked={draft.isVisible}
+                onCheckedChange={(checked) =>
+                  setDraft({ ...draft, isVisible: checked })
+                }
+              />
+            </div>
           </div>
           <div className="flex gap-2">
             <Button
@@ -293,72 +354,89 @@ export function RetainerServiceListEditor({
           {emptyHint ?? 'No services on this list yet.'}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {services.map((service) => (
-            <li
-              key={service.id}
-              className={cn(
-                'flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2',
-                service.isActive
-                  ? 'border-[color:var(--workspace-shell-border)]'
-                  : 'border-dashed opacity-60',
-              )}
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm text-[var(--workspace-shell-text)]">
-                  {service.name}
-                  <span className="ml-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                    {service.creditCost} credit
-                    {service.creditCost === 1 ? '' : 's'}
-                    {!service.isActive ? ' · off' : ''}
-                  </span>
-                </p>
-                {service.description ? (
-                  <p className="mt-0.5 line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                    {service.description}
-                  </p>
-                ) : null}
-              </div>
-              {canEdit ? (
-                <div className="flex items-center gap-1">
-                  <Switch
-                    checked={service.isActive}
-                    disabled={pending}
-                    onCheckedChange={(checked) =>
-                      toggleActive(service.id, checked)
-                    }
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() =>
-                      setDraft({
-                        id: service.id,
-                        name: service.name,
-                        description: service.description ?? '',
-                        creditCost: String(service.creditCost),
-                        isActive: service.isActive,
-                      })
-                    }
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <div key={group.id ?? 'uncategorized'} className="space-y-2">
+              <p className="text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                {group.name}
+              </p>
+              <ul className="space-y-2">
+                {group.services.map((service) => (
+                  <li
+                    key={service.id}
+                    className={cn(
+                      'flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2',
+                      service.isVisible && service.isActive
+                        ? 'border-[color:var(--workspace-shell-border)]'
+                        : 'border-dashed opacity-70',
+                    )}
                   >
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => remove(service.id)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ) : null}
-            </li>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-[var(--workspace-shell-text)]">
+                        {service.name}
+                        <span className="ml-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                          {service.creditCost} credit
+                          {service.creditCost === 1 ? '' : 's'}
+                          {!service.isVisible ? ' · hidden' : ''}
+                          {!service.isActive ? ' · off' : ''}
+                        </span>
+                      </p>
+                      {service.description ? (
+                        <p className="mt-0.5 line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                          {service.description}
+                        </p>
+                      ) : null}
+                    </div>
+                    {canEdit ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                            Visible
+                          </span>
+                          <Switch
+                            checked={service.isVisible}
+                            disabled={pending}
+                            onCheckedChange={(checked) =>
+                              toggleVisible(service.id, checked)
+                            }
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          onClick={() =>
+                            setDraft({
+                              id: service.id,
+                              name: service.name,
+                              description: service.description ?? '',
+                              creditCost: String(service.creditCost),
+                              isActive: service.isActive,
+                              isVisible: service.isVisible,
+                              categoryId: service.categoryId ?? '',
+                            })
+                          }
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={pending}
+                          onClick={() => remove(service.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

@@ -2,6 +2,12 @@
  * Starter workspace catalogue. Used only when the library is empty and
  * the user asks to seed it — never wipes existing rows.
  */
+export const DEFAULT_WORKSPACE_RETAINER_CATEGORIES = [
+  { name: 'Web', sortOrder: 0 },
+  { name: 'Support', sortOrder: 1 },
+  { name: 'Calls', sortOrder: 2 },
+] as const;
+
 export const DEFAULT_WORKSPACE_RETAINER_SERVICES = [
   {
     name: 'Website content update',
@@ -10,6 +16,7 @@ export const DEFAULT_WORKSPACE_RETAINER_SERVICES = [
     creditCost: 2,
     defaultDurationMinutes: 30,
     sortOrder: 0,
+    categoryName: 'Web',
   },
   {
     name: 'New website page',
@@ -18,6 +25,7 @@ export const DEFAULT_WORKSPACE_RETAINER_SERVICES = [
     creditCost: 8,
     defaultDurationMinutes: 120,
     sortOrder: 1,
+    categoryName: 'Web',
   },
   {
     name: 'Design tweak',
@@ -26,6 +34,7 @@ export const DEFAULT_WORKSPACE_RETAINER_SERVICES = [
     creditCost: 3,
     defaultDurationMinutes: 45,
     sortOrder: 2,
+    categoryName: 'Web',
   },
   {
     name: 'Community / app update',
@@ -34,6 +43,7 @@ export const DEFAULT_WORKSPACE_RETAINER_SERVICES = [
     creditCost: 4,
     defaultDurationMinutes: 60,
     sortOrder: 3,
+    categoryName: null,
   },
   {
     name: 'SEO article',
@@ -42,6 +52,7 @@ export const DEFAULT_WORKSPACE_RETAINER_SERVICES = [
     creditCost: 4,
     defaultDurationMinutes: 90,
     sortOrder: 4,
+    categoryName: null,
   },
   {
     name: 'Support fix',
@@ -50,5 +61,6 @@ export const DEFAULT_WORKSPACE_RETAINER_SERVICES = [
     creditCost: 1,
     defaultDurationMinutes: 15,
     sortOrder: 5,
+    categoryName: 'Support',
   },
 ] as const;

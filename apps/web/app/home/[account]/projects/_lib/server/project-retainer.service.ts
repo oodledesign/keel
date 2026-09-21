@@ -13,7 +13,9 @@ import type {
   CatalogueService,
   EffectiveService,
   EffectiveServiceList,
+  ServiceCategory,
 } from '~/lib/retainers/effective-services';
+import { UNCATEGORIZED_SORT } from '~/lib/retainers/effective-services';
 import {
   layersToEffectiveList,
   loadEffectiveLayers,
@@ -151,6 +153,7 @@ class ProjectRetainerService {
     recent: ProjectRetainerBurn[];
     effective: EffectiveServiceList;
     library: CatalogueService[];
+    categories: ServiceCategory[];
   }> {
     await this.ensureMember(accountId);
     await this.requireProject(accountId, projectId);
@@ -241,6 +244,7 @@ class ProjectRetainerService {
       recent,
       effective,
       library: layers.workspace.filter((row) => row.scope === 'workspace'),
+      categories: layers.categories,
     };
   }
 
@@ -344,6 +348,8 @@ class ProjectRetainerService {
     description?: string | null;
     creditCost: number;
     requestTypeId?: string | null;
+    categoryId?: string | null;
+    isVisible?: boolean;
   }) {
     await this.ensureMember(input.accountId);
     await this.requireProject(input.accountId, input.projectId);
@@ -357,6 +363,9 @@ class ProjectRetainerService {
       input.projectId,
       input.clientId,
     );
+    const category = input.categoryId
+      ? (current.categories.find((row) => row.id === input.categoryId) ?? null)
+      : null;
     const serviceId = await insertScopedRetainerService(db(this.client), {
       accountId: input.accountId,
       scope: 'project',
@@ -366,6 +375,8 @@ class ProjectRetainerService {
       description: input.description,
       creditCost: input.creditCost,
       requestTypeId: input.requestTypeId,
+      categoryId: input.categoryId,
+      isVisible: input.isVisible ?? true,
       sortOrder: current.effective.services.length,
     });
 
@@ -382,8 +393,12 @@ class ProjectRetainerService {
           creditCost: input.creditCost,
           requestTypeId: input.requestTypeId ?? null,
           isActive: true,
+          isVisible: input.isVisible ?? true,
           sortOrder: current.effective.services.length,
           scope: 'project',
+          categoryId: category?.id ?? null,
+          categoryName: category?.name ?? null,
+          categorySortOrder: category?.sortOrder ?? UNCATEGORIZED_SORT,
         },
       ],
     });

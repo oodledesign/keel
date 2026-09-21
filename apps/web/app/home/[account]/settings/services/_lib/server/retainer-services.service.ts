@@ -5,15 +5,32 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 
 import { RETAINER_WORKSPACE_ROLES } from '~/lib/retainers/constants';
-import { DEFAULT_WORKSPACE_RETAINER_SERVICES } from '~/lib/retainers/default-library';
+import {
+  DEFAULT_WORKSPACE_RETAINER_CATEGORIES,
+  DEFAULT_WORKSPACE_RETAINER_SERVICES,
+} from '~/lib/retainers/default-library';
+import type { ServiceCategory } from '~/lib/retainers/effective-services';
 import { looseClient } from '~/lib/retainers/loose-client';
+import { assertCategoryOnAccount } from '~/lib/retainers/persist-service-list';
 import { mapRetainerService } from '~/lib/retainers/map-records';
 import type { RetainerServiceRecord } from '~/lib/retainers/types';
 
-import type { UpsertRetainerServiceInput } from '../schema/retainer-services.schema';
+import type {
+  PatchRetainerServiceInput,
+  UpsertRetainerServiceCategoryInput,
+  UpsertRetainerServiceInput,
+} from '../schema/retainer-services.schema';
 
 function db(client: SupabaseClient) {
   return looseClient(client);
+}
+
+function mapCategory(row: Record<string, unknown>): ServiceCategory {
+  return {
+    id: String(row.id),
+    name: String(row.name ?? '').trim() || 'Untitled',
+    sortOrder: Number(row.sort_order ?? 0),
+  };
 }
 
 export function createRetainerServicesService(client: SupabaseClient) {
@@ -60,10 +77,26 @@ class RetainerServicesService {
       .filter((row) => row.scope === 'workspace');
   }
 
+  async listCategories(accountId: string): Promise<ServiceCategory[]> {
+    await this.ensureMember(accountId);
+    const { data, error } = await db(this.client)
+      .from('retainer_service_categories')
+      .select('id, name, sort_order')
+      .eq('account_id', accountId)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return ((data ?? []) as Array<Record<string, unknown>>).map(mapCategory);
+  }
+
   async upsert(
     input: UpsertRetainerServiceInput,
   ): Promise<RetainerServiceRecord> {
     await this.ensureMember(input.accountId);
+    await assertCategoryOnAccount(db(this.client), {
+      accountId: input.accountId,
+      categoryId: input.categoryId,
+    });
 
     const payload = {
       name: input.name,
@@ -74,6 +107,8 @@ class RetainerServicesService {
       default_duration_minutes: input.defaultDurationMinutes ?? null,
       sort_order: input.sortOrder,
       is_active: input.isActive,
+      is_visible: input.isVisible,
+      category_id: input.categoryId ?? null,
       request_type_id: input.requestTypeId ?? null,
       scope: 'workspace',
       client_id: null,
@@ -119,6 +154,33 @@ class RetainerServicesService {
     return mapRetainerService(data as Record<string, unknown>);
   }
 
+  async patch(
+    input: PatchRetainerServiceInput,
+  ): Promise<RetainerServiceRecord> {
+    await this.ensureMember(input.accountId);
+    if (input.categoryId !== undefined) {
+      await assertCategoryOnAccount(db(this.client), {
+        accountId: input.accountId,
+        categoryId: input.categoryId,
+      });
+    }
+    const payload: Record<string, unknown> = {};
+    if (input.isVisible !== undefined) payload.is_visible = input.isVisible;
+    if (input.categoryId !== undefined) payload.category_id = input.categoryId;
+    if (Object.keys(payload).length === 0) {
+      throw new Error('Nothing to update');
+    }
+    const { data, error } = await db(this.client)
+      .from('retainer_services')
+      .update(payload)
+      .eq('id', input.id)
+      .eq('account_id', input.accountId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapRetainerService(data as Record<string, unknown>);
+  }
+
   async softDelete(accountId: string, id: string) {
     await this.ensureMember(accountId);
     const { error } = await db(this.client)
@@ -130,12 +192,99 @@ class RetainerServicesService {
     return { ok: true as const };
   }
 
+  async upsertCategory(
+    input: UpsertRetainerServiceCategoryInput,
+  ): Promise<ServiceCategory> {
+    await this.ensureMember(input.accountId);
+    const name = input.name.trim();
+
+    if (input.id) {
+      const payload: Record<string, unknown> = { name };
+      if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder;
+      const { data, error } = await db(this.client)
+        .from('retainer_service_categories')
+        .update(payload)
+        .eq('id', input.id)
+        .eq('account_id', input.accountId)
+        .select('id, name, sort_order')
+        .single();
+      if (error) throw error;
+      return mapCategory(data as Record<string, unknown>);
+    }
+
+    const existing = await this.listCategories(input.accountId);
+    const nextSort =
+      input.sortOrder ??
+      existing.reduce((max, row) => Math.max(max, row.sortOrder), -1) + 1;
+
+    const { data, error } = await db(this.client)
+      .from('retainer_service_categories')
+      .insert({
+        account_id: input.accountId,
+        name,
+        sort_order: nextSort,
+      })
+      .select('id, name, sort_order')
+      .single();
+    if (error) throw error;
+    return mapCategory(data as Record<string, unknown>);
+  }
+
+  async deleteCategory(accountId: string, id: string) {
+    await this.ensureMember(accountId);
+    const { error } = await db(this.client)
+      .from('retainer_service_categories')
+      .delete()
+      .eq('id', id)
+      .eq('account_id', accountId);
+    if (error) throw error;
+    return { ok: true as const };
+  }
+
+  async reorderCategories(accountId: string, ids: string[]) {
+    await this.ensureMember(accountId);
+    await Promise.all(
+      ids.map((id, index) =>
+        db(this.client)
+          .from('retainer_service_categories')
+          .update({ sort_order: index })
+          .eq('id', id)
+          .eq('account_id', accountId),
+      ),
+    );
+    return this.listCategories(accountId);
+  }
+
+  private async seedCategoriesIfEmpty(
+    accountId: string,
+  ): Promise<ServiceCategory[]> {
+    const existing = await this.listCategories(accountId);
+    if (existing.length > 0) return existing;
+
+    const { error } = await db(this.client)
+      .from('retainer_service_categories')
+      .insert(
+        DEFAULT_WORKSPACE_RETAINER_CATEGORIES.map((row) => ({
+          account_id: accountId,
+          name: row.name,
+          sort_order: row.sortOrder,
+        })),
+      );
+    if (error) throw error;
+    return this.listCategories(accountId);
+  }
+
   async seedDefaultsIfEmpty(
     accountId: string,
   ): Promise<RetainerServiceRecord[]> {
     await this.ensureMember(accountId);
     const existing = await this.list(accountId);
     if (existing.length > 0) return existing;
+
+    const categories = await this.seedCategoriesIfEmpty(accountId);
+    const categoryByName = new Map(
+      categories.map((row) => [row.name.toLowerCase(), row.id]),
+    );
 
     const { error } = await db(this.client)
       .from('retainer_services')
@@ -148,7 +297,11 @@ class RetainerServicesService {
           default_duration_minutes: row.defaultDurationMinutes,
           sort_order: row.sortOrder,
           is_active: true,
+          is_visible: true,
           scope: 'workspace',
+          category_id: row.categoryName
+            ? (categoryByName.get(row.categoryName.toLowerCase()) ?? null)
+            : null,
         })),
       );
     if (error) throw error;

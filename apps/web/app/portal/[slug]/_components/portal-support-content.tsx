@@ -293,6 +293,45 @@ type PortalRequestTypeOption = {
   requestTypeId?: string | null;
 };
 
+function groupPortalServices<
+  T extends {
+    label: string;
+    categoryGroup: string | null;
+    categorySortOrder?: number;
+  },
+>(rows: T[]) {
+  const buckets = new Map<
+    string,
+    { name: string; sortOrder: number; services: T[] }
+  >();
+
+  for (const row of rows) {
+    const name = row.categoryGroup?.trim() || 'Uncategorized';
+    const sortOrder =
+      name === 'Uncategorized' ? 1_000_000 : (row.categorySortOrder ?? 0);
+    const existing = buckets.get(name);
+    if (existing) {
+      existing.services.push(row);
+      existing.sortOrder = Math.min(existing.sortOrder, sortOrder);
+      continue;
+    }
+    buckets.set(name, { name, sortOrder, services: [row] });
+  }
+
+  return [...buckets.values()]
+    .map((group) => ({
+      ...group,
+      services: [...group.services].sort((a, b) =>
+        a.label.localeCompare(b.label, 'en-GB', { sensitivity: 'base' }),
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        a.sortOrder - b.sortOrder ||
+        a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' }),
+    );
+}
+
 const STEP_LABELS = ['Type', 'Service', 'Details', 'Confirm'] as const;
 
 function WizardStepHeader({
@@ -459,6 +498,7 @@ export function PortalSupportNewForm({
     isBillable: boolean;
     isSupport?: boolean;
     categoryGroup: string | null;
+    categorySortOrder?: number;
     requestTypeId?: string | null;
   }>;
   initialProjects?: ProjectOption[];
@@ -736,18 +776,25 @@ export function PortalSupportNewForm({
                 and open a support ticket instead.
               </p>
             ) : (
-              serviceTypes.map((row) => (
-                <TypeRadioCard
-                  key={row.id}
-                  selected={selectedTypeId === row.id}
-                  onSelect={() => setSelectedTypeId(row.id)}
-                  title={row.label}
-                  meta={
-                    row.isBillable
-                      ? `${row.creditCost} credit${row.creditCost === 1 ? '' : 's'}`
-                      : 'Free'
-                  }
-                />
+              groupPortalServices(serviceTypes).map((group) => (
+                <div key={group.name} className="space-y-2">
+                  <p className="text-xs font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
+                    {group.name}
+                  </p>
+                  {group.services.map((row) => (
+                    <TypeRadioCard
+                      key={row.id}
+                      selected={selectedTypeId === row.id}
+                      onSelect={() => setSelectedTypeId(row.id)}
+                      title={row.label}
+                      meta={
+                        row.isBillable
+                          ? `${row.creditCost} credit${row.creditCost === 1 ? '' : 's'}`
+                          : 'Free'
+                      }
+                    />
+                  ))}
+                </div>
               ))
             )}
           </div>

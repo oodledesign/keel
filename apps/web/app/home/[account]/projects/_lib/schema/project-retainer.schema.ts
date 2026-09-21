@@ -34,6 +34,7 @@ const ServiceDraftSchema = z.object({
   creditCost: z.number().int().min(1).max(1_000_000),
   requestTypeId: z.string().uuid().nullable().optional(),
   isActive: z.boolean(),
+  isVisible: z.boolean(),
   sortOrder: z.number().int().min(0).max(10_000),
 });
 
@@ -58,4 +59,6 @@ export const AddCustomProjectRetainerServiceSchema = z.object({
   description: z.string().trim().max(2000).nullable().optional(),
   creditCost: z.number().int().min(1).max(1_000_000),
   requestTypeId: z.string().uuid().nullable().optional(),
+  categoryId: z.string().uuid().nullable().optional(),
+  isVisible: z.boolean().optional(),
 });

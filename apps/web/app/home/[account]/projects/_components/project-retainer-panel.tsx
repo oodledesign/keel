@@ -15,6 +15,7 @@ import type {
   CatalogueService,
   EffectiveService,
   EffectiveServiceList,
+  ServiceCategory,
 } from '~/lib/retainers/effective-services';
 import { inheritanceLabel } from '~/lib/retainers/effective-services';
 import type {
@@ -38,6 +39,7 @@ type Loaded = {
   recent: ProjectRetainerBurn[];
   effective: EffectiveServiceList;
   library: CatalogueService[];
+  categories: ServiceCategory[];
 };
 
 export function ProjectRetainerPanel({
@@ -54,6 +56,7 @@ export function ProjectRetainerPanel({
   const [retainer, setRetainer] = useState<ProjectRetainerRecord | null>(null);
   const [effective, setEffective] = useState<EffectiveServiceList | null>(null);
   const [library, setLibrary] = useState<CatalogueService[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [recent, setRecent] = useState<ProjectRetainerBurn[]>([]);
   const [adjustBy, setAdjustBy] = useState('10');
   const [pending, startTransition] = useTransition();
@@ -63,6 +66,7 @@ export function ProjectRetainerPanel({
     setRetainer(data.retainer);
     setEffective(data.effective);
     setLibrary(data.library);
+    setCategories(data.categories);
     setRecent(data.recent);
   }
 
@@ -74,6 +78,7 @@ export function ProjectRetainerPanel({
         setRetainer(data.retainer);
         setEffective(data.effective);
         setLibrary(data.library);
+        setCategories(data.categories);
         setRecent(data.recent);
       })
       .catch((error) => {
@@ -131,6 +136,7 @@ export function ProjectRetainerPanel({
             creditCost: row.creditCost,
             requestTypeId: row.requestTypeId,
             isActive: row.isActive,
+            isVisible: row.isVisible,
             sortOrder: row.sortOrder,
           })),
         });
@@ -166,6 +172,8 @@ export function ProjectRetainerPanel({
     name: string;
     description: string | null;
     creditCost: number;
+    categoryId?: string | null;
+    isVisible?: boolean;
   }) {
     if (!canEdit) return;
     startTransition(async () => {
@@ -316,6 +324,7 @@ export function ProjectRetainerPanel({
       <RetainerServiceListEditor
         services={effective.services}
         library={library}
+        categories={categories}
         inheritanceLabel={inheritanceLabel(effective)}
         resetLabel={resetLabel}
         customized={effective.customized}

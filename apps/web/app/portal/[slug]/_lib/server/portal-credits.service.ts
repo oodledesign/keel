@@ -7,7 +7,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { createCreditTopupInvoice } from '~/lib/credits/create-credit-topup-invoice';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
-import { activeEffectiveServices } from '~/lib/retainers/effective-services';
+import { clientFacingEffectiveServices } from '~/lib/retainers/effective-services';
 import {
   layersToEffectiveList,
   loadEffectiveLayers,
@@ -189,6 +189,7 @@ class PortalCreditsService {
       isBillable: boolean;
       isSupport: boolean;
       categoryGroup: string | null;
+      categorySortOrder?: number;
       requestTypeId: string | null;
     }>
   > {
@@ -215,13 +216,14 @@ class PortalCreditsService {
     });
     const list = layersToEffectiveList(layers);
 
-    return activeEffectiveServices(list).map((row) => ({
+    return clientFacingEffectiveServices(list).map((row) => ({
       id: row.id,
       label: row.name,
       creditCost: row.creditCost,
       isBillable: true,
       isSupport: false,
-      categoryGroup: 'retainer_work',
+      categoryGroup: row.categoryName,
+      categorySortOrder: row.categorySortOrder,
       requestTypeId: row.requestTypeId,
     }));
   }
