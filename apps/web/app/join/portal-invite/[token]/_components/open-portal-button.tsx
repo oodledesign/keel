@@ -13,10 +13,16 @@ export function OpenPortalButton(props: { href: string }) {
 
   return (
     <Button
+      data-test="open-portal-button"
       disabled={pending}
+      aria-busy={pending}
       onClick={() => {
         setPending(true);
-        router.push(props.href);
+        try {
+          router.push(props.href);
+        } catch {
+          setPending(false);
+        }
       }}
     >
       {pending ? (

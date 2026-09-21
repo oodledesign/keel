@@ -33,6 +33,15 @@ describe('firstNameFromSignedInUser', () => {
     ).toBe('Sam');
   });
 
+  it('strips a plus alias from the email local-part', () => {
+    expect(
+      firstNameFromSignedInUser({
+        userMetadata: {},
+        email: 'sam+work@example.com',
+      }),
+    ).toBe('Sam');
+  });
+
   it('returns null when nothing usable is present', () => {
     expect(firstNameFromSignedInUser({ userMetadata: {}, email: null })).toBe(
       null,

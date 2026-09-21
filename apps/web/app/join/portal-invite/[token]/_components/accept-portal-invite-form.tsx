@@ -36,6 +36,7 @@ export function AcceptPortalInviteForm(props: {
 
       <Button
         disabled={pending}
+        aria-busy={pending}
         onClick={() => {
           setError(null);
           startTransition(async () => {

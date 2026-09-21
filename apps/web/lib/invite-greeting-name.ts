@@ -58,8 +58,8 @@ function toFirstName(raw: string | null | undefined): string | null {
 
   let token = cleaned.split(/\s+/)[0] ?? cleaned;
 
-  if (/[._-]/.test(token)) {
-    token = token.split(/[._-]/)[0] ?? token;
+  if (/[._+-]/.test(token)) {
+    token = token.split(/[._+-]/)[0] ?? token;
   }
 
   if (!token) {
