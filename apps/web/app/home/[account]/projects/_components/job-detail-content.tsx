@@ -1033,6 +1033,7 @@ export function JobDetailContent({
               <ProjectRetainerPanel
                 accountId={accountId}
                 projectId={jobId}
+                clientId={client?.id ?? job.client_id}
                 canEdit={canEditJobs}
               />
             </div>

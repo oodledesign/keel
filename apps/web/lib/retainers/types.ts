@@ -4,6 +4,8 @@ import type {
   TaskStatusValue,
 } from './constants';
 
+export type RetainerServiceScope = 'workspace' | 'client' | 'project';
+
 export type RetainerServiceRecord = {
   id: string;
   accountId: string;
@@ -15,6 +17,11 @@ export type RetainerServiceRecord = {
   defaultDurationMinutes: number | null;
   isActive: boolean;
   sortOrder: number;
+  scope: RetainerServiceScope;
+  clientId: string | null;
+  projectId: string | null;
+  sourceServiceId: string | null;
+  requestTypeId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -26,6 +33,7 @@ export type ProjectRetainerRecord = {
   autoMatchEnabled: boolean;
   weeklyDigestEnabled: boolean;
   allowedServiceIds: string[];
+  servicesSource: 'inherited' | 'custom';
   createdAt: string;
   updatedAt: string;
 };

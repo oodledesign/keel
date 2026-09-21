@@ -93,6 +93,7 @@ export default async function ServicesSettingsPage(
       <RetainerServicesPanel
         accountId={accountId}
         initialServices={retainerServices}
+        requestTypes={requestTypes}
         canEdit={canEdit}
       />
       <RequestTypesPanel

@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { CreatePortalManagePaymentSessionSchema } from '../schema/portal-billing.schema';
 import {
   CreatePortalCreditTopupSchema,
+  ListPortalEffectiveServicesSchema,
   ListPortalRequestTypesSchema,
 } from '../schema/portal-credits.schema';
 import {
@@ -55,6 +56,15 @@ export const listPortalRequestTypes = enhanceAction(
   async (input) =>
     getCreditsService().listActiveRequestTypes(input.clientOrgId),
   { schema: ListPortalRequestTypesSchema },
+);
+
+export const listPortalEffectiveServices = enhanceAction(
+  async (input) =>
+    getCreditsService().listEffectiveServices(
+      input.clientOrgId,
+      input.projectId,
+    ),
+  { schema: ListPortalEffectiveServicesSchema },
 );
 
 export const createPortalCreditTopupAction = enhanceAction(

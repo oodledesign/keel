@@ -10,6 +10,13 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
+import { RetainerServiceListEditor } from '~/components/retainers/retainer-service-list-editor';
+import type {
+  CatalogueService,
+  EffectiveService,
+  EffectiveServiceList,
+} from '~/lib/retainers/effective-services';
+import { inheritanceLabel } from '~/lib/retainers/effective-services';
 import type {
   ProjectRetainerBurn,
   ProjectRetainerRecord,
@@ -17,34 +24,56 @@ import type {
 } from '~/lib/retainers/types';
 
 import {
+  addCustomProjectRetainerServiceAction,
   adjustProjectRetainerBalanceAction,
   loadProjectRetainerAction,
+  replaceProjectRetainerServicesAction,
+  resetProjectRetainerServicesAction,
   updateProjectRetainerSettingsAction,
 } from '../_lib/server/project-retainer-actions';
+
+type Loaded = {
+  retainer: ProjectRetainerRecord;
+  catalogue: RetainerServiceRecord[];
+  recent: ProjectRetainerBurn[];
+  effective: EffectiveServiceList;
+  library: CatalogueService[];
+};
 
 export function ProjectRetainerPanel({
   accountId,
   projectId,
+  clientId,
   canEdit,
 }: {
   accountId: string;
   projectId: string;
+  clientId?: string | null;
   canEdit: boolean;
 }) {
   const [retainer, setRetainer] = useState<ProjectRetainerRecord | null>(null);
-  const [catalogue, setCatalogue] = useState<RetainerServiceRecord[]>([]);
+  const [effective, setEffective] = useState<EffectiveServiceList | null>(null);
+  const [library, setLibrary] = useState<CatalogueService[]>([]);
   const [recent, setRecent] = useState<ProjectRetainerBurn[]>([]);
   const [adjustBy, setAdjustBy] = useState('10');
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
 
+  function applyLoaded(data: Loaded) {
+    setRetainer(data.retainer);
+    setEffective(data.effective);
+    setLibrary(data.library);
+    setRecent(data.recent);
+  }
+
   useEffect(() => {
     let cancelled = false;
-    loadProjectRetainerAction({ accountId, projectId })
+    loadProjectRetainerAction({ accountId, projectId, clientId })
       .then((data) => {
         if (cancelled) return;
         setRetainer(data.retainer);
-        setCatalogue(data.catalogue);
+        setEffective(data.effective);
+        setLibrary(data.library);
         setRecent(data.recent);
       })
       .catch((error) => {
@@ -62,17 +91,7 @@ export function ProjectRetainerPanel({
     return () => {
       cancelled = true;
     };
-  }, [accountId, projectId]);
-
-  function applyLoaded(data: {
-    retainer: ProjectRetainerRecord;
-    catalogue: RetainerServiceRecord[];
-    recent: ProjectRetainerBurn[];
-  }) {
-    setRetainer(data.retainer);
-    setCatalogue(data.catalogue);
-    setRecent(data.recent);
-  }
+  }, [accountId, projectId, clientId]);
 
   function toggleSetting(
     patch: Partial<
@@ -97,22 +116,71 @@ export function ProjectRetainerPanel({
     });
   }
 
-  function toggleService(serviceId: string, enabled: boolean) {
-    if (!retainer || !canEdit) return;
-    const next = enabled
-      ? [...new Set([...retainer.allowedServiceIds, serviceId])]
-      : retainer.allowedServiceIds.filter((id) => id !== serviceId);
+  function replaceServices(services: EffectiveService[]) {
+    if (!canEdit) return;
     startTransition(async () => {
       try {
-        const data = await updateProjectRetainerSettingsAction({
+        const data = await replaceProjectRetainerServicesAction({
           accountId,
           projectId,
-          allowedServiceIds: next,
+          clientId,
+          services: services.map((row) => ({
+            id: row.id,
+            name: row.name,
+            description: row.description,
+            creditCost: row.creditCost,
+            requestTypeId: row.requestTypeId,
+            isActive: row.isActive,
+            sortOrder: row.sortOrder,
+          })),
         });
         applyLoaded(data);
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not update services',
+        );
+      }
+    });
+  }
+
+  function resetServices() {
+    if (!canEdit) return;
+    startTransition(async () => {
+      try {
+        const data = await resetProjectRetainerServicesAction({
+          accountId,
+          projectId,
+          clientId,
+        });
+        applyLoaded(data);
+        toast.success('Reset to inherited services');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not reset services',
+        );
+      }
+    });
+  }
+
+  function addCustom(input: {
+    name: string;
+    description: string | null;
+    creditCost: number;
+  }) {
+    if (!canEdit) return;
+    startTransition(async () => {
+      try {
+        const data = await addCustomProjectRetainerServiceAction({
+          accountId,
+          projectId,
+          clientId,
+          ...input,
+        });
+        applyLoaded(data);
+        toast.success('Custom service added');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not add service',
         );
       }
     });
@@ -147,16 +215,19 @@ export function ProjectRetainerPanel({
     );
   }
 
-  if (!retainer) return null;
+  if (!retainer || !effective) return null;
 
-  const activeCatalogue = catalogue.filter((row) => row.isActive);
   const step = Number(adjustBy);
+  const resetLabel =
+    effective.inheritedFrom === 'client' || !clientId
+      ? 'Reset to client / workspace'
+      : 'Reset to client defaults';
 
   return (
     <div className="space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 p-4">
       <div>
         <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
-          Project retainer
+          Project services
         </h3>
         <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           Credits live on this project. Matching never emails the client.
@@ -242,46 +313,19 @@ export function ProjectRetainerPanel({
         </div>
       </div>
 
-      <div>
-        <p className="mb-2 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
-          Allowed services
-        </p>
-        {activeCatalogue.length === 0 ? (
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Add services in workspace Settings → Services.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {activeCatalogue.map((service) => {
-              const allowed = retainer.allowedServiceIds.includes(service.id);
-              return (
-                <li
-                  key={service.id}
-                  className="flex items-center justify-between gap-2 text-sm"
-                >
-                  <span className="min-w-0 truncate text-[var(--workspace-shell-text)]">
-                    {service.name}
-                    <span className="ml-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                      {service.creditCost}c
-                    </span>
-                  </span>
-                  <Switch
-                    checked={allowed}
-                    disabled={!canEdit || pending}
-                    onCheckedChange={(checked) =>
-                      toggleService(service.id, checked)
-                    }
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
-          Empty allowlist matches previously used services first, then the
-          workspace catalogue.
-        </p>
-      </div>
+      <RetainerServiceListEditor
+        services={effective.services}
+        library={library}
+        inheritanceLabel={inheritanceLabel(effective)}
+        resetLabel={resetLabel}
+        customized={effective.customized}
+        canEdit={canEdit}
+        pending={pending}
+        emptyHint="No services on this project yet. Inherit the client or workspace list, or add custom ones."
+        onReplace={replaceServices}
+        onReset={resetServices}
+        onAddCustom={addCustom}
+      />
 
       <div>
         <p className="mb-2 text-xs font-medium text-[var(--workspace-shell-text-muted)]">

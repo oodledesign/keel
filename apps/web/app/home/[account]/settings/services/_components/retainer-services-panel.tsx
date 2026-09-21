@@ -19,10 +19,12 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
 import type { RetainerServiceRecord } from '~/lib/retainers/types';
 
 import {
   deleteRetainerServiceAction,
+  seedDefaultRetainerServicesAction,
   upsertRetainerServiceAction,
 } from '../_lib/server/retainer-services-actions';
 
@@ -33,6 +35,7 @@ type Draft = {
   creditCost: string;
   defaultStatus: string;
   defaultDurationMinutes: string;
+  requestTypeId: string;
   isActive: boolean;
 };
 
@@ -42,16 +45,19 @@ const emptyDraft = (): Draft => ({
   creditCost: '1',
   defaultStatus: '',
   defaultDurationMinutes: '',
+  requestTypeId: '',
   isActive: true,
 });
 
 export function RetainerServicesPanel({
   accountId,
   initialServices,
+  requestTypes = [],
   canEdit,
 }: {
   accountId: string;
   initialServices: RetainerServiceRecord[];
+  requestTypes?: RequestTypeRecord[];
   canEdit: boolean;
 }) {
   const [services, setServices] = useState(initialServices);
@@ -82,6 +88,7 @@ export function RetainerServicesPanel({
       defaultDurationMinutes: row.defaultDurationMinutes
         ? String(row.defaultDurationMinutes)
         : '',
+      requestTypeId: row.requestTypeId ?? '',
       isActive: row.isActive,
     });
   }
@@ -127,6 +134,7 @@ export function RetainerServicesPanel({
           defaultDurationMinutes: duration,
           sortOrder: existing?.sortOrder ?? 0,
           isActive: draft.isActive,
+          requestTypeId: draft.requestTypeId || null,
         });
         setServices((current) => {
           const without = current.filter((row) => row.id !== saved.id);
@@ -160,29 +168,59 @@ export function RetainerServicesPanel({
     });
   }
 
+  function seedDefaults() {
+    startTransition(async () => {
+      try {
+        const seeded = await seedDefaultRetainerServicesAction({ accountId });
+        setServices(seeded);
+        toast.success('Starter catalogue added');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not add starter catalogue',
+        );
+      }
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold tracking-tight">
-            Retainer services
+            Workspace service library
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Catalogue used to match inbound client emails and burn project
-            credits. New services always need a human confirm.
+            Default catalogue for new clients, matching, and the portal when
+            nothing is customized. Clients and projects can trim, rename, or
+            reprice from here.
           </p>
         </div>
         {canEdit ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={pending || draft !== null}
-            onClick={startCreate}
-          >
-            <Plus className="mr-1 size-4" />
-            Add service
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {sorted.length === 0 ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={seedDefaults}
+              >
+                Add starter catalogue
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending || draft !== null}
+              onClick={startCreate}
+            >
+              <Plus className="mr-1 size-4" />
+              Add service
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -255,6 +293,32 @@ export function RetainerServicesPanel({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Portal request type (optional)</Label>
+              <Select
+                value={draft.requestTypeId || '__none__'}
+                onValueChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    requestTypeId: value === '__none__' ? '' : value,
+                  })
+                }
+              >
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {requestTypes
+                    .filter((row) => row.isActive && !row.isSupport)
+                    .map((row) => (
+                      <SelectItem key={row.id} value={row.id}>
+                        {row.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
               <Label htmlFor="rs-active">Active</Label>
               <Switch
@@ -288,8 +352,9 @@ export function RetainerServicesPanel({
       <ul className="space-y-2">
         {sorted.length === 0 ? (
           <li className="text-sm text-[var(--workspace-shell-text-muted)]">
-            No retainer services yet. Add the work you sell on retainers so
-            inbound email can be matched.
+            No workspace services yet. Add the work you sell on retainers, or
+            load a starter catalogue. Existing client and project lists are
+            never overwritten.
           </li>
         ) : (
           sorted.map((row) => (

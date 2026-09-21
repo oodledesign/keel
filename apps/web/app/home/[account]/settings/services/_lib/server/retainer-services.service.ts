@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 
 import { RETAINER_WORKSPACE_ROLES } from '~/lib/retainers/constants';
+import { DEFAULT_WORKSPACE_RETAINER_SERVICES } from '~/lib/retainers/default-library';
 import { looseClient } from '~/lib/retainers/loose-client';
 import { mapRetainerService } from '~/lib/retainers/map-records';
 import type { RetainerServiceRecord } from '~/lib/retainers/types';
@@ -54,9 +55,9 @@ class RetainerServicesService {
     }
     const { data, error } = await q;
     if (error) throw error;
-    return (data ?? []).map((row: Record<string, unknown>) =>
-      mapRetainerService(row),
-    );
+    return (data ?? [])
+      .map((row: Record<string, unknown>) => mapRetainerService(row))
+      .filter((row) => row.scope === 'workspace');
   }
 
   async upsert(
@@ -73,6 +74,10 @@ class RetainerServicesService {
       default_duration_minutes: input.defaultDurationMinutes ?? null,
       sort_order: input.sortOrder,
       is_active: input.isActive,
+      request_type_id: input.requestTypeId ?? null,
+      scope: 'workspace',
+      client_id: null,
+      project_id: null,
     };
 
     if (input.id) {
@@ -123,5 +128,30 @@ class RetainerServicesService {
       .eq('account_id', accountId);
     if (error) throw error;
     return { ok: true as const };
+  }
+
+  async seedDefaultsIfEmpty(
+    accountId: string,
+  ): Promise<RetainerServiceRecord[]> {
+    await this.ensureMember(accountId);
+    const existing = await this.list(accountId);
+    if (existing.length > 0) return existing;
+
+    const { error } = await db(this.client)
+      .from('retainer_services')
+      .insert(
+        DEFAULT_WORKSPACE_RETAINER_SERVICES.map((row) => ({
+          account_id: accountId,
+          name: row.name,
+          description: row.description,
+          credit_cost: row.creditCost,
+          default_duration_minutes: row.defaultDurationMinutes,
+          sort_order: row.sortOrder,
+          is_active: true,
+          scope: 'workspace',
+        })),
+      );
+    if (error) throw error;
+    return this.list(accountId);
   }
 }

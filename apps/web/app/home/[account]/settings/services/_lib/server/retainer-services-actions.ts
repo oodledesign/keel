@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   DeleteRetainerServiceSchema,
   ListRetainerServicesSchema,
+  SeedDefaultRetainerServicesSchema,
   UpsertRetainerServiceSchema,
 } from '../schema/retainer-services.schema';
 import { createRetainerServicesService } from './retainer-services.service';
@@ -38,4 +39,13 @@ export const deleteRetainerServiceAction = enhanceAction(
     return result;
   },
   { auth: true, schema: DeleteRetainerServiceSchema },
+);
+
+export const seedDefaultRetainerServicesAction = enhanceAction(
+  async (input) => {
+    const result = await getService().seedDefaultsIfEmpty(input.accountId);
+    revalidatePath('/home/[account]/settings/services', 'page');
+    return result;
+  },
+  { auth: true, schema: SeedDefaultRetainerServicesSchema },
 );

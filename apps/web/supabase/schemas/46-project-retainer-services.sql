@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS public.project_retainer_services (
 );
 
 COMMENT ON TABLE public.project_retainer_services IS
-  'Optional project allowlist. Empty means step-1 matching uses previously burned services only.';
+  'Project service override when customized. Empty + inherited resolves via client seed then workspace library.';
 
 CREATE INDEX IF NOT EXISTS ix_project_retainer_services_service
   ON public.project_retainer_services (service_id);

@@ -19,6 +19,11 @@ export const UpsertRetainerServiceSchema = z.object({
     .optional(),
   sortOrder: z.number().int().min(0).max(10_000).default(0),
   isActive: z.boolean().default(true),
+  requestTypeId: z.string().uuid().nullable().optional(),
+});
+
+export const SeedDefaultRetainerServicesSchema = z.object({
+  accountId: z.string().uuid(),
 });
 
 export const DeleteRetainerServiceSchema = z.object({

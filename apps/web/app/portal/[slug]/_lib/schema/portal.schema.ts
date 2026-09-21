@@ -35,6 +35,7 @@ export const CreatePortalTicketSchema = z.object({
   priority: PortalTicketPrioritySchema.default('medium'),
   project_id: z.string().uuid().nullable().optional(),
   request_type_id: z.string().uuid().nullable().optional(),
+  retainer_service_id: z.string().uuid().nullable().optional(),
   /** Portal wizard intent — validated against request_types.is_support. */
   request_intent: z.enum(['service', 'support']),
   recording_url: z.string().url().nullable().optional().or(z.literal('')),

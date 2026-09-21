@@ -7,6 +7,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { createCreditTopupInvoice } from '~/lib/credits/create-credit-topup-invoice';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
+import { activeEffectiveServices } from '~/lib/retainers/effective-services';
+import {
+  layersToEffectiveList,
+  loadEffectiveLayers,
+} from '~/lib/retainers/load-effective-layers';
+import { looseClient } from '~/lib/retainers/loose-client';
 
 import {
   PORTAL_CREDIT_TOPUP_PACKS,
@@ -170,6 +176,54 @@ class PortalCreditsService {
         categoryGroup: mapped.categoryGroup,
       };
     });
+  }
+
+  async listEffectiveServices(
+    clientOrgId: string,
+    projectId?: string | null,
+  ): Promise<
+    Array<{
+      id: string;
+      label: string;
+      creditCost: number;
+      isBillable: boolean;
+      isSupport: boolean;
+      categoryGroup: string | null;
+      requestTypeId: string | null;
+    }>
+  > {
+    await this.ensureMember(clientOrgId);
+    const accountId = await this.resolveAccountIdFromOrg(clientOrgId);
+    const clientId = await this.resolveClientId(accountId, clientOrgId);
+
+    if (projectId) {
+      const { data: project } = await this.admin
+        .from('projects')
+        .select('id, client_id, account_id')
+        .eq('id', projectId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+      if (!project || String(project.client_id ?? '') !== clientId) {
+        throw new Error('Invalid project for this client');
+      }
+    }
+
+    const layers = await loadEffectiveLayers(looseClient(this.admin), {
+      accountId,
+      clientId,
+      projectId: projectId ?? null,
+    });
+    const list = layersToEffectiveList(layers);
+
+    return activeEffectiveServices(list).map((row) => ({
+      id: row.id,
+      label: row.name,
+      creditCost: row.creditCost,
+      isBillable: true,
+      isSupport: false,
+      categoryGroup: 'retainer_work',
+      requestTypeId: row.requestTypeId,
+    }));
   }
 
   async getCreditsBundle(clientOrgId: string): Promise<PortalCreditsBundle> {

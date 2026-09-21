@@ -19,12 +19,14 @@ export default async function PortalServicesNewPage({
   const { slug } = await params;
   const ctx = await loadClientPortalContext(slug);
   const client = getSupabaseServerClient();
-  const [credits, projects] = await Promise.all([
-    createPortalCreditsService(client).getCreditsBundle(ctx.clientOrgId),
+  const creditsService = createPortalCreditsService(client);
+  const [credits, projects, effectiveServices] = await Promise.all([
+    creditsService.getCreditsBundle(ctx.clientOrgId),
     createClientPortalService(client).listProjects(
       ctx.clientOrgId,
       ctx.accountId,
     ),
+    creditsService.listEffectiveServices(ctx.clientOrgId).catch(() => []),
   ]);
 
   return (
@@ -62,6 +64,7 @@ export default async function PortalServicesNewPage({
         clientSlug={slug}
         initialBalance={credits.balance}
         initialRequestTypes={credits.requestTypes}
+        initialEffectiveServices={effectiveServices}
         initialProjects={projects}
       />
     </div>

@@ -12,8 +12,14 @@ import {
   restoreProjectRetainerCredits,
 } from './credit-ledger';
 import { isUndoWindowOpen } from './credit-rules';
+import { activeEffectiveServices } from './effective-services';
+import {
+  layersToEffectiveList,
+  loadEffectiveLayers,
+} from './load-effective-layers';
 import { looseClient } from './loose-client';
 import { mapMatchSuggestion, mapRetainerService } from './map-records';
+import { addServiceToProjectEffectiveList } from './persist-service-list';
 
 function db(client: SupabaseClient) {
   return looseClient(client);
@@ -159,13 +165,19 @@ export async function applyRetainerMatch(input: {
     if (!serviceRow) throw new Error('Service not found');
     const service = mapRetainerService(serviceRow as Record<string, unknown>);
     creditCost = service.creditCost;
-    const { data: allow } = await db(input.admin)
-      .from('project_retainer_services')
-      .select('service_id')
-      .eq('project_id', projectId)
-      .eq('service_id', serviceId)
-      .maybeSingle();
-    matchKind = allow ? 'project_service' : 'workspace_service';
+    const layers = await loadEffectiveLayers(db(input.admin), {
+      accountId,
+      projectId,
+      clientId: suggestion.clientId,
+    });
+    const onEffective = activeEffectiveServices(
+      layersToEffectiveList(layers),
+    ).some((row) => row.id === serviceId);
+    matchKind = onEffective ? 'project_service' : 'workspace_service';
+    const effectiveHit = layersToEffectiveList(layers).services.find(
+      (row) => row.id === serviceId,
+    );
+    if (effectiveHit) creditCost = effectiveHit.creditCost;
   }
 
   const addToProject =
@@ -175,9 +187,12 @@ export async function applyRetainerMatch(input: {
       Boolean(serviceId));
 
   if (addToProject && serviceId) {
-    await db(input.admin)
-      .from('project_retainer_services')
-      .upsert({ project_id: projectId, service_id: serviceId });
+    await addServiceToProjectEffectiveList(db(input.admin), {
+      accountId,
+      projectId,
+      clientId: suggestion.clientId,
+      serviceId,
+    });
     matchKind = 'project_service';
   }
 
@@ -420,9 +435,10 @@ export async function createProposedRetainerService(input: {
   }
 
   if (input.addToProjectId) {
-    await db(input.admin).from('project_retainer_services').upsert({
-      project_id: input.addToProjectId,
-      service_id: data.id,
+    await addServiceToProjectEffectiveList(db(input.admin), {
+      accountId: input.accountId,
+      projectId: input.addToProjectId,
+      serviceId: String(data.id),
     });
   }
 

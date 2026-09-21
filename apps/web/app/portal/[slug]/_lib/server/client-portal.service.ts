@@ -1475,18 +1475,57 @@ class ClientPortalService {
     }
 
     const intent = input.request_intent;
-    if (intent === 'service' && !input.request_type_id) {
+    if (
+      intent === 'service' &&
+      !input.request_type_id &&
+      !input.retainer_service_id
+    ) {
       throw new Error('Select a service to continue');
     }
 
-    if (input.request_type_id) {
+    const retainerServiceId = input.retainer_service_id ?? null;
+    let requestTypeId = input.request_type_id ?? null;
+    let effectiveCreditCost: number | null = null;
+
+    if (intent === 'service' && retainerServiceId) {
+      const { getSupabaseServerAdminClient } =
+        await import('@kit/supabase/server-admin-client');
+      const { loadEffectiveLayers, layersToEffectiveList } =
+        await import('~/lib/retainers/load-effective-layers');
+      const { activeEffectiveServices } =
+        await import('~/lib/retainers/effective-services');
+      const { looseClient } = await import('~/lib/retainers/loose-client');
+      const admin = getSupabaseServerAdminClient();
+      const { data: crmClient } = await admin
+        .from('clients')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('client_org_id', input.clientOrgId)
+        .limit(1)
+        .maybeSingle();
+      const layers = await loadEffectiveLayers(looseClient(admin), {
+        accountId,
+        clientId: crmClient?.id ? String(crmClient.id) : null,
+        projectId: input.project_id ?? null,
+      });
+      const hit = activeEffectiveServices(layersToEffectiveList(layers)).find(
+        (row) => row.id === retainerServiceId,
+      );
+      if (!hit) {
+        throw new Error('That service is not available on this project');
+      }
+      effectiveCreditCost = hit.creditCost;
+      requestTypeId = hit.requestTypeId ?? requestTypeId;
+    }
+
+    if (requestTypeId) {
       const { getSupabaseServerAdminClient } =
         await import('@kit/supabase/server-admin-client');
       const admin = getSupabaseServerAdminClient();
       const { data: requestType, error: requestTypeError } = await admin
         .from('request_types')
         .select('id, is_support, is_active, account_id')
-        .eq('id', input.request_type_id)
+        .eq('id', requestTypeId)
         .eq('account_id', accountId)
         .maybeSingle();
 
@@ -1513,10 +1552,16 @@ class ClientPortalService {
     const { resolveRequestTypeCreditSnapshot } =
       await import('~/lib/credits/ticket-credit-lifecycle');
 
-    const creditSnapshot = await resolveRequestTypeCreditSnapshot({
-      accountId,
-      requestTypeId: input.request_type_id,
-    });
+    const creditSnapshot = retainerServiceId
+      ? {
+          requestTypeId,
+          creditCostSnapshot: effectiveCreditCost ?? 0,
+          isBillable: true,
+        }
+      : await resolveRequestTypeCreditSnapshot({
+          accountId,
+          requestTypeId,
+        });
 
     const { data: profile } = await this.db
       .from('profiles')
@@ -1560,6 +1605,7 @@ class ClientPortalService {
         external_url: input.external_url || null,
         last_activity_at: now,
         request_type_id: creditSnapshot.requestTypeId,
+        retainer_service_id: retainerServiceId,
         credit_cost_snapshot: creditSnapshot.creditCostSnapshot,
       })
       .select(
