@@ -8,6 +8,8 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { selectPortalPlanSubscriptions } from '~/lib/billing/client-subscription-lifecycle';
+import { isOfflineBillingCollection } from '~/lib/billing/plan-templates-types';
 import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import {
   type WebsiteBrief,
@@ -255,6 +257,7 @@ export type PortalOverviewData = {
   website: PortalWebsite | null;
   openTicketCount: number;
   subscription: PortalSubscription | null;
+  pendingSubscriptions: PortalSubscription[];
   notices: PortalNotice[];
 };
 
@@ -412,6 +415,64 @@ class ClientPortalService {
     };
   }
 
+  private mapPortalSubscription(
+    row: Record<string, unknown>,
+  ): PortalSubscription {
+    return {
+      id: String(row.id),
+      planName:
+        String(row.plan_name ?? 'Subscription').trim() || 'Subscription',
+      monthlyAmount:
+        typeof row.monthly_amount === 'number' ? row.monthly_amount : null,
+      currency: row.currency ? String(row.currency) : null,
+      status: row.status ? String(row.status) : null,
+      nextBillingDate: row.next_billing_date
+        ? String(row.next_billing_date)
+        : null,
+      stripePaymentLink: isOfflineBillingCollection(
+        row.billing_collection as string | null,
+      )
+        ? null
+        : row.stripe_payment_link
+          ? String(row.stripe_payment_link)
+          : null,
+    };
+  }
+
+  private classifyPortalSubscriptions(rows: Array<Record<string, unknown>>): {
+    subscription: PortalSubscription | null;
+    pendingSubscriptions: PortalSubscription[];
+  } {
+    const mapped = rows.map((row) => ({
+      ...this.mapPortalSubscription(row),
+      billingCollection: String(row.billing_collection ?? 'stripe'),
+    }));
+    const { active, pending } = selectPortalPlanSubscriptions(mapped);
+
+    return {
+      subscription: active
+        ? {
+            id: active.id,
+            planName: active.planName,
+            monthlyAmount: active.monthlyAmount,
+            currency: active.currency,
+            status: active.status,
+            nextBillingDate: active.nextBillingDate,
+            stripePaymentLink: active.stripePaymentLink,
+          }
+        : null,
+      pendingSubscriptions: pending.map((row) => ({
+        id: row.id,
+        planName: row.planName,
+        monthlyAmount: row.monthlyAmount,
+        currency: row.currency,
+        status: row.status,
+        nextBillingDate: row.nextBillingDate,
+        stripePaymentLink: row.stripePaymentLink,
+      })),
+    };
+  }
+
   async getOverview(clientOrgId: string): Promise<PortalOverviewData> {
     await this.ensureMember(clientOrgId);
 
@@ -443,8 +504,7 @@ class ClientPortalService {
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(20),
       this.db
         .from('client_portal_items')
         .select('id, title, content, item_type, created_at')
@@ -454,25 +514,15 @@ class ClientPortalService {
     ]);
 
     const websiteRow = websiteResult.data as Record<string, unknown> | null;
+    const plans = this.classifyPortalSubscriptions(
+      (subscriptionResult.data ?? []) as Array<Record<string, unknown>>,
+    );
 
     return {
       website: websiteRow ? this.mapWebsite(websiteRow) : null,
       openTicketCount: ticketCountResult.count ?? 0,
-      subscription: subscriptionResult.data
-        ? {
-            id: subscriptionResult.data.id,
-            planName:
-              subscriptionResult.data.plan_name?.trim() || 'Subscription',
-            monthlyAmount: subscriptionResult.data.monthly_amount ?? null,
-            currency: subscriptionResult.data.currency ?? null,
-            status: subscriptionResult.data.status ?? null,
-            nextBillingDate: subscriptionResult.data.next_billing_date ?? null,
-            stripePaymentLink:
-              subscriptionResult.data.billing_collection === 'offline'
-                ? null
-                : (subscriptionResult.data.stripe_payment_link ?? null),
-          }
-        : null,
+      subscription: plans.subscription,
+      pendingSubscriptions: plans.pendingSubscriptions,
       notices: (
         (noticesResult.data ?? []) as Array<Record<string, unknown>>
       ).map((row) => ({
@@ -1887,25 +1937,13 @@ class ClientPortalService {
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(20),
       this.db.from('clients').select('id').eq('client_org_id', clientOrgId),
     ]);
 
-    const subscription = subscriptionResult.data
-      ? {
-          id: subscriptionResult.data.id,
-          planName: subscriptionResult.data.plan_name?.trim() || 'Subscription',
-          monthlyAmount: subscriptionResult.data.monthly_amount ?? null,
-          currency: subscriptionResult.data.currency ?? null,
-          status: subscriptionResult.data.status ?? null,
-          nextBillingDate: subscriptionResult.data.next_billing_date ?? null,
-          stripePaymentLink:
-            subscriptionResult.data.billing_collection === 'offline'
-              ? null
-              : (subscriptionResult.data.stripe_payment_link ?? null),
-        }
-      : null;
+    const { subscription } = this.classifyPortalSubscriptions(
+      (subscriptionResult.data ?? []) as Array<Record<string, unknown>>,
+    );
 
     const clientIds = ((clientsResult.data ?? []) as Array<{ id: string }>).map(
       (row) => row.id,

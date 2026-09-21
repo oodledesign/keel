@@ -17,6 +17,7 @@ import type {
   PortalCreditTopupPackId,
   PortalCreditsBundle,
 } from '../_lib/types/portal-credits.types';
+import { PortalPendingRetainerPayList } from './portal-pending-retainer-pay-card';
 
 function formatPounds(pence: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -164,6 +165,19 @@ export function PortalCreditsContent({
           </p>
         </div>
       </div>
+
+      {bundle.pendingPlans.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+            Awaiting payment
+          </h3>
+          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+            This retainer is not active yet. Credits from the plan stay locked
+            until you complete payment.
+          </p>
+          <PortalPendingRetainerPayList items={bundle.pendingPlans} />
+        </div>
+      ) : null}
 
       {bundle.pendingCreditTicketCount > 0 ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">

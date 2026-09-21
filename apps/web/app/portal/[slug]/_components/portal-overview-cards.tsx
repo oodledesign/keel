@@ -38,6 +38,7 @@ import {
 import { PortalMessageActions } from './portal-message-actions';
 import { PortalOverviewCreditsChip } from './portal-overview-credits-chip';
 import { PortalOverviewTasksCard } from './portal-overview-tasks-card';
+import { PortalPendingRetainerPayList } from './portal-pending-retainer-pay-card';
 import { PortalServiceRequestActions } from './portal-service-request-actions';
 
 export async function OverviewHeader({
@@ -326,10 +327,18 @@ export async function OverviewPlanStrip({
     '[clientSlug]',
     slug,
   );
+  const pendingItems = overview.pendingSubscriptions.map((sub) => ({
+    id: sub.id,
+    planName: sub.planName,
+    amountPence: sub.monthlyAmount ?? 0,
+    currency: sub.currency ?? 'gbp',
+  }));
   const nextSteps = portalCreditsNextSteps(
     credits?.balance ?? 0,
     credits?.nextRenewalDate ?? overview.subscription?.nextBillingDate ?? null,
   );
+  const hasPending = pendingItems.length > 0;
+  const hasActive = Boolean(overview.subscription);
 
   return (
     <Card>
@@ -337,49 +346,69 @@ export async function OverviewPlanStrip({
         <CardTitle className="text-base font-medium">Current plan</CardTitle>
         <CreditCard className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
       </CardHeader>
-      <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        {overview.subscription ? (
-          <div className="min-w-0 space-y-1">
-            <p className="font-medium text-[var(--ozer-text-on-light)]">
-              {overview.subscription.planName}
-            </p>
+      <CardContent className="space-y-4">
+        {hasPending ? (
+          <div className="space-y-2">
             <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-              {formatMinorUnits(
-                overview.subscription.monthlyAmount ?? 0,
-                overview.subscription.currency ?? 'gbp',
-              )}
-              /month
+              Complete payment to activate
+              {pendingItems.length === 1
+                ? ' this retainer'
+                : ' these retainers'}
+              . Credits and services stay locked until then.
             </p>
-            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-              Next billing:{' '}
-              {formatPortalDate(overview.subscription.nextBillingDate)}
-            </p>
+            <PortalPendingRetainerPayList items={pendingItems} />
           </div>
-        ) : (
-          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-            No active subscription.
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          {nextSteps.topUp ? (
-            <Button asChild size="sm">
-              <Link href={creditsHref}>Top up</Link>
-            </Button>
-          ) : null}
-          {nextSteps.billing ? (
-            <Button
-              asChild
-              size="sm"
-              variant={nextSteps.topUp ? 'outline' : 'default'}
-            >
-              <Link href={billingHref}>Billing</Link>
-            </Button>
-          ) : (
+        ) : null}
+
+        {hasActive ? (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <p className="font-medium text-[var(--ozer-text-on-light)]">
+                {overview.subscription?.planName}
+              </p>
+              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                {formatMinorUnits(
+                  overview.subscription?.monthlyAmount ?? 0,
+                  overview.subscription?.currency ?? 'gbp',
+                )}
+                /month
+              </p>
+              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                Next billing:{' '}
+                {formatPortalDate(overview.subscription?.nextBillingDate)}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {nextSteps.topUp ? (
+                <Button asChild size="sm">
+                  <Link href={creditsHref}>Top up</Link>
+                </Button>
+              ) : null}
+              {nextSteps.billing ? (
+                <Button
+                  asChild
+                  size="sm"
+                  variant={nextSteps.topUp ? 'outline' : 'default'}
+                >
+                  <Link href={billingHref}>Billing</Link>
+                </Button>
+              ) : (
+                <Button asChild size="sm" variant="ghost">
+                  <Link href={billingHref}>Billing details</Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : hasPending ? null : (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+              No active subscription.
+            </p>
             <Button asChild size="sm" variant="ghost">
               <Link href={billingHref}>Billing details</Link>
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

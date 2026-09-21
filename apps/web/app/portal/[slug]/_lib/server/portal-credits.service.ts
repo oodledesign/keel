@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { canPayClientSubscription } from '~/lib/billing/client-subscription-lifecycle';
 import { createCreditTopupInvoice } from '~/lib/credits/create-credit-topup-invoice';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
 import { clientFacingEffectiveServices } from '~/lib/retainers/effective-services';
@@ -288,43 +289,54 @@ class PortalCreditsService {
     await this.ensureMember(clientOrgId);
     const accountId = await this.resolveAccountIdFromOrg(clientOrgId);
 
-    const [poolRes, txRes, typesRes, pendingRes, subRes] = await Promise.all([
-      this.admin
-        .from('client_credit_pools')
-        .select('balance, cycle_start, cycle_end')
-        .eq('client_org_id', clientOrgId)
-        .maybeSingle(),
-      this.admin
-        .from('client_credit_transactions')
-        .select('id, type, amount, reason, created_at, related_ticket_id')
-        .eq('client_org_id', clientOrgId)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      this.admin
-        .from('request_types')
-        .select(
-          'id, label, credit_cost, is_billable, is_support, category_group, sort_order',
-        )
-        .eq('account_id', accountId)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      this.admin
-        .from('support_tickets')
-        .select('id', { count: 'exact', head: true })
-        .eq('client_org_id', clientOrgId)
-        .eq('status', 'pending_credits'),
-      this.admin
-        .from('client_subscriptions')
-        .select(
-          'id, next_billing_date, status, plan_template_id, plan_templates(name, credits_per_cycle, rollover_policy, rollover_cap)',
-        )
-        .eq('client_org_id', clientOrgId)
-        .eq('account_id', accountId)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    const [poolRes, txRes, typesRes, pendingRes, subRes, pendingSubRes] =
+      await Promise.all([
+        this.admin
+          .from('client_credit_pools')
+          .select('balance, cycle_start, cycle_end')
+          .eq('client_org_id', clientOrgId)
+          .maybeSingle(),
+        this.admin
+          .from('client_credit_transactions')
+          .select('id, type, amount, reason, created_at, related_ticket_id')
+          .eq('client_org_id', clientOrgId)
+          .order('created_at', { ascending: false })
+          .limit(50),
+        this.admin
+          .from('request_types')
+          .select(
+            'id, label, credit_cost, is_billable, is_support, category_group, sort_order',
+          )
+          .eq('account_id', accountId)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true }),
+        this.admin
+          .from('support_tickets')
+          .select('id', { count: 'exact', head: true })
+          .eq('client_org_id', clientOrgId)
+          .eq('status', 'pending_credits'),
+        this.admin
+          .from('client_subscriptions')
+          .select(
+            'id, next_billing_date, status, plan_template_id, plan_templates(name, credits_per_cycle, rollover_policy, rollover_cap)',
+          )
+          .eq('client_org_id', clientOrgId)
+          .eq('account_id', accountId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        this.admin
+          .from('client_subscriptions')
+          .select(
+            'id, plan_name, monthly_amount, currency, status, billing_collection',
+          )
+          .eq('client_org_id', clientOrgId)
+          .eq('account_id', accountId)
+          .in('status', ['pending', 'incomplete'])
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ]);
 
     const pool = poolRes.data as {
       balance?: number;
@@ -401,6 +413,24 @@ class PortalCreditsService {
       })),
       topupPacks: PORTAL_CREDIT_TOPUP_PACKS.map((pack) => ({ ...pack })),
       pendingCreditTicketCount: pendingRes.count ?? 0,
+      pendingPlans: (
+        (pendingSubRes.data ?? []) as Array<Record<string, unknown>>
+      )
+        .filter((row) =>
+          canPayClientSubscription({
+            status: String(row.status ?? ''),
+            billingCollection: row.billing_collection
+              ? String(row.billing_collection)
+              : 'stripe',
+          }),
+        )
+        .map((row) => ({
+          id: String(row.id),
+          planName:
+            String(row.plan_name ?? 'Subscription').trim() || 'Subscription',
+          amountPence: Number(row.monthly_amount ?? 0),
+          currency: String(row.currency ?? 'gbp').toLowerCase(),
+        })),
     };
   }
 

@@ -7,6 +7,11 @@ import Stripe from 'stripe';
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  canPayClientSubscription,
+  clientSubscriptionCheckoutHref,
+  isLiveClientSubscriptionStatus,
+} from '~/lib/billing/client-subscription-lifecycle';
 import type { PlanBillingInterval } from '~/lib/billing/plan-templates-types';
 import {
   getSiteOrigin,
@@ -289,10 +294,10 @@ class PortalBillingService {
 
       const status = String(row.status ?? 'pending');
       const offline = row.billing_collection === 'offline';
-      const checkoutUrl =
-        !offline && (status === 'incomplete' || status === 'pending')
-          ? (row.stripe_payment_link as string | null)
-          : null;
+      const payable = canPayClientSubscription({
+        status,
+        billingCollection: offline ? 'offline' : 'stripe',
+      });
 
       return {
         id: String(row.id),
@@ -305,20 +310,18 @@ class PortalBillingService {
         nextPaymentDate:
           (row.current_period_end as string | null) ??
           (row.next_billing_date as string | null),
-        checkoutUrl,
+        checkoutUrl: payable
+          ? clientSubscriptionCheckoutHref(String(row.id))
+          : null,
         canManagePaymentMethod: Boolean(
           connect && customerId && status === 'active' && !offline,
         ),
       };
     });
 
-    const pendingSetup = uniqueSubs.filter(
-      (sub) =>
-        (sub.status === 'incomplete' || sub.status === 'pending') &&
-        Boolean(sub.checkoutUrl),
-    );
-    const activeSubscriptions = uniqueSubs.filter(
-      (sub) => sub.status === 'active' || sub.status === 'overdue',
+    const pendingSetup = uniqueSubs.filter((sub) => Boolean(sub.checkoutUrl));
+    const activeSubscriptions = uniqueSubs.filter((sub) =>
+      isLiveClientSubscriptionStatus(sub.status),
     );
 
     for (const row of (clients ?? []) as Array<{

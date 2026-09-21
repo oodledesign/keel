@@ -3,10 +3,24 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { createPlanTemplatesService } from '~/home/[account]/settings/services/_lib/server/plan-templates.service';
-import {
-  createClientSubscriptionCheckout,
-  reconcileClientSubscriptionCheckoutSession,
-} from '~/lib/billing/subscription-checkout';
+import { resolvePortalBillingReturnUrl } from '~/lib/billing/resolve-portal-billing-return';
+import { reconcileClientSubscriptionCheckoutSession } from '~/lib/billing/subscription-checkout';
+
+async function redirectToPortal(
+  subscriptionId: string,
+  outcome: 'paid' | 'cancelled',
+) {
+  const url = await resolvePortalBillingReturnUrl(subscriptionId, outcome);
+  if (url) {
+    return NextResponse.redirect(url, { status: 303 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    subscriptionId,
+    cancelled: outcome === 'cancelled' ? true : undefined,
+  });
+}
 
 /**
  * GET /api/client-subscriptions/checkout?subscriptionId=xxx
@@ -69,37 +83,18 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, subscriptionId });
+    return redirectToPortal(subscriptionId, 'paid');
   }
 
   if (cancelled === '1') {
-    return NextResponse.json({ ok: true, cancelled: true, subscriptionId });
+    return redirectToPortal(subscriptionId, 'cancelled');
   }
 
   try {
-    // G2 rows already store Checkout URL on stripe_payment_link
     const admin = getSupabaseServerAdminClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- G2 columns pending typegen
-    const { data: row } = await (admin as any)
-      .from('client_subscriptions')
-      .select('stripe_payment_link, account_id, billing_collection')
-      .eq('id', subscriptionId)
-      .maybeSingle();
-
-    if (row?.billing_collection === 'offline') {
-      return NextResponse.json(
-        { error: 'This plan is billed offline' },
-        { status: 400 },
-      );
-    }
-
-    if (row?.stripe_payment_link && row?.account_id) {
-      return NextResponse.redirect(String(row.stripe_payment_link), {
-        status: 303,
-      });
-    }
-
-    const url = await createClientSubscriptionCheckout(subscriptionId);
+    const url = await createPlanTemplatesService(
+      admin as never,
+    ).resumePendingCheckoutUrl(subscriptionId);
     return NextResponse.redirect(url, { status: 303 });
   } catch (error) {
     const message =

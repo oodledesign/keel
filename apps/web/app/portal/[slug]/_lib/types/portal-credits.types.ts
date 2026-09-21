@@ -45,4 +45,10 @@ export type PortalCreditsBundle = {
     label: string;
   }>;
   pendingCreditTicketCount: number;
+  pendingPlans: Array<{
+    id: string;
+    planName: string;
+    amountPence: number;
+    currency: string;
+  }>;
 };
