@@ -92,7 +92,10 @@ export function CampaignsList({
                 data-test="campaign-card"
               >
                 <div className="flex items-start gap-3">
-                  <Link href={href} className="flex min-w-0 flex-1 items-start gap-3">
+                  <Link
+                    href={href}
+                    className="flex min-w-0 flex-1 items-start gap-3"
+                  >
                     <CampaignListThumbnail
                       brand={brand}
                       subject={campaign.subject}

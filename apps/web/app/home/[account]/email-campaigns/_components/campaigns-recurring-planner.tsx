@@ -124,7 +124,9 @@ export function CampaignsRecurringPlanner({
                       hadSends={instances.some((row) =>
                         campaignHasSendHistory(row),
                       )}
-                      sending={instances.some((row) => row.status === 'sending')}
+                      sending={instances.some(
+                        (row) => row.status === 'sending',
+                      )}
                       compact
                       afterDeleteHref={recurringHref}
                     />

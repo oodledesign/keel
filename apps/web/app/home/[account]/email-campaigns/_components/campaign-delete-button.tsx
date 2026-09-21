@@ -36,7 +36,10 @@ import { deleteCampaignAction } from '../_lib/server/server-actions';
 type CampaignDeleteKind = 'campaign' | 'series';
 
 function campaignsListHref(accountSlug: string) {
-  return pathsConfig.app.accountEmailCampaigns.replace('[account]', accountSlug);
+  return pathsConfig.app.accountEmailCampaigns.replace(
+    '[account]',
+    accountSlug,
+  );
 }
 
 function confirmCopy(input: {

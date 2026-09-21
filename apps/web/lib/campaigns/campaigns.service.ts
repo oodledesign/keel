@@ -57,11 +57,11 @@ import {
   parseCampaignAudienceConfig,
   parseCampaignAudienceType,
 } from './campaign-audience';
+import { assertCampaignDeletable } from './campaign-delete';
 import {
   type CampaignSendProgressSnapshot,
   buildCampaignSendProgress,
 } from './campaign-send-progress';
-import { assertCampaignDeletable } from './campaign-delete';
 import { seriesInstanceMaySend } from './campaign-series-ready';
 import { generateMissingSeriesInstances } from './campaign-series.service';
 import type {
