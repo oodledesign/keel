@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
+import { isGovUkEpcConfigured } from '~/lib/building-surveyor/epc/env';
 import { getWebsiteChannelStatus } from '~/lib/commercial/channel-publish-status';
 import { loadWebsiteChannelUrlState } from '~/lib/commercial/listing-website-url-resolve.server';
 import { collectRightmoveUrls } from '~/lib/commercial/rightmove-publish-status';
@@ -97,6 +98,7 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
           accountSlug={slug}
           accountId={accountId}
           canEditDisposals={canEditDisposals}
+          epcConfigured={isGovUkEpcConfigured()}
           rightmoveUrls={rightmoveUrls}
           publications={publications}
           mediaCreatedAt={(mediaRows.data ?? []).map((row) => row.created_at)}

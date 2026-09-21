@@ -175,6 +175,7 @@ export function ListingDetailShell({
   accountSlug,
   accountId,
   canEditDisposals,
+  epcConfigured = false,
   rightmoveUrls = [],
   publications = [],
   mediaCreatedAt = [],
@@ -186,6 +187,7 @@ export function ListingDetailShell({
   accountSlug: string;
   accountId: string;
   canEditDisposals: boolean;
+  epcConfigured?: boolean;
   rightmoveUrls?: string[];
   publications?: CommercialPortalPublication[];
   mediaCreatedAt?: Array<string | null | undefined>;
@@ -401,7 +403,10 @@ export function ListingDetailShell({
   );
 
   return (
-    <DisposalAccessProvider canEditDisposals={canEditDisposals}>
+    <DisposalAccessProvider
+      canEditDisposals={canEditDisposals}
+      epcConfigured={epcConfigured}
+    >
       <div className="space-y-4">
         {!canEditDisposals ? (
           <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-2.5 text-sm text-[var(--workspace-shell-text)]">
@@ -560,6 +565,7 @@ export function ListingDetailShell({
           accountId={accountId}
           accountSlug={accountSlug}
           listing={listing}
+          epcConfigured={epcConfigured}
           onSaved={(saved) => {
             setListing(saved);
             setEditOpen(false);
