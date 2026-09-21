@@ -185,6 +185,8 @@ async function ProjectDetailPage({
       projectId: id,
     }));
 
+  // Read-only presence check (no ensure_project_retainer). Hides the Services
+  // tab on projects with no credits, allowlist, burns, or client retainer.
   const showServices =
     !isContractorView &&
     (await createProjectRetainerService(client)

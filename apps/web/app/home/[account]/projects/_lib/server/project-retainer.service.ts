@@ -88,6 +88,7 @@ class ProjectRetainerService {
         .from('project_retainer_transactions')
         .select('id')
         .eq('project_id', projectId)
+        .eq('account_id', accountId)
         .limit(1),
       clientId
         ? db(this.client)
