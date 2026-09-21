@@ -466,11 +466,14 @@ export function ProductTour({
 type ReplayProductTourButtonProps = {
   tourId: DriveableProductTourId;
   accountSlug?: string | null;
+  /** When set, land here after reset instead of workspace home. */
+  redirectTo?: string;
 };
 
 export function ReplayProductTourButton({
   tourId,
   accountSlug,
+  redirectTo,
 }: ReplayProductTourButtonProps) {
   const [pending, startTransition] = useTransition();
 
@@ -484,18 +487,22 @@ export function ReplayProductTourButton({
         startTransition(async () => {
           try {
             await resetProductTourAction({ tourId });
-            // Also allow the default-landing prompt to show again after a replay.
-            try {
-              await resetProductTourAction({
-                tourId: 'default_landing_prompt',
-              });
-            } catch {
-              // ignore — prompt may already be unset
+            if (!redirectTo) {
+              // Also allow the default-landing prompt to show again after a replay.
+              try {
+                await resetProductTourAction({
+                  tourId: 'default_landing_prompt',
+                });
+              } catch {
+                // ignore — prompt may already be unset
+              }
             }
             // Land on the matching home so ProductTourHost auto-starts.
-            const href = accountSlug
-              ? pathsConfig.app.accountHome.replace('[account]', accountSlug)
-              : pathsConfig.app.home;
+            const href =
+              redirectTo ??
+              (accountSlug
+                ? pathsConfig.app.accountHome.replace('[account]', accountSlug)
+                : pathsConfig.app.home);
             window.location.assign(href);
           } catch (err) {
             toast.error(

@@ -13,7 +13,10 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 
 import { createPortalCreditTopupAction } from '../_lib/server/server-actions';
-import type { PortalCreditsBundle } from '../_lib/types/portal-credits.types';
+import type {
+  PortalCreditTopupPackId,
+  PortalCreditsBundle,
+} from '../_lib/types/portal-credits.types';
 
 function formatPounds(pence: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -83,7 +86,7 @@ export function PortalCreditsContent({
     clientSlug,
   );
 
-  function buyPack(packId: 'small' | 'medium' | 'large') {
+  function buyPack(packId: PortalCreditTopupPackId) {
     startTransition(async () => {
       try {
         const result = await createPortalCreditTopupAction({
@@ -193,7 +196,7 @@ export function PortalCreditsContent({
               <Button
                 type="button"
                 disabled={pending}
-                onClick={() => buyPack(pack.id as 'small' | 'medium' | 'large')}
+                onClick={() => buyPack(pack.id as PortalCreditTopupPackId)}
               >
                 {pending ? (
                   <Loader2 className="mr-1 size-4 animate-spin" />

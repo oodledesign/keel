@@ -6,11 +6,14 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getAgencyBrandingBySlug } from '~/lib/agency-branding';
 import { isAgencyPortalRequest } from '~/lib/agency-portal-request';
+import { loadCompletedProductTours } from '~/lib/product-tour/product-tour.actions';
+import type { CompletedProductTours } from '~/lib/product-tour/types';
 
 import { AgencyPortalShell } from './_components/agency-portal-shell';
+import { PortalProductTourHost } from './_components/portal-product-tour-host';
 import { PortalShell } from './_components/portal-shell';
 import { loadClientPortalContext } from './_lib/server/client-portal.loader';
-import { createPortalCreditsService } from './_lib/server/portal-credits.service';
+import { loadPortalCreditsBundle } from './_lib/server/portal-credits.loader';
 
 interface PortalSlugLayoutProps {
   children: ReactNode;
@@ -37,16 +40,15 @@ export default async function PortalSlugLayout({
 
   const ctx = await loadClientPortalContext(slug);
 
-  let creditBalance = 0;
-  let creditsPerCycle: number | null = null;
+  const credits = await loadPortalCreditsBundle(ctx.clientOrgId);
+  const creditBalance = credits?.balance ?? 0;
+  const creditsPerCycle = credits?.creditsPerCycle ?? null;
+
+  let completedTours: CompletedProductTours = {};
   try {
-    const credits = await createPortalCreditsService(
-      getSupabaseServerClient(),
-    ).getCreditsBundle(ctx.clientOrgId);
-    creditBalance = credits.balance;
-    creditsPerCycle = credits.creditsPerCycle;
+    completedTours = await loadCompletedProductTours();
   } catch {
-    // Credits are optional — keep the shell usable if the pool is missing.
+    completedTours = {};
   }
 
   return (
@@ -68,6 +70,7 @@ export default async function PortalSlugLayout({
       showMessagesNav={ctx.showMessagesNav}
     >
       {children}
+      <PortalProductTourHost completedTours={completedTours} />
     </PortalShell>
   );
 }
