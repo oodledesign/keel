@@ -265,7 +265,7 @@ class CampaignsService {
   }): Promise<EmailCampaign> {
     const source = await this.get(input.accountId, input.campaignId);
     if (source.status !== 'sent' && source.status !== 'failed') {
-      throw new Error('Only sent campaigns can be sent again');
+      throw new Error('Only sent or failed campaigns can be sent again');
     }
 
     let audienceType = source.audienceType;
@@ -284,6 +284,11 @@ class CampaignsService {
       );
       if (emails.length === 0) {
         throw new Error('Everyone invited has already responded');
+      }
+      if (emails.length > 5000) {
+        throw new Error(
+          'Too many non-responders for a follow-up list (max 5,000).',
+        );
       }
       audienceType = 'custom';
       audienceConfig = {
