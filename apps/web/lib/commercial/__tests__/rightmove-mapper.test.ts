@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  type RightmoveMapperListing,
   MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+  type RightmoveMapperListing,
   annualChargeFromPerSqft,
   asOptionalNumber,
   asPositiveWholeNumber,
@@ -766,6 +766,8 @@ describe('mapListingToRightmovePayload', () => {
     const space = payload.building.spaces[0];
     expect(space?.serviceCharge).toBe(5060);
     expect(space?.businessRates).toBeUndefined();
+    // Listing-level rates are evaluated before spaces, so the absurd
+    // listing business-rates skip is recorded first.
     expect(skippedAnnualCharges).toEqual([
       {
         field: 'businessRates',
@@ -874,7 +876,10 @@ describe('annualChargeFromPerSqft', () => {
   it('omits clearly absurd £/sqft rates instead of emitting huge annual totals', () => {
     expect(annualChargeFromPerSqft(3656.33, 1012)).toBeUndefined();
     expect(
-      annualChargeFromPerSqft(MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT + 0.01, 1000),
+      annualChargeFromPerSqft(
+        MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT + 0.01,
+        1000,
+      ),
     ).toBeUndefined();
   });
 });

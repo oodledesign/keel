@@ -428,6 +428,7 @@ function noteSkippedAnnualCharge(
   ) {
     return;
   }
+  // Same input always produces the same float from asOptionalNumber.
   if (skipped.some((item) => item.field === field && item.perSqft === rate)) {
     return;
   }
