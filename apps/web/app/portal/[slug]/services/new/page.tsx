@@ -9,14 +9,17 @@ import { createPortalCreditsService } from '../../_lib/server/portal-credits.ser
 
 interface PortalSupportNewPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ intent?: string }>;
 }
 
 export const generateMetadata = async () => ({ title: 'New request' });
 
 export default async function PortalServicesNewPage({
   params,
+  searchParams,
 }: PortalSupportNewPageProps) {
   const { slug } = await params;
+  const { intent } = await searchParams;
   const ctx = await loadClientPortalContext(slug);
   const client = getSupabaseServerClient();
   const creditsService = createPortalCreditsService(client);
@@ -66,6 +69,7 @@ export default async function PortalServicesNewPage({
         initialRequestTypes={credits.requestTypes}
         initialEffectiveServices={effectiveServices}
         initialProjects={projects}
+        initialIntent={intent === 'service' ? 'service' : null}
       />
     </div>
   );

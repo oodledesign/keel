@@ -477,6 +477,7 @@ export function PortalSupportNewForm({
   initialRequestTypes = [],
   initialEffectiveServices = [],
   initialProjects = [],
+  initialIntent = null,
 }: {
   clientOrgId: string;
   accountId: string;
@@ -502,11 +503,12 @@ export function PortalSupportNewForm({
     requestTypeId?: string | null;
   }>;
   initialProjects?: ProjectOption[];
+  initialIntent?: RequestIntent | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [step, setStep] = useState<WizardStep>(1);
-  const [intent, setIntent] = useState<RequestIntent | null>(null);
+  const [step, setStep] = useState<WizardStep>(initialIntent ? 2 : 1);
+  const [intent, setIntent] = useState<RequestIntent | null>(initialIntent);
   const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
   const [effectiveServices, setEffectiveServices] = useState(

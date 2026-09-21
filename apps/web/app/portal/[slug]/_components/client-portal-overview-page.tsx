@@ -25,10 +25,14 @@ import {
   type PortalOverviewTask,
   createClientPortalService,
 } from '../_lib/server/client-portal.service';
-import { loadPortalCreditsBundle } from '../_lib/server/portal-credits.loader';
+import {
+  loadPortalCanRequestService,
+  loadPortalCreditsBundle,
+} from '../_lib/server/portal-credits.loader';
 import { formatPortalDate, portalExternalHref } from './portal-badges';
 import { PortalOverviewCreditsChip } from './portal-overview-credits-chip';
 import { PortalOverviewTasksCard } from './portal-overview-tasks-card';
+import { PortalServiceRequestActions } from './portal-service-request-actions';
 
 export default async function ClientPortalOverviewPage({
   slug,
@@ -37,15 +41,15 @@ export default async function ClientPortalOverviewPage({
 }) {
   const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
-  const [overview, projects, allTasks, myTasksRaw, credits] = await Promise.all(
-    [
+  const [overview, projects, allTasks, myTasksRaw, credits, canRequest] =
+    await Promise.all([
       service.getOverview(ctx.clientOrgId),
       service.listPortalProjects(ctx.clientOrgId),
       service.listPortalOpenTasks(ctx.clientOrgId, 12),
       service.listPortalMyTasks(ctx.clientOrgId),
       loadPortalCreditsBundle(ctx.clientOrgId),
-    ],
-  );
+      loadPortalCanRequestService(ctx.clientOrgId),
+    ]);
 
   const myTasks: PortalOverviewTask[] = myTasksRaw
     .filter((task) => {
@@ -65,10 +69,6 @@ export default async function ClientPortalOverviewPage({
       assigneeName: null,
     }));
 
-  const supportHref = pathsConfig.app.clientPortalSupport.replace(
-    '[clientSlug]',
-    slug,
-  );
   const websiteHref = pathsConfig.app.clientPortalWebsite.replace(
     '[clientSlug]',
     slug,
@@ -219,9 +219,10 @@ export default async function ClientPortalOverviewPage({
             <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
               {overview.openTicketCount === 1 ? 'open ticket' : 'open tickets'}
             </p>
-            <Button asChild size="sm" variant="outline">
-              <Link href={supportHref}>View services</Link>
-            </Button>
+            <PortalServiceRequestActions
+              clientSlug={slug}
+              canRequest={canRequest}
+            />
           </CardContent>
         </Card>
 

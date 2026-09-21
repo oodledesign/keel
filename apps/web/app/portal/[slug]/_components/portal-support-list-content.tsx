@@ -20,6 +20,7 @@ import {
   formatPortalDate,
   formatPortalTicketNumber,
 } from './portal-badges';
+import { PortalServiceRequestActions } from './portal-service-request-actions';
 
 type StatusFilter = 'all' | PortalTicketStatus;
 
@@ -40,6 +41,7 @@ export function PortalSupportListContent({
   clientPictureUrl,
   businessName,
   businessLogoUrl,
+  canRequest = false,
 }: {
   clientSlug: string;
   initialTickets: PortalTicket[];
@@ -47,6 +49,7 @@ export function PortalSupportListContent({
   clientPictureUrl?: string | null;
   businessName?: string | null;
   businessLogoUrl?: string | null;
+  canRequest?: boolean;
 }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
@@ -104,12 +107,11 @@ export function PortalSupportListContent({
               Credits
             </Link>
           </Button>
-          <Button asChild>
-            <Link href={newHref}>
-              <Plus className="h-4 w-4" />
-              New request
-            </Link>
-          </Button>
+          <PortalServiceRequestActions
+            clientSlug={clientSlug}
+            canRequest={canRequest}
+            size="default"
+          />
         </div>
       </div>
 
@@ -159,12 +161,22 @@ export function PortalSupportListContent({
               Request a service or open a support ticket and our team will get
               back to you.
             </p>
-            <Button asChild className="mt-4">
-              <Link href={newHref}>
-                <Plus className="h-4 w-4" />
-                New request
-              </Link>
-            </Button>
+            {canRequest ? (
+              <div className="mt-4">
+                <PortalServiceRequestActions
+                  clientSlug={clientSlug}
+                  canRequest
+                  size="default"
+                />
+              </div>
+            ) : (
+              <Button asChild className="mt-4">
+                <Link href={newHref}>
+                  <Plus className="h-4 w-4" />
+                  New request
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
