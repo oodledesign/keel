@@ -23,6 +23,11 @@ import {
   type ListingEventType,
   recordListingEvent,
 } from '~/lib/commercial/listing-events';
+import {
+  type FeedListSyncStatus,
+  resolveEachListSyncStatus,
+  resolveWebsiteListSyncStatus,
+} from '~/lib/commercial/listing-feed-list-status';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import {
   LISTING_MEDIA_PREVIEW_TRANSFORM,
@@ -328,6 +333,10 @@ export type CommercialListing = {
   matchCount?: number;
   /** Rightmove list-column status when loaded with list sync data. */
   rightmoveSyncStatus?: RightmoveListSyncStatus;
+  /** Website XML-feed list-column status when loaded with list sync data. */
+  websiteSyncStatus?: FeedListSyncStatus;
+  /** EACH feed list-column status when loaded with list sync data. */
+  eachSyncStatus?: FeedListSyncStatus;
   /** Website / EACH / Rightmove rows for card feed overview. */
   feedPublications?: Array<{
     portal: string;
@@ -1308,7 +1317,8 @@ async function attachMatchCounts(
 
 const LIST_FEED_PORTALS = ['rightmove', 'property_hive', 'each'] as const;
 
-async function attachRightmoveSyncStatuses(
+/** Batch-load Website / EACH / Rightmove publication rows for the list DTO. */
+async function attachFeedSyncStatuses(
   client: SupabaseClient,
   accountId: string,
   listings: CommercialListing[],
@@ -1335,12 +1345,12 @@ async function attachRightmoveSyncStatuses(
     ]);
 
   if (pubsError) {
-    console.error('[listings] attachRightmoveSyncStatuses:', pubsError.message);
+    console.error('[listings] attachFeedSyncStatuses:', pubsError.message);
     return listings;
   }
   if (mediaError) {
     console.error(
-      '[listings] attachRightmoveSyncStatuses media:',
+      '[listings] attachFeedSyncStatuses media:',
       mediaError.message,
     );
   }
@@ -1381,6 +1391,26 @@ async function attachRightmoveSyncStatuses(
       ...listing,
       feedPublications,
       feedMediaCreatedAt,
+      websiteSyncStatus: resolveWebsiteListSyncStatus({
+        listing: {
+          status: listing.status,
+          externalId: listing.externalId,
+          websiteUrl: listing.websiteUrl,
+        },
+        publications: feedPublications,
+      }),
+      eachSyncStatus: resolveEachListSyncStatus({
+        listing: {
+          status: listing.status,
+          externalId: listing.externalId,
+          websiteUrl: listing.websiteUrl,
+          sizeMinSqft: listing.sizeMinSqft,
+          name: listing.name,
+          postcode: listing.postcode,
+          disposalType: listing.disposalType,
+        },
+        publications: feedPublications,
+      }),
       rightmoveSyncStatus: resolveRightmoveListSyncStatus({
         listingStatus: listing.status,
         listingUpdatedAt: listing.updatedAt,
@@ -1401,16 +1431,18 @@ function mergeListingEnrichment(
   covers: CommercialListing[],
   agents: CommercialListing[],
   coAgents: CommercialListing[],
-  rightmove: CommercialListing[] = [],
+  feeds: CommercialListing[] = [],
 ): CommercialListing[] {
   return base.map((listing, index) => ({
     ...listing,
     coverUrl: covers[index]?.coverUrl ?? null,
     actingAgents: agents[index]?.actingAgents ?? [],
     coAgents: coAgents[index]?.coAgents ?? [],
-    rightmoveSyncStatus: rightmove[index]?.rightmoveSyncStatus,
-    feedPublications: rightmove[index]?.feedPublications,
-    feedMediaCreatedAt: rightmove[index]?.feedMediaCreatedAt,
+    websiteSyncStatus: feeds[index]?.websiteSyncStatus,
+    eachSyncStatus: feeds[index]?.eachSyncStatus,
+    rightmoveSyncStatus: feeds[index]?.rightmoveSyncStatus,
+    feedPublications: feeds[index]?.feedPublications,
+    feedMediaCreatedAt: feeds[index]?.feedMediaCreatedAt,
   }));
 }
 
@@ -1439,18 +1471,18 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
-      const [covers, agents, coAgents, rightmove] = await Promise.all([
+      const [covers, agents, coAgents, feeds] = await Promise.all([
         attachCoverUrls(client, listings),
         attachActingAgents(client, accountId, listings),
         attachCoAgents(client, accountId, listings),
-        attachRightmoveSyncStatuses(client, accountId, listings),
+        attachFeedSyncStatuses(client, accountId, listings),
       ]);
       const enriched = mergeListingEnrichment(
         listings,
         covers,
         agents,
         coAgents,
-        rightmove,
+        feeds,
       );
       return attachMatchCounts(client, accountId, enriched, {
         includeSuggestions: true,
@@ -1568,18 +1600,18 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
-      const [covers, agents, coAgents, rightmove] = await Promise.all([
+      const [covers, agents, coAgents, feeds] = await Promise.all([
         attachCoverUrls(client, listings),
         attachActingAgents(client, input.accountId, listings),
         attachCoAgents(client, input.accountId, listings),
-        attachRightmoveSyncStatuses(client, input.accountId, listings),
+        attachFeedSyncStatuses(client, input.accountId, listings),
       ]);
       const merged = mergeListingEnrichment(
         listings,
         covers,
         agents,
         coAgents,
-        rightmove,
+        feeds,
       );
       const enriched = await attachMatchCounts(
         client,
@@ -1670,17 +1702,17 @@ export function createListingsService(client: SupabaseClient) {
 
       if (error || !data) return null;
       const mapped = mapListing(data as ListingRow);
-      const [covers, agents, rightmove] = await Promise.all([
+      const [covers, agents, feeds] = await Promise.all([
         attachCoverUrls(client, [mapped]),
         attachActingAgents(client, accountId, [mapped]),
-        attachRightmoveSyncStatuses(client, accountId, [mapped]),
+        attachFeedSyncStatuses(client, accountId, [mapped]),
       ]);
       const merged = mergeListingEnrichment(
         [mapped],
         covers,
         agents,
         [mapped],
-        rightmove,
+        feeds,
       );
       const [enriched] = await attachMatchCounts(client, accountId, merged, {
         includeSuggestions: true,

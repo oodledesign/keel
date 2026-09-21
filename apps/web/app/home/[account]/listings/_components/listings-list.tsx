@@ -56,7 +56,6 @@ import {
 } from '@kit/ui/select';
 
 import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
-import { RightmovePublicationStatusBadge } from '~/components/commercial/rightmove-publication-status-badge';
 import pathsConfig from '~/config/paths.config';
 import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import {
@@ -100,6 +99,10 @@ import {
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingCardFeedsIcon } from './listing-card-feeds-icon';
 import { ListingFormModal } from './listing-form-modal';
+import {
+  ListingListFeedStatusCells,
+  ListingListFeedStatusHeaders,
+} from './listing-list-feed-status';
 import { ListingPublicPreviewSheet } from './listing-public-preview-sheet';
 import { ListingSectorPills } from './listing-sector-pills';
 import { ListingsMapView } from './listings-map-view';
@@ -1277,12 +1280,7 @@ export function ListingsList({
                   Disposal
                 </th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th
-                  className="px-4 py-3 font-medium"
-                  title="Rightmove sync status"
-                >
-                  Rightmove
-                </th>
+                <ListingListFeedStatusHeaders />
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">
                   Size
                 </th>
@@ -1351,12 +1349,7 @@ export function ListingsList({
                     <td className="px-4 py-3">
                       <ListingStatusBadge status={listing.status} />
                     </td>
-                    <td
-                      className="px-4 py-3"
-                      data-test={`disposal-rightmove-sync-${listing.rightmoveSyncStatus ?? 'unknown'}`}
-                    >
-                      <ListingRightmoveSyncBadge listing={listing} />
-                    </td>
+                    <ListingListFeedStatusCells listing={listing} />
                     <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 lg:table-cell">
                       {size}
                     </td>
@@ -1663,32 +1656,6 @@ function ListingCard({
         ) : null}
       </CardContent>
     </Card>
-  );
-}
-
-function ListingRightmoveSyncBadge({
-  listing,
-  empty = 'dash',
-  className,
-}: {
-  listing: CommercialListing;
-  empty?: 'dash' | 'none';
-  className?: string;
-}) {
-  if (!listing.rightmoveSyncStatus) {
-    if (empty === 'none') return null;
-    return (
-      <span className="text-[var(--workspace-shell-text)]/35" aria-hidden>
-        —
-      </span>
-    );
-  }
-
-  return (
-    <RightmovePublicationStatusBadge
-      status={listing.rightmoveSyncStatus}
-      className={className}
-    />
   );
 }
 
