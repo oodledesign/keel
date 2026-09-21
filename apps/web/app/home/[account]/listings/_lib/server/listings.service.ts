@@ -633,8 +633,7 @@ function mapListing(row: ListingRow): CommercialListing {
     letContractLengthMonths: num(row.let_contract_length_months),
     epcBand: (row.epc_band as string | null) ?? null,
     epcRating: num(row.epc_rating),
-    epcCertificateNumber:
-      (row.epc_certificate_number as string | null) ?? null,
+    epcCertificateNumber: (row.epc_certificate_number as string | null) ?? null,
     epcFetchedAt: (row.epc_fetched_at as string | null) ?? null,
     possession: (row.possession as string | null) ?? null,
     buildStatus: (row.build_status as string | null) ?? null,

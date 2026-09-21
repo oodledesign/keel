@@ -22,9 +22,7 @@ export function DisposalAccessProvider({
   children: React.ReactNode;
 }) {
   return (
-    <DisposalAccessContext.Provider
-      value={{ canEditDisposals, epcConfigured }}
-    >
+    <DisposalAccessContext.Provider value={{ canEditDisposals, epcConfigured }}>
       {children}
     </DisposalAccessContext.Provider>
   );

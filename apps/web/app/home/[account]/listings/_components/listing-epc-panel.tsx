@@ -162,10 +162,7 @@ export function ListingEpcPanel({
   const hasLookup = Boolean(lookup.postcode || lookup.address || lookup.uprn);
 
   return (
-    <div
-      className="space-y-3"
-      data-test="listing-epc-panel"
-    >
+    <div className="space-y-3" data-test="listing-epc-panel">
       <div className="flex items-start justify-between gap-3">
         <div>
           {compact ? null : (
@@ -173,7 +170,9 @@ export function ListingEpcPanel({
               Energy Performance Certificate
             </h4>
           )}
-          <p className={`${compact ? '' : 'mt-1'} text-xs ${workspaceTextMuted}`}>
+          <p
+            className={`${compact ? '' : 'mt-1'} text-xs ${workspaceTextMuted}`}
+          >
             {configured
               ? 'Fetch the matching certificate from the GOV.UK register. Non-domestic results are preferred.'
               : 'EPC lookup is not configured on this environment.'}

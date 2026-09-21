@@ -917,8 +917,7 @@ function ListingFormFields({
               updateForm((prev) => ({
                 ...prev,
                 epcBand: next.epcBand ?? '',
-                epcRating:
-                  next.epcRating != null ? String(next.epcRating) : '',
+                epcRating: next.epcRating != null ? String(next.epcRating) : '',
               }));
             }}
           />

@@ -19,15 +19,15 @@ import {
 } from '~/lib/building-surveyor/epc/parse';
 import type { EpcSearchHit } from '~/lib/building-surveyor/epc/types';
 import {
+  type ListingEpcAttachment,
+  type ListingEpcLookup,
+  type ListingEpcSearchResult,
+  type RankedListingEpcHit,
   listingEpcFieldsFromCertificate,
   listingEpcLookupFromAddress,
   mergeListingEpcOnRefresh,
   parseListingEpcPulledSnapshot,
   snapshotListingEpcFields,
-  type ListingEpcAttachment,
-  type ListingEpcLookup,
-  type ListingEpcSearchResult,
-  type RankedListingEpcHit,
 } from '~/lib/commercial/listing-epc';
 import type { Database } from '~/lib/database.types';
 
@@ -179,13 +179,11 @@ class ListingEpcService {
     return [];
   }
 
-  private async searchHits(lookup: ListingEpcLookup): Promise<
-    Array<EpcSearchHit & { register: 'non-domestic' | 'domestic' }>
-  > {
+  private async searchHits(
+    lookup: ListingEpcLookup,
+  ): Promise<Array<EpcSearchHit & { register: 'non-domestic' | 'domestic' }>> {
     if (!lookup.uprn && !lookup.postcode && !lookup.address) {
-      throw new Error(
-        'Add a postcode or address before fetching an EPC.',
-      );
+      throw new Error('Add a postcode or address before fetching an EPC.');
     }
 
     const nonDomestic = await this.searchRegister(lookup, 'non-domestic');
@@ -313,5 +311,3 @@ class ListingEpcService {
     );
   }
 }
-
-export { EpcApiError };

@@ -103,11 +103,7 @@ export function listingEpcFieldsFromCertificate(
   summary: Pick<EpcCertificateSummary, 'currentRating' | 'currentScore'>,
 ): ListingEpcFields {
   return {
-    epcBand:
-      normalizeEnergyBand(summary.currentRating) ??
-      listingEpcFieldsFromSearchHit({
-        currentEnergyEfficiencyBand: summary.currentRating,
-      }).epcBand,
+    epcBand: normalizeEnergyBand(summary.currentRating),
     epcRating: clampListingEpcRating(summary.currentScore),
   };
 }
