@@ -1,13 +1,22 @@
 'use client';
 
+import { forwardRef } from 'react';
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@kit/ui/tooltip';
+import { cn } from '@kit/ui/utils';
 
-function initials(name: string) {
+const AVATAR_SIZE_CLASS = {
+  xs: 'h-5 w-5 text-[9px]',
+  sm: 'h-7 w-7 text-[10px]',
+  md: 'h-9 w-9 text-xs',
+} as const;
+
+export function listingMemberInitials(name: string) {
   return name
     .split(/\s+/)
     .map((part) => part[0])
@@ -15,6 +24,41 @@ function initials(name: string) {
     .slice(0, 2)
     .toUpperCase();
 }
+
+export const ListingMemberAvatar = forwardRef<
+  HTMLSpanElement,
+  {
+    name: string;
+    pictureUrl: string | null;
+    size?: keyof typeof AVATAR_SIZE_CLASS;
+    className?: string;
+  }
+>(function ListingMemberAvatar(
+  { name, pictureUrl, size = 'sm', className },
+  ref,
+) {
+  const initials = listingMemberInitials(name);
+
+  return (
+    <span
+      ref={ref}
+      className={cn(
+        'relative inline-flex shrink-0 overflow-hidden rounded-full',
+        AVATAR_SIZE_CLASS[size],
+        className,
+      )}
+    >
+      {pictureUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- remote member avatars; Next Image domains not configured for all sources
+        <img src={pictureUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center bg-[var(--workspace-shell-sidebar-accent)] font-semibold text-[var(--workspace-shell-text)]/70">
+          {initials}
+        </span>
+      )}
+    </span>
+  );
+});
 
 export function ListingAgentAvatarStack({
   agents,
@@ -29,37 +73,28 @@ export function ListingAgentAvatarStack({
 }) {
   if (agents.length === 0) return null;
 
-  const dim = size === 'sm' ? 'h-7 w-7 text-[10px]' : 'h-9 w-9 text-xs';
-
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex items-center -space-x-2">
         {agents.slice(0, 4).map((agent) => (
           <Tooltip key={agent.userId}>
             <TooltipTrigger asChild>
-              <span
-                className={`relative inline-flex overflow-hidden rounded-full ring-2 ring-[var(--workspace-shell-panel)] ${dim}`}
-              >
-                {agent.pictureUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={agent.pictureUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center bg-[var(--workspace-shell-sidebar-accent)] font-semibold text-[var(--workspace-shell-text)]/70">
-                    {initials(agent.name)}
-                  </span>
-                )}
-              </span>
+              <ListingMemberAvatar
+                name={agent.name}
+                pictureUrl={agent.pictureUrl}
+                size={size}
+                className="ring-2 ring-[var(--workspace-shell-panel)]"
+              />
             </TooltipTrigger>
             <TooltipContent side="top">{agent.name}</TooltipContent>
           </Tooltip>
         ))}
         {agents.length > 4 ? (
           <span
-            className={`inline-flex items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] font-medium text-[var(--workspace-shell-text)]/60 ring-2 ring-[var(--workspace-shell-panel)] ${dim}`}
+            className={cn(
+              'inline-flex items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] font-medium text-[var(--workspace-shell-text)]/60 ring-2 ring-[var(--workspace-shell-panel)]',
+              AVATAR_SIZE_CLASS[size],
+            )}
           >
             +{agents.length - 4}
           </span>
