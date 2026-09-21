@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -19,8 +20,18 @@ async function ListingMediaPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const media = await service.withSignedMediaUrls(
-    await service.listMedia(listingId),
+  const [publicMedia, privateMedia] = await Promise.all([
+    service.listMedia(listingId),
+    service.listMedia(listingId, { privacy: 'private' }),
+  ]);
+  const [media, privateMediaWithUrls] = await Promise.all([
+    service.withSignedMediaUrls(publicMedia),
+    service.withSignedMediaUrls(privateMedia),
+  ]);
+  const privateImages = privateMediaWithUrls.filter(
+    (item) =>
+      item.mediaType === 'image' ||
+      Boolean(item.mimeType?.startsWith('image/')),
   );
 
   return (
@@ -28,7 +39,11 @@ async function ListingMediaPage({ params }: PageProps) {
       accountId={accountId}
       listingId={listingId}
       media={media}
+      privateImages={privateImages}
       websiteUrl={listing.websiteUrl}
+      managePrivateMediaHref={`${pathsConfig.app.accountListingDetail
+        .replace('[account]', slug)
+        .replace('[id]', listingId)}/management#private-media`}
     />
   );
 }

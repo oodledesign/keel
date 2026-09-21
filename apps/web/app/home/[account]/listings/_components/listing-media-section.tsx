@@ -2,6 +2,7 @@
 
 import {
   type CSSProperties,
+  Fragment,
   type HTMLAttributes,
   type ReactNode,
   useEffect,
@@ -11,6 +12,7 @@ import {
   useTransition,
 } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -31,8 +33,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Eye,
   FileText,
@@ -47,7 +47,6 @@ import {
   Trash2,
   Upload,
   Video,
-  X,
 } from 'lucide-react';
 
 import { getSupabaseBrowserClient } from '@kit/supabase/browser-client';
@@ -70,6 +69,7 @@ import {
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { compressListingImageFile } from '~/lib/commercial/compress-listing-image';
 import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
@@ -94,6 +94,8 @@ import {
   updateListingMedia,
 } from '../_lib/server/server-actions';
 import { useDisposalAccess } from './disposal-access-context';
+import { ListingMediaLightbox } from './listing-media-lightbox';
+import { ListingPrivateImageThumbs } from './listing-private-image-thumbs';
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const ALLOWED = new Set([
@@ -255,12 +257,16 @@ export function ListingMediaSection({
   accountId,
   listingId,
   initialMedia,
+  initialPrivateImages = [],
   initialWebsiteUrl,
+  managePrivateMediaHref,
 }: {
   accountId: string;
   listingId: string;
   initialMedia: CommercialListingMedia[];
+  initialPrivateImages?: CommercialListingMedia[];
   initialWebsiteUrl?: string | null;
+  managePrivateMediaHref?: string;
 }) {
   const { canEditDisposals } = useDisposalAccess();
   const readOnly = !canEditDisposals;
@@ -276,6 +282,7 @@ export function ListingMediaSection({
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [media, setMedia] = useState(initialMedia);
+  const [privateImages, setPrivateImages] = useState(initialPrivateImages);
   const [uploadType, setUploadType] = useState<FileMediaType>('image');
   const [uploadAccept, setUploadAccept] = useState(FILE_SECTIONS[0]!.accept);
   const [error, setError] = useState<string | null>(null);
@@ -289,11 +296,14 @@ export function ListingMediaSection({
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState(initialWebsiteUrl ?? '');
-  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     setMedia(sortListingMedia(initialMedia));
   }, [initialMedia]);
+
+  useEffect(() => {
+    setPrivateImages(initialPrivateImages);
+  }, [initialPrivateImages]);
 
   useEffect(() => {
     setWebsiteUrl(initialWebsiteUrl ?? '');
@@ -309,36 +319,6 @@ export function ListingMediaSection({
     () => media.filter((item) => item.mediaType === 'video'),
     [media],
   );
-
-  const lightboxItem =
-    lightboxIndex != null ? (imageItems[lightboxIndex] ?? null) : null;
-
-  useEffect(() => {
-    if (lightboxIndex == null) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        setLightboxIndex((prev) =>
-          prev == null || imageItems.length === 0
-            ? prev
-            : (prev - 1 + imageItems.length) % imageItems.length,
-        );
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        setLightboxIndex((prev) =>
-          prev == null || imageItems.length === 0
-            ? prev
-            : (prev + 1) % imageItems.length,
-        );
-      } else if (event.key === 'Escape') {
-        setLightboxIndex(null);
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [lightboxIndex, imageItems.length]);
 
   const openLightbox = (item: CommercialListingMedia) => {
     const index = imageItems.findIndex((row) => row.id === item.id);
@@ -876,118 +856,171 @@ export function ListingMediaSection({
       {PRIMARY_FILE_SECTIONS.map((section) => {
         const items = media.filter((item) => item.mediaType === section.type);
         return (
-          <Card
-            key={section.type}
-            className={workspacePanelCard}
-            data-tour={
-              section.type === 'image' || section.type === 'floorplan'
-                ? 'sop-listing-media'
-                : section.type === 'epc'
-                  ? 'sop-listing-epc'
-                  : section.type === 'brochure'
-                    ? 'sop-listing-brochure'
-                    : undefined
-            }
-          >
-            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-              <div>
-                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-                  {section.title}
-                </CardTitle>
-                <p className="text-sm text-[var(--workspace-shell-text)]/50">
-                  {section.description}
-                </p>
-              </div>
-              <Button
-                type="button"
-                disabled={pending || readOnly}
-                className={workspaceBtnPrimaryMd}
-                onClick={() => startUpload(section.type, section.accept)}
-              >
-                {pending && uploadType === section.type ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                Upload
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {items.length === 0 ? (
-                <button
+          <Fragment key={section.type}>
+            <Card
+              id={section.type === 'image' ? 'photos' : undefined}
+              className={cn(
+                workspacePanelCard,
+                section.type === 'image' && 'scroll-mt-36',
+              )}
+              data-tour={
+                section.type === 'image' || section.type === 'floorplan'
+                  ? 'sop-listing-media'
+                  : section.type === 'epc'
+                    ? 'sop-listing-epc'
+                    : section.type === 'brochure'
+                      ? 'sop-listing-brochure'
+                      : undefined
+              }
+            >
+              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                <div>
+                  <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                    {section.title}
+                  </CardTitle>
+                  <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                    {section.description}
+                  </p>
+                </div>
+                <Button
                   type="button"
                   disabled={pending || readOnly}
+                  className={workspaceBtnPrimaryMd}
                   onClick={() => startUpload(section.type, section.accept)}
-                  className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-4 py-8 text-sm text-[var(--workspace-shell-text)]/50 transition-colors hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]/70"
                 >
-                  <Plus className="h-5 w-5" />
-                  Add {section.title.toLowerCase()}
-                </button>
-              ) : section.type === 'image' && !readOnly ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handlePhotoDragEnd}
-                  accessibility={{
-                    announcements: {
-                      onDragStart: ({ active }) => {
-                        const photo = media.find(
-                          (item) => item.id === active.id,
-                        );
-                        return `Picked up ${photo?.fileName ?? 'photo'}`;
-                      },
-                      onDragOver: ({ active, over }) => {
-                        if (!over) return;
-                        const photo = media.find(
-                          (item) => item.id === active.id,
-                        );
-                        const target = media.find(
-                          (item) => item.id === over.id,
-                        );
-                        return `Moved ${photo?.fileName ?? 'photo'} over ${target?.fileName ?? 'another photo'}`;
-                      },
-                      onDragEnd: ({ active, over }) => {
-                        const photo = media.find(
-                          (item) => item.id === active.id,
-                        );
-                        if (!over) {
-                          return `Cancelled reordering ${photo?.fileName ?? 'photo'}`;
-                        }
-                        return `Dropped ${photo?.fileName ?? 'photo'}. First photo is the cover.`;
-                      },
-                      onDragCancel: ({ active }) => {
-                        const photo = media.find(
-                          (item) => item.id === active.id,
-                        );
-                        return `Cancelled reordering ${photo?.fileName ?? 'photo'}`;
-                      },
-                    },
-                  }}
-                >
-                  <SortableContext
-                    items={items.map((item) => item.id)}
-                    strategy={rectSortingStrategy}
+                  {pending && uploadType === section.type ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  Upload
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {items.length === 0 ? (
+                  <button
+                    type="button"
+                    disabled={pending || readOnly}
+                    onClick={() => startUpload(section.type, section.accept)}
+                    className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-4 py-8 text-sm text-[var(--workspace-shell-text)]/50 transition-colors hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]/70"
                   >
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {items.map((item) => (
-                        <SortablePhotoCard
-                          key={item.id}
-                          item={item}
-                          disabled={pending}
-                        >
-                          {(drag) => renderMediaCard(item, drag)}
-                        </SortablePhotoCard>
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {items.map((item) => renderMediaCard(item))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <Plus className="h-5 w-5" />
+                    Add {section.title.toLowerCase()}
+                  </button>
+                ) : section.type === 'image' && !readOnly ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handlePhotoDragEnd}
+                    accessibility={{
+                      announcements: {
+                        onDragStart: ({ active }) => {
+                          const photo = media.find(
+                            (item) => item.id === active.id,
+                          );
+                          return `Picked up ${photo?.fileName ?? 'photo'}`;
+                        },
+                        onDragOver: ({ active, over }) => {
+                          if (!over) return;
+                          const photo = media.find(
+                            (item) => item.id === active.id,
+                          );
+                          const target = media.find(
+                            (item) => item.id === over.id,
+                          );
+                          return `Moved ${photo?.fileName ?? 'photo'} over ${target?.fileName ?? 'another photo'}`;
+                        },
+                        onDragEnd: ({ active, over }) => {
+                          const photo = media.find(
+                            (item) => item.id === active.id,
+                          );
+                          if (!over) {
+                            return `Cancelled reordering ${photo?.fileName ?? 'photo'}`;
+                          }
+                          return `Dropped ${photo?.fileName ?? 'photo'}. First photo is the cover.`;
+                        },
+                        onDragCancel: ({ active }) => {
+                          const photo = media.find(
+                            (item) => item.id === active.id,
+                          );
+                          return `Cancelled reordering ${photo?.fileName ?? 'photo'}`;
+                        },
+                      },
+                    }}
+                  >
+                    <SortableContext
+                      items={items.map((item) => item.id)}
+                      strategy={rectSortingStrategy}
+                    >
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {items.map((item) => (
+                          <SortablePhotoCard
+                            key={item.id}
+                            item={item}
+                            disabled={pending}
+                          >
+                            {(drag) => renderMediaCard(item, drag)}
+                          </SortablePhotoCard>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {items.map((item) => renderMediaCard(item))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            {section.type === 'image' ? (
+              <Card
+                id="private-images"
+                className={cn(workspacePanelCard, 'scroll-mt-36')}
+              >
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                  <div>
+                    <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                      Private images
+                    </CardTitle>
+                    <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                      Internal photos. Not shown on the website, brochure, or
+                      portals.
+                    </p>
+                  </div>
+                  {managePrivateMediaHref ? (
+                    <Button type="button" variant="outline" size="sm" asChild>
+                      <Link href={managePrivateMediaHref}>Manage</Link>
+                    </Button>
+                  ) : null}
+                </CardHeader>
+                <CardContent>
+                  {privateImages.length === 0 ? (
+                    <p className="text-sm text-[var(--workspace-shell-text)]/45">
+                      No private images yet.
+                      {managePrivateMediaHref ? (
+                        <>
+                          {' '}
+                          Add them from{' '}
+                          <Link
+                            href={managePrivateMediaHref}
+                            className="text-[var(--workspace-shell-accent-text)] underline-offset-2 hover:underline"
+                          >
+                            Private media
+                          </Link>
+                          .
+                        </>
+                      ) : null}
+                    </p>
+                  ) : (
+                    <ListingPrivateImageThumbs
+                      images={privateImages}
+                      size="sm"
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
+          </Fragment>
         );
       })}
 
@@ -1113,105 +1146,11 @@ export function ListingMediaSection({
         );
       })}
 
-      {lightboxItem ? (
-        <div
-          className="fixed inset-0 z-50 flex flex-col bg-black/90"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Media lightbox"
-          onClick={() => setLightboxIndex(null)}
-          onTouchStart={(event) => {
-            touchStartX.current = event.changedTouches[0]?.clientX ?? null;
-          }}
-          onTouchEnd={(event) => {
-            const start = touchStartX.current;
-            const end = event.changedTouches[0]?.clientX;
-            touchStartX.current = null;
-            if (start == null || end == null || imageItems.length < 2) return;
-            const delta = end - start;
-            if (Math.abs(delta) < 50) return;
-            setLightboxIndex((prev) =>
-              prev == null
-                ? prev
-                : delta > 0
-                  ? (prev - 1 + imageItems.length) % imageItems.length
-                  : (prev + 1) % imageItems.length,
-            );
-          }}
-        >
-          <div className="flex items-center justify-between gap-3 px-4 py-3 text-white">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {lightboxItem.fileName ?? 'Untitled'}
-              </p>
-              <p className="text-xs text-white/60">
-                {(lightboxIndex ?? 0) + 1} of {imageItems.length}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-white hover:bg-white/10 hover:text-white"
-              onClick={(event) => {
-                event.stopPropagation();
-                setLightboxIndex(null);
-              }}
-              aria-label="Close lightbox"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-
-          <div
-            className="relative flex min-h-0 flex-1 items-center justify-center px-14 pb-8"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {imageItems.length > 1 ? (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute left-3 h-11 w-11 rounded-full bg-black/40 text-white hover:bg-black/60 hover:text-white"
-                  onClick={() =>
-                    setLightboxIndex((prev) =>
-                      prev == null
-                        ? prev
-                        : (prev - 1 + imageItems.length) % imageItems.length,
-                    )
-                  }
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-3 h-11 w-11 rounded-full bg-black/40 text-white hover:bg-black/60 hover:text-white"
-                  onClick={() =>
-                    setLightboxIndex((prev) =>
-                      prev == null ? prev : (prev + 1) % imageItems.length,
-                    )
-                  }
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-              </>
-            ) : null}
-
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={mediaHref(lightboxItem) ?? undefined}
-              alt={lightboxItem.fileName ?? 'Listing media'}
-              className="max-h-full max-w-full object-contain"
-              draggable={false}
-            />
-          </div>
-        </div>
-      ) : null}
+      <ListingMediaLightbox
+        items={imageItems}
+        index={lightboxIndex}
+        onIndexChange={setLightboxIndex}
+      />
 
       <Dialog
         open={Boolean(renameTarget)}
