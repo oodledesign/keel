@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  followUpAudienceEmails,
   followUpCampaignName,
   nonResponderEmails,
   uniqueRecipientEmails,
@@ -31,6 +32,33 @@ describe('nonResponderEmails', () => {
         [{ contactEmail: 'Bob@example.com' }, { contactEmail: null }],
       ),
     ).toEqual(['ada@example.com', 'cam@example.com']);
+  });
+});
+
+describe('followUpAudienceEmails', () => {
+  const recipients = [
+    { email: 'ada@example.com' },
+    { email: 'bob@example.com' },
+  ];
+
+  it('snapshots every invited email for send-again-to-all', () => {
+    expect(
+      followUpAudienceEmails({
+        mode: 'all',
+        recipients,
+        responderEmails: [{ contactEmail: 'ada@example.com' }],
+      }),
+    ).toEqual(['ada@example.com', 'bob@example.com']);
+  });
+
+  it('excludes RSVP respondents for non-responders', () => {
+    expect(
+      followUpAudienceEmails({
+        mode: 'non_responders',
+        recipients,
+        responderEmails: [{ contactEmail: 'ADA@example.com' }],
+      }),
+    ).toEqual(['bob@example.com']);
   });
 });
 

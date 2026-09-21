@@ -29,6 +29,17 @@ export function nonResponderEmails(
   );
 }
 
+export function followUpAudienceEmails(input: {
+  mode: 'all' | 'non_responders';
+  recipients: Array<{ email: string }>;
+  responderEmails?: Array<{ contactEmail: string | null }>;
+}): string[] {
+  if (input.mode === 'non_responders') {
+    return nonResponderEmails(input.recipients, input.responderEmails ?? []);
+  }
+  return uniqueRecipientEmails(input.recipients);
+}
+
 export function followUpCampaignName(sourceName: string): string {
   const base = sourceName.trim() || 'Campaign';
   const raw = `${base}${FOLLOW_UP_SUFFIX}`;

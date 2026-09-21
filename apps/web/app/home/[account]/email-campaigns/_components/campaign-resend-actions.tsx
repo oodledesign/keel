@@ -38,8 +38,8 @@ function followUpCopy(input: { mode: ResendMode; isSeriesInstance: boolean }): {
     return {
       title: 'Send to people who have not RSVP’d?',
       description: input.isSeriesInstance
-        ? 'This creates a new one-off draft from this send. People who already RSVP’d are left out. The original send and the recurring series are not changed. You can edit the copy, then review and send.'
-        : 'This creates a new draft from this send. People who already RSVP’d are left out. The original sent campaign is not changed. You can edit the copy, then review and send.',
+        ? 'This creates a new one-off draft. The audience is everyone from this send who has not RSVP’d. The original send and the recurring series are not changed. Edit the copy, then review and send.'
+        : 'This creates a new draft. The audience is everyone from this send who has not RSVP’d. The original sent campaign is not changed. Edit the copy, then review and send.',
       action: 'Create draft',
     };
   }
@@ -47,8 +47,8 @@ function followUpCopy(input: { mode: ResendMode; isSeriesInstance: boolean }): {
   return {
     title: 'Send this campaign again?',
     description: input.isSeriesInstance
-      ? 'This creates a new one-off draft copied from this send. The original send and the recurring series are not changed. You can edit the copy, then review and send.'
-      : 'This creates a new draft copied from this send. The original sent campaign is not changed. You can edit the copy, then review and send.',
+      ? 'This creates a new one-off draft copied from this send, to the same people. The original send and the recurring series are not changed. Edit the copy, then review and send.'
+      : 'This creates a new draft copied from this send, to the same people. The original sent campaign is not changed. Edit the copy, then review and send.',
     action: 'Create draft',
   };
 }

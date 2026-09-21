@@ -52,7 +52,6 @@ import { CampaignAnalyticsSummary } from './campaign-analytics-summary';
 import type { AudiencePickerOption } from './campaign-audience-picker';
 import { CampaignFormSubmissions } from './campaign-form-submissions';
 import { CampaignRecipientLog } from './campaign-recipient-log';
-import { CampaignResendActions } from './campaign-resend-actions';
 import { CampaignSendProgress } from './campaign-send-progress';
 import { CampaignSendTestDialog } from './campaign-send-test-dialog';
 import { CampaignStatusBadge } from './campaign-status-badge';
@@ -144,12 +143,6 @@ export function CampaignSendPanel({
 
   return (
     <div className="space-y-6">
-      <CampaignResendActions
-        accountId={accountId}
-        accountSlug={accountSlug}
-        campaign={campaign}
-        hasRsvpForm={Boolean(linkedForm?.isRsvp)}
-      />
       <div className={`${workspacePanelCard} p-4 sm:p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

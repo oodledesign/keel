@@ -58,7 +58,10 @@ import {
   parseCampaignAudienceType,
 } from './campaign-audience';
 import { assertCampaignDeletable } from './campaign-delete';
-import { followUpCampaignName, nonResponderEmails } from './campaign-resend';
+import {
+  followUpAudienceEmails,
+  followUpCampaignName,
+} from './campaign-resend';
 import {
   type CampaignSendProgressSnapshot,
   buildCampaignSendProgress,
@@ -268,36 +271,37 @@ class CampaignsService {
       throw new Error('Only sent or failed campaigns can be sent again');
     }
 
-    let audienceType = source.audienceType;
-    let audienceConfig = source.audienceConfig;
+    const recipients = await this.listRecipients(
+      input.accountId,
+      input.campaignId,
+    );
+    const emails = followUpAudienceEmails({
+      mode: input.mode,
+      recipients,
+      responderEmails: (input.responderEmails ?? []).map((email) => ({
+        contactEmail: email,
+      })),
+    });
 
-    if (input.mode === 'non_responders') {
-      const recipients = await this.listRecipients(
-        input.accountId,
-        input.campaignId,
-      );
-      const emails = nonResponderEmails(
-        recipients,
-        (input.responderEmails ?? []).map((email) => ({
-          contactEmail: email,
-        })),
-      );
-      if (emails.length === 0) {
-        throw new Error('Everyone invited has already responded');
-      }
-      if (emails.length > 5000) {
-        throw new Error(
-          'Too many non-responders for a follow-up list (max 5,000).',
-        );
-      }
-      audienceType = 'custom';
-      audienceConfig = {
-        emails,
-        clientIds: [],
-        contactIds: [],
-        listId: null,
-      };
+    if (input.mode === 'non_responders' && emails.length === 0) {
+      throw new Error('Everyone invited has already responded');
     }
+    if (emails.length > 5000) {
+      throw new Error('Too many people for a follow-up list (max 5,000).');
+    }
+
+    // Snapshot the original send when we have recipient rows. If the send
+    // never produced rows, keep the source audience (list / subscribers).
+    const audienceType = emails.length > 0 ? 'custom' : source.audienceType;
+    const audienceConfig =
+      emails.length > 0
+        ? {
+            emails,
+            clientIds: [],
+            contactIds: [],
+            listId: null,
+          }
+        : source.audienceConfig;
 
     const { data, error } = await fromTable(
       this.client,

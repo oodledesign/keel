@@ -13,6 +13,7 @@ import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.load
 import { CampaignDeleteButton } from '../_components/campaign-delete-button';
 import { CampaignInstanceBanner } from '../_components/campaign-instance-banner';
 import { CampaignNav } from '../_components/campaign-nav';
+import { CampaignResendActions } from '../_components/campaign-resend-actions';
 import { loadCampaignDetail } from '../_lib/server/campaigns.loader';
 
 interface CampaignLayoutProps {
@@ -89,6 +90,12 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
           />
         ) : null}
         <CampaignNav accountSlug={account} campaignId={campaignId} />
+        <CampaignResendActions
+          accountId={workspace.account.id}
+          accountSlug={account}
+          campaign={data.campaign}
+          hasRsvpForm={data.hasRsvpForm}
+        />
         {children}
       </PageBody>
     </>

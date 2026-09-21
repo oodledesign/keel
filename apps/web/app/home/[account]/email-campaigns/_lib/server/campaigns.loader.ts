@@ -170,11 +170,17 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
     );
   }
 
+  const linkedForm = await loadCampaignLinkedFormSubmissions(
+    accountId,
+    campaign.bodyDocument?.formLink?.formId,
+  );
+
   return {
     campaign,
     series,
     seriesHasSends,
     seriesAnySending,
+    hasRsvpForm: Boolean(linkedForm?.isRsvp),
     recipients,
     subscriberCount: audienceOptions.subscriberCount,
     audienceCount,
