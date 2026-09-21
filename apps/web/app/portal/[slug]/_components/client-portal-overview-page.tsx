@@ -25,7 +25,7 @@ import {
   type PortalOverviewTask,
   createClientPortalService,
 } from '../_lib/server/client-portal.service';
-import { createPortalCreditsService } from '../_lib/server/portal-credits.service';
+import { loadPortalCreditsBundle } from '../_lib/server/portal-credits.loader';
 import { formatPortalDate, portalExternalHref } from './portal-badges';
 import { PortalOverviewCreditsChip } from './portal-overview-credits-chip';
 import { PortalOverviewTasksCard } from './portal-overview-tasks-card';
@@ -43,9 +43,7 @@ export default async function ClientPortalOverviewPage({
       service.listPortalProjects(ctx.clientOrgId),
       service.listPortalOpenTasks(ctx.clientOrgId, 12),
       service.listPortalMyTasks(ctx.clientOrgId),
-      createPortalCreditsService(getSupabaseServerClient())
-        .getCreditsBundle(ctx.clientOrgId)
-        .catch(() => null),
+      loadPortalCreditsBundle(ctx.clientOrgId),
     ],
   );
 

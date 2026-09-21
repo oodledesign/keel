@@ -13,7 +13,7 @@ import { AgencyPortalShell } from './_components/agency-portal-shell';
 import { PortalProductTourHost } from './_components/portal-product-tour-host';
 import { PortalShell } from './_components/portal-shell';
 import { loadClientPortalContext } from './_lib/server/client-portal.loader';
-import { createPortalCreditsService } from './_lib/server/portal-credits.service';
+import { loadPortalCreditsBundle } from './_lib/server/portal-credits.loader';
 
 interface PortalSlugLayoutProps {
   children: ReactNode;
@@ -40,17 +40,9 @@ export default async function PortalSlugLayout({
 
   const ctx = await loadClientPortalContext(slug);
 
-  let creditBalance = 0;
-  let creditsPerCycle: number | null = null;
-  try {
-    const credits = await createPortalCreditsService(
-      getSupabaseServerClient(),
-    ).getCreditsBundle(ctx.clientOrgId);
-    creditBalance = credits.balance;
-    creditsPerCycle = credits.creditsPerCycle;
-  } catch {
-    // Credits are optional — keep the shell usable if the pool is missing.
-  }
+  const credits = await loadPortalCreditsBundle(ctx.clientOrgId);
+  const creditBalance = credits?.balance ?? 0;
+  const creditsPerCycle = credits?.creditsPerCycle ?? null;
 
   let completedTours: CompletedProductTours = {};
   try {
