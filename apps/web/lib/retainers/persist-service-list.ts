@@ -27,6 +27,13 @@ export async function replaceClientServiceList(
     services: EffectiveService[];
   },
 ) {
+  const { error: flagError } = await client
+    .from('clients')
+    .update({ retainer_services_source: 'custom' })
+    .eq('id', input.clientId)
+    .eq('account_id', input.accountId);
+  if (flagError) throw new Error(flagError.message);
+
   const { error: delError } = await client
     .from('client_retainer_services')
     .delete()
@@ -45,31 +52,24 @@ export async function replaceClientServiceList(
       );
     if (insError) throw new Error(insError.message);
   }
-
-  const { error: flagError } = await client
-    .from('clients')
-    .update({ retainer_services_source: 'custom' })
-    .eq('id', input.clientId)
-    .eq('account_id', input.accountId);
-  if (flagError) throw new Error(flagError.message);
 }
 
 export async function resetClientServiceList(
   client: LooseClient,
   input: { clientId: string; accountId: string },
 ) {
-  const { error: delError } = await client
-    .from('client_retainer_services')
-    .delete()
-    .eq('client_id', input.clientId);
-  if (delError) throw new Error(delError.message);
-
   const { error: flagError } = await client
     .from('clients')
     .update({ retainer_services_source: 'inherited' })
     .eq('id', input.clientId)
     .eq('account_id', input.accountId);
   if (flagError) throw new Error(flagError.message);
+
+  const { error: delError } = await client
+    .from('client_retainer_services')
+    .delete()
+    .eq('client_id', input.clientId);
+  if (delError) throw new Error(delError.message);
 }
 
 export async function replaceProjectServiceList(
@@ -80,6 +80,13 @@ export async function replaceProjectServiceList(
     services: EffectiveService[];
   },
 ) {
+  const { error: flagError } = await client
+    .from('project_retainers')
+    .update({ services_source: 'custom' })
+    .eq('project_id', input.projectId)
+    .eq('account_id', input.accountId);
+  if (flagError) throw new Error(flagError.message);
+
   const { error: delError } = await client
     .from('project_retainer_services')
     .delete()
@@ -98,31 +105,24 @@ export async function replaceProjectServiceList(
       );
     if (insError) throw new Error(insError.message);
   }
-
-  const { error: flagError } = await client
-    .from('project_retainers')
-    .update({ services_source: 'custom' })
-    .eq('project_id', input.projectId)
-    .eq('account_id', input.accountId);
-  if (flagError) throw new Error(flagError.message);
 }
 
 export async function resetProjectServiceList(
   client: LooseClient,
   input: { projectId: string; accountId: string },
 ) {
-  const { error: delError } = await client
-    .from('project_retainer_services')
-    .delete()
-    .eq('project_id', input.projectId);
-  if (delError) throw new Error(delError.message);
-
   const { error: flagError } = await client
     .from('project_retainers')
     .update({ services_source: 'inherited' })
     .eq('project_id', input.projectId)
     .eq('account_id', input.accountId);
   if (flagError) throw new Error(flagError.message);
+
+  const { error: delError } = await client
+    .from('project_retainer_services')
+    .delete()
+    .eq('project_id', input.projectId);
+  if (delError) throw new Error(delError.message);
 }
 
 export async function insertScopedRetainerService(
@@ -145,7 +145,7 @@ export async function insertScopedRetainerService(
       account_id: input.accountId,
       scope: input.scope,
       client_id: input.scope === 'client' ? (input.clientId ?? null) : null,
-      project_id: input.projectId ?? null,
+      project_id: input.scope === 'project' ? (input.projectId ?? null) : null,
       name: input.name.trim(),
       description: input.description?.trim() || null,
       credit_cost: input.creditCost,

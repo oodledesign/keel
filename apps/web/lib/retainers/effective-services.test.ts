@@ -38,6 +38,7 @@ const community = workspace('svc-community', 'Community app update', 4, {
 const seo = workspace('svc-seo', 'SEO article', 3, { sortOrder: 3 });
 const customClient = workspace('svc-client-custom', 'Member onboarding', 5, {
   scope: 'client',
+  clientId: 'client-a',
   sortOrder: 4,
 });
 
@@ -79,6 +80,7 @@ describe('resolveEffectiveServices', () => {
       clientOverrides,
       projectCustomized: false,
       projectOverrides: [],
+      clientId: 'client-a',
     });
 
     expect(list.source).toBe('client');
@@ -137,6 +139,38 @@ describe('resolveEffectiveServices', () => {
       clientId: 'client-a',
     });
 
+    expect(list.services).toEqual([]);
+  });
+
+  it('does not resolve client extras when clientId is missing', () => {
+    const list = resolveEffectiveServices({
+      workspace: [customClient],
+      clientCustomized: true,
+      clientOverrides: [{ serviceId: customClient.id }],
+      projectCustomized: false,
+      projectOverrides: [],
+      clientId: null,
+    });
+
+    expect(list.source).toBe('client');
+    expect(list.services).toEqual([]);
+  });
+
+  it('does not resolve project extras when projectId is missing', () => {
+    const projectOnly = workspace('svc-project', 'Project only', 2, {
+      scope: 'project',
+      projectId: 'project-a',
+    });
+    const list = resolveEffectiveServices({
+      workspace: [projectOnly],
+      clientCustomized: false,
+      clientOverrides: [],
+      projectCustomized: true,
+      projectOverrides: [{ serviceId: projectOnly.id }],
+      projectId: null,
+    });
+
+    expect(list.source).toBe('project');
     expect(list.services).toEqual([]);
   });
 

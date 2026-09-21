@@ -123,7 +123,8 @@ export function resolveEffectiveServices(input: {
     const extras = input.workspace.filter(
       (row) =>
         row.scope === 'project' &&
-        (!input.projectId || row.projectId === input.projectId),
+        input.projectId != null &&
+        row.projectId === input.projectId,
     );
     return {
       source: 'project',
@@ -137,7 +138,8 @@ export function resolveEffectiveServices(input: {
     const extras = input.workspace.filter(
       (row) =>
         row.scope === 'client' &&
-        (!input.clientId || row.clientId === input.clientId),
+        input.clientId != null &&
+        row.clientId === input.clientId,
     );
     return {
       source: 'client',
