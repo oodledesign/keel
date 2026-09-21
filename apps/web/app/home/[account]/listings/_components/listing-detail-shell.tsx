@@ -115,7 +115,16 @@ const NAV: Array<{
       { id: 'linkedin', label: 'LinkedIn' },
     ],
   },
-  { key: 'media', label: 'Media', icon: Camera, href: '/media' },
+  {
+    key: 'media',
+    label: 'Media',
+    icon: Camera,
+    href: '/media',
+    sections: [
+      { id: 'photos', label: 'Photos' },
+      { id: 'private-images', label: 'Private images' },
+    ],
+  },
   { key: 'interest', label: 'Interest', icon: Users, href: '/interest' },
   {
     key: 'availability',

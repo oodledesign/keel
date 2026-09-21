@@ -644,19 +644,25 @@ export function ListingMediaPageSection({
   accountId,
   listingId,
   media,
+  privateImages = [],
   websiteUrl,
+  managePrivateMediaHref,
 }: {
   accountId: string;
   listingId: string;
   media: CommercialListingMedia[];
+  privateImages?: CommercialListingMedia[];
   websiteUrl?: string | null;
+  managePrivateMediaHref?: string;
 }) {
   return (
     <ListingMediaSection
       accountId={accountId}
       listingId={listingId}
       initialMedia={media}
+      initialPrivateImages={privateImages}
       initialWebsiteUrl={websiteUrl}
+      managePrivateMediaHref={managePrivateMediaHref}
     />
   );
 }

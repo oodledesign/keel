@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { FileText, ImageIcon, Loader2, Trash2, Upload } from 'lucide-react';
 
@@ -11,6 +11,11 @@ import { toast } from '@kit/ui/sonner';
 
 import { compressListingImageFile } from '~/lib/commercial/compress-listing-image';
 import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
+import {
+  LISTING_MEDIA_PREVIEW_TRANSFORM,
+  encodeStorageSignedUrl,
+  listingMediaSupportsPreviewTransform,
+} from '~/lib/commercial/listing-media-public-url';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialListingMedia } from '../_lib/server/listings.service';
@@ -18,6 +23,7 @@ import {
   createListingMedia,
   deleteListingMedia,
 } from '../_lib/server/server-actions';
+import { ListingPrivateImageThumbs } from './listing-private-image-thumbs';
 
 const MAX_BYTES = 100 * 1024 * 1024;
 const IMAGE_TYPES = new Set([
@@ -39,6 +45,36 @@ function safeFileName(name: string) {
   return safeMediaFileName(name);
 }
 
+async function signPrivateMediaUrl(
+  path: string,
+  mimeType: string | null,
+): Promise<string | null> {
+  const client = getSupabaseBrowserClient();
+  const usePreview = listingMediaSupportsPreviewTransform(mimeType);
+  const { data, error } = await client.storage
+    .from('commercial-listing-media')
+    .createSignedUrl(
+      path,
+      3600,
+      usePreview ? { transform: LISTING_MEDIA_PREVIEW_TRANSFORM } : undefined,
+    );
+
+  if (!error && data?.signedUrl) {
+    return encodeStorageSignedUrl(data.signedUrl);
+  }
+
+  if (usePreview) {
+    const fallback = await client.storage
+      .from('commercial-listing-media')
+      .createSignedUrl(path, 3600);
+    return fallback.data?.signedUrl
+      ? encodeStorageSignedUrl(fallback.data.signedUrl)
+      : null;
+  }
+
+  return null;
+}
+
 function PrivateUploadCard({
   title,
   description,
@@ -57,6 +93,10 @@ function PrivateUploadCard({
   const inputRef = useRef<HTMLInputElement>(null);
   const [media, setMedia] = useState(initialMedia);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setMedia(initialMedia);
+  }, [initialMedia]);
 
   const accept =
     mode === 'images'
@@ -117,7 +157,8 @@ function PrivateUploadCard({
             isPrivate: true,
             isCover: false,
           });
-          uploaded.push(created);
+          const url = await signPrivateMediaUrl(path, created.mimeType);
+          uploaded.push({ ...created, url });
         }
 
         setMedia((prev) => [...prev, ...uploaded]);
@@ -142,6 +183,9 @@ function PrivateUploadCard({
   };
 
   const remove = (item: CommercialListingMedia) => {
+    if (!confirm(`Remove ${item.fileName ?? 'this private file'}?`)) {
+      return;
+    }
     startTransition(async () => {
       try {
         await deleteListingMedia({
@@ -213,35 +257,44 @@ function PrivateUploadCard({
         </div>
 
         {media.length > 0 ? (
-          <ul className="space-y-2">
-            {media.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-center gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
-              >
-                {item.mediaType === 'image' ||
-                item.mimeType?.startsWith('image/') ? (
-                  <ImageIcon className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/40" />
-                ) : (
-                  <FileText className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/40" />
-                )}
-                <span className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)]">
-                  {item.fileName ?? 'Private file'}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  disabled={pending}
-                  onClick={() => remove(item)}
-                  aria-label={`Delete ${item.fileName ?? 'file'}`}
+          mode === 'images' ? (
+            <ListingPrivateImageThumbs
+              images={media}
+              size="md"
+              onDelete={remove}
+              deleteDisabled={pending}
+            />
+          ) : (
+            <ul className="space-y-2">
+              {media.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  {item.mediaType === 'image' ||
+                  item.mimeType?.startsWith('image/') ? (
+                    <ImageIcon className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/40" />
+                  ) : (
+                    <FileText className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/40" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)]">
+                    {item.fileName ?? 'Private file'}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={pending}
+                    onClick={() => remove(item)}
+                    aria-label={`Delete ${item.fileName ?? 'file'}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )
         ) : null}
       </CardContent>
     </Card>
@@ -263,7 +316,7 @@ export function ListingPrivateMediaSection({
     <div className="grid gap-4 md:grid-cols-2">
       <PrivateUploadCard
         title="Private images"
-        description="Internal photos not published on marketing media or portals."
+        description="Internal photos not published on marketing media or portals. Click a thumbnail to preview."
         accountId={accountId}
         listingId={listingId}
         mode="images"
