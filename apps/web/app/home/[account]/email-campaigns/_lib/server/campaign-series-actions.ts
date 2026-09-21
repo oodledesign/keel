@@ -13,6 +13,7 @@ import { createCampaignSeriesService } from '~/lib/campaigns/campaign-series.ser
 import {
   CampaignSeriesInstanceActionSchema,
   CreateCampaignSeriesSchema,
+  DeleteCampaignSeriesSchema,
   UpdateCampaignSeriesSchema,
 } from '../schemas/campaign-series.schema';
 
@@ -176,4 +177,25 @@ export const skipCampaignInstanceAction = enhanceAction(
     return { success: true as const };
   },
   { auth: true, schema: CampaignSeriesInstanceActionSchema },
+);
+
+export const deleteCampaignSeriesAction = enhanceAction(
+  async function (data, user) {
+    const logger = await getLogger();
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const service = createCampaignSeriesService(client);
+    const result = await service.delete(data.accountId, data.seriesId);
+
+    logger.info(
+      {
+        name: 'delete-campaign-series',
+        userId: user.id,
+        seriesId: data.seriesId,
+      },
+      'Deleted recurring campaign series',
+    );
+    revalidateSeriesPaths(data.accountSlug, data.seriesId);
+    return { success: true as const, hadSends: result.hadSends };
+  },
+  { auth: true, schema: DeleteCampaignSeriesSchema },
 );

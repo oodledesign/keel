@@ -61,6 +61,7 @@ import {
   type CampaignSendProgressSnapshot,
   buildCampaignSendProgress,
 } from './campaign-send-progress';
+import { assertCampaignDeletable } from './campaign-delete';
 import { seriesInstanceMaySend } from './campaign-series-ready';
 import { generateMissingSeriesInstances } from './campaign-series.service';
 import type {
@@ -570,6 +571,23 @@ class CampaignsService {
     }
 
     return mapCampaign(data as Record<string, unknown>);
+  }
+
+  /**
+   * Hard-delete a one-off campaign. Recipients and email events cascade.
+   * Credit ledger and automations keep their rows with campaign_id cleared.
+   * Scheduled sends are row-driven — deleting the campaign is enough.
+   */
+  async delete(accountId: string, campaignId: string): Promise<void> {
+    const campaign = await this.get(accountId, campaignId);
+    assertCampaignDeletable(campaign);
+
+    const { error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+      .delete()
+      .eq('id', campaignId)
+      .eq('account_id', accountId);
+
+    if (error) throw new Error(error.message);
   }
 
   /**

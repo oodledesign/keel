@@ -7,6 +7,7 @@ import { CalendarClock, FolderKanban } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
+import { campaignHasSendHistory } from '~/lib/campaigns/campaign-delete';
 import {
   formatOccurrenceLabel,
   seriesRecurrenceSummary,
@@ -21,6 +22,7 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { CampaignDeleteButton } from './campaign-delete-button';
 import { CampaignInstanceActions } from './campaign-instance-actions';
 import { CampaignStatusBadge } from './campaign-status-badge';
 
@@ -48,6 +50,10 @@ export function CampaignsRecurringPlanner({
     instances: PlannerInstance[];
   }>;
 }) {
+  const recurringHref = pathsConfig.app.accountEmailCampaignRecurring.replace(
+    '[account]',
+    accountSlug,
+  );
   const newHref = pathsConfig.app.accountEmailCampaignRecurringNew.replace(
     '[account]',
     accountSlug,
@@ -105,9 +111,24 @@ export function CampaignsRecurringPlanner({
                       {seriesRecurrenceSummary(series)} · {series.timezone}
                     </p>
                   </div>
-                  <span className={`text-xs ${workspaceTextMuted}`}>
-                    {series.status === 'paused' ? 'Paused' : 'Active'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs ${workspaceTextMuted}`}>
+                      {series.status === 'paused' ? 'Paused' : 'Active'}
+                    </span>
+                    <CampaignDeleteButton
+                      accountId={accountId}
+                      accountSlug={accountSlug}
+                      kind="series"
+                      id={series.id}
+                      name={series.name}
+                      hadSends={instances.some((row) =>
+                        campaignHasSendHistory(row),
+                      )}
+                      sending={instances.some((row) => row.status === 'sending')}
+                      compact
+                      afterDeleteHref={recurringHref}
+                    />
+                  </div>
                 </div>
 
                 {upcoming.length === 0 ? (

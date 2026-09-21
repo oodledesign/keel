@@ -11,6 +11,7 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { campaignHasSendHistory } from '~/lib/campaigns/campaign-delete';
 import {
   SERIES_WEEKDAYS,
   formatOccurrenceLabel,
@@ -34,6 +35,7 @@ import {
 } from '~/lib/workspace-ui';
 
 import { updateCampaignSeriesAction } from '../_lib/server/campaign-series-actions';
+import { CampaignDeleteButton } from './campaign-delete-button';
 import { CampaignInstanceActions } from './campaign-instance-actions';
 import { CampaignStatusBadge } from './campaign-status-badge';
 
@@ -226,6 +228,19 @@ export function CampaignSeriesDetail({
           >
             {series.status === 'paused' ? 'Resume' : 'Pause'}
           </Button>
+          <CampaignDeleteButton
+            accountId={accountId}
+            accountSlug={accountSlug}
+            kind="series"
+            id={series.id}
+            name={series.name}
+            hadSends={instances.some((row) => campaignHasSendHistory(row))}
+            sending={instances.some((row) => row.status === 'sending')}
+            afterDeleteHref={pathsConfig.app.accountEmailCampaignRecurring.replace(
+              '[account]',
+              accountSlug,
+            )}
+          />
         </div>
       </div>
 

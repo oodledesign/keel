@@ -9,6 +9,7 @@ import {
   parseCampaignAudienceConfig,
   parseCampaignAudienceType,
 } from '~/lib/campaigns/campaign-audience';
+import { planSeriesDelete } from '~/lib/campaigns/campaign-delete';
 import {
   parseCampaignDocument,
   resolveCampaignDocument,
@@ -468,6 +469,41 @@ class CampaignSeriesService {
       const series = await this.get(input.accountId, campaign.seriesId);
       await this.generateMissing(series);
     }
+  }
+
+  /**
+   * Hard-delete the series definition and unsent occurrences so cron will not
+   * generate or send further weeks. Sent/failed instances stay as one-off
+   * history (series_id SET NULL).
+   */
+  async delete(
+    accountId: string,
+    seriesId: string,
+  ): Promise<{ hadSends: boolean }> {
+    await this.get(accountId, seriesId);
+    const instances = await this.listInstances(accountId, seriesId);
+    const plan = planSeriesDelete(instances);
+
+    if (plan.deleteInstanceIds.length > 0) {
+      const { error: instanceError } = await fromTable(
+        this.client,
+        CAMPAIGNS_TABLE,
+      )
+        .delete()
+        .eq('account_id', accountId)
+        .eq('series_id', seriesId)
+        .in('id', plan.deleteInstanceIds);
+
+      if (instanceError) throw new Error(instanceError.message);
+    }
+
+    const { error } = await fromTable(this.client, SERIES_TABLE)
+      .delete()
+      .eq('account_id', accountId)
+      .eq('id', seriesId);
+
+    if (error) throw new Error(error.message);
+    return { hadSends: plan.hadSends };
   }
 
   private async requireInstance(accountId: string, campaignId: string) {

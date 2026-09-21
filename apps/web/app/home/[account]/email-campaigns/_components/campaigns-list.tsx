@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { FolderKanban, Mail } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
+import { campaignHasSendHistory } from '~/lib/campaigns/campaign-delete';
 import type { CampaignBrand } from '~/lib/campaigns/campaign-document';
 import type { EmailCampaign } from '~/lib/campaigns/campaign.types';
 import type { CampaignTemplateWorkspace } from '~/lib/campaigns/templates';
@@ -12,6 +13,7 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { CampaignDeleteButton } from './campaign-delete-button';
 import { CampaignListThumbnail } from './campaign-list-thumbnail';
 import { CampaignStatusBadge } from './campaign-status-badge';
 import { CreateCampaignButton } from './create-campaign-button';
@@ -84,42 +86,53 @@ export function CampaignsList({
               .replace('[campaignId]', campaign.id);
 
             return (
-              <Link
+              <div
                 key={campaign.id}
-                href={href}
+                className={`${workspacePanelCard} px-4 py-4 transition-colors hover:bg-[var(--workspace-shell-panel-hover)]`}
                 data-test="campaign-card"
-                className={`${workspacePanelCard} block px-4 py-4 transition-colors hover:bg-[var(--workspace-shell-panel-hover)]`}
               >
                 <div className="flex items-start gap-3">
-                  <CampaignListThumbnail
-                    brand={brand}
-                    subject={campaign.subject}
-                    bodyDocument={campaign.bodyDocument}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className={`font-semibold ${workspaceText}`}>
-                          {campaign.name}
-                        </h3>
-                        <p
-                          className={`mt-1 truncate text-sm ${workspaceTextMuted}`}
-                        >
-                          {campaign.subject || 'No subject yet'}
-                        </p>
+                  <Link href={href} className="flex min-w-0 flex-1 items-start gap-3">
+                    <CampaignListThumbnail
+                      brand={brand}
+                      subject={campaign.subject}
+                      bodyDocument={campaign.bodyDocument}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className={`font-semibold ${workspaceText}`}>
+                            {campaign.name}
+                          </h3>
+                          <p
+                            className={`mt-1 truncate text-sm ${workspaceTextMuted}`}
+                          >
+                            {campaign.subject || 'No subject yet'}
+                          </p>
+                        </div>
+                        <CampaignStatusBadge status={campaign.status} />
                       </div>
-                      <CampaignStatusBadge status={campaign.status} />
+                      {campaign.status === 'sent' ||
+                      campaign.status === 'sending' ? (
+                        <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
+                          {campaign.sentCount} sent · {campaign.failedCount}{' '}
+                          failed · {campaign.unsubscribedCount} unsubscribed
+                        </p>
+                      ) : null}
                     </div>
-                    {campaign.status === 'sent' ||
-                    campaign.status === 'sending' ? (
-                      <p className={`mt-3 text-xs ${workspaceTextMuted}`}>
-                        {campaign.sentCount} sent · {campaign.failedCount}{' '}
-                        failed · {campaign.unsubscribedCount} unsubscribed
-                      </p>
-                    ) : null}
-                  </div>
+                  </Link>
+                  <CampaignDeleteButton
+                    accountId={accountId}
+                    accountSlug={accountSlug}
+                    kind="campaign"
+                    id={campaign.id}
+                    name={campaign.name}
+                    hadSends={campaignHasSendHistory(campaign)}
+                    sending={campaign.status === 'sending'}
+                    compact
+                  />
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

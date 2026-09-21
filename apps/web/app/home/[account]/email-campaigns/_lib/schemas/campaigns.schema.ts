@@ -145,6 +145,12 @@ export const CancelScheduleCampaignSchema = z.object({
   campaignId: z.string().uuid(),
 });
 
+export const DeleteCampaignSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  campaignId: z.string().uuid(),
+});
+
 export const SendCampaignTestSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),

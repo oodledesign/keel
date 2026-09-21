@@ -26,6 +26,7 @@ import {
   CreateListFromCategorySchema,
   DeleteAudienceListSchema,
   DeleteAutomationSchema,
+  DeleteCampaignSchema,
   SaveAudienceListSchema,
   SaveAutomationSchema,
   SaveCampaignContactSchema,
@@ -299,6 +300,24 @@ export const cancelScheduleCampaignAction = enhanceAction(
     return { success: true as const };
   },
   { auth: true, schema: CancelScheduleCampaignSchema },
+);
+
+export const deleteCampaignAction = enhanceAction(
+  async function (data, user) {
+    const logger = await getLogger();
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const service = createCampaignsService(client);
+    await service.delete(data.accountId, data.campaignId);
+
+    logger.info(
+      { name: 'delete-campaign', userId: user.id, campaignId: data.campaignId },
+      'Deleted email campaign',
+    );
+    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, data.campaignId);
+    return { success: true as const };
+  },
+  { auth: true, schema: DeleteCampaignSchema },
 );
 
 async function requireGrowthCampaigns(accountId: string) {
