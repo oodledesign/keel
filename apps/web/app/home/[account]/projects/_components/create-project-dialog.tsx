@@ -82,6 +82,9 @@ type Props = {
   projectDetailPathBuilder?: (id: string) => string;
   defaults?: ProjectCreateDefaults;
   hideTypePicker?: boolean;
+  /** Keep the prefilled client selected and hide the client picker. */
+  lockClient?: boolean;
+  lockedClientLabel?: string;
   dialogTitle?: string;
   dialogDescription?: string;
   statuses?: ProjectStatus[];
@@ -99,6 +102,8 @@ export function CreateProjectDialog({
   projectDetailPathBuilder,
   defaults,
   hideTypePicker = false,
+  lockClient = false,
+  lockedClientLabel,
   dialogTitle: dialogTitleOverride,
   dialogDescription: dialogDescriptionOverride,
   statuses: statusesProp,
@@ -133,9 +138,11 @@ export function CreateProjectDialog({
   >([]);
   const [clientsLoading, setClientsLoading] = useState(false);
 
+  const lockedClientId = lockClient ? (defaults?.clientId ?? '').trim() : '';
+
   const resetForm = () => {
     setName('');
-    setClientId('');
+    setClientId(lockedClientId);
     setDescription('');
     setStatus(defaultProjectStatusSlug(statuses));
     setPriority('medium');
@@ -181,7 +188,14 @@ export function CreateProjectDialog({
   }, [open]);
 
   useEffect(() => {
-    if (!open || !accountId || projectType !== 'delivery' || isSimple) return;
+    if (
+      !open ||
+      !accountId ||
+      projectType !== 'delivery' ||
+      isSimple ||
+      lockClient
+    )
+      return;
 
     setClientsLoading(true);
     listClients({ accountId, page: 1, pageSize: 100 })
@@ -198,7 +212,7 @@ export function CreateProjectDialog({
       })
       .catch(() => setClients([]))
       .finally(() => setClientsLoading(false));
-  }, [open, accountId, projectType, isSimple]);
+  }, [open, accountId, projectType, isSimple, lockClient]);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) resetForm();
@@ -217,6 +231,11 @@ export function CreateProjectDialog({
     e.preventDefault();
     if (!name.trim()) {
       toast.error('Name is required');
+      return;
+    }
+
+    if (lockClient && !lockedClientId) {
+      toast.error('Client is required');
       return;
     }
 
@@ -241,7 +260,9 @@ export function CreateProjectDialog({
         accountId,
         title: name.trim(),
         description: description.trim() || undefined,
-        client_id: isSimple ? undefined : clientId.trim() || undefined,
+        client_id: isSimple
+          ? undefined
+          : lockedClientId || clientId.trim() || undefined,
         status: isSimple ? defaultProjectStatusSlug(statuses) : status,
         priority: (isSimple ? 'medium' : priority) as
           | 'low'
@@ -422,17 +443,26 @@ export function CreateProjectDialog({
                   Client
                 </Label>
                 <div className="mt-1">
-                  <ClientCombobox
-                    clients={clients}
-                    value={clientId}
-                    onValueChange={setClientId}
-                    loading={clientsLoading}
-                    placeholder="Select client (optional)"
-                    addClientHref={pathsConfig.app.accountClients.replace(
-                      '[account]',
-                      accountSlug,
-                    )}
-                  />
+                  {lockClient ? (
+                    <Input
+                      value={lockedClientLabel?.trim() || 'This client'}
+                      readOnly
+                      disabled
+                      className={fieldClass}
+                    />
+                  ) : (
+                    <ClientCombobox
+                      clients={clients}
+                      value={clientId}
+                      onValueChange={setClientId}
+                      loading={clientsLoading}
+                      placeholder="Select client (optional)"
+                      addClientHref={pathsConfig.app.accountClients.replace(
+                        '[account]',
+                        accountSlug,
+                      )}
+                    />
+                  )}
                 </div>
               </div>
 
