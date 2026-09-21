@@ -65,7 +65,7 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
             id={data.series.id}
             name={data.series.name}
             hadSends={data.seriesHasSends}
-            sending={data.campaign.status === 'sending'}
+            sending={data.seriesAnySending}
           />
         ) : (
           <CampaignDeleteButton

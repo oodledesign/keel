@@ -150,11 +150,15 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
   const series = campaign.seriesId
     ? await seriesService.get(accountId, campaign.seriesId).catch(() => null)
     : null;
-  const seriesHasSends = series
-    ? (await seriesService.listInstances(accountId, series.id)).some((row) =>
-        campaignHasSendHistory(row),
-      )
-    : false;
+  const seriesInstances = series
+    ? await seriesService.listInstances(accountId, series.id)
+    : [];
+  const seriesHasSends = seriesInstances.some((row) =>
+    campaignHasSendHistory(row),
+  );
+  const seriesAnySending = seriesInstances.some(
+    (row) => row.status === 'sending',
+  );
 
   if (hasCampaignsProFeatures(snapshot.planTier)) {
     const peers = (await service.list(accountId)).filter(
@@ -170,6 +174,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
     campaign,
     series,
     seriesHasSends,
+    seriesAnySending,
     recipients,
     subscriberCount: audienceOptions.subscriberCount,
     audienceCount,
