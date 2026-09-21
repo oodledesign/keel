@@ -1266,6 +1266,8 @@ export function ClientDetailSidebar({
             accountId={accountId}
             accountSlug={accountSlug}
             clientId={client.id}
+            clientName={displayName}
+            canEdit={canEditClients}
             onViewProjects={() => setActiveTab('projects')}
           />
         </div>

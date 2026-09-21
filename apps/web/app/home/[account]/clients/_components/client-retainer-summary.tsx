@@ -15,12 +15,14 @@ import {
 import type { ClientSubscriptionStatus } from '~/lib/billing/plan-templates-types';
 import {
   type ClientProjectRetainerSummary,
+  type ClientRetainerProjectChoice,
   type UnassignedClientRetainer,
   projectRetainerHref,
 } from '~/lib/retainers/client-retainer-summary';
 import { workspaceTextMuted } from '~/lib/workspace-ui';
 
 import { listClientRetainerSummaryAction } from '../_lib/server/client-retainer-summary-actions';
+import { AddClientRetainerButton } from './add-client-retainer-button';
 
 function StatusPill({ status }: { status: string }) {
   const key = (
@@ -41,15 +43,20 @@ export function ClientRetainerSummary({
   accountId,
   accountSlug,
   clientId,
+  clientName,
+  canEdit,
   onViewProjects,
 }: {
   accountId: string;
   accountSlug: string;
   clientId: string;
+  clientName?: string;
+  canEdit: boolean;
   onViewProjects: () => void;
 }) {
   const [projects, setProjects] = useState<ClientProjectRetainerSummary[]>([]);
   const [unassigned, setUnassigned] = useState<UnassignedClientRetainer[]>([]);
+  const [choices, setChoices] = useState<ClientRetainerProjectChoice[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -59,6 +66,7 @@ export function ClientRetainerSummary({
         if (cancelled) return;
         setProjects(data.projects);
         setUnassigned(data.unassigned);
+        setChoices(data.choices);
         setLoaded(true);
       })
       .catch((error) => {
@@ -84,22 +92,39 @@ export function ClientRetainerSummary({
     );
   }
 
+  const addButton = (
+    <AddClientRetainerButton
+      accountId={accountId}
+      accountSlug={accountSlug}
+      clientId={clientId}
+      clientName={clientName}
+      choices={choices}
+      canEdit={canEdit}
+      onViewProjects={onViewProjects}
+    />
+  );
+
   if (projects.length === 0 && unassigned.length === 0) {
     return (
       <div className="mt-4 space-y-3">
         <p className={`text-sm ${workspaceTextMuted}`}>
-          No project retainers yet. Create or open a project to attach a plan
+          No project retainers yet. Add a retainer on a project to attach a plan
           and manage credits there.
         </p>
-        <Button type="button" size="sm" onClick={onViewProjects}>
-          View projects
-        </Button>
+        {canEdit ? (
+          addButton
+        ) : (
+          <Button type="button" size="sm" onClick={onViewProjects}>
+            View projects
+          </Button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="mt-4 space-y-4">
+      {canEdit ? <div className="flex justify-end">{addButton}</div> : null}
       <ul className="space-y-2">
         {projects.map((row) => (
           <li

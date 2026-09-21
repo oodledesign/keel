@@ -78,6 +78,11 @@ describe('client retainer summary', () => {
     ]);
     expect(result.unassigned).toHaveLength(1);
     expect(result.unassigned[0]?.subscriptionId).toBe('legacy');
+    expect(result.choices).toEqual([
+      { projectId: 'p1', projectTitle: 'Site', hasPlan: false },
+      { projectId: 'p2', projectTitle: 'Brand', hasPlan: true },
+      { projectId: 'p3', projectTitle: 'Idle', hasPlan: false },
+    ]);
   });
 
   it('hides a project whose only plan is cancelled unless credits remain', () => {
@@ -89,6 +94,9 @@ describe('client retainer summary', () => {
       ],
     });
     expect(empty.projects).toEqual([]);
+    expect(empty.choices).toEqual([
+      { projectId: 'p1', projectTitle: 'Site', hasPlan: false },
+    ]);
 
     const withCredits = buildClientRetainerSummary({
       projects: [{ id: 'p1', title: 'Site', status: 'active' }],
@@ -123,6 +131,9 @@ describe('client retainer summary', () => {
   it('deep-links to the project retainer tab', () => {
     expect(projectRetainerHref('acme', 'proj-1')).toBe(
       '/app/acme/projects/proj-1?tab=services',
+    );
+    expect(projectRetainerHref('acme', 'proj-1', { attach: true })).toBe(
+      '/app/acme/projects/proj-1?tab=services&attach=1',
     );
   });
 });

@@ -7,6 +7,7 @@ import { requireUser } from '@kit/supabase/require-user';
 import { createPlanTemplatesService } from '~/home/[account]/settings/services/_lib/server/plan-templates.service';
 import {
   type ClientProjectRetainerSummary,
+  type ClientRetainerProjectChoice,
   type UnassignedClientRetainer,
   buildClientRetainerSummary,
 } from '~/lib/retainers/client-retainer-summary';
@@ -41,6 +42,7 @@ class ClientRetainerSummaryService {
   ): Promise<{
     projects: ClientProjectRetainerSummary[];
     unassigned: UnassignedClientRetainer[];
+    choices: ClientRetainerProjectChoice[];
   }> {
     await this.ensureMember(accountId);
 

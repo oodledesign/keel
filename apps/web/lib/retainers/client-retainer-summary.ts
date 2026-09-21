@@ -22,10 +22,21 @@ export type UnassignedClientRetainer = {
   canPay: boolean;
 };
 
-export function projectRetainerHref(accountSlug: string, projectId: string) {
-  return `${pathsConfig.app.accountJobDetail
+export type ClientRetainerProjectChoice = {
+  projectId: string;
+  projectTitle: string;
+  hasPlan: boolean;
+};
+
+export function projectRetainerHref(
+  accountSlug: string,
+  projectId: string,
+  options?: { attach?: boolean },
+) {
+  const href = `${pathsConfig.app.accountJobDetail
     .replace('[account]', accountSlug)
     .replace('[id]', projectId)}?tab=services`;
+  return options?.attach ? `${href}&attach=1` : href;
 }
 
 export function pickPrimarySubscription(
@@ -49,6 +60,7 @@ export function buildClientRetainerSummary(input: {
 }): {
   projects: ClientProjectRetainerSummary[];
   unassigned: UnassignedClientRetainer[];
+  choices: ClientRetainerProjectChoice[];
 } {
   const byProject = new Map<string, ClientSubscriptionRecord[]>();
   const unassignedSubs: ClientSubscriptionRecord[] = [];
@@ -110,5 +122,16 @@ export function buildClientRetainerSummary(input: {
       }),
     }));
 
-  return { projects, unassigned };
+  const choices = input.projects.map((project) => {
+    const liveOrPending = (byProject.get(project.id) ?? []).filter(
+      (row) => row.status !== 'cancelled',
+    );
+    return {
+      projectId: project.id,
+      projectTitle: project.title,
+      hasPlan: Boolean(pickPrimarySubscription(liveOrPending)),
+    } satisfies ClientRetainerProjectChoice;
+  });
+
+  return { projects, unassigned, choices };
 }
