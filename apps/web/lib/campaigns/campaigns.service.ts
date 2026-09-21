@@ -57,6 +57,11 @@ import {
   parseCampaignAudienceConfig,
   parseCampaignAudienceType,
 } from './campaign-audience';
+import { assertCampaignDeletable } from './campaign-delete';
+import {
+  followUpAudienceEmails,
+  followUpCampaignName,
+} from './campaign-resend';
 import {
   type CampaignSendProgressSnapshot,
   buildCampaignSendProgress,
@@ -245,6 +250,87 @@ class CampaignsService {
 
     if (error || !data) {
       throw new Error(error?.message ?? 'Could not create campaign');
+    }
+
+    return mapCampaign(data as Record<string, unknown>);
+  }
+
+  /**
+   * New draft copied from a sent campaign. Does not mutate the historical send.
+   * Recurring occurrences become a one-off follow-up (no series_id).
+   */
+  async duplicateForResend(input: {
+    accountId: string;
+    userId: string;
+    campaignId: string;
+    mode: 'all' | 'non_responders';
+    responderEmails?: string[];
+  }): Promise<EmailCampaign> {
+    const source = await this.get(input.accountId, input.campaignId);
+    if (source.status !== 'sent' && source.status !== 'failed') {
+      throw new Error('Only sent or failed campaigns can be sent again');
+    }
+
+    const recipients = await this.listRecipients(
+      input.accountId,
+      input.campaignId,
+    );
+    const emails = followUpAudienceEmails({
+      mode: input.mode,
+      recipients,
+      responderEmails: (input.responderEmails ?? []).map((email) => ({
+        contactEmail: email,
+      })),
+    });
+
+    if (input.mode === 'non_responders' && emails.length === 0) {
+      throw new Error('Everyone invited has already responded');
+    }
+    if (emails.length > 5000) {
+      throw new Error('Too many people for a follow-up list (max 5,000).');
+    }
+
+    // Snapshot the original send when we have recipient rows. If the send
+    // never produced rows, keep the source audience (list / subscribers).
+    const audienceType = emails.length > 0 ? 'custom' : source.audienceType;
+    const audienceConfig =
+      emails.length > 0
+        ? {
+            emails,
+            clientIds: [],
+            contactIds: [],
+            listId: null,
+          }
+        : source.audienceConfig;
+
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
+      .insert({
+        account_id: input.accountId,
+        created_by: input.userId,
+        name: followUpCampaignName(source.name),
+        subject: source.subject,
+        subject_b: source.subjectB,
+        ab_enabled: source.abEnabled,
+        ab_split_percent: source.abSplitPercent,
+        preview_text: source.previewText,
+        html_body: source.htmlBody,
+        body_document: source.bodyDocument,
+        from_name: source.fromName,
+        from_email: source.fromEmail,
+        reply_to: source.replyTo,
+        audience_type: audienceType,
+        audience_config: audienceConfig,
+        scheduled_timezone: source.scheduledTimezone,
+        status: 'draft',
+      })
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message ?? 'Could not create follow-up campaign');
     }
 
     return mapCampaign(data as Record<string, unknown>);
@@ -570,6 +656,23 @@ class CampaignsService {
     }
 
     return mapCampaign(data as Record<string, unknown>);
+  }
+
+  /**
+   * Hard-delete a one-off campaign. Recipients and email events cascade.
+   * Credit ledger and automations keep their rows with campaign_id cleared.
+   * Scheduled sends are row-driven — deleting the campaign is enough.
+   */
+  async delete(accountId: string, campaignId: string): Promise<void> {
+    const campaign = await this.get(accountId, campaignId);
+    assertCampaignDeletable(campaign);
+
+    const { error } = await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+      .delete()
+      .eq('id', campaignId)
+      .eq('account_id', accountId);
+
+    if (error) throw new Error(error.message);
   }
 
   /**

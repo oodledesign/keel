@@ -11,6 +11,7 @@ import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
 import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
 import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
+import { campaignHasSendHistory } from '~/lib/campaigns/campaign-delete';
 import type { CampaignLinkedFormSubmissions } from '~/lib/campaigns/campaign-form-submissions';
 import { createCampaignSeriesService } from '~/lib/campaigns/campaign-series.service';
 import { createCampaignsService } from '~/lib/campaigns/campaigns.service';
@@ -145,11 +146,19 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
     loadCampaignAnalyticsBundle(admin, campaign, recipients),
   ]);
 
+  const seriesService = createCampaignSeriesService(client);
   const series = campaign.seriesId
-    ? await createCampaignSeriesService(client)
-        .get(accountId, campaign.seriesId)
-        .catch(() => null)
+    ? await seriesService.get(accountId, campaign.seriesId).catch(() => null)
     : null;
+  const seriesInstances = series
+    ? await seriesService.listInstances(accountId, series.id)
+    : [];
+  const seriesHasSends = seriesInstances.some((row) =>
+    campaignHasSendHistory(row),
+  );
+  const seriesAnySending = seriesInstances.some(
+    (row) => row.status === 'sending',
+  );
 
   if (hasCampaignsProFeatures(snapshot.planTier)) {
     const peers = (await service.list(accountId)).filter(
@@ -161,9 +170,17 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
     );
   }
 
+  const linkedForm = await loadCampaignLinkedFormSubmissions(
+    accountId,
+    campaign.bodyDocument?.formLink?.formId,
+  );
+
   return {
     campaign,
     series,
+    seriesHasSends,
+    seriesAnySending,
+    hasRsvpForm: Boolean(linkedForm?.isRsvp),
     recipients,
     subscriberCount: audienceOptions.subscriberCount,
     audienceCount,
