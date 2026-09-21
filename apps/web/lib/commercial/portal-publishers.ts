@@ -38,6 +38,7 @@ import {
   type RightmoveMapperListing,
   type RightmoveMapperMedia,
   type RightmoveMapperUnit,
+  type RightmoveSkippedAnnualCharge,
   asOptionalNumber,
   deriveAskingRentPenceFromUnits,
   mapListingToRightmovePayload,
@@ -606,6 +607,7 @@ export async function publishToRightmove(
   }
 
   let mediaSampleUrls: Array<string | null> | undefined;
+  let skippedAnnualCharges: RightmoveSkippedAnnualCharge[] | undefined;
   try {
     const env = getRightmoveEnv();
     const [listing, units, media] = await Promise.all([
@@ -643,6 +645,7 @@ export async function publishToRightmove(
       units,
       media,
     });
+    skippedAnnualCharges = mapped.skippedAnnualCharges;
 
     const result = await putCommercialProperty({
       reference: mapped.reference,
@@ -680,6 +683,9 @@ export async function publishToRightmove(
         agentId: resolved.agentId,
         derivedRentFromUnits,
         note,
+        ...(skippedAnnualCharges && skippedAnnualCharges.length > 0
+          ? { skippedAnnualCharges }
+          : {}),
       },
     });
   } catch (err) {
@@ -704,6 +710,9 @@ export async function publishToRightmove(
         branchRef: resolved.branchRef,
         accountBranchId: resolved.accountBranchId,
         ...(mediaSampleUrls ? { mediaSampleUrls } : {}),
+        ...(skippedAnnualCharges && skippedAnnualCharges.length > 0
+          ? { skippedAnnualCharges }
+          : {}),
         ...(err instanceof RightmoveApiError
           ? {
               httpStatus: err.status,

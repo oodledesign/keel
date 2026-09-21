@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
   type RightmoveMapperListing,
   annualChargeFromPerSqft,
   asOptionalNumber,
@@ -484,7 +485,7 @@ describe('mapListingToRightmovePayload', () => {
   });
 
   it('maps service charge and rates from £/sqft × size to annual totals', () => {
-    const { payload } = mapListingToRightmovePayload({
+    const { payload, skippedAnnualCharges } = mapListingToRightmovePayload({
       listing: baseListing({
         serviceChargePerSqft: 4.5,
         ratesPayablePerSqft: 8.25,
@@ -497,6 +498,53 @@ describe('mapListingToRightmovePayload', () => {
     expect(payload.building.serviceCharge).toBe(7992);
     expect(payload.building.businessRates).toBe(14652);
     expect(payload.building.condition).toBe('FULL_FIT_OUT');
+    expect(skippedAnnualCharges).toEqual([]);
+  });
+
+  it('omits absurd £/sqft service charge and rates from the Rightmove payload', () => {
+    const listing = baseListing({
+      // Unit 9 Angel Walk: £3656.33/sqft was sent as ~£3.7M and Rightmove 502'd.
+      serviceChargePerSqft: 3656.33,
+      ratesPayablePerSqft: 3656.33,
+    });
+
+    const { payload, skippedAnnualCharges } = mapListingToRightmovePayload({
+      listing,
+      agentId: 283634,
+    });
+
+    expect(payload.building.serviceCharge).toBeUndefined();
+    expect(payload.building.businessRates).toBeUndefined();
+    expect(listing.serviceChargePerSqft).toBe(3656.33);
+    expect(listing.ratesPayablePerSqft).toBe(3656.33);
+    expect(skippedAnnualCharges).toEqual([
+      {
+        field: 'serviceCharge',
+        perSqft: 3656.33,
+        maxPerSqft: MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+      },
+      {
+        field: 'businessRates',
+        perSqft: 3656.33,
+        maxPerSqft: MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+      },
+    ]);
+  });
+
+  it('keeps £/sqft charges at the documented upper bound', () => {
+    const { payload, skippedAnnualCharges } = mapListingToRightmovePayload({
+      listing: baseListing({
+        serviceChargePerSqft: MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+        ratesPayablePerSqft: 20,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.serviceCharge).toBe(
+      annualChargeFromPerSqft(MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT, 1776),
+    );
+    expect(payload.building.businessRates).toBe(35520);
+    expect(skippedAnnualCharges).toEqual([]);
   });
 
   it('maps parking toggle and space count for Rightmove ADF', () => {
@@ -684,6 +732,56 @@ describe('mapListingToRightmovePayload', () => {
     expect(space?.primaryPropertyClassification.subType).toBe('WAREHOUSE');
   });
 
+  it('omits absurd unit £/sqft charges and falls back to listing rates', () => {
+    const { payload, skippedAnnualCharges } = mapListingToRightmovePayload({
+      listing: baseListing({
+        serviceChargePerSqft: 5,
+        ratesPayablePerSqft: 3656.33,
+      }),
+      agentId: 283634,
+      units: [
+        {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          label: 'Unit 9',
+          floorOrUnit: 'Ground',
+          sizeSqft: 1012,
+          measurementStandard: 'gia',
+          sortOrder: 0,
+          externalId: null,
+          askingRentPence: null,
+          rentPerSqft: null,
+          description: null,
+          sector: null,
+          status: 'Available',
+          serviceChargePerSqft: 3656.33,
+          ratesPayablePerSqft: null,
+          fittedSpace: null,
+        },
+      ],
+    });
+
+    expect('spaces' in payload.building).toBe(true);
+    if (!('spaces' in payload.building)) return;
+
+    const space = payload.building.spaces[0];
+    expect(space?.serviceCharge).toBe(5060);
+    expect(space?.businessRates).toBeUndefined();
+    // Listing-level rates are evaluated before spaces, so the absurd
+    // listing business-rates skip is recorded first.
+    expect(skippedAnnualCharges).toEqual([
+      {
+        field: 'businessRates',
+        perSqft: 3656.33,
+        maxPerSqft: MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+      },
+      {
+        field: 'serviceCharge',
+        perSqft: 3656.33,
+        maxPerSqft: MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+      },
+    ]);
+  });
+
   it('rounds space sizing to a positive whole number', () => {
     const { payload } = mapListingToRightmovePayload({
       listing: baseListing({
@@ -765,6 +863,24 @@ describe('annualChargeFromPerSqft', () => {
     expect(annualChargeFromPerSqft(null, 1000)).toBeUndefined();
     expect(annualChargeFromPerSqft(4.5, null)).toBeUndefined();
     expect(annualChargeFromPerSqft(4.5, 1776)).toBe(7992);
+  });
+
+  it('keeps typical UK commercial £/sqft rates', () => {
+    expect(annualChargeFromPerSqft(5, 1000)).toBe(5000);
+    expect(annualChargeFromPerSqft(20, 1000)).toBe(20000);
+    expect(
+      annualChargeFromPerSqft(MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT, 1000),
+    ).toBe(100_000);
+  });
+
+  it('omits clearly absurd £/sqft rates instead of emitting huge annual totals', () => {
+    expect(annualChargeFromPerSqft(3656.33, 1012)).toBeUndefined();
+    expect(
+      annualChargeFromPerSqft(
+        MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT + 0.01,
+        1000,
+      ),
+    ).toBeUndefined();
   });
 });
 
