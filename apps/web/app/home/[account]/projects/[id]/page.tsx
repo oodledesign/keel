@@ -26,7 +26,6 @@ import { JobDetailContent } from '../_components/job-detail-content';
 import { loadCampaignDetailPageData } from '../_lib/campaign/server/campaign-page.loader';
 import { loadJobsPageData } from '../_lib/server/jobs-page.loader';
 import { createJobsService } from '../_lib/server/jobs.service';
-import { createProjectRetainerService } from '../_lib/server/project-retainer.service';
 import { createProjectStatusesService } from '../_lib/server/project-statuses.service';
 
 const PROJECT_DETAIL_SPACE_TYPES = [
@@ -185,13 +184,9 @@ async function ProjectDetailPage({
       projectId: id,
     }));
 
-  // Read-only presence check (no ensure_project_retainer). Hides the Services
-  // tab on projects with no credits, allowlist, burns, or client retainer.
-  const showServices =
-    !isContractorView &&
-    (await createProjectRetainerService(client)
-      .hasServicesPresence(accountId, id, jobClient?.id ?? null)
-      .catch(() => false));
+  // Retainer is project-primary: always available for team members so they
+  // can attach a plan. Contractors stay off this tab.
+  const showServices = !isContractorView;
 
   const partnerCostLines = showPartnerCosts
     ? await createPartnerCostLinesService(client).listForHost({

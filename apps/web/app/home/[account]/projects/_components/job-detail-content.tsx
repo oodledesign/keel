@@ -646,7 +646,7 @@ export function JobDetailContent({
                   className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
                 >
                   <Repeat className="h-3.5 w-3.5" />
-                  Services
+                  Retainer
                 </TabsTrigger>
               )}
               {!isContractorView && showPartnerCosts && (
@@ -1029,7 +1029,7 @@ export function JobDetailContent({
             value="services"
             className="mt-0 flex-1 overflow-auto p-4 md:p-5"
           >
-            <div className="max-w-xl">
+            <div className="max-w-2xl">
               <ProjectRetainerPanel
                 accountId={accountId}
                 projectId={jobId}

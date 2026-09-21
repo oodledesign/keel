@@ -16,6 +16,7 @@ import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import pathsConfig from '~/config/paths.config';
 import { WebsiteStatusBadge } from '~/home/[account]/websites/_components/website-badges';
 import type { WebsiteStatus } from '~/home/[account]/websites/_lib/schema/websites.schema';
+import { shouldNamePortalPlanProject } from '~/lib/billing/client-subscription-lifecycle';
 import { formatMinorUnits } from '~/lib/billing/plan-templates-types';
 import { portalCreditsNextSteps } from '~/lib/credits/portal-overview-credits';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
@@ -327,18 +328,29 @@ export async function OverviewPlanStrip({
     '[clientSlug]',
     slug,
   );
+  const liveSubscriptions =
+    (overview.liveSubscriptions?.length ?? 0) > 0
+      ? overview.liveSubscriptions
+      : overview.subscription
+        ? [overview.subscription]
+        : [];
+  const showProject = shouldNamePortalPlanProject(
+    liveSubscriptions.length + overview.pendingSubscriptions.length,
+  );
   const pendingItems = overview.pendingSubscriptions.map((sub) => ({
     id: sub.id,
     planName: sub.planName,
     amountPence: sub.monthlyAmount ?? 0,
     currency: sub.currency ?? 'gbp',
+    projectName: sub.projectName,
+    showProject,
   }));
   const nextSteps = portalCreditsNextSteps(
     credits?.balance ?? 0,
-    credits?.nextRenewalDate ?? overview.subscription?.nextBillingDate ?? null,
+    credits?.nextRenewalDate ?? liveSubscriptions[0]?.nextBillingDate ?? null,
   );
   const hasPending = pendingItems.length > 0;
-  const hasActive = Boolean(overview.subscription);
+  const hasActive = liveSubscriptions.length > 0;
 
   return (
     <Card>
@@ -362,21 +374,29 @@ export async function OverviewPlanStrip({
 
         {hasActive ? (
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0 space-y-1">
-              <p className="font-medium text-[var(--ozer-text-on-light)]">
-                {overview.subscription?.planName}
-              </p>
-              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-                {formatMinorUnits(
-                  overview.subscription?.monthlyAmount ?? 0,
-                  overview.subscription?.currency ?? 'gbp',
-                )}
-                /month
-              </p>
-              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-                Next billing:{' '}
-                {formatPortalDate(overview.subscription?.nextBillingDate)}
-              </p>
+            <div className="min-w-0 space-y-3">
+              {liveSubscriptions.map((sub) => (
+                <div key={sub.id} className="space-y-1">
+                  <p className="font-medium text-[var(--ozer-text-on-light)]">
+                    {sub.planName}
+                  </p>
+                  {showProject && sub.projectName ? (
+                    <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                      {sub.projectName}
+                    </p>
+                  ) : null}
+                  <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                    {formatMinorUnits(
+                      sub.monthlyAmount ?? 0,
+                      sub.currency ?? 'gbp',
+                    )}
+                    /month
+                  </p>
+                  <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                    Next billing: {formatPortalDate(sub.nextBillingDate)}
+                  </p>
+                </div>
+              ))}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {nextSteps.topUp ? (

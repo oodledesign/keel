@@ -11,6 +11,7 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { shouldNamePortalPlanProject } from '~/lib/billing/client-subscription-lifecycle';
 
 import { createPortalCreditTopupAction } from '../_lib/server/server-actions';
 import type {
@@ -86,6 +87,9 @@ export function PortalCreditsContent({
     '[clientSlug]',
     clientSlug,
   );
+  const showProject = shouldNamePortalPlanProject(
+    bundle.pendingPlans.length + (bundle.planName ? 1 : 0),
+  );
 
   function buyPack(packId: PortalCreditTopupPackId) {
     startTransition(async () => {
@@ -150,6 +154,9 @@ export function PortalCreditsContent({
           {bundle.planName ? (
             <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
               {bundle.planName}
+              {showProject && bundle.planProjectName
+                ? ` · ${bundle.planProjectName}`
+                : null}
               {bundle.creditsPerCycle != null
                 ? ` · ${bundle.creditsPerCycle}/cycle`
                 : null}
@@ -172,10 +179,16 @@ export function PortalCreditsContent({
             Awaiting payment
           </h3>
           <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-            This retainer is not active yet. Credits from the plan stay locked
-            until you complete payment.
+            {bundle.pendingPlans.length === 1
+              ? 'This retainer is not active yet. Credits from the plan stay locked until you complete payment.'
+              : 'These retainers are not active yet. Credits from the plans stay locked until you complete payment.'}
           </p>
-          <PortalPendingRetainerPayList items={bundle.pendingPlans} />
+          <PortalPendingRetainerPayList
+            items={bundle.pendingPlans.map((item) => ({
+              ...item,
+              showProject,
+            }))}
+          />
         </div>
       ) : null}
 

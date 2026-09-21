@@ -42,6 +42,7 @@ export type ClientSubscriptionRecord = {
   clientId: string | null;
   clientOrgId: string | null;
   websiteId: string | null;
+  projectId: string | null;
   planTemplateId: string | null;
   planName: string | null;
   subscriptionKind: PlanTemplateKind | null;

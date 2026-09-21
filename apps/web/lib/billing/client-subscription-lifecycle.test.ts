@@ -9,6 +9,7 @@ import {
   isVisibleAgencyClientSubscription,
   portalBillingReturnPath,
   selectPortalPlanSubscriptions,
+  shouldNamePortalPlanProject,
 } from './client-subscription-lifecycle';
 
 describe('client subscription lifecycle', () => {
@@ -61,6 +62,11 @@ describe('client subscription lifecycle', () => {
     expect(isVisibleAgencyClientSubscription('cancelled')).toBe(false);
   });
 
+  it('names the project in the portal when more than one plan is shown', () => {
+    expect(shouldNamePortalPlanProject(1)).toBe(false);
+    expect(shouldNamePortalPlanProject(2)).toBe(true);
+  });
+
   it('reuses the existing checkout route for Pay now', () => {
     expect(clientSubscriptionCheckoutHref('sub-1')).toBe(
       '/api/client-subscriptions/checkout?subscriptionId=sub-1',
@@ -84,7 +90,27 @@ describe('client subscription lifecycle', () => {
 
     expect(selectPortalPlanSubscriptions(rows)).toEqual({
       active: rows[4],
+      live: [rows[4]],
       pending: [rows[1], rows[2]],
+    });
+  });
+
+  it('keeps every live project retainer, not only the first', () => {
+    const liveA = {
+      id: 'site',
+      status: 'active',
+      billingCollection: 'stripe',
+    };
+    const liveB = {
+      id: 'brand',
+      status: 'overdue',
+      billingCollection: 'stripe',
+    };
+
+    expect(selectPortalPlanSubscriptions([liveA, liveB])).toEqual({
+      active: liveA,
+      live: [liveA, liveB],
+      pending: [],
     });
   });
 
@@ -93,7 +119,7 @@ describe('client subscription lifecycle', () => {
       selectPortalPlanSubscriptions([
         { id: 'old', status: 'cancelled', billingCollection: 'stripe' },
       ]),
-    ).toEqual({ active: null, pending: [] });
+    ).toEqual({ active: null, live: [], pending: [] });
   });
 
   it('documents remove: live/pending become cancelled and drop off portal + agency lists', () => {
@@ -115,6 +141,7 @@ describe('client subscription lifecycle', () => {
       ]),
     ).toEqual({
       active: null,
+      live: [],
       pending: [{ id: 'next', status: 'pending', billingCollection: 'stripe' }],
     });
   });

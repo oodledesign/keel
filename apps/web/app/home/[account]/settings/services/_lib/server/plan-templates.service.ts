@@ -70,6 +70,7 @@ function mapSubscription(
     clientId: row.client_id ? String(row.client_id) : null,
     clientOrgId: row.client_org_id ? String(row.client_org_id) : null,
     websiteId: row.website_id ? String(row.website_id) : null,
+    projectId: row.project_id ? String(row.project_id) : null,
     planTemplateId: row.plan_template_id ? String(row.plan_template_id) : null,
     planName: row.plan_name ? String(row.plan_name) : null,
     subscriptionKind: (row.subscription_kind as PlanTemplateKind) ?? null,
@@ -495,6 +496,7 @@ class PlanTemplatesService {
     planTemplateId: string;
     clientId: string;
     websiteId?: string | null;
+    projectId?: string | null;
     collection?: ClientSubscriptionBillingCollection;
   }): Promise<{
     subscription: ClientSubscriptionRecord;
@@ -574,6 +576,21 @@ class PlanTemplatesService {
 
     const businessId = await this.resolveBusinessId(input.accountId);
 
+    if (input.projectId) {
+      const { data: project } = await this.db
+        .from('projects')
+        .select('id, client_id')
+        .eq('id', input.projectId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      if (!project) throw new Error('Project not found');
+      const projectClientId = (project as { client_id?: string | null })
+        .client_id;
+      if (projectClientId && projectClientId !== input.clientId) {
+        throw new Error('Project does not belong to this client');
+      }
+    }
+
     let existingQuery = this.db
       .from('client_subscriptions')
       .select('*')
@@ -588,6 +605,11 @@ class PlanTemplatesService {
     } else {
       existingQuery = existingQuery.is('website_id', null);
     }
+    if (input.projectId) {
+      existingQuery = existingQuery.eq('project_id', input.projectId);
+    } else {
+      existingQuery = existingQuery.is('project_id', null);
+    }
 
     const { data: existingSub } = await existingQuery.maybeSingle();
 
@@ -601,6 +623,7 @@ class PlanTemplatesService {
           client_id: input.clientId,
           client_org_id: clientOrgId,
           website_id: input.websiteId ?? null,
+          project_id: input.projectId ?? null,
           plan_template_id: template.id,
           plan_name: template.name,
           subscription_kind: template.kind,
@@ -871,7 +894,7 @@ class PlanTemplatesService {
 
   async listSubscriptions(
     accountId: string,
-    filters?: { clientId?: string; websiteId?: string },
+    filters?: { clientId?: string; websiteId?: string; projectId?: string },
   ): Promise<ClientSubscriptionRecord[]> {
     await this.ensureMember(accountId);
     let query = this.db
@@ -881,6 +904,7 @@ class PlanTemplatesService {
       .order('created_at', { ascending: false });
     if (filters?.clientId) query = query.eq('client_id', filters.clientId);
     if (filters?.websiteId) query = query.eq('website_id', filters.websiteId);
+    if (filters?.projectId) query = query.eq('project_id', filters.projectId);
     const { data, error } = await query;
     if (error) throw error;
     return ((data ?? []) as Array<Record<string, unknown>>).map(

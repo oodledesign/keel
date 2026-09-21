@@ -28,6 +28,7 @@ export type PortalCreditsBundle = {
   rolloverCap: number | null;
   creditsPerCycle: number | null;
   planName: string | null;
+  planProjectName: string | null;
   nextRenewalDate: string | null;
   transactions: PortalCreditTransaction[];
   requestTypes: Array<{
@@ -50,5 +51,6 @@ export type PortalCreditsBundle = {
     planName: string;
     amountPence: number;
     currency: string;
+    projectName: string | null;
   }>;
 };

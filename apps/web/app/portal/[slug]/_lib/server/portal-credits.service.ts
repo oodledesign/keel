@@ -318,7 +318,7 @@ class PortalCreditsService {
         this.admin
           .from('client_subscriptions')
           .select(
-            'id, next_billing_date, status, plan_template_id, plan_templates(name, credits_per_cycle, rollover_policy, rollover_cap)',
+            'id, next_billing_date, status, plan_template_id, project_id, plan_templates(name, credits_per_cycle, rollover_policy, rollover_cap)',
           )
           .eq('client_org_id', clientOrgId)
           .eq('account_id', accountId)
@@ -329,7 +329,7 @@ class PortalCreditsService {
         this.admin
           .from('client_subscriptions')
           .select(
-            'id, plan_name, monthly_amount, currency, status, billing_collection',
+            'id, plan_name, monthly_amount, currency, status, billing_collection, project_id',
           )
           .eq('client_org_id', clientOrgId)
           .eq('account_id', accountId)
@@ -346,6 +346,7 @@ class PortalCreditsService {
 
     const sub = subRes.data as {
       next_billing_date?: string | null;
+      project_id?: string | null;
       plan_templates?:
         | {
             name?: string | null;
@@ -372,6 +373,43 @@ class PortalCreditsService {
         ? policy
         : null;
 
+    const payablePending = (
+      (pendingSubRes.data ?? []) as Array<Record<string, unknown>>
+    ).filter((row) =>
+      canPayClientSubscription({
+        status: String(row.status ?? ''),
+        billingCollection: row.billing_collection
+          ? String(row.billing_collection)
+          : 'stripe',
+      }),
+    );
+    const projectIds = [
+      ...new Set(
+        [
+          sub?.project_id ? String(sub.project_id) : null,
+          ...payablePending.map((row) =>
+            row.project_id ? String(row.project_id) : null,
+          ),
+        ].filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const projectNames = new Map<string, string>();
+    if (projectIds.length > 0) {
+      const { data: projects } = await this.admin
+        .from('projects')
+        .select('id, name, title')
+        .in('id', projectIds);
+      for (const project of (projects ?? []) as Array<{
+        id: string;
+        name?: string | null;
+        title?: string | null;
+      }>) {
+        const name = project.name?.trim() || project.title?.trim();
+        if (name) projectNames.set(project.id, name);
+      }
+    }
+    const activeProjectId = sub?.project_id ? String(sub.project_id) : null;
+
     return {
       balance: Number(pool?.balance ?? 0),
       cycleStart: pool?.cycle_start ? String(pool.cycle_start) : null,
@@ -384,6 +422,9 @@ class PortalCreditsService {
           ? plan.credits_per_cycle
           : null,
       planName: plan?.name ? String(plan.name) : null,
+      planProjectName: activeProjectId
+        ? (projectNames.get(activeProjectId) ?? null)
+        : null,
       nextRenewalDate: sub?.next_billing_date
         ? String(sub.next_billing_date)
         : pool?.cycle_end
@@ -413,24 +454,17 @@ class PortalCreditsService {
       })),
       topupPacks: PORTAL_CREDIT_TOPUP_PACKS.map((pack) => ({ ...pack })),
       pendingCreditTicketCount: pendingRes.count ?? 0,
-      pendingPlans: (
-        (pendingSubRes.data ?? []) as Array<Record<string, unknown>>
-      )
-        .filter((row) =>
-          canPayClientSubscription({
-            status: String(row.status ?? ''),
-            billingCollection: row.billing_collection
-              ? String(row.billing_collection)
-              : 'stripe',
-          }),
-        )
-        .map((row) => ({
+      pendingPlans: payablePending.map((row) => {
+        const projectId = row.project_id ? String(row.project_id) : null;
+        return {
           id: String(row.id),
           planName:
             String(row.plan_name ?? 'Subscription').trim() || 'Subscription',
           amountPence: Number(row.monthly_amount ?? 0),
           currency: String(row.currency ?? 'gbp').toLowerCase(),
-        })),
+          projectName: projectId ? (projectNames.get(projectId) ?? null) : null,
+        };
+      }),
     };
   }
 

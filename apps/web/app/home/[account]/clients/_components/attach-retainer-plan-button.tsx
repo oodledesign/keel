@@ -41,10 +41,12 @@ import {
 export function AttachRetainerPlanButton({
   accountId,
   clientId,
+  projectId,
   canEdit,
 }: {
   accountId: string;
   clientId: string;
+  projectId?: string;
   canEdit: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -81,6 +83,7 @@ export function AttachRetainerPlanButton({
         const result = await attachRetainerPlanAction({
           accountId,
           clientId,
+          projectId,
           planTemplateId: createNew ? undefined : planTemplateId || undefined,
           newTemplate: createNew
             ? {
@@ -142,10 +145,10 @@ export function AttachRetainerPlanButton({
         <DialogHeader>
           <DialogTitle>Add retainer</DialogTitle>
           <DialogDescription>
-            Attach any active Services plan (hosting, retainer, care plan, or
-            custom). Collect via Stripe Checkout, or activate now if you invoice
-            the client outside Stripe. To change amount later, cancel and create
-            a new subscription — no upgrades or prorations in this version.
+            Attach a plan to this project. Collect via Stripe Checkout, or
+            activate now if you invoice the client outside Stripe. To change
+            amount later, remove and create a new subscription — no upgrades or
+            prorations in this version.
           </DialogDescription>
         </DialogHeader>
 

@@ -57,6 +57,7 @@ export const AttachHostingPlanSchema = z.object({
 export const AttachRetainerPlanSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid(),
+  projectId: z.string().uuid().optional(),
   planTemplateId: z.string().uuid().optional(),
   newTemplate: UpsertPlanTemplateSchema.omit({
     accountId: true,
@@ -74,6 +75,7 @@ export const ListClientSubscriptionsSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid().optional(),
   websiteId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
 });
 
 export const ResendClientSubscriptionPaymentLinkSchema = z.object({

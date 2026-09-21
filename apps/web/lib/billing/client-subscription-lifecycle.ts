@@ -58,10 +58,14 @@ export function selectPortalPlanSubscriptions<
     status: string | null | undefined;
     billingCollection?: string | null;
   },
->(rows: T[]): { active: T | null; pending: T[] } {
+>(rows: T[]): { active: T | null; live: T[]; pending: T[] } {
   const pending = rows.filter((row) => canPayClientSubscription(row));
-  const active =
-    rows.find((row) => isLiveClientSubscriptionStatus(row.status)) ?? null;
+  const live = rows.filter((row) => isLiveClientSubscriptionStatus(row.status));
 
-  return { active, pending };
+  return { active: live[0] ?? null, live, pending };
+}
+
+/** Name the project on portal plan/billing when the client has more than one. */
+export function shouldNamePortalPlanProject(planCount: number): boolean {
+  return planCount > 1;
 }

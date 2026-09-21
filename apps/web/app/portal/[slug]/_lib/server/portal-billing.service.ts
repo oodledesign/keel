@@ -30,6 +30,8 @@ export type PortalBillingSubscription = {
   nextPaymentDate: string | null;
   checkoutUrl: string | null;
   canManagePaymentMethod: boolean;
+  projectId: string | null;
+  projectName: string | null;
 };
 
 export type PortalBillingStripeInvoice = {
@@ -243,7 +245,7 @@ class PortalBillingService {
       this.admin
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at, billing_collection',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at, billing_collection, project_id',
         )
         .eq('client_org_id', clientOrgId)
         .eq('account_id', accountId)
@@ -252,7 +254,7 @@ class PortalBillingService {
         ? this.admin
             .from('client_subscriptions')
             .select(
-              'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at, billing_collection',
+              'id, plan_name, monthly_amount, currency, status, next_billing_date, current_period_end, stripe_payment_link, stripe_customer_id, stripe_customer_id_connect, stripe_subscription_id, subscription_kind, plan_template_id, client_id, created_at, billing_collection, project_id',
             )
             .in('client_id', clientIds)
             .eq('account_id', accountId)
@@ -285,6 +287,28 @@ class PortalBillingService {
 
     const connect = await this.resolveConnectAccount(accountId);
     const customerIds = new Set<string>();
+    const projectIds = [
+      ...new Set(
+        subRows
+          .map((row) => (row.project_id ? String(row.project_id) : null))
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const projectNames = new Map<string, string>();
+    if (projectIds.length > 0) {
+      const { data: projects } = await this.admin
+        .from('projects')
+        .select('id, name, title')
+        .in('id', projectIds);
+      for (const project of (projects ?? []) as Array<{
+        id: string;
+        name?: string | null;
+        title?: string | null;
+      }>) {
+        const name = project.name?.trim() || project.title?.trim();
+        if (name) projectNames.set(project.id, name);
+      }
+    }
 
     const uniqueSubs: PortalBillingSubscription[] = subRows.map((row) => {
       const customerId =
@@ -298,6 +322,7 @@ class PortalBillingService {
         status,
         billingCollection: offline ? 'offline' : 'stripe',
       });
+      const projectId = row.project_id ? String(row.project_id) : null;
 
       return {
         id: String(row.id),
@@ -316,6 +341,8 @@ class PortalBillingService {
         canManagePaymentMethod: Boolean(
           connect && customerId && status === 'active' && !offline,
         ),
+        projectId,
+        projectName: projectId ? (projectNames.get(projectId) ?? null) : null,
       };
     });
 

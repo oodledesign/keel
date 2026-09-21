@@ -128,10 +128,12 @@ export const attachRetainerPlanAction = enhanceAction(
       planTemplateId,
       clientId: input.clientId,
       websiteId: null,
+      projectId: input.projectId ?? null,
       collection: input.collection,
     });
 
     revalidatePath('/home/[account]/clients', 'layout');
+    revalidatePath('/home/[account]/projects', 'layout');
     return result;
   },
   { schema: AttachRetainerPlanSchema },
@@ -145,6 +147,7 @@ export const cancelClientSubscriptionAction = enhanceAction(
     );
     revalidatePath('/home/[account]/clients', 'layout');
     revalidatePath('/home/[account]/websites', 'layout');
+    revalidatePath('/home/[account]/projects', 'layout');
     return result;
   },
   { schema: CancelClientSubscriptionSchema },
@@ -155,6 +158,7 @@ export const listClientSubscriptionsAction = enhanceAction(
     getService().listSubscriptions(input.accountId, {
       clientId: input.clientId,
       websiteId: input.websiteId,
+      projectId: input.projectId,
     }),
   { schema: ListClientSubscriptionsSchema },
 );

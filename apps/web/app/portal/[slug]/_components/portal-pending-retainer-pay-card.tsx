@@ -9,6 +9,8 @@ export type PortalPendingRetainerPayItem = {
   amountPence: number;
   currency: string;
   interval?: 'month' | 'year';
+  projectName?: string | null;
+  showProject?: boolean;
 };
 
 export function PortalPendingRetainerPayCard({
@@ -28,6 +30,11 @@ export function PortalPendingRetainerPayCard({
         <p className="font-medium text-[var(--ozer-text-on-light)]">
           {item.planName}
         </p>
+        {item.showProject && item.projectName ? (
+          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+            {item.projectName}
+          </p>
+        ) : null}
         <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
           {formatMinorUnits(item.amountPence, item.currency, item.interval)}
         </p>

@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import { shouldNamePortalPlanProject } from '~/lib/billing/client-subscription-lifecycle';
 import { clientSubscriptionStatusLabel } from '~/lib/billing/client-subscription-status';
 import { formatMinorUnits } from '~/lib/billing/plan-templates-types';
 
@@ -37,6 +38,9 @@ export default async function PortalBillingPage({
   ).getBillingBundle(ctx.accountId, ctx.clientOrgId);
   const paid = query.paid === '1';
   const checkoutCancelled = query.checkout === 'cancelled';
+  const showProject = shouldNamePortalPlanProject(
+    billing.pendingSetup.length + billing.activeSubscriptions.length,
+  );
 
   return (
     <div className="space-y-6">
@@ -87,6 +91,8 @@ export default async function PortalBillingPage({
                 amountPence: sub.amountPence,
                 currency: sub.currency,
                 interval: sub.interval,
+                projectName: sub.projectName,
+                showProject,
               }))}
             />
           </CardContent>
@@ -111,6 +117,11 @@ export default async function PortalBillingPage({
                 <p className="font-medium text-[var(--ozer-text-on-light)]">
                   {sub.planName}
                 </p>
+                {showProject && sub.projectName ? (
+                  <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+                    {sub.projectName}
+                  </p>
+                ) : null}
                 <p className="mt-1 text-sm text-slate-600">
                   {formatMinorUnits(
                     sub.amountPence,

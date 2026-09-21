@@ -149,12 +149,16 @@ export function ClientSubscriptionStatusList({
   accountId,
   clientId,
   websiteId,
+  projectId,
   canEdit,
+  emptyLabel,
 }: {
   accountId: string;
   clientId?: string;
   websiteId?: string;
+  projectId?: string;
   canEdit: boolean;
+  emptyLabel?: string;
 }) {
   const [rows, setRows] = useState<ClientSubscriptionRecord[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -174,6 +178,7 @@ export function ClientSubscriptionStatusList({
         accountId,
         clientId,
         websiteId,
+        projectId,
       })
         .then((data) => {
           if (!cancelled) applyRows(data);
@@ -192,7 +197,7 @@ export function ClientSubscriptionStatusList({
       cancelled = true;
       window.removeEventListener(CLIENT_SUBSCRIPTIONS_CHANGED_EVENT, load);
     };
-  }, [accountId, clientId, websiteId]);
+  }, [accountId, clientId, websiteId, projectId]);
 
   if (!loaded) {
     return null;
@@ -201,8 +206,8 @@ export function ClientSubscriptionStatusList({
   if (rows.length === 0) {
     return (
       <p className={`mt-3 text-sm ${workspaceTextMuted}`}>
-        No plan attached. Add one to collect payment and give the client portal
-        access.
+        {emptyLabel ??
+          'No plan attached. Add a retainer on this project to collect payment.'}
       </p>
     );
   }
@@ -346,8 +351,8 @@ function RemoveRetainerButton({
                   </p>
                 )}
                 <p>
-                  Credit burn history is kept. Unused credits stay on the client
-                  until you adjust them.
+                  Credit burn history is kept. Unused credits stay on the
+                  project until you adjust them.
                 </p>
               </div>
             </AlertDialogDescription>

@@ -54,6 +54,8 @@ export type PortalSubscription = {
   status: string | null;
   nextBillingDate: string | null;
   stripePaymentLink: string | null;
+  projectId: string | null;
+  projectName: string | null;
 };
 
 export type PortalNotice = {
@@ -257,6 +259,7 @@ export type PortalOverviewData = {
   website: PortalWebsite | null;
   openTicketCount: number;
   subscription: PortalSubscription | null;
+  liveSubscriptions: PortalSubscription[];
   pendingSubscriptions: PortalSubscription[];
   notices: PortalNotice[];
 };
@@ -415,9 +418,43 @@ class ClientPortalService {
     };
   }
 
+  private async loadSubscriptionProjectNames(
+    rows: Array<Record<string, unknown>>,
+  ): Promise<Map<string, string>> {
+    const ids = [
+      ...new Set(
+        rows
+          .map((row) => (row.project_id ? String(row.project_id) : null))
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const map = new Map<string, string>();
+    if (ids.length === 0) return map;
+
+    // After ensureMember: portal RLS may hide projects that are not shared.
+    const admin = getSupabaseServerAdminClient();
+    const { data } = await admin
+      .from('projects')
+      .select('id, name, title')
+      .in('id', ids);
+
+    for (const row of (data ?? []) as Array<{
+      id: string;
+      name?: string | null;
+      title?: string | null;
+    }>) {
+      const name = row.name?.trim() || row.title?.trim();
+      if (name) map.set(row.id, name);
+    }
+
+    return map;
+  }
+
   private mapPortalSubscription(
     row: Record<string, unknown>,
+    projectNames: Map<string, string>,
   ): PortalSubscription {
+    const projectId = row.project_id ? String(row.project_id) : null;
     return {
       id: String(row.id),
       planName:
@@ -436,40 +473,45 @@ class ClientPortalService {
         : row.stripe_payment_link
           ? String(row.stripe_payment_link)
           : null,
+      projectId,
+      projectName: projectId ? (projectNames.get(projectId) ?? null) : null,
     };
   }
 
-  private classifyPortalSubscriptions(rows: Array<Record<string, unknown>>): {
+  private toPortalSubscription(row: PortalSubscription): PortalSubscription {
+    return {
+      id: row.id,
+      planName: row.planName,
+      monthlyAmount: row.monthlyAmount,
+      currency: row.currency,
+      status: row.status,
+      nextBillingDate: row.nextBillingDate,
+      stripePaymentLink: row.stripePaymentLink,
+      projectId: row.projectId,
+      projectName: row.projectName,
+    };
+  }
+
+  private classifyPortalSubscriptions(
+    rows: Array<Record<string, unknown>>,
+    projectNames: Map<string, string>,
+  ): {
     subscription: PortalSubscription | null;
+    liveSubscriptions: PortalSubscription[];
     pendingSubscriptions: PortalSubscription[];
   } {
     const mapped = rows.map((row) => ({
-      ...this.mapPortalSubscription(row),
+      ...this.mapPortalSubscription(row, projectNames),
       billingCollection: String(row.billing_collection ?? 'stripe'),
     }));
-    const { active, pending } = selectPortalPlanSubscriptions(mapped);
+    const { active, live, pending } = selectPortalPlanSubscriptions(mapped);
 
     return {
-      subscription: active
-        ? {
-            id: active.id,
-            planName: active.planName,
-            monthlyAmount: active.monthlyAmount,
-            currency: active.currency,
-            status: active.status,
-            nextBillingDate: active.nextBillingDate,
-            stripePaymentLink: active.stripePaymentLink,
-          }
-        : null,
-      pendingSubscriptions: pending.map((row) => ({
-        id: row.id,
-        planName: row.planName,
-        monthlyAmount: row.monthlyAmount,
-        currency: row.currency,
-        status: row.status,
-        nextBillingDate: row.nextBillingDate,
-        stripePaymentLink: row.stripePaymentLink,
-      })),
+      subscription: active ? this.toPortalSubscription(active) : null,
+      liveSubscriptions: live.map((row) => this.toPortalSubscription(row)),
+      pendingSubscriptions: pending.map((row) =>
+        this.toPortalSubscription(row),
+      ),
     };
   }
 
@@ -500,7 +542,7 @@ class ClientPortalService {
       this.db
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection, project_id',
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
@@ -514,14 +556,21 @@ class ClientPortalService {
     ]);
 
     const websiteRow = websiteResult.data as Record<string, unknown> | null;
+    const subscriptionRows = (subscriptionResult.data ?? []) as Array<
+      Record<string, unknown>
+    >;
+    const projectNames =
+      await this.loadSubscriptionProjectNames(subscriptionRows);
     const plans = this.classifyPortalSubscriptions(
-      (subscriptionResult.data ?? []) as Array<Record<string, unknown>>,
+      subscriptionRows,
+      projectNames,
     );
 
     return {
       website: websiteRow ? this.mapWebsite(websiteRow) : null,
       openTicketCount: ticketCountResult.count ?? 0,
       subscription: plans.subscription,
+      liveSubscriptions: plans.liveSubscriptions,
       pendingSubscriptions: plans.pendingSubscriptions,
       notices: (
         (noticesResult.data ?? []) as Array<Record<string, unknown>>
@@ -1933,7 +1982,7 @@ class ClientPortalService {
       this.db
         .from('client_subscriptions')
         .select(
-          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection',
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link, billing_collection, project_id',
         )
         .eq('client_org_id', clientOrgId)
         .order('created_at', { ascending: false })
@@ -1941,8 +1990,14 @@ class ClientPortalService {
       this.db.from('clients').select('id').eq('client_org_id', clientOrgId),
     ]);
 
+    const subscriptionRows = (subscriptionResult.data ?? []) as Array<
+      Record<string, unknown>
+    >;
+    const projectNames =
+      await this.loadSubscriptionProjectNames(subscriptionRows);
     const { subscription } = this.classifyPortalSubscriptions(
-      (subscriptionResult.data ?? []) as Array<Record<string, unknown>>,
+      subscriptionRows,
+      projectNames,
     );
 
     const clientIds = ((clientsResult.data ?? []) as Array<{ id: string }>).map(
