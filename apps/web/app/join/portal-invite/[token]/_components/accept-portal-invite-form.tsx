@@ -5,8 +5,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
-import { Spinner } from '@kit/ui/spinner';
 import { toast } from '@kit/ui/sonner';
+import { Spinner } from '@kit/ui/spinner';
 
 import pathsConfig from '~/config/paths.config';
 import { acceptClientPortalInviteAction } from '~/lib/clients/client-portal-invites-actions';
