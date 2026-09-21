@@ -7,24 +7,32 @@ import {
   useRef,
   useState,
   useTransition,
+  type ComponentProps,
 } from 'react';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  ArrowUpDown,
   Bell,
   Building2,
+  CircleDot,
   Edit2,
   Eye,
   LayoutGrid,
   List,
   Loader2,
   Map as MapIcon,
+  MapPin,
+  MapPinned,
   MoreHorizontal,
   Plus,
+  Rows3,
   Search,
   Trash2,
+  Users,
+  type LucideIcon,
 } from 'lucide-react';
 
 import {
@@ -54,6 +62,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { cn } from '@kit/ui/utils';
 
 import { ListingStatusBadge } from '~/components/commercial/listing-status-badge';
 import { RightmovePublicationStatusBadge } from '~/components/commercial/rightmove-publication-status-badge';
@@ -63,7 +72,6 @@ import {
   DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
   LISTING_STATUSES,
-  LISTING_STATUS_LABELS,
   listingStatusPublishHint,
 } from '~/lib/commercial/commercial-constants';
 import {
@@ -97,7 +105,10 @@ import {
   deleteListing,
   listListings,
 } from '../_lib/server/server-actions';
-import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
+import {
+  ListingAgentAvatarStack,
+  ListingMemberAvatar,
+} from './listing-agent-avatar-stack';
 import { ListingCardFeedsIcon } from './listing-card-feeds-icon';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingPublicPreviewSheet } from './listing-public-preview-sheet';
@@ -881,6 +892,10 @@ export function ListingsList({
     });
   }, [accountId, deleteTarget, router]);
 
+  const selectedMember = agentUserId
+    ? (members.find((member) => member.userId === agentUserId) ?? null)
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -892,27 +907,18 @@ export function ListingsList({
               ? ` · page ${page} of ${totalPages}`
               : null}
         </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => {
-              const next = Number(value) as PageSizeOption;
-              if (!PAGE_SIZE_OPTIONS.includes(next)) return;
-              setPageSize(next);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="h-9 w-[148px] border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]">
-              <SelectValue placeholder="Per page" />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size} per page
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs sm:flex-none">
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, address, postcode, or property type…"
+              aria-label="Search disposals"
+              className="h-9 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
+            />
+          </div>
           <Select
             value={sortMode}
             onValueChange={(value) => {
@@ -920,12 +926,20 @@ export function ListingsList({
               setPage(1);
             }}
           >
-            <SelectTrigger className="h-9 w-[180px] border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]">
+            <FilterSelectTrigger
+              icon={ArrowUpDown}
+              className="h-9 w-[180px]"
+              aria-label="Sort disposals"
+            >
               <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
+            </FilterSelectTrigger>
+            <SelectContent className={workspaceSelectContentClass}>
               {LISTING_SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className={workspaceSelectItemClass}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -982,18 +996,6 @@ export function ListingsList({
         </div>
       </div>
 
-      <div className="relative max-w-xl">
-        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
-        <Input
-          type="search"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name, address, postcode, or property type…"
-          aria-label="Search disposals"
-          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
-        />
-      </div>
-
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           {showOfficeFilter ? (
@@ -1003,13 +1005,14 @@ export function ListingsList({
                 setOfficeFilter(value === 'all' ? null : value)
               }
             >
-              <SelectTrigger
-                className="h-8 w-[200px] border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+              <FilterSelectTrigger
+                icon={MapPin}
+                className="w-[200px]"
                 aria-label="Filter by office"
                 data-test="office-filter"
               >
                 <SelectValue placeholder="Office" />
-              </SelectTrigger>
+              </FilterSelectTrigger>
               <SelectContent className={workspaceSelectContentClass}>
                 <SelectItem
                   value="all"
@@ -1036,16 +1039,19 @@ export function ListingsList({
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as StatusFilter)}
           >
-            <SelectTrigger
-              className="h-8 w-[180px] border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+            <FilterSelectTrigger
+              icon={CircleDot}
+              className="w-[200px]"
               aria-label="Filter by status"
               data-test="status-filter"
             >
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+              <SelectValue placeholder="Status">
+                <StatusFilterLabel status={statusFilter} />
+              </SelectValue>
+            </FilterSelectTrigger>
             <SelectContent className={workspaceSelectContentClass}>
               <SelectItem value="active" className={workspaceSelectItemClass}>
-                Active
+                <StatusFilterLabel status="active" />
               </SelectItem>
               {LISTING_STATUSES.map((status) => (
                 <SelectItem
@@ -1054,7 +1060,7 @@ export function ListingsList({
                   className={`${workspaceSelectItemClass} pr-10`}
                 >
                   <span className="flex w-full items-center justify-between gap-3">
-                    <span>{LISTING_STATUS_LABELS[status]}</span>
+                    <ListingStatusBadge status={status} />
                     <span className="text-muted-foreground shrink-0 text-xs">
                       {listingStatusPublishHint(status)}
                     </span>
@@ -1062,7 +1068,7 @@ export function ListingsList({
                 </SelectItem>
               ))}
               <SelectItem value="all" className={workspaceSelectItemClass}>
-                All statuses
+                <StatusFilterLabel status="all" />
               </SelectItem>
             </SelectContent>
           </Select>
@@ -1074,13 +1080,27 @@ export function ListingsList({
                 setAgentUserId(value === 'all' ? null : value)
               }
             >
-              <SelectTrigger
-                className="h-8 w-[220px] border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+              <FilterSelectTrigger
+                icon={Users}
+                className="w-[220px]"
                 aria-label="Filter by team member"
                 data-test="agent-filter"
               >
-                <SelectValue placeholder="Team member" />
-              </SelectTrigger>
+                <SelectValue placeholder="Team member">
+                  {selectedMember ? (
+                    <span className="flex min-w-0 items-center gap-2">
+                      <ListingMemberAvatar
+                        name={selectedMember.name}
+                        pictureUrl={selectedMember.pictureUrl}
+                        size="xs"
+                      />
+                      <span className="truncate">{selectedMember.name}</span>
+                    </span>
+                  ) : (
+                    'All team members'
+                  )}
+                </SelectValue>
+              </FilterSelectTrigger>
               <SelectContent className={workspaceSelectContentClass}>
                 <SelectItem value="all" className={workspaceSelectItemClass}>
                   All team members
@@ -1091,7 +1111,14 @@ export function ListingsList({
                     value={member.userId}
                     className={workspaceSelectItemClass}
                   >
-                    {member.name}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <ListingMemberAvatar
+                        name={member.name}
+                        pictureUrl={member.pictureUrl}
+                        size="xs"
+                      />
+                      <span className="truncate">{member.name}</span>
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1101,6 +1128,7 @@ export function ListingsList({
           <FilterChip
             active={needsLocationOnly}
             onClick={() => setNeedsLocationOnly((v) => !v)}
+            icon={MapPinned}
             label={
               needsLocationCount > 0
                 ? `Needs location (${needsLocationCount})`
@@ -1397,40 +1425,74 @@ export function ListingsList({
         </div>
       )}
 
-      {viewMode !== 'map' && effectiveTotalPages > 1 ? (
+      {viewMode !== 'map' ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Showing {(page - 1) * pageSize + 1}–
-            {Math.min(
-              page * pageSize,
-              usesFullCache ? visibleListings.length : total,
-            )}{' '}
-            of {usesFullCache ? visibleListings.length : total}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={page <= 1 || loadingPage || enrichingMap}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="border-[color:var(--workspace-shell-border)]"
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                const next = Number(value) as PageSizeOption;
+                if (!PAGE_SIZE_OPTIONS.includes(next)) return;
+                setPageSize(next);
+                setPage(1);
+              }}
             >
-              Previous
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={
-                page >= effectiveTotalPages || loadingPage || enrichingMap
-              }
-              onClick={() => setPage((p) => p + 1)}
-              className="border-[color:var(--workspace-shell-border)]"
-            >
-              Next
-            </Button>
+              <FilterSelectTrigger
+                icon={Rows3}
+                className="h-8 w-[148px]"
+                aria-label="Results per page"
+              >
+                <SelectValue placeholder="Per page" />
+              </FilterSelectTrigger>
+              <SelectContent className={workspaceSelectContentClass}>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <SelectItem
+                    key={size}
+                    value={String(size)}
+                    className={workspaceSelectItemClass}
+                  >
+                    {size} per page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {displayCount > 0 ? (
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Showing {(page - 1) * pageSize + 1}–
+                {Math.min(
+                  page * pageSize,
+                  usesFullCache ? visibleListings.length : total,
+                )}{' '}
+                of {usesFullCache ? visibleListings.length : total}
+              </p>
+            ) : null}
           </div>
+          {effectiveTotalPages > 1 ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={page <= 1 || loadingPage || enrichingMap}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="border-[color:var(--workspace-shell-border)]"
+              >
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={
+                  page >= effectiveTotalPages || loadingPage || enrichingMap
+                }
+                onClick={() => setPage((p) => p + 1)}
+                className="border-[color:var(--workspace-shell-border)]"
+              >
+                Next
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -1738,16 +1800,65 @@ function ListingActions({
   );
 }
 
+function FilterSelectTrigger({
+  icon: Icon,
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof SelectTrigger> & {
+  icon: LucideIcon;
+}) {
+  return (
+    <SelectTrigger
+      className={cn(
+        'h-8 max-w-full border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)] [&>span]:line-clamp-none',
+        className,
+      )}
+      {...props}
+    >
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        <Icon
+          className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]"
+          aria-hidden
+        />
+        {children}
+      </span>
+    </SelectTrigger>
+  );
+}
+
+function StatusFilterLabel({ status }: { status: StatusFilter }) {
+  if (status === 'active') {
+    return (
+      <span className="inline-flex items-center rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
+        Active
+      </span>
+    );
+  }
+
+  if (status === 'all') {
+    return (
+      <span className="inline-flex items-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/70">
+        All statuses
+      </span>
+    );
+  }
+
+  return <ListingStatusBadge status={status} />;
+}
+
 function FilterChip({
   active,
   onClick,
   label,
+  icon: Icon,
   activeClassName,
   dataTest,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
+  icon?: LucideIcon;
   activeClassName?: string;
   dataTest?: string;
 }) {
@@ -1757,12 +1868,13 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       data-test={dataTest}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
         active
           ? (activeClassName ?? 'bg-[var(--ozer-accent)] text-white')
           : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]'
       }`}
     >
+      {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden /> : null}
       {label}
     </button>
   );
