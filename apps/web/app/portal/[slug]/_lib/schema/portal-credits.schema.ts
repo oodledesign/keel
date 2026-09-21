@@ -9,3 +9,8 @@ export const CreatePortalCreditTopupSchema = z.object({
 export const ListPortalRequestTypesSchema = z.object({
   clientOrgId: z.string().uuid(),
 });
+
+export const ListPortalEffectiveServicesSchema = z.object({
+  clientOrgId: z.string().uuid(),
+  projectId: z.string().uuid().nullable().optional(),
+});

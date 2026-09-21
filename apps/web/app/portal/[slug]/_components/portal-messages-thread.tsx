@@ -18,11 +18,13 @@ export function PortalMessagesThread({
   threadId,
   currentUserId,
   initialMessages,
+  autoFocusCompose = false,
 }: {
   clientOrgId: string;
   threadId: string;
   currentUserId: string;
   initialMessages: PortalChatMessage[];
+  autoFocusCompose?: boolean;
 }) {
   const [messages, setMessages] =
     useState<PortalChatMessage[]>(initialMessages);
@@ -293,6 +295,7 @@ export function PortalMessagesThread({
             <ImagePlus className="h-4 w-4" />
           </Button>
           <Input
+            autoFocus={autoFocusCompose}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Type a message…"

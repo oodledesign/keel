@@ -118,6 +118,26 @@ export function formatPortalDate(value: string | null | undefined) {
   });
 }
 
+export function formatPortalRelativeTime(value: string | null | undefined) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 45_000) return 'Just now';
+
+  const mins = Math.round(diffMs / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+
+  return formatPortalDate(value);
+}
+
 export function formatPortalMoney(
   amount: number | null,
   currency: string | null | undefined,

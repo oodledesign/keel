@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type { PlanTemplateRecord } from '~/lib/billing/plan-templates-types';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
+import type { ServiceCategory } from '~/lib/retainers/effective-services';
 import type { RetainerServiceRecord } from '~/lib/retainers/types';
 
 import {
@@ -65,6 +66,7 @@ export default async function ServicesSettingsPage(
   let templates: PlanTemplateRecord[] = [];
   let requestTypes: RequestTypeRecord[] = [];
   let retainerServices: RetainerServiceRecord[] = [];
+  let retainerCategories: ServiceCategory[] = [];
   try {
     templates = await planService.listTemplates(accountId);
   } catch {
@@ -80,6 +82,12 @@ export default async function ServicesSettingsPage(
   } catch {
     retainerServices = [];
   }
+  try {
+    retainerCategories =
+      await retainerServicesService.listCategories(accountId);
+  } catch {
+    retainerCategories = [];
+  }
 
   const canEdit = access.isOwner || access.isAdmin;
 
@@ -93,6 +101,8 @@ export default async function ServicesSettingsPage(
       <RetainerServicesPanel
         accountId={accountId}
         initialServices={retainerServices}
+        initialCategories={retainerCategories}
+        requestTypes={requestTypes}
         canEdit={canEdit}
       />
       <RequestTypesPanel

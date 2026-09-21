@@ -9,12 +9,28 @@ import {
   adjustProjectRetainerCredits,
   ensureProjectRetainer,
 } from '~/lib/retainers/credit-ledger';
+import type {
+  CatalogueService,
+  EffectiveService,
+  EffectiveServiceList,
+  ServiceCategory,
+} from '~/lib/retainers/effective-services';
+import { UNCATEGORIZED_SORT } from '~/lib/retainers/effective-services';
+import {
+  layersToEffectiveList,
+  loadEffectiveLayers,
+} from '~/lib/retainers/load-effective-layers';
 import { looseClient } from '~/lib/retainers/loose-client';
 import {
   mapProjectRetainer,
   mapRetainerBurn,
   mapRetainerService,
 } from '~/lib/retainers/map-records';
+import {
+  insertScopedRetainerService,
+  replaceProjectServiceList,
+  resetProjectServiceList,
+} from '~/lib/retainers/persist-service-list';
 import type {
   ProjectRetainerBurn,
   ProjectRetainerRecord,
@@ -72,33 +88,43 @@ class ProjectRetainerService {
     await this.ensureMember(accountId);
     await this.requireProject(accountId, projectId);
 
-    const [retainerRes, allowRes, txRes, subRes] = await Promise.all([
-      db(this.client)
-        .from('project_retainers')
-        .select('credit_balance')
-        .eq('project_id', projectId)
-        .eq('account_id', accountId)
-        .maybeSingle(),
-      db(this.client)
-        .from('project_retainer_services')
-        .select('service_id')
-        .eq('project_id', projectId)
-        .limit(1),
-      db(this.client)
-        .from('project_retainer_transactions')
-        .select('id')
-        .eq('project_id', projectId)
-        .eq('account_id', accountId)
-        .limit(1),
-      clientId
-        ? db(this.client)
-            .from('client_subscriptions')
-            .select('id')
-            .eq('account_id', accountId)
-            .eq('client_id', clientId)
-            .limit(1)
-        : Promise.resolve({ data: [] as Array<{ id: string }> }),
-    ]);
+    const [retainerRes, allowRes, txRes, subRes, clientRes] = await Promise.all(
+      [
+        db(this.client)
+          .from('project_retainers')
+          .select('credit_balance')
+          .eq('project_id', projectId)
+          .eq('account_id', accountId)
+          .maybeSingle(),
+        db(this.client)
+          .from('project_retainer_services')
+          .select('service_id')
+          .eq('project_id', projectId)
+          .limit(1),
+        db(this.client)
+          .from('project_retainer_transactions')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('account_id', accountId)
+          .limit(1),
+        clientId
+          ? db(this.client)
+              .from('client_subscriptions')
+              .select('id')
+              .eq('account_id', accountId)
+              .eq('client_id', clientId)
+              .limit(1)
+          : Promise.resolve({ data: [] as Array<{ id: string }> }),
+        clientId
+          ? db(this.client)
+              .from('clients')
+              .select('retainer_services_source')
+              .eq('id', clientId)
+              .eq('account_id', accountId)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ],
+    );
 
     const balance = Number(
       (retainerRes.data as { credit_balance?: number } | null)
@@ -108,16 +134,26 @@ class ProjectRetainerService {
     if ((allowRes.data ?? []).length > 0) return true;
     if ((txRes.data ?? []).length > 0) return true;
     if ((subRes.data ?? []).length > 0) return true;
+    if (
+      (clientRes.data as { retainer_services_source?: string } | null)
+        ?.retainer_services_source === 'custom'
+    ) {
+      return true;
+    }
     return false;
   }
 
   async load(
     accountId: string,
     projectId: string,
+    clientId?: string | null,
   ): Promise<{
     retainer: ProjectRetainerRecord;
     catalogue: RetainerServiceRecord[];
     recent: ProjectRetainerBurn[];
+    effective: EffectiveServiceList;
+    library: CatalogueService[];
+    categories: ServiceCategory[];
   }> {
     await this.ensureMember(accountId);
     await this.requireProject(accountId, projectId);
@@ -192,6 +228,13 @@ class ProjectRetainerService {
         }),
     );
 
+    const layers = await loadEffectiveLayers(db(this.client), {
+      accountId,
+      projectId,
+      clientId,
+    });
+    const effective = layersToEffectiveList(layers);
+
     return {
       retainer: mapProjectRetainer(
         retainerRes.data as Record<string, unknown>,
@@ -199,6 +242,9 @@ class ProjectRetainerService {
       ),
       catalogue,
       recent,
+      effective,
+      library: layers.workspace.filter((row) => row.scope === 'workspace'),
+      categories: layers.categories,
     };
   }
 
@@ -251,9 +297,113 @@ class ProjectRetainerService {
           );
         if (insError) throw insError;
       }
+
+      const { error: sourceError } = await db(this.client)
+        .from('project_retainers')
+        .update({ services_source: 'custom' })
+        .eq('project_id', input.projectId)
+        .eq('account_id', input.accountId);
+      if (sourceError) throw sourceError;
     }
 
     return this.load(input.accountId, input.projectId);
+  }
+
+  async replaceServices(input: {
+    accountId: string;
+    projectId: string;
+    clientId?: string | null;
+    services: EffectiveService[];
+  }) {
+    await this.ensureMember(input.accountId);
+    await this.requireProject(input.accountId, input.projectId);
+    await ensureProjectRetainer({
+      projectId: input.projectId,
+      accountId: input.accountId,
+    });
+    await replaceProjectServiceList(db(this.client), input);
+    return this.load(input.accountId, input.projectId, input.clientId);
+  }
+
+  async resetServices(input: {
+    accountId: string;
+    projectId: string;
+    clientId?: string | null;
+  }) {
+    await this.ensureMember(input.accountId);
+    await this.requireProject(input.accountId, input.projectId);
+    await ensureProjectRetainer({
+      projectId: input.projectId,
+      accountId: input.accountId,
+    });
+    await resetProjectServiceList(db(this.client), input);
+    return this.load(input.accountId, input.projectId, input.clientId);
+  }
+
+  async addCustom(input: {
+    accountId: string;
+    projectId: string;
+    clientId?: string | null;
+    name: string;
+    description?: string | null;
+    creditCost: number;
+    requestTypeId?: string | null;
+    categoryId?: string | null;
+    isVisible?: boolean;
+  }) {
+    await this.ensureMember(input.accountId);
+    await this.requireProject(input.accountId, input.projectId);
+    await ensureProjectRetainer({
+      projectId: input.projectId,
+      accountId: input.accountId,
+    });
+
+    const current = await this.load(
+      input.accountId,
+      input.projectId,
+      input.clientId,
+    );
+    const category = input.categoryId
+      ? (current.categories.find((row) => row.id === input.categoryId) ?? null)
+      : null;
+    const serviceId = await insertScopedRetainerService(db(this.client), {
+      accountId: input.accountId,
+      scope: 'project',
+      projectId: input.projectId,
+      clientId: input.clientId,
+      name: input.name,
+      description: input.description,
+      creditCost: input.creditCost,
+      requestTypeId: input.requestTypeId,
+      categoryId: input.categoryId,
+      isVisible: input.isVisible ?? true,
+      sortOrder: current.effective.services.length,
+    });
+
+    await replaceProjectServiceList(db(this.client), {
+      accountId: input.accountId,
+      projectId: input.projectId,
+      services: [
+        ...current.effective.services,
+        {
+          id: serviceId,
+          sourceServiceId: null,
+          name: input.name.trim(),
+          description: input.description?.trim() || null,
+          creditCost: input.creditCost,
+          requestTypeId: input.requestTypeId ?? null,
+          isActive: true,
+          isVisible: input.isVisible ?? true,
+          sortOrder: current.effective.services.length,
+          scope: 'project',
+          categoryId: category?.id ?? null,
+          categoryName: category?.name ?? null,
+          categorySortOrder: category?.sortOrder ?? UNCATEGORIZED_SORT,
+        },
+      ],
+    });
+
+    return this.load(input.accountId, input.projectId, input.clientId);
   }
 
   async adjustBalance(input: {

@@ -9,8 +9,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { undoRetainerBurn } from '~/lib/retainers/apply-match';
 
 import {
+  AddCustomProjectRetainerServiceSchema,
   AdjustProjectRetainerBalanceSchema,
   LoadProjectRetainerSchema,
+  ReplaceProjectRetainerServicesSchema,
+  ResetProjectRetainerServicesSchema,
   UndoTaskRetainerBurnSchema,
   UpdateProjectRetainerSettingsSchema,
 } from '../schema/project-retainer.schema';
@@ -21,7 +24,8 @@ function getService() {
 }
 
 export const loadProjectRetainerAction = enhanceAction(
-  async (input) => getService().load(input.accountId, input.projectId),
+  async (input) =>
+    getService().load(input.accountId, input.projectId, input.clientId),
   { auth: true, schema: LoadProjectRetainerSchema },
 );
 
@@ -41,6 +45,52 @@ export const adjustProjectRetainerBalanceAction = enhanceAction(
     return result;
   },
   { auth: true, schema: AdjustProjectRetainerBalanceSchema },
+);
+
+export const replaceProjectRetainerServicesAction = enhanceAction(
+  async (input) => {
+    const result = await getService().replaceServices({
+      accountId: input.accountId,
+      projectId: input.projectId,
+      clientId: input.clientId,
+      services: input.services.map((row) => ({
+        id: row.id,
+        sourceServiceId: null,
+        name: row.name,
+        description: row.description ?? null,
+        creditCost: row.creditCost,
+        requestTypeId: row.requestTypeId ?? null,
+        isActive: row.isActive,
+        isVisible: row.isVisible,
+        sortOrder: row.sortOrder,
+        scope: 'project',
+        categoryId: null,
+        categoryName: null,
+        categorySortOrder: 1_000_000,
+      })),
+    });
+    revalidatePath('/home/[account]/projects/[id]', 'page');
+    return result;
+  },
+  { auth: true, schema: ReplaceProjectRetainerServicesSchema },
+);
+
+export const resetProjectRetainerServicesAction = enhanceAction(
+  async (input) => {
+    const result = await getService().resetServices(input);
+    revalidatePath('/home/[account]/projects/[id]', 'page');
+    return result;
+  },
+  { auth: true, schema: ResetProjectRetainerServicesSchema },
+);
+
+export const addCustomProjectRetainerServiceAction = enhanceAction(
+  async (input) => {
+    const result = await getService().addCustom(input);
+    revalidatePath('/home/[account]/projects/[id]', 'page');
+    return result;
+  },
+  { auth: true, schema: AddCustomProjectRetainerServiceSchema },
 );
 
 export const undoTaskRetainerBurnAction = enhanceAction(

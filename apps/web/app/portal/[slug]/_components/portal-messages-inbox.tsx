@@ -16,12 +16,14 @@ export function PortalMessagesInbox({
   threads,
   initialThreadId,
   initialMessages,
+  autoFocusCompose = false,
 }: {
   clientOrgId: string;
   currentUserId: string;
   threads: PortalChatThread[];
   initialThreadId: string | null;
   initialMessages: PortalChatMessage[];
+  autoFocusCompose?: boolean;
 }) {
   const [selectedId, setSelectedId] = useState(
     initialThreadId ?? threads[0]?.id ?? null,
@@ -62,8 +64,16 @@ export function PortalMessagesInbox({
                     : 'hover:bg-[var(--workspace-shell-panel-hover)]',
                 )}
               >
-                <span className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
-                  {thread.title}
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+                    {thread.title}
+                  </span>
+                  {thread.hasUnread ? (
+                    <span
+                      className="size-2 shrink-0 rounded-full bg-[var(--ozer-accent)]"
+                      aria-label="Unread"
+                    />
+                  ) : null}
                 </span>
                 <span className="truncate text-xs text-[var(--ozer-text-on-light-muted)]">
                   {thread.lastMessagePreview ?? 'No messages yet'}
@@ -82,6 +92,9 @@ export function PortalMessagesInbox({
             currentUserId={currentUserId}
             initialMessages={
               selected.id === initialThreadId ? initialMessages : []
+            }
+            autoFocusCompose={
+              autoFocusCompose && selected.id === initialThreadId
             }
           />
         ) : null}

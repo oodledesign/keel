@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -35,6 +35,7 @@ import type {
 import {
   addPortalTicketMessage,
   createPortalTicket,
+  listPortalEffectiveServices,
 } from '../_lib/server/server-actions';
 import {
   PortalTicketPriorityBadge,
@@ -289,7 +290,47 @@ type PortalRequestTypeOption = {
   isBillable: boolean;
   isSupport: boolean;
   categoryGroup: string | null;
+  requestTypeId?: string | null;
 };
+
+function groupPortalServices<
+  T extends {
+    label: string;
+    categoryGroup: string | null;
+    categorySortOrder?: number;
+  },
+>(rows: T[]) {
+  const buckets = new Map<
+    string,
+    { name: string; sortOrder: number; services: T[] }
+  >();
+
+  for (const row of rows) {
+    const name = row.categoryGroup?.trim() || 'Uncategorized';
+    const sortOrder =
+      name === 'Uncategorized' ? 1_000_000 : (row.categorySortOrder ?? 0);
+    const existing = buckets.get(name);
+    if (existing) {
+      existing.services.push(row);
+      existing.sortOrder = Math.min(existing.sortOrder, sortOrder);
+      continue;
+    }
+    buckets.set(name, { name, sortOrder, services: [row] });
+  }
+
+  return [...buckets.values()]
+    .map((group) => ({
+      ...group,
+      services: [...group.services].sort((a, b) =>
+        a.label.localeCompare(b.label, 'en-GB', { sensitivity: 'base' }),
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        a.sortOrder - b.sortOrder ||
+        a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' }),
+    );
+}
 
 const STEP_LABELS = ['Type', 'Service', 'Details', 'Confirm'] as const;
 
@@ -434,7 +475,9 @@ export function PortalSupportNewForm({
   clientSlug,
   initialBalance = 0,
   initialRequestTypes = [],
+  initialEffectiveServices = [],
   initialProjects = [],
+  initialIntent = null,
 }: {
   clientOrgId: string;
   accountId: string;
@@ -449,14 +492,29 @@ export function PortalSupportNewForm({
     isSupport?: boolean;
     categoryGroup: string | null;
   }>;
+  initialEffectiveServices?: Array<{
+    id: string;
+    label: string;
+    creditCost: number;
+    isBillable: boolean;
+    isSupport?: boolean;
+    categoryGroup: string | null;
+    categorySortOrder?: number;
+    requestTypeId?: string | null;
+  }>;
   initialProjects?: ProjectOption[];
+  initialIntent?: RequestIntent | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [step, setStep] = useState<WizardStep>(1);
-  const [intent, setIntent] = useState<RequestIntent | null>(null);
+  const [step, setStep] = useState<WizardStep>(initialIntent ? 2 : 1);
+  const [intent, setIntent] = useState<RequestIntent | null>(initialIntent);
   const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
+  const [effectiveServices, setEffectiveServices] = useState(
+    initialEffectiveServices,
+  );
+  const fallbackServicesRef = useRef(initialEffectiveServices);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -483,13 +541,40 @@ export function PortalSupportNewForm({
     clientSlug,
   );
 
-  const serviceTypes = requestTypes.filter((row) => !row.isSupport);
+  const serviceTypes = effectiveServices.map((row) => ({
+    ...row,
+    isSupport: false,
+    isBillable: row.isBillable !== false,
+  }));
   const supportTypes = requestTypes.filter((row) => row.isSupport);
+
+  useEffect(() => {
+    let cancelled = false;
+    listPortalEffectiveServices({
+      clientOrgId,
+      projectId: form.project_id || null,
+    })
+      .then((rows) => {
+        if (cancelled) return;
+        setEffectiveServices(rows);
+        setSelectedTypeId((current) =>
+          current && rows.some((row) => row.id === current) ? current : '',
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setEffectiveServices(fallbackServicesRef.current);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientOrgId, form.project_id]);
 
   const selectedType =
     selectedTypeId === GENERAL_SUPPORT_ID
       ? null
-      : (requestTypes.find((row) => row.id === selectedTypeId) ?? null);
+      : (serviceTypes.find((row) => row.id === selectedTypeId) ??
+        requestTypes.find((row) => row.id === selectedTypeId) ??
+        null);
 
   const selectedTypeLabel =
     selectedTypeId === GENERAL_SUPPORT_ID
@@ -551,12 +636,19 @@ export function PortalSupportNewForm({
       return;
     }
 
+    const selectedService =
+      intent === 'service'
+        ? serviceTypes.find((row) => row.id === selectedTypeId)
+        : null;
     const requestTypeId =
-      !selectedTypeId || selectedTypeId === GENERAL_SUPPORT_ID
-        ? null
-        : selectedTypeId;
+      intent === 'support'
+        ? !selectedTypeId || selectedTypeId === GENERAL_SUPPORT_ID
+          ? null
+          : selectedTypeId
+        : (selectedService?.requestTypeId ?? null);
+    const retainerServiceId = selectedService?.id ?? null;
 
-    if (intent === 'service' && !requestTypeId) {
+    if (intent === 'service' && !retainerServiceId) {
       toast.error('Select a service to continue');
       return;
     }
@@ -572,6 +664,7 @@ export function PortalSupportNewForm({
           priority: form.priority,
           project_id: form.project_id || null,
           request_type_id: requestTypeId,
+          retainer_service_id: retainerServiceId,
           request_intent: intent,
           recording_url: form.recording_url.trim() || null,
           external_url: form.external_url.trim() || null,
@@ -647,27 +740,63 @@ export function PortalSupportNewForm({
                 Choose a service
               </h3>
               <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
-                Select the service that best matches your request.
+                Only the services on this project&apos;s retainer. Pick a
+                project first if you have more than one.
               </p>
             </div>
+            {projects.length > 0 ? (
+              <div className="space-y-2">
+                <Label>Project</Label>
+                <Select
+                  value={form.project_id || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      project_id: value === '__none__' ? '' : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      No project — client defaults
+                    </SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             {serviceTypes.length === 0 ? (
               <p className="rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-[var(--ozer-text-on-light-muted)]">
                 No services are configured yet. Contact your agency, or go back
                 and open a support ticket instead.
               </p>
             ) : (
-              serviceTypes.map((row) => (
-                <TypeRadioCard
-                  key={row.id}
-                  selected={selectedTypeId === row.id}
-                  onSelect={() => setSelectedTypeId(row.id)}
-                  title={row.label}
-                  meta={
-                    row.isBillable
-                      ? `${row.creditCost} credit${row.creditCost === 1 ? '' : 's'}`
-                      : 'Free'
-                  }
-                />
+              groupPortalServices(serviceTypes).map((group) => (
+                <div key={group.name} className="space-y-2">
+                  <p className="text-xs font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
+                    {group.name}
+                  </p>
+                  {group.services.map((row) => (
+                    <TypeRadioCard
+                      key={row.id}
+                      selected={selectedTypeId === row.id}
+                      onSelect={() => setSelectedTypeId(row.id)}
+                      title={row.label}
+                      meta={
+                        row.isBillable
+                          ? `${row.creditCost} credit${row.creditCost === 1 ? '' : 's'}`
+                          : 'Free'
+                      }
+                    />
+                  ))}
+                </div>
               ))
             )}
           </div>

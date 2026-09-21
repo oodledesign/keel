@@ -32,3 +32,22 @@ export function portalCreditsResetCopy(
   if (days === 1) return 'Resets in 1 day';
   return `Resets in ${days} days`;
 }
+
+export function portalCreditsHasRenewal(
+  nextRenewalDate: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  return portalCreditsResetCopy(nextRenewalDate, now) !== 'No renewal set';
+}
+
+/** Overview next-step when the credits chip would otherwise be a dead end. */
+export function portalCreditsNextSteps(
+  balance: number,
+  nextRenewalDate: string | null | undefined,
+  now: Date = new Date(),
+): { topUp: boolean; billing: boolean } {
+  return {
+    topUp: balance <= 0,
+    billing: !portalCreditsHasRenewal(nextRenewalDate, now),
+  };
+}

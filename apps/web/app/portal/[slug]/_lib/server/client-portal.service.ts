@@ -1,9 +1,12 @@
 import 'server-only';
 
+import { cache } from 'react';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import {
@@ -165,7 +168,77 @@ export type PortalChatThread = {
   lastMessagePreview: string | null;
   lastMessageAt: string;
   isClientWide: boolean;
+  hasUnread?: boolean;
 };
+
+const OPEN_TICKET_STATUSES = [
+  'open',
+  'in-progress',
+  'pending_credits',
+  'waiting',
+] as const;
+
+const requirePortalMember = cache(async (clientOrgId: string) => {
+  const supabase = getSupabaseServerClient();
+  const { data: user } = await requireUser(supabase);
+  if (!user) throw new Error('Authentication required');
+
+  const { data: membership, error } = await supabase
+    .from('client_members')
+    .select('id')
+    .eq('client_org_id', clientOrgId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error || !membership) {
+    throw new Error('Permission denied');
+  }
+
+  return user;
+});
+
+const resolvePortalContactIdCached = cache(
+  async (clientOrgId: string, userEmail: string | null) => {
+    if (!userEmail?.trim()) return null;
+    const targetEmail = userEmail.trim().toLowerCase();
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: orgClientRows } = await admin
+      .from('clients')
+      .select('id')
+      .eq('client_org_id', clientOrgId);
+
+    const orgClientIds = ((orgClientRows ?? []) as Array<{ id: string }>).map(
+      (row) => row.id,
+    );
+    if (orgClientIds.length === 0) return null;
+
+    const { data: links } = await admin
+      .from('client_contacts')
+      .select('contact_id')
+      .in('client_id', orgClientIds);
+
+    const contactIds = [
+      ...new Set(
+        ((links ?? []) as Array<{ contact_id: string }>).map(
+          (row) => row.contact_id,
+        ),
+      ),
+    ];
+    if (contactIds.length === 0) return null;
+
+    const { data: candidates } = await admin
+      .from('contacts')
+      .select('id, email')
+      .in('id', contactIds);
+
+    const match = (
+      (candidates ?? []) as Array<{ id: string; email?: string | null }>
+    ).find((row) => row.email?.trim().toLowerCase() === targetEmail);
+
+    return match?.id ?? null;
+  },
+);
 
 export type PortalInvoice = {
   id: string;
@@ -220,21 +293,7 @@ class ClientPortalService {
   }
 
   private async ensureMember(clientOrgId: string) {
-    const { data: user } = await requireUser(this.client);
-    if (!user) throw new Error('Authentication required');
-
-    const { data: membership, error } = await this.db
-      .from('client_members')
-      .select('id')
-      .eq('client_org_id', clientOrgId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (error || !membership) {
-      throw new Error('Permission denied');
-    }
-
-    return user;
+    return requirePortalMember(clientOrgId);
   }
 
   private async loadAuthorNames(userIds: string[]) {
@@ -365,7 +424,7 @@ class ClientPortalService {
       this.db
         .from('websites')
         .select(
-          'id, name, domain, staging_url, status, stack, cms_admin_url, hosting_notes, portal_share_scope, sitemap, wireframes, business_id',
+          'id, name, domain, staging_url, status, stack, cms_admin_url, hosting_notes, portal_share_scope, business_id',
         )
         .eq('client_org_id', clientOrgId)
         .eq('portal_visible', true)
@@ -376,7 +435,7 @@ class ClientPortalService {
         .from('support_tickets')
         .select('id', { count: 'exact', head: true })
         .eq('client_org_id', clientOrgId)
-        .in('status', ['open', 'in-progress', 'pending_credits', 'waiting']),
+        .in('status', [...OPEN_TICKET_STATUSES]),
       this.db
         .from('client_subscriptions')
         .select(
@@ -521,6 +580,35 @@ class ClientPortalService {
     const { data, error } = await query;
     if (error) {
       console.error('[client-portal] listTickets:', error.message);
+      return [];
+    }
+
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id),
+      title: String(row.title ?? 'Untitled'),
+      status: (row.status as PortalTicketStatus) ?? 'open',
+      priority: (row.priority as PortalTicketPriority) ?? 'medium',
+      ticketNumber: Number(row.ticket_number ?? 0),
+      createdAt: String(row.created_at),
+    }));
+  }
+
+  async listTicketsPeek(
+    clientOrgId: string,
+    limit = 3,
+  ): Promise<PortalTicket[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('support_tickets')
+      .select('id, title, status, priority, ticket_number, created_at')
+      .eq('client_org_id', clientOrgId)
+      .in('status', [...OPEN_TICKET_STATUSES])
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('[client-portal] listTicketsPeek:', error.message);
       return [];
     }
 
@@ -1038,7 +1126,10 @@ class ClientPortalService {
    * Tasks assigned to the portal user's matched CRM contact
    * (`assignee_contact_id` + email match).
    */
-  async listPortalMyTasks(clientOrgId: string): Promise<PortalMyTask[]> {
+  async listPortalMyTasks(
+    clientOrgId: string,
+    options?: { openOnly?: boolean; limit?: number },
+  ): Promise<PortalMyTask[]> {
     const user = await this.ensureMember(clientOrgId);
     const contactId = await this.resolvePortalContactId(
       clientOrgId,
@@ -1046,7 +1137,7 @@ class ClientPortalService {
     );
     if (!contactId) return [];
 
-    const { data, error } = await this.db
+    let query = this.db
       .from('tasks')
       .select(
         'id, title, status, priority, due_date, duration_minutes, notes, project_id',
@@ -1054,6 +1145,15 @@ class ClientPortalService {
       .eq('assignee_contact_id', contactId)
       .order('due_date', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
+
+    if (options?.openOnly) {
+      query = query.not('status', 'in', '(done,completed,cancelled)');
+    }
+    if (options?.limit && options.limit > 0) {
+      query = query.limit(options.limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('[client-portal] listPortalMyTasks:', error.message);
@@ -1114,14 +1214,18 @@ class ClientPortalService {
   async listPortalOpenTasks(
     clientOrgId: string,
     limit = 12,
+    projects?: PortalProjectSummary[],
   ): Promise<PortalOverviewTask[]> {
     await this.ensureMember(clientOrgId);
 
-    const projects = await this.listPortalProjects(clientOrgId);
-    if (projects.length === 0) return [];
+    const resolvedProjects =
+      projects ?? (await this.listPortalProjects(clientOrgId));
+    if (resolvedProjects.length === 0) return [];
 
-    const projectIds = projects.map((p) => p.id);
-    const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
+    const projectIds = resolvedProjects.map((p) => p.id);
+    const projectNameById = new Map(
+      resolvedProjects.map((p) => [p.id, p.name]),
+    );
 
     const { data, error } = await this.db
       .from('tasks')
@@ -1310,44 +1414,7 @@ class ClientPortalService {
     clientOrgId: string,
     userEmail: string | null,
   ): Promise<string | null> {
-    if (!userEmail?.trim()) return null;
-    const targetEmail = userEmail.trim().toLowerCase();
-    const admin = getSupabaseServerAdminClient();
-
-    const { data: orgClientRows } = await admin
-      .from('clients')
-      .select('id')
-      .eq('client_org_id', clientOrgId);
-
-    const orgClientIds = ((orgClientRows ?? []) as Array<{ id: string }>).map(
-      (row) => row.id,
-    );
-    if (orgClientIds.length === 0) return null;
-
-    const { data: links } = await admin
-      .from('client_contacts')
-      .select('contact_id')
-      .in('client_id', orgClientIds);
-
-    const contactIds = [
-      ...new Set(
-        ((links ?? []) as Array<{ contact_id: string }>).map(
-          (row) => row.contact_id,
-        ),
-      ),
-    ];
-    if (contactIds.length === 0) return null;
-
-    const { data: candidates } = await admin
-      .from('contacts')
-      .select('id, email')
-      .in('id', contactIds);
-
-    const match = (
-      (candidates ?? []) as Array<{ id: string; email?: string | null }>
-    ).find((row) => row.email?.trim().toLowerCase() === targetEmail);
-
-    return match?.id ?? null;
+    return resolvePortalContactIdCached(clientOrgId, userEmail);
   }
 
   async listPortalTaskComments(
@@ -1475,18 +1542,57 @@ class ClientPortalService {
     }
 
     const intent = input.request_intent;
-    if (intent === 'service' && !input.request_type_id) {
+    if (
+      intent === 'service' &&
+      !input.request_type_id &&
+      !input.retainer_service_id
+    ) {
       throw new Error('Select a service to continue');
     }
 
-    if (input.request_type_id) {
+    const retainerServiceId = input.retainer_service_id ?? null;
+    let requestTypeId = input.request_type_id ?? null;
+    let effectiveCreditCost: number | null = null;
+
+    if (intent === 'service' && retainerServiceId) {
+      const { getSupabaseServerAdminClient } =
+        await import('@kit/supabase/server-admin-client');
+      const { loadEffectiveLayers, layersToEffectiveList } =
+        await import('~/lib/retainers/load-effective-layers');
+      const { clientFacingEffectiveServices } =
+        await import('~/lib/retainers/effective-services');
+      const { looseClient } = await import('~/lib/retainers/loose-client');
+      const admin = getSupabaseServerAdminClient();
+      const { data: crmClient } = await admin
+        .from('clients')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('client_org_id', input.clientOrgId)
+        .limit(1)
+        .maybeSingle();
+      const layers = await loadEffectiveLayers(looseClient(admin), {
+        accountId,
+        clientId: crmClient?.id ? String(crmClient.id) : null,
+        projectId: input.project_id ?? null,
+      });
+      const hit = clientFacingEffectiveServices(
+        layersToEffectiveList(layers),
+      ).find((row) => row.id === retainerServiceId);
+      if (!hit) {
+        throw new Error('That service is not available on this project');
+      }
+      effectiveCreditCost = hit.creditCost;
+      requestTypeId = hit.requestTypeId ?? requestTypeId;
+    }
+
+    if (requestTypeId) {
       const { getSupabaseServerAdminClient } =
         await import('@kit/supabase/server-admin-client');
       const admin = getSupabaseServerAdminClient();
       const { data: requestType, error: requestTypeError } = await admin
         .from('request_types')
         .select('id, is_support, is_active, account_id')
-        .eq('id', input.request_type_id)
+        .eq('id', requestTypeId)
         .eq('account_id', accountId)
         .maybeSingle();
 
@@ -1513,10 +1619,16 @@ class ClientPortalService {
     const { resolveRequestTypeCreditSnapshot } =
       await import('~/lib/credits/ticket-credit-lifecycle');
 
-    const creditSnapshot = await resolveRequestTypeCreditSnapshot({
-      accountId,
-      requestTypeId: input.request_type_id,
-    });
+    const creditSnapshot = retainerServiceId
+      ? {
+          requestTypeId,
+          creditCostSnapshot: effectiveCreditCost ?? 0,
+          isBillable: true,
+        }
+      : await resolveRequestTypeCreditSnapshot({
+          accountId,
+          requestTypeId,
+        });
 
     const { data: profile } = await this.db
       .from('profiles')
@@ -1560,6 +1672,7 @@ class ClientPortalService {
         external_url: input.external_url || null,
         last_activity_at: now,
         request_type_id: creditSnapshot.requestTypeId,
+        retainer_service_id: retainerServiceId,
         credit_cost_snapshot: creditSnapshot.creditCostSnapshot,
       })
       .select(
@@ -1903,21 +2016,170 @@ class ClientPortalService {
       clientOrgId,
     });
 
-    return threads.map((thread) => ({
-      id: thread.id,
-      title:
-        thread.title?.trim() ||
-        (thread.is_client_wide
-          ? 'Everyone on this client'
-          : thread.participants
-              .map((p) => p.display_name)
-              .filter(Boolean)
-              .slice(0, 3)
-              .join(', ') || 'Conversation'),
-      lastMessagePreview: thread.last_message_preview,
-      lastMessageAt: thread.last_message_at,
-      isClientWide: thread.is_client_wide,
-    }));
+    return threads.map(
+      (thread: {
+        id: string;
+        title: string | null;
+        is_client_wide: boolean;
+        last_message_preview: string | null;
+        last_message_at: string;
+        unread_count: number;
+        participants: Array<{ display_name: string }>;
+      }) => ({
+        id: thread.id,
+        title:
+          thread.title?.trim() ||
+          (thread.is_client_wide
+            ? 'Everyone on this client'
+            : thread.participants
+                .map((p) => p.display_name)
+                .filter(Boolean)
+                .slice(0, 3)
+                .join(', ') || 'Conversation'),
+        lastMessagePreview: thread.last_message_preview,
+        lastMessageAt: thread.last_message_at,
+        isClientWide: thread.is_client_wide,
+        hasUnread: thread.unread_count > 0,
+      }),
+    );
+  }
+
+  /**
+   * Lean Overview peek — no workspace messages.service graph, no participant
+   * hydration, no N+1 last-message loop. Title + snippet + unread flag only.
+   */
+  async listParticipatingThreadsPeek(
+    clientOrgId: string,
+    limit = 3,
+  ): Promise<PortalChatThread[]> {
+    const user = await this.ensureMember(clientOrgId);
+    // Generated Database types lag portal chat columns (contact participant,
+    // is_client_wide, client_org_id). Same admin-any pattern as messages.service.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- portal chat columns not in generated types
+    const admin = getSupabaseServerAdminClient() as any;
+    const contactId = await this.resolvePortalContactId(
+      clientOrgId,
+      user.email ?? null,
+    );
+
+    const [byUser, byContact, orgClients] = await Promise.all([
+      admin
+        .from('chat_thread_participants')
+        .select('thread_id, last_read_at')
+        .eq('participant_user_id', user.id)
+        .is('archived_at', null)
+        .limit(200),
+      contactId
+        ? admin
+            .from('chat_thread_participants')
+            .select('thread_id, last_read_at')
+            .eq('participant_contact_id', contactId)
+            .is('archived_at', null)
+            .limit(200)
+        : Promise.resolve({
+            data: [] as Array<{
+              thread_id: string;
+              last_read_at?: string | null;
+            }>,
+          }),
+      admin.from('clients').select('id').eq('client_org_id', clientOrgId),
+    ]);
+
+    const lastReadByThread = new Map<string, string | null>();
+    for (const row of [
+      ...((byUser.data ?? []) as Array<{
+        thread_id: string;
+        last_read_at?: string | null;
+      }>),
+      ...((byContact.data ?? []) as Array<{
+        thread_id: string;
+        last_read_at?: string | null;
+      }>),
+    ]) {
+      if (!lastReadByThread.has(row.thread_id)) {
+        lastReadByThread.set(row.thread_id, row.last_read_at ?? null);
+      }
+    }
+
+    const threadIds = [...lastReadByThread.keys()];
+    if (threadIds.length === 0) return [];
+
+    const clientIds = ((orgClients.data ?? []) as Array<{ id: string }>).map(
+      (row) => row.id,
+    );
+
+    const { data: matched, error } = await admin
+      .from('chat_threads')
+      .select(
+        'id, title, is_client_wide, last_message_at, client_org_id, client_id',
+      )
+      .in('id', threadIds)
+      .order('last_message_at', { ascending: false })
+      .limit(40);
+
+    if (error) {
+      console.error(
+        '[client-portal] listParticipatingThreadsPeek:',
+        error.message,
+      );
+      return [];
+    }
+
+    const threads = (
+      (matched ?? []) as Array<{
+        id: string;
+        title?: string | null;
+        is_client_wide?: boolean | null;
+        last_message_at: string;
+        client_org_id?: string | null;
+        client_id?: string | null;
+      }>
+    )
+      .filter(
+        (thread) =>
+          thread.client_org_id === clientOrgId ||
+          (thread.client_id != null && clientIds.includes(thread.client_id)),
+      )
+      .slice(0, limit);
+
+    const latestMessages = await Promise.all(
+      threads.map((thread) =>
+        admin
+          .from('chat_messages')
+          .select('body, image_url')
+          .eq('thread_id', thread.id)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ),
+    );
+
+    return threads.map((thread, index) => {
+      const latest = latestMessages[index]?.data as {
+        body?: string | null;
+        image_url?: string | null;
+      } | null;
+      const lastReadAt = lastReadByThread.get(thread.id);
+      const hasUnread = Boolean(
+        thread.last_message_at &&
+        (!lastReadAt ||
+          new Date(lastReadAt).getTime() <
+            new Date(thread.last_message_at).getTime()),
+      );
+
+      return {
+        id: thread.id,
+        title:
+          thread.title?.trim() ||
+          (thread.is_client_wide ? 'Everyone on this client' : 'Conversation'),
+        lastMessagePreview:
+          latest?.body?.trim() || (latest?.image_url ? 'Image' : null),
+        lastMessageAt: thread.last_message_at,
+        isClientWide: Boolean(thread.is_client_wide),
+        hasUnread,
+      };
+    });
   }
 
   async sendPortalMessage(

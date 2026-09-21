@@ -106,6 +106,7 @@ import { ClientMediaRollup } from './client-media-rollup';
 import { ClientMessagesBlock } from './client-messages-block';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientRanklyBlock } from './client-rankly-block';
+import { ClientRetainerServicesPanel } from './client-retainer-services-panel';
 import { ClientSupportBlock } from './client-support-block';
 import { ClientTasksBlock } from './client-tasks-block';
 import { ClientUpcomingBookingsBlock } from './client-upcoming-bookings-block';
@@ -1271,6 +1272,11 @@ export function ClientDetailSidebar({
             />
           </div>
           <ClientSubscriptionStatusList
+            accountId={accountId}
+            clientId={client.id}
+            canEdit={canEditClients}
+          />
+          <ClientRetainerServicesPanel
             accountId={accountId}
             clientId={client.id}
             canEdit={canEditClients}

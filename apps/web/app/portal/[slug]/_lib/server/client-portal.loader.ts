@@ -78,20 +78,54 @@ export const loadClientPortalContext = cache(
     }
 
     const admin = getSupabaseServerAdminClient();
-    const { data: account } = await admin
-      .from('accounts')
-      .select('slug')
-      .eq('id', accountId)
-      .maybeSingle();
+
+    const [
+      { data: account },
+      { data: moduleSettings },
+      { data: membership, error: membershipError },
+      { data: profile },
+      { data: userAccount },
+      { data: orgClientRows },
+      { data: teamMembershipThisAccount },
+      teamMembershipAny,
+    ] = await Promise.all([
+      admin.from('accounts').select('slug').eq('id', accountId).maybeSingle(),
+      client
+        .from('account_module_settings')
+        .select('module_key, enabled')
+        .eq('account_id', accountId)
+        .in('module_key', ['client_portal', 'messages']),
+      client
+        .from('client_members')
+        .select('id, role')
+        .eq('client_org_id', org.id)
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      client
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle(),
+      client
+        .from('accounts')
+        .select('name, picture_url')
+        .eq('id', user.id)
+        .maybeSingle(),
+      admin.from('clients').select('id').eq('client_org_id', org.id),
+      client
+        .from('accounts_memberships')
+        .select('account_role')
+        .eq('account_id', accountId)
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      client
+        .from('accounts_memberships')
+        .select('account_id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+    ]);
 
     const accountSlug =
       (account as { slug?: string | null } | null)?.slug?.trim() || clientSlug;
-
-    const { data: moduleSettings } = await client
-      .from('account_module_settings')
-      .select('module_key, enabled')
-      .eq('account_id', accountId)
-      .in('module_key', ['client_portal', 'messages']);
 
     const moduleSettingRows = (moduleSettings ?? []) as Array<{
       module_key: string;
@@ -111,13 +145,6 @@ export const loadClientPortalContext = cache(
     );
     const showMessagesNav = messagesSetting?.enabled !== false;
 
-    const { data: membership, error: membershipError } = await client
-      .from('client_members')
-      .select('id, role')
-      .eq('client_org_id', org.id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
     let membershipRole: string | null = membership?.role ?? null;
 
     if (membershipError) {
@@ -125,15 +152,8 @@ export const loadClientPortalContext = cache(
     }
 
     if (!membership) {
-      const { data: teamMembership } = await client
-        .from('accounts_memberships')
-        .select('account_role')
-        .eq('account_id', accountId)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
       const teamRole = (
-        teamMembership as { account_role?: string | null } | null
+        teamMembershipThisAccount as { account_role?: string | null } | null
       )?.account_role;
 
       if (!teamRole || teamRole === 'contractor' || teamRole === 'client') {
@@ -143,23 +163,14 @@ export const loadClientPortalContext = cache(
       membershipRole = null;
     }
 
-    const [{ data: profile }, { data: userAccount }] = await Promise.all([
-      client
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .maybeSingle(),
-      client
-        .from('accounts')
-        .select('name, picture_url')
-        .eq('id', user.id)
-        .maybeSingle(),
-    ]);
-
     const accountRow = userAccount as {
       name?: string | null;
       picture_url?: string | null;
     } | null;
+
+    const orgClientIds = ((orgClientRows ?? []) as Array<{ id: string }>).map(
+      (row) => row.id,
+    );
 
     // The portal's identity is the client contact set by the agency in the
     // CRM (first name + photo), not the portal user's own Ozer account.
@@ -172,23 +183,9 @@ export const loadClientPortalContext = cache(
     // admin client — portal contacts have no accounts_memberships row, so
     // RLS on `contacts` (own row via user_id, or account-member) would hide
     // every row here regardless.
-    const { data: orgClientRows } = await admin
-      .from('clients')
-      .select('id')
-      .eq('client_org_id', org.id);
+    const loadMatchedContact = async () => {
+      if (!user.email || orgClientIds.length === 0) return null;
 
-    const orgClientIds = ((orgClientRows ?? []) as Array<{ id: string }>).map(
-      (row) => row.id,
-    );
-
-    let contact: {
-      first_name?: string | null;
-      last_name?: string | null;
-      full_name?: string | null;
-      picture_url?: string | null;
-    } | null = null;
-
-    if (user.email && orgClientIds.length > 0) {
       const { data: links } = await admin
         .from('client_contacts')
         .select('contact_id')
@@ -201,27 +198,63 @@ export const loadClientPortalContext = cache(
           ),
         ),
       ];
+      if (contactIds.length === 0) return null;
 
-      if (contactIds.length > 0) {
-        const { data: candidates } = await admin
-          .from('contacts')
-          .select('first_name, last_name, full_name, picture_url, email')
-          .in('id', contactIds);
+      const { data: candidates } = await admin
+        .from('contacts')
+        .select('first_name, last_name, full_name, picture_url, email')
+        .in('id', contactIds);
 
-        const targetEmail = user.email.trim().toLowerCase();
-        contact =
-          (
-            (candidates ?? []) as Array<{
-              first_name?: string | null;
-              last_name?: string | null;
-              full_name?: string | null;
-              picture_url?: string | null;
-              email?: string | null;
-            }>
-          ).find((row) => row.email?.trim().toLowerCase() === targetEmail) ??
-          null;
-      }
-    }
+      const targetEmail = user.email.trim().toLowerCase();
+      return (
+        (
+          (candidates ?? []) as Array<{
+            first_name?: string | null;
+            last_name?: string | null;
+            full_name?: string | null;
+            picture_url?: string | null;
+            email?: string | null;
+          }>
+        ).find((row) => row.email?.trim().toLowerCase() === targetEmail) ?? null
+      );
+    };
+
+    // projects.client_org_id is a legacy/partial column (not always kept in
+    // sync with client_id) — match on either to find portal-visible projects.
+    const projectFilter =
+      orgClientIds.length > 0
+        ? `client_org_id.eq.${org.id},client_id.in.(${orgClientIds.join(',')})`
+        : `client_org_id.eq.${org.id}`;
+
+    const [
+      contact,
+      clientPictures,
+      businessBrand,
+      websiteCount,
+      projectCountResult,
+      meetingCountResult,
+    ] = await Promise.all([
+      loadMatchedContact(),
+      loadClientPicturesByOrgIds(client, [org.id]),
+      loadSupportBusinessBrand(accountId),
+      client
+        .from('websites')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_org_id', org.id)
+        .eq('portal_visible', true),
+      client
+        .from('projects')
+        .select('id', { count: 'exact', head: true })
+        .eq('portal_visible', true)
+        .or(projectFilter),
+      orgClientIds.length > 0
+        ? client
+            .from('meeting_transcripts')
+            .select('id', { count: 'exact', head: true })
+            .filter('portal_visible', 'eq', true)
+            .in('client_id', orgClientIds)
+        : Promise.resolve({ count: 0 }),
+    ]);
 
     const contactFirstName =
       contact?.first_name?.trim() ||
@@ -240,44 +273,8 @@ export const loadClientPortalContext = cache(
       accountRow?.picture_url ??
       null;
 
-    const [clientPictures, businessBrand, websiteCount, teamMembership] =
-      await Promise.all([
-        loadClientPicturesByOrgIds(client, [org.id]),
-        loadSupportBusinessBrand(accountId),
-        client
-          .from('websites')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_org_id', org.id)
-          .eq('portal_visible', true),
-        client
-          .from('accounts_memberships')
-          .select('account_id', { count: 'exact', head: true })
-          .eq('user_id', user.id),
-      ]);
-
-    // projects.client_org_id is a legacy/partial column (not always kept in
-    // sync with client_id) — match on either to find portal-visible projects.
-    const projectFilter =
-      orgClientIds.length > 0
-        ? `client_org_id.eq.${org.id},client_id.in.(${orgClientIds.join(',')})`
-        : `client_org_id.eq.${org.id}`;
-
-    const { count: portalVisibleProjectCount } = await client
-      .from('projects')
-      .select('id', { count: 'exact', head: true })
-      .eq('portal_visible', true)
-      .or(projectFilter);
-
-    const portalVisibleMeetingCount =
-      orgClientIds.length > 0
-        ? (
-            await client
-              .from('meeting_transcripts')
-              .select('id', { count: 'exact', head: true })
-              .filter('portal_visible', 'eq', true)
-              .in('client_id', orgClientIds)
-          ).count
-        : 0;
+    const portalVisibleProjectCount = projectCountResult.count ?? 0;
+    const portalVisibleMeetingCount = meetingCountResult.count ?? 0;
 
     const rawOrgName = org.name?.trim();
     const orgName =
@@ -300,7 +297,7 @@ export const loadClientPortalContext = cache(
       membershipRole,
       userAvatarUrl,
       hasContactRecord: contact !== null,
-      hasWorkspaceAccess: (teamMembership.count ?? 0) > 0,
+      hasWorkspaceAccess: (teamMembershipAny.count ?? 0) > 0,
       showWebsiteNav: (websiteCount.count ?? 0) > 0,
       showProjectsNav: (portalVisibleProjectCount ?? 0) > 0,
       showMeetingsNav: (portalVisibleMeetingCount ?? 0) > 0,

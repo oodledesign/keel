@@ -7,6 +7,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { createCreditTopupInvoice } from '~/lib/credits/create-credit-topup-invoice';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
+import { clientFacingEffectiveServices } from '~/lib/retainers/effective-services';
+import {
+  layersToEffectiveList,
+  loadEffectiveLayers,
+} from '~/lib/retainers/load-effective-layers';
+import { looseClient } from '~/lib/retainers/loose-client';
 
 import {
   PORTAL_CREDIT_TOPUP_PACKS,
@@ -170,6 +176,112 @@ class PortalCreditsService {
         categoryGroup: mapped.categoryGroup,
       };
     });
+  }
+
+  async listEffectiveServices(
+    clientOrgId: string,
+    projectId?: string | null,
+  ): Promise<
+    Array<{
+      id: string;
+      label: string;
+      creditCost: number;
+      isBillable: boolean;
+      isSupport: boolean;
+      categoryGroup: string | null;
+      categorySortOrder?: number;
+      requestTypeId: string | null;
+    }>
+  > {
+    await this.ensureMember(clientOrgId);
+    const accountId = await this.resolveAccountIdFromOrg(clientOrgId);
+    const clientId = await this.resolveClientId(accountId, clientOrgId);
+
+    if (projectId) {
+      const { data: project } = await this.admin
+        .from('projects')
+        .select('id, client_id, account_id')
+        .eq('id', projectId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+      if (!project || String(project.client_id ?? '') !== clientId) {
+        throw new Error('Invalid project for this client');
+      }
+    }
+
+    const layers = await loadEffectiveLayers(looseClient(this.admin), {
+      accountId,
+      clientId,
+      projectId: projectId ?? null,
+    });
+    const list = layersToEffectiveList(layers);
+
+    return clientFacingEffectiveServices(list).map((row) => ({
+      id: row.id,
+      label: row.name,
+      creditCost: row.creditCost,
+      isBillable: true,
+      isSupport: false,
+      categoryGroup: row.categoryName,
+      categorySortOrder: row.categorySortOrder,
+      requestTypeId: row.requestTypeId,
+    }));
+  }
+
+  async getCreditsSnapshot(clientOrgId: string): Promise<{
+    balance: number;
+    creditsPerCycle: number | null;
+    nextRenewalDate: string | null;
+  }> {
+    await this.ensureMember(clientOrgId);
+    const accountId = await this.resolveAccountIdFromOrg(clientOrgId);
+
+    const [poolRes, subRes] = await Promise.all([
+      this.admin
+        .from('client_credit_pools')
+        .select('balance, cycle_end')
+        .eq('client_org_id', clientOrgId)
+        .maybeSingle(),
+      this.admin
+        .from('client_subscriptions')
+        .select('next_billing_date, plan_templates(credits_per_cycle)')
+        .eq('client_org_id', clientOrgId)
+        .eq('account_id', accountId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const pool = poolRes.data as {
+      balance?: number;
+      cycle_end?: string | null;
+    } | null;
+
+    const sub = subRes.data as {
+      next_billing_date?: string | null;
+      plan_templates?:
+        | { credits_per_cycle?: number | null }
+        | { credits_per_cycle?: number | null }[]
+        | null;
+    } | null;
+
+    const plan = Array.isArray(sub?.plan_templates)
+      ? sub?.plan_templates[0]
+      : sub?.plan_templates;
+
+    return {
+      balance: Number(pool?.balance ?? 0),
+      creditsPerCycle:
+        typeof plan?.credits_per_cycle === 'number'
+          ? plan.credits_per_cycle
+          : null,
+      nextRenewalDate: sub?.next_billing_date
+        ? String(sub.next_billing_date)
+        : pool?.cycle_end
+          ? String(pool.cycle_end)
+          : null,
+    };
   }
 
   async getCreditsBundle(clientOrgId: string): Promise<PortalCreditsBundle> {

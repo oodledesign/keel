@@ -5,7 +5,13 @@ import type {
   ProjectRetainerRecord,
   RetainerMatchSuggestion,
   RetainerServiceRecord,
+  RetainerServiceScope,
 } from './types';
+
+function asScope(value: unknown): RetainerServiceScope {
+  if (value === 'client' || value === 'project') return value;
+  return 'workspace';
+}
 
 function asTaskStatus(value: unknown): TaskStatusValue | null {
   if (typeof value !== 'string') return null;
@@ -33,7 +39,16 @@ export function mapRetainerService(
         ? Math.round(row.default_duration_minutes)
         : null,
     isActive: Boolean(row.is_active ?? true),
+    isVisible: row.is_visible == null ? true : Boolean(row.is_visible),
     sortOrder: Number(row.sort_order ?? 0),
+    categoryId: row.category_id ? String(row.category_id) : null,
+    scope: asScope(row.scope),
+    clientId: row.client_id ? String(row.client_id) : null,
+    projectId: row.project_id ? String(row.project_id) : null,
+    sourceServiceId: row.source_service_id
+      ? String(row.source_service_id)
+      : null,
+    requestTypeId: row.request_type_id ? String(row.request_type_id) : null,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   };
@@ -50,6 +65,7 @@ export function mapProjectRetainer(
     autoMatchEnabled: Boolean(row.auto_match_enabled),
     weeklyDigestEnabled: Boolean(row.weekly_digest_enabled),
     allowedServiceIds,
+    servicesSource: row.services_source === 'custom' ? 'custom' : 'inherited',
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   };

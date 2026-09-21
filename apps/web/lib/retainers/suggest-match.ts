@@ -6,31 +6,27 @@ import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 
 import { applyRetainerMatch } from './apply-match';
+import {
+  buildMatchPools,
+  clientFacingEffectiveServices,
+  toLadderServices,
+} from './effective-services';
+import {
+  layersToEffectiveList,
+  loadEffectiveLayers,
+} from './load-effective-layers';
 import { looseClient } from './loose-client';
-import { mapRetainerService } from './map-records';
 import { mapMatchSuggestion } from './map-records';
 import { matchRetainerServiceWithFlash } from './match-ai';
 import {
   canAutoApply,
   resolveMatchKind,
-  splitServicePools,
   suggestedCreditCost,
 } from './match-ladder';
-import type { LadderService, RetainerMatchSuggestion } from './types';
+import type { RetainerMatchSuggestion } from './types';
 
 function db(client: SupabaseClient) {
   return looseClient(client);
-}
-
-function toLadderService(
-  row: ReturnType<typeof mapRetainerService>,
-): LadderService {
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    creditCost: row.creditCost,
-  };
 }
 
 export async function suggestRetainerMatchForActionItem(input: {
@@ -70,37 +66,26 @@ export async function suggestRetainerMatchForActionItem(input: {
     return mapMatchSuggestion(existing as Record<string, unknown>);
   }
 
-  const [projectRow, catalogueRows, allowRows, usedRows, messages] =
-    await Promise.all([
-      db(input.admin)
-        .from('projects')
-        .select('id, account_id, name, title, client_id')
-        .eq('id', item.project_id)
-        .maybeSingle(),
-      db(input.admin)
-        .from('retainer_services')
-        .select('*')
-        .eq('account_id', item.account_id)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-      db(input.admin)
-        .from('project_retainer_services')
-        .select('service_id')
-        .eq('project_id', item.project_id),
-      db(input.admin)
-        .from('project_retainer_transactions')
-        .select('service_id')
-        .eq('project_id', item.project_id)
-        .eq('type', 'burn')
-        .not('service_id', 'is', null),
-      item.thread_id
-        ? db(input.admin)
-            .from('email_messages')
-            .select('from_address, subject, body_text, snippet, internal_date')
-            .eq('thread_id', item.thread_id)
-            .order('internal_date', { ascending: true, nullsFirst: false })
-        : Promise.resolve({ data: [] }),
-    ]);
+  const [projectRow, usedRows, messages] = await Promise.all([
+    db(input.admin)
+      .from('projects')
+      .select('id, account_id, name, title, client_id')
+      .eq('id', item.project_id)
+      .maybeSingle(),
+    db(input.admin)
+      .from('project_retainer_transactions')
+      .select('service_id')
+      .eq('project_id', item.project_id)
+      .eq('type', 'burn')
+      .not('service_id', 'is', null),
+    item.thread_id
+      ? db(input.admin)
+          .from('email_messages')
+          .select('from_address, subject, body_text, snippet, internal_date')
+          .eq('thread_id', item.thread_id)
+          .order('internal_date', { ascending: true, nullsFirst: false })
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const project = projectRow.data as {
     id: string;
@@ -112,15 +97,20 @@ export async function suggestRetainerMatchForActionItem(input: {
 
   if (!project) return null;
 
-  const catalogue = (
-    (catalogueRows.data ?? []) as Array<Record<string, unknown>>
-  )
-    .map(mapRetainerService)
-    .map(toLadderService);
-
-  const allowlistIds = (
-    (allowRows.data ?? []) as Array<{ service_id: string }>
-  ).map((row) => row.service_id);
+  const layers = await loadEffectiveLayers(db(input.admin), {
+    accountId: String(item.account_id),
+    projectId: String(item.project_id),
+    clientId: item.client_id ? String(item.client_id) : project.client_id,
+  });
+  const effective = layersToEffectiveList(layers);
+  const catalogue = layers.workspace
+    .filter((row) => row.scope === 'workspace' && row.isActive && row.isVisible)
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      creditCost: row.creditCost,
+    }));
   const previouslyUsedIds = [
     ...new Set(
       ((usedRows.data ?? []) as Array<{ service_id: string | null }>)
@@ -129,11 +119,14 @@ export async function suggestRetainerMatchForActionItem(input: {
     ),
   ];
 
-  const pools = splitServicePools({
-    catalogue,
-    allowlistIds,
+  const pools = buildMatchPools({
+    workspaceCatalogue: catalogue,
+    effective,
     previouslyUsedIds,
   });
+  const effectiveLadder = toLadderServices(
+    clientFacingEffectiveServices(effective),
+  );
 
   const { data: thread } = item.thread_id
     ? await db(input.admin)
@@ -199,7 +192,9 @@ export async function suggestRetainerMatchForActionItem(input: {
 
   const matchedService =
     matchKind === 'project_service' || matchKind === 'workspace_service'
-      ? (catalogue.find((row) => row.id === ai.serviceId) ?? null)
+      ? (effectiveLadder.find((row) => row.id === ai.serviceId) ??
+        catalogue.find((row) => row.id === ai.serviceId) ??
+        null)
       : null;
 
   const creditCost = suggestedCreditCost({
