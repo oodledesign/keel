@@ -145,6 +145,13 @@ export const CancelScheduleCampaignSchema = z.object({
   campaignId: z.string().uuid(),
 });
 
+export const DuplicateCampaignForResendSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  campaignId: z.string().uuid(),
+  mode: z.enum(['all', 'non_responders']),
+});
+
 export const DeleteCampaignSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),

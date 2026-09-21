@@ -14,7 +14,7 @@ export const CAMPAIGN_AUDIENCE_TYPES = [
 export type CampaignAudienceType = (typeof CAMPAIGN_AUDIENCE_TYPES)[number];
 
 export const CampaignAudienceConfigSchema = z.object({
-  emails: z.array(z.string().email().max(320)).max(500).optional(),
+  emails: z.array(z.string().email().max(320)).max(5000).optional(),
   clientIds: z.array(z.string().uuid()).max(500).optional(),
   contactIds: z.array(z.string().uuid()).max(500).optional(),
   listId: z.string().uuid().optional().nullable(),

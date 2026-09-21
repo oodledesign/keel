@@ -27,6 +27,7 @@ import {
   DeleteAudienceListSchema,
   DeleteAutomationSchema,
   DeleteCampaignSchema,
+  DuplicateCampaignForResendSchema,
   SaveAudienceListSchema,
   SaveAutomationSchema,
   SaveCampaignContactSchema,
@@ -36,6 +37,7 @@ import {
   SendCampaignTestSchema,
   UpdateCampaignSchema,
 } from '../schemas/campaigns.schema';
+import { loadCampaignLinkedFormSubmissions } from './campaigns.loader';
 
 function campaignsPath(accountSlug: string) {
   return pathsConfig.app.accountEmailCampaigns.replace(
@@ -318,6 +320,52 @@ export const deleteCampaignAction = enhanceAction(
     return { success: true as const };
   },
   { auth: true, schema: DeleteCampaignSchema },
+);
+
+export const duplicateCampaignForResendAction = enhanceAction(
+  async function (data, user) {
+    const logger = await getLogger();
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const service = createCampaignsService(client);
+    const source = await service.get(data.accountId, data.campaignId);
+
+    let responderEmails: string[] = [];
+    if (data.mode === 'non_responders') {
+      const formId = source.bodyDocument?.formLink?.formId;
+      const linked = formId
+        ? await loadCampaignLinkedFormSubmissions(data.accountId, formId)
+        : null;
+      if (!linked?.isRsvp) {
+        throw new Error('This campaign has no RSVP form');
+      }
+      responderEmails = linked.submissions
+        .map((row) => row.contactEmail)
+        .filter((email): email is string => Boolean(email));
+    }
+
+    const campaign = await service.duplicateForResend({
+      accountId: data.accountId,
+      userId: user.id,
+      campaignId: data.campaignId,
+      mode: data.mode,
+      responderEmails,
+    });
+
+    logger.info(
+      {
+        name: 'duplicate-campaign-resend',
+        userId: user.id,
+        sourceCampaignId: data.campaignId,
+        campaignId: campaign.id,
+        mode: data.mode,
+      },
+      'Created follow-up campaign from sent campaign',
+    );
+    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, campaign.id);
+    return { success: true as const, campaignId: campaign.id };
+  },
+  { auth: true, schema: DuplicateCampaignForResendSchema },
 );
 
 async function requireGrowthCampaigns(accountId: string) {

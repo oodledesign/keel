@@ -58,6 +58,7 @@ import {
   parseCampaignAudienceType,
 } from './campaign-audience';
 import { assertCampaignDeletable } from './campaign-delete';
+import { followUpCampaignName, nonResponderEmails } from './campaign-resend';
 import {
   type CampaignSendProgressSnapshot,
   buildCampaignSendProgress,
@@ -246,6 +247,81 @@ class CampaignsService {
 
     if (error || !data) {
       throw new Error(error?.message ?? 'Could not create campaign');
+    }
+
+    return mapCampaign(data as Record<string, unknown>);
+  }
+
+  /**
+   * New draft copied from a sent campaign. Does not mutate the historical send.
+   * Recurring occurrences become a one-off follow-up (no series_id).
+   */
+  async duplicateForResend(input: {
+    accountId: string;
+    userId: string;
+    campaignId: string;
+    mode: 'all' | 'non_responders';
+    responderEmails?: string[];
+  }): Promise<EmailCampaign> {
+    const source = await this.get(input.accountId, input.campaignId);
+    if (source.status !== 'sent' && source.status !== 'failed') {
+      throw new Error('Only sent campaigns can be sent again');
+    }
+
+    let audienceType = source.audienceType;
+    let audienceConfig = source.audienceConfig;
+
+    if (input.mode === 'non_responders') {
+      const recipients = await this.listRecipients(
+        input.accountId,
+        input.campaignId,
+      );
+      const emails = nonResponderEmails(
+        recipients,
+        (input.responderEmails ?? []).map((email) => ({
+          contactEmail: email,
+        })),
+      );
+      if (emails.length === 0) {
+        throw new Error('Everyone invited has already responded');
+      }
+      audienceType = 'custom';
+      audienceConfig = {
+        emails,
+        clientIds: [],
+        contactIds: [],
+        listId: null,
+      };
+    }
+
+    const { data, error } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGNS,
+    )
+      .insert({
+        account_id: input.accountId,
+        created_by: input.userId,
+        name: followUpCampaignName(source.name),
+        subject: source.subject,
+        subject_b: source.subjectB,
+        ab_enabled: source.abEnabled,
+        ab_split_percent: source.abSplitPercent,
+        preview_text: source.previewText,
+        html_body: source.htmlBody,
+        body_document: source.bodyDocument,
+        from_name: source.fromName,
+        from_email: source.fromEmail,
+        reply_to: source.replyTo,
+        audience_type: audienceType,
+        audience_config: audienceConfig,
+        scheduled_timezone: source.scheduledTimezone,
+        status: 'draft',
+      })
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message ?? 'Could not create follow-up campaign');
     }
 
     return mapCampaign(data as Record<string, unknown>);

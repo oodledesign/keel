@@ -37,6 +37,11 @@ describe('campaign status pills', () => {
     ]);
   });
 
+  it('uses a vivid sage fill for sent', () => {
+    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-sage-500');
+    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-plum-900');
+  });
+
   it('uses a distinct colour class per status', () => {
     const classes = STATUSES.map(
       (status) => CAMPAIGN_STATUS_BADGE_CLASS[status],
