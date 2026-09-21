@@ -72,30 +72,47 @@ async function loadDisposalsPageDataImpl(
   const client = getSupabaseServerClient();
   const listingsService = createListingsService(client);
 
-  const branches = await loadAccountBranches(accountId);
+  const initialStatusFilter = parseDisposalStatusFilter(filters.status);
+  const { status, statuses } = disposalStatusQueryParams(initialStatusFilter);
+
+  // Default (unfiltered) list can start with branches/members — most refreshes.
+  const loadDefaultList = !filters.office && !filters.agent;
+  const [branches, members, defaultPage] = await Promise.all([
+    loadAccountBranches(accountId),
+    listingsService.listAccountMembers(resolvedSlug),
+    loadDefaultList
+      ? getCachedDisposalsListPage({
+          accountId,
+          userId: user.id,
+          accountBranchId: null,
+          status,
+          statuses,
+          actingAgentUserId: null,
+          page: 1,
+          pageSize: 20,
+        })
+      : Promise.resolve(null),
+  ]);
+
   const branchIds = new Set(branches.map((branch) => branch.id));
   const initialOfficeId =
     filters.office && branchIds.has(filters.office) ? filters.office : null;
-
-  const members = await listingsService.listAccountMembers(resolvedSlug);
   const memberIds = new Set(members.map((member) => member.userId));
-  const initialStatusFilter = parseDisposalStatusFilter(filters.status);
   const initialAgentUserId =
     filters.agent && memberIds.has(filters.agent) ? filters.agent : null;
 
-  const { status, statuses } = disposalStatusQueryParams(initialStatusFilter);
-
   const [{ data: listings, total }, unassignedCount] = await Promise.all([
-    getCachedDisposalsListPage({
-      accountId,
-      userId: user.id,
-      accountBranchId: initialOfficeId,
-      status,
-      statuses,
-      actingAgentUserId: initialAgentUserId,
-      page: 1,
-      pageSize: 20,
-    }),
+    defaultPage ??
+      getCachedDisposalsListPage({
+        accountId,
+        userId: user.id,
+        accountBranchId: initialOfficeId,
+        status,
+        statuses,
+        actingAgentUserId: initialAgentUserId,
+        page: 1,
+        pageSize: 20,
+      }),
     branches.length > 1
       ? getCachedUnassignedListingsCount({
           accountId,

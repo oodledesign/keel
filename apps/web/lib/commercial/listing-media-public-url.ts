@@ -180,13 +180,41 @@ export function encodeStorageSignedUrl(url: string): string {
   }
 }
 
-/** Gallery / lightbox preview transform — keeps admin UI snappy for large JPEGs. */
-export const LISTING_MEDIA_PREVIEW_TRANSFORM = {
+export type ListingMediaPreviewSize = 'list' | 'gallery';
+
+export type ListingMediaTransform = {
+  width: number;
+  height: number;
+  resize: 'cover' | 'contain' | 'fill';
+  quality: number;
+};
+
+/** Gallery / lightbox preview — large but still transformed. */
+export const LISTING_MEDIA_PREVIEW_TRANSFORM: ListingMediaTransform = {
   width: 1600,
   height: 1600,
-  resize: 'contain' as const,
+  resize: 'contain',
   quality: 75,
 };
+
+/**
+ * Disposals list / card thumbs. ~400px is enough for card covers and table
+ * chips; the previous 1600×1600 preview was far too large for this surface.
+ *
+ * Requires Supabase Image Transformations on the project. If signing with a
+ * transform fails (`requested path is invalid`), callers should fail soft and
+ * fall back to an untransformed signed URL rather than the public proxy.
+ */
+export const LISTING_MEDIA_LIST_TRANSFORM: ListingMediaTransform = {
+  width: 400,
+  height: 400,
+  resize: 'cover',
+  quality: 70,
+};
+
+/** List covers stay valid longer so the browser can cache across navigations. */
+export const LISTING_MEDIA_LIST_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
+export const LISTING_MEDIA_GALLERY_SIGNED_URL_TTL_SECONDS = 60 * 60;
 
 export function listingMediaSupportsPreviewTransform(
   mimeType: string | null | undefined,
@@ -198,4 +226,51 @@ export function listingMediaSupportsPreviewTransform(
     value === 'image/png' ||
     value === 'image/webp'
   );
+}
+
+export function listingMediaTransformFor(
+  size: ListingMediaPreviewSize,
+): ListingMediaTransform {
+  return size === 'list'
+    ? LISTING_MEDIA_LIST_TRANSFORM
+    : LISTING_MEDIA_PREVIEW_TRANSFORM;
+}
+
+export function listingMediaSignedUrlTtlSeconds(
+  size: ListingMediaPreviewSize,
+): number {
+  return size === 'list'
+    ? LISTING_MEDIA_LIST_SIGNED_URL_TTL_SECONDS
+    : LISTING_MEDIA_GALLERY_SIGNED_URL_TTL_SECONDS;
+}
+
+/** Transform options for `createSignedUrl(s)`, or undefined when not an image. */
+export function listingMediaSignedUrlTransform(
+  mimeType: string | null | undefined,
+  size: ListingMediaPreviewSize,
+): ListingMediaTransform | undefined {
+  if (!listingMediaSupportsPreviewTransform(mimeType)) return undefined;
+  return listingMediaTransformFor(size);
+}
+
+/** Prefer an explicit cover, otherwise the first image in sort order. */
+export function pickListingCoverMedia<
+  T extends { listingId: string; isCover: boolean },
+>(items: T[]): Map<string, T> {
+  const covers = new Map<string, T>();
+  const fallbacks = new Map<string, T>();
+
+  for (const item of items) {
+    if (item.isCover) {
+      if (!covers.has(item.listingId)) covers.set(item.listingId, item);
+      continue;
+    }
+    if (!fallbacks.has(item.listingId)) fallbacks.set(item.listingId, item);
+  }
+
+  for (const [listingId, item] of fallbacks) {
+    if (!covers.has(listingId)) covers.set(listingId, item);
+  }
+
+  return covers;
 }

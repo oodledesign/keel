@@ -5,6 +5,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  encodeStorageSignedUrl,
+  listingMediaSignedUrlTtlSeconds,
+  listingMediaTransformFor,
+  pickListingCoverMedia,
+} from '~/lib/commercial/listing-media-public-url';
+import {
   COMMERCIAL_LISTING_MEDIA_BUCKET,
   resolveCommercialMediaPublicUrl,
 } from '~/lib/commercial/migrate-external-listing-media';
@@ -201,46 +207,79 @@ async function attachCoverUrls(
     return listings;
   }
 
-  const coverByListing = new Map<
-    string,
-    { storagePath: string | null; externalUrl: string | null }
-  >();
-  for (const row of (mediaRows ?? []) as Array<Record<string, unknown>>) {
-    const listingId = row.listing_id as string;
-    if (coverByListing.has(listingId)) continue;
-    coverByListing.set(listingId, {
+  const coverByListing = pickListingCoverMedia(
+    ((mediaRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      listingId: row.listing_id as string,
+      isCover: Boolean(row.is_cover),
       storagePath: (row.storage_path as string | null) ?? null,
       externalUrl: (row.external_url as string | null) ?? null,
-    });
-  }
+    })),
+  );
 
-  const signed = await Promise.all(
-    [...coverByListing.entries()].map(async ([listingId, media]) => {
-      let storageSignedUrl: string | null = null;
-      if (media.storagePath) {
-        const { data, error: signError } = await client.storage
-          .from(COMMERCIAL_LISTING_MEDIA_BUCKET)
-          .createSignedUrl(media.storagePath, 3600);
-        if (signError) {
-          console.error(
-            '[commercial-dashboard] signed cover url:',
-            signError.message,
-          );
-        } else {
-          storageSignedUrl = data.signedUrl ?? null;
+  const paths = [...coverByListing.values()]
+    .map((media) => media.storagePath?.trim() || '')
+    .filter(Boolean);
+  const uniquePaths = [...new Set(paths)];
+  const signedByPath = new Map<string, string>();
+
+  if (uniquePaths.length > 0) {
+    const expiresIn = listingMediaSignedUrlTtlSeconds('list');
+    const transform = listingMediaTransformFor('list');
+    const bucket = client.storage.from(COMMERCIAL_LISTING_MEDIA_BUCKET);
+    const signed = await Promise.all(
+      uniquePaths.map(async (path) => {
+        const { data, error: signError } = await bucket.createSignedUrl(
+          path,
+          expiresIn,
+          { transform },
+        );
+        if (signError || !data?.signedUrl) {
+          if (signError) {
+            console.error(
+              '[commercial-dashboard] signed cover url:',
+              signError.message,
+            );
+          }
+          return [path, null] as const;
+        }
+        return [path, data.signedUrl] as const;
+      }),
+    );
+
+    const failed = signed.filter(([, url]) => !url).map(([path]) => path);
+
+    if (failed.length > 0) {
+      const fallback = await bucket.createSignedUrls(failed, expiresIn);
+      for (let i = 0; i < failed.length; i++) {
+        const path = failed[i]!;
+        const row = fallback.data?.[i];
+        if (row?.signedUrl && !row.error) {
+          signedByPath.set(path, row.signedUrl);
+          if (row.path) signedByPath.set(row.path, row.signedUrl);
         }
       }
+    }
+
+    for (const [path, url] of signed) {
+      if (url) signedByPath.set(path, url);
+    }
+  }
+
+  const urlByListing = new Map(
+    [...coverByListing.entries()].map(([listingId, media]) => {
+      const storageSignedUrl = media.storagePath
+        ? (signedByPath.get(media.storagePath) ?? null)
+        : null;
+      const resolved = resolveCommercialMediaPublicUrl({
+        storageSignedUrl,
+        externalUrl: media.externalUrl,
+      });
       return [
         listingId,
-        resolveCommercialMediaPublicUrl({
-          storageSignedUrl,
-          externalUrl: media.externalUrl,
-        }),
+        resolved ? encodeStorageSignedUrl(resolved) : null,
       ] as const;
     }),
   );
-
-  const urlByListing = new Map(signed);
   return listings.map((listing) => ({
     ...listing,
     coverUrl: urlByListing.get(listing.id) ?? null,

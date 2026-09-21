@@ -22,7 +22,6 @@ import {
   Eye,
   LayoutGrid,
   List,
-  Loader2,
   type LucideIcon,
   Map as MapIcon,
   MapPin,
@@ -104,11 +103,13 @@ import {
   deleteListing,
   listListings,
 } from '../_lib/server/server-actions';
+import { DisposalsListSkeleton } from './disposals-list-skeleton';
 import {
   ListingAgentAvatarStack,
   ListingMemberAvatar,
 } from './listing-agent-avatar-stack';
 import { ListingCardFeedsIcon } from './listing-card-feeds-icon';
+import { ListingCoverImage } from './listing-cover-image';
 import { ListingFormModal } from './listing-form-modal';
 import {
   ListingListFeedStatusCells,
@@ -1211,16 +1212,12 @@ export function ListingsList({
         </p>
       ) : null}
 
-      {visibleListings.length === 0 &&
-      (loadingPage || enrichingSearch || enrichingMap) ? (
-        <Card className={workspacePanelCard}>
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[var(--ozer-accent)]" />
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              Loading disposals…
-            </p>
-          </CardContent>
-        </Card>
+      {(loadingPage ||
+        (visibleListings.length === 0 && (enrichingSearch || enrichingMap))) &&
+      viewMode !== 'map' ? (
+        <DisposalsListSkeleton
+          view={viewMode === 'table' ? 'table' : 'cards'}
+        />
       ) : visibleListings.length === 0 &&
         !loadingPage &&
         !enrichingSearch &&
@@ -1286,12 +1283,13 @@ export function ListingsList({
         />
       ) : viewMode === 'cards' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {pagedVisibleListings.map((listing) => (
+          {pagedVisibleListings.map((listing, index) => (
             <ListingCard
               key={listing.id}
               listing={listing}
               accountSlug={accountSlug}
               canEditDisposals={canEditDisposals}
+              eagerCover={index < 4}
               onPreview={() => setPreviewListingId(listing.id)}
               onEdit={() => openEdit(listing)}
               onDelete={() => setDeleteTarget(listing)}
@@ -1339,13 +1337,11 @@ export function ListingsList({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <span
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg ${workspaceIconChip}`}
+                          className={`relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg ${workspaceIconChip}`}
                         >
                           {listing.coverUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <ListingCoverImage
                               src={listing.coverUrl}
-                              alt=""
                               className="h-full w-full object-cover"
                             />
                           ) : (
@@ -1559,6 +1555,7 @@ function ListingCard({
   listing,
   accountSlug,
   canEditDisposals,
+  eagerCover = false,
   onPreview,
   onEdit,
   onDelete,
@@ -1566,6 +1563,7 @@ function ListingCard({
   listing: CommercialListing;
   accountSlug: string;
   canEditDisposals: boolean;
+  eagerCover?: boolean;
   onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1585,10 +1583,9 @@ function ListingCard({
         className="relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-[var(--workspace-shell-sidebar-accent)]"
       >
         {listing.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <ListingCoverImage
             src={listing.coverUrl}
-            alt=""
+            eager={eagerCover}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
           />
         ) : (
