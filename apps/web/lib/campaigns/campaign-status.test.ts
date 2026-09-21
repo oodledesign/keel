@@ -37,8 +37,8 @@ describe('campaign status pills', () => {
     ]);
   });
 
-  it('uses a vivid sage fill for sent', () => {
-    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-sage-500');
+  it('uses a vivid lime fill for sent', () => {
+    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-lime-400');
     expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-plum-900');
   });
 

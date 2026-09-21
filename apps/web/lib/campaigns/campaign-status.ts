@@ -30,7 +30,7 @@ export const CAMPAIGN_STATUS_BADGE_CLASS: Record<EmailCampaignStatus, string> =
       'bg-[color-mix(in_srgb,var(--ozer-gold-500)_20%,transparent)] text-[var(--ozer-plum-800)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-gold-500)_42%,transparent)] dark:text-[var(--ozer-gold-500)]',
     sending:
       'bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--ozer-info)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-info)_28%,transparent)]',
-    sent: 'bg-[var(--ozer-sage-500)] text-[var(--ozer-plum-900)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-plum-900)_22%,var(--ozer-sage-500))] dark:bg-[var(--ozer-sage-300)] dark:text-[var(--ozer-plum-900)] dark:ring-[color-mix(in_srgb,var(--ozer-sage-500)_70%,var(--ozer-plum-900))]',
+    sent: 'bg-[var(--ozer-lime-400)] font-semibold text-[var(--ozer-plum-900)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-plum-900)_30%,var(--ozer-lime-400))] dark:bg-[var(--ozer-lime-400)] dark:text-[var(--ozer-plum-900)] dark:ring-[color-mix(in_srgb,var(--ozer-plum-900)_40%,var(--ozer-lime-400))]',
     cancelled:
       'bg-[color-mix(in_srgb,var(--ozer-text-muted)_18%,transparent)] text-[var(--workspace-shell-text-muted)] ring-1 ring-inset ring-[color:var(--workspace-shell-border)]',
     failed:
