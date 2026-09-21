@@ -228,6 +228,62 @@ class PortalCreditsService {
     }));
   }
 
+  async getCreditsSnapshot(clientOrgId: string): Promise<{
+    balance: number;
+    creditsPerCycle: number | null;
+    nextRenewalDate: string | null;
+  }> {
+    await this.ensureMember(clientOrgId);
+    const accountId = await this.resolveAccountIdFromOrg(clientOrgId);
+
+    const [poolRes, subRes] = await Promise.all([
+      this.admin
+        .from('client_credit_pools')
+        .select('balance, cycle_end')
+        .eq('client_org_id', clientOrgId)
+        .maybeSingle(),
+      this.admin
+        .from('client_subscriptions')
+        .select('next_billing_date, plan_templates(credits_per_cycle)')
+        .eq('client_org_id', clientOrgId)
+        .eq('account_id', accountId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const pool = poolRes.data as {
+      balance?: number;
+      cycle_end?: string | null;
+    } | null;
+
+    const sub = subRes.data as {
+      next_billing_date?: string | null;
+      plan_templates?:
+        | { credits_per_cycle?: number | null }
+        | { credits_per_cycle?: number | null }[]
+        | null;
+    } | null;
+
+    const plan = Array.isArray(sub?.plan_templates)
+      ? sub?.plan_templates[0]
+      : sub?.plan_templates;
+
+    return {
+      balance: Number(pool?.balance ?? 0),
+      creditsPerCycle:
+        typeof plan?.credits_per_cycle === 'number'
+          ? plan.credits_per_cycle
+          : null,
+      nextRenewalDate: sub?.next_billing_date
+        ? String(sub.next_billing_date)
+        : pool?.cycle_end
+          ? String(pool.cycle_end)
+          : null,
+    };
+  }
+
   async getCreditsBundle(clientOrgId: string): Promise<PortalCreditsBundle> {
     await this.ensureMember(clientOrgId);
     const accountId = await this.resolveAccountIdFromOrg(clientOrgId);

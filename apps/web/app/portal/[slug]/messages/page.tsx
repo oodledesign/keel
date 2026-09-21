@@ -6,35 +6,40 @@ import { createClientPortalService } from '../_lib/server/client-portal.service'
 
 interface PortalMessagesPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ compose?: string; thread?: string }>;
 }
 
 export const generateMetadata = async () => ({ title: 'Messages' });
 
 export default async function PortalMessagesPage({
   params,
+  searchParams,
 }: PortalMessagesPageProps) {
   const { slug } = await params;
+  const { compose, thread: requestedThread } = await searchParams;
   const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
 
   let threads = await service.listParticipatingThreads(ctx.clientOrgId);
   if (threads.length === 0) {
     const threadId = await service.getOrCreateMessageThread(ctx.clientOrgId);
-    threads = await service.listParticipatingThreads(ctx.clientOrgId);
-    if (threads.length === 0) {
-      threads = [
-        {
-          id: threadId,
-          title: 'Everyone on this client',
-          lastMessagePreview: null,
-          lastMessageAt: new Date().toISOString(),
-          isClientWide: true,
-        },
-      ];
-    }
+    threads = [
+      {
+        id: threadId,
+        title: 'Everyone on this client',
+        lastMessagePreview: null,
+        lastMessageAt: new Date().toISOString(),
+        isClientWide: true,
+      },
+    ];
   }
 
-  const activeId = threads[0]?.id ?? null;
+  const activeId =
+    (requestedThread && threads.some((thread) => thread.id === requestedThread)
+      ? requestedThread
+      : null) ??
+    threads[0]?.id ??
+    null;
   const messages = activeId
     ? await service.listPortalMessages(ctx.clientOrgId, activeId)
     : [];
@@ -56,6 +61,7 @@ export default async function PortalMessagesPage({
         threads={threads}
         initialThreadId={activeId}
         initialMessages={messages}
+        autoFocusCompose={compose === '1'}
       />
     </div>
   );

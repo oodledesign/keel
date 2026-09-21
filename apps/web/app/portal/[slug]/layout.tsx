@@ -13,7 +13,7 @@ import { AgencyPortalShell } from './_components/agency-portal-shell';
 import { PortalProductTourHost } from './_components/portal-product-tour-host';
 import { PortalShell } from './_components/portal-shell';
 import { loadClientPortalContext } from './_lib/server/client-portal.loader';
-import { loadPortalCreditsBundle } from './_lib/server/portal-credits.loader';
+import { loadPortalCreditsSnapshot } from './_lib/server/portal-credits.loader';
 
 interface PortalSlugLayoutProps {
   children: ReactNode;
@@ -40,7 +40,7 @@ export default async function PortalSlugLayout({
 
   const ctx = await loadClientPortalContext(slug);
 
-  const credits = await loadPortalCreditsBundle(ctx.clientOrgId);
+  const credits = await loadPortalCreditsSnapshot(ctx.clientOrgId);
   const creditBalance = credits?.balance ?? 0;
   const creditsPerCycle = credits?.creditsPerCycle ?? null;
 

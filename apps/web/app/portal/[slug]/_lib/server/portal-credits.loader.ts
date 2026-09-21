@@ -14,7 +14,8 @@ export const loadPortalCanRequestService = cache(
         getSupabaseServerClient(),
       ).listEffectiveServices(clientOrgId);
       return rows.length > 0;
-    } catch {
+    } catch (error) {
+      console.error('[portal] loadPortalCanRequestService:', error);
       return false;
     }
   },
@@ -26,7 +27,28 @@ export const loadPortalCreditsBundle = cache(
       return await createPortalCreditsService(
         getSupabaseServerClient(),
       ).getCreditsBundle(clientOrgId);
-    } catch {
+    } catch (error) {
+      console.error('[portal] loadPortalCreditsBundle:', error);
+      return null;
+    }
+  },
+);
+
+export type PortalCreditsSnapshot = {
+  balance: number;
+  creditsPerCycle: number | null;
+  nextRenewalDate: string | null;
+};
+
+/** Layout + Overview only need balance / renewal — skip history and request types. */
+export const loadPortalCreditsSnapshot = cache(
+  async (clientOrgId: string): Promise<PortalCreditsSnapshot | null> => {
+    try {
+      return await createPortalCreditsService(
+        getSupabaseServerClient(),
+      ).getCreditsSnapshot(clientOrgId);
+    } catch (error) {
+      console.error('[portal] loadPortalCreditsSnapshot:', error);
       return null;
     }
   },

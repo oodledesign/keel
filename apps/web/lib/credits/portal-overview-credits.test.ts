@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { PORTAL_CREDIT_TOPUP_PACKS } from '../../app/portal/[slug]/_lib/types/portal-credits.types';
 import {
   calendarDaysUntil,
+  portalCreditsHasRenewal,
+  portalCreditsNextSteps,
   portalCreditsResetCopy,
 } from './portal-overview-credits';
 
@@ -38,5 +40,31 @@ describe('portalCreditsResetCopy', () => {
 describe('calendarDaysUntil', () => {
   it('returns null for invalid dates', () => {
     expect(calendarDaysUntil('nope')).toBeNull();
+  });
+});
+
+describe('portalCreditsNextSteps', () => {
+  const now = new Date(2026, 8, 21);
+
+  it('offers Top up when the balance is empty', () => {
+    expect(portalCreditsNextSteps(0, '2026-10-05', now)).toEqual({
+      topUp: true,
+      billing: false,
+    });
+  });
+
+  it('offers Billing when no renewal is set', () => {
+    expect(portalCreditsHasRenewal(null, now)).toBe(false);
+    expect(portalCreditsNextSteps(12, null, now)).toEqual({
+      topUp: false,
+      billing: true,
+    });
+  });
+
+  it('offers both when credits and renewal are missing', () => {
+    expect(portalCreditsNextSteps(0, 'not-a-date', now)).toEqual({
+      topUp: true,
+      billing: true,
+    });
   });
 });

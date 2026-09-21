@@ -1132,32 +1132,38 @@ class MessagesService {
       );
     });
 
-    const participantsMap = await this.loadThreadParticipants(
-      (threads ?? []).map((t: { id: string }) => t.id),
-    );
+    const threadRows = threads ?? [];
+    const [participantsMap, latestMessages] = await Promise.all([
+      this.loadThreadParticipants(threadRows.map((t: { id: string }) => t.id)),
+      Promise.all(
+        threadRows.map((thread: { id: string }) =>
+          this.admin
+            .from('chat_messages')
+            .select('id, body, image_url, created_at')
+            .eq('thread_id', thread.id)
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ),
+      ),
+    ]);
 
-    const out: MessageThreadListItem[] = [];
-    for (const thread of threads ?? []) {
-      const { data: latestMessage } = await this.admin
-        .from('chat_messages')
-        .select('id, body, image_url, created_at')
-        .eq('thread_id', thread.id)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    return threadRows.map((thread: any, index: number) => {
+      const latestMessage = latestMessages[index]?.data as {
+        body?: string | null;
+        image_url?: string | null;
+      } | null;
 
-      out.push({
+      return {
         ...thread,
         unread_count: 0,
         last_message_preview:
           latestMessage?.body?.trim() ||
           (latestMessage?.image_url ? 'Image' : null),
         participants: participantsMap.get(thread.id) ?? [],
-      });
-    }
-
-    return out;
+      };
+    });
   }
 
   async assertCanUploadImage(params: { userId: string; threadId: string }) {
