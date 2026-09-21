@@ -60,6 +60,11 @@ function etagFor(row: MediaRow): string {
   return `"${Buffer.from(stamp).toString('base64url')}"`;
 }
 
+/** Versioned by ETag — safe to cache across navigations and CDN. */
+const STORAGE_CACHE_CONTROL =
+  'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';
+const EXTERNAL_CACHE_CONTROL = 'public, max-age=300, s-maxage=300';
+
 async function serveMedia(
   request: Request,
   id: string,
@@ -82,13 +87,31 @@ async function serveMedia(
       status: 304,
       headers: {
         ETag: etag,
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        'Cache-Control': STORAGE_CACHE_CONTROL,
       },
     });
   }
 
   const storagePath = row.storage_path?.trim() || null;
   if (storagePath) {
+    const contentType = row.mime_type?.trim() || 'application/octet-stream';
+    const headers: Record<string, string> = {
+      'Content-Type': contentType,
+      ETag: etag,
+      'Cache-Control': STORAGE_CACHE_CONTROL,
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (row.file_name?.trim()) {
+      headers['Content-Disposition'] =
+        `inline; filename="${row.file_name.replace(/"/g, '')}"`;
+    }
+
+    // Rightmove uses conditional HEAD/ETag. Do not 302 and do not download
+    // the object just to answer HEAD.
+    if (method === 'HEAD') {
+      return new NextResponse(null, { status: 200, headers });
+    }
+
     const admin = getSupabaseServerAdminClient();
     const { data, error } = await admin.storage
       .from(COMMERCIAL_LISTING_MEDIA_BUCKET)
@@ -99,26 +122,12 @@ async function serveMedia(
       return new NextResponse('Media unavailable', { status: 502 });
     }
 
-    const contentType =
-      row.mime_type?.trim() || data.type || 'application/octet-stream';
-    const buffer = Buffer.from(await data.arrayBuffer());
-    const headers: Record<string, string> = {
-      'Content-Type': contentType,
-      'Content-Length': String(buffer.byteLength),
-      ETag: etag,
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
-      'X-Content-Type-Options': 'nosniff',
-    };
-    if (row.file_name?.trim()) {
-      headers['Content-Disposition'] =
-        `inline; filename="${row.file_name.replace(/"/g, '')}"`;
+    if (data.type) headers['Content-Type'] = row.mime_type?.trim() || data.type;
+    if (typeof data.size === 'number' && data.size > 0) {
+      headers['Content-Length'] = String(data.size);
     }
 
-    if (method === 'HEAD') {
-      return new NextResponse(null, { status: 200, headers });
-    }
-
-    return new NextResponse(buffer, { status: 200, headers });
+    return new NextResponse(data.stream(), { status: 200, headers });
   }
 
   const external = row.external_url?.trim() || null;
@@ -134,7 +143,7 @@ async function serveMedia(
       headers: {
         'Content-Type': row.mime_type?.trim() || 'application/octet-stream',
         ETag: etag,
-        'Cache-Control': 'public, max-age=300, s-maxage=300',
+        'Cache-Control': EXTERNAL_CACHE_CONTROL,
         'X-Content-Type-Options': 'nosniff',
       },
     });
@@ -144,7 +153,7 @@ async function serveMedia(
     status: 302,
     headers: {
       ETag: etag,
-      'Cache-Control': 'public, max-age=300, s-maxage=300',
+      'Cache-Control': EXTERNAL_CACHE_CONTROL,
     },
   });
 }

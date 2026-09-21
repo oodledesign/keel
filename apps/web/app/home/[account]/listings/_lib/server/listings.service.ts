@@ -25,9 +25,13 @@ import {
 } from '~/lib/commercial/listing-events';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import {
-  LISTING_MEDIA_PREVIEW_TRANSFORM,
+  type ListingMediaPreviewSize,
+  type ListingMediaTransform,
   encodeStorageSignedUrl,
+  listingMediaSignedUrlTransform,
+  listingMediaSignedUrlTtlSeconds,
   listingMediaSupportsPreviewTransform,
+  pickListingCoverMedia,
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
@@ -1035,62 +1039,191 @@ function generateShareToken() {
   return randomBytes(24).toString('hex');
 }
 
-async function signMediaUrl(
-  client: SupabaseClient,
+const LISTING_MEDIA_SIGN_CHUNK = 50;
+const COVER_MEDIA_SELECT =
+  'id, listing_id, account_id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at';
+
+function applySignedMediaUrl(
   item: CommercialListingMedia,
-): Promise<CommercialListingMedia> {
-  // External/public cover hosts need no storage round-trip.
-  if (!item.storagePath && item.externalUrl) {
-    return {
-      ...item,
-      url: resolveCommercialMediaPublicUrl({
-        storageSignedUrl: null,
-        externalUrl: item.externalUrl,
-      }),
-    };
-  }
-
-  let storageSignedUrl: string | null = null;
-  if (item.storagePath) {
-    const usePreviewTransform = listingMediaSupportsPreviewTransform(
-      item.mimeType,
-    );
-    const { data, error } = await client.storage
-      .from('commercial-listing-media')
-      .createSignedUrl(
-        item.storagePath,
-        3600,
-        usePreviewTransform
-          ? { transform: LISTING_MEDIA_PREVIEW_TRANSFORM }
-          : undefined,
-      );
-    if (error) {
-      console.error('[listings] signed media url error:', error.message);
-      // Transform signing can fail on older objects — fall back to full file.
-      if (usePreviewTransform) {
-        const fallback = await client.storage
-          .from('commercial-listing-media')
-          .createSignedUrl(item.storagePath, 3600);
-        if (fallback.error) {
-          console.error(
-            '[listings] signed media url fallback error:',
-            fallback.error.message,
-          );
-        } else {
-          storageSignedUrl = fallback.data.signedUrl ?? null;
-        }
-      }
-    } else {
-      storageSignedUrl = data.signedUrl ?? null;
-    }
-  }
-
+  storageSignedUrl: string | null,
+): CommercialListingMedia {
   const resolved = resolveCommercialMediaPublicUrl({
     storageSignedUrl,
     externalUrl: item.externalUrl,
   });
   const url = resolved ? encodeStorageSignedUrl(resolved) : null;
   return { ...item, url };
+}
+
+async function signStoragePaths(
+  client: SupabaseClient,
+  paths: string[],
+  options?: { transform?: ListingMediaTransform; expiresIn?: number },
+): Promise<Map<string, string>> {
+  const unique = [...new Set(paths.map((path) => path.trim()).filter(Boolean))];
+  const signedByPath = new Map<string, string>();
+  const expiresIn =
+    options?.expiresIn ?? listingMediaSignedUrlTtlSeconds('gallery');
+  const bucket = client.storage.from('commercial-listing-media');
+
+  // storage-js createSignedUrls does not accept `transform` — only the
+  // singular createSignedUrl call signs Image Transformation params.
+  if (options?.transform) {
+    const transform = options.transform;
+    const results = await Promise.all(
+      unique.map(async (path) => {
+        const { data, error } = await bucket.createSignedUrl(path, expiresIn, {
+          transform,
+        });
+        if (error || !data?.signedUrl) {
+          if (error) {
+            console.error('[listings] signed media url error:', error.message);
+          }
+          return [path, null] as const;
+        }
+        return [path, data.signedUrl] as const;
+      }),
+    );
+
+    const failed: string[] = [];
+    for (const [path, url] of results) {
+      if (url) signedByPath.set(path, url);
+      else failed.push(path);
+    }
+
+    if (failed.length > 0) {
+      const fallback = await signStoragePaths(client, failed, { expiresIn });
+      for (const [path, url] of fallback) signedByPath.set(path, url);
+    }
+
+    return signedByPath;
+  }
+
+  for (let i = 0; i < unique.length; i += LISTING_MEDIA_SIGN_CHUNK) {
+    const chunk = unique.slice(i, i + LISTING_MEDIA_SIGN_CHUNK);
+    const { data, error } = await bucket.createSignedUrls(chunk, expiresIn);
+
+    if (error) {
+      console.error('[listings] batch signed media url error:', error.message);
+      continue;
+    }
+
+    for (let j = 0; j < chunk.length; j++) {
+      const path = chunk[j]!;
+      const row = data?.[j];
+      if (row?.signedUrl && !row.error) {
+        signedByPath.set(path, row.signedUrl);
+        if (row.path) signedByPath.set(row.path, row.signedUrl);
+      }
+    }
+  }
+
+  return signedByPath;
+}
+
+type SignMediaOptions = {
+  size?: ListingMediaPreviewSize;
+};
+
+async function signMediaUrls(
+  client: SupabaseClient,
+  items: CommercialListingMedia[],
+  options?: SignMediaOptions,
+): Promise<CommercialListingMedia[]> {
+  if (items.length === 0) return items;
+
+  const size = options?.size ?? 'gallery';
+  const expiresIn = listingMediaSignedUrlTtlSeconds(size);
+  const transformable: CommercialListingMedia[] = [];
+  const plain: CommercialListingMedia[] = [];
+
+  for (const item of items) {
+    if (!item.storagePath) continue;
+    if (listingMediaSupportsPreviewTransform(item.mimeType)) {
+      transformable.push(item);
+    } else {
+      plain.push(item);
+    }
+  }
+
+  const transform = listingMediaSignedUrlTransform(
+    transformable[0]?.mimeType ?? 'image/jpeg',
+    size,
+  );
+
+  const [transformed, untransformed] = await Promise.all([
+    transformable.length > 0
+      ? signStoragePaths(
+          client,
+          transformable.map((item) => item.storagePath!).filter(Boolean),
+          { transform, expiresIn },
+        )
+      : Promise.resolve(new Map<string, string>()),
+    plain.length > 0
+      ? signStoragePaths(
+          client,
+          plain.map((item) => item.storagePath!).filter(Boolean),
+          { expiresIn },
+        )
+      : Promise.resolve(new Map<string, string>()),
+  ]);
+
+  const urlByPath = new Map([...transformed, ...untransformed]);
+
+  return items.map((item) => {
+    if (!item.storagePath) {
+      return applySignedMediaUrl(item, null);
+    }
+    return applySignedMediaUrl(item, urlByPath.get(item.storagePath) ?? null);
+  });
+}
+
+async function fetchCoverMediaRows(
+  client: SupabaseClient,
+  listingIds: string[],
+): Promise<MediaRow[]> {
+  if (listingIds.length === 0) return [];
+
+  const { data: coverRows, error: coverError } = await client
+    .from('commercial_listing_media')
+    .select(COVER_MEDIA_SELECT)
+    .in('listing_id', listingIds)
+    .eq('is_private', false)
+    .eq('is_cover', true)
+    .or('media_type.eq.image,mime_type.ilike.image/%')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (coverError) {
+    console.error('[listings] cover media error:', coverError.message);
+    return [];
+  }
+
+  const covers = (coverRows ?? []) as MediaRow[];
+  const covered = new Set(covers.map((row) => row.listing_id));
+  const missing = listingIds.filter((id) => !covered.has(id));
+  if (missing.length === 0) return covers;
+
+  const { data: fallbackRows, error: fallbackError } = await client
+    .from('commercial_listing_media')
+    .select(COVER_MEDIA_SELECT)
+    .in('listing_id', missing)
+    .eq('is_private', false)
+    .or('media_type.eq.image,mime_type.ilike.image/%')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (fallbackError) {
+    console.error(
+      '[listings] cover fallback media error:',
+      fallbackError.message,
+    );
+    return covers;
+  }
+
+  return [...covers, ...((fallbackRows ?? []) as MediaRow[])];
 }
 
 async function attachCoverUrls(
@@ -1100,34 +1233,14 @@ async function attachCoverUrls(
   if (listings.length === 0) return listings;
 
   const listingIds = listings.map((l) => l.id);
-  const { data: mediaRows, error } = await client
-    .from('commercial_listing_media')
-    .select(
-      'id, listing_id, account_id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at',
-    )
-    .in('listing_id', listingIds)
-    .eq('is_private', false)
-    .or('media_type.eq.image,mime_type.ilike.image/%')
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true })
-    .order('id', { ascending: true });
-
-  if (error) {
-    console.error('[listings] cover media error:', error.message);
-    return listings;
-  }
-
-  const coverByListing = new Map<string, CommercialListingMedia>();
-  for (const row of (mediaRows ?? []) as MediaRow[]) {
-    const media = mapMedia(row);
-    if (!coverByListing.has(media.listingId)) {
-      coverByListing.set(media.listingId, media);
-    }
-  }
-
-  const signed = await Promise.all(
-    [...coverByListing.values()].map((item) => signMediaUrl(client, item)),
+  const mediaRows = await fetchCoverMediaRows(client, listingIds);
+  const coverByListing = pickListingCoverMedia(
+    mediaRows.map((row) => mapMedia(row)),
   );
+
+  const signed = await signMediaUrls(client, [...coverByListing.values()], {
+    size: 'list',
+  });
   const urlByListing = new Map(
     signed.map((item) => [item.listingId, item.url ?? null]),
   );
@@ -1316,33 +1429,20 @@ async function attachRightmoveSyncStatuses(
   if (listings.length === 0) return listings;
 
   const listingIds = listings.map((listing) => listing.id);
-  const [{ data: pubs, error: pubsError }, { data: media, error: mediaError }] =
-    await Promise.all([
-      client
-        .from('commercial_portal_publications')
-        .select(
-          'listing_id, portal, status, external_id, external_url, last_sync_at, last_error',
-        )
-        .eq('account_id', accountId)
-        .in('portal', [...LIST_FEED_PORTALS])
-        .in('listing_id', listingIds),
-      client
-        .from('commercial_listing_media')
-        .select('listing_id, created_at')
-        .eq('account_id', accountId)
-        .eq('is_private', false)
-        .in('listing_id', listingIds),
-    ]);
+  // Media timestamps are not loaded here: media mutations already bump
+  // commercial_listings.updated_at, which is enough for list stale-sync.
+  const { data: pubs, error: pubsError } = await client
+    .from('commercial_portal_publications')
+    .select(
+      'listing_id, portal, status, external_id, external_url, last_sync_at, last_error',
+    )
+    .eq('account_id', accountId)
+    .in('portal', [...LIST_FEED_PORTALS])
+    .in('listing_id', listingIds);
 
   if (pubsError) {
     console.error('[listings] attachRightmoveSyncStatuses:', pubsError.message);
     return listings;
-  }
-  if (mediaError) {
-    console.error(
-      '[listings] attachRightmoveSyncStatuses media:',
-      mediaError.message,
-    );
   }
 
   const pubsByListing = new Map<
@@ -1362,25 +1462,12 @@ async function attachRightmoveSyncStatuses(
     });
     pubsByListing.set(listingId, current);
   }
-  const mediaByListing = new Map<string, string[]>();
-  for (const row of (media ?? []) as Array<Record<string, unknown>>) {
-    const listingId = String(row.listing_id);
-    const createdAt =
-      typeof row.created_at === 'string' ? row.created_at : null;
-    if (!createdAt) continue;
-    const current = mediaByListing.get(listingId) ?? [];
-    current.push(createdAt);
-    mediaByListing.set(listingId, current);
-  }
-
   return listings.map((listing) => {
     const feedPublications = pubsByListing.get(listing.id) ?? [];
-    const feedMediaCreatedAt = mediaByListing.get(listing.id) ?? [];
     const pub = feedPublications.find((row) => row.portal === 'rightmove');
     return {
       ...listing,
       feedPublications,
-      feedMediaCreatedAt,
       rightmoveSyncStatus: resolveRightmoveListSyncStatus({
         listingStatus: listing.status,
         listingUpdatedAt: listing.updatedAt,
@@ -1389,7 +1476,6 @@ async function attachRightmoveSyncStatuses(
         lastError: pub?.lastError ?? null,
         externalId: pub?.externalId ?? null,
         externalUrl: pub?.externalUrl ?? null,
-        mediaCreatedAt: feedMediaCreatedAt,
       }),
     };
   });
@@ -1488,26 +1574,35 @@ export function createListingsService(client: SupabaseClient) {
         query = query.eq('status', input.status);
       }
 
-      if (input.actingAgentUserId) {
-        const { data: agentRows, error: agentError } = await fromTable(
-          client,
-          'commercial_listing_agents',
-        )
-          .select('listing_id')
-          .eq('account_id', input.accountId)
-          .eq('user_id', input.actingAgentUserId);
+      const [agentFilter, branchFilter] = await Promise.all([
+        input.actingAgentUserId
+          ? fromTable(client, 'commercial_listing_agents')
+              .select('listing_id')
+              .eq('account_id', input.accountId)
+              .eq('user_id', input.actingAgentUserId)
+          : Promise.resolve({ data: null, error: null }),
+        input.accountBranchId
+          ? client
+              .from('account_branches')
+              .select('id')
+              .eq('id', input.accountBranchId)
+              .eq('account_id', input.accountId)
+              .maybeSingle()
+          : Promise.resolve({ data: true, error: null }),
+      ]);
 
-        if (agentError) {
+      if (input.actingAgentUserId) {
+        if (agentFilter.error) {
           console.error(
             '[listings] listListingsPage agent filter:',
-            agentError.message,
+            agentFilter.error.message,
           );
           return { data: [], total: 0 };
         }
 
         const listingIds = [
           ...new Set(
-            ((agentRows ?? []) as Array<{ listing_id: string }>).map(
+            ((agentFilter.data ?? []) as Array<{ listing_id: string }>).map(
               (row) => row.listing_id,
             ),
           ),
@@ -1519,22 +1614,15 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       if (input.accountBranchId) {
-        const { data: branch, error: branchError } = await client
-          .from('account_branches')
-          .select('id')
-          .eq('id', input.accountBranchId)
-          .eq('account_id', input.accountId)
-          .maybeSingle();
-
-        if (branchError) {
+        if (branchFilter.error) {
           console.error(
             '[listings] listListingsPage branch check:',
-            branchError.message,
+            branchFilter.error.message,
           );
           return { data: [], total: 0 };
         }
 
-        if (!branch) {
+        if (!branchFilter.data) {
           return { data: [], total: 0 };
         }
 
@@ -2807,8 +2895,11 @@ export function createListingsService(client: SupabaseClient) {
 
     async withSignedMediaUrls(
       media: CommercialListingMedia[],
+      options?: SignMediaOptions,
     ): Promise<CommercialListingMedia[]> {
-      return Promise.all(media.map((item) => signMediaUrl(client, item)));
+      return signMediaUrls(client, media, {
+        size: options?.size ?? 'gallery',
+      });
     },
 
     async listEnquiriesForListing(

@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  LISTING_MEDIA_LIST_TRANSFORM,
+  LISTING_MEDIA_PREVIEW_TRANSFORM,
   RIGHTMOVE_MEDIA_URL_MAX_LENGTH,
   buildCommercialListingMediaPublicUrl,
   commercialListingMediaFileName,
   commercialListingMediaVersion,
+  listingMediaSignedUrlTransform,
+  listingMediaTransformFor,
+  pickListingCoverMedia,
   withRightmoveMediaCacheBust,
 } from '../listing-media-public-url';
 
@@ -55,6 +60,52 @@ describe('withRightmoveMediaCacheBust', () => {
     const signed =
       'https://example.supabase.co/storage/v1/object/sign/path/file.jpg?token=abc';
     expect(withRightmoveMediaCacheBust(signed, 1787230000)).toBe(signed);
+  });
+});
+
+describe('listingMediaTransformFor', () => {
+  it('uses the small list transform for card/list covers', () => {
+    expect(listingMediaTransformFor('list')).toEqual(
+      LISTING_MEDIA_LIST_TRANSFORM,
+    );
+    expect(LISTING_MEDIA_LIST_TRANSFORM.width).toBeLessThanOrEqual(400);
+    expect(LISTING_MEDIA_LIST_TRANSFORM.height).toBeLessThanOrEqual(400);
+    expect(LISTING_MEDIA_LIST_TRANSFORM.quality).toBe(70);
+  });
+
+  it('keeps the large gallery transform for detail previews', () => {
+    expect(listingMediaTransformFor('gallery')).toEqual(
+      LISTING_MEDIA_PREVIEW_TRANSFORM,
+    );
+    expect(LISTING_MEDIA_PREVIEW_TRANSFORM.width).toBe(1600);
+    expect(LISTING_MEDIA_PREVIEW_TRANSFORM.height).toBe(1600);
+  });
+});
+
+describe('listingMediaSignedUrlTransform', () => {
+  it('returns the list size for jpeg covers and skips non-images', () => {
+    expect(listingMediaSignedUrlTransform('image/jpeg', 'list')).toEqual(
+      LISTING_MEDIA_LIST_TRANSFORM,
+    );
+    expect(listingMediaSignedUrlTransform('image/png', 'gallery')).toEqual(
+      LISTING_MEDIA_PREVIEW_TRANSFORM,
+    );
+    expect(
+      listingMediaSignedUrlTransform('application/pdf', 'list'),
+    ).toBeUndefined();
+    expect(listingMediaSignedUrlTransform(null, 'gallery')).toBeUndefined();
+  });
+});
+
+describe('pickListingCoverMedia', () => {
+  it('prefers is_cover over the first image in sort order', () => {
+    const picked = pickListingCoverMedia([
+      { listingId: 'a', isCover: false, id: 'first' },
+      { listingId: 'a', isCover: true, id: 'cover' },
+      { listingId: 'b', isCover: false, id: 'only' },
+    ]);
+    expect(picked.get('a')?.id).toBe('cover');
+    expect(picked.get('b')?.id).toBe('only');
   });
 });
 
