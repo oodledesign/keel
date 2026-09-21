@@ -278,6 +278,8 @@ export type CommercialListing = {
   letContractLengthMonths: number | null;
   epcBand: string | null;
   epcRating: number | null;
+  epcCertificateNumber: string | null;
+  epcFetchedAt: string | null;
   possession: string | null;
   buildStatus: string | null;
   planningStatus: string | null;
@@ -631,6 +633,9 @@ function mapListing(row: ListingRow): CommercialListing {
     letContractLengthMonths: num(row.let_contract_length_months),
     epcBand: (row.epc_band as string | null) ?? null,
     epcRating: num(row.epc_rating),
+    epcCertificateNumber:
+      (row.epc_certificate_number as string | null) ?? null,
+    epcFetchedAt: (row.epc_fetched_at as string | null) ?? null,
     possession: (row.possession as string | null) ?? null,
     buildStatus: (row.build_status as string | null) ?? null,
     planningStatus: (row.planning_status as string | null) ?? null,

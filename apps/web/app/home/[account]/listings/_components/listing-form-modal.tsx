@@ -47,6 +47,10 @@ import {
   disposalIncludesToLet,
   listingStatusPublishHint,
 } from '~/lib/commercial/commercial-constants';
+import {
+  listingEpcLookupFromAddress,
+  listingToEpcAttachment,
+} from '~/lib/commercial/listing-epc';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import {
@@ -57,6 +61,8 @@ import {
 } from '../_lib/listing-form-shared';
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { createListing, updateListing } from '../_lib/server/server-actions';
+import { useDisposalAccess } from './disposal-access-context';
+import { ListingEpcPanel } from './listing-epc-panel';
 
 const emptyForm = listingEmptyForm;
 
@@ -77,6 +83,7 @@ interface ListingFormModalProps {
     locationCopy?: string;
     keyPoints?: string[];
   } | null;
+  epcConfigured?: boolean;
 }
 
 export function ListingFormModal({
@@ -89,6 +96,7 @@ export function ListingFormModal({
   defaults,
   instructingClientId,
   marketingOverrides,
+  epcConfigured = false,
 }: ListingFormModalProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -108,6 +116,7 @@ export function ListingFormModal({
           defaults={defaults}
           instructingClientId={instructingClientId}
           marketingOverrides={marketingOverrides}
+          epcConfigured={epcConfigured}
         />
       </DialogContent>
     </Dialog>
@@ -127,6 +136,7 @@ function ListingFormFields({
   autosaveStatus,
   onFormChange,
   onDone,
+  epcConfigured = false,
 }: {
   accountId: string;
   accountSlug?: string;
@@ -145,14 +155,21 @@ function ListingFormFields({
   autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
   onFormChange?: (form: ListingFormState) => void;
   onDone?: () => void;
+  epcConfigured?: boolean;
 }) {
   const isEdit = Boolean(listing);
   const isPage = presentation === 'page';
+  const { epcConfigured: epcConfiguredFromAccess } = useDisposalAccess();
+  const epcLookupConfigured = epcConfigured || epcConfiguredFromAccess;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<ListingFormState>(() => {
     if (listing) return listingToFormState(listing, marketingOverrides);
     return { ...emptyForm, ...defaults };
+  });
+  const [epcRegister, setEpcRegister] = useState({
+    certificateNumber: listing?.epcCertificateNumber ?? null,
+    fetchedAt: listing?.epcFetchedAt ?? null,
   });
 
   const previousStatus = listing?.status ?? null;
@@ -868,6 +885,43 @@ function ListingFormFields({
               />
             </div>
           </div>
+        ) : null}
+
+        {listing ? (
+          <ListingEpcPanel
+            accountId={accountId}
+            listingId={listing.id}
+            canEdit
+            configured={epcLookupConfigured}
+            compact
+            lookup={listingEpcLookupFromAddress({
+              name: form.name,
+              addressLine1: form.addressLine1,
+              addressLine2: form.addressLine2,
+              town: form.town,
+              postcode: form.postcode,
+            })}
+            attached={listingToEpcAttachment({
+              epcBand: form.epcBand.trim() || null,
+              epcRating: form.epcRating
+                ? Number.parseInt(form.epcRating, 10)
+                : null,
+              epcCertificateNumber: epcRegister.certificateNumber,
+              epcFetchedAt: epcRegister.fetchedAt,
+            })}
+            onAttached={(next) => {
+              setEpcRegister({
+                certificateNumber: next.certificateNumber,
+                fetchedAt: next.fetchedAt,
+              });
+              updateForm((prev) => ({
+                ...prev,
+                epcBand: next.epcBand ?? '',
+                epcRating:
+                  next.epcRating != null ? String(next.epcRating) : '',
+              }));
+            }}
+          />
         ) : null}
 
         <div className="grid grid-cols-2 gap-4">

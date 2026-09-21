@@ -41,6 +41,10 @@ import {
   type EnquiryStatus,
   formatCommercialUseClassLabel,
 } from '~/lib/commercial/commercial-constants';
+import {
+  listingEpcLookupFromAddress,
+  listingToEpcAttachment,
+} from '~/lib/commercial/listing-epc';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -66,6 +70,7 @@ import {
 import { CommercialInterestPanel } from './commercial-interest-panel';
 import { useDisposalAccess } from './disposal-access-context';
 import { ListingCirculateDialog } from './listing-circulate-dialog';
+import { ListingEpcPanel } from './listing-epc-panel';
 import { ListingCirculationLog } from './listing-circulation-log';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingInternalNotesCard } from './listing-internal-notes-card';
@@ -184,6 +189,7 @@ export function ListingOverviewSection({
   listing: initial,
   accountId,
   accountSlug,
+  epcConfigured = false,
   interestSummary,
   parties = [],
   publications = [],
@@ -194,6 +200,7 @@ export function ListingOverviewSection({
   listing: CommercialListing;
   accountId: string;
   accountSlug: string;
+  epcConfigured?: boolean;
   interestSummary?: {
     active: number;
     archived: number;
@@ -208,7 +215,10 @@ export function ListingOverviewSection({
   websitePublicPageUrl?: string | null;
   websiteUrlHealth?: WebsiteUrlHealth | null;
 }) {
-  const { listing } = useListingState(initial);
+  const { listing, setListing } = useListingState(initial);
+  const { canEditDisposals, epcConfigured: epcConfiguredFromAccess } =
+    useDisposalAccess();
+  const epcLookupConfigured = epcConfigured || epcConfiguredFromAccess;
   const [matchBadgeCount, setMatchBadgeCount] = useState(
     () => listing.matchCount ?? 0,
   );
@@ -383,16 +393,32 @@ export function ListingOverviewSection({
                 value={formatCommercialUseClassLabel(listing.useClass)}
               />
               <DetailItem label="Property type" value={listing.sector} />
-              <DetailItem
-                label="EPC"
-                value={
-                  listing.epcBand
-                    ? listing.epcRating != null
-                      ? `${listing.epcBand} (${listing.epcRating})`
-                      : listing.epcBand
-                    : null
-                }
-              />
+              <div className="col-span-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+                <ListingEpcPanel
+                  key={listing.id}
+                  accountId={accountId}
+                  listingId={listing.id}
+                  canEdit={canEditDisposals}
+                  configured={epcLookupConfigured}
+                  lookup={listingEpcLookupFromAddress({
+                    name: listing.name,
+                    addressLine1: listing.addressLine1,
+                    addressLine2: listing.addressLine2,
+                    town: listing.town,
+                    postcode: listing.postcode,
+                  })}
+                  attached={listingToEpcAttachment(listing)}
+                  onAttached={(next) => {
+                    setListing((current) => ({
+                      ...current,
+                      epcBand: next.epcBand,
+                      epcRating: next.epcRating,
+                      epcCertificateNumber: next.certificateNumber,
+                      epcFetchedAt: next.fetchedAt,
+                    }));
+                  }}
+                />
+              </div>
               <DetailItem
                 label="Available from"
                 value={

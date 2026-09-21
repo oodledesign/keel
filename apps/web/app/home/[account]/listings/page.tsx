@@ -3,10 +3,12 @@ import { Suspense } from 'react';
 import { PageBody } from '@kit/ui/page';
 import { Skeleton } from '@kit/ui/skeleton';
 
+import { isGovUkEpcConfigured } from '~/lib/building-surveyor/epc/env';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
+import { DisposalAccessProvider } from './_components/disposal-access-context';
 import { ListingsList } from './_components/listings-list';
 import { loadDisposalsPageData } from './_lib/server/disposals-page.loader';
 
@@ -65,20 +67,25 @@ async function DisposalsListBody({
   });
 
   return (
-    <ListingsList
-      accountId={data.accountId}
-      accountSlug={data.accountSlug}
-      initialListings={data.listings}
-      initialTotal={data.total}
-      offices={data.offices}
-      members={data.members}
-      initialOfficeId={data.initialOfficeId}
-      initialStatusFilter={data.initialStatusFilter}
-      initialAgentUserId={data.initialAgentUserId}
-      initialNeedsLocation={needsLocationParam}
-      unassignedCount={data.unassignedCount}
+    <DisposalAccessProvider
       canEditDisposals={data.canEditDisposals}
-    />
+      epcConfigured={isGovUkEpcConfigured()}
+    >
+      <ListingsList
+        accountId={data.accountId}
+        accountSlug={data.accountSlug}
+        initialListings={data.listings}
+        initialTotal={data.total}
+        offices={data.offices}
+        members={data.members}
+        initialOfficeId={data.initialOfficeId}
+        initialStatusFilter={data.initialStatusFilter}
+        initialAgentUserId={data.initialAgentUserId}
+        initialNeedsLocation={needsLocationParam}
+        unassignedCount={data.unassignedCount}
+        canEditDisposals={data.canEditDisposals}
+      />
+    </DisposalAccessProvider>
   );
 }
 
