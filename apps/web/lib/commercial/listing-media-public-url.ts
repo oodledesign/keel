@@ -3,12 +3,14 @@
  * Rightmove Commercial API rejects media URLs longer than 250 chars and
  * requires brochure URLs to end with a `.pdf` extension — Supabase signed
  * URLs fail both constraints.
+ *
+ * Client-safe: do not import Node built-ins or server-only modules.
  */
 import { getAppSiteOrigin } from '~/lib/app-host-routing';
 import {
   extensionFromMime,
   extensionFromUrlOrName,
-} from '~/lib/commercial/migrate-external-listing-media';
+} from '~/lib/commercial/listing-media-extension';
 
 export const RIGHTMOVE_MEDIA_URL_MAX_LENGTH = 250;
 
