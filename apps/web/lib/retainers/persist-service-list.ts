@@ -1,3 +1,5 @@
+import 'server-only';
+
 import type { EffectiveService } from './effective-services';
 import {
   layersToEffectiveList,

@@ -26,6 +26,8 @@ function workspace(
     sortOrder: extras.sortOrder ?? 0,
     scope: extras.scope ?? 'workspace',
     sourceServiceId: extras.sourceServiceId ?? null,
+    clientId: extras.clientId ?? null,
+    projectId: extras.projectId ?? null,
   };
 }
 
@@ -119,6 +121,23 @@ describe('resolveEffectiveServices', () => {
       }),
     ]);
     expect(inheritanceLabel(list)).toBe('Customized for this project');
+  });
+
+  it('does not resolve another client’s custom service onto this list', () => {
+    const otherClient = workspace('svc-other', 'Other client only', 2, {
+      scope: 'client',
+      clientId: 'client-b',
+    });
+    const list = resolveEffectiveServices({
+      workspace: [webflow, otherClient],
+      clientCustomized: true,
+      clientOverrides: [{ serviceId: otherClient.id }],
+      projectCustomized: false,
+      projectOverrides: [],
+      clientId: 'client-a',
+    });
+
+    expect(list.services).toEqual([]);
   });
 
   it('keeps an intentionally empty custom list empty', () => {

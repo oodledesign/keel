@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -472,6 +472,7 @@ export function PortalSupportNewForm({
   const [effectiveServices, setEffectiveServices] = useState(
     initialEffectiveServices,
   );
+  const fallbackServicesRef = useRef(initialEffectiveServices);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -519,12 +520,12 @@ export function PortalSupportNewForm({
         );
       })
       .catch(() => {
-        if (!cancelled) setEffectiveServices(initialEffectiveServices);
+        if (!cancelled) setEffectiveServices(fallbackServicesRef.current);
       });
     return () => {
       cancelled = true;
     };
-  }, [clientOrgId, form.project_id, initialEffectiveServices]);
+  }, [clientOrgId, form.project_id]);
 
   const selectedType =
     selectedTypeId === GENERAL_SUPPORT_ID

@@ -13,6 +13,8 @@ export type CatalogueService = {
   sortOrder: number;
   scope: ServiceListSource;
   sourceServiceId: string | null;
+  clientId?: string | null;
+  projectId?: string | null;
 };
 
 export type ScopedServiceOverride = {
@@ -95,12 +97,17 @@ export function resolveEffectiveServices(input: {
   clientOverrides: ScopedServiceOverride[];
   projectCustomized: boolean;
   projectOverrides: ScopedServiceOverride[];
+  clientId?: string | null;
+  projectId?: string | null;
 }): EffectiveServiceList {
   const resolveLayer = (
     overrides: ScopedServiceOverride[],
     extraCatalogue: CatalogueService[] = [],
   ): EffectiveService[] => {
-    const lookup = catalogueById([...input.workspace, ...extraCatalogue]);
+    const lookup = catalogueById([
+      ...input.workspace.filter((row) => row.scope === 'workspace'),
+      ...extraCatalogue,
+    ]);
     return sortServices(
       overrides
         .map((row) => {
@@ -113,7 +120,11 @@ export function resolveEffectiveServices(input: {
   };
 
   if (input.projectCustomized) {
-    const extras = input.workspace.filter((row) => row.scope === 'project');
+    const extras = input.workspace.filter(
+      (row) =>
+        row.scope === 'project' &&
+        (!input.projectId || row.projectId === input.projectId),
+    );
     return {
       source: 'project',
       inheritedFrom: null,
@@ -123,7 +134,11 @@ export function resolveEffectiveServices(input: {
   }
 
   if (input.clientCustomized) {
-    const extras = input.workspace.filter((row) => row.scope !== 'workspace');
+    const extras = input.workspace.filter(
+      (row) =>
+        row.scope === 'client' &&
+        (!input.clientId || row.clientId === input.clientId),
+    );
     return {
       source: 'client',
       inheritedFrom: 'client',

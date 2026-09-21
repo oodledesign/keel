@@ -190,6 +190,10 @@ CREATE POLICY client_retainer_services_insert
       WHERE c.id = client_id
         AND rs.account_id = c.account_id
         AND (
+          rs.scope = 'workspace'
+          OR (rs.scope = 'client' AND rs.client_id = c.id)
+        )
+        AND (
           public.has_role_on_account (c.account_id)
           OR public.is_super_admin ()
         )
@@ -219,6 +223,10 @@ CREATE POLICY client_retainer_services_update
       JOIN public.retainer_services rs ON rs.id = service_id
       WHERE c.id = client_id
         AND rs.account_id = c.account_id
+        AND (
+          rs.scope = 'workspace'
+          OR (rs.scope = 'client' AND rs.client_id = c.id)
+        )
         AND (
           public.has_role_on_account (c.account_id)
           OR public.is_super_admin ()

@@ -1,3 +1,5 @@
+import 'server-only';
+
 import type {
   CatalogueService,
   EffectiveServiceList,
@@ -35,6 +37,8 @@ function toCatalogue(row: Record<string, unknown>): CatalogueService {
     sortOrder: mapped.sortOrder,
     scope: mapped.scope,
     sourceServiceId: mapped.sourceServiceId,
+    clientId: mapped.clientId,
+    projectId: mapped.projectId,
   };
 }
 
