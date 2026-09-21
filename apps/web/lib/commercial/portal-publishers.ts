@@ -680,6 +680,9 @@ export async function publishToRightmove(
         agentId: resolved.agentId,
         derivedRentFromUnits,
         note,
+        ...(mapped.skippedAnnualCharges.length > 0
+          ? { skippedAnnualCharges: mapped.skippedAnnualCharges }
+          : {}),
       },
     });
   } catch (err) {

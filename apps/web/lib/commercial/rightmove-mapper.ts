@@ -377,8 +377,28 @@ function mapTenure(
 }
 
 /**
+ * Upper bound for UK commercial service charge / business rates in £/sqft.
+ * Typical marketed values are £5–£20/sqft; anything above this is almost
+ * certainly a total (or another field) pasted into the rate column.
+ *
+ * Sending the implied annual figure to Rightmove ADF has produced opaque
+ * 502s (Unit 9 Angel Walk: £3656.33/sqft → ~£3.7M `serviceCharge`).
+ */
+export const MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT = 100;
+
+export type RightmoveSkippedAnnualCharge = {
+  field: 'serviceCharge' | 'businessRates';
+  perSqft: number;
+  maxPerSqft: number;
+};
+
+/**
  * Convert £/sqft × size → annual £ for Rightmove `serviceCharge` /
  * `businessRates` (ADF examples are annual totals, not rates).
+ *
+ * Rates above {@link MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT} are omitted so
+ * a data-entry error cannot break the commercial PUT. Stored listing
+ * values are left unchanged.
  */
 export function annualChargeFromPerSqft(
   perSqft: number | null | undefined,
@@ -387,7 +407,48 @@ export function annualChargeFromPerSqft(
   const rate = asOptionalNumber(perSqft);
   const size = asOptionalNumber(sizeSqft);
   if (rate == null || size == null || rate <= 0 || size <= 0) return undefined;
+  if (rate > MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT) return undefined;
   return Math.round(rate * size * 100) / 100;
+}
+
+function noteSkippedAnnualCharge(
+  skipped: RightmoveSkippedAnnualCharge[],
+  field: RightmoveSkippedAnnualCharge['field'],
+  perSqft: number | null | undefined,
+  sizeSqft: number | null | undefined,
+): void {
+  const rate = asOptionalNumber(perSqft);
+  const size = asOptionalNumber(sizeSqft);
+  if (
+    rate == null ||
+    size == null ||
+    rate <= 0 ||
+    size <= 0 ||
+    rate <= MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT
+  ) {
+    return;
+  }
+  if (skipped.some((item) => item.field === field && item.perSqft === rate)) {
+    return;
+  }
+  skipped.push({
+    field,
+    perSqft: rate,
+    maxPerSqft: MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+  });
+}
+
+function annualChargeForRightmovePayload(
+  perSqft: number | null | undefined,
+  sizeSqft: number | null | undefined,
+  field: RightmoveSkippedAnnualCharge['field'],
+  skipped: RightmoveSkippedAnnualCharge[],
+): number | undefined {
+  const annual = annualChargeFromPerSqft(perSqft, sizeSqft);
+  if (annual == null) {
+    noteSkippedAnnualCharge(skipped, field, perSqft, sizeSqft);
+  }
+  return annual;
 }
 
 export function mapCondition(input: {
@@ -794,6 +855,7 @@ function mapUnitsToSpaces(input: {
   status: RightmoveStatus;
   published: boolean;
   classification: RightmovePropertyClassification;
+  skippedAnnualCharges: RightmoveSkippedAnnualCharge[];
 }): RightmoveSpace[] {
   const {
     buildingReference,
@@ -802,6 +864,7 @@ function mapUnitsToSpaces(input: {
     status,
     published,
     classification,
+    skippedAnnualCharges,
   } = input;
 
   return units.map((unit, index) => {
@@ -831,11 +894,31 @@ function mapUnitsToSpaces(input: {
     const chargeSize =
       asOptionalNumber(unit.sizeSqft) ?? listingSizeForCharges(listing);
     const serviceCharge =
-      annualChargeFromPerSqft(unit.serviceChargePerSqft, chargeSize) ??
-      annualChargeFromPerSqft(listing.serviceChargePerSqft, chargeSize);
+      annualChargeForRightmovePayload(
+        unit.serviceChargePerSqft,
+        chargeSize,
+        'serviceCharge',
+        skippedAnnualCharges,
+      ) ??
+      annualChargeForRightmovePayload(
+        listing.serviceChargePerSqft,
+        chargeSize,
+        'serviceCharge',
+        skippedAnnualCharges,
+      );
     const businessRates =
-      annualChargeFromPerSqft(unit.ratesPayablePerSqft, chargeSize) ??
-      annualChargeFromPerSqft(listing.ratesPayablePerSqft, chargeSize);
+      annualChargeForRightmovePayload(
+        unit.ratesPayablePerSqft,
+        chargeSize,
+        'businessRates',
+        skippedAnnualCharges,
+      ) ??
+      annualChargeForRightmovePayload(
+        listing.ratesPayablePerSqft,
+        chargeSize,
+        'businessRates',
+        skippedAnnualCharges,
+      );
     const condition = mapCondition({
       fittedSpace: unit.fittedSpace ?? listing.fittedSpace,
       conditionDescription: listing.conditionDescription,
@@ -874,6 +957,8 @@ export type MapListingToRightmoveResult = {
   reference: string;
   payload: RightmovePropertyPayload;
   published: boolean;
+  /** £/sqft rates omitted from the outbound payload (listing data unchanged). */
+  skippedAnnualCharges: RightmoveSkippedAnnualCharge[];
 };
 
 /**
@@ -906,14 +991,19 @@ export function mapListingToRightmovePayload(input: {
     fittedSpace: listing.fittedSpace,
     conditionDescription: listing.conditionDescription,
   });
+  const skippedAnnualCharges: RightmoveSkippedAnnualCharge[] = [];
   const chargeSize = listingSizeForCharges(listing);
-  const serviceCharge = annualChargeFromPerSqft(
+  const serviceCharge = annualChargeForRightmovePayload(
     listing.serviceChargePerSqft,
     chargeSize,
+    'serviceCharge',
+    skippedAnnualCharges,
   );
-  const businessRates = annualChargeFromPerSqft(
+  const businessRates = annualChargeForRightmovePayload(
     listing.ratesPayablePerSqft,
     chargeSize,
+    'businessRates',
+    skippedAnnualCharges,
   );
   const epcRating =
     listing.epcRating != null && Number.isFinite(listing.epcRating)
@@ -994,10 +1084,13 @@ export function mapListingToRightmovePayload(input: {
       status,
       published,
       classification,
+      skippedAnnualCharges,
     });
+    warnSkippedAnnualCharges(skippedAnnualCharges);
     return {
       reference,
       published,
+      skippedAnnualCharges,
       payload: {
         building: {
           ...buildingBase,
@@ -1007,11 +1100,23 @@ export function mapListingToRightmovePayload(input: {
     };
   }
 
+  warnSkippedAnnualCharges(skippedAnnualCharges);
   return {
     reference,
     published,
+    skippedAnnualCharges,
     payload: {
       building: buildingBase,
     },
   };
+}
+
+function warnSkippedAnnualCharges(
+  skippedAnnualCharges: RightmoveSkippedAnnualCharge[],
+): void {
+  if (skippedAnnualCharges.length === 0) return;
+  console.warn(
+    '[rightmove] omitted absurd £/sqft annual charges from payload',
+    skippedAnnualCharges,
+  );
 }
