@@ -1,5 +1,11 @@
 import 'server-only';
 
+import {
+  isPublicMapboxTokenSource,
+  logMapboxServerAuthFailure,
+  resolveMapboxToken,
+} from '~/lib/commercial/brochure-pdf/mapbox-token';
+
 /**
  * Mapbox Static Images API helper for brochure map pages.
  *
@@ -60,32 +66,6 @@ export function toMapboxPinHex(
       .join('');
   }
   return fallback;
-}
-
-type TokenSource =
-  | 'MAPBOX_SECRET_TOKEN'
-  | 'MAPBOX_ACCESS_TOKEN'
-  | 'MAPBOX_TOKEN'
-  | 'NEXT_PUBLIC_MAPBOX_TOKEN';
-
-function resolveMapboxToken(): { token: string; source: TokenSource } | null {
-  const candidates: Array<{ source: TokenSource; value: string | undefined }> =
-    [
-      // Server tokens first — typically no URL restrictions
-      { source: 'MAPBOX_SECRET_TOKEN', value: process.env.MAPBOX_SECRET_TOKEN },
-      { source: 'MAPBOX_ACCESS_TOKEN', value: process.env.MAPBOX_ACCESS_TOKEN },
-      { source: 'MAPBOX_TOKEN', value: process.env.MAPBOX_TOKEN },
-      {
-        source: 'NEXT_PUBLIC_MAPBOX_TOKEN',
-        value: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
-      },
-    ];
-
-  for (const candidate of candidates) {
-    const token = candidate.value?.trim();
-    if (token) return { token, source: candidate.source };
-  }
-  return null;
 }
 
 function clampSize(n: number): number {
@@ -209,16 +189,19 @@ export async function fetchBrochureMapImageBytes(
   console.error(
     '[brochure-pdf] mapbox static failed after retries:',
     `tokenSource=${resolved.source}`,
-    `tokenIsPublic=${resolved.source === 'NEXT_PUBLIC_MAPBOX_TOKEN'}`,
+    `tokenIsPublic=${isPublicMapboxTokenSource(resolved.source)}`,
     errors.join(' | '),
   );
 
-  if (
-    resolved.source === 'NEXT_PUBLIC_MAPBOX_TOKEN' &&
-    errors.some((e) => e.startsWith('401') || e.startsWith('403'))
-  ) {
-    console.error(
-      '[brochure-pdf] Hint: NEXT_PUBLIC_MAPBOX_TOKEN may have URL restrictions that block server-side fetches. Add MAPBOX_SECRET_TOKEN (sk.… or unrestricted pk.…) in Vercel for brochure PDFs.',
+  const authError = errors.find(
+    (error) => error.startsWith('401') || error.startsWith('403'),
+  );
+  if (authError) {
+    const status = Number.parseInt(authError.slice(0, 3), 10);
+    logMapboxServerAuthFailure(
+      resolved.source,
+      Number.isFinite(status) ? status : 401,
+      'mapbox static',
     );
   }
 

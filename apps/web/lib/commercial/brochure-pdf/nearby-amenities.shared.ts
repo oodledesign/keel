@@ -34,6 +34,17 @@ export function isTownCentreAmenity(label: string): boolean {
   return TOWN_CENTRE_RE.test(label.trim());
 }
 
+/** Stable key for merge/dedupe — strips distance and railway/train wording. */
+export function amenityDedupeKey(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/\s*[·•]\s*.+$/, '')
+    .replace(/\b(?:railway|train)\s+station\b/g, 'station')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
  * True when the list is empty or only a town-centre / dummy line — i.e. we
  * should still merge in Mapbox POIs when they exist.
@@ -59,8 +70,8 @@ export function buildFallbackNearbyAmenities(
   const push = (label: string) => {
     const trimmed = label.trim();
     if (!trimmed || isDummyLocalAreaAmenity(trimmed)) return;
-    const key = trimmed.toLowerCase();
-    if (seen.has(key)) return;
+    const key = amenityDedupeKey(trimmed);
+    if (!key || seen.has(key)) return;
     seen.add(key);
     items.push({ label: trimmed, index: items.length + 1 });
   };
