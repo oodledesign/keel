@@ -146,6 +146,7 @@ type DetailTab =
   | 'websites'
   | 'invoices'
   | 'finance'
+  | 'retainer'
   | 'meetings'
   | 'notes'
   | 'tasks'
@@ -579,6 +580,7 @@ export function ClientDetailSidebar({
         ['websites', 'Websites'],
         ['invoices', 'Invoices'],
         ['finance', 'Finance'],
+        ['retainer', 'Retainer'],
         ['meetings', 'Meetings'],
         ['notes', 'Notes'],
         ['tasks', 'Tasks'],
@@ -913,29 +915,13 @@ export function ClientDetailSidebar({
                   />
                 </div>
 
-                <div className="mt-4 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                        Retainers
-                      </p>
-                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        Recurring retainers via Stripe or invoiced offline.
-                        Cancel + recreate to change price.
-                      </p>
-                    </div>
-                    <AttachRetainerPlanButton
-                      accountId={accountId}
-                      clientId={client.id}
-                      canEdit={canEditClients}
-                    />
-                  </div>
-                  <ClientSubscriptionStatusList
-                    accountId={accountId}
-                    clientId={client.id}
-                    canEdit={canEditClients}
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('retainer')}
+                  className="mt-4 text-xs font-medium text-[var(--ozer-accent-pressed)] hover:underline"
+                >
+                  Manage retainer →
+                </button>
 
                 {client.email ? (
                   <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -1262,6 +1248,34 @@ export function ClientDetailSidebar({
           accountSlug={accountSlug}
           clientId={client.id}
         />
+      );
+    }
+
+    if (activeTab === 'retainer') {
+      return (
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Retainer
+              </h2>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                Recurring retainers via Stripe or invoiced offline. Cancel +
+                recreate to change price.
+              </p>
+            </div>
+            <AttachRetainerPlanButton
+              accountId={accountId}
+              clientId={client.id}
+              canEdit={canEditClients}
+            />
+          </div>
+          <ClientSubscriptionStatusList
+            accountId={accountId}
+            clientId={client.id}
+            canEdit={canEditClients}
+          />
+        </div>
       );
     }
 

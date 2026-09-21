@@ -59,6 +59,58 @@ class ProjectRetainerService {
     if (!project) throw new Error('Project not found or access denied');
   }
 
+  /**
+   * Light presence check — does not create a retainer row.
+   * True when the project has credits, allowlisted services, burn history,
+   * or the linked client already has a retainer/subscription.
+   */
+  async hasServicesPresence(
+    accountId: string,
+    projectId: string,
+    clientId?: string | null,
+  ): Promise<boolean> {
+    await this.ensureMember(accountId);
+    await this.requireProject(accountId, projectId);
+
+    const [retainerRes, allowRes, txRes, subRes] = await Promise.all([
+      db(this.client)
+        .from('project_retainers')
+        .select('credit_balance')
+        .eq('project_id', projectId)
+        .eq('account_id', accountId)
+        .maybeSingle(),
+      db(this.client)
+        .from('project_retainer_services')
+        .select('service_id')
+        .eq('project_id', projectId)
+        .limit(1),
+      db(this.client)
+        .from('project_retainer_transactions')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('account_id', accountId)
+        .limit(1),
+      clientId
+        ? db(this.client)
+            .from('client_subscriptions')
+            .select('id')
+            .eq('account_id', accountId)
+            .eq('client_id', clientId)
+            .limit(1)
+        : Promise.resolve({ data: [] as Array<{ id: string }> }),
+    ]);
+
+    const balance = Number(
+      (retainerRes.data as { credit_balance?: number } | null)
+        ?.credit_balance ?? 0,
+    );
+    if (Number.isFinite(balance) && balance > 0) return true;
+    if ((allowRes.data ?? []).length > 0) return true;
+    if ((txRes.data ?? []).length > 0) return true;
+    if ((subRes.data ?? []).length > 0) return true;
+    return false;
+  }
+
   async load(
     accountId: string,
     projectId: string,

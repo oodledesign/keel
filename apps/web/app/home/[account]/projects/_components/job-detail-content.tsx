@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Mic,
   Pencil,
+  Repeat,
   UserPlus,
   Users,
   Wallet,
@@ -154,6 +155,7 @@ export function JobDetailContent({
   canEditJobs,
   isContractorView,
   showPartnerCosts = false,
+  showServices = false,
   partnerCostLines = [],
   workspaceNotes,
   workspaceDocs,
@@ -174,6 +176,7 @@ export function JobDetailContent({
   canEditJobs: boolean;
   isContractorView: boolean;
   showPartnerCosts?: boolean;
+  showServices?: boolean;
   partnerCostLines?: PartnerCostLine[];
   workspaceNotes: NoteListItem[];
   workspaceDocs: DocListItem[];
@@ -188,7 +191,9 @@ export function JobDetailContent({
   const jobsPath = projectListHref(accountSlug);
   const isPersonal = isPersonalProjectsScope(accountSlug);
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') ?? 'project';
+  const requestedTab = searchParams.get('tab') ?? 'project';
+  const initialTab =
+    requestedTab === 'services' && !showServices ? 'project' : requestedTab;
   const [activeTab, setActiveTab] = useState(initialTab);
   const clientsPath = pathsConfig.app.accountClients.replace(
     '[account]',
@@ -270,8 +275,13 @@ export function JobDetailContent({
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab) setActiveTab(tab);
-  }, [searchParams]);
+    if (!tab) return;
+    if (tab === 'services' && !showServices) {
+      setActiveTab('project');
+      return;
+    }
+    setActiveTab(tab);
+  }, [searchParams, showServices]);
 
   useEffect(() => {
     if (activeTab !== 'docs' || docsContent.loaded || docsContent.loading) {
@@ -630,6 +640,15 @@ export function JobDetailContent({
                   Finance
                 </TabsTrigger>
               )}
+              {!isContractorView && showServices && (
+                <TabsTrigger
+                  value="services"
+                  className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+                >
+                  <Repeat className="h-3.5 w-3.5" />
+                  Services
+                </TabsTrigger>
+              )}
               {!isContractorView && showPartnerCosts && (
                 <TabsTrigger
                   value="partner-costs"
@@ -714,13 +733,6 @@ export function JobDetailContent({
             </div>
 
             <div className="space-y-4">
-              {!isContractorView ? (
-                <ProjectRetainerPanel
-                  accountId={accountId}
-                  projectId={jobId}
-                  canEdit={canEditJobs}
-                />
-              ) : null}
               {client && (
                 <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 p-4">
                   <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
@@ -1009,6 +1021,21 @@ export function JobDetailContent({
               accountSlug={accountSlug}
               projectId={jobId}
             />
+          </TabsContent>
+        )}
+
+        {!isContractorView && showServices && (
+          <TabsContent
+            value="services"
+            className="mt-0 flex-1 overflow-auto p-4 md:p-5"
+          >
+            <div className="max-w-xl">
+              <ProjectRetainerPanel
+                accountId={accountId}
+                projectId={jobId}
+                canEdit={canEditJobs}
+              />
+            </div>
           </TabsContent>
         )}
 
