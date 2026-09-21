@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
+import { Spinner } from '@kit/ui/spinner';
 
 import pathsConfig from '~/config/paths.config';
 import { acceptClientPortalInviteAction } from '~/lib/clients/client-portal-invites-actions';
@@ -35,6 +36,7 @@ export function AcceptPortalInviteForm(props: {
 
       <Button
         disabled={pending}
+        aria-busy={pending}
         onClick={() => {
           setError(null);
           startTransition(async () => {
@@ -59,7 +61,14 @@ export function AcceptPortalInviteForm(props: {
           });
         }}
       >
-        {pending ? 'Accepting…' : 'Accept invite'}
+        {pending ? (
+          <>
+            <Spinner className="mr-2 size-4 text-current" />
+            Accepting…
+          </>
+        ) : (
+          'Accept invite'
+        )}
       </Button>
 
       <p className="text-muted-foreground text-xs">
