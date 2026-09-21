@@ -3,6 +3,7 @@ export const PRODUCT_TOUR_IDS = [
   'commercial_property',
   'work_design',
   'work_property',
+  'client_portal',
   'default_landing_prompt',
   'personal_nav_tour_hint',
   'work_dashboard_preset',

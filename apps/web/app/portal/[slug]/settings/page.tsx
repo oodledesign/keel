@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import { ReplayProductTourButton } from '~/components/product-tour/product-tour';
 import pathsConfig from '~/config/paths.config';
 
 import { PortalAvatarForm } from '../_components/portal-avatar-form';
@@ -32,6 +33,24 @@ export default async function PortalSettingsPage({
           Manage your profile for the {ctx.orgName} client portal.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-medium">Quick tour</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+            Walk through the portal tabs again anytime.
+          </p>
+          <ReplayProductTourButton
+            tourId="client_portal"
+            redirectTo={pathsConfig.app.clientPortalHome.replace(
+              '[clientSlug]',
+              slug,
+            )}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -139,6 +139,57 @@ const WORK_DESIGN_STEPS: TourStepDef[] = [
   },
 ];
 
+const CLIENT_PORTAL_STEPS: TourStepDef[] = [
+  {
+    title: 'Welcome to your portal',
+    description:
+      'A quick look at the tabs you’ll use. Skip anytime — replay from Settings if you want it again.',
+  },
+  {
+    element: '[data-tour="portal-nav-overview"]',
+    title: 'Overview',
+    description:
+      'Your home — projects, tasks, services, and your current plan.',
+    side: 'bottom',
+  },
+  {
+    element: '[data-tour="portal-nav-website"]',
+    title: 'Website',
+    description: 'Your site details and any CMS access we’ve shared.',
+    side: 'bottom',
+  },
+  {
+    element: '[data-tour="portal-nav-projects"]',
+    title: 'Projects',
+    description: 'Work we’re delivering together, with status and due dates.',
+    side: 'bottom',
+  },
+  {
+    element: '[data-tour="portal-nav-meetings"]',
+    title: 'Meetings',
+    description: 'Notes and recordings from our calls.',
+    side: 'bottom',
+  },
+  {
+    element: '[data-tour="portal-nav-tasks"]',
+    title: 'My tasks',
+    description: 'Anything waiting on you.',
+    side: 'bottom',
+  },
+  {
+    element: '[data-tour="portal-nav-messages"]',
+    title: 'Messages',
+    description: 'Chat with the team in one place.',
+    side: 'bottom',
+  },
+  {
+    element: '[data-tour="portal-nav-services"]',
+    title: 'Services',
+    description: 'Raise a request and top up credits when you need more.',
+    side: 'bottom',
+  },
+];
+
 const WORK_PROPERTY_STEPS: TourStepDef[] = [
   {
     title: 'Welcome to your property workspace',
@@ -214,22 +265,30 @@ const STEPS_BY_TOUR: Record<DriveableProductTourId, TourStepDef[]> = {
   commercial_property: COMMERCIAL_STEPS,
   work_design: WORK_DESIGN_STEPS,
   work_property: WORK_PROPERTY_STEPS,
+  client_portal: CLIENT_PORTAL_STEPS,
 };
 
 export function getProductTourStepDefs(tourId: ProductTourId): TourStepDef[] {
   if (
     tourId === 'default_landing_prompt' ||
-    tourId === 'personal_nav_tour_hint'
+    tourId === 'personal_nav_tour_hint' ||
+    tourId === 'work_dashboard_preset'
   ) {
     return [];
   }
 
-  return [...STEPS_BY_TOUR[tourId], ...CHROME_STEPS];
+  const steps = STEPS_BY_TOUR[tourId];
+  // Portal shell has no workspace chrome (switcher / New / profile / support).
+  if (tourId === 'client_portal') {
+    return steps;
+  }
+
+  return [...steps, ...CHROME_STEPS];
 }
 
 export function resolveTeamProductTourId(
   profile: string | null | undefined,
-): Exclude<DriveableProductTourId, 'personal'> | null {
+): Exclude<DriveableProductTourId, 'personal' | 'client_portal'> | null {
   if (profile === 'commercial_property') return 'commercial_property';
   if (profile === 'work_property') return 'work_property';
   if (

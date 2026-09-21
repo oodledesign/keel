@@ -25,7 +25,9 @@ import {
   type PortalOverviewTask,
   createClientPortalService,
 } from '../_lib/server/client-portal.service';
+import { createPortalCreditsService } from '../_lib/server/portal-credits.service';
 import { formatPortalDate, portalExternalHref } from './portal-badges';
+import { PortalOverviewCreditsChip } from './portal-overview-credits-chip';
 import { PortalOverviewTasksCard } from './portal-overview-tasks-card';
 
 export default async function ClientPortalOverviewPage({
@@ -35,12 +37,17 @@ export default async function ClientPortalOverviewPage({
 }) {
   const ctx = await loadClientPortalContext(slug);
   const service = createClientPortalService(getSupabaseServerClient());
-  const [overview, projects, allTasks, myTasksRaw] = await Promise.all([
-    service.getOverview(ctx.clientOrgId),
-    service.listPortalProjects(ctx.clientOrgId),
-    service.listPortalOpenTasks(ctx.clientOrgId, 12),
-    service.listPortalMyTasks(ctx.clientOrgId),
-  ]);
+  const [overview, projects, allTasks, myTasksRaw, credits] = await Promise.all(
+    [
+      service.getOverview(ctx.clientOrgId),
+      service.listPortalProjects(ctx.clientOrgId),
+      service.listPortalOpenTasks(ctx.clientOrgId, 12),
+      service.listPortalMyTasks(ctx.clientOrgId),
+      createPortalCreditsService(getSupabaseServerClient())
+        .getCreditsBundle(ctx.clientOrgId)
+        .catch(() => null),
+    ],
+  );
 
   const myTasks: PortalOverviewTask[] = myTasksRaw
     .filter((task) => {
@@ -89,13 +96,22 @@ export default async function ClientPortalOverviewPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
-          Welcome back, {ctx.displayName}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
-          Here&apos;s what&apos;s happening with your account.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
+            Welcome back, {ctx.displayName}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+            Here&apos;s what&apos;s happening with your account.
+          </p>
+        </div>
+        {credits ? (
+          <PortalOverviewCreditsChip
+            clientSlug={slug}
+            balance={credits.balance}
+            nextRenewalDate={credits.nextRenewalDate}
+          />
+        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

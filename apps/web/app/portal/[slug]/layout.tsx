@@ -6,8 +6,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getAgencyBrandingBySlug } from '~/lib/agency-branding';
 import { isAgencyPortalRequest } from '~/lib/agency-portal-request';
+import { loadCompletedProductTours } from '~/lib/product-tour/product-tour.actions';
+import type { CompletedProductTours } from '~/lib/product-tour/types';
 
 import { AgencyPortalShell } from './_components/agency-portal-shell';
+import { PortalProductTourHost } from './_components/portal-product-tour-host';
 import { PortalShell } from './_components/portal-shell';
 import { loadClientPortalContext } from './_lib/server/client-portal.loader';
 import { createPortalCreditsService } from './_lib/server/portal-credits.service';
@@ -49,6 +52,13 @@ export default async function PortalSlugLayout({
     // Credits are optional — keep the shell usable if the pool is missing.
   }
 
+  let completedTours: CompletedProductTours = {};
+  try {
+    completedTours = await loadCompletedProductTours();
+  } catch {
+    completedTours = {};
+  }
+
   return (
     <PortalShell
       clientSlug={slug}
@@ -68,6 +78,7 @@ export default async function PortalSlugLayout({
       showMessagesNav={ctx.showMessagesNav}
     >
       {children}
+      <PortalProductTourHost completedTours={completedTours} />
     </PortalShell>
   );
 }

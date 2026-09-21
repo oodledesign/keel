@@ -241,7 +241,7 @@ export function PortalShell({
             />
           </div>
 
-          <nav className="flex flex-wrap gap-1">
+          <nav className="flex flex-wrap gap-1" data-tour="portal-nav">
             {navItems
               .filter((item) => !item.showKey || visibility[item.showKey])
               .map((item) => {
@@ -252,6 +252,7 @@ export function PortalShell({
                   <Link
                     key={item.key}
                     href={href}
+                    data-tour={`portal-nav-${item.key}`}
                     className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                       active
                         ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'

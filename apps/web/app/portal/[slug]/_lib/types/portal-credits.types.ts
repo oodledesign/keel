@@ -1,8 +1,15 @@
+/**
+ * Client-portal credit top-up packs (GBP).
+ * Pack sizes are display credits only — never mention time equivalents in UI.
+ */
 export const PORTAL_CREDIT_TOPUP_PACKS = [
-  { id: 'small', units: 10, totalPence: 5000, label: '10 credits' },
-  { id: 'medium', units: 25, totalPence: 10000, label: '25 credits' },
-  { id: 'large', units: 50, totalPence: 17500, label: '50 credits' },
+  { id: 'small', units: 40, totalPence: 3500, label: '40 credits' },
+  { id: 'medium', units: 80, totalPence: 7000, label: '80 credits' },
+  { id: 'large', units: 160, totalPence: 14000, label: '160 credits' },
 ] as const;
+
+export type PortalCreditTopupPackId =
+  (typeof PORTAL_CREDIT_TOPUP_PACKS)[number]['id'];
 
 export type PortalCreditTransaction = {
   id: string;
