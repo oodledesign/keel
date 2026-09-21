@@ -9,14 +9,19 @@ import { Heading } from '@kit/ui/heading';
 
 import { AppLogo } from '~/components/app-logo';
 import pathsConfig from '~/config/paths.config';
-import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   buildClientPortalPath,
   getClientPortalInviteByToken,
   linkPendingClientPortalInvitesForUser,
 } from '~/lib/clients/client-portal-invites.service';
+import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  firstNameFromSignedInUser,
+  inviteGreeting,
+} from '~/lib/invite-greeting-name';
 
 import { AcceptPortalInviteForm } from './_components/accept-portal-invite-form';
+import { OpenPortalButton } from './_components/open-portal-button';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -64,12 +69,24 @@ async function AcceptPortalInvitePage(props: PageProps) {
   const invitedEmail = current.invitedEmail.toLowerCase();
   const emailMismatch =
     Boolean(signedInEmail) && signedInEmail !== invitedEmail;
+  const greeting = inviteGreeting(
+    firstNameFromSignedInUser({
+      userMetadata: auth.data.user_metadata,
+      email: auth.data.email,
+    }),
+  );
 
   return (
-    <AuthLayoutShell Logo={AppLogo}>
+    <AuthLayoutShell
+      Logo={AppLogo}
+      contentClassName="bg-card text-card-foreground border shadow-md"
+    >
       <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-10">
         <div>
-          <Heading level={4}>Client portal invite</Heading>
+          <p className="text-muted-foreground text-sm">Client portal invite</p>
+          <Heading level={4} className="mt-1">
+            {greeting}
+          </Heading>
           <p className="text-muted-foreground mt-2 text-sm">
             <strong>{ownerName}</strong> invited you to access{' '}
             <strong>{clientLabel}</strong>.
@@ -102,11 +119,9 @@ async function AcceptPortalInvitePage(props: PageProps) {
           <div className="space-y-4">
             <p className="text-sm">You have access to this client portal.</p>
             {current.clientOrgSlug ? (
-              <Button asChild>
-                <Link href={buildClientPortalPath(current.clientOrgSlug)}>
-                  Open portal
-                </Link>
-              </Button>
+              <OpenPortalButton
+                href={buildClientPortalPath(current.clientOrgSlug)}
+              />
             ) : null}
           </div>
         ) : (

@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
+import { Spinner } from '@kit/ui/spinner';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
@@ -59,7 +60,14 @@ export function AcceptPortalInviteForm(props: {
           });
         }}
       >
-        {pending ? 'Accepting…' : 'Accept invite'}
+        {pending ? (
+          <>
+            <Spinner className="mr-2 size-4 text-current" />
+            Accepting…
+          </>
+        ) : (
+          'Accept invite'
+        )}
       </Button>
 
       <p className="text-muted-foreground text-xs">
