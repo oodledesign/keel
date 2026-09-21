@@ -1,13 +1,13 @@
 'use client';
 
 import {
+  type ComponentProps,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   useTransition,
-  type ComponentProps,
 } from 'react';
 
 import Link from 'next/link';
@@ -23,6 +23,7 @@ import {
   LayoutGrid,
   List,
   Loader2,
+  type LucideIcon,
   Map as MapIcon,
   MapPin,
   MapPinned,
@@ -32,7 +33,6 @@ import {
   Search,
   Trash2,
   Users,
-  type LucideIcon,
 } from 'lucide-react';
 
 import {
@@ -1811,7 +1811,10 @@ function FilterSelectTrigger({
   return (
     <SelectTrigger
       className={cn(
-        'h-8 max-w-full border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)] [&>span]:line-clamp-none',
+        'h-8 max-w-full border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]',
+        // Radix SelectTrigger wraps children in a span that line-clamps;
+        // keep badge/avatar content readable in the selected value.
+        '[&>span]:line-clamp-none',
         className,
       )}
       {...props}
@@ -1827,6 +1830,7 @@ function FilterSelectTrigger({
   );
 }
 
+/** Composite filters are not listing statuses — ListingStatusBadge covers the rest. */
 function StatusFilterLabel({ status }: { status: StatusFilter }) {
   if (status === 'active') {
     return (
