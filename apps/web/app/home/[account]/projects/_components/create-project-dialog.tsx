@@ -234,6 +234,11 @@ export function CreateProjectDialog({
       return;
     }
 
+    if (lockClient && !lockedClientId) {
+      toast.error('Client is required');
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (projectType === 'campaign') {
