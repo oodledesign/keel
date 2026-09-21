@@ -69,6 +69,7 @@ const WORKSPACE_SEGMENT_KEYS: Record<string, MobileNavIconKey> = {
   invoices: 'invoices',
   proposals: 'proposals',
   contracts: 'contracts',
+  retainers: 'invoices',
   members: 'people',
   people: 'people',
   notes: 'notes',

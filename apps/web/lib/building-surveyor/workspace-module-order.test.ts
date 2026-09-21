@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER,
   WORK_BUSINESS_MODULE_ORDER,
+  WORK_BUSINESS_NAV_SECTIONS,
 } from '~/config/workspace-module-order';
-import { isContractsModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import {
+  isContractsModuleEnabled,
+  resolveAccountModuleKey,
+} from '~/home/[account]/_lib/server/account-modules';
 
 describe('BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER', () => {
   it('includes contracts near surveys and docs', () => {
@@ -22,6 +26,15 @@ describe('BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER', () => {
 
   it('does not change the business workspace contracts placement', () => {
     expect(WORK_BUSINESS_MODULE_ORDER).toContain('contracts');
+  });
+
+  it('puts retainers in the business Commercial nav, gated by clients', () => {
+    const commercial = WORK_BUSINESS_NAV_SECTIONS.find(
+      (section) => section.label === 'Commercial',
+    );
+    expect(WORK_BUSINESS_MODULE_ORDER).toContain('retainers');
+    expect(commercial?.keys).toContain('retainers');
+    expect(resolveAccountModuleKey('retainers')).toBe('clients');
   });
 });
 

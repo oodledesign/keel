@@ -24,6 +24,7 @@ import {
 import { spaceTypeFromProfile } from '../_lib/workspace-profile';
 import { FinancesDashboardSkeleton } from './_components/finances-dashboard-skeleton';
 import { FinancesPageContent } from './_components/finances-page-content';
+import { FinancesRetainersLoader } from './_components/finances-retainers-loader';
 
 interface FinancesPageProps {
   params: Promise<{ account: string }>;
@@ -71,6 +72,16 @@ async function FinancesPage({ params }: FinancesPageProps) {
           <FinancesPageContent
             accountId={accountId}
             accountSlug={accountSlug}
+            retainers={
+              spaceType === 'work' ? (
+                <Suspense fallback={null}>
+                  <FinancesRetainersLoader
+                    accountId={accountId}
+                    accountSlug={accountSlug}
+                  />
+                </Suspense>
+              ) : null
+            }
           />
         </Suspense>
       </PageBody>

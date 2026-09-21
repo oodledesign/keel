@@ -24,6 +24,7 @@ const LEGACY_WORKSPACE_MODULE_PATHS: Record<string, string> = {
   invoices: pathsConfig.app.accountInvoices,
   proposals: pathsConfig.app.accountProposals,
   contracts: pathsConfig.app.accountContracts,
+  retainers: pathsConfig.app.accountRetainers,
   team: pathsConfig.app.accountMembers,
   notes: pathsConfig.app.accountNotes,
   finances: pathsConfig.app.accountFinances,

@@ -63,6 +63,7 @@ export const WORK_BUSINESS_MODULE_ORDER = [
   'invoices',
   'proposals',
   'contracts',
+  'retainers',
   'team',
   'notes',
   'brain',
@@ -101,7 +102,7 @@ export const WORK_BUSINESS_NAV_SECTIONS = [
   },
   {
     label: 'Commercial',
-    keys: ['invoices', 'proposals', 'contracts', 'finances'],
+    keys: ['invoices', 'proposals', 'contracts', 'retainers', 'finances'],
   },
   {
     label: 'Team & tools',
