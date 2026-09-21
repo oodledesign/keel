@@ -478,20 +478,6 @@ class ClientPortalService {
     };
   }
 
-  private toPortalSubscription(row: PortalSubscription): PortalSubscription {
-    return {
-      id: row.id,
-      planName: row.planName,
-      monthlyAmount: row.monthlyAmount,
-      currency: row.currency,
-      status: row.status,
-      nextBillingDate: row.nextBillingDate,
-      stripePaymentLink: row.stripePaymentLink,
-      projectId: row.projectId,
-      projectName: row.projectName,
-    };
-  }
-
   private classifyPortalSubscriptions(
     rows: Array<Record<string, unknown>>,
     projectNames: Map<string, string>,
@@ -507,11 +493,9 @@ class ClientPortalService {
     const { active, live, pending } = selectPortalPlanSubscriptions(mapped);
 
     return {
-      subscription: active ? this.toPortalSubscription(active) : null,
-      liveSubscriptions: live.map((row) => this.toPortalSubscription(row)),
-      pendingSubscriptions: pending.map((row) =>
-        this.toPortalSubscription(row),
-      ),
+      subscription: active,
+      liveSubscriptions: live,
+      pendingSubscriptions: pending,
     };
   }
 

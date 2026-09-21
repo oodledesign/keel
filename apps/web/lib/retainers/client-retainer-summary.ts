@@ -67,10 +67,13 @@ export function buildClientRetainerSummary(input: {
   const projects = input.projects
     .map((project) => {
       const subs = byProject.get(project.id) ?? [];
-      const primary = pickPrimarySubscription(subs);
+      const liveOrPending = subs.filter((row) => row.status !== 'cancelled');
       const balance = input.balances.has(project.id)
         ? (input.balances.get(project.id) ?? 0)
         : null;
+      const primary =
+        pickPrimarySubscription(liveOrPending) ??
+        (balance != null ? pickPrimarySubscription(subs) : null);
       const hasRetainer = Boolean(primary) || balance != null;
 
       if (!hasRetainer) return null;

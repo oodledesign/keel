@@ -80,6 +80,37 @@ describe('client retainer summary', () => {
     expect(result.unassigned[0]?.subscriptionId).toBe('legacy');
   });
 
+  it('hides a project whose only plan is cancelled unless credits remain', () => {
+    const empty = buildClientRetainerSummary({
+      projects: [{ id: 'p1', title: 'Site', status: 'active' }],
+      balances: new Map(),
+      subscriptions: [
+        sub({ id: 'gone', projectId: 'p1', status: 'cancelled' }),
+      ],
+    });
+    expect(empty.projects).toEqual([]);
+
+    const withCredits = buildClientRetainerSummary({
+      projects: [{ id: 'p1', title: 'Site', status: 'active' }],
+      balances: new Map([['p1', 4]]),
+      subscriptions: [
+        sub({ id: 'gone', projectId: 'p1', status: 'cancelled' }),
+      ],
+    });
+    expect(withCredits.projects).toEqual([
+      {
+        projectId: 'p1',
+        projectTitle: 'Site',
+        projectStatus: 'active',
+        creditBalance: 4,
+        planName: 'Care',
+        planStatus: 'cancelled',
+        subscriptionId: 'gone',
+        canPay: false,
+      },
+    ]);
+  });
+
   it('prefers a live plan over pending when both exist', () => {
     expect(
       pickPrimarySubscription([
