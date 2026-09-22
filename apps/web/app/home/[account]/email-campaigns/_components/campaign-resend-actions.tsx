@@ -26,10 +26,15 @@ import {
 } from '~/lib/workspace-ui';
 
 import { duplicateCampaignForResendAction } from '../_lib/server/server-actions';
+import { CampaignAdditionalRecipientsDialog } from './campaign-additional-recipients-dialog';
+import type { AudiencePickerOption } from './campaign-audience-picker';
 
-type ResendMode = 'all' | 'non_responders';
+export type ResendMode = 'all' | 'non_responders';
 
-function followUpCopy(input: { mode: ResendMode; isSeriesInstance: boolean }): {
+export function followUpCopy(input: {
+  mode: ResendMode;
+  isSeriesInstance: boolean;
+}): {
   title: string;
   description: string;
   action: string;
@@ -53,30 +58,74 @@ function followUpCopy(input: { mode: ResendMode; isSeriesInstance: boolean }): {
   };
 }
 
+export function CampaignResendConfirmDialog({
+  mode,
+  pending,
+  isSeriesInstance,
+  onOpenChange,
+  onConfirm,
+  confirmTestId = 'campaign-resend-confirm',
+}: {
+  mode: ResendMode | null;
+  pending: boolean;
+  isSeriesInstance: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (mode: ResendMode) => void;
+  confirmTestId?: string;
+}) {
+  const copy = mode ? followUpCopy({ mode, isSeriesInstance }) : null;
+
+  return (
+    <AlertDialog open={Boolean(mode)} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{copy?.title}</AlertDialogTitle>
+          <AlertDialogDescription>{copy?.description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <Button
+            type="button"
+            className={workspaceBtnPrimary}
+            disabled={pending || !mode}
+            data-test={confirmTestId}
+            onClick={(event) => {
+              event.preventDefault();
+              if (mode) onConfirm(mode);
+            }}
+          >
+            {pending ? 'Creating…' : copy?.action}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function CampaignResendActions({
   accountId,
   accountSlug,
   campaign,
   hasRsvpForm,
+  clients = [],
+  contacts = [],
+  alreadySentEmails = [],
 }: {
   accountId: string;
   accountSlug: string;
   campaign: EmailCampaign;
   hasRsvpForm: boolean;
+  clients?: AudiencePickerOption[];
+  contacts?: AudiencePickerOption[];
+  alreadySentEmails?: string[];
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<ResendMode | null>(null);
+  const [additionalOpen, setAdditionalOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const canResend = campaign.status === 'sent' || campaign.status === 'failed';
 
   if (!canResend) return null;
-
-  const copy = mode
-    ? followUpCopy({
-        mode,
-        isSeriesInstance: Boolean(campaign.seriesId),
-      })
-    : null;
 
   const run = (nextMode: ResendMode) => {
     startTransition(async () => {
@@ -110,7 +159,9 @@ export function CampaignResendActions({
       <div>
         <h3 className={`font-semibold ${workspaceText}`}>Send again</h3>
         <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-          Creates a new draft. This sent campaign stays as history.
+          Creates a new draft. This sent campaign stays as history. Send again
+          uses the original people. Send to additional recipients only emails
+          the people you add.
           {campaign.seriesId
             ? ' The follow-up is a one-off — it is not added to the series.'
             : ''}
@@ -137,36 +188,36 @@ export function CampaignResendActions({
             Send to non-responders
           </Button>
         ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pending}
+          data-test="campaign-additional-recipients"
+          onClick={() => setAdditionalOpen(true)}
+        >
+          Send to additional recipients
+        </Button>
       </div>
 
-      <AlertDialog
-        open={Boolean(mode)}
+      <CampaignResendConfirmDialog
+        mode={mode}
+        pending={pending}
+        isSeriesInstance={Boolean(campaign.seriesId)}
         onOpenChange={(open) => {
           if (!pending && !open) setMode(null);
         }}
-      >
-        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{copy?.title}</AlertDialogTitle>
-            <AlertDialogDescription>{copy?.description}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-            <Button
-              type="button"
-              className={workspaceBtnPrimary}
-              disabled={pending || !mode}
-              data-test="campaign-resend-confirm"
-              onClick={(event) => {
-                event.preventDefault();
-                if (mode) run(mode);
-              }}
-            >
-              {pending ? 'Creating…' : copy?.action}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={run}
+      />
+      <CampaignAdditionalRecipientsDialog
+        open={additionalOpen}
+        onOpenChange={setAdditionalOpen}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        campaignId={campaign.id}
+        clients={clients}
+        contacts={contacts}
+        alreadySentEmails={alreadySentEmails}
+      />
     </div>
   );
 }

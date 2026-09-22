@@ -59,8 +59,14 @@ import {
 } from './campaign-audience';
 import { assertCampaignDeletable } from './campaign-delete';
 import {
+  additionalRecipientsCampaignName,
+  duplicateCampaignName,
+  filterAdditionalRecipients,
+} from './campaign-duplicate';
+import {
   followUpAudienceEmails,
   followUpCampaignName,
+  uniqueRecipientEmails,
 } from './campaign-resend';
 import {
   type CampaignSendProgressSnapshot,
@@ -303,6 +309,151 @@ class CampaignsService {
           }
         : source.audienceConfig;
 
+    return this.insertCopiedDraft({
+      accountId: input.accountId,
+      userId: input.userId,
+      source,
+      name: followUpCampaignName(source.name),
+      audienceType,
+      audienceConfig,
+      failureMessage: 'Could not create follow-up campaign',
+    });
+  }
+
+  /**
+   * New draft with the same copy and audience settings. Send history, schedule,
+   * and series membership stay on the source — the clone is a one-off draft.
+   */
+  async duplicate(input: {
+    accountId: string;
+    userId: string;
+    campaignId: string;
+  }): Promise<EmailCampaign> {
+    const source = await this.get(input.accountId, input.campaignId);
+    return this.insertCopiedDraft({
+      accountId: input.accountId,
+      userId: input.userId,
+      source,
+      name: duplicateCampaignName(source.name),
+      audienceType: source.audienceType,
+      audienceConfig: source.audienceConfig,
+      failureMessage: 'Could not duplicate campaign',
+    });
+  }
+
+  /**
+   * New draft using the sent campaign's copy, aimed only at people who were
+   * not on that send. Never copies subscribers / saved-list audience, so it
+   * cannot re-blast the original list.
+   */
+  async duplicateForAdditionalRecipients(input: {
+    accountId: string;
+    userId: string;
+    campaignId: string;
+    emails: string[];
+    clientIds: string[];
+    contactIds: string[];
+  }): Promise<{ campaign: EmailCampaign; skippedAlreadySent: number }> {
+    const source = await this.get(input.accountId, input.campaignId);
+    if (source.status !== 'sent' && source.status !== 'failed') {
+      throw new Error(
+        'Only sent campaigns can be emailed to additional recipients',
+      );
+    }
+
+    const recipients = await this.listRecipients(
+      input.accountId,
+      input.campaignId,
+    );
+    const [clients, contacts] = await Promise.all([
+      this.peopleEmails('clients', input.accountId, input.clientIds),
+      this.peopleEmails('contacts', input.accountId, input.contactIds),
+    ]);
+    // Only successful sends are left off. Failed or skipped rows can be
+    // picked again; unsubscribes are still dropped at send time.
+    const filtered = filterAdditionalRecipients({
+      emails: input.emails,
+      selectedClientIds: input.clientIds,
+      selectedContactIds: input.contactIds,
+      clients,
+      contacts,
+      alreadySentEmails: uniqueRecipientEmails(
+        recipients.filter((row) => row.status === 'sent'),
+      ),
+    });
+    const remaining =
+      filtered.emails.length +
+      filtered.clientIds.length +
+      filtered.contactIds.length;
+
+    if (remaining === 0) {
+      if (filtered.skippedAlreadySent > 0) {
+        throw new Error(
+          'Those people were already sent this campaign. Add someone new, or use Send again to all.',
+        );
+      }
+      throw new Error('Add at least one recipient.');
+    }
+    if (filtered.emails.length > 5000) {
+      throw new Error('Too many people for a follow-up list (max 5,000).');
+    }
+
+    const campaign = await this.insertCopiedDraft({
+      accountId: input.accountId,
+      userId: input.userId,
+      source,
+      name: additionalRecipientsCampaignName(source.name),
+      audienceType: 'custom',
+      audienceConfig: {
+        emails: filtered.emails,
+        clientIds: filtered.clientIds,
+        contactIds: filtered.contactIds,
+        listId: null,
+      },
+      failureMessage: 'Could not create the additional-recipients draft',
+    });
+
+    return { campaign, skippedAlreadySent: filtered.skippedAlreadySent };
+  }
+
+  private async peopleEmails(
+    table: 'clients' | 'contacts',
+    accountId: string,
+    ids: string[],
+  ): Promise<Array<{ id: string; email: string }>> {
+    if (ids.length === 0) return [];
+
+    let query = fromTable(this.client, table)
+      .select('id, email')
+      .eq('account_id', accountId)
+      .in('id', ids)
+      .not('email', 'is', null);
+
+    // Clients can be archived. Contacts have no archived_at column.
+    if (table === 'clients') {
+      query = query.is('archived_at', null);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return ((data ?? []) as Array<Record<string, unknown>>)
+      .map((row) => ({
+        id: String(row.id),
+        email: String(row.email ?? ''),
+      }))
+      .filter((row) => row.email.trim().length > 0);
+  }
+
+  private async insertCopiedDraft(input: {
+    accountId: string;
+    userId: string;
+    source: EmailCampaign;
+    name: string;
+    audienceType: CampaignAudienceType;
+    audienceConfig: CampaignAudienceConfig;
+    failureMessage: string;
+  }): Promise<EmailCampaign> {
     const { data, error } = await fromTable(
       this.client,
       WORKSPACE_EMAIL_CAMPAIGNS,
@@ -310,27 +461,27 @@ class CampaignsService {
       .insert({
         account_id: input.accountId,
         created_by: input.userId,
-        name: followUpCampaignName(source.name),
-        subject: source.subject,
-        subject_b: source.subjectB,
-        ab_enabled: source.abEnabled,
-        ab_split_percent: source.abSplitPercent,
-        preview_text: source.previewText,
-        html_body: source.htmlBody,
-        body_document: source.bodyDocument,
-        from_name: source.fromName,
-        from_email: source.fromEmail,
-        reply_to: source.replyTo,
-        audience_type: audienceType,
-        audience_config: audienceConfig,
-        scheduled_timezone: source.scheduledTimezone,
+        name: input.name,
+        subject: input.source.subject,
+        subject_b: input.source.subjectB,
+        ab_enabled: input.source.abEnabled,
+        ab_split_percent: input.source.abSplitPercent,
+        preview_text: input.source.previewText,
+        html_body: input.source.htmlBody,
+        body_document: input.source.bodyDocument,
+        from_name: input.source.fromName,
+        from_email: input.source.fromEmail,
+        reply_to: input.source.replyTo,
+        audience_type: input.audienceType,
+        audience_config: input.audienceConfig,
+        scheduled_timezone: input.source.scheduledTimezone,
         status: 'draft',
       })
       .select('*')
       .single();
 
     if (error || !data) {
-      throw new Error(error?.message ?? 'Could not create follow-up campaign');
+      throw new Error(error?.message ?? input.failureMessage);
     }
 
     return mapCampaign(data as Record<string, unknown>);

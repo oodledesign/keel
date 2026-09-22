@@ -10,7 +10,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { CampaignDeleteButton } from '../_components/campaign-delete-button';
+import { CampaignActionsMenu } from '../_components/campaign-actions-menu';
 import { CampaignInstanceBanner } from '../_components/campaign-instance-banner';
 import { CampaignNav } from '../_components/campaign-nav';
 import { CampaignResendActions } from '../_components/campaign-resend-actions';
@@ -58,27 +58,40 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
         title={data.campaign.name}
         description={data.campaign.subject || 'Draft campaign'}
       >
-        {data.series ? (
-          <CampaignDeleteButton
-            accountId={workspace.account.id}
-            accountSlug={account}
-            kind="series"
-            id={data.series.id}
-            name={data.series.name}
-            hadSends={data.seriesHasSends}
-            sending={data.seriesAnySending}
-          />
-        ) : (
-          <CampaignDeleteButton
-            accountId={workspace.account.id}
-            accountSlug={account}
-            kind="campaign"
-            id={data.campaign.id}
-            name={data.campaign.name}
-            hadSends={campaignHasSendHistory(data.campaign)}
-            sending={data.campaign.status === 'sending'}
-          />
-        )}
+        <CampaignActionsMenu
+          accountId={workspace.account.id}
+          accountSlug={account}
+          campaign={{
+            id: data.campaign.id,
+            name: data.campaign.name,
+            status: data.campaign.status,
+            seriesId: data.campaign.seriesId,
+          }}
+          placement="detail"
+          hasRsvpForm={data.hasRsvpForm}
+          clients={data.audienceOptions.clients}
+          contacts={data.audienceOptions.contacts}
+          alreadySentEmails={data.recipients
+            .filter((row) => row.status === 'sent')
+            .map((row) => row.email)}
+          deleteTarget={
+            data.series
+              ? {
+                  kind: 'series',
+                  id: data.series.id,
+                  name: data.series.name,
+                  hadSends: data.seriesHasSends,
+                  sending: data.seriesAnySending,
+                }
+              : {
+                  kind: 'campaign',
+                  id: data.campaign.id,
+                  name: data.campaign.name,
+                  hadSends: campaignHasSendHistory(data.campaign),
+                  sending: data.campaign.status === 'sending',
+                }
+          }
+        />
       </TeamAccountLayoutPageHeader>
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
         {data.series ? (
@@ -95,6 +108,11 @@ async function CampaignLayout({ children, params }: CampaignLayoutProps) {
           accountSlug={account}
           campaign={data.campaign}
           hasRsvpForm={data.hasRsvpForm}
+          clients={data.audienceOptions.clients}
+          contacts={data.audienceOptions.contacts}
+          alreadySentEmails={data.recipients
+            .filter((row) => row.status === 'sent')
+            .map((row) => row.email)}
         />
         {children}
       </PageBody>

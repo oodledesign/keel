@@ -13,7 +13,7 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
-import { CampaignDeleteButton } from './campaign-delete-button';
+import { CampaignActionsMenu } from './campaign-actions-menu';
 import { CampaignListThumbnail } from './campaign-list-thumbnail';
 import { CampaignStatusBadge } from './campaign-status-badge';
 import { CreateCampaignButton } from './create-campaign-button';
@@ -124,15 +124,23 @@ export function CampaignsList({
                       ) : null}
                     </div>
                   </Link>
-                  <CampaignDeleteButton
+                  <CampaignActionsMenu
                     accountId={accountId}
                     accountSlug={accountSlug}
-                    kind="campaign"
-                    id={campaign.id}
-                    name={campaign.name}
-                    hadSends={campaignHasSendHistory(campaign)}
-                    sending={campaign.status === 'sending'}
-                    compact
+                    campaign={{
+                      id: campaign.id,
+                      name: campaign.name,
+                      status: campaign.status,
+                      seriesId: campaign.seriesId,
+                    }}
+                    placement="list"
+                    deleteTarget={{
+                      kind: 'campaign',
+                      id: campaign.id,
+                      name: campaign.name,
+                      hadSends: campaignHasSendHistory(campaign),
+                      sending: campaign.status === 'sending',
+                    }}
                   />
                 </div>
               </div>
