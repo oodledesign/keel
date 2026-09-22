@@ -117,6 +117,7 @@ export async function createRecorderNote(params: {
       .from('projects')
       .select('id')
       .eq('id', projectId)
+      .eq('account_id', accountId)
       .maybeSingle();
     if (projectError || !project) {
       throw new Error('Project not found');

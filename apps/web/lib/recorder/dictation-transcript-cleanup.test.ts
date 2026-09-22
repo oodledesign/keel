@@ -110,6 +110,13 @@ describe('cleanStoredSpeakerSegments', () => {
     ]);
   });
 
+  it('returns null for non-array input', () => {
+    expect(cleanStoredSpeakerSegments(null)).toBeNull();
+    expect(cleanStoredSpeakerSegments(undefined)).toBeNull();
+    expect(cleanStoredSpeakerSegments('string')).toBeNull();
+    expect(cleanStoredSpeakerSegments({})).toBeNull();
+  });
+
   it('reports no change for a normal meeting', () => {
     const segments = [
       { speaker: 'Me', text: 'Let us review the homepage.' },
