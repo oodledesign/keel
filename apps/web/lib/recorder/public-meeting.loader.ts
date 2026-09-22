@@ -5,6 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import {
+  type MeetingPostSyncNotice,
+  describeMeetingPostSync,
+} from '~/lib/recorder/meeting-post-sync-status';
 import { MEETING_PUBLISHED_SUGGESTED_TASK_STATUSES } from '~/lib/recorder/meeting-suggested-tasks';
 import {
   type TranscriptSegment,
@@ -41,6 +45,7 @@ export type PublicMeetingPayload = {
   showTasks: boolean;
   business: PublicMeetingParty | null;
   client: PublicMeetingParty | null;
+  postSyncNotice: MeetingPostSyncNotice | null;
 };
 
 type TranscriptShareRow = {
@@ -53,6 +58,9 @@ type TranscriptShareRow = {
   speaker_segments?: unknown;
   speaker_mappings?: unknown;
   public_share_show_tasks?: boolean | null;
+  summary_status?: string | null;
+  task_extraction_status?: string | null;
+  post_sync_error?: string | null;
 };
 
 function clientDisplayName(
@@ -288,6 +296,12 @@ async function assembleMeetingSharePayload(
     client: linkedClient
       ? { name: linkedClient.name, logoUrl: linkedClient.pictureUrl }
       : null,
+    postSyncNotice: describeMeetingPostSync({
+      summaryStatus: transcript.summary_status,
+      taskExtractionStatus: transcript.task_extraction_status,
+      error: transcript.post_sync_error,
+      audience: 'public',
+    }),
   };
 }
 
@@ -300,7 +314,7 @@ export async function loadMeetingSharePayloadById(
   const { data: transcript, error } = await admin
     .from('meeting_transcripts')
     .select(
-      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_show_tasks',
+      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_show_tasks, summary_status, task_extraction_status, post_sync_error',
     )
     .eq('id', transcriptId)
     .maybeSingle();
@@ -329,7 +343,7 @@ export async function loadPublicMeetingByToken(
   const { data: transcript, error } = await admin
     .from('meeting_transcripts')
     .select(
-      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_enabled, public_share_token, public_share_show_tasks',
+      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_enabled, public_share_token, public_share_show_tasks, summary_status, task_extraction_status, post_sync_error',
     )
     .eq('public_share_token', normalized)
     .eq('public_share_enabled', true)

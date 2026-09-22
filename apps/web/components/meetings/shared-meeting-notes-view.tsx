@@ -1,5 +1,6 @@
 import { Users } from 'lucide-react';
 
+import { MeetingPostSyncNoticeBanner } from '~/components/meetings/meeting-post-sync-notice';
 import { PublicMeetingNotesTabs } from '~/components/meetings/public-meeting-notes-tabs';
 import {
   type PublicMeetingParty,
@@ -99,6 +100,13 @@ export function SharedMeetingNotesView({
           </p>
         ) : null}
       </header>
+
+      {meeting.postSyncNotice ? (
+        <MeetingPostSyncNoticeBanner
+          notice={meeting.postSyncNotice}
+          variant="public"
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.85fr)] lg:items-start">
         <PublicMeetingNotesTabs

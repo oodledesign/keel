@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { listUpcomingSyncedMeetings } from '~/lib/integrations/google-calendar/events';
 import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
+import { scheduleMeetingPostSync } from '~/lib/recorder/meeting-post-sync';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
 import { NativeHttpError } from './http';
@@ -26,6 +27,10 @@ vi.mock('~/lib/brain/sync', () => ({
 
 vi.mock('~/lib/recorder/meeting-summary', () => ({
   loadMeetingSummary: vi.fn(),
+}));
+
+vi.mock('~/lib/recorder/meeting-post-sync', () => ({
+  scheduleMeetingPostSync: vi.fn(),
 }));
 
 vi.mock('~/lib/notifications/meeting-in-app-notifications', () => ({
@@ -362,6 +367,7 @@ describe('listNativeUpcomingMeetings', () => {
 describe('createNativeMeeting', () => {
   beforeEach(() => {
     vi.mocked(notifyMeetingTranscriptSyncedInApp).mockClear();
+    vi.mocked(scheduleMeetingPostSync).mockClear();
   });
 
   it('requires a client in this workspace and inserts meeting_transcripts', async () => {
@@ -427,8 +433,11 @@ describe('createNativeMeeting', () => {
         created_by: 'user-dan',
         duration_seconds: 42,
         speaker_segments: [{ speaker: 'Me', text: 'Hello from the site' }],
+        summary_status: 'pending',
+        task_extraction_status: 'pending',
       }),
     );
+    expect(scheduleMeetingPostSync).toHaveBeenCalledWith('m1');
     expect(created.id).toBe('m1');
     expect(created.client_name).toBe('Hope and Wonder');
     expect(notifyMeetingTranscriptSyncedInApp).toHaveBeenCalledWith({

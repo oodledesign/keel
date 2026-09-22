@@ -77,6 +77,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/meeting-post-sync",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/project-phase-due-reminders",
       "schedule": "0 8 * * *"
     },

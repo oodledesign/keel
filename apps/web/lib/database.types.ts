@@ -11512,12 +11512,17 @@ export type Database = {
           id: string
           meeting_date: string | null
           portal_visible: boolean
+          post_sync_error: string | null
+          post_sync_updated_at: string | null
           project_id: string | null
+          proposal_id: string | null
           public_share_enabled: boolean
           public_share_show_tasks: boolean
           public_share_token: string | null
           recorded_at: string | null
           source: string
+          summary_status: string
+          task_extraction_status: string
           speaker_mappings: Json
           speaker_segments: Json | null
           title: string
@@ -11539,12 +11544,17 @@ export type Database = {
           id?: string
           meeting_date?: string | null
           portal_visible?: boolean
+          post_sync_error?: string | null
+          post_sync_updated_at?: string | null
           project_id?: string | null
+          proposal_id?: string | null
           public_share_enabled?: boolean
           public_share_show_tasks?: boolean
           public_share_token?: string | null
           recorded_at?: string | null
           source?: string
+          summary_status?: string
+          task_extraction_status?: string
           speaker_mappings?: Json
           speaker_segments?: Json | null
           title?: string
@@ -11566,12 +11576,17 @@ export type Database = {
           id?: string
           meeting_date?: string | null
           portal_visible?: boolean
+          post_sync_error?: string | null
+          post_sync_updated_at?: string | null
           project_id?: string | null
+          proposal_id?: string | null
           public_share_enabled?: boolean
           public_share_show_tasks?: boolean
           public_share_token?: string | null
           recorded_at?: string | null
           source?: string
+          summary_status?: string
+          task_extraction_status?: string
           speaker_mappings?: Json
           speaker_segments?: Json | null
           title?: string

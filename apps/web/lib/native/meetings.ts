@@ -9,6 +9,7 @@ import {
   mergeUpcomingMeetings,
 } from '~/lib/integrations/google-calendar/upcoming-meetings';
 import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
+import { scheduleMeetingPostSync } from '~/lib/recorder/meeting-post-sync';
 import { MEETING_VISIBLE_SUGGESTED_TASK_STATUSES } from '~/lib/recorder/meeting-suggested-tasks';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 import { parseTranscriptContent } from '~/lib/recorder/transcript-speakers';
@@ -371,6 +372,10 @@ export async function createNativeMeeting(input: {
       created_by: input.userId,
       duration_seconds: duration,
       recorded_at: new Date().toISOString(),
+      summary_status: 'pending',
+      task_extraction_status: 'pending',
+      post_sync_error: null,
+      post_sync_updated_at: new Date().toISOString(),
     })
     .select(LIST_SELECT)
     .single();
@@ -381,6 +386,7 @@ export async function createNativeMeeting(input: {
 
   const row = data as NativeMeetingRow;
   queueBrainIndexSource(input.workspace.id, 'transcript', row.id);
+  scheduleMeetingPostSync(row.id);
 
   void notifyMeetingTranscriptSyncedInApp({
     accountId: input.workspace.id,

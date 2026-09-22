@@ -16,7 +16,7 @@ import {
   recordRecorderSync,
 } from '~/lib/recorder/access';
 import { resolveMeetingCalendarMetadata } from '~/lib/recorder/calendar-metadata';
-import { queueMeetingSummaryGeneration } from '~/lib/recorder/meeting-summary';
+import { scheduleMeetingPostSync } from '~/lib/recorder/meeting-post-sync';
 import {
   type TranscriptSegment,
   normalizeTranscriptSegments,
@@ -26,6 +26,7 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 
@@ -215,6 +216,10 @@ export async function POST(request: Request) {
       recorded_at: recordedAt,
       duration_seconds: input.duration_seconds ?? null,
       meeting_date: input.meeting_date ?? null,
+      summary_status: 'pending',
+      task_extraction_status: 'pending',
+      post_sync_error: null,
+      post_sync_updated_at: new Date().toISOString(),
       calendar_event_id: calendarMetadata.calendar_event_id,
       calendar_event_start: calendarMetadata.calendar_event_start,
       calendar_event_end: calendarMetadata.calendar_event_end,
@@ -232,15 +237,7 @@ export async function POST(request: Request) {
 
   queueBrainIndexSource(targetAccountId, 'transcript', row.id);
 
-  queueMeetingSummaryGeneration({
-    meetingTranscriptId: row.id,
-    accountId: targetAccountId,
-    createdByUserId: token.user_id,
-    title: input.title?.trim() || 'Meeting transcript',
-    content: transcriptContent,
-    meetingDate: input.meeting_date ?? null,
-    calendarAttendees: calendarMetadata.calendar_attendees,
-  });
+  scheduleMeetingPostSync(row.id);
 
   await recordRecorderSync(token.user_id, input.duration_seconds ?? 0);
 
