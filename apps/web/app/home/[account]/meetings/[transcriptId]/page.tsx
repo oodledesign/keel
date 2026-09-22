@@ -75,9 +75,11 @@ async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
           meetingTasks={data.meetingTasks}
           clients={data.clients}
           contacts={data.contacts}
+          clientContacts={data.clientContacts}
           members={data.members}
           notesSentEmails={data.notesSentEmails}
           currentUserId={data.currentUserId}
+          currentUserEmail={data.currentUserEmail}
           canEdit={data.canEdit}
           assignmentOptions={assignmentOptions}
         />
