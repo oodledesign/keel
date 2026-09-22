@@ -16,6 +16,8 @@ import { callAI } from '~/lib/ai/router';
 
 const MAX_TRANSCRIPT_CHARS = 80_000;
 const MIN_TASK_CONFIDENCE = 0.45;
+/** Skip the extract model call when the transcript is too thin to hold commitments. */
+export const MIN_TRANSCRIPT_CHARS_FOR_TASK_EXTRACTION = 120;
 
 const MeetingExtractItemSchema = z.object({
   suggested_title: z.string().optional(),
@@ -62,6 +64,7 @@ export type MeetingActionItemExtractInput = {
 };
 
 const EXTRACT_SYSTEM = `You extract explicit action items from a meeting transcript for a human review queue.
+Meetings are often agency/client design or project calls (deliverables, approvals, assets, timelines).
 Return ONLY valid JSON, no prose, no markdown fences:
 {
   "items": [
@@ -80,7 +83,9 @@ Return ONLY valid JSON, no prose, no markdown fences:
 
 Rules:
 - Only include explicit action items — commitments to do something, not discussion topics or FYIs.
+- Prefer concrete follow-ups: send/revise a deliverable, share assets, approve comps, schedule a next call, update a brief, chase a dependency.
 - Use [] when there are no actionable items.
+- Deduplicate: if two lines describe the same commitment, keep the first item.
 - Infer due dates from phrases like "by Friday" using the provided current date; use null when unknown.
 - Infer suggested_duration_minutes only when the transcript mentions effort (e.g. "30 mins", "2 hours"). Use an integer number of minutes. Use null when no duration is mentioned — do not guess.
 - Keep suggested_title short and imperative; put supporting context in suggested_description.
@@ -88,14 +93,18 @@ Rules:
 - task_confidence is 0-1 for how clearly this is a real, actionable commitment (not a vague idea).
 - assignee_confidence is 0-1 for how confident you are in suggested_assignee_email.
 
+Speaker labels:
+- Transcripts may use "Speaker 1", "Speaker 2", "Me", or similar. Use calendar attendees and the summary for context, but do not invent which generic label is which person unless the transcript makes it clear.
+- "Me" is usually the meeting recorder when that is how the device labelled the local speaker.
+
 Assignee rules (critical):
 - The meeting recorder (primary user) is identified in the user message. Account members (name + email) are listed when available.
 - Only assign when there is explicit evidence in the transcript (direct address, "I'll…", "Sarah will send…", accepted commitment).
 - Do NOT assign to the recorder just because they attended or recorded the call.
 - If assignment is ambiguous, set suggested_assignee_email to null, assignee_confidence below 0.6, and keep the item for review.
-- Never guess an assignee to avoid leaving tasks unassigned.
+- Never guess an assignee email.
 - If the source clearly assigns work to a named account member, set suggested_assignee_email to that member's email.
-- If the source assigns work to someone who is not an account member, omit the item entirely.
+- If the source assigns work to a client, vendor, or other non-member: KEEP the item, set suggested_assignee_email to null, assignee_confidence at most 0.5, and name that person in suggested_description (e.g. "Client: Alex to send brand assets").
 - When suggested_assignee_email is null, assignee_confidence must be at most 0.5.`;
 
 function buildMemberList(members: ExtractAccountMember[]): string {
@@ -157,6 +166,65 @@ function normalizeExcerpt(value: string | null | undefined): string | null {
   return trimmed.length > 200 ? `${trimmed.slice(0, 197)}…` : trimmed;
 }
 
+export function isTranscriptTooThinForTaskExtraction(transcript: string) {
+  return transcript.trim().length < MIN_TRANSCRIPT_CHARS_FOR_TASK_EXTRACTION;
+}
+
+function normalizeExtractedTitle(title: string) {
+  return title.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Drop near-duplicate titles within a single extraction batch (keep first). */
+export function dedupeMeetingExtractedItems(
+  items: MeetingExtractedActionItem[],
+): MeetingExtractedActionItem[] {
+  const kept: MeetingExtractedActionItem[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const key = normalizeExtractedTitle(item.suggestedTitle);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    kept.push(item);
+  }
+
+  return kept;
+}
+
+/**
+ * Client/vendor commitments must stay reviewable. Clear non-member emails and
+ * note the external owner in the description instead of dropping the item.
+ */
+export function retainExternalMeetingAssignees(
+  items: MeetingExtractedActionItem[],
+  members: ExtractAccountMember[],
+  recorderEmail: string,
+): MeetingExtractedActionItem[] {
+  const ownerEmail = recorderEmail.trim().toLowerCase();
+  const memberEmails = new Set(
+    members.map((entry) => entry.email.trim().toLowerCase()),
+  );
+
+  return items.map((item) => {
+    const rawEmail = item.suggestedAssigneeEmail?.trim() || null;
+    const email = rawEmail?.toLowerCase() || null;
+    if (!email || email === ownerEmail || memberEmails.has(email)) {
+      return item;
+    }
+
+    const ownerNote = `External owner mentioned: ${rawEmail}`;
+    const description = item.suggestedDescription?.trim();
+    return {
+      ...item,
+      suggestedAssigneeEmail: null,
+      assigneeConfidence: Math.min(item.assigneeConfidence ?? 0.4, 0.4),
+      suggestedDescription: description
+        ? `${description}\n\n${ownerNote}`
+        : ownerNote,
+    };
+  });
+}
+
 export function parseMeetingExtractResponse(
   raw: string,
 ): MeetingExtractedActionItem[] {
@@ -171,16 +239,18 @@ export function parseMeetingExtractResponse(
     const end = cleaned.lastIndexOf('}');
 
     if (start < 0 || end <= start) {
-      return parseExtractResponse(raw).map((item) => ({
-        suggestedTitle: item.title,
-        suggestedDescription: item.detail,
-        suggestedDueDate: item.suggestedDueDate,
-        suggestedDurationMinutes: item.suggestedDurationMinutes,
-        sourceExcerpt: item.sourceExcerpt,
-        taskConfidence: null,
-        assigneeConfidence: item.assigneeConfidence,
-        suggestedAssigneeEmail: item.suggestedAssigneeEmail,
-      }));
+      return dedupeMeetingExtractedItems(
+        parseExtractResponse(raw).map((item) => ({
+          suggestedTitle: item.title,
+          suggestedDescription: item.detail,
+          suggestedDueDate: item.suggestedDueDate,
+          suggestedDurationMinutes: item.suggestedDurationMinutes,
+          sourceExcerpt: item.sourceExcerpt,
+          taskConfidence: null,
+          assigneeConfidence: item.assigneeConfidence,
+          suggestedAssigneeEmail: item.suggestedAssigneeEmail,
+        })),
+      );
     }
 
     try {
@@ -193,44 +263,48 @@ export function parseMeetingExtractResponse(
   const parsed = MeetingExtractResponseSchema.safeParse(json);
 
   if (!parsed.success) {
-    return parseExtractResponse(raw).map((item) => ({
-      suggestedTitle: item.title,
-      suggestedDescription: item.detail,
-      suggestedDueDate: item.suggestedDueDate,
-      suggestedDurationMinutes: item.suggestedDurationMinutes,
-      sourceExcerpt: item.sourceExcerpt,
-      taskConfidence: null,
-      assigneeConfidence: item.assigneeConfidence,
-      suggestedAssigneeEmail: item.suggestedAssigneeEmail,
-    }));
+    return dedupeMeetingExtractedItems(
+      parseExtractResponse(raw).map((item) => ({
+        suggestedTitle: item.title,
+        suggestedDescription: item.detail,
+        suggestedDueDate: item.suggestedDueDate,
+        suggestedDurationMinutes: item.suggestedDurationMinutes,
+        sourceExcerpt: item.sourceExcerpt,
+        taskConfidence: null,
+        assigneeConfidence: item.assigneeConfidence,
+        suggestedAssigneeEmail: item.suggestedAssigneeEmail,
+      })),
+    );
   }
 
-  return parsed.data.items
-    .map((item) => {
-      const title = (item.suggested_title ?? item.title ?? '').trim();
-      const description =
-        item.suggested_description?.trim() || item.detail?.trim() || null;
+  return dedupeMeetingExtractedItems(
+    parsed.data.items
+      .map((item) => {
+        const title = (item.suggested_title ?? item.title ?? '').trim();
+        const description =
+          item.suggested_description?.trim() || item.detail?.trim() || null;
 
-      return {
-        suggestedTitle: title,
-        suggestedDescription: description,
-        suggestedDueDate: normalizeDueDate(item.suggested_due_date),
-        suggestedDurationMinutes: normalizeDurationMinutes(
-          item.suggested_duration_minutes,
-        ),
-        sourceExcerpt: normalizeExcerpt(item.source_excerpt),
-        taskConfidence: normalizeConfidence(item.task_confidence),
-        assigneeConfidence: normalizeConfidence(item.assignee_confidence),
-        suggestedAssigneeEmail:
-          item.suggested_assignee_email?.trim().toLowerCase() || null,
-      };
-    })
-    .filter(
-      (item) =>
-        item.suggestedTitle.length > 0 &&
-        (item.taskConfidence === null ||
-          item.taskConfidence >= MIN_TASK_CONFIDENCE),
-    );
+        return {
+          suggestedTitle: title,
+          suggestedDescription: description,
+          suggestedDueDate: normalizeDueDate(item.suggested_due_date),
+          suggestedDurationMinutes: normalizeDurationMinutes(
+            item.suggested_duration_minutes,
+          ),
+          sourceExcerpt: normalizeExcerpt(item.source_excerpt),
+          taskConfidence: normalizeConfidence(item.task_confidence),
+          assigneeConfidence: normalizeConfidence(item.assignee_confidence),
+          suggestedAssigneeEmail:
+            item.suggested_assignee_email?.trim().toLowerCase() || null,
+        };
+      })
+      .filter(
+        (item) =>
+          item.suggestedTitle.length > 0 &&
+          (item.taskConfidence === null ||
+            item.taskConfidence >= MIN_TASK_CONFIDENCE),
+      ),
+  );
 }
 
 export async function extractMeetingActionItems(
@@ -243,10 +317,15 @@ export async function extractMeetingActionItems(
     return [];
   }
 
+  if (transcript && isTranscriptTooThinForTaskExtraction(transcript)) {
+    return [];
+  }
+
   const currentDate = todayLocalYmd();
   const recorderLabel = input.recorderName?.trim()
     ? `${input.recorderName.trim()} <${input.recorderEmail}>`
     : input.recorderEmail;
+  const truncated = transcript.length > MAX_TRANSCRIPT_CHARS;
 
   const userContent = `Current date: ${currentDate}
 
@@ -264,7 +343,7 @@ Meeting summary (use for speaker attribution and context):
 ${summary || '(Summary unavailable — rely on transcript)'}
 ---
 
-Full transcript:
+Full transcript${truncated ? ' (truncated for length; prefer commitments that appear in the provided text)' : ''}:
 ---
 ${transcript.slice(0, MAX_TRANSCRIPT_CHARS)}
 ---

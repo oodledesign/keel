@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { stripJsonFences } from '@kit/email-assistant';
 
-import { parseMeetingExtractResponse } from './meeting-action-items-extract';
+import {
+  dedupeMeetingExtractedItems,
+  isTranscriptTooThinForTaskExtraction,
+  parseMeetingExtractResponse,
+  retainExternalMeetingAssignees,
+} from './meeting-action-items-extract';
 
 describe('meeting action item extraction parsing', () => {
   it('stripJsonFences removes markdown wrappers', () => {
@@ -67,5 +72,118 @@ describe('meeting action item extraction parsing', () => {
 
     expect(items[0]?.sourceExcerpt?.length).toBeLessThanOrEqual(200);
     expect(items[0]?.sourceExcerpt?.endsWith('…')).toBe(true);
+  });
+
+  it('dedupes duplicate titles within a batch', () => {
+    const items = parseMeetingExtractResponse(
+      JSON.stringify({
+        items: [
+          {
+            suggested_title: 'Send brand assets',
+            task_confidence: 0.9,
+            assignee_confidence: 0.4,
+            suggested_assignee_email: null,
+          },
+          {
+            suggested_title: '  Send   brand assets ',
+            task_confidence: 0.85,
+            assignee_confidence: 0.4,
+            suggested_assignee_email: null,
+          },
+        ],
+      }),
+    );
+
+    expect(items).toHaveLength(1);
+    expect(items[0]?.suggestedTitle).toBe('Send brand assets');
+  });
+
+  it('flags thin transcripts that should skip extraction', () => {
+    expect(isTranscriptTooThinForTaskExtraction('Hi')).toBe(true);
+    expect(
+      isTranscriptTooThinForTaskExtraction(
+        [
+          'Speaker 1: We should ship the homepage revision by Friday after client approval.',
+          'Me: I will send the updated comps tonight and chase brand assets tomorrow morning.',
+        ].join(' '),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('dedupeMeetingExtractedItems', () => {
+  it('keeps the first title', () => {
+    expect(
+      dedupeMeetingExtractedItems([
+        {
+          suggestedTitle: 'Follow up',
+          suggestedDescription: 'first',
+          suggestedDueDate: null,
+          suggestedDurationMinutes: null,
+          sourceExcerpt: null,
+          taskConfidence: 0.9,
+          assigneeConfidence: 0.4,
+          suggestedAssigneeEmail: null,
+        },
+        {
+          suggestedTitle: 'Follow up',
+          suggestedDescription: 'second',
+          suggestedDueDate: null,
+          suggestedDurationMinutes: null,
+          sourceExcerpt: null,
+          taskConfidence: 0.9,
+          assigneeConfidence: 0.4,
+          suggestedAssigneeEmail: null,
+        },
+      ]),
+    ).toEqual([expect.objectContaining({ suggestedDescription: 'first' })]);
+  });
+});
+
+describe('retainExternalMeetingAssignees', () => {
+  const members = [{ userId: 'user-dan', name: 'Dan', email: 'dan@ozer.so' }];
+
+  it('keeps client-owned commitments as unassigned review items', () => {
+    const [item] = retainExternalMeetingAssignees(
+      [
+        {
+          suggestedTitle: 'Send brand assets',
+          suggestedDescription: 'Alex will send the logo pack',
+          suggestedDueDate: null,
+          suggestedDurationMinutes: null,
+          sourceExcerpt: 'Alex will send the logo pack',
+          taskConfidence: 0.9,
+          assigneeConfidence: 0.9,
+          suggestedAssigneeEmail: 'Alex@Client.COM',
+        },
+      ],
+      members,
+      'dan@ozer.so',
+    );
+
+    expect(item?.suggestedAssigneeEmail).toBeNull();
+    expect(item?.assigneeConfidence).toBeLessThanOrEqual(0.4);
+    expect(item?.suggestedDescription).toContain('Alex@Client.COM');
+  });
+
+  it('leaves account-member assignees intact', () => {
+    const [item] = retainExternalMeetingAssignees(
+      [
+        {
+          suggestedTitle: 'Update proposal',
+          suggestedDescription: null,
+          suggestedDueDate: null,
+          suggestedDurationMinutes: null,
+          sourceExcerpt: null,
+          taskConfidence: 0.9,
+          assigneeConfidence: 0.9,
+          suggestedAssigneeEmail: 'dan@ozer.so',
+        },
+      ],
+      members,
+      'dan@ozer.so',
+    );
+
+    expect(item?.suggestedAssigneeEmail).toBe('dan@ozer.so');
   });
 });
