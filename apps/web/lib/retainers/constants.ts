@@ -36,6 +36,9 @@ export const RETAINER_WORKSPACE_ROLES = new Set([
   'staff',
 ]);
 
+/** Roles allowed to mutate retainers (matches canEditClients role set). */
+export const RETAINER_EDIT_ROLES = new Set(['owner', 'admin', 'staff']);
+
 export const TASK_STATUS_VALUES = [
   'todo',
   'in_progress',

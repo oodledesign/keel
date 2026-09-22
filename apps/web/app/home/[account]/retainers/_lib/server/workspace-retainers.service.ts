@@ -4,12 +4,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 
+import { isVisibleAgencyClientSubscription } from '~/lib/billing/client-subscription-lifecycle';
 import {
   type ClientSubscriptionRecord,
   type PlanTemplateKind,
   parseBillingCollection,
 } from '~/lib/billing/plan-templates-types';
-import { RETAINER_WORKSPACE_ROLES } from '~/lib/retainers/constants';
+import {
+  RETAINER_EDIT_ROLES,
+  RETAINER_WORKSPACE_ROLES,
+} from '~/lib/retainers/constants';
 import { looseClient } from '~/lib/retainers/loose-client';
 import {
   type WorkspaceRetainerClientChoice,
@@ -18,6 +22,8 @@ import {
   buildWorkspaceRetainerRows,
   parsePlanBillingInterval,
 } from '~/lib/retainers/workspace-retainers';
+
+import type { LinkWorkspaceRetainerToProjectInput } from '../schema/workspace-retainers.schema';
 
 function clientDisplayName(row: {
   display_name?: string | null;
@@ -98,6 +104,14 @@ class WorkspaceRetainersService {
       .maybeSingle();
     const role = membership?.account_role as string | undefined;
     if (!role || !RETAINER_WORKSPACE_ROLES.has(role)) {
+      throw new Error('Forbidden');
+    }
+    return { userId: auth.data.id, role };
+  }
+
+  private async ensureCanEdit(accountId: string) {
+    const { role } = await this.ensureMember(accountId);
+    if (!RETAINER_EDIT_ROLES.has(role)) {
       throw new Error('Forbidden');
     }
   }
@@ -221,5 +235,114 @@ class WorkspaceRetainersService {
       subscriptions,
       intervals,
     });
+  }
+
+  /**
+   * Attach a legacy client-level subscription (project_id null) to a project
+   * in the same workspace. Credits stay on project_retainers once linked.
+   */
+  async linkToProject(
+    input: LinkWorkspaceRetainerToProjectInput,
+  ): Promise<{ projectId: string; subscriptionId: string }> {
+    await this.ensureCanEdit(input.accountId);
+
+    const { data: subscription, error: subError } = await looseClient(
+      this.client,
+    )
+      .from('client_subscriptions')
+      .select('id, account_id, client_id, project_id, plan_template_id, status')
+      .eq('id', input.subscriptionId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (subError) throw new Error('Could not load retainer');
+    if (!subscription) throw new Error('Retainer not found');
+
+    const existingProjectId = subscription.project_id
+      ? String(subscription.project_id)
+      : null;
+    if (existingProjectId) {
+      throw new Error('This retainer is already linked to a project');
+    }
+
+    const clientId = subscription.client_id
+      ? String(subscription.client_id)
+      : null;
+    if (!clientId) {
+      throw new Error('This retainer has no client to match projects against');
+    }
+
+    const { data: project, error: projectError } = await this.client
+      .from('projects')
+      .select('id, client_id')
+      .eq('id', input.projectId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (projectError) throw new Error('Could not load project');
+    if (!project) throw new Error('Project not found');
+
+    const projectClientId = (project as { client_id?: string | null })
+      .client_id;
+    if (projectClientId && projectClientId !== clientId) {
+      throw new Error('Project does not belong to this client');
+    }
+    if (!projectClientId) {
+      throw new Error('Choose a project that belongs to this client');
+    }
+
+    const planTemplateId = subscription.plan_template_id
+      ? String(subscription.plan_template_id)
+      : null;
+
+    const { data: existingOnProject, error: conflictError } = await looseClient(
+      this.client,
+    )
+      .from('client_subscriptions')
+      .select('id, status, plan_template_id')
+      .eq('account_id', input.accountId)
+      .eq('project_id', input.projectId)
+      .is('website_id', null);
+
+    if (conflictError) throw new Error('Could not check existing retainers');
+
+    const conflicting = (
+      (existingOnProject ?? []) as Array<{
+        id?: string;
+        status?: string | null;
+        plan_template_id?: string | null;
+      }>
+    ).find((row) => {
+      if (!isVisibleAgencyClientSubscription(row.status)) return false;
+      if (!planTemplateId) return true;
+      return String(row.plan_template_id ?? '') === planTemplateId;
+    });
+
+    if (conflicting) {
+      throw new Error(
+        planTemplateId
+          ? 'This project already has a live retainer for the same plan'
+          : 'This project already has a live retainer',
+      );
+    }
+
+    const { data: updated, error: updateError } = await looseClient(this.client)
+      .from('client_subscriptions')
+      .update({ project_id: input.projectId })
+      .eq('id', input.subscriptionId)
+      .eq('account_id', input.accountId)
+      .is('project_id', null)
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) throw new Error('Could not link retainer');
+    if (!updated) {
+      throw new Error('Could not link retainer — it may already be linked');
+    }
+
+    return {
+      projectId: input.projectId,
+      subscriptionId: input.subscriptionId,
+    };
   }
 }

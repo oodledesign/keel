@@ -19,6 +19,7 @@ export type LooseQuery = {
   upsert: (values: unknown) => LooseQuery;
   delete: () => LooseQuery;
   eq: (column: string, value: unknown) => LooseQuery;
+  is: (column: string, value: null) => LooseQuery;
   in: (column: string, values: readonly unknown[]) => LooseQuery;
   gte: (column: string, value: unknown) => LooseQuery;
   lt: (column: string, value: unknown) => LooseQuery;
