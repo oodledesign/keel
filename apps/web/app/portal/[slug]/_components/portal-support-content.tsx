@@ -142,11 +142,7 @@ export function PortalSupportDetailContent({
         <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
           Opened {formatPortalDate(ticket.createdAt)}
           {ticket.dueDate
-            ? ` · Deadline ${formatPortalDate(
-                /^\d{4}-\d{2}-\d{2}$/.test(ticket.dueDate)
-                  ? `${ticket.dueDate}T12:00:00`
-                  : ticket.dueDate,
-              )}`
+            ? ` · Deadline ${formatPortalDate(ticket.dueDate)}`
             : null}
         </p>
       </div>
@@ -535,7 +531,7 @@ export function PortalSupportNewForm({
       initialProjects,
       resumed?.projectId ?? null,
     ),
-    due_date: resumed?.dueDate ?? '',
+    dueDate: resumed?.dueDate ?? '',
     recording_url: resumed?.recordingUrl ?? '',
     external_url: resumed?.externalUrl ?? '',
   });
@@ -616,7 +612,7 @@ export function PortalSupportNewForm({
       description: form.description,
       priority: form.priority,
       projectId: form.project_id || null,
-      dueDate: form.due_date || null,
+      dueDate: form.dueDate || null,
       recordingUrl: form.recording_url,
       externalUrl: form.external_url,
       attachments,
@@ -655,7 +651,7 @@ export function PortalSupportNewForm({
           description: '',
           priority: 'medium',
           project_id: resolveInitialProjectId(projects, null),
-          due_date: '',
+          dueDate: '',
           recording_url: '',
           external_url: '',
         });
@@ -745,7 +741,7 @@ export function PortalSupportNewForm({
           request_type_id: requestTypeId,
           retainer_service_id: retainerServiceId,
           request_intent: intent,
-          due_date: form.due_date.trim() || null,
+          due_date: form.dueDate.trim() || null,
           recording_url: form.recording_url.trim() || null,
           external_url: form.external_url.trim() || null,
           attachments,
@@ -1019,11 +1015,11 @@ export function PortalSupportNewForm({
                 <Input
                   id="due_date"
                   type="date"
-                  value={form.due_date}
+                  value={form.dueDate}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      due_date: event.target.value,
+                      dueDate: event.target.value,
                     }))
                   }
                 />
@@ -1147,13 +1143,13 @@ export function PortalSupportNewForm({
                   {form.priority}
                 </dd>
               </div>
-              {form.due_date ? (
+              {form.dueDate ? (
                 <div className="flex justify-between gap-4">
                   <dt className="text-[var(--ozer-text-on-light-muted)]">
                     Deadline
                   </dt>
                   <dd className="font-medium text-[var(--ozer-text-on-light)]">
-                    {formatPortalDate(`${form.due_date}T12:00:00`)}
+                    {formatPortalDate(form.dueDate)}
                   </dd>
                 </div>
               ) : null}

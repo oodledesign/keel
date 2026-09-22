@@ -574,11 +574,7 @@ export function SupportTicketDetailContent({
                     Deadline
                   </dt>
                   <dd className="text-[var(--workspace-shell-text)]">
-                    {formatTicketDate(
-                      /^\d{4}-\d{2}-\d{2}$/.test(ticket.dueDate)
-                        ? `${ticket.dueDate}T12:00:00`
-                        : ticket.dueDate,
-                    )}
+                    {formatTicketDate(ticket.dueDate)}
                   </dd>
                 </div>
               ) : null}

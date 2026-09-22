@@ -1792,7 +1792,7 @@ class ClientPortalService {
         credit_cost_snapshot: creditSnapshot.creditCostSnapshot,
       })
       .select(
-        'id, title, description, status, priority, ticket_number, created_at, public_token, assigned_to',
+        'id, title, description, status, priority, ticket_number, created_at, public_token, assigned_to, due_date',
       )
       .single();
 
@@ -1860,7 +1860,7 @@ class ClientPortalService {
       priority: (data.priority as PortalTicketPriority) ?? 'medium',
       ticketNumber: data.ticket_number ?? 0,
       createdAt: data.created_at,
-      dueDate: input.due_date?.trim() ? input.due_date.trim() : null,
+      dueDate: (data as { due_date?: string | null }).due_date ?? null,
     };
   }
 
