@@ -80,6 +80,7 @@ export type PortalTicket = {
 
 export type PortalTicketDetail = PortalTicket & {
   description: string | null;
+  dueDate: string | null;
 };
 
 export type PortalTicketMessage = {
@@ -717,7 +718,7 @@ class ClientPortalService {
     const { data, error } = await this.db
       .from('support_tickets')
       .select(
-        'id, title, description, status, priority, ticket_number, created_at',
+        'id, title, description, status, priority, ticket_number, created_at, due_date',
       )
       .eq('id', ticketId)
       .eq('client_org_id', clientOrgId)
@@ -733,6 +734,7 @@ class ClientPortalService {
       priority: (data.priority as PortalTicketPriority) ?? 'medium',
       ticketNumber: data.ticket_number ?? 0,
       createdAt: data.created_at,
+      dueDate: (data as { due_date?: string | null }).due_date ?? null,
     };
   }
 
@@ -1783,13 +1785,14 @@ class ClientPortalService {
         submitter_email: submitterEmail,
         recording_url: input.recording_url || null,
         external_url: input.external_url || null,
+        due_date: input.due_date?.trim() ? input.due_date.trim() : null,
         last_activity_at: now,
         request_type_id: creditSnapshot.requestTypeId,
         retainer_service_id: retainerServiceId,
         credit_cost_snapshot: creditSnapshot.creditCostSnapshot,
       })
       .select(
-        'id, title, description, status, priority, ticket_number, created_at, public_token, assigned_to',
+        'id, title, description, status, priority, ticket_number, created_at, public_token, assigned_to, due_date',
       )
       .single();
 
@@ -1857,6 +1860,7 @@ class ClientPortalService {
       priority: (data.priority as PortalTicketPriority) ?? 'medium',
       ticketNumber: data.ticket_number ?? 0,
       createdAt: data.created_at,
+      dueDate: (data as { due_date?: string | null }).due_date ?? null,
     };
   }
 

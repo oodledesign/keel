@@ -202,7 +202,7 @@ export function PortalShell({
   return (
     <div className="min-h-screen bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]">
       {paymentNotice ? (
-        <div className="sticky top-0 z-40">
+        <div className="sticky top-0 z-40 bg-[var(--ozer-coral-50)]">
           <PortalPaymentNoticeBar
             notice={paymentNotice}
             clientOrgId={clientOrgId}

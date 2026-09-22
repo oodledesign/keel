@@ -30,7 +30,7 @@ export function PortalPaymentNoticeBar({
 
   return (
     <div
-      className="border-b border-[color:var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)]"
+      className="border-b border-[color:var(--ozer-accent)]/30 bg-[var(--ozer-coral-50)]"
       data-test="portal-payment-notice"
       role="status"
     >

@@ -40,6 +40,13 @@ export const CreatePortalTicketSchema = z.object({
   request_intent: z.enum(['service', 'support']),
   recording_url: z.string().url().nullable().optional().or(z.literal('')),
   external_url: z.string().url().nullable().optional().or(z.literal('')),
+  /** Optional client-requested deadline (YYYY-MM-DD). */
+  due_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
+    .nullable()
+    .optional()
+    .or(z.literal('')),
   attachments: z
     .array(
       z.object({
@@ -105,6 +112,13 @@ export const PortalRequestDraftPayloadSchema = z.object({
   description: z.string().max(20000).default(''),
   priority: PortalTicketPrioritySchema.default('medium'),
   projectId: z.string().uuid().nullable().optional(),
+  /** Optional YYYY-MM-DD deadline. */
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional()
+    .or(z.literal('')),
   recordingUrl: z.string().max(2000).default(''),
   externalUrl: z.string().max(2000).default(''),
   attachments: z.array(PortalRequestDraftAttachmentSchema).max(5).default([]),

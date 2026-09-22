@@ -25,7 +25,11 @@ export type { TicketPriority, TicketStatus };
 
 export function formatTicketDate(value: string | null | undefined) {
   if (!value) return '—';
-  return new Date(value).toLocaleDateString('en-GB', {
+  // Bare YYYY-MM-DD is UTC midnight in JS; noon local avoids off-by-one labels.
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T12:00:00`
+    : value;
+  return new Date(normalized).toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

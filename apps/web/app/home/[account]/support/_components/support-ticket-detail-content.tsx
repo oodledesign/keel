@@ -568,6 +568,17 @@ export function SupportTicketDetailContent({
                 </div>
               ) : null}
 
+              {ticket.dueDate ? (
+                <div>
+                  <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    Deadline
+                  </dt>
+                  <dd className="text-[var(--workspace-shell-text)]">
+                    {formatTicketDate(ticket.dueDate)}
+                  </dd>
+                </div>
+              ) : null}
+
               {ticket.websiteName ? (
                 <div>
                   <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
