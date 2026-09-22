@@ -201,3 +201,71 @@ export function parseCcList(cc: string): string[] {
     .map((part) => part.trim())
     .filter(Boolean);
 }
+
+const BOARD_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValidBoardEmail(value: string): boolean {
+  return BOARD_EMAIL_PATTERN.test(value.trim());
+}
+
+/** Case-insensitive unique emails, preserving the first spelling. */
+export function dedupeBoardEmails(
+  emails: Array<string | null | undefined>,
+): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+
+  for (const raw of emails) {
+    const email = raw?.trim() ?? '';
+    if (!email) continue;
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(email);
+  }
+
+  return unique;
+}
+
+export function splitEmailDraft(raw: string): string[] {
+  return raw
+    .split(/[,;\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Recipients for one notify send: the saved board address (optional),
+ * plus any custom addresses. Invalid tokens are returned separately.
+ */
+export function collectBoardNotifyRecipients(input: {
+  savedEmail?: string | null;
+  includeSaved: boolean;
+  customEmails: string[];
+  draft?: string;
+}): { recipients: string[]; invalid: string[] } {
+  const pending = splitEmailDraft(input.draft ?? '');
+  const candidates = [
+    ...(input.includeSaved ? [input.savedEmail] : []),
+    ...input.customEmails,
+    ...pending,
+  ];
+
+  const invalid: string[] = [];
+  const valid: string[] = [];
+
+  for (const candidate of candidates) {
+    const email = candidate?.trim() ?? '';
+    if (!email) continue;
+    if (!isValidBoardEmail(email)) {
+      invalid.push(email);
+      continue;
+    }
+    valid.push(email);
+  }
+
+  return {
+    recipients: dedupeBoardEmails(valid),
+    invalid,
+  };
+}

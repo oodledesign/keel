@@ -9,8 +9,10 @@ import {
   type BoardNotifyStatus,
   applyBoardTemplate,
   boardStatusLabel,
+  dedupeBoardEmails,
   formatBoardListingRef,
   formatBoardPropertyAddress,
+  isValidBoardEmail,
   parseCcList,
   resolveBoardRecipients,
 } from '~/lib/commercial/board-company-settings';
@@ -152,25 +154,47 @@ export const sendBoardNotifyAction = enhanceAction(
     const accountName =
       (account as { name?: string | null } | null)?.name?.trim() || 'Agency';
     const statusLabel = boardStatusLabel(input.status as BoardNotifyStatus);
-    const ccList = parseCcList(input.cc ?? '');
+    const recipients = dedupeBoardEmails(input.to);
+    if (recipients.length === 0) {
+      throw new Error('Add at least one recipient');
+    }
 
-    await sendClientFacingEmail({
-      type: 'commercial_board_notify',
-      accountId: input.accountId,
-      feature: 'other',
-      accountName,
-      displayName: accountName,
-      mail: {
-        to: input.to.trim(),
-        subject: input.subject.trim(),
-        text: input.body.trim(),
-        ...(ccList.length > 0 ? { cc: ccList } : {}),
-      },
-      metadata: {
-        listing_id: input.listingId,
-        board_status: input.status,
-      },
-    });
+    const ccList = dedupeBoardEmails(parseCcList(input.cc ?? '')).filter(
+      (email) =>
+        !recipients.some(
+          (recipient) => recipient.toLowerCase() === email.toLowerCase(),
+        ),
+    );
+    const invalidCc = ccList.filter((email) => !isValidBoardEmail(email));
+    if (invalidCc.length > 0) {
+      throw new Error(`Enter a valid CC email: ${invalidCc.join(', ')}`);
+    }
+
+    const subject = input.subject.trim();
+    const body = input.body.trim();
+
+    // The agency mailer delivers one To address per send.
+    for (const [index, to] of recipients.entries()) {
+      await sendClientFacingEmail({
+        type: 'commercial_board_notify',
+        accountId: input.accountId,
+        feature: 'other',
+        accountName,
+        displayName: accountName,
+        mail: {
+          to,
+          subject,
+          text: body,
+          ...(index === 0 && ccList.length > 0 ? { cc: ccList } : {}),
+        },
+        metadata: {
+          listing_id: input.listingId,
+          board_status: input.status,
+          recipient_index: index,
+          recipient_count: recipients.length,
+        },
+      });
+    }
 
     await recordListingEvent(client, {
       accountId: input.accountId,
@@ -180,7 +204,7 @@ export const sendBoardNotifyAction = enhanceAction(
       summary: `Board company notified (${statusLabel})`,
       metadata: {
         status: input.status,
-        to: input.to.trim(),
+        to: recipients,
         cc: ccList,
       },
     });

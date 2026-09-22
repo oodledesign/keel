@@ -73,8 +73,9 @@ export function BoardCompanySettingsCard({
           Boards
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          When a disposal moves to Under offer, Let, or Sold, agents can confirm
-          sending a boards-down email to your board company. Merge fields:{' '}
+          When a disposal moves to Under offer, Let, or Sold, agents confirm
+          before a boards email is sent. The saved address is prefilled; extra
+          addresses can be added on the prompt. Merge fields:{' '}
           <code className="text-xs">{'{{property_address}}'}</code>,{' '}
           <code className="text-xs">{'{{status}}'}</code>,{' '}
           <code className="text-xs">{'{{listing_ref}}'}</code>,{' '}

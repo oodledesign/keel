@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -20,7 +20,13 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import type { BoardNotifyStatus } from '~/lib/commercial/board-company-settings';
-import { boardStatusLabel } from '~/lib/commercial/board-company-settings';
+import {
+  boardStatusLabel,
+  collectBoardNotifyRecipients,
+  dedupeBoardEmails,
+  isValidBoardEmail,
+  splitEmailDraft,
+} from '~/lib/commercial/board-company-settings';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import {
@@ -29,6 +35,28 @@ import {
   sendBoardNotifyAction,
   skipBoardNotifyAction,
 } from '../_lib/server/board-notify-actions';
+
+function EmailChip({
+  email,
+  onRemove,
+}: {
+  email: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text)]">
+      <span className="truncate">{email}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded-full p-0.5 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]"
+        aria-label={`Remove ${email}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
 
 export function NotifyBoardCompanyDialog({
   open,
@@ -46,7 +74,11 @@ export function NotifyBoardCompanyDialog({
   status: BoardNotifyStatus;
 }) {
   const [preview, setPreview] = useState<BoardNotifyPreview | null>(null);
-  const [to, setTo] = useState('');
+  const [savedEmail, setSavedEmail] = useState('');
+  const [includeSaved, setIncludeSaved] = useState(false);
+  const [customEmails, setCustomEmails] = useState<string[]>([]);
+  const [draft, setDraft] = useState('');
+  const [recipientError, setRecipientError] = useState<string | null>(null);
   const [cc, setCc] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -71,7 +103,11 @@ export function NotifyBoardCompanyDialog({
         });
         if (cancelled) return;
         setPreview(next);
-        setTo(next.to);
+        setSavedEmail(next.to);
+        setIncludeSaved(Boolean(next.to));
+        setCustomEmails([]);
+        setDraft('');
+        setRecipientError(null);
         setCc(next.cc);
         setSubject(next.subject);
         setBody(next.body);
@@ -89,13 +125,48 @@ export function NotifyBoardCompanyDialog({
     };
   }, [open, accountId, accountSlug, listingId, status]);
 
-  const configured = Boolean(preview?.configured);
+  const committed = collectBoardNotifyRecipients({
+    savedEmail,
+    includeSaved,
+    customEmails,
+  });
+  const { recipients, invalid } = collectBoardNotifyRecipients({
+    savedEmail,
+    includeSaved,
+    customEmails,
+    draft,
+  });
   const canSend =
-    configured &&
-    Boolean(to.trim()) &&
+    recipients.length > 0 &&
+    invalid.length === 0 &&
     Boolean(subject.trim()) &&
     Boolean(body.trim()) &&
     !sending;
+
+  const addCustomEmails = (raw: string) => {
+    const parts = splitEmailDraft(raw);
+    if (parts.length === 0) return;
+
+    const bad = parts.filter((email) => !isValidBoardEmail(email));
+    if (bad.length > 0) {
+      setRecipientError('Enter a valid email address');
+      setDraft(bad.join(', '));
+    } else {
+      setRecipientError(null);
+      setDraft('');
+    }
+
+    const good = parts.filter((email) => isValidBoardEmail(email));
+    if (good.length === 0) return;
+
+    setCustomEmails((current) => {
+      const savedKey = includeSaved ? savedEmail.trim().toLowerCase() : '';
+      const next = dedupeBoardEmails([...current, ...good]).filter(
+        (email) => email.toLowerCase() !== savedKey,
+      );
+      return next;
+    });
+  };
 
   const recordSkip = async () => {
     if (settledRef.current) return;
@@ -124,14 +195,29 @@ export function NotifyBoardCompanyDialog({
   };
 
   const handleSend = () => {
-    if (!canSend) return;
+    const pending = collectBoardNotifyRecipients({
+      savedEmail,
+      includeSaved,
+      customEmails,
+      draft,
+    });
+    if (pending.invalid.length > 0) {
+      setRecipientError('Enter a valid email address');
+      return;
+    }
+    if (pending.recipients.length === 0) {
+      setRecipientError('Add at least one recipient');
+      return;
+    }
+    if (!subject.trim() || !body.trim() || sending) return;
+
     startSend(async () => {
       try {
         await sendBoardNotifyAction({
           accountId,
           listingId,
           status,
-          to: to.trim(),
+          to: pending.recipients,
           cc: cc.trim(),
           subject: subject.trim(),
           body: body.trim(),
@@ -155,8 +241,9 @@ export function NotifyBoardCompanyDialog({
             Notify board company?
           </DialogTitle>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Status is now {boardStatusLabel(status)}. Preview and edit the email
-            before sending — nothing is sent until you confirm.
+            Status is now {boardStatusLabel(status)}. The saved board address is
+            included when one is set — add extra addresses if you need to.
+            Nothing is sent until you confirm.
           </p>
         </DialogHeader>
 
@@ -173,17 +260,78 @@ export function NotifyBoardCompanyDialog({
               <Label className="text-[var(--workspace-shell-text)]/70">
                 To
               </Label>
-              <Input
-                type="email"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="Board company email"
-                disabled={!configured}
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
-              />
-              {!configured ? (
+              <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5">
+                {includeSaved && savedEmail ? (
+                  <EmailChip
+                    email={savedEmail}
+                    onRemove={() => setIncludeSaved(false)}
+                  />
+                ) : null}
+                {customEmails.map((email) => (
+                  <EmailChip
+                    key={email.toLowerCase()}
+                    email={email}
+                    onRemove={() =>
+                      setCustomEmails((current) =>
+                        current.filter(
+                          (item) => item.toLowerCase() !== email.toLowerCase(),
+                        ),
+                      )
+                    }
+                  />
+                ))}
+                <input
+                  value={draft}
+                  onChange={(event) => {
+                    setDraft(event.target.value);
+                    if (recipientError) setRecipientError(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ',') {
+                      event.preventDefault();
+                      addCustomEmails(draft);
+                    } else if (
+                      event.key === 'Backspace' &&
+                      draft === '' &&
+                      customEmails.length > 0
+                    ) {
+                      setCustomEmails((current) => current.slice(0, -1));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (draft.trim()) addCustomEmails(draft);
+                  }}
+                  placeholder={
+                    recipients.length === 0 ? 'name@company.com' : 'Add email'
+                  }
+                  aria-label="Add recipient"
+                  className="min-w-[10rem] flex-1 bg-transparent px-1 py-1 text-sm text-[var(--workspace-shell-text)] outline-none placeholder:text-[var(--workspace-shell-text)]/30"
+                />
+              </div>
+              {savedEmail && !includeSaved ? (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+                  onClick={() => setIncludeSaved(true)}
+                >
+                  Include saved board email ({savedEmail})
+                </button>
+              ) : null}
+              {recipientError ? (
+                <p className="text-destructive text-sm">{recipientError}</p>
+              ) : committed.recipients.length === 0 && !draft.trim() ? (
+                <p className="text-destructive text-sm">
+                  Add at least one recipient
+                </p>
+              ) : (
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Saved board email, extra addresses, or both. Press Enter to
+                  add.
+                </p>
+              )}
+              {!savedEmail ? (
                 <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                  Add a board company email in settings to enable Send.
+                  No board company email is saved.
                   {preview?.settingsHref ? (
                     <>
                       {' '}
@@ -206,7 +354,6 @@ export function NotifyBoardCompanyDialog({
               <Input
                 value={cc}
                 onChange={(e) => setCc(e.target.value)}
-                disabled={!configured}
                 className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
               />
             </div>

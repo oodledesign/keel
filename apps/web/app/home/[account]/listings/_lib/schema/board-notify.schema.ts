@@ -14,7 +14,10 @@ export const PrepareBoardNotifySchema = AccountListingSchema.extend({
 
 export const SendBoardNotifySchema = AccountListingSchema.extend({
   status: z.enum(BOARD_NOTIFY_STATUSES),
-  to: z.string().trim().email('Enter a valid board company email'),
+  to: z
+    .array(z.string().trim().email('Enter a valid email'))
+    .min(1, 'Add at least one recipient')
+    .max(20),
   cc: z.string().trim().max(1000).optional().default(''),
   subject: z.string().trim().min(1).max(300),
   body: z.string().trim().min(1).max(8000),
