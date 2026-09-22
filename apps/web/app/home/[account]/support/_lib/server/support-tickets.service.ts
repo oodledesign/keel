@@ -36,6 +36,8 @@ export type SupportTicket = {
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string | null;
+  /** Optional client-requested deadline (YYYY-MM-DD). */
+  dueDate: string | null;
   requestTypeId: string | null;
   creditCostSnapshot: number | null;
   creditsDeductedAt: string | null;
@@ -103,6 +105,7 @@ type TicketRow = {
   created_at: string;
   updated_at: string;
   last_activity_at?: string | null;
+  due_date?: string | null;
   submitter_name?: string | null;
   submitter_email?: string | null;
   recording_url?: string | null;
@@ -216,6 +219,7 @@ function mapTicketRow(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastActivityAt: row.last_activity_at ?? row.updated_at ?? null,
+    dueDate: row.due_date ?? null,
     clientOrgName: org?.name?.trim() ?? null,
     clientPictureUrl: branding?.clientPictureUrl ?? null,
     businessName: branding?.businessName ?? null,

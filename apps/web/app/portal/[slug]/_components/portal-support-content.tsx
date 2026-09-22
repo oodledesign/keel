@@ -141,6 +141,13 @@ export function PortalSupportDetailContent({
         </h1>
         <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
           Opened {formatPortalDate(ticket.createdAt)}
+          {ticket.dueDate
+            ? ` · Deadline ${formatPortalDate(
+                /^\d{4}-\d{2}-\d{2}$/.test(ticket.dueDate)
+                  ? `${ticket.dueDate}T12:00:00`
+                  : ticket.dueDate,
+              )}`
+            : null}
         </p>
       </div>
 
@@ -260,6 +267,16 @@ const GENERAL_SUPPORT_ID = '__general_support__';
 
 type RequestIntent = 'service' | 'support';
 type WizardStep = 1 | 2 | 3 | 4;
+
+/** Prefer a resumed draft project; else auto-pick when the client has exactly one. */
+function resolveInitialProjectId(
+  projects: ProjectOption[],
+  resumedProjectId?: string | null,
+): string {
+  if (resumedProjectId) return resumedProjectId;
+  if (projects.length === 1) return projects[0]!.id;
+  return '';
+}
 
 type PortalRequestTypeOption = {
   id: string;
@@ -514,7 +531,11 @@ export function PortalSupportNewForm({
     title: resumed?.title ?? '',
     description: resumed?.description ?? '',
     priority: (resumed?.priority ?? 'medium') as PortalTicketPriority,
-    project_id: resumed?.projectId ?? '',
+    project_id: resolveInitialProjectId(
+      initialProjects,
+      resumed?.projectId ?? null,
+    ),
+    due_date: resumed?.dueDate ?? '',
     recording_url: resumed?.recordingUrl ?? '',
     external_url: resumed?.externalUrl ?? '',
   });
@@ -595,6 +616,7 @@ export function PortalSupportNewForm({
       description: form.description,
       priority: form.priority,
       projectId: form.project_id || null,
+      dueDate: form.due_date || null,
       recordingUrl: form.recording_url,
       externalUrl: form.external_url,
       attachments,
@@ -632,7 +654,8 @@ export function PortalSupportNewForm({
           title: '',
           description: '',
           priority: 'medium',
-          project_id: '',
+          project_id: resolveInitialProjectId(projects, null),
+          due_date: '',
           recording_url: '',
           external_url: '',
         });
@@ -722,6 +745,7 @@ export function PortalSupportNewForm({
           request_type_id: requestTypeId,
           retainer_service_id: retainerServiceId,
           request_intent: intent,
+          due_date: form.due_date.trim() || null,
           recording_url: form.recording_url.trim() || null,
           external_url: form.external_url.trim() || null,
           attachments,
@@ -842,9 +866,11 @@ export function PortalSupportNewForm({
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">
-                      No project — client defaults
-                    </SelectItem>
+                    {projects.length > 1 ? (
+                      <SelectItem value="__none__">
+                        No project — client defaults
+                      </SelectItem>
+                    ) : null}
                     {projects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
@@ -989,7 +1015,26 @@ export function PortalSupportNewForm({
               </div>
 
               <div className="space-y-2">
-                <Label>Project (optional)</Label>
+                <Label htmlFor="due_date">Deadline (optional)</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={form.due_date}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      due_date: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            {projects.length > 0 ? (
+              <div className="space-y-2">
+                <Label>
+                  Project {projects.length === 1 ? '' : '(optional)'}
+                </Label>
                 <Select
                   value={form.project_id || '__none__'}
                   onValueChange={(value) =>
@@ -1003,7 +1048,9 @@ export function PortalSupportNewForm({
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">No project</SelectItem>
+                    {projects.length > 1 ? (
+                      <SelectItem value="__none__">No project</SelectItem>
+                    ) : null}
                     {projects.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
@@ -1012,7 +1059,7 @@ export function PortalSupportNewForm({
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="recording_url">Recording URL (optional)</Label>
@@ -1100,6 +1147,27 @@ export function PortalSupportNewForm({
                   {form.priority}
                 </dd>
               </div>
+              {form.due_date ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[var(--ozer-text-on-light-muted)]">
+                    Deadline
+                  </dt>
+                  <dd className="font-medium text-[var(--ozer-text-on-light)]">
+                    {formatPortalDate(`${form.due_date}T12:00:00`)}
+                  </dd>
+                </div>
+              ) : null}
+              {form.project_id ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[var(--ozer-text-on-light-muted)]">
+                    Project
+                  </dt>
+                  <dd className="text-right font-medium text-[var(--ozer-text-on-light)]">
+                    {projects.find((project) => project.id === form.project_id)
+                      ?.name ?? 'Selected'}
+                  </dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-[var(--ozer-text-on-light-muted)]">
                   Title

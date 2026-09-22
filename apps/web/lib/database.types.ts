@@ -15196,6 +15196,7 @@ export type Database = {
           created_by: string | null
           credit_cost_snapshot: number | null
           credits_deducted_at: string | null
+          due_date: string | null
           description: string | null
           external_url: string | null
           id: string
@@ -15226,6 +15227,7 @@ export type Database = {
           created_by?: string | null
           credit_cost_snapshot?: number | null
           credits_deducted_at?: string | null
+          due_date?: string | null
           description?: string | null
           external_url?: string | null
           id?: string
@@ -15256,6 +15258,7 @@ export type Database = {
           created_by?: string | null
           credit_cost_snapshot?: number | null
           credits_deducted_at?: string | null
+          due_date?: string | null
           description?: string | null
           external_url?: string | null
           id?: string
