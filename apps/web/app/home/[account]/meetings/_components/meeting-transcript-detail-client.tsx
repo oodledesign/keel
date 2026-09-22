@@ -65,6 +65,7 @@ import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
 import type { MeetingNotesSentEmail } from '~/lib/recorder/meeting-notes-email-recipients.shared';
+import { mergeMeetingNotesRecipientEmails } from '~/lib/recorder/meeting-notes-recipient-emails';
 import {
   formatMeetingNotesRecipientLabel,
   resolveMeetingNotesRecipientName,
@@ -150,9 +151,11 @@ type Props = {
   meetingTasks?: MeetingTask[];
   clients: ClientOption[];
   contacts: ContactOption[];
+  clientContacts: ContactOption[];
   members: SpeakerPickerMember[];
   notesSentEmails?: MeetingNotesSentEmail[];
   currentUserId: string;
+  currentUserEmail?: string | null;
   canEdit: boolean;
   assignmentOptions: TaskAssignmentOption[];
 };
@@ -234,9 +237,11 @@ export function MeetingTranscriptDetailClient({
   meetingTasks = [],
   clients,
   contacts: initialContacts,
+  clientContacts,
   members,
   notesSentEmails = [],
   currentUserId,
+  currentUserEmail = null,
   canEdit,
   assignmentOptions,
 }: Props) {
@@ -352,6 +357,20 @@ export function MeetingTranscriptDetailClient({
     ),
   ).sort((a, b) => a.localeCompare(b));
 
+  const linkedClientContacts =
+    clientId && clientId === (transcript.clientId ?? '') ? clientContacts : [];
+  const noteRecipientEmails = mergeMeetingNotesRecipientEmails({
+    participantEmails: callParticipantEmails,
+    clientContactEmails: linkedClientContacts.map(
+      (contact) => contact.email ?? '',
+    ),
+    currentUserEmails: [
+      currentUserEmail,
+      members.find((member) => member.userId === currentUserId)?.email,
+    ],
+  });
+  const recipientContacts = [...linkedClientContacts, ...contacts];
+
   const contactEmailOptions = contacts
     .map((contact) => ({
       id: contact.id,
@@ -361,7 +380,7 @@ export function MeetingTranscriptDetailClient({
     .filter(
       (contact) =>
         isValidEmail(contact.email) &&
-        !callParticipantEmails.includes(contact.email),
+        !noteRecipientEmails.includes(contact.email),
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -371,7 +390,7 @@ export function MeetingTranscriptDetailClient({
 
   const openEmailNotesDialog = (preselectParticipants = true) => {
     setSelectedRecipientEmails(
-      preselectParticipants ? callParticipantEmails : selectedRecipientEmails,
+      preselectParticipants ? noteRecipientEmails : selectedRecipientEmails,
     );
     setExtraRecipientEmail('');
     setShowContactPicker(false);
@@ -1701,17 +1720,17 @@ export function MeetingTranscriptDetailClient({
           </DialogHeader>
 
           <div className="min-w-0 space-y-4">
-            {callParticipantEmails.length > 0 ? (
+            {noteRecipientEmails.length > 0 ? (
               <div className="min-w-0 space-y-2">
                 <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
                   Participants
                 </p>
                 <div className="max-h-48 min-w-0 space-y-2 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
-                  {callParticipantEmails.map((email) => {
+                  {noteRecipientEmails.map((email) => {
                     const checked = selectedRecipientEmails.includes(email);
                     const name = resolveMeetingNotesRecipientName({
                       email,
-                      contacts,
+                      contacts: recipientContacts,
                       attendees: transcript.calendarAttendees,
                       members,
                       clients,
@@ -1739,8 +1758,8 @@ export function MeetingTranscriptDetailClient({
               </div>
             ) : (
               <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                No calendar participants found for this meeting. Add emails
-                below, or pick from contacts.
+                No recipients found for this meeting. Add emails below, or pick
+                from contacts.
               </p>
             )}
 

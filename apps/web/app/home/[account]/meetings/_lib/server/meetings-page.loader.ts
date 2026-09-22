@@ -18,6 +18,7 @@ import {
   mergeUpcomingMeetings,
 } from '~/lib/integrations/google-calendar/upcoming-meetings';
 import { loadMeetingNotesSentEmails } from '~/lib/recorder/meeting-notes-email-recipients';
+import { primaryContactEmail } from '~/lib/recorder/meeting-notes-recipient-emails';
 import {
   type MeetingParticipant,
   resolveMeetingParticipants,
@@ -116,6 +117,56 @@ function mapMemberOptions(rows: unknown[]): MeetingMemberOption[] {
     })
     .filter((member): member is MeetingMemberOption => member !== null)
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+type ClientContactEmailRow = {
+  id?: string;
+  full_name?: string | null;
+  email?: string | null;
+  picture_url?: string | null;
+  emails?: Array<{
+    email?: string | null;
+    is_primary?: boolean | null;
+  }> | null;
+};
+
+function mapMeetingClientContacts(
+  rows: ClientContactEmailRow[],
+): MeetingContactOption[] {
+  const contacts: MeetingContactOption[] = [];
+
+  for (const row of rows) {
+    if (!row.id) continue;
+
+    contacts.push({
+      id: row.id,
+      name: row.full_name?.trim() || 'Unnamed contact',
+      email: primaryContactEmail(row),
+      pictureUrl: row.picture_url ?? null,
+    });
+  }
+
+  return contacts;
+}
+
+async function loadMeetingClientContacts(
+  clientsService: ReturnType<typeof createClientsService>,
+  accountId: string,
+  clientId: string | null | undefined,
+): Promise<MeetingContactOption[]> {
+  if (!clientId) return [];
+
+  try {
+    const result = await clientsService.listContacts({
+      accountId,
+      clientId,
+    });
+
+    return mapMeetingClientContacts(result.data ?? []);
+  } catch (error) {
+    console.warn('[meetings] load client contacts for notes failed', error);
+    return [];
+  }
 }
 
 function mapContactOptions(
@@ -338,14 +389,22 @@ async function loadMeetingTranscriptPageDataImpl(
     }),
   ]);
 
-  const notesSentEmails =
+  const [notesSentEmails, clientContacts] = await Promise.all([
     transcript && access.canEditClients
-      ? await loadMeetingNotesSentEmails(client, {
+      ? loadMeetingNotesSentEmails(client, {
           accountId,
           transcriptId,
           publicShareToken: transcript.publicShareToken,
         })
-      : [];
+      : Promise.resolve([]),
+    transcript && access.canEditClients
+      ? loadMeetingClientContacts(
+          clientsService,
+          accountId,
+          transcript.clientId ?? null,
+        )
+      : Promise.resolve([]),
+  ]);
 
   if (membersResult.error) {
     throw new Error(membersResult.error.message);
@@ -467,9 +526,11 @@ async function loadMeetingTranscriptPageDataImpl(
     meetingTasks,
     clients: mapClientOptions(clientsResult.data ?? []),
     contacts,
+    clientContacts,
     members,
     notesSentEmails,
     currentUserId: workspace.user.id,
+    currentUserEmail: workspace.user.email ?? null,
     canEdit: access.canEditClients,
     canView: access.canViewClients,
   };
