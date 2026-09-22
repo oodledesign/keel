@@ -12,14 +12,23 @@ import { isLinkedInAppConfigured } from '~/lib/commercial/linkedin-publishing/en
 import { verifyPendingLinkedInOrgs } from '~/lib/commercial/linkedin-publishing/oauth-state';
 import type { LinkedInOrgConnectionPublic } from '~/lib/commercial/linkedin-publishing/types';
 import {
+  PORTAL_CREDENTIAL_WARNING_SAMPLE,
+  PORTAL_SYNC_ISSUE_LIST_LIMIT,
+  type PortalPublicationIssue,
+  type PortalSyncIssueSummary,
+  isCredentialNotConfiguredError,
+  portalSyncIssueCutoff,
+  summarizePortalSyncIssues,
+} from '~/lib/commercial/portal-sync-issues';
+import {
   buildEachFeedUrl,
   buildPropertyHiveFeedUrl,
 } from '~/lib/commercial/property-hive-feed';
-import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
   loadLatestRightmoveBulkJob,
   toPublicRightmoveBulkJob,
 } from '~/lib/commercial/rightmove-bulk-job';
+import type { RightmoveBulkJobPublic } from '~/lib/commercial/rightmove-bulk-job-types';
 import {
   getRightmoveEnvironmentLabel,
   isRightmoveOAuthConfigured,
@@ -64,15 +73,8 @@ export type CommercialPublishingSettings = {
     connection: LinkedInOrgConnectionPublic | null;
     pendingOrgs: Array<{ id: string; name: string }>;
   };
-  recentPublicationIssues: Array<{
-    id: string;
-    listingId: string;
-    listingName: string | null;
-    portal: string;
-    status: string;
-    lastSyncAt: string | null;
-    lastError: string | null;
-  }>;
+  /** Recent per-listing failures, with workspace-wide credential noise grouped. */
+  portalSync: PortalSyncIssueSummary;
 };
 
 function isConfigured(
@@ -140,40 +142,20 @@ export async function loadCommercialPublishingSettings(
     Boolean(b.rightmoveBranchId?.trim()),
   );
 
-  const { data: issueRows } = await client
-    .from('commercial_portal_publications')
-    .select(
-      'id, listing_id, portal, status, last_sync_at, last_error, commercial_listings(name)',
-    )
-    .eq('account_id', accountId)
-    .or('status.eq.error,last_error.not.is.null')
-    .order('last_sync_at', { ascending: false, nullsFirst: false })
-    .limit(15);
-
-  const recentPublicationIssues = (
-    (issueRows ?? []) as Array<Record<string, unknown>>
-  ).map((row) => {
-    const listingJoin = row.commercial_listings as
-      | { name?: string }
-      | { name?: string }[]
-      | null;
-    const listingName = Array.isArray(listingJoin)
-      ? (listingJoin[0]?.name ?? null)
-      : (listingJoin?.name ?? null);
-    return {
-      id: String(row.id),
-      listingId: String(row.listing_id),
-      listingName,
-      portal: String(row.portal ?? ''),
-      status: String(row.status ?? ''),
-      lastSyncAt: (row.last_sync_at as string | null) ?? null,
-      lastError: (row.last_error as string | null) ?? null,
-    };
-  });
+  const propertyHiveConfigured = isConfigured(ph);
+  const unconfiguredPortals = [
+    ...(!propertyHiveConfigured ? ['property_hive'] : []),
+    ...(!oauthConfigured ? ['rightmove'] : []),
+  ];
+  const portalSync = await loadPortalSyncIssues(
+    client,
+    accountId,
+    unconfiguredPortals,
+  );
 
   return {
     propertyHive: {
-      configured: isConfigured(ph),
+      configured: propertyHiveConfigured,
       siteUrl: (ph?.site_url as string | undefined) ?? '',
       username: (ph?.username as string | undefined) ?? '',
       officeId: (ph?.office_id as string | null | undefined) ?? null,
@@ -187,9 +169,10 @@ export async function loadCommercialPublishingSettings(
       branchConfigured,
       configured: oauthConfigured,
       workspaceBranches,
-      bulkJob: await loadLatestRightmoveBulkJob(client as never, accountId).then(
-        (job) => (job ? toPublicRightmoveBulkJob(job) : null),
-      ),
+      bulkJob: await loadLatestRightmoveBulkJob(
+        client as never,
+        accountId,
+      ).then((job) => (job ? toPublicRightmoveBulkJob(job) : null)),
     },
     each: {
       configured: eachFeedEnabled,
@@ -201,8 +184,124 @@ export async function loadCommercialPublishingSettings(
       connection: await loadLinkedInOrgConnection(client, accountId),
       pendingOrgs: await loadPendingLinkedInOrgs(),
     },
-    recentPublicationIssues,
+    portalSync,
   };
+}
+
+const PORTAL_SYNC_ISSUE_SELECT =
+  'id, listing_id, portal, status, last_sync_at, last_error, commercial_listings(name)';
+
+function mapPortalSyncIssueRow(
+  row: Record<string, unknown>,
+): PortalPublicationIssue {
+  const listingJoin = row.commercial_listings as
+    | { name?: string }
+    | { name?: string }[]
+    | null;
+  const listingName = Array.isArray(listingJoin)
+    ? (listingJoin[0]?.name ?? null)
+    : (listingJoin?.name ?? null);
+
+  return {
+    id: String(row.id),
+    listingId: String(row.listing_id),
+    listingName,
+    portal: String(row.portal ?? ''),
+    status: String(row.status ?? ''),
+    lastSyncAt: (row.last_sync_at as string | null) ?? null,
+    lastError: (row.last_error as string | null) ?? null,
+  };
+}
+
+/**
+ * Recent publication rows with a status of error or a last_error.
+ * Missing-credential rows for portals that are unconfigured workspace-wide
+ * are counted and sampled separately so they do not crowd out real failures.
+ */
+async function loadPortalSyncIssues(
+  client: SupabaseClient,
+  accountId: string,
+  unconfiguredPortals: string[],
+): Promise<PortalSyncIssueSummary> {
+  const cutoff = portalSyncIssueCutoff();
+
+  let issuesQuery = client
+    .from('commercial_portal_publications')
+    .select(PORTAL_SYNC_ISSUE_SELECT)
+    .eq('account_id', accountId)
+    .gte('last_sync_at', cutoff)
+    .or('status.eq.error,last_error.not.is.null')
+    .order('last_sync_at', { ascending: false, nullsFirst: false })
+    .limit(PORTAL_SYNC_ISSUE_LIST_LIMIT + 1);
+
+  for (const portal of unconfiguredPortals) {
+    issuesQuery = issuesQuery.or(
+      `portal.neq.${portal},last_error.is.null,last_error.not.ilike."%credentials not configured%"`,
+    );
+  }
+
+  const credentialGroups = await Promise.all(
+    unconfiguredPortals.map(async (portal) => {
+      const [countResult, sampleResult] = await Promise.all([
+        client
+          .from('commercial_portal_publications')
+          .select('id', { count: 'exact', head: true })
+          .eq('account_id', accountId)
+          .eq('portal', portal)
+          .gte('last_sync_at', cutoff)
+          .ilike('last_error', '%credentials not configured%'),
+        client
+          .from('commercial_portal_publications')
+          .select(PORTAL_SYNC_ISSUE_SELECT)
+          .eq('account_id', accountId)
+          .eq('portal', portal)
+          .gte('last_sync_at', cutoff)
+          .ilike('last_error', '%credentials not configured%')
+          .order('last_sync_at', { ascending: false, nullsFirst: false })
+          .limit(PORTAL_CREDENTIAL_WARNING_SAMPLE),
+      ]);
+
+      const sample = (
+        (sampleResult.data ?? []) as Array<Record<string, unknown>>
+      )
+        .map(mapPortalSyncIssueRow)
+        .filter((row) => isCredentialNotConfiguredError(row.lastError));
+
+      return {
+        portal,
+        count: countResult.count ?? sample.length,
+        sample,
+      };
+    }),
+  );
+
+  const filteredIssues = await issuesQuery;
+  let issueRows = filteredIssues.data;
+
+  if (filteredIssues.error) {
+    const fallback = await client
+      .from('commercial_portal_publications')
+      .select(PORTAL_SYNC_ISSUE_SELECT)
+      .eq('account_id', accountId)
+      .gte('last_sync_at', cutoff)
+      .or('status.eq.error,last_error.not.is.null')
+      .order('last_sync_at', { ascending: false, nullsFirst: false })
+      .limit(100);
+    issueRows = fallback.data;
+  }
+
+  const issues = ((issueRows ?? []) as Array<Record<string, unknown>>).map(
+    mapPortalSyncIssueRow,
+  );
+
+  return summarizePortalSyncIssues({
+    issues,
+    unconfiguredPortals,
+    credentialCounts: Object.fromEntries(
+      credentialGroups.map((group) => [group.portal, group.count]),
+    ),
+    credentialSamples: credentialGroups.flatMap((group) => group.sample),
+  });
 }
 
 async function loadPendingLinkedInOrgs(): Promise<

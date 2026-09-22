@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { type ReactNode, useEffect, useState, useTransition } from 'react';
 
 import { CheckCircle2, Copy, Linkedin, Loader2, RefreshCw } from 'lucide-react';
 
@@ -17,6 +17,11 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import {
+  type PublishingSettingsTab,
+  parsePublishingSettingsTab,
+  publishingSettingsTabHash,
+} from '~/lib/commercial/publishing-settings-tabs';
 import {
   workspaceBtnPrimaryMd,
   workspacePanelCard,
@@ -35,6 +40,8 @@ import {
   saveWebsiteListingUrlTemplateAction,
   testPublishListingAction,
 } from '../_lib/server/server-actions';
+import { CommercialPublishingSectionNav } from './commercial-publishing-section-nav';
+import { PortalSyncIssuesCard } from './portal-sync-issues-card';
 import { RightmoveBulkPublishPanel } from './rightmove-bulk-publish-panel';
 
 interface CommercialPublishingSettingsProps {
@@ -49,6 +56,15 @@ interface CommercialPublishingSettingsProps {
     connected?: boolean;
     select?: boolean;
   };
+  /** Deep-linked tab from `?tab=`. Hash `#board-company` still wins on the client. */
+  initialTab?: PublishingSettingsTab;
+  /** Website-tab content rendered above the Property Hive feed (requirement form). */
+  websiteLeading?: ReactNode;
+  /**
+   * Boards-tab content. When omitted, a slot explains where board company
+   * email settings belong (`#board-company`).
+   */
+  boards?: ReactNode;
 }
 
 function ConfiguredBadge({ configured }: { configured: boolean }) {
@@ -75,8 +91,42 @@ export function CommercialPublishingSettings({
   listings,
   portalPublishingUnlocked = true,
   linkedinBanner,
+  initialTab = 'website',
+  websiteLeading,
+  boards,
 }: CommercialPublishingSettingsProps) {
   void linkedinBanner;
+  const [tab, setTab] = useState<PublishingSettingsTab>(initialTab);
+
+  useEffect(() => {
+    const applyLocation = () => {
+      const fromHash = parsePublishingSettingsTab(window.location.hash);
+      const fromQuery = parsePublishingSettingsTab(
+        new URLSearchParams(window.location.search).get('tab'),
+      );
+      setTab(fromHash ?? fromQuery ?? initialTab);
+    };
+
+    applyLocation();
+    window.addEventListener('hashchange', applyLocation);
+    window.addEventListener('popstate', applyLocation);
+    return () => {
+      window.removeEventListener('hashchange', applyLocation);
+      window.removeEventListener('popstate', applyLocation);
+    };
+  }, [initialTab]);
+
+  const selectTab = (next: PublishingSettingsTab) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', next);
+    url.hash = publishingSettingsTabHash(next);
+    window.history.pushState(
+      null,
+      '',
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+    setTab(next);
+  };
   const [settings, setSettings] = useState(initialSettings);
   const [listingUrlTemplate, setListingUrlTemplate] = useState(
     initialSettings.propertyHive.listingUrlTemplate ?? '',
@@ -268,495 +318,525 @@ export function CommercialPublishingSettings({
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {false && linkedinBanner?.error ? (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-          {linkedinBanner.error}
-        </p>
-      ) : null}
-      {false && linkedinBanner?.connected ? (
-        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-          LinkedIn company page connected.
-        </p>
-      ) : null}
-      {(settings.recentPublicationIssues?.length ?? 0) > 0 ? (
-        <Card className={workspacePanelCard}>
-          <CardHeader>
-            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-              Recent portal sync issues
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
-              {settings.recentPublicationIssues.map((issue) => (
-                <li
-                  key={issue.id}
-                  className="space-y-0.5 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                    {issue.listingName ?? 'Disposal'}
-                    <span className="ml-1 font-normal text-[var(--workspace-shell-text)]/55 capitalize">
-                      · {issue.portal.replace(/_/g, ' ')}
-                    </span>
-                  </p>
-                  <p className="text-xs text-rose-500">
-                    <span className="capitalize">{issue.status}</span>
-                    {issue.lastError ? ` — ${issue.lastError}` : null}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-      <Card className={workspacePanelCard}>
-        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-            Property Hive XML feed
-          </CardTitle>
-          <ConfiguredBadge configured={settings.propertyHive.feedEnabled} />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            XML feed for Property Hive Import. EACH has a separate feed URL
-            under Portal publishing so you can later choose different stock per
-            portal.
-          </p>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:flex-row lg:items-start">
+      <CommercialPublishingSectionNav tab={tab} onSelect={selectTab} />
+      <div className="min-w-0 flex-1">
+        {tab === 'website' ? (
+          <div className="space-y-6">
+            {websiteLeading}
+            <Card className={workspacePanelCard}>
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  Property Hive XML feed
+                </CardTitle>
+                <ConfiguredBadge
+                  configured={settings.propertyHive.feedEnabled}
+                />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-[var(--workspace-shell-text)]/60">
+                  XML feed for Property Hive Import. EACH has its own feed URL
+                  on the Portals tab so stock can diverge later.
+                </p>
 
-          {feedUrl ? (
-            <div className="space-y-2">
-              <Label>Feed URL</Label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input readOnly value={feedUrl} className="font-mono text-xs" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={copyFeedUrl}
-                  className="shrink-0 gap-1.5"
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy
-                </Button>
-              </div>
-              <ol className="list-decimal space-y-1 pl-4 text-xs text-[var(--workspace-shell-text)]/55">
-                <li>Property Hive → Property Import: XML / generic XML</li>
-                <li>Paste this URL, Frequency → Every 15 minutes</li>
-                <li>Prefer a real server cron (WP-Cron alone can drift)</li>
-              </ol>
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--workspace-shell-text)]/50">
-              Enable the feed to generate a secret URL for Property Hive.
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              disabled={feedPending}
-              onClick={enableFeed}
-              className={workspaceBtnPrimaryMd}
-            >
-              {feedPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
-              {feedUrl ? 'Refresh feed details' : 'Enable XML feed'}
-            </Button>
-            {feedUrl ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={feedPending}
-                onClick={rotateFeed}
-                className="gap-1.5"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Rotate token
-              </Button>
-            ) : null}
-          </div>
-
-          <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
-            <Label htmlFor="listing-url-template">
-              Public listing URL template
-            </Label>
-            <p className="text-xs text-[var(--workspace-shell-text)]/55">
-              For XML-only websites (no Property Hive REST), Ozer can store a
-              public page link when Website is on. Use{' '}
-              <code className="text-[11px]">{'{slug}'}</code> (address) or{' '}
-              <code className="text-[11px]">{'{external_id}'}</code>. Example:{' '}
-              <code className="text-[11px]">
-                https://www.bracketts.co.uk/property/{'{slug}'}/
-              </code>
-            </p>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="listing-url-template"
-                value={listingUrlTemplate}
-                onChange={(event) => setListingUrlTemplate(event.target.value)}
-                placeholder="https://www.example.com/property/{slug}/"
-                className="font-mono text-xs"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={templatePending}
-                className="shrink-0"
-                onClick={() => {
-                  startTemplateTransition(async () => {
-                    try {
-                      const next = await saveWebsiteListingUrlTemplateAction({
-                        accountId,
-                        listingUrlTemplate: listingUrlTemplate.trim() || null,
-                      });
-                      setSettings(next);
-                      setListingUrlTemplate(
-                        next.propertyHive.listingUrlTemplate ?? '',
-                      );
-                      toast.success('Listing URL template saved');
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : 'Could not save listing URL template',
-                      );
-                    }
-                  });
-                }}
-              >
-                {templatePending ? 'Saving…' : 'Save template'}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className={workspacePanelCard}>
-        <CardHeader>
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-            Portal publishing
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          {!portalPublishingUnlocked ? (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-              Portal publishing is locked on this subscription. Contact support
-              if you expect Rightmove, EACH, or Property Hive to be available.
-            </p>
-          ) : null}
-          <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Rightmove Commercial Listings uses platform OAuth (env). Rightmove
-            Branch IDs live on each workspace office under Brand settings →
-            Branches, and disposals pick an office on Management. EACH and
-            Property Hive use XML feed URLs (EACH has its own token so stock can
-            diverge later).
-          </p>
-
-          <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                Rightmove
-              </h3>
-              <ConfiguredBadge
-                configured={settings.rightmove.oauthConfigured}
-              />
-            </div>
-            <p className="text-xs text-[var(--workspace-shell-text)]/55">
-              OAuth Client ID / Key live in server env (
-              {settings.rightmove.environment === 'production'
-                ? 'production'
-                : 'test'}{' '}
-              API).{' '}
-              {settings.rightmove.oauthConfigured
-                ? 'Platform credentials are present.'
-                : 'Set RIGHTMOVE_CLIENT_ID and RIGHTMOVE_CLIENT_KEY, then use Test publish → Rightmove with no listing to verify the token.'}
-            </p>
-            {settings.rightmove.workspaceBranches.length === 0 ? (
-              <p className="text-xs text-amber-200/90">
-                No workspace offices yet — add offices under Brand settings →
-                Branches, then set each Rightmove Branch ID here.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {settings.rightmove.workspaceBranches.map((branch) => (
-                  <div
-                    key={branch.id}
-                    className="grid gap-2 rounded-lg bg-black/10 px-3 py-3 sm:grid-cols-[1fr_160px] sm:items-center"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                        {branch.name}
-                      </p>
-                      <p className="text-xs text-[var(--workspace-shell-text)]/45">
-                        Workspace office from Brand settings
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <Label
-                        htmlFor={`rm-id-${branch.id}`}
-                        className="text-xs text-[var(--workspace-shell-text)]/55"
-                      >
-                        Rightmove Branch ID
-                      </Label>
+                {feedUrl ? (
+                  <div className="space-y-2">
+                    <Label>Feed URL</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Input
-                        id={`rm-id-${branch.id}`}
-                        inputMode="numeric"
-                        value={rmBranchIds[branch.id] ?? ''}
-                        disabled={!portalPublishingUnlocked}
-                        onChange={(e) =>
-                          setRmBranchIds((prev) => ({
-                            ...prev,
-                            [branch.id]: e.target.value.replace(/\D/g, ''),
-                          }))
-                        }
-                        placeholder="e.g. 283634"
+                        readOnly
+                        value={feedUrl}
+                        className="font-mono text-xs"
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={copyFeedUrl}
+                        className="shrink-0 gap-1.5"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </Button>
                     </div>
+                    <ol className="list-decimal space-y-1 pl-4 text-xs text-[var(--workspace-shell-text)]/55">
+                      <li>
+                        Property Hive → Property Import: XML / generic XML
+                      </li>
+                      <li>Paste this URL, Frequency → Every 15 minutes</li>
+                      <li>
+                        Prefer a real server cron (WP-Cron alone can drift)
+                      </li>
+                    </ol>
                   </div>
-                ))}
-                <div className="space-y-3">
+                ) : (
+                  <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                    Enable the feed to generate a secret URL for Property Hive.
+                  </p>
+                )}
+
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    variant="outline"
-                    disabled={rmPending || !portalPublishingUnlocked}
-                    onClick={saveRightmoveBranches}
+                    disabled={feedPending}
+                    onClick={enableFeed}
+                    className={workspaceBtnPrimaryMd}
                   >
-                    {rmPending ? (
+                    {feedPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : null}
-                    Save Rightmove branch IDs
+                    {feedUrl ? 'Refresh feed details' : 'Enable XML feed'}
                   </Button>
-                  <RightmoveBulkPublishPanel
-                    accountId={accountId}
-                    accountSlug={accountSlug}
-                    environment={settings.rightmove.environment}
-                    portalPublishingUnlocked={portalPublishingUnlocked}
-                    oauthConfigured={settings.rightmove.oauthConfigured}
-                    branchConfigured={settings.rightmove.branchConfigured}
-                    initialJob={settings.rightmove.bulkJob}
-                  />
+                  {feedUrl ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={feedPending}
+                      onClick={rotateFeed}
+                      className="gap-1.5"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Rotate token
+                    </Button>
+                  ) : null}
                 </div>
-              </div>
-            )}
-            {!settings.rightmove.branchConfigured ? (
-              <p className="text-xs text-amber-200/90">
-                Enter a numeric Rightmove Branch ID for each office that should
-                publish disposals.
-              </p>
-            ) : null}
-          </div>
 
-          <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                EACH
-              </h3>
-              <ConfiguredBadge configured={settings.each.configured} />
-            </div>
-            <p className="text-xs text-[var(--workspace-shell-text)]/55">
-              Dedicated XML feed URL for EACH. Includes all Marketing / Under
-              offer disposals unless switched Off on the listing (Overview or
-              Management).
-            </p>
-            {eachFeedUrl ? (
-              <div className="space-y-2">
-                <Label>EACH feed URL</Label>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    readOnly
-                    value={eachFeedUrl}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={copyEachFeedUrl}
-                    className="shrink-0 gap-1.5"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copy
-                  </Button>
+                <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
+                  <Label htmlFor="listing-url-template">
+                    Public listing URL template
+                  </Label>
+                  <p className="text-xs text-[var(--workspace-shell-text)]/55">
+                    For XML-only websites (no Property Hive REST), Ozer can
+                    store a public page link when Website is on. Use{' '}
+                    <code className="text-[11px]">{'{slug}'}</code> (address) or{' '}
+                    <code className="text-[11px]">{'{external_id}'}</code>.
+                    Example:{' '}
+                    <code className="text-[11px]">
+                      https://www.bracketts.co.uk/property/{'{slug}'}/
+                    </code>
+                  </p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      id="listing-url-template"
+                      value={listingUrlTemplate}
+                      onChange={(event) =>
+                        setListingUrlTemplate(event.target.value)
+                      }
+                      placeholder="https://www.example.com/property/{slug}/"
+                      className="font-mono text-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={templatePending}
+                      className="shrink-0"
+                      onClick={() => {
+                        startTemplateTransition(async () => {
+                          try {
+                            const next =
+                              await saveWebsiteListingUrlTemplateAction({
+                                accountId,
+                                listingUrlTemplate:
+                                  listingUrlTemplate.trim() || null,
+                              });
+                            setSettings(next);
+                            setListingUrlTemplate(
+                              next.propertyHive.listingUrlTemplate ?? '',
+                            );
+                            toast.success('Listing URL template saved');
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : 'Could not save listing URL template',
+                            );
+                          }
+                        });
+                      }}
+                    >
+                      {templatePending ? 'Saving…' : 'Save template'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="text-xs text-amber-200/90">
-                Enable the EACH feed, then send that URL to EACH.
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={eachFeedPending}
-                onClick={enableEachFeed}
-              >
-                {eachFeedPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+
+        {tab === 'portals' ? (
+          <div className="space-y-6">
+            <Card className={workspacePanelCard}>
+              <CardHeader>
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  Portal publishing
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                {!portalPublishingUnlocked ? (
+                  <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
+                    Portal publishing is locked on this subscription. Contact
+                    support if you expect Rightmove, EACH, or Property Hive to
+                    be available.
+                  </p>
                 ) : null}
-                {eachFeedUrl ? 'Refresh EACH feed' : 'Enable EACH feed'}
-              </Button>
-              {eachFeedUrl ? (
+                <p className="text-sm text-[var(--workspace-shell-text)]/60">
+                  Rightmove Commercial Listings uses platform OAuth (env).
+                  Rightmove Branch IDs live on each workspace office under Brand
+                  settings → Branches, and disposals pick an office on
+                  Management. EACH and Property Hive use XML feed URLs (EACH has
+                  its own token so stock can diverge later).
+                </p>
+
+                <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                      Rightmove
+                    </h3>
+                    <ConfiguredBadge
+                      configured={settings.rightmove.oauthConfigured}
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--workspace-shell-text)]/55">
+                    OAuth Client ID / Key live in server env (
+                    {settings.rightmove.environment === 'production'
+                      ? 'production'
+                      : 'test'}{' '}
+                    API).{' '}
+                    {settings.rightmove.oauthConfigured
+                      ? 'Platform credentials are present.'
+                      : 'Set RIGHTMOVE_CLIENT_ID and RIGHTMOVE_CLIENT_KEY, then use Test publish → Rightmove with no listing to verify the token.'}
+                  </p>
+                  {settings.rightmove.workspaceBranches.length === 0 ? (
+                    <p className="text-xs text-amber-200/90">
+                      No workspace offices yet — add offices under Brand
+                      settings → Branches, then set each Rightmove Branch ID
+                      here.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {settings.rightmove.workspaceBranches.map((branch) => (
+                        <div
+                          key={branch.id}
+                          className="grid gap-2 rounded-lg bg-black/10 px-3 py-3 sm:grid-cols-[1fr_160px] sm:items-center"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                              {branch.name}
+                            </p>
+                            <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                              Workspace office from Brand settings
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor={`rm-id-${branch.id}`}
+                              className="text-xs text-[var(--workspace-shell-text)]/55"
+                            >
+                              Rightmove Branch ID
+                            </Label>
+                            <Input
+                              id={`rm-id-${branch.id}`}
+                              inputMode="numeric"
+                              value={rmBranchIds[branch.id] ?? ''}
+                              disabled={!portalPublishingUnlocked}
+                              onChange={(e) =>
+                                setRmBranchIds((prev) => ({
+                                  ...prev,
+                                  [branch.id]: e.target.value.replace(
+                                    /\D/g,
+                                    '',
+                                  ),
+                                }))
+                              }
+                              placeholder="e.g. 283634"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <div className="space-y-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={rmPending || !portalPublishingUnlocked}
+                          onClick={saveRightmoveBranches}
+                        >
+                          {rmPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : null}
+                          Save Rightmove branch IDs
+                        </Button>
+                        <RightmoveBulkPublishPanel
+                          accountId={accountId}
+                          accountSlug={accountSlug}
+                          environment={settings.rightmove.environment}
+                          portalPublishingUnlocked={portalPublishingUnlocked}
+                          oauthConfigured={settings.rightmove.oauthConfigured}
+                          branchConfigured={settings.rightmove.branchConfigured}
+                          initialJob={settings.rightmove.bulkJob}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {!settings.rightmove.branchConfigured ? (
+                    <p className="text-xs text-amber-200/90">
+                      Enter a numeric Rightmove Branch ID for each office that
+                      should publish disposals.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                      EACH
+                    </h3>
+                    <ConfiguredBadge configured={settings.each.configured} />
+                  </div>
+                  <p className="text-xs text-[var(--workspace-shell-text)]/55">
+                    Dedicated XML feed URL for EACH. Includes all Marketing /
+                    Under offer disposals unless switched Off on the listing
+                    (Overview or Management).
+                  </p>
+                  {eachFeedUrl ? (
+                    <div className="space-y-2">
+                      <Label>EACH feed URL</Label>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Input
+                          readOnly
+                          value={eachFeedUrl}
+                          className="font-mono text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={copyEachFeedUrl}
+                          className="shrink-0 gap-1.5"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-amber-200/90">
+                      Enable the EACH feed, then send that URL to EACH.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={eachFeedPending}
+                      onClick={enableEachFeed}
+                    >
+                      {eachFeedPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : null}
+                      {eachFeedUrl ? 'Refresh EACH feed' : 'Enable EACH feed'}
+                    </Button>
+                    {eachFeedUrl ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={eachFeedPending}
+                        onClick={rotateEachFeed}
+                        className="gap-1.5"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Rotate EACH token
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={`${workspacePanelCard} opacity-60`}>
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+                <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
+                  <Linkedin className="h-4 w-4" />
+                  LinkedIn company page
+                </CardTitle>
+                <ConfiguredBadge
+                  configured={
+                    settings.linkedin.connection?.status === 'connected' ||
+                    settings.linkedin.connection?.status === 'needs_reconnect'
+                  }
+                />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-[var(--workspace-shell-text)]/60">
+                  Coming soon — post disposals to your LinkedIn company page
+                  from Publishing.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+
+        {tab === 'boards' ? (
+          <div className="space-y-6">
+            {boards ?? <BoardCompanySettingsPlaceholder />}
+          </div>
+        ) : null}
+
+        {tab === 'sync' ? (
+          <div className="space-y-6">
+            <PortalSyncIssuesCard summary={settings.portalSync} />
+            <Card className={workspacePanelCard}>
+              <CardHeader>
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  Test publish
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-[var(--workspace-shell-text)]/60">
+                  For Property Hive and EACH, this checks each portal’s XML
+                  feed. For Rightmove, leave Listing empty to verify OAuth
+                  (optionally pick an office to probe its Branch ID); pick a
+                  listing to PUT — that listing must have an Office / branch
+                  assigned on Management.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Portal</Label>
+                    <Select
+                      value={testPortal}
+                      onValueChange={(value) =>
+                        setTestPortal(value as typeof testPortal)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={workspaceSelectContentClass}>
+                        <SelectItem
+                          value="property_hive"
+                          className={workspaceSelectItemClass}
+                        >
+                          Property Hive
+                        </SelectItem>
+                        <SelectItem
+                          value="rightmove"
+                          className={workspaceSelectItemClass}
+                        >
+                          Rightmove
+                        </SelectItem>
+                        <SelectItem
+                          value="each"
+                          className={workspaceSelectItemClass}
+                        >
+                          EACH
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Listing (optional)</Label>
+                    <Select
+                      value={testListingId || '__none__'}
+                      onValueChange={(value) =>
+                        setTestListingId(value === '__none__' ? '' : value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="No listing — connection only" />
+                      </SelectTrigger>
+                      <SelectContent className={workspaceSelectContentClass}>
+                        <SelectItem
+                          value="__none__"
+                          className={workspaceSelectItemClass}
+                        >
+                          No listing — connection only
+                        </SelectItem>
+                        {listings.map((listing) => (
+                          <SelectItem
+                            key={listing.id}
+                            value={listing.id}
+                            className={workspaceSelectItemClass}
+                          >
+                            {listing.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {testPortal === 'rightmove' && !testListingId ? (
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Office for branch probe (optional)</Label>
+                      <Select
+                        value={testAccountBranchId || '__none__'}
+                        onValueChange={(value) =>
+                          setTestAccountBranchId(
+                            value === '__none__' ? '' : value,
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="First office with RM ID" />
+                        </SelectTrigger>
+                        <SelectContent className={workspaceSelectContentClass}>
+                          <SelectItem
+                            value="__none__"
+                            className={workspaceSelectItemClass}
+                          >
+                            Auto — first office with a Rightmove Branch ID
+                          </SelectItem>
+                          {settings.rightmove.workspaceBranches.map(
+                            (branch) => (
+                              <SelectItem
+                                key={branch.id}
+                                value={branch.id}
+                                className={workspaceSelectItemClass}
+                              >
+                                {branch.name}
+                                {branch.rightmoveBranchId
+                                  ? ` · RM ${branch.rightmoveBranchId}`
+                                  : ' · no RM ID'}
+                              </SelectItem>
+                            ),
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                </div>
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={eachFeedPending}
-                  onClick={rotateEachFeed}
-                  className="gap-1.5"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Rotate EACH token
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className={`${workspacePanelCard} opacity-60`}>
-        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-          <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
-            <Linkedin className="h-4 w-4" />
-            LinkedIn company page
-          </CardTitle>
-          <ConfiguredBadge
-            configured={
-              settings.linkedin.connection?.status === 'connected' ||
-              settings.linkedin.connection?.status === 'needs_reconnect'
-            }
-          />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Coming soon — post disposals to your LinkedIn company page from
-            Publishing.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className={workspacePanelCard}>
-        <CardHeader>
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-            Test publish
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            For Property Hive and EACH, this checks each portal’s XML feed. For
-            Rightmove, leave Listing empty to verify OAuth (optionally pick an
-            office to probe its Branch ID); pick a listing to PUT — that listing
-            must have an Office / branch assigned on Management.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Portal</Label>
-              <Select
-                value={testPortal}
-                onValueChange={(value) =>
-                  setTestPortal(value as typeof testPortal)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className={workspaceSelectContentClass}>
-                  <SelectItem
-                    value="property_hive"
-                    className={workspaceSelectItemClass}
-                  >
-                    Property Hive
-                  </SelectItem>
-                  <SelectItem
-                    value="rightmove"
-                    className={workspaceSelectItemClass}
-                  >
-                    Rightmove
-                  </SelectItem>
-                  <SelectItem value="each" className={workspaceSelectItemClass}>
-                    EACH
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Listing (optional)</Label>
-              <Select
-                value={testListingId || '__none__'}
-                onValueChange={(value) =>
-                  setTestListingId(value === '__none__' ? '' : value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="No listing — connection only" />
-                </SelectTrigger>
-                <SelectContent className={workspaceSelectContentClass}>
-                  <SelectItem
-                    value="__none__"
-                    className={workspaceSelectItemClass}
-                  >
-                    No listing — connection only
-                  </SelectItem>
-                  {listings.map((listing) => (
-                    <SelectItem
-                      key={listing.id}
-                      value={listing.id}
-                      className={workspaceSelectItemClass}
-                    >
-                      {listing.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {testPortal === 'rightmove' && !testListingId ? (
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Office for branch probe (optional)</Label>
-                <Select
-                  value={testAccountBranchId || '__none__'}
-                  onValueChange={(value) =>
-                    setTestAccountBranchId(value === '__none__' ? '' : value)
+                  disabled={
+                    testPending ||
+                    (testPortal === 'rightmove' && !portalPublishingUnlocked)
                   }
+                  onClick={runTestPublish}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="First office with RM ID" />
-                  </SelectTrigger>
-                  <SelectContent className={workspaceSelectContentClass}>
-                    <SelectItem
-                      value="__none__"
-                      className={workspaceSelectItemClass}
-                    >
-                      Auto — first office with a Rightmove Branch ID
-                    </SelectItem>
-                    {settings.rightmove.workspaceBranches.map((branch) => (
-                      <SelectItem
-                        key={branch.id}
-                        value={branch.id}
-                        className={workspaceSelectItemClass}
-                      >
-                        {branch.name}
-                        {branch.rightmoveBranchId
-                          ? ` · RM ${branch.rightmoveBranchId}`
-                          : ' · no RM ID'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
+                  {testPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  Run test
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={
-              testPending ||
-              (testPortal === 'rightmove' && !portalPublishingUnlocked)
-            }
-            onClick={runTestPublish}
-          >
-            {testPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Run test
-          </Button>
-        </CardContent>
-      </Card>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+function BoardCompanySettingsPlaceholder() {
+  return (
+    <Card id="board-company" className={workspacePanelCard}>
+      <CardHeader>
+        <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+          Boards
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-[var(--workspace-shell-text)]/60">
+          Board company email, CC, and message templates for boards-down notes
+          (Under offer, Let, or Sold) belong in this tab.
+        </p>
+      </CardContent>
+    </Card>
   );
 }

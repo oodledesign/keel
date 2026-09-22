@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
+import { parsePublishingSettingsTab } from '~/lib/commercial/publishing-settings-tabs';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -20,6 +21,7 @@ interface CommercialPublishingPageProps {
     linkedin_error?: string;
     linkedin_connected?: string;
     linkedin_select?: string;
+    tab?: string;
   }>;
 }
 
@@ -57,24 +59,23 @@ async function CommercialPublishingPage({
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Website & portals"
-        description="Property Hive and EACH listing XML feeds, Rightmove portal setup, and LinkedIn company-page posting."
+        description="Website feed, portal credentials, boards, and sync activity."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
-        <div className="space-y-4">
-          <RequirementFormSettingsCard accountId={accountId} />
-          <CommercialPublishingSettings
-            accountId={accountId}
-            accountSlug={slug}
-            initialSettings={settings}
-            listings={listings}
-            portalPublishingUnlocked={portalPublishingAllowed(billableSeats)}
-            linkedinBanner={{
-              error: query.linkedin_error ?? null,
-              connected: query.linkedin_connected === '1',
-              select: query.linkedin_select === '1',
-            }}
-          />
-        </div>
+        <CommercialPublishingSettings
+          accountId={accountId}
+          accountSlug={slug}
+          initialSettings={settings}
+          listings={listings}
+          portalPublishingUnlocked={portalPublishingAllowed(billableSeats)}
+          initialTab={parsePublishingSettingsTab(query.tab) ?? 'website'}
+          websiteLeading={<RequirementFormSettingsCard accountId={accountId} />}
+          linkedinBanner={{
+            error: query.linkedin_error ?? null,
+            connected: query.linkedin_connected === '1',
+            select: query.linkedin_select === '1',
+          }}
+        />
       </PageBody>
     </>
   );
