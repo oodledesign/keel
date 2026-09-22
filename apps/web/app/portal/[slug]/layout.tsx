@@ -13,7 +13,9 @@ import { AgencyPortalShell } from './_components/agency-portal-shell';
 import { PortalProductTourHost } from './_components/portal-product-tour-host';
 import { PortalShell } from './_components/portal-shell';
 import { loadClientPortalContext } from './_lib/server/client-portal.loader';
+import { createClientPortalService } from './_lib/server/client-portal.service';
 import { loadPortalCreditsSnapshot } from './_lib/server/portal-credits.loader';
+import { loadPortalPaymentNotice } from './_lib/server/portal-payment-notice.loader';
 
 interface PortalSlugLayoutProps {
   children: ReactNode;
@@ -40,7 +42,12 @@ export default async function PortalSlugLayout({
 
   const ctx = await loadClientPortalContext(slug);
 
-  const credits = await loadPortalCreditsSnapshot(ctx.clientOrgId);
+  const portal = createClientPortalService(getSupabaseServerClient());
+  const [credits, incompleteTaskCount, paymentNotice] = await Promise.all([
+    loadPortalCreditsSnapshot(ctx.clientOrgId),
+    portal.countOpenPortalMyTasks(ctx.clientOrgId).catch(() => 0),
+    loadPortalPaymentNotice(ctx.clientOrgId).catch(() => null),
+  ]);
   const creditBalance = credits?.balance ?? 0;
   const creditsPerCycle = credits?.creditsPerCycle ?? null;
 
@@ -54,6 +61,7 @@ export default async function PortalSlugLayout({
   return (
     <PortalShell
       clientSlug={slug}
+      clientOrgId={ctx.clientOrgId}
       orgName={ctx.orgName}
       clientPictureUrl={ctx.clientPictureUrl}
       accountName={ctx.accountName}
@@ -68,6 +76,8 @@ export default async function PortalSlugLayout({
       showProjectsNav={ctx.showProjectsNav}
       showMeetingsNav={ctx.showMeetingsNav}
       showMessagesNav={ctx.showMessagesNav}
+      incompleteTaskCount={incompleteTaskCount}
+      paymentNotice={paymentNotice}
     >
       {children}
       <PortalProductTourHost completedTours={completedTours} />

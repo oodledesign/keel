@@ -17,7 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import type { PortalPaymentNotice } from '~/lib/billing/portal-payment-notice';
 
+import { PortalPaymentNoticeBar } from './portal-payment-notice-bar';
 import { PortalProfileDropdown } from './portal-profile-dropdown';
 import { PortalSupportFab } from './portal-support-fab';
 
@@ -108,11 +110,10 @@ function normalizeLogoUrl(url: string | null | undefined): string | null {
   if (!trimmed) return null;
   try {
     const parsed = new URL(trimmed);
-    parsed.search = '';
     parsed.hash = '';
     return parsed.toString();
   } catch {
-    return trimmed.split('?')[0] || trimmed;
+    return trimmed;
   }
 }
 
@@ -135,6 +136,7 @@ function PortalBrandMark(props: {
 
 export function PortalShell({
   clientSlug,
+  clientOrgId,
   orgName,
   clientPictureUrl = null,
   accountName = null,
@@ -149,9 +151,12 @@ export function PortalShell({
   showProjectsNav = false,
   showMeetingsNav = false,
   showMessagesNav = false,
+  incompleteTaskCount = 0,
+  paymentNotice = null,
   children,
 }: {
   clientSlug: string;
+  clientOrgId: string;
   orgName: string;
   clientPictureUrl?: string | null;
   accountName?: string | null;
@@ -166,6 +171,8 @@ export function PortalShell({
   showProjectsNav?: boolean;
   showMeetingsNav?: boolean;
   showMessagesNav?: boolean;
+  incompleteTaskCount?: number;
+  paymentNotice?: PortalPaymentNotice | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -182,43 +189,43 @@ export function PortalShell({
   };
 
   const clientLogo = normalizeLogoUrl(clientPictureUrl);
-  const agencyLogo = normalizeLogoUrl(accountLogoUrl);
-  const agencyName = accountName?.trim() || 'Agency';
-
-  // Client logo is primary when present; agency logo only as a badge when both
-  // exist and are different. Never show the agency mark twice.
-  const primaryLogo = clientLogo ?? agencyLogo;
-  const primaryLabel = clientLogo ? orgName : agencyName;
-  const secondaryLogo =
-    clientLogo && agencyLogo && agencyLogo !== clientLogo ? agencyLogo : null;
+  const businessLogo = normalizeLogoUrl(accountLogoUrl);
+  const businessName = accountName?.trim() || 'Agency';
+  const widthClass = cn(
+    'mx-auto w-full px-4 sm:px-6 lg:px-8',
+    contentWidth,
+    isProjectRoute && 'xl:px-10',
+  );
 
   return (
     <div className="min-h-screen bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]">
+      {paymentNotice ? (
+        <div className="sticky top-0 z-40">
+          <PortalPaymentNoticeBar
+            notice={paymentNotice}
+            clientOrgId={clientOrgId}
+            clientSlug={clientSlug}
+            contentClassName={widthClass}
+          />
+        </div>
+      ) : null}
       <header className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-        <div
-          className={cn(
-            'mx-auto flex w-full flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8',
-            contentWidth,
-            isProjectRoute && 'xl:px-10',
-          )}
-        >
+        <div className={cn('flex w-full flex-col gap-4 py-4', widthClass)}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative shrink-0">
                 <PortalBrandMark
-                  src={primaryLogo}
-                  label={primaryLabel}
+                  src={businessLogo}
+                  label={businessName}
                   sizeClass="size-12"
                 />
-                {secondaryLogo ? (
-                  <div className="absolute -right-1 -bottom-1">
-                    <PortalBrandMark
-                      src={secondaryLogo}
-                      label={agencyName}
-                      sizeClass="size-7"
-                    />
-                  </div>
-                ) : null}
+                <div className="absolute -right-1 -bottom-1 rounded-full ring-2 ring-[var(--workspace-shell-panel)]">
+                  <PortalBrandMark
+                    src={clientLogo}
+                    label={orgName}
+                    sizeClass="size-6"
+                  />
+                </div>
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
@@ -241,9 +248,15 @@ export function PortalShell({
             />
           </div>
 
-          <nav className="flex flex-wrap gap-1" data-tour="portal-nav">
+          <nav
+            className="-mx-1 flex flex-nowrap gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-tour="portal-nav"
+          >
             {navItems
-              .filter((item) => !item.showKey || visibility[item.showKey])
+              .filter((item) => {
+                if (item.key === 'tasks') return incompleteTaskCount > 0;
+                return !item.showKey || visibility[item.showKey];
+              })
               .map((item) => {
                 const href = createPortalPath(item.pathKey, clientSlug);
                 const active = isNavActive(pathname, href, item.key);
@@ -253,7 +266,7 @@ export function PortalShell({
                     key={item.key}
                     href={href}
                     data-tour={`portal-nav-${item.key}`}
-                    className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                       active
                         ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
                         : 'text-[var(--workspace-shell-nav-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-nav-text-hover)]'
@@ -261,6 +274,17 @@ export function PortalShell({
                   >
                     {item.icon}
                     {item.label}
+                    {item.key === 'tasks' ? (
+                      <span
+                        className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums ${
+                          active
+                            ? 'bg-[var(--ozer-white)]/20 text-[var(--ozer-white)]'
+                            : 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                        }`}
+                      >
+                        {incompleteTaskCount}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}

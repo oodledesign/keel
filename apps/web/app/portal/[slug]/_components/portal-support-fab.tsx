@@ -17,10 +17,10 @@ export function PortalSupportFab({ clientSlug }: { clientSlug: string }) {
     '[clientSlug]',
     clientSlug,
   );
-  const newHref = pathsConfig.app.clientPortalSupportNew.replace(
+  const newHref = `${pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
     clientSlug,
-  );
+  )}?request=1`;
   const creditsHref = pathsConfig.app.clientPortalCredits.replace(
     '[clientSlug]',
     clientSlug,

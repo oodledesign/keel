@@ -91,6 +91,35 @@ export const CompletePortalMyTaskSchema = z.object({
   taskId: z.string().uuid(),
 });
 
+const PortalRequestDraftAttachmentSchema = z.object({
+  name: z.string().max(300),
+  url: z.string().url().max(2000),
+  mimeType: z.string().max(200),
+  size: z.number().int().nonnegative(),
+});
+
+export const PortalRequestDraftPayloadSchema = z.object({
+  intent: z.enum(['service', 'support']).nullable(),
+  selectedTypeId: z.string().max(120).default(''),
+  title: z.string().max(300).default(''),
+  description: z.string().max(20000).default(''),
+  priority: PortalTicketPrioritySchema.default('medium'),
+  projectId: z.string().uuid().nullable().optional(),
+  recordingUrl: z.string().max(2000).default(''),
+  externalUrl: z.string().max(2000).default(''),
+  attachments: z.array(PortalRequestDraftAttachmentSchema).max(5).default([]),
+});
+
+export const SavePortalRequestDraftSchema = z.object({
+  clientOrgId: z.string().uuid(),
+  step: z.number().int().min(1).max(4),
+  payload: PortalRequestDraftPayloadSchema,
+});
+
+export const DeletePortalRequestDraftSchema = z.object({
+  clientOrgId: z.string().uuid(),
+});
+
 export const SendPortalMessageSchema = z.object({
   clientOrgId: z.string().uuid(),
   threadId: z.string().uuid(),
@@ -100,6 +129,13 @@ export const SendPortalMessageSchema = z.object({
 
 export type PortalTicketStatus = z.infer<typeof PortalTicketStatusSchema>;
 export type PortalTicketPriority = z.infer<typeof PortalTicketPrioritySchema>;
+export type PortalRequestDraftPayload = z.infer<
+  typeof PortalRequestDraftPayloadSchema
+>;
+export type PortalRequestDraft = {
+  step: 1 | 2 | 3 | 4;
+  payload: PortalRequestDraftPayload;
+};
 export type CreatePortalTicketInput = z.infer<typeof CreatePortalTicketSchema>;
 export type AddPortalTicketMessageInput = z.infer<
   typeof AddPortalTicketMessageSchema

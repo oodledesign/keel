@@ -24,10 +24,10 @@ import { cn } from '@kit/ui/utils';
 import { SupportAttachmentUploader } from '~/components/support/support-attachment-uploader';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
-import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import pathsConfig from '~/config/paths.config';
 
 import type { PortalTicketPriority } from '../_lib/schema/portal.schema';
+import type { PortalRequestDraft } from '../_lib/schema/portal.schema';
 import type {
   PortalTicketDetail,
   PortalTicketMessage,
@@ -35,7 +35,9 @@ import type {
 import {
   addPortalTicketMessage,
   createPortalTicket,
+  deletePortalRequestDraft,
   listPortalEffectiveServices,
+  savePortalRequestDraft,
 } from '../_lib/server/server-actions';
 import {
   PortalTicketPriorityBadge,
@@ -53,10 +55,6 @@ export function PortalSupportDetailContent({
   clientSlug,
   accountId,
   accountSlug,
-  clientName,
-  clientPictureUrl,
-  businessName,
-  businessLogoUrl,
 }: {
   ticket: PortalTicketDetail;
   initialMessages: PortalTicketMessage[];
@@ -64,10 +62,6 @@ export function PortalSupportDetailContent({
   clientSlug: string;
   accountId: string;
   accountSlug: string;
-  clientName?: string | null;
-  clientPictureUrl?: string | null;
-  businessName?: string | null;
-  businessLogoUrl?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -145,22 +139,6 @@ export function PortalSupportDetailContent({
         <h1 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
           {ticket.title}
         </h1>
-        {(businessName || clientName) && (
-          <SupportDualPartyIdentity
-            className="mt-3"
-            size="sm"
-            business={
-              businessName
-                ? { name: businessName, logoUrl: businessLogoUrl }
-                : null
-            }
-            client={
-              clientName
-                ? { name: clientName, logoUrl: clientPictureUrl }
-                : null
-            }
-          />
-        )}
         <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
           Opened {formatPortalDate(ticket.createdAt)}
         </p>
@@ -347,7 +325,7 @@ function WizardStepHeader({
       : STEP_LABELS;
 
   return (
-    <ol className="flex flex-wrap gap-2">
+    <ol className="flex flex-nowrap gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {labels.map((label, index) => {
         const n = (index + 1) as WizardStep;
         const active = step === n;
@@ -356,7 +334,7 @@ function WizardStepHeader({
           <li
             key={label}
             className={cn(
-              'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium',
+              'inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap',
               active
                 ? 'bg-[var(--ozer-accent)] text-white'
                 : done
@@ -478,6 +456,10 @@ export function PortalSupportNewForm({
   initialEffectiveServices = [],
   initialProjects = [],
   initialIntent = null,
+  initialDraft = null,
+  presentation = 'page',
+  onClose,
+  onDraftChange,
 }: {
   clientOrgId: string;
   accountId: string;
@@ -504,24 +486,37 @@ export function PortalSupportNewForm({
   }>;
   initialProjects?: ProjectOption[];
   initialIntent?: RequestIntent | null;
+  initialDraft?: PortalRequestDraft | null;
+  presentation?: 'page' | 'embedded';
+  onClose?: () => void;
+  onDraftChange?: (draft: PortalRequestDraft | null) => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [step, setStep] = useState<WizardStep>(initialIntent ? 2 : 1);
-  const [intent, setIntent] = useState<RequestIntent | null>(initialIntent);
-  const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
-  const [selectedTypeId, setSelectedTypeId] = useState('');
+  const resumed = initialDraft?.payload;
+  const [step, setStep] = useState<WizardStep>(
+    initialDraft?.step ?? (initialIntent ? 2 : 1),
+  );
+  const [intent, setIntent] = useState<RequestIntent | null>(
+    resumed?.intent ?? initialIntent,
+  );
+  const [attachments, setAttachments] = useState<SupportAttachmentItem[]>(
+    resumed?.attachments ?? [],
+  );
+  const [selectedTypeId, setSelectedTypeId] = useState(
+    resumed?.selectedTypeId ?? '',
+  );
   const [effectiveServices, setEffectiveServices] = useState(
     initialEffectiveServices,
   );
   const fallbackServicesRef = useRef(initialEffectiveServices);
   const [form, setForm] = useState({
-    title: '',
-    description: '',
-    priority: 'medium' as PortalTicketPriority,
-    project_id: '',
-    recording_url: '',
-    external_url: '',
+    title: resumed?.title ?? '',
+    description: resumed?.description ?? '',
+    priority: (resumed?.priority ?? 'medium') as PortalTicketPriority,
+    project_id: resumed?.projectId ?? '',
+    recording_url: resumed?.recordingUrl ?? '',
+    external_url: resumed?.externalUrl ?? '',
   });
 
   const requestTypes: PortalRequestTypeOption[] = initialRequestTypes.map(
@@ -557,9 +552,10 @@ export function PortalSupportNewForm({
       .then((rows) => {
         if (cancelled) return;
         setEffectiveServices(rows);
-        setSelectedTypeId((current) =>
-          current && rows.some((row) => row.id === current) ? current : '',
-        );
+        setSelectedTypeId((current) => {
+          if (!current || intent === 'support') return current;
+          return rows.some((row) => row.id === current) ? current : '';
+        });
       })
       .catch(() => {
         if (!cancelled) setEffectiveServices(fallbackServicesRef.current);
@@ -567,7 +563,7 @@ export function PortalSupportNewForm({
     return () => {
       cancelled = true;
     };
-  }, [clientOrgId, form.project_id]);
+  }, [clientOrgId, form.project_id, intent]);
 
   const selectedType =
     selectedTypeId === GENERAL_SUPPORT_ID
@@ -588,6 +584,64 @@ export function PortalSupportNewForm({
     : intent === 'support'
       ? 'Free'
       : null;
+
+  function draftPayload() {
+    return {
+      intent,
+      selectedTypeId,
+      title: form.title,
+      description: form.description,
+      priority: form.priority,
+      projectId: form.project_id || null,
+      recordingUrl: form.recording_url,
+      externalUrl: form.external_url,
+      attachments,
+    };
+  }
+
+  function handleSaveDraft() {
+    startTransition(async () => {
+      try {
+        const saved = await savePortalRequestDraft({
+          clientOrgId,
+          step,
+          payload: draftPayload(),
+        });
+        onDraftChange?.(saved);
+        toast.success('Draft saved');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save draft',
+        );
+      }
+    });
+  }
+
+  function handleStartOver() {
+    startTransition(async () => {
+      try {
+        await deletePortalRequestDraft({ clientOrgId });
+        onDraftChange?.(null);
+        setStep(initialIntent ? 2 : 1);
+        setIntent(initialIntent);
+        setSelectedTypeId('');
+        setAttachments([]);
+        setForm({
+          title: '',
+          description: '',
+          priority: 'medium',
+          project_id: '',
+          recording_url: '',
+          external_url: '',
+        });
+        toast.success('Draft discarded');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not discard draft',
+        );
+      }
+    });
+  }
 
   function goNextFromIntent() {
     if (!intent) {
@@ -671,6 +725,13 @@ export function PortalSupportNewForm({
           attachments,
         });
 
+        try {
+          await deletePortalRequestDraft({ clientOrgId });
+          onDraftChange?.(null);
+        } catch {
+          // The request is already created. A leftover draft can be discarded later.
+        }
+
         router.push(
           pathsConfig.app.clientPortalSupportDetail
             .replace('[clientSlug]', clientSlug)
@@ -686,7 +747,26 @@ export function PortalSupportNewForm({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div
+      className={
+        presentation === 'embedded'
+          ? 'space-y-5'
+          : 'mx-auto max-w-2xl space-y-6'
+      }
+    >
+      {initialDraft ? (
+        <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+          Continuing your saved draft.{' '}
+          <button
+            type="button"
+            className="font-medium text-[var(--ozer-text-on-light)] underline"
+            disabled={isPending}
+            onClick={handleStartOver}
+          >
+            Start over
+          </button>
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
         <span className="text-[var(--ozer-text-on-light-muted)]">
           Credit balance:{' '}
@@ -1059,11 +1139,30 @@ export function PortalSupportNewForm({
           >
             Back
           </Button>
+        ) : presentation === 'embedded' ? (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isPending}
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
         ) : (
           <Button type="button" variant="ghost" asChild>
             <Link href={listHref}>Cancel</Link>
           </Button>
         )}
+
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={handleSaveDraft}
+          data-test="portal-save-request-draft"
+        >
+          Save draft
+        </Button>
 
         {step === 1 ? (
           <Button type="button" onClick={goNextFromIntent}>

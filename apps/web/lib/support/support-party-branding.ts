@@ -5,6 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
+import { pickClientOrgPictures } from './pick-client-org-picture';
+
 export type SupportPartyBrand = {
   name: string;
   logoUrl: string | null;
@@ -18,25 +20,30 @@ export async function loadClientPicturesByOrgIds(
   orgIds: string[],
 ): Promise<Map<string, string>> {
   const unique = [...new Set(orgIds.filter(Boolean))];
-  const map = new Map<string, string>();
-  if (unique.length === 0) return map;
+  if (unique.length === 0) return new Map();
 
   const { data } = await client
     .from('clients')
-    .select('client_org_id, picture_url')
+    .select('client_org_id, picture_url, client_type, updated_at')
     .in('client_org_id', unique)
     .not('picture_url', 'is', null);
 
-  for (const row of data ?? []) {
-    const orgId = (row as { client_org_id?: string | null }).client_org_id;
-    const picture = toSupabasePublicStorageUrl(
-      (row as { picture_url?: string | null }).picture_url?.trim(),
-    );
-    if (!orgId || !picture || map.has(orgId)) continue;
-    map.set(orgId, picture);
-  }
-
-  return map;
+  return pickClientOrgPictures(
+    (data ?? []).map((row) => {
+      const record = row as {
+        client_org_id?: string | null;
+        picture_url?: string | null;
+        client_type?: string | null;
+        updated_at?: string | null;
+      };
+      return {
+        clientOrgId: record.client_org_id,
+        pictureUrl: record.picture_url,
+        clientType: record.client_type,
+        updatedAt: record.updated_at,
+      };
+    }),
+  );
 }
 
 export async function loadSupportBusinessBrand(

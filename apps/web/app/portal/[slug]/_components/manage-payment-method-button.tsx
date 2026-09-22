@@ -12,9 +12,17 @@ import { createPortalManagePaymentSessionAction } from '../_lib/server/server-ac
 export function ManagePaymentMethodButton({
   clientOrgId,
   clientSlug,
+  label = 'Manage payment method',
+  appearance = 'outline',
+  className,
+  testId,
 }: {
   clientOrgId: string;
   clientSlug: string;
+  label?: string;
+  appearance?: 'outline' | 'primary';
+  className?: string;
+  testId?: string;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -39,17 +47,19 @@ export function ManagePaymentMethodButton({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant={appearance === 'primary' ? 'default' : 'outline'}
       size="sm"
       disabled={pending}
       onClick={openPortal}
+      className={className}
+      data-test={testId}
     >
       {pending ? (
         <Loader2 className="mr-1 size-4 animate-spin" />
-      ) : (
+      ) : appearance === 'outline' ? (
         <CreditCard className="mr-1 size-4" />
-      )}
-      Manage payment method
+      ) : null}
+      {label}
     </Button>
   );
 }

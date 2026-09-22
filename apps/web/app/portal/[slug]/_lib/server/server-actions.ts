@@ -14,8 +14,10 @@ import {
   AddPortalTicketMessageSchema,
   CompletePortalMyTaskSchema,
   CreatePortalTicketSchema,
+  DeletePortalRequestDraftSchema,
   GetPortalTicketSchema,
   ListPortalProjectsSchema,
+  SavePortalRequestDraftSchema,
   SendPortalMessageSchema,
 } from '../schema/portal.schema';
 import { createClientPortalService } from './client-portal.service';
@@ -98,6 +100,21 @@ export const sendPortalMessage = enhanceAction(
       input.imageUrl,
     ),
   { schema: SendPortalMessageSchema },
+);
+
+export const savePortalRequestDraft = enhanceAction(
+  async (input) =>
+    getService().savePortalRequestDraft({
+      clientOrgId: input.clientOrgId,
+      step: input.step,
+      payload: input.payload,
+    }),
+  { schema: SavePortalRequestDraftSchema },
+);
+
+export const deletePortalRequestDraft = enhanceAction(
+  async (input) => getService().deletePortalRequestDraft(input.clientOrgId),
+  { schema: DeletePortalRequestDraftSchema },
 );
 
 export const createPortalManagePaymentSessionAction = enhanceAction(
