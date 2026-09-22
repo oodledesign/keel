@@ -10,7 +10,6 @@ export type ListWorkspaceRetainersInput = z.infer<
 
 export const LinkWorkspaceRetainerToProjectSchema = z.object({
   accountId: z.string().uuid(),
-  accountSlug: z.string().min(1),
   subscriptionId: z.string().uuid(),
   projectId: z.string().uuid(),
 });

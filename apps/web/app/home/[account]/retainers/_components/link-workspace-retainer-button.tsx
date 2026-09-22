@@ -127,7 +127,6 @@ export function LinkWorkspaceRetainerDialog({
       try {
         const result = await linkWorkspaceRetainerToProjectAction({
           accountId,
-          accountSlug,
           subscriptionId,
           projectId: selectedProject.projectId,
         });
@@ -135,7 +134,6 @@ export function LinkWorkspaceRetainerDialog({
         notifyClientSubscriptionsChanged();
         onOpenChange(false);
         reset();
-        router.refresh();
         router.push(projectRetainerHref(accountSlug, result.projectId));
       } catch (error) {
         toast.error(errorMessage(error, 'Could not link retainer'));

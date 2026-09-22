@@ -10,7 +10,10 @@ import {
   type PlanTemplateKind,
   parseBillingCollection,
 } from '~/lib/billing/plan-templates-types';
-import { RETAINER_WORKSPACE_ROLES } from '~/lib/retainers/constants';
+import {
+  RETAINER_EDIT_ROLES,
+  RETAINER_WORKSPACE_ROLES,
+} from '~/lib/retainers/constants';
 import { looseClient } from '~/lib/retainers/loose-client';
 import {
   type WorkspaceRetainerClientChoice,
@@ -101,6 +104,14 @@ class WorkspaceRetainersService {
       .maybeSingle();
     const role = membership?.account_role as string | undefined;
     if (!role || !RETAINER_WORKSPACE_ROLES.has(role)) {
+      throw new Error('Forbidden');
+    }
+    return { userId: auth.data.id, role };
+  }
+
+  private async ensureCanEdit(accountId: string) {
+    const { role } = await this.ensureMember(accountId);
+    if (!RETAINER_EDIT_ROLES.has(role)) {
       throw new Error('Forbidden');
     }
   }
@@ -233,7 +244,7 @@ class WorkspaceRetainersService {
   async linkToProject(
     input: LinkWorkspaceRetainerToProjectInput,
   ): Promise<{ projectId: string; subscriptionId: string }> {
-    await this.ensureMember(input.accountId);
+    await this.ensureCanEdit(input.accountId);
 
     const { data: subscription, error: subError } = await looseClient(
       this.client,
@@ -244,7 +255,7 @@ class WorkspaceRetainersService {
       .eq('account_id', input.accountId)
       .maybeSingle();
 
-    if (subError) throw new Error(subError.message);
+    if (subError) throw new Error('Could not load retainer');
     if (!subscription) throw new Error('Retainer not found');
 
     const existingProjectId = subscription.project_id
@@ -268,7 +279,7 @@ class WorkspaceRetainersService {
       .eq('account_id', input.accountId)
       .maybeSingle();
 
-    if (projectError) throw new Error(projectError.message);
+    if (projectError) throw new Error('Could not load project');
     if (!project) throw new Error('Project not found');
 
     const projectClientId = (project as { client_id?: string | null })
@@ -293,7 +304,7 @@ class WorkspaceRetainersService {
       .eq('project_id', input.projectId)
       .is('website_id', null);
 
-    if (conflictError) throw new Error(conflictError.message);
+    if (conflictError) throw new Error('Could not check existing retainers');
 
     const conflicting = (
       (existingOnProject ?? []) as Array<{
@@ -324,7 +335,7 @@ class WorkspaceRetainersService {
       .select('id')
       .maybeSingle();
 
-    if (updateError) throw new Error(updateError.message);
+    if (updateError) throw new Error('Could not link retainer');
     if (!updated) {
       throw new Error('Could not link retainer — it may already be linked');
     }
