@@ -543,6 +543,8 @@ export function PortalSupportNewForm({
   }));
   const supportTypes = requestTypes.filter((row) => row.isSupport);
 
+  // Effective services are project-scoped. The project picker lives entirely
+  // on the client, so this cannot be an RSC fetch.
   useEffect(() => {
     let cancelled = false;
     listPortalEffectiveServices({

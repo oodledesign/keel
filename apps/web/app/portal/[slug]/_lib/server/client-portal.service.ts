@@ -2402,7 +2402,6 @@ class ClientPortalService {
         user_id: user.id,
         step_index: step,
         payload: input.payload,
-        updated_at: new Date().toISOString(),
       },
       { onConflict: 'client_org_id,user_id' },
     );

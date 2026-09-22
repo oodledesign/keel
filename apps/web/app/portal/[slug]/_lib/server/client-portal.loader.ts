@@ -89,6 +89,8 @@ export const loadClientPortalContext = cache(
       { data: teamMembershipThisAccount },
       teamMembershipAny,
     ] = await Promise.all([
+      // Admin: account slug only (non-sensitive). Membership is checked below
+      // before any CRM picture / contact reads.
       admin.from('accounts').select('slug').eq('id', accountId).maybeSingle(),
       client
         .from('account_module_settings')

@@ -20,7 +20,7 @@ export function PortalSupportFab({ clientSlug }: { clientSlug: string }) {
   const newHref = `${pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
     clientSlug,
-  )}?request=1`;
+  )}?request=service`;
   const creditsHref = pathsConfig.app.clientPortalCredits.replace(
     '[clientSlug]',
     clientSlug,

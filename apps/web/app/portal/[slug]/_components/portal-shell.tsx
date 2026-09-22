@@ -88,10 +88,12 @@ function isNavActive(pathname: string, href: string, key: string) {
 
   if (key === 'services') {
     // Keep Services highlighted on credits (credits lives under Services).
+    const creditsHref = href.replace(/\/services$/, '/credits');
     return (
       pathname === href ||
       pathname.startsWith(`${href}/`) ||
-      pathname.includes('/credits')
+      pathname === creditsHref ||
+      pathname.startsWith(`${creditsHref}/`)
     );
   }
 
