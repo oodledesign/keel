@@ -152,6 +152,34 @@ export const DuplicateCampaignForResendSchema = z.object({
   mode: z.enum(['all', 'non_responders']),
 });
 
+export const DuplicateCampaignSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  campaignId: z.string().uuid(),
+});
+
+export const SendCampaignToAdditionalRecipientsSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    accountSlug: z.string().min(1),
+    campaignId: z.string().uuid(),
+    audienceConfig: CampaignAudienceConfigSchema,
+  })
+  .superRefine((value, ctx) => {
+    const config = value.audienceConfig;
+    const count =
+      (config.emails?.length ?? 0) +
+      (config.clientIds?.length ?? 0) +
+      (config.contactIds?.length ?? 0);
+    if (count === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Add at least one recipient',
+        path: ['audienceConfig'],
+      });
+    }
+  });
+
 export const DeleteCampaignSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),

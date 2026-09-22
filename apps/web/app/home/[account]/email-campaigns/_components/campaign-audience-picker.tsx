@@ -47,6 +47,8 @@ export function CampaignAudiencePicker({
   lists = [],
   planTier,
   disabled,
+  lockType,
+  embedded,
   onChange,
 }: {
   accountSlug: string;
@@ -63,11 +65,16 @@ export function CampaignAudiencePicker({
   lists?: CampaignAudienceList[];
   planTier?: string;
   disabled?: boolean;
+  /** Hide the type radios and show only this audience's fields. */
+  lockType?: 'custom';
+  /** Drop the card chrome so the fields can sit inside a dialog. */
+  embedded?: boolean;
   onChange: (next: {
     audienceType: CampaignAudienceType;
     audienceConfig: CampaignAudienceConfig;
   }) => void;
 }) {
+  const effectiveType = lockType ?? audienceType;
   const growth = hasCampaignsGrowthFeatures(planTier);
   const savedLists = hasCampaignsSavedLists(planTier);
   const newListHref = pathsConfig.app.accountEmailCampaignAudienceNew.replace(
@@ -102,69 +109,76 @@ export function CampaignAudiencePicker({
 
   return (
     <div
-      className={`${workspacePanelCard} space-y-4 p-4`}
+      className={embedded ? 'space-y-4' : `${workspacePanelCard} space-y-4 p-4`}
       data-test="campaign-audience-picker"
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className={`font-semibold ${workspaceText}`}>Audience</h2>
-          <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-            Choose who receives this campaign. Unsubscribed and suppressed
-            addresses are never sent.
+      {embedded ? null : (
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className={`font-semibold ${workspaceText}`}>Audience</h2>
+            <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+              Choose who receives this campaign. Unsubscribed and suppressed
+              addresses are never sent.
+            </p>
+          </div>
+          <p
+            className={`text-sm font-medium ${workspaceText}`}
+            data-test="campaign-audience-estimate"
+          >
+            ~{estimatedCount.toLocaleString()} recipients
           </p>
         </div>
-        <p
-          className={`text-sm font-medium ${workspaceText}`}
-          data-test="campaign-audience-estimate"
+      )}
+
+      {lockType ? null : (
+        <RadioGroup
+          value={audienceType}
+          disabled={disabled}
+          onValueChange={(value) => setType(value as CampaignAudienceType)}
+          className="grid gap-3 sm:grid-cols-2"
         >
-          ~{estimatedCount.toLocaleString()} recipients
-        </p>
-      </div>
-
-      <RadioGroup
-        value={audienceType}
-        disabled={disabled}
-        onValueChange={(value) => setType(value as CampaignAudienceType)}
-        className="grid gap-3 sm:grid-cols-2"
-      >
-        {(
-          [
-            ['subscribers', counts.subscriberCount],
-            ['clients', counts.clientCount],
-            ['contacts', counts.contactCount],
-            ['custom', null],
-            ...(showListRadio
-              ? ([['list', lists.length]] as Array<
-                  [CampaignAudienceType, number | null]
-                >)
-              : []),
-          ] as Array<[CampaignAudienceType, number | null]>
-        ).map(([type, count]) => (
-          <label
-            key={type}
-            className="flex cursor-pointer items-start gap-3 rounded-md border border-[color:var(--workspace-shell-border)] p-3"
-          >
-            <RadioGroupItem value={type} id={`audience-${type}`} />
-            <span className="min-w-0">
-              <span className={`block font-medium ${workspaceText}`}>
-                {AUDIENCE_TYPE_LABEL[type]}
-                {count != null ? (
-                  <span
-                    className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}
-                  >
-                    ({count.toLocaleString()})
-                  </span>
-                ) : null}
+          {(
+            [
+              ['subscribers', counts.subscriberCount],
+              ['clients', counts.clientCount],
+              ['contacts', counts.contactCount],
+              ['custom', null],
+              ...(showListRadio
+                ? ([['list', lists.length]] as Array<
+                    [CampaignAudienceType, number | null]
+                  >)
+                : []),
+            ] as Array<[CampaignAudienceType, number | null]>
+          ).map(([type, count]) => (
+            <label
+              key={type}
+              className="flex cursor-pointer items-start gap-3 rounded-md border border-[color:var(--workspace-shell-border)] p-3"
+            >
+              <RadioGroupItem value={type} id={`audience-${type}`} />
+              <span className="min-w-0">
+                <span className={`block font-medium ${workspaceText}`}>
+                  {AUDIENCE_TYPE_LABEL[type]}
+                  {count != null ? (
+                    <span
+                      className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}
+                    >
+                      ({count.toLocaleString()})
+                    </span>
+                  ) : null}
+                </span>
+                <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
+                  {AUDIENCE_TYPE_HINT[type]}
+                </span>
               </span>
-              <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
-                {AUDIENCE_TYPE_HINT[type]}
-              </span>
-            </span>
-          </label>
-        ))}
-      </RadioGroup>
+            </label>
+          ))}
+        </RadioGroup>
+      )}
 
-      {savedLists && lists.length === 0 && audienceType !== 'list' ? (
+      {!lockType &&
+      savedLists &&
+      lists.length === 0 &&
+      effectiveType !== 'list' ? (
         <div
           className="space-y-1 rounded-md border border-[color:var(--workspace-shell-border)] p-3"
           data-test="campaign-audience-create-list-prompt"
@@ -184,7 +198,7 @@ export function CampaignAudiencePicker({
         </div>
       ) : null}
 
-      {audienceType === 'list' && savedLists ? (
+      {effectiveType === 'list' && savedLists ? (
         <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-4">
           <Label className={workspaceText}>Saved list</Label>
           {lists.length === 0 ? (
@@ -236,8 +250,14 @@ export function CampaignAudiencePicker({
         </div>
       ) : null}
 
-      {audienceType === 'custom' ? (
-        <div className="space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-4">
+      {effectiveType === 'custom' ? (
+        <div
+          className={
+            lockType
+              ? 'space-y-4'
+              : 'space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-4'
+          }
+        >
           <div className="space-y-2">
             <Label htmlFor="campaign-audience-emails" className={workspaceText}>
               Manual emails
@@ -310,11 +330,13 @@ export function CampaignAudiencePicker({
       ) : null}
 
       <p className={`text-xs ${workspaceTextMuted}`}>
-        {growth
-          ? 'Growth lists apply filters at send time. Unsubscribed and suppressed addresses are never sent.'
-          : savedLists
-            ? 'Manual and CSV lists are included on Starter. Upgrade to Growth for logic filters.'
-            : 'Subscribe to Campaigns to use saved lists.'}
+        {lockType
+          ? 'Unsubscribed and suppressed addresses are still skipped when you send.'
+          : growth
+            ? 'Growth lists apply filters at send time. Unsubscribed and suppressed addresses are never sent.'
+            : savedLists
+              ? 'Manual and CSV lists are included on Starter. Upgrade to Growth for logic filters.'
+              : 'Subscribe to Campaigns to use saved lists.'}
       </p>
     </div>
   );

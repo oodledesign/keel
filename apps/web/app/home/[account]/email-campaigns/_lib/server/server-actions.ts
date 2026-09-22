@@ -28,6 +28,7 @@ import {
   DeleteAutomationSchema,
   DeleteCampaignSchema,
   DuplicateCampaignForResendSchema,
+  DuplicateCampaignSchema,
   SaveAudienceListSchema,
   SaveAutomationSchema,
   SaveCampaignContactSchema,
@@ -35,6 +36,7 @@ import {
   ScheduleCampaignSchema,
   SendCampaignSchema,
   SendCampaignTestSchema,
+  SendCampaignToAdditionalRecipientsSchema,
   UpdateCampaignSchema,
 } from '../schemas/campaigns.schema';
 import { loadCampaignLinkedFormSubmissions } from './campaigns.loader';
@@ -366,6 +368,68 @@ export const duplicateCampaignForResendAction = enhanceAction(
     return { success: true as const, campaignId: campaign.id };
   },
   { auth: true, schema: DuplicateCampaignForResendSchema },
+);
+
+export const duplicateCampaignAction = enhanceAction(
+  async function (data, user) {
+    const logger = await getLogger();
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const campaign = await createCampaignsService(client).duplicate({
+      accountId: data.accountId,
+      userId: user.id,
+      campaignId: data.campaignId,
+    });
+
+    logger.info(
+      {
+        name: 'duplicate-campaign',
+        userId: user.id,
+        sourceCampaignId: data.campaignId,
+        campaignId: campaign.id,
+      },
+      'Duplicated email campaign',
+    );
+    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, campaign.id);
+    return { success: true as const, campaignId: campaign.id };
+  },
+  { auth: true, schema: DuplicateCampaignSchema },
+);
+
+export const sendCampaignToAdditionalRecipientsAction = enhanceAction(
+  async function (data, user) {
+    const logger = await getLogger();
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    const result = await createCampaignsService(
+      client,
+    ).duplicateForAdditionalRecipients({
+      accountId: data.accountId,
+      userId: user.id,
+      campaignId: data.campaignId,
+      emails: data.audienceConfig.emails ?? [],
+      clientIds: data.audienceConfig.clientIds ?? [],
+      contactIds: data.audienceConfig.contactIds ?? [],
+    });
+
+    logger.info(
+      {
+        name: 'campaign-additional-recipients',
+        userId: user.id,
+        sourceCampaignId: data.campaignId,
+        campaignId: result.campaign.id,
+        skippedAlreadySent: result.skippedAlreadySent,
+      },
+      'Created additional-recipients draft from sent campaign',
+    );
+    revalidatePath(campaignsPath(data.accountSlug));
+    revalidateCampaignPaths(data.accountSlug, result.campaign.id);
+    return {
+      success: true as const,
+      campaignId: result.campaign.id,
+      skippedAlreadySent: result.skippedAlreadySent,
+    };
+  },
+  { auth: true, schema: SendCampaignToAdditionalRecipientsSchema },
 );
 
 async function requireGrowthCampaigns(accountId: string) {

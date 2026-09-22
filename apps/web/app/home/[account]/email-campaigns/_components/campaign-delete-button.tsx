@@ -76,6 +76,9 @@ export function CampaignDeleteButton({
   sending = false,
   compact = false,
   afterDeleteHref,
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   accountId: string;
   accountSlug: string;
@@ -86,9 +89,18 @@ export function CampaignDeleteButton({
   sending?: boolean;
   compact?: boolean;
   afterDeleteHref?: string;
+  /** Controlled confirm dialog, used by the campaign overflow menu. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    onOpenChange?.(next);
+    if (openProp === undefined) setUncontrolledOpen(next);
+  };
   const [pending, startTransition] = useTransition();
   const copy = confirmCopy({ kind, name, hadSends });
   const testPrefix =
@@ -125,7 +137,7 @@ export function CampaignDeleteButton({
 
   return (
     <>
-      {compact ? (
+      {hideTrigger ? null : compact ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
