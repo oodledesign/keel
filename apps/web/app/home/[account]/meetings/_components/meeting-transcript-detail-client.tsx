@@ -1239,8 +1239,9 @@ export function MeetingTranscriptDetailClient({
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                      No saved tasks from this meeting yet. Extract and save
-                      tasks to see them here.
+                      {transcript.taskExtractionStatus === 'ready'
+                        ? 'No clear action items found in this transcript. Extract manually if something was missed.'
+                        : 'No saved tasks from this meeting yet. Extract and save tasks to see them here.'}
                     </p>
                     {canEdit ? (
                       <Button
@@ -1620,7 +1621,9 @@ export function MeetingTranscriptDetailClient({
                 </h2>
               </div>
               <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-                Pull action items from this transcript into your workspace.
+                {transcript.taskExtractionStatus === 'ready'
+                  ? 'No clear action items found in this transcript. Extract manually if something was missed.'
+                  : 'Pull action items from this transcript into your workspace.'}
               </p>
               <Button
                 type="button"

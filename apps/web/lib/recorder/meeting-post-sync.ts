@@ -207,7 +207,8 @@ export async function processMeetingPostSync(
       .update({
         summary_status: 'failed',
         task_extraction_status: 'failed',
-        post_sync_error: 'This meeting has no transcript to summarise',
+        post_sync_error:
+          'This meeting has no transcript to summarise. Re-sync from Assistant or paste the transcript, then try again.',
         post_sync_updated_at: new Date().toISOString(),
       })
       .eq('id', row.id);
@@ -245,7 +246,8 @@ export async function processMeetingPostSync(
           task_extraction_status: 'failed',
           post_sync_error:
             error instanceof Error
-              ? error.message.trim().slice(0, 240) || 'Meeting processing failed'
+              ? error.message.trim().slice(0, 240) ||
+                'Meeting processing failed'
               : 'Meeting processing failed',
           post_sync_updated_at: new Date().toISOString(),
         })

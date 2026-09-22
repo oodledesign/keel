@@ -5,6 +5,8 @@ import {
   shouldIncludeExtractedItem,
 } from '~/lib/email-assistant/account-members';
 
+import { retainExternalMeetingAssignees } from './meeting-action-items-extract';
+
 describe('meeting action item assignee resolution', () => {
   const members = [
     { userId: 'user-recorder', name: 'Dan', email: 'dan@ozer.so' },
@@ -37,7 +39,7 @@ describe('meeting action item assignee resolution', () => {
     ).toBeNull();
   });
 
-  it('drops tasks assigned to non-members', () => {
+  it('drops raw non-member emails at the shared filter boundary', () => {
     expect(
       shouldIncludeExtractedItem(
         {
@@ -48,6 +50,37 @@ describe('meeting action item assignee resolution', () => {
         'dan@ozer.so',
       ),
     ).toBe(false);
+  });
+
+  it('keeps client commitments after external-assignee normalization', () => {
+    const [normalized] = retainExternalMeetingAssignees(
+      [
+        {
+          suggestedTitle: 'Send brand assets',
+          suggestedDescription: 'Client will send assets',
+          suggestedDueDate: null,
+          suggestedDurationMinutes: null,
+          sourceExcerpt: null,
+          taskConfidence: 0.9,
+          assigneeConfidence: 0.95,
+          suggestedAssigneeEmail: 'vendor@outside.com',
+        },
+      ],
+      members,
+      'dan@ozer.so',
+    );
+
+    expect(normalized?.suggestedAssigneeEmail).toBeNull();
+    expect(
+      shouldIncludeExtractedItem(
+        {
+          suggestedAssigneeEmail: normalized?.suggestedAssigneeEmail ?? null,
+          assigneeConfidence: normalized?.assigneeConfidence ?? null,
+        },
+        members,
+        'dan@ozer.so',
+      ),
+    ).toBe(true);
   });
 
   it('keeps ambiguous tasks for review', () => {

@@ -13,6 +13,7 @@ import { notifyMeetingTasksReadyForReviewInApp } from '~/lib/notifications/meeti
 import {
   type MeetingExtractedActionItem,
   extractMeetingActionItems,
+  retainExternalMeetingAssignees,
 } from '~/lib/recorder/meeting-action-items-extract';
 import { snapDueDateYmd } from '~/lib/workspace-focus';
 import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
@@ -144,7 +145,11 @@ export async function extractAndPersistMeetingActionItems(
     supabase: admin,
   });
 
-  const filtered = extracted.filter((item) =>
+  const filtered = retainExternalMeetingAssignees(
+    extracted,
+    members,
+    recorder.email,
+  ).filter((item) =>
     shouldIncludeExtractedItem(
       {
         suggestedAssigneeEmail: item.suggestedAssigneeEmail,
