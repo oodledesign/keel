@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type CSSProperties,
   type ComponentProps,
   useCallback,
   useEffect,
@@ -1290,6 +1291,7 @@ export function ListingsList({
               accountSlug={accountSlug}
               canEditDisposals={canEditDisposals}
               eagerCover={index < 4}
+              enterIndex={index}
               onPreview={() => setPreviewListingId(listing.id)}
               onEdit={() => openEdit(listing)}
               onDelete={() => setDeleteTarget(listing)}
@@ -1351,7 +1353,7 @@ export function ListingsList({
                         <div className="min-w-0">
                           <Link
                             href={href}
-                            className="font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
+                            className={`font-medium ${disposalTitleLinkClass}`}
                           >
                             {listing.name}
                           </Link>
@@ -1551,11 +1553,32 @@ export function ListingsList({
   );
 }
 
+/**
+ * Title hover stays readable on cream cards. `--ozer-accent-muted` is coral-100
+ * (pale on white). `--workspace-shell-accent-text` is coral-600 in light mode
+ * and coral-100 on plum panels in dark mode.
+ */
+const disposalTitleLinkClass =
+  'text-[var(--workspace-shell-text)] transition-colors hover:text-[var(--workspace-shell-accent-text)]';
+
+/** Short fade/slide. Capped so a long page does not trail for seconds. */
+function disposalCardEnterStyle(enterIndex: number): CSSProperties {
+  return {
+    animationDuration: '280ms',
+    animationTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    animationDelay: `${Math.min(enterIndex, 11) * 35}ms`,
+    // tw-animate's `animate-in` shorthand defaults fill-mode to none, which
+    // flashes cards during the stagger delay. Hold the faded start state.
+    animationFillMode: 'both',
+  };
+}
+
 function ListingCard({
   listing,
   accountSlug,
   canEditDisposals,
   eagerCover = false,
+  enterIndex = 0,
   onPreview,
   onEdit,
   onDelete,
@@ -1564,6 +1587,8 @@ function ListingCard({
   accountSlug: string;
   canEditDisposals: boolean;
   eagerCover?: boolean;
+  /** Grid position used to stagger the entry animation. */
+  enterIndex?: number;
   onPreview: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1576,7 +1601,15 @@ function ListingCard({
 
   return (
     <Card
-      className={`group overflow-hidden ${workspacePanelCard} ${workspaceCardHover}`}
+      className={cn(
+        'group overflow-hidden',
+        workspacePanelCard,
+        workspaceCardHover,
+        // Cover images fade on their own; the card root has to animate or the
+        // title/price appear instantly when the grid replaces the skeleton.
+        'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-reduce:animate-none',
+      )}
+      style={disposalCardEnterStyle(enterIndex)}
     >
       <Link
         href={href}
@@ -1621,7 +1654,7 @@ function ListingCard({
           <div className="min-w-0">
             <Link
               href={href}
-              className="line-clamp-2 text-sm font-semibold text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
+              className={`line-clamp-2 text-sm font-semibold ${disposalTitleLinkClass}`}
             >
               {listing.name}
             </Link>
@@ -1775,18 +1808,18 @@ function FilterSelectTrigger({
   return (
     <SelectTrigger
       className={cn(
-        'h-8 max-w-full border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]',
-        // Radix SelectTrigger wraps children in a span that line-clamps;
-        // keep badge/avatar content readable in the selected value.
-        '[&>span]:line-clamp-none',
+        'h-8 max-w-full border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] py-0 text-sm leading-none text-[var(--workspace-shell-text)]',
+        // Base trigger line-clamps the direct child (`display: -webkit-box`),
+        // which drops flex centering and sits the glyph above the label.
+        '[&>span]:line-clamp-none [&>span]:flex! [&>span]:h-full [&>span]:items-center [&>span]:leading-none',
         className,
       )}
       {...props}
     >
-      <span className="flex min-w-0 flex-1 items-center gap-2">
-        <Icon
-          className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]"
-          aria-hidden
+      <span className="flex h-full min-w-0 flex-1 items-center gap-2 leading-none">
+        <FilterPillIcon
+          icon={Icon}
+          className="text-[var(--workspace-shell-text-muted)]"
         />
         {children}
       </span>
@@ -1836,14 +1869,29 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       data-test={dataTest}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+      className={`inline-flex h-8 items-center gap-2 rounded-full px-3 text-xs leading-none font-medium transition-colors ${
         active
           ? (activeClassName ?? 'bg-[var(--ozer-accent)] text-white')
           : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]'
       }`}
     >
-      {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden /> : null}
-      {label}
+      {Icon ? <FilterPillIcon icon={Icon} /> : null}
+      <span className="leading-none">{label}</span>
     </button>
+  );
+}
+
+/** Fixed box so the glyph and label share one vertical mid-line. */
+function FilterPillIcon({
+  icon: Icon,
+  className,
+}: {
+  icon: LucideIcon;
+  className?: string;
+}) {
+  return (
+    <span className="inline-flex size-4 shrink-0 items-center justify-center">
+      <Icon className={cn('block size-3.5', className)} aria-hidden />
+    </span>
   );
 }
