@@ -17,6 +17,7 @@ import {
   decryptCommercialSecret,
   encryptCommercialSecret,
 } from './commercial-crypto';
+import { propertyHiveLocalUnpublishRecord } from './portal-sync-issues';
 import { OZER_LISTING_ID_META_KEY } from './property-hive-custom-fields';
 
 export type PropertyHiveCredentials = {
@@ -544,14 +545,13 @@ export async function unpublishListingFromPropertyHive(
   const existing = await getExistingPublication(accountId, listingId);
 
   if (!credentials || !existing?.external_id) {
+    const local = propertyHiveLocalUnpublishRecord();
     await upsertPublication({
       accountId,
       listingId,
       externalId: existing?.external_id,
-      status: 'unpublished',
-      lastError: credentials
-        ? null
-        : 'Property Hive credentials not configured; marked unpublished locally',
+      status: local.status,
+      lastError: local.lastError,
     });
     return;
   }
