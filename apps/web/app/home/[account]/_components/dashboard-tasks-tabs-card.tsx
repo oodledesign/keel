@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
-
-import { useRouter } from 'next/navigation';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   Check,
@@ -26,6 +31,12 @@ import {
   dismissSuggestedEmailTaskAction,
 } from '~/lib/email-assistant/email-assistant.actions';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
+import { commitOptimisticUpdate } from '~/lib/tasks/commit-optimistic-update';
+import {
+  applySessionTaskStatuses,
+  isTaskDoneStatus,
+  omitHiddenItems,
+} from '~/lib/tasks/session-task-status';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
 import type {
@@ -85,20 +96,39 @@ export function DashboardTasksTabsCard({
   suggestedEmailTasks,
   density = 'md',
 }: Props) {
-  const router = useRouter();
-  const [meetingItems, setMeetingItems] = useState(meetingTaskReview.items);
-  const [emailItems, setEmailItems] = useState(suggestedEmailTasks.items);
+  const [hiddenMeetingIds, setHiddenMeetingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [hiddenEmailIds, setHiddenEmailIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
-  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
-  const [isPending, startTransition] = useTransition();
+  const sessionUpcomingStatusRef = useRef(new Map<string, string>());
+  const upcomingRef = useRef(upcomingTasks);
+  const [upcoming, setUpcoming] = useState(upcomingTasks);
 
   useEffect(() => {
-    setMeetingItems(meetingTaskReview.items);
-  }, [meetingTaskReview.items]);
+    setUpcoming(
+      applySessionTaskStatuses(
+        upcomingTasks,
+        sessionUpcomingStatusRef.current,
+        upcomingRef.current,
+      ),
+    );
+  }, [upcomingTasks]);
 
   useEffect(() => {
-    setEmailItems(suggestedEmailTasks.items);
-  }, [suggestedEmailTasks.items]);
+    upcomingRef.current = upcoming;
+  }, [upcoming]);
+
+  const meetingItems = useMemo(
+    () => omitHiddenItems(meetingTaskReview.items, hiddenMeetingIds),
+    [hiddenMeetingIds, meetingTaskReview.items],
+  );
+  const emailItems = useMemo(
+    () => omitHiddenItems(suggestedEmailTasks.items, hiddenEmailIds),
+    [hiddenEmailIds, suggestedEmailTasks.items],
+  );
 
   const meetingCount = Math.max(
     0,
@@ -112,26 +142,46 @@ export function DashboardTasksTabsCard({
       Math.max(0, suggestedEmailTasks.items.length - emailItems.length),
   );
 
+  const sessionCompletedStillOnServer = upcomingTasks.filter((task) =>
+    upcoming.some(
+      (row) =>
+        row.id === task.id &&
+        isTaskDoneStatus(row.status) &&
+        !isTaskDoneStatus(task.status),
+    ),
+  ).length;
+  const upcomingCount = Math.max(
+    0,
+    upcomingTasksTotalCount - sessionCompletedStillOnServer,
+  );
+
   const defaultTab = useMemo((): TabId => {
-    if (upcomingTasksTotalCount > 0) return 'upcoming';
+    if (upcomingCount > 0 || upcoming.length > 0) return 'upcoming';
     if (meetingCount > 0) return 'meeting';
     if (emailCount > 0) return 'email';
     return 'upcoming';
-  }, [emailCount, meetingCount, upcomingTasksTotalCount]);
+  }, [emailCount, meetingCount, upcoming.length, upcomingCount]);
 
   const [tab, setTab] = useState<TabId>(defaultTab);
 
   useEffect(() => {
     const countForCurrentTab =
       tab === 'upcoming'
-        ? upcomingTasksTotalCount
+        ? Math.max(upcomingCount, upcoming.length > 0 ? 1 : 0)
         : tab === 'meeting'
           ? meetingCount
           : emailCount;
     if (countForCurrentTab === 0) {
       setTab(defaultTab);
     }
-  }, [defaultTab, emailCount, meetingCount, tab, upcomingTasksTotalCount]);
+  }, [
+    defaultTab,
+    emailCount,
+    meetingCount,
+    tab,
+    upcoming.length,
+    upcomingCount,
+  ]);
 
   const tasksHref = pathsConfig.app.accountTasks.replace(
     '[account]',
@@ -153,12 +203,48 @@ export function DashboardTasksTabsCard({
         ? emailReviewHref
         : tasksHref;
 
-  function markPending(id: string, active: boolean) {
-    setPendingIds((prev) => {
+  function hideIds(
+    setHidden: Dispatch<SetStateAction<Set<string>>>,
+    ids: string[],
+  ) {
+    if (ids.length === 0) return;
+    commitOptimisticUpdate(() => {
+      setHidden((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) next.add(id);
+        return next;
+      });
+    });
+  }
+
+  function showIds(
+    setHidden: Dispatch<SetStateAction<Set<string>>>,
+    ids: string[],
+  ) {
+    setHidden((prev) => {
       const next = new Set(prev);
-      if (active) next.add(id);
-      else next.delete(id);
-      return next;
+      let changed = false;
+      for (const id of ids) {
+        if (next.delete(id)) changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }
+
+  function commitUpcomingStatus(task: DashboardTaskSummary, status: string) {
+    commitOptimisticUpdate(() => {
+      sessionUpcomingStatusRef.current.set(task.id, status);
+      setUpcoming((prev) => {
+        const base = prev.some((row) => row.id === task.id)
+          ? prev
+          : [...prev, task];
+        const next = applySessionTaskStatuses(
+          base,
+          sessionUpcomingStatusRef.current,
+          prev,
+        );
+        return next;
+      });
     });
   }
 
@@ -171,8 +257,8 @@ export function DashboardTasksTabsCard({
       return;
     }
 
-    markPending(item.id, true);
-    startTransition(async () => {
+    hideIds(setHiddenMeetingIds, [item.id]);
+    void (async () => {
       try {
         if (kind === 'accept') {
           await approveMeetingActionItem({
@@ -192,23 +278,23 @@ export function DashboardTasksTabsCard({
           });
           toast.success('Suggestion declined');
         }
-        setMeetingItems((prev) => prev.filter((row) => row.id !== item.id));
-        router.refresh();
       } catch (error) {
+        showIds(setHiddenMeetingIds, [item.id]);
         toast.error(
           error instanceof Error
             ? error.message
             : 'Could not update meeting suggestion',
         );
-      } finally {
-        markPending(item.id, false);
       }
-    });
+    })();
   }
 
   function runEmailAction(actionItemId: string, kind: 'accept' | 'dismiss') {
-    markPending(actionItemId, true);
-    startTransition(async () => {
+    hideIds(setHiddenEmailIds, [actionItemId]);
+    setExpandedEmailId((current) =>
+      current === actionItemId ? null : current,
+    );
+    void (async () => {
       try {
         if (kind === 'accept') {
           await acceptSuggestedEmailTaskAction({
@@ -225,23 +311,15 @@ export function DashboardTasksTabsCard({
           });
           toast.success('Suggestion dismissed');
         }
-        setEmailItems((prev) =>
-          prev.filter((item) => item.id !== actionItemId),
-        );
-        setExpandedEmailId((current) =>
-          current === actionItemId ? null : current,
-        );
-        router.refresh();
       } catch (error) {
+        showIds(setHiddenEmailIds, [actionItemId]);
         toast.error(
           error instanceof Error
             ? error.message
             : 'Could not update suggestion',
         );
-      } finally {
-        markPending(actionItemId, false);
       }
-    });
+    })();
   }
 
   const tabs: Array<{
@@ -253,7 +331,7 @@ export function DashboardTasksTabsCard({
     {
       id: 'upcoming',
       label: 'Upcoming',
-      count: upcomingTasksTotalCount,
+      count: upcomingCount,
       icon: ListTodo,
     },
     {
@@ -309,16 +387,17 @@ export function DashboardTasksTabsCard({
 
       {tab === 'upcoming' ? (
         <ul className="space-y-2 p-3">
-          {upcomingTasks.length === 0 ? (
+          {upcoming.length === 0 ? (
             <li className="px-1 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
               No upcoming tasks.
             </li>
           ) : (
-            upcomingTasks.map((task) => (
+            upcoming.map((task) => (
               <DashboardUpcomingTaskItem
                 key={task.id}
                 task={task}
                 workspaceAccountId={accountId}
+                onCommitStatus={commitUpcomingStatus}
               />
             ))
           )}
@@ -333,7 +412,6 @@ export function DashboardTasksTabsCard({
             </li>
           ) : (
             meetingItems.map((item) => {
-              const busy = isPending && pendingIds.has(item.id);
               const dueLabel = formatSuggestedDueDate(item.suggestedDueDate);
 
               return (
@@ -369,7 +447,6 @@ export function DashboardTasksTabsCard({
                   </div>
                   <button
                     type="button"
-                    disabled={busy}
                     onClick={() => runMeetingAction(item, 'accept')}
                     title={
                       item.suggestedAssigneeId
@@ -377,18 +454,17 @@ export function DashboardTasksTabsCard({
                         : 'Open meeting review to choose an assignee'
                     }
                     aria-label="Accept meeting task"
-                    className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-2 text-[11px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)] disabled:opacity-50"
+                    className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-2 text-[11px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)]"
                   >
                     <Check className="h-3.5 w-3.5" />
                     Accept
                   </button>
                   <button
                     type="button"
-                    disabled={busy}
                     onClick={() => runMeetingAction(item, 'decline')}
                     title="Decline suggestion"
                     aria-label="Decline meeting task"
-                    className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
+                    className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
                   >
                     <X className="h-3.5 w-3.5" />
                     Decline
@@ -412,7 +488,6 @@ export function DashboardTasksTabsCard({
               <EmailReviewRow
                 key={item.id}
                 item={item}
-                busy={isPending && pendingIds.has(item.id)}
                 expanded={expandedEmailId === item.id}
                 onToggleExpand={() =>
                   setExpandedEmailId((current) =>
@@ -432,14 +507,12 @@ export function DashboardTasksTabsCard({
 
 function EmailReviewRow({
   item,
-  busy,
   expanded,
   onToggleExpand,
   onAccept,
   onDismiss,
 }: {
   item: DashboardSuggestedEmailTask;
-  busy: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
   onAccept: () => void;
@@ -484,22 +557,20 @@ function EmailReviewRow({
         </button>
         <button
           type="button"
-          disabled={busy}
           onClick={onAccept}
           title="Accept task"
           aria-label="Accept task"
-          className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-2 text-[11px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)] disabled:opacity-50"
+          className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-2 text-[11px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)]"
         >
           <Check className="h-3.5 w-3.5" />
           Accept
         </button>
         <button
           type="button"
-          disabled={busy}
           onClick={onDismiss}
           title="Dismiss suggestion"
           aria-label="Dismiss suggestion"
-          className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
+          className="mt-0.5 inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
         >
           <X className="h-3.5 w-3.5" />
         </button>

@@ -25,21 +25,26 @@ import {
 } from '~/home/(user)/_lib/actions/task-actions';
 import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
-import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
+import { isTaskDoneStatus } from '~/lib/tasks/session-task-status';
 
 import type { DashboardTaskSummary } from '../_lib/server/dashboard-page.loader';
 
 type Props = {
   task: DashboardTaskSummary;
   workspaceAccountId: string;
+  onCommitStatus: (task: DashboardTaskSummary, status: string) => void;
 };
 
-export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
+export function DashboardUpcomingTaskItem({
+  task,
+  workspaceAccountId,
+  onCommitStatus,
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editTask, setEditTask] = useState<TasksPageTask | null>(null);
   const [isPending, startTransition] = useTransition();
-  const { isDone, setOptimisticDone } = useOptimisticDone(false);
+  const isDone = isTaskDoneStatus(task.status);
 
   const refresh = useCallback(() => {
     router.refresh();
@@ -63,20 +68,23 @@ export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
     });
   }, [task.id, workspaceAccountId]);
 
-  function markComplete() {
-    if (isDone) return;
-    setOptimisticDone(true);
+  function toggleDone(nextDone: boolean) {
+    if (nextDone === isDone) return;
+    const nextStatus = nextDone ? 'completed' : 'pending';
+    const previous = task.status;
+    onCommitStatus(task, nextStatus);
     void (async () => {
-      const result = await updateTask(task.id, { status: 'completed' });
+      const result = await updateTask(task.id, { status: nextStatus });
 
       if (!result.success) {
-        setOptimisticDone(false);
-        toast.error(result.error ?? 'Could not complete task');
+        onCommitStatus(task, previous);
+        toast.error(result.error ?? 'Could not update task');
         return;
       }
 
-      toast.success('Task completed');
-      refresh();
+      if (nextDone) {
+        toast.success('Task completed');
+      }
     })();
   }
 
@@ -107,8 +115,8 @@ export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
           <Checkbox
             checked={isDone}
             onCheckedChange={(value) => {
-              if (value === 'indeterminate' || isDone) return;
-              markComplete();
+              if (value === 'indeterminate') return;
+              toggleDone(Boolean(value));
             }}
             aria-label={isDone ? 'Task completed' : 'Mark task as done'}
             className="h-5 w-5 shrink-0 rounded-full border-[color:var(--workspace-shell-border)] shadow-none data-[state=checked]:border-[var(--ozer-accent)] data-[state=checked]:bg-[var(--ozer-accent-subtle)] data-[state=checked]:text-[var(--ozer-accent)]"
@@ -151,7 +159,10 @@ export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
               <Pencil className="mr-2 h-3.5 w-3.5" />
               Open
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={isDone} onSelect={markComplete}>
+            <DropdownMenuItem
+              disabled={isDone}
+              onSelect={() => toggleDone(true)}
+            >
               <Check className="mr-2 h-3.5 w-3.5" />
               Mark complete
             </DropdownMenuItem>

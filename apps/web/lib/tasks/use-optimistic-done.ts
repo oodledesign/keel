@@ -2,18 +2,24 @@
 
 import { useState } from 'react';
 
+import { commitOptimisticUpdate } from '~/lib/tasks/commit-optimistic-update';
+
 /** Instant check/strike before the server status catches up. */
 export function useOptimisticDone(completed: boolean) {
-  const [optimistic, setOptimisticDone] = useState<boolean | null>(null);
+  const [optimistic, setOptimistic] = useState<boolean | null>(null);
   const [seenCompleted, setSeenCompleted] = useState(completed);
 
   if (completed !== seenCompleted) {
     setSeenCompleted(completed);
-    setOptimisticDone(null);
+    setOptimistic(null);
   }
 
   return {
     isDone: optimistic ?? completed,
-    setOptimisticDone,
+    setOptimisticDone: (next: boolean) => {
+      commitOptimisticUpdate(() => {
+        setOptimistic(next);
+      });
+    },
   };
 }

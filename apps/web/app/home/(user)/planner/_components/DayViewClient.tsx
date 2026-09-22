@@ -67,6 +67,8 @@ import type {
   DayViewPipeline,
   PlannerTask,
 } from '~/lib/planner/types';
+import { commitOptimisticUpdate } from '~/lib/tasks/commit-optimistic-update';
+import { applySessionTaskStatuses } from '~/lib/tasks/session-task-status';
 import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
 
 import { createTask, updateTask } from '../../_lib/actions/task-actions';
@@ -129,6 +131,8 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const [tasks, setTasks] = useState<PlannerTask[]>(initialData.tasksDueToday);
   const tasksRef = useRef(tasks);
   tasksRef.current = tasks;
+  const sessionDueStatusRef = useRef(new Map<string, PlannerTask['status']>());
+  const sessionDueTasksRef = useRef(new Map<string, PlannerTask>());
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDurationMinutes, setNewTaskDurationMinutes] = useState<
     number | null
@@ -143,8 +147,19 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       : undefined;
 
   useEffect(() => {
-    setTasks(initialData.tasksDueToday);
-  }, [initialData.tasksDueToday]);
+    sessionDueStatusRef.current.clear();
+    sessionDueTasksRef.current.clear();
+  }, [dateYmd]);
+
+  useEffect(() => {
+    setTasks(
+      applySessionTaskStatuses(
+        initialData.tasksDueToday,
+        sessionDueStatusRef.current,
+        [...sessionDueTasksRef.current.values(), ...tasksRef.current],
+      ),
+    );
+  }, [dateYmd, initialData.tasksDueToday]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
@@ -427,15 +442,19 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const [plannedTaskOverrides, setPlannedTaskOverrides] = useState<
     Record<string, PlannerTask['status']>
   >({});
+  const [pinnedPlannedTasks, setPinnedPlannedTasks] = useState<PlannerTask[]>(
+    [],
+  );
   const plannedOverridesRef = useRef(plannedTaskOverrides);
   plannedOverridesRef.current = plannedTaskOverrides;
 
   useEffect(() => {
     setPlannedTaskOverrides({});
-  }, [dateYmd, planMarkdown, initialData.openTasksForReplan]);
+    setPinnedPlannedTasks([]);
+  }, [dateYmd]);
 
   const plannedTasksToShow = useMemo(() => {
-    return plannedExtraTasks
+    const shown = plannedExtraTasks
       .map((task) => {
         const override = plannedTaskOverrides[task.id];
         return override ? { ...task, status: override } : task;
@@ -445,7 +464,15 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           task.status !== 'completed' ||
           plannedTaskOverrides[task.id] === 'completed',
       );
-  }, [plannedExtraTasks, plannedTaskOverrides]);
+    const shownIds = new Set(shown.map((task) => task.id));
+    const dueIds = new Set(tasks.map((task) => task.id));
+    for (const task of pinnedPlannedTasks) {
+      if (shownIds.has(task.id) || dueIds.has(task.id)) continue;
+      const override = plannedTaskOverrides[task.id];
+      shown.push(override ? { ...task, status: override } : task);
+    }
+    return shown;
+  }, [pinnedPlannedTasks, plannedExtraTasks, plannedTaskOverrides, tasks]);
 
   const replanUserContext = useMemo(() => {
     const stored = loadStoredPlan(initialData.scope, dateYmd);
@@ -469,23 +496,27 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       options?: { recordHistory?: boolean },
     ) => {
       const recordHistory = options?.recordHistory !== false;
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t)),
-      );
-      tasksRef.current = tasksRef.current.map((t) =>
-        t.id === taskId ? { ...t, status: nextStatus } : t,
-      );
+      commitOptimisticUpdate(() => {
+        sessionDueStatusRef.current.set(taskId, nextStatus);
+        const next = tasksRef.current.map((t) =>
+          t.id === taskId ? { ...t, status: nextStatus } : t,
+        );
+        const updated = next.find((t) => t.id === taskId);
+        if (updated) sessionDueTasksRef.current.set(taskId, updated);
+        tasksRef.current = next;
+        setTasks(next);
+      });
 
       const result = await updateTask(taskId, { status: nextStatus });
       if (!result.success) {
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === taskId ? { ...t, status: previousStatus } : t,
-          ),
-        );
-        tasksRef.current = tasksRef.current.map((t) =>
+        sessionDueStatusRef.current.set(taskId, previousStatus);
+        const next = tasksRef.current.map((t) =>
           t.id === taskId ? { ...t, status: previousStatus } : t,
         );
+        const updated = next.find((t) => t.id === taskId);
+        if (updated) sessionDueTasksRef.current.set(taskId, updated);
+        tasksRef.current = next;
+        setTasks(next);
         toast.error(result.error ?? 'Could not update task');
         return;
       }
@@ -525,11 +556,25 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       options?: { recordHistory?: boolean },
     ) => {
       const recordHistory = options?.recordHistory !== false;
-      setPlannedTaskOverrides((prev) => ({ ...prev, [taskId]: nextStatus }));
-      plannedOverridesRef.current = {
-        ...plannedOverridesRef.current,
-        [taskId]: nextStatus,
-      };
+      commitOptimisticUpdate(() => {
+        setPlannedTaskOverrides((prev) => ({ ...prev, [taskId]: nextStatus }));
+        plannedOverridesRef.current = {
+          ...plannedOverridesRef.current,
+          [taskId]: nextStatus,
+        };
+        setPinnedPlannedTasks((prev) => {
+          const existing = prev.find((task) => task.id === taskId);
+          const source =
+            existing ??
+            tasksRef.current.find((task) => task.id === taskId) ??
+            null;
+          if (!source) return prev;
+          return [
+            ...prev.filter((task) => task.id !== taskId),
+            { ...source, status: nextStatus },
+          ];
+        });
+      });
 
       const result = await updateTask(taskId, { status: nextStatus });
       if (!result.success) {
@@ -542,6 +587,15 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           }
           return next;
         });
+        setPinnedPlannedTasks((prev) =>
+          prev.flatMap((task) => {
+            if (task.id !== taskId) return [task];
+            if (previousStatus === 'completed') {
+              return [{ ...task, status: previousStatus }];
+            }
+            return [];
+          }),
+        );
         toast.error(result.error ?? 'Could not update task');
         return;
       }
@@ -579,6 +633,12 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   async function togglePlannedTask(task: PlannerTask) {
     const completing = task.status !== 'completed';
     const nextStatus = completing ? 'completed' : 'pending';
+    commitOptimisticUpdate(() => {
+      setPinnedPlannedTasks((prev) => [
+        ...prev.filter((row) => row.id !== task.id),
+        { ...task, status: nextStatus },
+      ]);
+    });
     await applyPlannedTaskStatus(task.id, nextStatus, task.status);
   }
 

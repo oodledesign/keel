@@ -16,6 +16,7 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
+import { commitOptimisticUpdate } from '~/lib/tasks/commit-optimistic-update';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -63,7 +64,11 @@ export function PhaseTasksPanel({
   const patchTask = useCallback(
     (task: JobBoardTask, updates: Partial<JobBoardTask>) => {
       const optimistic = { ...task, ...updates };
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? optimistic : t)));
+      commitOptimisticUpdate(() => {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === task.id ? optimistic : t)),
+        );
+      });
       startTransition(async () => {
         try {
           const saved = await updateJobTask({

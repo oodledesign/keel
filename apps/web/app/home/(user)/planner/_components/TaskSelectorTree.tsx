@@ -31,6 +31,10 @@ import { cn } from '@kit/ui/utils';
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
 import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
+import {
+  type PinnedPlannerTask,
+  mergePinnedPlannerTasks,
+} from '~/lib/planner/merge-pinned-planner-tasks';
 import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
 import type {
   PlannerProjectNode,
@@ -38,7 +42,7 @@ import type {
   PlannerTask,
   PlannerWorkspaceNode,
 } from '~/lib/planner/types';
-import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
+import { commitOptimisticUpdate } from '~/lib/tasks/commit-optimistic-update';
 
 import { PlannerClientAvatar, PlannerClientPill } from './planner-client-pill';
 
@@ -108,11 +112,33 @@ export function TaskSelectorTree({
   const router = useRouter();
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pinnedTasks, setPinnedTasks] = useState<PinnedPlannerTask[]>([]);
+
+  const mergedTree = useMemo(
+    () => mergePinnedPlannerTasks(taskTree, pinnedTasks),
+    [pinnedTasks, taskTree],
+  );
 
   const filteredTree = useMemo(
-    () => filterPlannerTaskTree(taskTree, searchQuery),
-    [taskTree, searchQuery],
+    () => filterPlannerTaskTree(mergedTree, searchQuery),
+    [mergedTree, searchQuery],
   );
+
+  function setSessionDone(pin: PinnedPlannerTask, done: boolean) {
+    commitOptimisticUpdate(() => {
+      setPinnedTasks((prev) => {
+        const without = prev.filter((row) => row.task.id !== pin.task.id);
+        if (!done) return without;
+        return [
+          ...without,
+          {
+            ...pin,
+            task: { ...pin.task, status: 'completed' },
+          },
+        ];
+      });
+    });
+  }
 
   function handleTaskCreated(taskId: string | null) {
     toast.success('Task added');
@@ -131,7 +157,7 @@ export function TaskSelectorTree({
     onSelectedTaskIdsChange(next);
   }
 
-  const allCount = taskTree.reduce((sum, ws) => sum + ws.taskCount, 0);
+  const allCount = mergedTree.reduce((sum, ws) => sum + ws.taskCount, 0);
   const selectedCount = selectedTaskIds.size;
 
   return (
@@ -221,7 +247,7 @@ export function TaskSelectorTree({
         </div>
       ) : null}
 
-      {taskTree.length === 0 ? (
+      {mergedTree.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center">
           <p className="text-sm text-[var(--workspace-shell-text)]/55">
             No open tasks found.
@@ -252,6 +278,7 @@ export function TaskSelectorTree({
               selectedTaskIds={selectedTaskIds}
               toggle={toggle}
               scope={scope}
+              onSessionDone={setSessionDone}
             />
           ))}
         </div>
@@ -265,11 +292,13 @@ function WorkspaceNode({
   selectedTaskIds,
   toggle,
   scope,
+  onSessionDone,
 }: {
   workspace: PlannerWorkspaceNode;
   selectedTaskIds: Set<string>;
   toggle: (ids: string[], checked: boolean) => void;
   scope: PlannerScope;
+  onSessionDone: (pin: PinnedPlannerTask, done: boolean) => void;
 }) {
   const [open, setOpen] = useState(true);
   const ids = workspace.projects.flatMap((project) =>
@@ -302,9 +331,11 @@ function WorkspaceNode({
           <ProjectNode
             key={project.id}
             project={project}
+            workspace={workspace}
             selectedTaskIds={selectedTaskIds}
             toggle={toggle}
             scope={scope}
+            onSessionDone={onSessionDone}
           />
         ))}
       </CollapsibleContent>
@@ -314,14 +345,18 @@ function WorkspaceNode({
 
 function ProjectNode({
   project,
+  workspace,
   selectedTaskIds,
   toggle,
   scope,
+  onSessionDone,
 }: {
   project: PlannerProjectNode;
+  workspace: PlannerWorkspaceNode;
   selectedTaskIds: Set<string>;
   toggle: (ids: string[], checked: boolean) => void;
   scope: PlannerScope;
+  onSessionDone: (pin: PinnedPlannerTask, done: boolean) => void;
 }) {
   const [open, setOpen] = useState(true);
   const ids = project.tasks.map((task) => task.id);
@@ -374,6 +409,21 @@ function ProjectNode({
             checked={selectedTaskIds.has(task.id)}
             onCheckedChange={(nextChecked) => toggle([task.id], nextChecked)}
             scope={scope}
+            onSessionDone={(done) =>
+              onSessionDone(
+                {
+                  workspace: { id: workspace.id, name: workspace.name },
+                  project: {
+                    id: project.id,
+                    name: project.name,
+                    clientPictureUrl: project.clientPictureUrl,
+                    accentColor: project.accentColor,
+                  },
+                  task,
+                },
+                done,
+              )
+            }
           />
         ))}
       </CollapsibleContent>
@@ -386,25 +436,26 @@ function TaskRow({
   checked,
   onCheckedChange,
   scope,
+  onSessionDone,
 }: {
   task: PlannerTask;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   scope: PlannerScope;
+  onSessionDone: (done: boolean) => void;
 }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
-  const { isDone, setOptimisticDone } = useOptimisticDone(false);
+  const isDone = task.status === 'completed';
   const clientName = task.clientName?.trim();
 
   const handleMarkDone = () => {
-    setOptimisticDone(true);
+    if (isDone) return;
+    onSessionDone(true);
     void (async () => {
       const result = await updateTask(task.id, { status: 'completed' });
-      if (result.success) {
-        router.refresh();
-      } else {
-        setOptimisticDone(false);
+      if (!result.success) {
+        onSessionDone(false);
         toast.error('Could not complete task');
       }
     })();

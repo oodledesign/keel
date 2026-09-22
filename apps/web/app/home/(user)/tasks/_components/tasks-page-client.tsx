@@ -53,6 +53,7 @@ import { cn } from '@kit/ui/utils';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { useCommandUndoStack } from '~/lib/hooks/use-command-undo-stack';
+import { commitOptimisticUpdate } from '~/lib/tasks/commit-optimistic-update';
 import {
   type TaskExportRow,
   downloadTextFile,
@@ -63,6 +64,7 @@ import {
   tasksToMarkdown,
   tasksToPlainText,
 } from '~/lib/tasks/export-tasks';
+import { applySessionTaskStatuses } from '~/lib/tasks/session-task-status';
 import {
   isAssignedToSomeoneElse,
   taskAssigneeDisplayName,
@@ -1454,7 +1456,9 @@ export function TasksPageClient({
 }: Props) {
   const [tasks, setTasks] = useState<TasksPageTask[]>(initialTasks);
   const tasksRef = useRef(tasks);
-  tasksRef.current = tasks;
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
   const [view, setView] = useState<TaskViewMode>('list');
   const [filter, setFilter] = useState<'all' | 'work' | 'life'>(() =>
     variant === 'workspace' ? 'work' : includeWorkspaceTasks ? 'all' : 'life',
@@ -1471,6 +1475,7 @@ export function TasksPageClient({
   const [lingeringCompletedIds, setLingeringCompletedIds] = useState<
     Set<string>
   >(() => new Set());
+  const sessionStatusRef = useRef(new Map<string, TaskStatus>());
 
   const [expandedRootTaskIds, setExpandedRootTaskIds] = useState<Set<string>>(
     () => new Set(),
@@ -1483,7 +1488,6 @@ export function TasksPageClient({
     useState<ScheduledSeriesItem | null>(null);
   const [editSeriesOpen, setEditSeriesOpen] = useState(false);
 
-  const router = useRouter();
   const { push: pushUndo } = useCommandUndoStack();
   const todayKey = todayISO();
 
@@ -1516,10 +1520,17 @@ export function TasksPageClient({
     [initialTasks],
   );
 
-  // Re-sync local state when the server returns a fresh list (after router.refresh / nav).
+  // Re-sync from the server, but keep this session's checkbox edits visible.
   useEffect(() => {
-    setTasks(initialTasks);
-    setLingeringCompletedIds(new Set());
+    const session = sessionStatusRef.current;
+    setTasks((prev) => applySessionTaskStatuses(initialTasks, session, prev));
+    setLingeringCompletedIds(
+      new Set(
+        [...session.entries()]
+          .filter(([, status]) => status === 'completed')
+          .map(([id]) => id),
+      ),
+    );
   }, [initialTasks]);
 
   // New server payload → collapse all parent groups again.
@@ -1717,31 +1728,26 @@ export function TasksPageClient({
       const previous = findTaskStatusInTree(tasksRef.current, taskId);
       if (!previous || previous === nextStatus) return;
 
-      const nextTasks = updateTaskStatusInTree(
-        tasksRef.current,
-        taskId,
-        nextStatus,
-      );
-      tasksRef.current = nextTasks;
-      setTasks(nextTasks);
-
-      if (nextStatus === 'completed') {
+      commitOptimisticUpdate(() => {
+        sessionStatusRef.current.set(taskId, nextStatus);
+        const nextTasks = updateTaskStatusInTree(
+          tasksRef.current,
+          taskId,
+          nextStatus,
+        );
+        tasksRef.current = nextTasks;
+        setTasks(nextTasks);
         setLingeringCompletedIds((prev) => {
           const next = new Set(prev);
-          next.add(taskId);
+          if (nextStatus === 'completed') next.add(taskId);
+          else next.delete(taskId);
           return next;
         });
-      } else {
-        setLingeringCompletedIds((prev) => {
-          if (!prev.has(taskId)) return prev;
-          const next = new Set(prev);
-          next.delete(taskId);
-          return next;
-        });
-      }
+      });
 
       const result = await updateTask(taskId, { status: nextStatus });
       if (!result.success) {
+        sessionStatusRef.current.set(taskId, previous);
         const reverted = updateTaskStatusInTree(
           tasksRef.current,
           taskId,
@@ -1750,16 +1756,14 @@ export function TasksPageClient({
         tasksRef.current = reverted;
         setTasks(reverted);
         setLingeringCompletedIds((prev) => {
-          if (!prev.has(taskId)) return prev;
           const next = new Set(prev);
-          next.delete(taskId);
+          if (previous === 'completed') next.add(taskId);
+          else next.delete(taskId);
           return next;
         });
         toast.error(result.error ?? 'Could not update task');
         return;
       }
-
-      router.refresh();
 
       if (recordHistory) {
         pushUndo({
@@ -1775,10 +1779,12 @@ export function TasksPageClient({
         });
       }
     },
-    [pushUndo, router],
+    [pushUndo],
   );
 
-  applyTaskStatusRef.current = handleStatusChanged;
+  useEffect(() => {
+    applyTaskStatusRef.current = handleStatusChanged;
+  }, [handleStatusChanged]);
 
   const handleTitleChanged = useCallback((taskId: string, title: string) => {
     setTasks((prev) => updateTaskTitleInTree(prev, taskId, title));

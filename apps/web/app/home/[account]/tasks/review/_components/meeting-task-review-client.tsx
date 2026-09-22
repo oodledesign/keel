@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -41,6 +41,7 @@ import {
   isHighConfidenceMeetingSuggestion,
 } from '~/lib/recorder/meeting-task-confidence';
 import type { AccountTaskAutomationSettings } from '~/lib/recorder/task-automation-settings';
+import { commitOptimisticUpdate } from '~/lib/tasks/commit-optimistic-update';
 
 import {
   approveMeetingActionItem,
@@ -146,9 +147,7 @@ export function MeetingTaskReviewClient({
   const [drafts, setDrafts] = useState<Record<string, ItemDraft>>(() =>
     Object.fromEntries(initialItems.map((item) => [item.id, buildDraft(item)])),
   );
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
-  const [, startTransition] = useTransition();
 
   const tasksPath = workAccountPath(pathsConfig.app.accountTasks, accountSlug);
   const settingsPath = workAccountPath(
@@ -227,8 +226,10 @@ export function MeetingTaskReviewClient({
       return;
     }
 
-    setPendingId(item.id);
-    startTransition(async () => {
+    commitOptimisticUpdate(() => {
+      removeItem(item.id);
+    });
+    void (async () => {
       try {
         await approveMeetingActionItem({
           accountId,
@@ -245,22 +246,26 @@ export function MeetingTaskReviewClient({
             ? 'Task updated and added to planner'
             : 'Task added to planner',
         );
-        removeItem(item.id);
       } catch (error) {
+        setItems((current) =>
+          current.some((row) => row.id === item.id)
+            ? current
+            : [item, ...current],
+        );
         toast.error(
           error instanceof Error
             ? error.message
             : 'Could not approve suggestion',
         );
-      } finally {
-        setPendingId(null);
       }
-    });
+    })();
   }
 
   function rejectItem(item: MeetingReviewItem) {
-    setPendingId(item.id);
-    startTransition(async () => {
+    commitOptimisticUpdate(() => {
+      removeItem(item.id);
+    });
+    void (async () => {
       try {
         await rejectMeetingActionItem({
           accountId,
@@ -268,17 +273,19 @@ export function MeetingTaskReviewClient({
           meetingActionItemId: item.id,
         });
         toast.success('Suggestion rejected');
-        removeItem(item.id);
       } catch (error) {
+        setItems((current) =>
+          current.some((row) => row.id === item.id)
+            ? current
+            : [item, ...current],
+        );
         toast.error(
           error instanceof Error
             ? error.message
             : 'Could not reject suggestion',
         );
-      } finally {
-        setPendingId(null);
       }
-    });
+    })();
   }
 
   function bulkApprove() {
@@ -287,8 +294,13 @@ export function MeetingTaskReviewClient({
       return;
     }
 
+    const targets = highConfidenceItems;
+    const targetIds = new Set(targets.map((item) => item.id));
+    commitOptimisticUpdate(() => {
+      setItems((current) => current.filter((item) => !targetIds.has(item.id)));
+    });
     setBulkPending(true);
-    startTransition(async () => {
+    void (async () => {
       try {
         const result = await bulkApproveHighConfidenceMeetingItems({
           accountId,
@@ -299,17 +311,21 @@ export function MeetingTaskReviewClient({
             ? `Added ${result.publishedCount} task${result.publishedCount === 1 ? '' : 's'} to the planner`
             : 'No high-confidence suggestions to approve',
         );
-        setItems((current) =>
-          current.filter((item) => !isHighConfidenceMeetingSuggestion(item)),
-        );
       } catch (error) {
+        setItems((current) => {
+          const existing = new Set(current.map((item) => item.id));
+          return [
+            ...targets.filter((item) => !existing.has(item.id)),
+            ...current,
+          ];
+        });
         toast.error(
           error instanceof Error ? error.message : 'Bulk approve failed',
         );
       } finally {
         setBulkPending(false);
       }
-    });
+    })();
   }
 
   return (
@@ -336,7 +352,7 @@ export function MeetingTaskReviewClient({
             <Button
               type="button"
               onClick={bulkApprove}
-              disabled={bulkPending || pendingId !== null}
+              disabled={bulkPending}
               className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             >
               {bulkPending ? (
@@ -415,7 +431,6 @@ export function MeetingTaskReviewClient({
             const draft = drafts[item.id] ?? buildDraft(item);
             const isExpanded = expandedIds.has(item.id);
             const isEditing = editingIds.has(item.id);
-            const isPending = pendingId === item.id;
             const meetingHref = workAccountPath(
               pathsConfig.app.accountMeetingDetail,
               accountSlug,
@@ -524,7 +539,7 @@ export function MeetingTaskReviewClient({
                       size="sm"
                       variant="ghost"
                       className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-                      disabled={isPending || bulkPending}
+                      disabled={bulkPending}
                       onClick={() => rejectItem(item)}
                     >
                       <X className="h-4 w-4" />
@@ -534,14 +549,10 @@ export function MeetingTaskReviewClient({
                       type="button"
                       size="sm"
                       className="h-8 bg-[var(--ozer-accent)] px-3 text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                      disabled={isPending || bulkPending}
+                      disabled={bulkPending}
                       onClick={() => approveItem(item, Boolean(draft.dueDate))}
                     >
-                      {isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        'Approve'
-                      )}
+                      Approve
                     </Button>
                   </div>
                 </div>
@@ -679,7 +690,7 @@ export function MeetingTaskReviewClient({
                             size="sm"
                             variant="outline"
                             className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
-                            disabled={isPending || bulkPending}
+                            disabled={bulkPending}
                             onClick={() => toggleEditing(item.id, item)}
                           >
                             <Pencil className="mr-1 h-3.5 w-3.5" />
@@ -690,17 +701,10 @@ export function MeetingTaskReviewClient({
                               type="button"
                               size="sm"
                               className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                              disabled={isPending || bulkPending}
+                              disabled={bulkPending}
                               onClick={() => approveItem(item, true)}
                             >
-                              {isPending ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Saving…
-                                </>
-                              ) : (
-                                'Save & approve'
-                              )}
+                              Save & approve
                             </Button>
                           ) : null}
                         </div>
