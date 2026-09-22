@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import {
   type CommercialBoardSettings,
   parseCommercialBoardSettings,
@@ -33,14 +35,20 @@ export async function loadCommercialBoardSettings(
   );
 }
 
+/**
+ * Persist board settings. Callers must authorize first
+ * (`requireCommercialBillableActor`). Uses the admin client because
+ * `accounts` RLS only allows the primary owner to UPDATE.
+ */
 export async function saveCommercialBoardSettings(
-  client: SupabaseClient,
+  _client: SupabaseClient,
   accountId: string,
   settings: CommercialBoardSettings,
 ): Promise<CommercialBoardSettings> {
   const serialized = serializeCommercialBoardSettings(settings);
+  const admin = getSupabaseServerAdminClient();
 
-  const { error } = await fromAccounts(client)
+  const { error } = await fromAccounts(admin)
     .update({ commercial_board_settings: serialized })
     .eq('id', accountId);
 

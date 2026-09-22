@@ -241,6 +241,7 @@ export function NotifyBoardCompanyDialog({
             type="button"
             variant="outline"
             disabled={sending}
+            data-test="board-notify-skip"
             className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
             onClick={handleNotNow}
           >
@@ -249,6 +250,7 @@ export function NotifyBoardCompanyDialog({
           <Button
             type="button"
             disabled={!canSend || loading || Boolean(loadError)}
+            data-test="board-notify-send"
             className={workspaceBtnPrimaryMd}
             onClick={handleSend}
           >
