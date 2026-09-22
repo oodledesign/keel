@@ -2,10 +2,9 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { extractAndPersistMeetingActionItems } from '~/lib/recorder/meeting-action-items';
+import type { MeetingPostSyncStatus } from '~/lib/recorder/meeting-post-sync-status';
 import {
   attendeeEmailsFromCalendarAttendees,
   generateMeetingSummaryText,
@@ -21,38 +20,124 @@ export type MeetingSummaryJobInput = {
   calendarAttendees?: Array<{ name: string; email: string }>;
 };
 
+export type MeetingSummaryJobOptions = {
+  /** Reuse a saved summary and only run task extraction. Manual regenerate sets this false. */
+  reuseExistingSummary?: boolean;
+};
+
+function postSyncErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.trim().slice(0, 500) || 'Meeting processing failed';
+}
+
+async function writeMeetingPostSyncStatus(
+  admin: SupabaseClient,
+  meetingTranscriptId: string,
+  patch: {
+    summaryStatus?: MeetingPostSyncStatus;
+    taskExtractionStatus?: MeetingPostSyncStatus;
+    error?: string | null;
+  },
+) {
+  const update: {
+    post_sync_updated_at: string;
+    summary_status?: MeetingPostSyncStatus;
+    task_extraction_status?: MeetingPostSyncStatus;
+    post_sync_error?: string | null;
+  } = {
+    post_sync_updated_at: new Date().toISOString(),
+  };
+
+  if (patch.summaryStatus) {
+    update.summary_status = patch.summaryStatus;
+  }
+  if (patch.taskExtractionStatus) {
+    update.task_extraction_status = patch.taskExtractionStatus;
+  }
+  if ('error' in patch) {
+    update.post_sync_error = patch.error;
+  }
+
+  const { error } = await admin
+    .from('meeting_transcripts')
+    .update(update)
+    .eq('id', meetingTranscriptId);
+
+  if (error) {
+    console.error('[recorder] meeting post-sync status update failed', {
+      meetingTranscriptId,
+      error: error.message,
+    });
+  }
+}
+
 export async function generateAndPersistMeetingSummary(
   admin: SupabaseClient,
   input: MeetingSummaryJobInput,
+  options?: MeetingSummaryJobOptions,
 ): Promise<void> {
   const attendeeEmails = attendeeEmailsFromCalendarAttendees(
     input.calendarAttendees ?? [],
   );
 
-  const summaryText = await generateMeetingSummaryText(
-    {
-      title: input.title,
-      transcript: input.content,
-      meetingDate: input.meetingDate,
-      attendees: input.calendarAttendees,
-    },
-    { accountId: input.accountId, supabase: admin },
-  );
+  let summaryText: string | null = null;
 
-  const { error } = await admin.from('meeting_summaries').upsert(
-    {
-      meeting_transcript_id: input.meetingTranscriptId,
-      account_id: input.accountId,
-      summary_text: summaryText,
-      attendee_emails: attendeeEmails,
-      generated_at: new Date().toISOString(),
-    },
-    { onConflict: 'meeting_transcript_id' },
-  );
-
-  if (error) {
-    throw new Error(error.message);
+  if (options?.reuseExistingSummary) {
+    const existing = await loadMeetingSummary(admin, {
+      meetingTranscriptId: input.meetingTranscriptId,
+      accountId: input.accountId,
+    });
+    summaryText = existing?.summaryText ?? null;
   }
+
+  if (!summaryText) {
+    await writeMeetingPostSyncStatus(admin, input.meetingTranscriptId, {
+      summaryStatus: 'processing',
+      taskExtractionStatus: 'processing',
+      error: null,
+    });
+
+    try {
+      summaryText = await generateMeetingSummaryText(
+        {
+          title: input.title,
+          transcript: input.content,
+          meetingDate: input.meetingDate,
+          attendees: input.calendarAttendees,
+        },
+        { accountId: input.accountId, supabase: admin },
+      );
+
+      const { error } = await admin.from('meeting_summaries').upsert(
+        {
+          meeting_transcript_id: input.meetingTranscriptId,
+          account_id: input.accountId,
+          summary_text: summaryText,
+          attendee_emails: attendeeEmails,
+          generated_at: new Date().toISOString(),
+        },
+        { onConflict: 'meeting_transcript_id' },
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    } catch (error) {
+      const message = postSyncErrorMessage(error);
+      await writeMeetingPostSyncStatus(admin, input.meetingTranscriptId, {
+        summaryStatus: 'failed',
+        taskExtractionStatus: 'failed',
+        error: message,
+      });
+      throw error;
+    }
+  }
+
+  await writeMeetingPostSyncStatus(admin, input.meetingTranscriptId, {
+    summaryStatus: 'ready',
+    taskExtractionStatus: 'processing',
+    error: null,
+  });
 
   try {
     await extractAndPersistMeetingActionItems(admin, {
@@ -66,30 +151,35 @@ export async function generateAndPersistMeetingSummary(
       calendarAttendees: input.calendarAttendees,
     });
   } catch (error) {
+    const message = postSyncErrorMessage(error);
     console.error('[recorder] meeting action item extraction failed', {
       meetingTranscriptId: input.meetingTranscriptId,
       accountId: input.accountId,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
     });
+    await writeMeetingPostSyncStatus(admin, input.meetingTranscriptId, {
+      taskExtractionStatus: 'failed',
+      error: message,
+    });
+    queueBrainIndexSource(
+      input.accountId,
+      'transcript',
+      input.meetingTranscriptId,
+    );
+    return;
   }
+
+  await writeMeetingPostSyncStatus(admin, input.meetingTranscriptId, {
+    summaryStatus: 'ready',
+    taskExtractionStatus: 'ready',
+    error: null,
+  });
 
   queueBrainIndexSource(
     input.accountId,
     'transcript',
     input.meetingTranscriptId,
   );
-}
-
-export function queueMeetingSummaryGeneration(input: MeetingSummaryJobInput) {
-  const admin = getSupabaseServerAdminClient();
-
-  void generateAndPersistMeetingSummary(admin, input).catch((error) => {
-    console.error('[recorder] meeting summary generation failed', {
-      meetingTranscriptId: input.meetingTranscriptId,
-      accountId: input.accountId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  });
 }
 
 export type MeetingSummaryRecord = {

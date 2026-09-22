@@ -242,6 +242,7 @@ const GenerateSummarySchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).max(200).optional(),
   transcriptId: z.string().uuid(),
+  force: z.boolean().optional(),
 });
 
 export const deleteMeetingTranscript = enhanceAction(
@@ -288,15 +289,19 @@ export const generateMeetingSummary = enhanceAction(
     const { generateAndPersistMeetingSummary } =
       await import('~/lib/recorder/meeting-summary');
 
-    await generateAndPersistMeetingSummary(getSupabaseServerAdminClient(), {
-      meetingTranscriptId: transcript.id,
-      accountId: input.accountId,
-      createdByUserId: user.id,
-      title: transcript.title,
-      content,
-      meetingDate: transcript.meetingDate,
-      calendarAttendees: transcript.calendarAttendees,
-    });
+    await generateAndPersistMeetingSummary(
+      getSupabaseServerAdminClient(),
+      {
+        meetingTranscriptId: transcript.id,
+        accountId: input.accountId,
+        createdByUserId: user.id,
+        title: transcript.title,
+        content,
+        meetingDate: transcript.meetingDate,
+        calendarAttendees: transcript.calendarAttendees,
+      },
+      { reuseExistingSummary: input.force !== true },
+    );
 
     if (input.accountSlug) {
       revalidateMeetingPages(input.accountSlug, input.transcriptId);

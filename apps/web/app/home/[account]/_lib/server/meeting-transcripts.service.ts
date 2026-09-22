@@ -12,6 +12,10 @@ import {
 import type { Database } from '~/lib/database.types';
 import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
 import {
+  type MeetingPostSyncStatus,
+  parseMeetingPostSyncStatus,
+} from '~/lib/recorder/meeting-post-sync-status';
+import {
   type SpeakerBinding,
   type SpeakerMappings,
   type TranscriptSegment,
@@ -47,6 +51,11 @@ export type MeetingTranscript = {
   publicShareToken: string | null;
   publicShareShowTasks: boolean;
   portalVisible: boolean;
+  proposalId: string | null;
+  summaryStatus: MeetingPostSyncStatus;
+  taskExtractionStatus: MeetingPostSyncStatus;
+  postSyncError: string | null;
+  postSyncUpdatedAt: string | null;
 };
 
 export type MeetingTranscriptListItem = MeetingTranscript & {
@@ -75,6 +84,11 @@ type MeetingTranscriptRow = {
   public_share_token?: string | null;
   public_share_show_tasks?: boolean | null;
   portal_visible?: boolean | null;
+  proposal_id?: string | null;
+  summary_status?: string | null;
+  task_extraction_status?: string | null;
+  post_sync_error?: string | null;
+  post_sync_updated_at?: string | null;
 };
 
 function normalizeCalendarAttendees(value: unknown): MeetingCalendarAttendee[] {
@@ -128,6 +142,13 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
     publicShareToken: row.public_share_token ?? null,
     publicShareShowTasks: row.public_share_show_tasks !== false,
     portalVisible: Boolean(row.portal_visible),
+    proposalId: row.proposal_id ?? null,
+    summaryStatus: parseMeetingPostSyncStatus(row.summary_status),
+    taskExtractionStatus: parseMeetingPostSyncStatus(
+      row.task_extraction_status,
+    ),
+    postSyncError: row.post_sync_error?.trim() || null,
+    postSyncUpdatedAt: row.post_sync_updated_at ?? null,
   };
 }
 

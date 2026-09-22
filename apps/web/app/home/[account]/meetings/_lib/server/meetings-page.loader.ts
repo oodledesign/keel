@@ -22,6 +22,7 @@ import {
   type MeetingParticipant,
   resolveMeetingParticipants,
 } from '~/lib/recorder/meeting-participants';
+import { ensureMeetingPostSyncQueued } from '~/lib/recorder/meeting-post-sync';
 import {
   MEETING_VISIBLE_SUGGESTED_TASK_STATUSES,
   listMeetingSuggestedTasks,
@@ -347,6 +348,30 @@ async function loadMeetingTranscriptPageDataImpl(
         })
       : [];
 
+  let meetingTranscript = transcript;
+  if (meetingTranscript) {
+    const queued = await ensureMeetingPostSyncQueued({
+      id: meetingTranscript.id,
+      source: meetingTranscript.source,
+      proposalId: meetingTranscript.proposalId,
+      content: meetingTranscript.content,
+      createdAt: meetingTranscript.createdAt,
+      summaryStatus: meetingTranscript.summaryStatus,
+      taskExtractionStatus: meetingTranscript.taskExtractionStatus,
+      postSyncUpdatedAt: meetingTranscript.postSyncUpdatedAt,
+      hasSummary: Boolean(summary),
+    });
+    if (queued) {
+      meetingTranscript = {
+        ...meetingTranscript,
+        summaryStatus: queued.summaryStatus,
+        taskExtractionStatus: queued.taskExtractionStatus,
+        postSyncError: queued.postSyncError,
+        postSyncUpdatedAt: queued.postSyncUpdatedAt,
+      };
+    }
+  }
+
   if (membersResult.error) {
     throw new Error(membersResult.error.message);
   }
@@ -446,9 +471,9 @@ async function loadMeetingTranscriptPageDataImpl(
   return {
     accountId,
     accountSlug,
-    transcript: transcript
+    transcript: meetingTranscript
       ? {
-          ...transcript,
+          ...meetingTranscript,
           publicShareToken: access.canEditClients
             ? transcript.publicShareToken
             : null,

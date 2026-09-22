@@ -59,6 +59,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { MeetingPostSyncNoticeBanner } from '~/components/meetings/meeting-post-sync-notice';
 import { MeetingSummaryMarkdown } from '~/components/meetings/meeting-summary-markdown';
 import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
@@ -69,6 +70,10 @@ import {
   formatMeetingNotesRecipientLabel,
   resolveMeetingNotesRecipientName,
 } from '~/lib/recorder/meeting-notes-recipient-label';
+import {
+  type MeetingPostSyncStatus,
+  describeMeetingPostSync,
+} from '~/lib/recorder/meeting-post-sync-status';
 import { MEETING_SUGGESTED_TASK_PENDING_STATUS } from '~/lib/recorder/meeting-suggested-tasks';
 import { buildPublicMeetingShareUrl } from '~/lib/recorder/public-meeting-share';
 import {
@@ -116,6 +121,9 @@ type Transcript = {
   publicShareToken?: string | null;
   publicShareShowTasks?: boolean;
   portalVisible?: boolean;
+  summaryStatus?: MeetingPostSyncStatus;
+  taskExtractionStatus?: MeetingPostSyncStatus;
+  postSyncError?: string | null;
 };
 
 type MeetingSummary = {
@@ -320,6 +328,12 @@ export function MeetingTranscriptDetailClient({
     setDraftContent(transcript.content);
     setEditingTranscript(false);
   }, [transcript.id, transcript.speakerSegments, transcript.content]);
+
+  const postSyncNotice = describeMeetingPostSync({
+    summaryStatus: transcript.summaryStatus,
+    taskExtractionStatus: transcript.taskExtractionStatus,
+    error: transcript.postSyncError,
+  });
 
   const meetingsPath = pathsConfig.app.accountMeetings.replace(
     '[account]',
@@ -635,6 +649,7 @@ export function MeetingTranscriptDetailClient({
           accountId,
           accountSlug,
           transcriptId: transcript.id,
+          force: isRegenerate,
         });
         toast.success(
           isRegenerate
@@ -646,6 +661,7 @@ export function MeetingTranscriptDetailClient({
         toast.error(
           error instanceof Error ? error.message : 'Summary generation failed',
         );
+        router.refresh();
       }
     });
   };
@@ -828,6 +844,16 @@ export function MeetingTranscriptDetailClient({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="space-y-6">
           <section className={panelClassName}>
+            {postSyncNotice ? (
+              <div className="mb-4">
+                <MeetingPostSyncNoticeBanner
+                  notice={postSyncNotice}
+                  canRetry={canEdit}
+                  pending={pending}
+                  onRetry={() => generateSummary(false)}
+                />
+              </div>
+            ) : null}
             <Tabs
               defaultValue={summary ? 'summary' : 'transcript'}
               className="gap-0"
@@ -898,7 +924,9 @@ export function MeetingTranscriptDetailClient({
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={pending}
+                            disabled={
+                              pending || postSyncNotice?.tone === 'progress'
+                            }
                             className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                             onClick={() => generateSummary(true)}
                           >
@@ -916,6 +944,10 @@ export function MeetingTranscriptDetailClient({
                       <MeetingSummaryMarkdown markdown={summary.summaryText} />
                     </div>
                   </div>
+                ) : postSyncNotice ? (
+                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                    {postSyncNotice.message}
+                  </p>
                 ) : canEdit && displayContent.trim() ? (
                   <div className="space-y-4">
                     <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -1181,6 +1213,10 @@ export function MeetingTranscriptDetailClient({
                       </li>
                     ))}
                   </ul>
+                ) : postSyncNotice?.tone === 'progress' ? (
+                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                    {postSyncNotice.message}
+                  </p>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -1543,6 +1579,18 @@ export function MeetingTranscriptDetailClient({
                 <CheckSquare className="mr-2 h-4 w-4" />
                 Review suggested tasks
               </Button>
+            </section>
+          ) : canEdit && postSyncNotice?.tone === 'progress' ? (
+            <section className={panelClassName}>
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--ozer-accent)]" />
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Tasks
+                </h2>
+              </div>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                {postSyncNotice.message}
+              </p>
             </section>
           ) : canEdit && meetingTasks.length === 0 ? (
             <section className={panelClassName}>
