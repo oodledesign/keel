@@ -8,6 +8,7 @@ import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { assertTasksModuleEnabled } from '~/lib/quick-action/module-access';
+import { cleanDictationTranscript } from '~/lib/recorder/dictation-transcript-cleanup';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 const TASK_DB_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent']);
@@ -63,10 +64,13 @@ export type CreateRecorderTaskInput = {
 };
 
 export async function createRecorderTask(input: CreateRecorderTaskInput) {
-  const title = input.title.trim();
+  const title = cleanDictationTranscript(input.title).trim();
   if (!title) {
     throw new Error('Task title is required');
   }
+  const notes = input.notes
+    ? cleanDictationTranscript(input.notes).trim() || null
+    : null;
 
   const admin = getSupabaseServerAdminClient();
   await assertWorkspaceMember(admin, input.accountId, input.userId);
@@ -119,7 +123,7 @@ export async function createRecorderTask(input: CreateRecorderTaskInput) {
       priority: normalizeTaskPriority(input.priority),
       due_date: input.dueDate?.trim() || null,
       duration_minutes: clampDurationMinutes(input.durationMinutes),
-      notes: input.notes?.trim() || null,
+      notes,
       project_id: projectId,
       client_id: clientId,
       status: 'todo',

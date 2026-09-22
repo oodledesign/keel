@@ -16,6 +16,7 @@ import {
   recordRecorderSync,
 } from '~/lib/recorder/access';
 import { resolveMeetingCalendarMetadata } from '~/lib/recorder/calendar-metadata';
+import { cleanDictationTranscript } from '~/lib/recorder/dictation-transcript-cleanup';
 import { scheduleMeetingPostSync } from '~/lib/recorder/meeting-post-sync';
 import {
   type TranscriptSegment,
@@ -193,14 +194,20 @@ export async function POST(request: Request) {
   });
 
   const parsedFromContent = parseTranscriptContent(input.content.trim());
-  const speakerSegments: TranscriptSegment[] | null = input.segments?.length
+  const rawSegments: TranscriptSegment[] | null = input.segments?.length
     ? normalizeTranscriptSegments(input.segments)
     : parsedFromContent.hasSpeakerLabels
       ? parsedFromContent.segments
       : null;
+  const speakerSegments = rawSegments
+    ? rawSegments.map((segment) => ({
+        ...segment,
+        text: cleanDictationTranscript(segment.text),
+      }))
+    : null;
   const transcriptContent = speakerSegments
     ? serializeTranscriptSegments(speakerSegments)
-    : input.content.trim();
+    : cleanDictationTranscript(input.content.trim());
 
   const { data: row, error } = await admin
     .from('meeting_transcripts')

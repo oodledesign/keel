@@ -9,6 +9,7 @@ import {
   mergeUpcomingMeetings,
 } from '~/lib/integrations/google-calendar/upcoming-meetings';
 import { notifyMeetingTranscriptSyncedInApp } from '~/lib/notifications/meeting-in-app-notifications';
+import { cleanDictationTranscript } from '~/lib/recorder/dictation-transcript-cleanup';
 import { scheduleMeetingPostSync } from '~/lib/recorder/meeting-post-sync';
 import { MEETING_VISIBLE_SUGGESTED_TASK_STATUSES } from '~/lib/recorder/meeting-suggested-tasks';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
@@ -330,7 +331,9 @@ export async function createNativeMeeting(input: {
   source?: string | null;
   durationSeconds?: number | null;
 }): Promise<NativeMeeting> {
-  const content = normalizeNativeMeetingContent(input.content);
+  const content = cleanDictationTranscript(
+    normalizeNativeMeetingContent(input.content),
+  );
   if (!content) {
     throw new NativeHttpError(400, 'content is required');
   }
