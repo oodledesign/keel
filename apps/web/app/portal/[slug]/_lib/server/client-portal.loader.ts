@@ -89,6 +89,8 @@ export const loadClientPortalContext = cache(
       { data: teamMembershipThisAccount },
       teamMembershipAny,
     ] = await Promise.all([
+      // Admin: account slug only (non-sensitive). Membership is checked below
+      // before any CRM picture / contact reads.
       admin.from('accounts').select('slug').eq('id', accountId).maybeSingle(),
       client
         .from('account_module_settings')
@@ -235,7 +237,10 @@ export const loadClientPortalContext = cache(
       meetingCountResult,
     ] = await Promise.all([
       loadMatchedContact(),
-      loadClientPicturesByOrgIds(client, [org.id]),
+      // Portal members are not accounts_memberships rows, so clients_select
+      // hides picture_url. The logo is public in account_image; read it with
+      // the admin client only after membership is confirmed above.
+      loadClientPicturesByOrgIds(admin, [org.id]),
       loadSupportBusinessBrand(accountId),
       client
         .from('websites')

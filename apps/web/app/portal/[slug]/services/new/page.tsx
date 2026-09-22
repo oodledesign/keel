@@ -1,7 +1,5 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
-
 import { PortalSupportNewForm } from '../../_components/portal-support-content';
 import { loadClientPortalContext } from '../../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../../_lib/server/client-portal.service';
@@ -23,34 +21,17 @@ export default async function PortalServicesNewPage({
   const ctx = await loadClientPortalContext(slug);
   const client = getSupabaseServerClient();
   const creditsService = createPortalCreditsService(client);
-  const [credits, projects, effectiveServices] = await Promise.all([
+  const portal = createClientPortalService(client);
+  const [credits, projects, effectiveServices, draft] = await Promise.all([
     creditsService.getCreditsBundle(ctx.clientOrgId),
-    createClientPortalService(client).listProjects(
-      ctx.clientOrgId,
-      ctx.accountId,
-    ),
+    portal.listProjects(ctx.clientOrgId, ctx.accountId),
     creditsService.listEffectiveServices(ctx.clientOrgId).catch(() => []),
+    portal.getPortalRequestDraft(ctx.clientOrgId).catch(() => null),
   ]);
 
   return (
     <div className="space-y-6">
       <div>
-        {(ctx.accountName || ctx.orgName) && (
-          <SupportDualPartyIdentity
-            className="mb-3"
-            size="sm"
-            business={
-              ctx.accountName
-                ? { name: ctx.accountName, logoUrl: ctx.accountLogoUrl }
-                : null
-            }
-            client={
-              ctx.orgName
-                ? { name: ctx.orgName, logoUrl: ctx.clientPictureUrl }
-                : null
-            }
-          />
-        )}
         <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
           New request
         </h2>
@@ -69,7 +50,8 @@ export default async function PortalServicesNewPage({
         initialRequestTypes={credits.requestTypes}
         initialEffectiveServices={effectiveServices}
         initialProjects={projects}
-        initialIntent={intent === 'service' ? 'service' : null}
+        initialIntent={draft ? null : intent === 'service' ? 'service' : null}
+        initialDraft={draft}
       />
     </div>
   );

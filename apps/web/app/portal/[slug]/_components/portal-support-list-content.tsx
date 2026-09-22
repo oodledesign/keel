@@ -3,16 +3,32 @@
 import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-import { Coins, Layers, Plus } from 'lucide-react';
+import { Layers, MoreHorizontal, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 
-import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import pathsConfig from '~/config/paths.config';
 
-import type { PortalTicketStatus } from '../_lib/schema/portal.schema';
+import type {
+  PortalRequestDraft,
+  PortalTicketStatus,
+} from '../_lib/schema/portal.schema';
 import type { PortalTicket } from '../_lib/server/client-portal.service';
 import {
   PortalTicketPriorityBadge,
@@ -20,9 +36,11 @@ import {
   formatPortalDate,
   formatPortalTicketNumber,
 } from './portal-badges';
-import { PortalServiceRequestActions } from './portal-service-request-actions';
+import { PortalServicesTabs } from './portal-services-tabs';
+import { PortalSupportNewForm } from './portal-support-content';
 
 type StatusFilter = 'all' | PortalTicketStatus;
+type RequestIntent = 'service' | 'support';
 
 const statusTabs: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -34,63 +52,101 @@ const statusTabs: { value: StatusFilter; label: string }[] = [
   { value: 'closed', label: 'Closed' },
 ];
 
+type RequestTypeOption = {
+  id: string;
+  label: string;
+  creditCost: number;
+  isBillable: boolean;
+  isSupport?: boolean;
+  categoryGroup: string | null;
+};
+
+type EffectiveServiceOption = RequestTypeOption & {
+  categorySortOrder?: number;
+  requestTypeId?: string | null;
+};
+
 export function PortalSupportListContent({
   clientSlug,
+  clientOrgId,
+  accountId,
+  accountSlug,
   initialTickets,
-  clientName,
-  clientPictureUrl,
-  businessName,
-  businessLogoUrl,
   canRequest = false,
+  initialBalance = 0,
+  initialRequestTypes = [],
+  initialEffectiveServices = [],
+  initialProjects = [],
+  initialDraft = null,
+  initialRequest = null,
 }: {
   clientSlug: string;
+  clientOrgId: string;
+  accountId: string;
+  accountSlug: string;
   initialTickets: PortalTicket[];
-  clientName?: string | null;
-  clientPictureUrl?: string | null;
-  businessName?: string | null;
-  businessLogoUrl?: string | null;
   canRequest?: boolean;
+  initialBalance?: number;
+  initialRequestTypes?: RequestTypeOption[];
+  initialEffectiveServices?: EffectiveServiceOption[];
+  initialProjects?: Array<{ id: string; name: string }>;
+  initialDraft?: PortalRequestDraft | null;
+  initialRequest?: string | null;
 }) {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [draft, setDraft] = useState<PortalRequestDraft | null>(initialDraft);
+  const initialLaunchIntent: RequestIntent | null =
+    initialRequest === 'support'
+      ? 'support'
+      : initialRequest === 'service' || initialRequest === '1'
+        ? 'service'
+        : null;
+  const shouldOpenFromQuery =
+    Boolean(initialLaunchIntent) || initialRequest === 'new';
+  const [open, setOpen] = useState(shouldOpenFromQuery);
+  const [launchIntent, setLaunchIntent] = useState<RequestIntent | null>(
+    initialLaunchIntent,
+  );
+  const [formKey, setFormKey] = useState(0);
 
   const filteredTickets = useMemo(() => {
     if (statusFilter === 'all') return initialTickets;
     return initialTickets.filter((ticket) => ticket.status === statusFilter);
   }, [initialTickets, statusFilter]);
 
-  const newHref = pathsConfig.app.clientPortalSupportNew.replace(
-    '[clientSlug]',
-    clientSlug,
-  );
-  const creditsHref = pathsConfig.app.clientPortalCredits.replace(
-    '[clientSlug]',
-    clientSlug,
-  );
   const servicesHref = pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
     clientSlug,
   );
+  const settingsHref = pathsConfig.app.clientPortalSettings.replace(
+    '[clientSlug]',
+    clientSlug,
+  );
+  const billingHref = pathsConfig.app.clientPortalBilling.replace(
+    '[clientSlug]',
+    clientSlug,
+  );
+
+  function openRequest(intent: RequestIntent | null) {
+    setLaunchIntent(intent);
+    setFormKey((current) => current + 1);
+    setOpen(true);
+  }
+
+  function closeRequest() {
+    setOpen(false);
+    if (initialRequest) {
+      router.replace(servicesHref);
+    }
+  }
+
+  const primaryLabel = canRequest ? 'Request service' : 'New request';
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          {(businessName || clientName) && (
-            <SupportDualPartyIdentity
-              className="mb-3"
-              size="sm"
-              business={
-                businessName
-                  ? { name: businessName, logoUrl: businessLogoUrl }
-                  : null
-              }
-              client={
-                clientName
-                  ? { name: clientName, logoUrl: clientPictureUrl }
-                  : null
-              }
-            />
-          )}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-xl font-semibold text-[var(--ozer-text-on-light)]">
             Services
           </h2>
@@ -100,37 +156,66 @@ export function PortalSupportListContent({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline">
-            <Link href={creditsHref}>
-              <Coins className="h-4 w-4" />
-              Credits
-            </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            data-test="portal-request-service"
+            onClick={() => openRequest(canRequest ? 'service' : null)}
+          >
+            {canRequest ? null : <Plus className="h-4 w-4" />}
+            {primaryLabel}
           </Button>
-          <PortalServiceRequestActions
-            clientSlug={clientSlug}
-            canRequest={canRequest}
-            size="default"
-          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="More actions"
+                data-test="portal-services-more"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => openRequest('support')}>
+                Support ticket
+              </DropdownMenuItem>
+              {draft ? (
+                <DropdownMenuItem onSelect={() => openRequest(null)}>
+                  Resume draft
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem asChild>
+                <Link href={settingsHref}>Settings</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={billingHref}>Billing</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <div className="flex w-fit items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5">
-        <Link
-          href={servicesHref}
-          className="rounded bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--workspace-shell-accent-text)]"
-        >
-          Requests
-        </Link>
-        <Link
-          href={creditsHref}
-          className="rounded px-2.5 py-1 text-xs font-medium text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]"
-        >
-          Credits
-        </Link>
-      </div>
+      {draft ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2.5">
+          <p className="text-sm text-[var(--workspace-shell-text)]">
+            You have an unfinished request.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => openRequest(null)}
+          >
+            Resume
+          </Button>
+        </div>
+      ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <PortalServicesTabs clientSlug={clientSlug} active="requests" />
+
+      <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {statusTabs.map((tab) => {
           const active = statusFilter === tab.value;
           return (
@@ -138,7 +223,7 @@ export function PortalSupportListContent({
               key={tab.value}
               type="button"
               onClick={() => setStatusFilter(tab.value)}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
                 active
                   ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
                   : 'text-[var(--ozer-text-on-light-muted)] hover:bg-slate-100 hover:text-[var(--ozer-text-on-light)]'
@@ -161,22 +246,13 @@ export function PortalSupportListContent({
               Request a service or open a support ticket and our team will get
               back to you.
             </p>
-            {canRequest ? (
-              <div className="mt-4">
-                <PortalServiceRequestActions
-                  clientSlug={clientSlug}
-                  canRequest
-                  size="default"
-                />
-              </div>
-            ) : (
-              <Button asChild className="mt-4">
-                <Link href={newHref}>
-                  <Plus className="h-4 w-4" />
-                  New request
-                </Link>
-              </Button>
-            )}
+            <Button
+              type="button"
+              className="mt-4"
+              onClick={() => openRequest(canRequest ? 'service' : null)}
+            >
+              {primaryLabel}
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -236,6 +312,45 @@ export function PortalSupportListContent({
           </div>
         </div>
       )}
+
+      <Dialog
+        open={open}
+        onOpenChange={(next) => (next ? setOpen(true) : closeRequest())}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {draft
+                ? 'Resume request'
+                : launchIntent === 'support'
+                  ? 'Support ticket'
+                  : 'Request service'}
+            </DialogTitle>
+            <DialogDescription>
+              Choose a service or open a support ticket. You can save a draft
+              and come back later.
+            </DialogDescription>
+          </DialogHeader>
+          {open ? (
+            <PortalSupportNewForm
+              key={formKey}
+              presentation="embedded"
+              clientOrgId={clientOrgId}
+              accountId={accountId}
+              accountSlug={accountSlug}
+              clientSlug={clientSlug}
+              initialBalance={initialBalance}
+              initialRequestTypes={initialRequestTypes}
+              initialEffectiveServices={initialEffectiveServices}
+              initialProjects={initialProjects}
+              initialDraft={draft}
+              initialIntent={draft ? null : launchIntent}
+              onClose={closeRequest}
+              onDraftChange={setDraft}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

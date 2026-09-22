@@ -23,11 +23,14 @@ import {
 } from '~/lib/websites/planning-types';
 import { migrateSitemapPages } from '~/lib/websites/sitemap-document';
 
-import type {
-  AddPortalTicketMessageInput,
-  CreatePortalTicketInput,
-  PortalTicketPriority,
-  PortalTicketStatus,
+import {
+  type AddPortalTicketMessageInput,
+  type CreatePortalTicketInput,
+  type PortalRequestDraft,
+  type PortalRequestDraftPayload,
+  PortalRequestDraftPayloadSchema,
+  type PortalTicketPriority,
+  type PortalTicketStatus,
 } from '../schema/portal.schema';
 
 export type PortalWebsite = {
@@ -809,7 +812,11 @@ class ClientPortalService {
   ): Promise<PortalProjectOption[]> {
     await this.ensureMember(clientOrgId);
 
-    const { data: clients } = await this.db
+    // Portal members cannot read CRM clients under clients_select. Resolve
+    // ids with admin after membership is confirmed, then list projects
+    // through the user client so portal project RLS still applies.
+    const admin = getSupabaseServerAdminClient();
+    const { data: clients } = await admin
       .from('clients')
       .select('id')
       .eq('client_org_id', clientOrgId);
@@ -1289,6 +1296,29 @@ class ClientPortalService {
         ? (projectNameById.get(row.project_id) ?? null)
         : null,
     }));
+  }
+
+  /** Incomplete tasks assigned to this portal user. Zero hides My tasks. */
+  async countOpenPortalMyTasks(clientOrgId: string): Promise<number> {
+    const user = await this.ensureMember(clientOrgId);
+    const contactId = await this.resolvePortalContactId(
+      clientOrgId,
+      user.email ?? null,
+    );
+    if (!contactId) return 0;
+
+    const { count, error } = await this.db
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('assignee_contact_id', contactId)
+      .not('status', 'in', '(done,completed,cancelled)');
+
+    if (error) {
+      console.error('[client-portal] countOpenPortalMyTasks:', error.message);
+      return 0;
+    }
+
+    return count ?? 0;
   }
 
   /**
@@ -2326,5 +2356,75 @@ class ClientPortalService {
     }
 
     throw new Error('You are not a participant in this thread');
+  }
+
+  async getPortalRequestDraft(
+    clientOrgId: string,
+  ): Promise<PortalRequestDraft | null> {
+    const user = await this.ensureMember(clientOrgId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- portal_request_drafts pending typegen
+    const drafts = this.db as any;
+    const { data, error } = await drafts
+      .from('portal_request_drafts')
+      .select('step_index, payload')
+      .eq('client_org_id', clientOrgId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[client-portal] getPortalRequestDraft:', error.message);
+      return null;
+    }
+    if (!data) return null;
+
+    const parsed = PortalRequestDraftPayloadSchema.safeParse(data.payload);
+    if (!parsed.success) return null;
+
+    const step = Number(data.step_index);
+    const safeStep = step === 2 || step === 3 || step === 4 ? step : 1;
+
+    return { step: safeStep, payload: parsed.data };
+  }
+
+  async savePortalRequestDraft(input: {
+    clientOrgId: string;
+    step: number;
+    payload: PortalRequestDraftPayload;
+  }): Promise<PortalRequestDraft> {
+    const user = await this.ensureMember(input.clientOrgId);
+    const step =
+      input.step === 2 || input.step === 3 || input.step === 4 ? input.step : 1;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- portal_request_drafts pending typegen
+    const drafts = this.db as any;
+    const { error } = await drafts.from('portal_request_drafts').upsert(
+      {
+        client_org_id: input.clientOrgId,
+        user_id: user.id,
+        step_index: step,
+        payload: input.payload,
+      },
+      { onConflict: 'client_org_id,user_id' },
+    );
+
+    if (error) {
+      this.throwErr(error, 'Could not save draft');
+    }
+
+    return { step, payload: input.payload };
+  }
+
+  async deletePortalRequestDraft(clientOrgId: string): Promise<void> {
+    const user = await this.ensureMember(clientOrgId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- portal_request_drafts pending typegen
+    const drafts = this.db as any;
+    const { error } = await drafts
+      .from('portal_request_drafts')
+      .delete()
+      .eq('client_org_id', clientOrgId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      this.throwErr(error, 'Could not discard draft');
+    }
   }
 }

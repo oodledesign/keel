@@ -17,10 +17,7 @@ export function PortalServiceRequestActions({
     '[clientSlug]',
     clientSlug,
   );
-  const requestHref = `${pathsConfig.app.clientPortalSupportNew.replace(
-    '[clientSlug]',
-    clientSlug,
-  )}?intent=service`;
+  const requestHref = `${listHref}?request=${canRequest ? 'service' : 'new'}`;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
