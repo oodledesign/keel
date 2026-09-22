@@ -32,6 +32,10 @@ import {
 } from '~/lib/workspace-ui';
 
 import { AddWorkspaceRetainerButton } from './add-workspace-retainer-button';
+import {
+  LinkWorkspaceRetainerDialog,
+  LinkWorkspaceRetainerTrigger,
+} from './link-workspace-retainer-button';
 
 const STATUS_FILTERS: Array<{
   id: WorkspaceRetainerStatusFilter;
@@ -81,6 +85,12 @@ function rowHref(accountSlug: string, row: WorkspaceRetainerRow) {
   return row.projectId ? projectRetainerHref(accountSlug, row.projectId) : null;
 }
 
+function canLinkOrphan(row: WorkspaceRetainerRow, canEdit: boolean) {
+  return Boolean(
+    canEdit && !row.projectId && row.subscriptionId && row.clientId,
+  );
+}
+
 export function RetainersPageContent({
   accountId,
   accountSlug,
@@ -103,10 +113,16 @@ export function RetainersPageContent({
     initialStatus ?? 'all',
   );
   const [query, setQuery] = useState('');
+  const [linkRowId, setLinkRowId] = useState<string | null>(null);
 
   const rows = useMemo(
     () => filterWorkspaceRetainerRows(initialRows, { status, query }),
     [initialRows, query, status],
+  );
+
+  const linkRow = useMemo(
+    () => initialRows.find((row) => row.id === linkRowId) ?? null,
+    [initialRows, linkRowId],
   );
 
   const addButton = (
@@ -190,16 +206,21 @@ export function RetainersPageContent({
                   {rows.map((row) => {
                     const href = rowHref(accountSlug, row);
                     const nextBilling = formatNextBilling(row.nextBillingDate);
+                    const linkable = canLinkOrphan(row, canEdit);
                     return (
                       <tr
                         key={row.id}
                         className={cn(
                           'border-b border-[color:var(--workspace-shell-border)]',
-                          href &&
+                          (href || linkable) &&
                             'cursor-pointer hover:bg-[var(--workspace-shell-panel-hover)]',
                         )}
                         onClick={() => {
-                          if (href) router.push(href);
+                          if (href) {
+                            router.push(href);
+                            return;
+                          }
+                          if (linkable) setLinkRowId(row.id);
                         }}
                         data-test="workspace-retainer-row"
                       >
@@ -238,6 +259,10 @@ export function RetainersPageContent({
                             <Button asChild size="sm" variant="outline">
                               <Link href={href}>Edit</Link>
                             </Button>
+                          ) : linkable ? (
+                            <LinkWorkspaceRetainerTrigger
+                              onClick={() => setLinkRowId(row.id)}
+                            />
                           ) : null}
                         </td>
                       </tr>
@@ -252,6 +277,7 @@ export function RetainersPageContent({
             {rows.map((row) => {
               const href = rowHref(accountSlug, row);
               const nextBilling = formatNextBilling(row.nextBillingDate);
+              const linkable = canLinkOrphan(row, canEdit);
               const body = (
                 <div className={cn(workspacePanelCard, 'p-4')}>
                   <div className="flex items-start justify-between gap-3">
@@ -280,6 +306,13 @@ export function RetainersPageContent({
                       : ''}
                     {nextBilling ? ` · Next ${nextBilling}` : ''}
                   </p>
+                  {linkable ? (
+                    <div className="mt-3">
+                      <LinkWorkspaceRetainerTrigger
+                        onClick={() => setLinkRowId(row.id)}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               );
 
@@ -292,6 +325,17 @@ export function RetainersPageContent({
           </ul>
         </>
       )}
+
+      <LinkWorkspaceRetainerDialog
+        accountId={accountId}
+        accountSlug={accountSlug}
+        row={linkRow}
+        projects={initialProjects}
+        open={linkRowId != null && linkRow != null}
+        onOpenChange={(next) => {
+          if (!next) setLinkRowId(null);
+        }}
+      />
     </div>
   );
 }
