@@ -233,10 +233,48 @@ export async function processMeetingPostSync(
       meetingTranscriptId: row.id,
       error: error instanceof Error ? error.message : String(error),
     });
+
+    try {
+      await admin
+        .from('meeting_transcripts')
+        .update({
+          summary_status: 'failed',
+          task_extraction_status: 'failed',
+          post_sync_error:
+            error instanceof Error
+              ? error.message.trim().slice(0, 240) || 'Meeting processing failed'
+              : 'Meeting processing failed',
+          post_sync_updated_at: new Date().toISOString(),
+        })
+        .eq('id', row.id)
+        .in('summary_status', ['pending', 'processing']);
+    } catch (statusError) {
+      console.error('[recorder] meeting post-sync failed-status write failed', {
+        meetingTranscriptId: row.id,
+        error:
+          statusError instanceof Error
+            ? statusError.message
+            : String(statusError),
+      });
+    }
+
     return { status: 'failed' };
   }
 
-  return { status: 'ready' };
+  const finished = await loadPostSyncRow(admin, meetingTranscriptId);
+  const finishedSummary = parseMeetingPostSyncStatus(finished?.summary_status);
+  const finishedTasks = parseMeetingPostSyncStatus(
+    finished?.task_extraction_status,
+  );
+
+  if (finishedSummary === 'failed' || finishedTasks === 'failed') {
+    return { status: 'failed' };
+  }
+  if (finishedSummary === 'ready' && finishedTasks === 'ready') {
+    return { status: 'ready' };
+  }
+
+  return { status: 'partial' };
 }
 
 export async function ensureMeetingPostSyncQueued(input: {

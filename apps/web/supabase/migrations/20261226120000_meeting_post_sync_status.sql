@@ -38,6 +38,14 @@ CREATE INDEX IF NOT EXISTS ix_meeting_transcripts_post_sync_open
   WHERE summary_status IN ('pending', 'processing')
      OR task_extraction_status IN ('pending', 'processing');
 
+-- Status is written only by the service-role post-sync worker.
+REVOKE UPDATE (
+  summary_status,
+  task_extraction_status,
+  post_sync_error,
+  post_sync_updated_at
+) ON public.meeting_transcripts FROM authenticated;
+
 -- Recent Assistant syncs that saved a transcript and never produced a summary.
 UPDATE public.meeting_transcripts AS mt
 SET

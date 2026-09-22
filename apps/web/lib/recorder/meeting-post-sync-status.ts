@@ -114,6 +114,8 @@ export function shouldScheduleMeetingPostSync(
   const tasks = parseMeetingPostSyncStatus(input.taskExtractionStatus);
 
   if (summary === 'failed' || tasks === 'failed') return false;
+  // Summary done but tasks never started (pre-status rows). Leave alone —
+  // manual regenerate / extract covers that edge case without re-running AI.
   if (summary === 'ready' && (tasks === 'ready' || tasks === 'idle')) {
     return false;
   }

@@ -27,7 +27,18 @@ export type MeetingSummaryJobOptions = {
 
 function postSyncErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
-  return message.trim().slice(0, 500) || 'Meeting processing failed';
+  const trimmed = message.trim().replace(/\s+/g, ' ');
+  if (!trimmed) return 'Meeting processing failed';
+
+  // Keep provider internals out of the meeting page.
+  if (/api[_-]?key|sk-[a-z0-9]|bearer\s+[a-z0-9]|authorization/i.test(trimmed)) {
+    return 'Meeting processing failed';
+  }
+  if (/rate.?limit|overloaded|timeout|timed out|ECONNRESET|fetch failed/i.test(trimmed)) {
+    return 'The AI service was unavailable. Try again in a moment.';
+  }
+
+  return trimmed.slice(0, 240);
 }
 
 async function writeMeetingPostSyncStatus(

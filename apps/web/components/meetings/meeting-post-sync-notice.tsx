@@ -45,7 +45,12 @@ export function MeetingPostSyncNoticeBanner({
     : 'text-[var(--ozer-text-on-light-muted)]';
 
   return (
-    <div role="status" className={className}>
+    <div
+      role="status"
+      data-test="meeting-post-sync-notice"
+      data-tone={notice.tone}
+      className={className}
+    >
       {inProgress ? (
         <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-[var(--ozer-accent)]" />
       ) : (
@@ -61,6 +66,7 @@ export function MeetingPostSyncNoticeBanner({
             type="button"
             size="sm"
             disabled={pending}
+            data-test="meeting-post-sync-retry"
             className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
             onClick={onRetry}
           >
