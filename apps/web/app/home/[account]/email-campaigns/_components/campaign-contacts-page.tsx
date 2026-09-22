@@ -12,6 +12,13 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
@@ -81,10 +88,8 @@ export function CampaignContactsPage({
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryId ?? '');
   const [industryFilter, setIndustryFilter] = useState(initialIndustry ?? '');
   const [selected, setSelected] = useState<string[]>([]);
-  const [listId, setListId] = useState(
-    lists.find((list) => list.source === 'manual')?.id ?? '',
-  );
-  const [newListName, setNewListName] = useState('');
+  const [addToListContact, setAddToListContact] =
+    useState<CampaignWorkspaceContact | null>(null);
   const [bulkCategoryId, setBulkCategoryId] = useState(categories[0]?.id ?? '');
   const [editing, setEditing] = useState<CampaignWorkspaceContact | null>(null);
   const [creating, setCreating] = useState(false);
@@ -223,88 +228,15 @@ export function CampaignContactsPage({
             <p className={`text-sm font-medium ${workspaceText}`}>
               {selected.length} selected
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Add to existing list</Label>
-                <select
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                  value={listId}
-                  onChange={(event) => setListId(event.target.value)}
-                >
-                  <option value="">Choose a manual list…</option>
-                  {lists
-                    .filter((list) => list.source === 'manual')
-                    .map((list) => (
-                      <option key={list.id} value={list.id}>
-                        {list.name}
-                      </option>
-                    ))}
-                </select>
-                <Button
-                  size="sm"
-                  disabled={pending || !listId}
-                  onClick={() => {
-                    startTransition(async () => {
-                      try {
-                        await bulkAddContactsToListAction({
-                          accountId,
-                          accountSlug,
-                          listId,
-                          contactIds: selected,
-                        });
-                        toast.success('Added to list');
-                        setSelected([]);
-                        router.refresh();
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : 'Could not add to list',
-                        );
-                      }
-                    });
-                  }}
-                >
-                  Add to list
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <Label>Or create a new list</Label>
-                <Input
-                  placeholder="New list name"
-                  value={newListName}
-                  onChange={(event) => setNewListName(event.target.value)}
-                />
-                <Button
-                  size="sm"
-                  disabled={pending || !newListName.trim()}
-                  onClick={() => {
-                    startTransition(async () => {
-                      try {
-                        await bulkAddContactsToListAction({
-                          accountId,
-                          accountSlug,
-                          newListName,
-                          contactIds: selected,
-                        });
-                        toast.success('List created');
-                        setNewListName('');
-                        setSelected([]);
-                        router.refresh();
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : 'Could not create list',
-                        );
-                      }
-                    });
-                  }}
-                >
-                  Create list from selection
-                </Button>
-              </div>
-            </div>
+            <AddContactsToListForm
+              accountId={accountId}
+              accountSlug={accountSlug}
+              lists={lists}
+              contactIds={selected}
+              pending={pending}
+              startTransition={startTransition}
+              onAdded={() => setSelected([])}
+            />
             {growth && categories.length > 0 ? (
               <div className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1">
@@ -361,7 +293,7 @@ export function CampaignContactsPage({
           />
         ) : null}
 
-        <div className={`${workspacePanelCard} overflow-hidden`}>
+        <div className={`${workspacePanelCard} overflow-x-auto`}>
           <table
             className="w-full text-left text-sm"
             data-test="campaign-contacts-table"
@@ -444,16 +376,29 @@ export function CampaignContactsPage({
                         .join(', ') || '—'}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(contact);
-                          setCreating(false);
-                        }}
-                      >
-                        Edit
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditing(contact);
+                            setCreating(false);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        {savedLists ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            data-test="campaign-contact-row-add-to-list"
+                            aria-label={`Add ${contact.fullName} to a list`}
+                            onClick={() => setAddToListContact(contact)}
+                          >
+                            Add to list
+                          </Button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -479,6 +424,17 @@ export function CampaignContactsPage({
         )}
       </div>
 
+      <AddContactToListDialog
+        contact={addToListContact}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        lists={lists}
+        onOpenChange={(open) => {
+          if (!open) setAddToListContact(null);
+        }}
+        onAdded={() => setAddToListContact(null)}
+      />
+
       {creating || editing ? (
         <ContactFormDialog
           accountId={accountId}
@@ -493,6 +449,161 @@ export function CampaignContactsPage({
           startTransition={startTransition}
         />
       ) : null}
+    </div>
+  );
+}
+
+function AddContactToListDialog({
+  contact,
+  accountId,
+  accountSlug,
+  lists,
+  onOpenChange,
+  onAdded,
+}: {
+  contact: CampaignWorkspaceContact | null;
+  accountId: string;
+  accountSlug: string;
+  lists: CampaignAudienceList[];
+  onOpenChange: (open: boolean) => void;
+  onAdded: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <Dialog open={contact != null} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg"
+        data-test="campaign-contact-add-to-list-dialog"
+      >
+        <DialogHeader>
+          <DialogTitle>Add to list</DialogTitle>
+          <DialogDescription className={workspaceTextMuted}>
+            {contact
+              ? `Add ${contact.fullName} to a manual list.`
+              : 'Add this contact to a manual list.'}
+          </DialogDescription>
+        </DialogHeader>
+        {contact ? (
+          <AddContactsToListForm
+            key={contact.id}
+            accountId={accountId}
+            accountSlug={accountSlug}
+            lists={lists}
+            contactIds={[contact.id]}
+            pending={pending}
+            startTransition={startTransition}
+            onAdded={onAdded}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddContactsToListForm({
+  accountId,
+  accountSlug,
+  lists,
+  contactIds,
+  pending,
+  startTransition,
+  onAdded,
+}: {
+  accountId: string;
+  accountSlug: string;
+  lists: CampaignAudienceList[];
+  contactIds: string[];
+  pending: boolean;
+  startTransition: TransitionStartFunction;
+  onAdded: () => void;
+}) {
+  const router = useRouter();
+  const manualLists = lists.filter((list) => list.source === 'manual');
+  const [listId, setListId] = useState(manualLists[0]?.id ?? '');
+  const [newListName, setNewListName] = useState('');
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-2">
+        <Label>Add to existing list</Label>
+        <select
+          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          value={listId}
+          onChange={(event) => setListId(event.target.value)}
+        >
+          <option value="">Choose a manual list…</option>
+          {manualLists.map((list) => (
+            <option key={list.id} value={list.id}>
+              {list.name}
+            </option>
+          ))}
+        </select>
+        <Button
+          size="sm"
+          disabled={pending || !listId || contactIds.length === 0}
+          data-test="campaign-add-contacts-to-list"
+          onClick={() => {
+            startTransition(async () => {
+              try {
+                await bulkAddContactsToListAction({
+                  accountId,
+                  accountSlug,
+                  listId,
+                  contactIds,
+                });
+                toast.success('Added to list');
+                onAdded();
+                router.refresh();
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : 'Could not add to list',
+                );
+              }
+            });
+          }}
+        >
+          Add to list
+        </Button>
+      </div>
+      <div className="space-y-2">
+        <Label>Or create a new list</Label>
+        <Input
+          placeholder="New list name"
+          value={newListName}
+          onChange={(event) => setNewListName(event.target.value)}
+        />
+        <Button
+          size="sm"
+          disabled={pending || !newListName.trim() || contactIds.length === 0}
+          onClick={() => {
+            startTransition(async () => {
+              try {
+                await bulkAddContactsToListAction({
+                  accountId,
+                  accountSlug,
+                  newListName,
+                  contactIds,
+                });
+                toast.success('List created');
+                setNewListName('');
+                onAdded();
+                router.refresh();
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : 'Could not create list',
+                );
+              }
+            });
+          }}
+        >
+          Create list from selection
+        </Button>
+      </div>
     </div>
   );
 }

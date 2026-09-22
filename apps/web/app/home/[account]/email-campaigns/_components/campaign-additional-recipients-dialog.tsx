@@ -154,6 +154,7 @@ function AdditionalRecipientsForm({
       </DialogHeader>
 
       <CampaignAudiencePicker
+        accountId={accountId}
         accountSlug={accountSlug}
         audienceType="custom"
         audienceConfig={audienceConfig}

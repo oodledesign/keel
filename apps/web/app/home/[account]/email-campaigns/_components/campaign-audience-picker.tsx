@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -30,6 +30,8 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { CampaignAudienceAddContact } from './campaign-audience-add-contact';
+
 export type AudiencePickerOption = {
   id: string;
   email: string;
@@ -37,6 +39,7 @@ export type AudiencePickerOption = {
 };
 
 export function CampaignAudiencePicker({
+  accountId,
   accountSlug,
   audienceType,
   audienceConfig,
@@ -51,6 +54,7 @@ export function CampaignAudiencePicker({
   embedded,
   onChange,
 }: {
+  accountId?: string;
   accountSlug: string;
   audienceType: CampaignAudienceType;
   audienceConfig: CampaignAudienceConfig;
@@ -87,6 +91,15 @@ export function CampaignAudiencePicker({
   const [manualText, setManualText] = useState(
     (audienceConfig.emails ?? []).join(', '),
   );
+  const [createdContacts, setCreatedContacts] = useState<
+    AudiencePickerOption[]
+  >([]);
+
+  const contactOptions = useMemo(() => {
+    const known = new Set(contacts.map((row) => row.id));
+    const extras = createdContacts.filter((row) => !known.has(row.id));
+    return [...extras, ...contacts];
+  }, [contacts, createdContacts]);
 
   const selectedClientIds = useMemo(
     () => new Set(audienceConfig.clientIds ?? []),
@@ -96,6 +109,26 @@ export function CampaignAudiencePicker({
     () => new Set(audienceConfig.contactIds ?? []),
     [audienceConfig.contactIds],
   );
+  const selectedList = lists.find((list) => list.id === audienceConfig.listId);
+  const audienceConfigRef = useRef(audienceConfig);
+  useEffect(() => {
+    audienceConfigRef.current = audienceConfig;
+  }, [audienceConfig]);
+
+  const addContactToCustomAudience = (contactId: string) => {
+    const current = audienceConfigRef.current;
+    const next = new Set(current.contactIds ?? []);
+    next.add(contactId);
+    const nextConfig = {
+      ...current,
+      contactIds: [...next],
+    };
+    audienceConfigRef.current = nextConfig;
+    onChange({
+      audienceType: 'custom',
+      audienceConfig: nextConfig,
+    });
+  };
 
   const setType = (next: CampaignAudienceType) => {
     onChange({
@@ -176,6 +209,18 @@ export function CampaignAudiencePicker({
       )}
 
       {!lockType &&
+      (effectiveType === 'subscribers' ||
+        effectiveType === 'clients' ||
+        effectiveType === 'contacts') ? (
+        <p
+          className={`text-sm ${workspaceTextMuted}`}
+          data-test="campaign-audience-add-one-hint"
+        >
+          Add one contact from Custom, or from a manual saved list.
+        </p>
+      ) : null}
+
+      {!lockType &&
       savedLists &&
       lists.length === 0 &&
       effectiveType !== 'list' ? (
@@ -247,6 +292,28 @@ export function CampaignAudiencePicker({
               Pick a list (or create one) before sending.
             </p>
           ) : null}
+          {selectedList?.source === 'manual' ? (
+            <CampaignAudienceAddContact
+              accountId={accountId}
+              accountSlug={accountSlug}
+              mode="manual-list"
+              listId={selectedList.id}
+              listName={selectedList.name}
+              contacts={contactOptions}
+              disabled={disabled}
+              onContactCreated={(contact) =>
+                setCreatedContacts((current) => [contact, ...current])
+              }
+            />
+          ) : selectedList ? (
+            <p
+              className={`text-sm ${workspaceTextMuted}`}
+              data-test="campaign-audience-logic-list-note"
+            >
+              This list includes people by filter rules. Add one contact from a
+              manual list, or from Custom.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -258,6 +325,19 @@ export function CampaignAudiencePicker({
               : 'space-y-4 border-t border-[color:var(--workspace-shell-border)] pt-4'
           }
         >
+          <CampaignAudienceAddContact
+            accountId={accountId}
+            accountSlug={accountSlug}
+            mode="custom"
+            contacts={contactOptions}
+            selectedIds={selectedContactIds}
+            disabled={disabled}
+            onAddToAudience={addContactToCustomAudience}
+            onContactCreated={(contact) =>
+              setCreatedContacts((current) => [contact, ...current])
+            }
+          />
+
           <div className="space-y-2">
             <Label htmlFor="campaign-audience-emails" className={workspaceText}>
               Manual emails
@@ -309,7 +389,7 @@ export function CampaignAudiencePicker({
             <PickerList
               title="Contacts"
               empty="No contacts with email."
-              options={contacts}
+              options={contactOptions}
               selected={selectedContactIds}
               disabled={disabled}
               onToggle={(id, checked) => {

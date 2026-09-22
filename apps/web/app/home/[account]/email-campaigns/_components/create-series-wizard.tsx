@@ -243,6 +243,7 @@ export function CreateSeriesWizard({
 
       {step === 1 ? (
         <CampaignAudiencePicker
+          accountId={accountId}
           accountSlug={accountSlug}
           audienceType={audienceType}
           audienceConfig={audienceConfig}

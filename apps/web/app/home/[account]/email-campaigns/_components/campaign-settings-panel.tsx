@@ -279,6 +279,7 @@ export function CampaignSettingsPanel({
       </div>
 
       <CampaignAudiencePicker
+        accountId={accountId}
         accountSlug={accountSlug}
         audienceType={audienceType}
         audienceConfig={audienceConfig}
