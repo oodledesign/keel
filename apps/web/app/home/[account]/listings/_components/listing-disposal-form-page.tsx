@@ -8,6 +8,7 @@ import pathsConfig from '~/config/paths.config';
 import { updateDeal } from '~/home/(user)/pipeline/actions';
 import { bindListingToActiveSopAssist } from '~/home/[account]/sops/_components/sop-tracker-widget';
 
+import { useNotifyBoardCompanyPrompt } from '../_lib/client/notify-board-company';
 import {
   type ListingFormState,
   formStateToListingPayload,
@@ -40,20 +41,26 @@ export function ListingDisposalFormPage({
   const skipNextSave = useRef(true);
   const dealLinkedRef = useRef(false);
   const sopBoundRef = useRef(false);
+  const lastPersistedStatus = useRef(listing.status);
+  const { maybePrompt, dialog: boardNotifyDialog } =
+    useNotifyBoardCompanyPrompt({ accountId, accountSlug });
 
   const persist = useCallback(
     async (form: ListingFormState) => {
       setAutosaveStatus('saving');
       try {
         const payload = formStateToListingPayload(form);
+        const previousStatus = lastPersistedStatus.current;
+        const nextStatus = payload.status ?? form.status;
         await updateListing({
           listingId: listing.id,
           accountId,
           ...payload,
         });
+        lastPersistedStatus.current = nextStatus;
         setAutosaveStatus('saved');
 
-        if (payload.status === 'marketing' && listing.status !== 'marketing') {
+        if (nextStatus === 'marketing' && previousStatus !== 'marketing') {
           const { maybeNudgeMoveInstructionToCurrent } =
             await import('../_lib/client/marketing-instruction-nudge');
           await maybeNudgeMoveInstructionToCurrent({
@@ -61,6 +68,12 @@ export function ListingDisposalFormPage({
             listingId: listing.id,
           });
         }
+
+        maybePrompt({
+          listingId: listing.id,
+          previousStatus,
+          nextStatus,
+        });
 
         if (pipelineDealId && !dealLinkedRef.current) {
           dealLinkedRef.current = true;
@@ -73,7 +86,7 @@ export function ListingDisposalFormPage({
         setAutosaveStatus('error');
       }
     },
-    [accountId, accountSlug, listing.id, listing.status, pipelineDealId],
+    [accountId, accountSlug, listing.id, maybePrompt, pipelineDealId],
   );
 
   const scheduleAutosave = useCallback(
@@ -143,6 +156,7 @@ export function ListingDisposalFormPage({
           router.refresh();
         }}
       />
+      {boardNotifyDialog}
     </div>
   );
 }

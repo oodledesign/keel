@@ -62,6 +62,7 @@ import {
   SavePropertyHiveCredentialsSchema,
   SaveRightmoveWorkspaceBranchesSchema,
   SaveWebsiteListingUrlTemplateSchema,
+  SaveBoardCompanySettingsSchema,
   SelectLinkedInOrgSchema,
   SetEachListingFeedInclusionSchema,
   SetRightmoveListingInclusionSchema,
@@ -739,4 +740,27 @@ export const saveWebsiteListingUrlTemplateAction = enhanceAction(
     return loadCommercialPublishingSettings(input.accountId);
   },
   { schema: SaveWebsiteListingUrlTemplateSchema },
+);
+
+export const saveBoardCompanySettingsAction = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'save board company settings',
+    );
+
+    const { saveCommercialBoardSettings } =
+      await import('~/lib/commercial/board-company-settings.server');
+
+    return saveCommercialBoardSettings(db(), input.accountId, {
+      email: input.email,
+      cc: input.cc,
+      subjectTemplate: input.subjectTemplate,
+      bodyTemplate: input.bodyTemplate,
+      byBranch: input.byBranch ?? {},
+    });
+  },
+  { schema: SaveBoardCompanySettingsSchema },
 );

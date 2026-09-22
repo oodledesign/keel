@@ -23,6 +23,8 @@ export type ListingEventType =
   | 'portal_sync'
   | 'media_changed'
   | 'marketing_updated'
+  | 'board_notify_sent'
+  | 'board_notify_skipped'
   | 'note'
   | 'seeded';
 
