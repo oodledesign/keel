@@ -289,7 +289,7 @@ export function ListingsMapView({
                           <Link
                             href={href}
                             onClick={(e) => e.stopPropagation()}
-                            className="line-clamp-1 text-sm font-semibold text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
+                            className="line-clamp-1 text-sm font-semibold text-[var(--workspace-shell-text)] transition-colors hover:text-[var(--workspace-shell-accent-text)]"
                           >
                             {listing.name}
                           </Link>
