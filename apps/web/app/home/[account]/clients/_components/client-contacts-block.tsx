@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   Check,
@@ -330,8 +330,10 @@ function AddContactForm({
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState('');
 
+  const contactSearchRequest = useRef(0);
+
   const loadAccountContacts = useCallback(
-    async (query?: string) => {
+    async (query: string | undefined, requestId: number) => {
       setLoadingContacts(true);
       try {
         const result = (await listAccountContacts({
@@ -339,11 +341,15 @@ function AddContactForm({
           clientId,
           query: query?.trim() || undefined,
         })) as { data?: AccountContact[] };
+        if (requestId !== contactSearchRequest.current) return;
         setAccountContacts(Array.isArray(result?.data) ? result.data : []);
       } catch {
+        if (requestId !== contactSearchRequest.current) return;
         setAccountContacts([]);
       } finally {
-        setLoadingContacts(false);
+        if (requestId === contactSearchRequest.current) {
+          setLoadingContacts(false);
+        }
       }
     },
     [accountId, clientId],
@@ -351,8 +357,10 @@ function AddContactForm({
 
   useEffect(() => {
     if (mode !== 'existing') return;
+    const requestId = ++contactSearchRequest.current;
+    setLoadingContacts(true);
     const timer = window.setTimeout(() => {
-      void loadAccountContacts(searchQuery);
+      void loadAccountContacts(searchQuery, requestId);
     }, 200);
     return () => window.clearTimeout(timer);
   }, [loadAccountContacts, mode, searchQuery]);

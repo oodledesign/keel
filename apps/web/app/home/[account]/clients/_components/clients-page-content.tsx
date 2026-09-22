@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Linkedin,
   List,
+  Loader2,
   PlusCircle,
   Search,
   Upload,
@@ -143,7 +144,7 @@ export function ClientsPageContent({
   accountId,
   canViewClients,
   canEditClients,
-  isContractorView,
+  isContractorView: _isContractorView,
   initialOverview = [],
   initialTotal = 0,
   variant = 'work',
@@ -436,6 +437,9 @@ export function ClientsPageContent({
 
   const searchQuery = search.trim().toLowerCase();
   const isSearching = searchQuery.length > 0;
+  const searchPending =
+    isSearching &&
+    (search.trim() !== searchDebounced.trim() || enrichingSearch);
 
   const displayedClients = useMemo(() => {
     if (isSearching) {
@@ -707,9 +711,10 @@ export function ClientsPageContent({
             onRestored={() => void refreshClients()}
             terminology={isCommercial ? 'commercial' : 'default'}
           />
-        ) : loadingPage && displayedClients.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-            <Trans i18nKey="common:loading" />
+        ) : displayedClients.length === 0 && (loadingPage || searchPending) ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--workspace-shell-text-muted)]">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {isSearching ? 'Searching…' : <Trans i18nKey="common:loading" />}
           </div>
         ) : displayedClients.length === 0 ? (
           <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
@@ -788,9 +793,10 @@ export function ClientsPageContent({
           </div>
         )}
 
-        {!showArchived && isSearching && enrichingSearch ? (
-          <p className="mt-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-            Finding more matches…
+        {!showArchived && searchPending && displayedClients.length > 0 ? (
+          <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Searching…
           </p>
         ) : null}
 

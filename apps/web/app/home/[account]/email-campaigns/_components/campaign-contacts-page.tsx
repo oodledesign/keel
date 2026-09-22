@@ -2,6 +2,7 @@
 
 import {
   type TransitionStartFunction,
+  useCallback,
   useMemo,
   useState,
   useTransition,
@@ -9,6 +10,8 @@ import {
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
+import { Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -84,6 +87,7 @@ export function CampaignContactsPage({
   const growth = hasCampaignsGrowthFeatures(planTier);
   const savedLists = hasCampaignsSavedLists(planTier);
   const [pending, startTransition] = useTransition();
+  const [searching, startSearch] = useTransition();
   const [query, setQuery] = useState(initialQuery ?? '');
   const [categoryFilter, setCategoryFilter] = useState(initialCategoryId ?? '');
   const [industryFilter, setIndustryFilter] = useState(initialIndustry ?? '');
@@ -128,8 +132,7 @@ export function CampaignContactsPage({
   const selectedSet = new Set(selected);
   const allVisibleSelected =
     filtered.length > 0 && filtered.every((row) => selectedSet.has(row.id));
-
-  const applySearch = () => {
+  const applySearch = useCallback(() => {
     const params = new URLSearchParams();
     if (query.trim()) params.set('q', query.trim());
     if (categoryFilter) params.set('category', categoryFilter);
@@ -138,8 +141,10 @@ export function CampaignContactsPage({
       '[account]',
       accountSlug,
     )}${params.toString() ? `?${params}` : ''}`;
-    router.push(href);
-  };
+    startSearch(() => {
+      router.push(href);
+    });
+  }, [accountSlug, categoryFilter, industryFilter, query, router]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -293,6 +298,15 @@ export function CampaignContactsPage({
           />
         ) : null}
 
+        {searching && filtered.length > 0 ? (
+          <p
+            className={`flex items-center gap-2 text-xs ${workspaceTextMuted}`}
+          >
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Searching…
+          </p>
+        ) : null}
+
         <div className={`${workspacePanelCard} overflow-x-auto`}>
           <table
             className="w-full text-left text-sm"
@@ -324,7 +338,16 @@ export function CampaignContactsPage({
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {searching && filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className={`px-3 py-6 ${workspaceTextMuted}`}>
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Searching…
+                    </span>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className={`px-3 py-6 ${workspaceTextMuted}`}>
                     No contacts match. Create one or upload a CSV.

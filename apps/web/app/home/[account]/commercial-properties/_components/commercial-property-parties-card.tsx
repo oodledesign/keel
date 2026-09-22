@@ -64,13 +64,16 @@ export function CommercialPropertyPartiesCard({
   const [contactPhone, setContactPhone] = useState('');
   const [pending, startTransition] = useTransition();
   const [searching, startSearch] = useTransition();
+  const [searchSettledFor, setSearchSettledFor] = useState('');
 
   useEffect(() => {
     const q = query.trim();
     if (q.length < 1) {
       setResults([]);
+      setSearchSettledFor('');
       return;
     }
+    let cancelled = false;
     const handle = window.setTimeout(() => {
       startSearch(async () => {
         try {
@@ -80,14 +83,25 @@ export function CommercialPropertyPartiesCard({
             excludePropertyId: propertyId,
             role,
           });
-          setResults(rows);
+          if (!cancelled) setResults(rows);
         } catch (err) {
           console.error(err);
+          if (!cancelled) setResults([]);
+        } finally {
+          if (!cancelled) setSearchSettledFor(q);
         }
       });
     }, 220);
-    return () => window.clearTimeout(handle);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
   }, [accountId, propertyId, query, role]);
+
+  const trimmedContactQuery = query.trim();
+  const contactSearchPending =
+    trimmedContactQuery.length > 0 &&
+    (searching || searchSettledFor !== trimmedContactQuery);
 
   const linkedKeys = useMemo(
     () => new Set(parties.map((p) => `${p.clientId}:${p.role}`)),
@@ -205,7 +219,7 @@ export function CommercialPropertyPartiesCard({
               disabled={pending}
               onChange={(e) => setQuery(e.target.value)}
             />
-            {query.trim() && (searching || results.length > 0) ? (
+            {trimmedContactQuery ? (
               <ul className="max-h-44 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
                 {results
                   .filter((row) => !linkedKeys.has(`${row.id}:${role}`))
@@ -230,7 +244,11 @@ export function CommercialPropertyPartiesCard({
                       </button>
                     </li>
                   ))}
-                {!searching && results.length === 0 ? (
+                {contactSearchPending ? (
+                  <li className="px-3 py-2 text-sm text-[var(--workspace-shell-text)]/45">
+                    Searching…
+                  </li>
+                ) : results.length === 0 ? (
                   <li className="px-3 py-2 text-sm text-[var(--workspace-shell-text)]/45">
                     No matching contacts
                   </li>
