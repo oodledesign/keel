@@ -20,7 +20,8 @@ const EXTRA_STATUS_LABEL: Record<string, string> = {
 
 /**
  * Soft tinted pills — same language as listing/job status chips.
- * Colours come from Ozer tokens (info / gold / coral / sage / muted).
+ * Colours come from Ozer tokens (info / gold / coral / sage / sky / muted).
+ * Sent is a light aqua wash (sage mixed into sky) with slate-blue text.
  */
 export const CAMPAIGN_STATUS_BADGE_CLASS: Record<EmailCampaignStatus, string> =
   {
@@ -30,7 +31,7 @@ export const CAMPAIGN_STATUS_BADGE_CLASS: Record<EmailCampaignStatus, string> =
       'bg-[color-mix(in_srgb,var(--ozer-gold-500)_20%,transparent)] text-[var(--ozer-plum-800)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-gold-500)_42%,transparent)] dark:text-[var(--ozer-gold-500)]',
     sending:
       'bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--ozer-info)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-info)_28%,transparent)]',
-    sent: 'bg-[var(--ozer-lime-400)] font-semibold text-[var(--ozer-plum-900)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-plum-900)_30%,var(--ozer-lime-400))] dark:bg-[var(--ozer-lime-400)] dark:text-[var(--ozer-plum-900)] dark:ring-[color-mix(in_srgb,var(--ozer-plum-900)_40%,var(--ozer-lime-400))]',
+    sent: 'bg-[color-mix(in_srgb,var(--ozer-sage-500)_28%,var(--ozer-sky-100))] text-[var(--ozer-slate-blue)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-slate-blue)_28%,transparent)]',
     cancelled:
       'bg-[color-mix(in_srgb,var(--ozer-text-muted)_18%,transparent)] text-[var(--workspace-shell-text-muted)] ring-1 ring-inset ring-[color:var(--workspace-shell-border)]',
     failed:

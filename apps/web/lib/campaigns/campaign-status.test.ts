@@ -37,9 +37,11 @@ describe('campaign status pills', () => {
     ]);
   });
 
-  it('uses a vivid lime fill for sent', () => {
-    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-lime-400');
-    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-plum-900');
+  it('uses a light aqua fill and darker teal text for sent', () => {
+    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-sage-500');
+    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-sky-100');
+    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).toContain('ozer-slate-blue');
+    expect(CAMPAIGN_STATUS_BADGE_CLASS.sent).not.toContain('ozer-lime-400');
   });
 
   it('uses a distinct colour class per status', () => {
