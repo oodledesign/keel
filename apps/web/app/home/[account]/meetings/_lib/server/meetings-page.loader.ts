@@ -475,19 +475,19 @@ async function loadMeetingTranscriptPageDataImpl(
       ? {
           ...meetingTranscript,
           publicShareToken: access.canEditClients
-            ? transcript.publicShareToken
+            ? meetingTranscript.publicShareToken
             : null,
           publicShareEnabled: access.canEditClients
-            ? transcript.publicShareEnabled
+            ? meetingTranscript.publicShareEnabled
             : false,
           publicShareShowTasks: access.canEditClients
-            ? transcript.publicShareShowTasks
+            ? meetingTranscript.publicShareShowTasks
             : false,
           portalVisible: access.canEditClients
-            ? transcript.portalVisible
+            ? meetingTranscript.portalVisible
             : false,
         }
-      : transcript,
+      : meetingTranscript,
     summary,
     meetingTasks,
     clients: mapClientOptions(clientsResult.data ?? []),
