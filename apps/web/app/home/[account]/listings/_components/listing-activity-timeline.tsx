@@ -22,6 +22,8 @@ const EVENT_ICONS: Record<string, typeof CircleDot> = {
   portal_sync: Megaphone,
   media_changed: Camera,
   marketing_updated: FileText,
+  board_notify_sent: Megaphone,
+  board_notify_skipped: FileText,
   note: FileText,
   seeded: CircleDot,
 };

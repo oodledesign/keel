@@ -59,6 +59,7 @@ import {
   listingEmptyForm,
   listingToFormState,
 } from '../_lib/listing-form-shared';
+import { useNotifyBoardCompanyPrompt } from '../_lib/client/notify-board-company';
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { createListing, updateListing } from '../_lib/server/server-actions';
 import { useDisposalAccess } from './disposal-access-context';
@@ -98,28 +99,38 @@ export function ListingFormModal({
   marketingOverrides,
   epcConfigured = false,
 }: ListingFormModalProps) {
+  const { maybePrompt, dialog: boardNotifyDialog } =
+    useNotifyBoardCompanyPrompt({
+      accountId,
+      accountSlug,
+    });
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-        <DialogHeader>
-          <DialogTitle className="text-[var(--workspace-shell-text)]">
-            {listing ? 'Edit disposal' : 'Add disposal'}
-          </DialogTitle>
-        </DialogHeader>
-        <ListingFormFields
-          key={`${listing?.id ?? 'new'}-${open ? 'open' : 'closed'}-${marketingOverrides ? 'ai' : 'base'}`}
-          accountId={accountId}
-          accountSlug={accountSlug}
-          listing={listing}
-          onClose={onClose}
-          onSaved={onSaved}
-          defaults={defaults}
-          instructingClientId={instructingClientId}
-          marketingOverrides={marketingOverrides}
-          epcConfigured={epcConfigured}
-        />
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <DialogHeader>
+            <DialogTitle className="text-[var(--workspace-shell-text)]">
+              {listing ? 'Edit disposal' : 'Add disposal'}
+            </DialogTitle>
+          </DialogHeader>
+          <ListingFormFields
+            key={`${listing?.id ?? 'new'}-${open ? 'open' : 'closed'}-${marketingOverrides ? 'ai' : 'base'}`}
+            accountId={accountId}
+            accountSlug={accountSlug}
+            listing={listing}
+            onClose={onClose}
+            onSaved={onSaved}
+            defaults={defaults}
+            instructingClientId={instructingClientId}
+            marketingOverrides={marketingOverrides}
+            epcConfigured={epcConfigured}
+            onBoardNotifyPrompt={maybePrompt}
+          />
+        </DialogContent>
+      </Dialog>
+      {boardNotifyDialog}
+    </>
   );
 }
 
@@ -137,6 +148,7 @@ function ListingFormFields({
   onFormChange,
   onDone,
   epcConfigured = false,
+  onBoardNotifyPrompt,
 }: {
   accountId: string;
   accountSlug?: string;
@@ -156,6 +168,11 @@ function ListingFormFields({
   onFormChange?: (form: ListingFormState) => void;
   onDone?: () => void;
   epcConfigured?: boolean;
+  onBoardNotifyPrompt?: (params: {
+    listingId: string;
+    previousStatus: string | null | undefined;
+    nextStatus: string;
+  }) => void;
 }) {
   const isEdit = Boolean(listing);
   const isPage = presentation === 'page';
@@ -216,6 +233,14 @@ function ListingFormFields({
           await maybeNudgeMoveInstructionToCurrent({
             accountId,
             listingId: saved.id,
+          });
+        }
+
+        if (!isPage) {
+          onBoardNotifyPrompt?.({
+            listingId: saved.id,
+            previousStatus,
+            nextStatus: form.status,
           });
         }
 

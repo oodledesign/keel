@@ -1,6 +1,8 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
+import { loadAccountBranches } from '~/lib/brand/account-branches';
+import { loadCommercialBoardSettings } from '~/lib/commercial/board-company-settings.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -11,6 +13,7 @@ import {
 } from '../_lib/server/workspace-route-guard';
 import { createListingsService } from '../listings/_lib/server/listings.service';
 import { RequirementFormSettingsCard } from '../requirements/_components/requirement-form-settings-card';
+import { BoardCompanySettingsCard } from './_components/board-company-settings-card';
 import { CommercialPublishingSettings } from './_components/commercial-publishing-settings';
 import { loadCommercialPublishingSettings } from './_lib/server/commercial-publishing.loader';
 
@@ -46,22 +49,33 @@ async function CommercialPublishingPage({
     await import('~/lib/commercial/commercial-seat-access');
   const { portalPublishingAllowed } =
     await import('~/lib/billing/commercial-graduated-pricing');
-  const [settings, listings, billableSeats] = await Promise.all([
-    loadCommercialPublishingSettings(accountId),
-    createListingsService(client).listListings(accountId),
-    getCommercialBillableSeatCount(client, accountId),
-  ]);
+  const [settings, boardSettings, branches, listings, billableSeats] =
+    await Promise.all([
+      loadCommercialPublishingSettings(accountId),
+      loadCommercialBoardSettings(client, accountId),
+      loadAccountBranches(accountId),
+      createListingsService(client).listListings(accountId),
+      getCommercialBillableSeatCount(client, accountId),
+    ]);
 
   return (
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Website & portals"
-        description="Property Hive and EACH listing XML feeds, Rightmove portal setup, and LinkedIn company-page posting."
+        description="Property Hive and EACH listing XML feeds, Rightmove portal setup, LinkedIn company-page posting, and board company notify."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <div className="space-y-4">
           <RequirementFormSettingsCard accountId={accountId} />
+          <BoardCompanySettingsCard
+            accountId={accountId}
+            initialSettings={boardSettings}
+            branches={branches.map((branch) => ({
+              id: branch.id,
+              name: branch.name,
+            }))}
+          />
           <CommercialPublishingSettings
             accountId={accountId}
             accountSlug={slug}

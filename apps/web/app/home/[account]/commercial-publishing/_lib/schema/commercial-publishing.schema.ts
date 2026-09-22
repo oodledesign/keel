@@ -122,3 +122,29 @@ export const SaveWebsiteListingUrlTemplateSchema = AccountIdSchema.extend({
       },
     ),
 });
+
+const optionalEmail = z
+  .string()
+  .trim()
+  .max(320)
+  .refine(
+    (value) => value === '' || z.string().email().safeParse(value).success,
+    'Enter a valid email',
+  );
+
+export const SaveBoardCompanySettingsSchema = AccountIdSchema.extend({
+  email: optionalEmail,
+  cc: z.string().trim().max(1000),
+  subjectTemplate: z.string().trim().min(1).max(300),
+  bodyTemplate: z.string().trim().min(1).max(8000),
+  byBranch: z
+    .record(
+      z.string().uuid(),
+      z.object({
+        email: optionalEmail,
+        cc: z.string().trim().max(1000),
+      }),
+    )
+    .optional()
+    .default({}),
+});
