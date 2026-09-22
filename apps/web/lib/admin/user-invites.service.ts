@@ -27,9 +27,11 @@ import {
   syncWorkspaceStateAfterAdminGrant,
   syncWorkspaceStateAfterAdminPlan,
 } from '~/lib/billing/sync-workspace-from-admin-grant';
+import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import type { AdminUserInviteRow } from './user-invites.schema';
+import { renderWorkspaceOwnerInviteEmail } from './workspace-owner-invite';
 
 export type { AdminUserInviteRow };
 
@@ -413,6 +415,188 @@ export async function sendAdminUserInviteEmail(params: {
   });
 }
 
+function provisionedOwnerHomePath(slug: string): string {
+  return pathsConfig.app.accountHome.replace('[account]', slug);
+}
+
+function readProvisionedOwner(
+  config: ReturnType<typeof parseAdminUserInviteAccessConfig>,
+): { accountId: string; slug: string; workspaceName: string } | null {
+  const owner = config.provisionedOwner;
+  const accountId =
+    typeof owner?.accountId === 'string' ? owner.accountId.trim() : '';
+  const slug = typeof owner?.slug === 'string' ? owner.slug.trim() : '';
+  const workspaceName =
+    typeof owner?.workspaceName === 'string' ? owner.workspaceName.trim() : '';
+
+  if (!accountId || !slug || !workspaceName) {
+    return null;
+  }
+
+  return { accountId, slug, workspaceName };
+}
+
+export async function sendWorkspaceOwnerInviteEmail(params: {
+  email: string;
+  inviteToken: string;
+  workspaceName: string;
+  inviterName: string;
+  accountId?: string;
+}): Promise<void> {
+  const acceptUrl = getAdminUserInviteAcceptUrl(params.inviteToken);
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+  const sender = process.env.EMAIL_SENDER;
+
+  if (!sender) {
+    throw new Error('EMAIL_SENDER is not configured');
+  }
+
+  const { html, subject } = renderWorkspaceOwnerInviteEmail({
+    workspaceName: params.workspaceName,
+    inviterName: params.inviterName,
+    acceptUrl,
+    productName,
+  });
+
+  await sendPlatformEmail({
+    type: 'invitation',
+    accountId: params.accountId,
+    mail: {
+      to: params.email,
+      from: sender,
+      subject,
+      html,
+    },
+    metadata: {
+      kind: 'workspace_owner_invite',
+      inviteToken: params.inviteToken,
+      workspaceName: params.workspaceName,
+    },
+  });
+}
+
+/**
+ * Record a sign-in invite for an owner whose account and workspace already exist.
+ * The invite row is kept when email delivery fails so it can be resent.
+ */
+export async function createProvisionedWorkspaceOwnerInvite(
+  admin: SupabaseClient,
+  params: {
+    email: string;
+    invitedBy: string;
+    inviterName: string;
+    accountId: string;
+    slug: string;
+    workspaceName: string;
+  },
+): Promise<{
+  invite: AdminUserInviteRow;
+  emailSent: boolean;
+  emailError?: string;
+}> {
+  const normalizedEmail = params.email.trim().toLowerCase();
+
+  const { data: pendingRows, error: pendingError } = await admin
+    .from('admin_user_invites')
+    .select('*')
+    .eq('email', normalizedEmail)
+    .eq('status', 'pending')
+    .gte('expires_at', new Date().toISOString())
+    .limit(1);
+
+  if (pendingError) {
+    throw new Error(pendingError.message);
+  }
+
+  const existingPending = (pendingRows?.[0] ??
+    null) as AdminUserInviteRow | null;
+
+  if (existingPending) {
+    const existingConfig = parseAdminUserInviteAccessConfig(
+      existingPending.access_config,
+    );
+
+    if (existingConfig.provisionedOwner?.accountId === params.accountId) {
+      try {
+        await sendWorkspaceOwnerInviteEmail({
+          email: normalizedEmail,
+          inviteToken: existingPending.invite_token,
+          workspaceName: params.workspaceName,
+          inviterName: params.inviterName,
+          accountId: params.accountId,
+        });
+        return { invite: existingPending, emailSent: true };
+      } catch (sendError) {
+        return {
+          invite: existingPending,
+          emailSent: false,
+          emailError: formatEmailDeliveryError(sendError),
+        };
+      }
+    }
+
+    return {
+      invite: existingPending,
+      emailSent: false,
+      emailError:
+        'A pending invite already exists for this email. Resend or revoke it from Admin → Users.',
+    };
+  }
+
+  const { data, error } = await admin
+    .from('admin_user_invites')
+    .insert({
+      email: normalizedEmail,
+      invited_by: params.invitedBy,
+      access_config: {
+        provisionedOwner: {
+          accountId: params.accountId,
+          slug: params.slug,
+          workspaceName: params.workspaceName,
+        },
+      },
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const invite = data as AdminUserInviteRow;
+
+  let emailSent = true;
+  let emailError: string | undefined;
+
+  try {
+    await sendWorkspaceOwnerInviteEmail({
+      email: normalizedEmail,
+      inviteToken: invite.invite_token,
+      workspaceName: params.workspaceName,
+      inviterName: params.inviterName,
+      accountId: params.accountId,
+    });
+  } catch (sendError) {
+    emailSent = false;
+    emailError = formatEmailDeliveryError(sendError);
+  }
+
+  await logAdminAction(admin, {
+    actorUserId: params.invitedBy,
+    action: 'create_user_invite',
+    targetAccountId: params.accountId,
+    metadata: {
+      inviteId: invite.id,
+      email: normalizedEmail,
+      kind: 'workspace_owner_invite',
+      workspaceName: params.workspaceName,
+      emailSent,
+    },
+  });
+
+  return { invite, emailSent, emailError };
+}
+
 export async function loadAdminUserInviteByToken(
   admin: SupabaseClient,
   inviteToken: string,
@@ -554,6 +738,17 @@ export async function resendAdminUserInvite(
   const invite = data as AdminUserInviteRow;
   const config = parseAdminUserInviteAccessConfig(invite.access_config);
 
+  if (config.provisionedOwner?.workspaceName) {
+    await sendWorkspaceOwnerInviteEmail({
+      email: invite.email,
+      inviteToken: invite.invite_token,
+      workspaceName: config.provisionedOwner.workspaceName,
+      inviterName,
+      accountId: config.provisionedOwner.accountId,
+    });
+    return;
+  }
+
   await sendAdminUserInviteEmail({
     email: invite.email,
     inviteToken: invite.invite_token,
@@ -577,6 +772,13 @@ export async function fulfillAdminUserInvite(
 
   if (invite.status === 'accepted' && invite.accepted_user_id === userId) {
     const config = parseAdminUserInviteAccessConfig(invite.access_config);
+    const acceptedOwner = readProvisionedOwner(config);
+    if (acceptedOwner) {
+      return {
+        redirectTo: provisionedOwnerHomePath(acceptedOwner.slug),
+      };
+    }
+
     if (config.personalOnly) {
       return { redirectTo: pathsConfig.app.home };
     }
@@ -613,6 +815,55 @@ export async function fulfillAdminUserInvite(
   }
 
   const config = parseAdminUserInviteAccessConfig(invite.access_config);
+
+  if (config.provisionedOwner) {
+    const provisionedOwner = readProvisionedOwner(config);
+    if (!provisionedOwner) {
+      throw new Error('Owner invitation is missing workspace details.');
+    }
+
+    await admin
+      .from('admin_user_invites')
+      .update({
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+        accepted_user_id: userId,
+      })
+      .eq('id', invite.id);
+
+    await logAdminAction(admin, {
+      actorUserId: userId,
+      action: 'accept_user_invite',
+      targetAccountId: provisionedOwner.accountId,
+      metadata: {
+        inviteId: invite.id,
+        email: invite.email,
+        kind: 'workspace_owner_invite',
+      },
+    });
+
+    void import('~/lib/admin/platform-lifecycle-notifications')
+      .then(({ notifyPlatformInviteAccepted }) =>
+        notifyPlatformInviteAccepted({
+          email: invite.email,
+          userId,
+          inviteKind: 'admin_user',
+          workspaceName: provisionedOwner.workspaceName,
+          workspaceSlug: provisionedOwner.slug,
+        }),
+      )
+      .catch((err) => {
+        console.error(
+          '[admin-invite] Failed to queue invite-accepted notification:',
+          err instanceof Error ? err.message : err,
+        );
+      });
+
+    return {
+      redirectTo: provisionedOwnerHomePath(provisionedOwner.slug),
+    };
+  }
+
   let primarySlug: string | null = null;
   let landingSlug: string | null = null;
 

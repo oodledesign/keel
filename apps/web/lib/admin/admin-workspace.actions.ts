@@ -19,12 +19,14 @@ import {
   spaceTypeForProfile,
 } from '~/home/[account]/_lib/workspace-profile';
 import { logAdminAction } from '~/lib/admin/log-admin-action';
+import { createProvisionedWorkspaceOwnerInvite } from '~/lib/admin/user-invites.service';
 import { findPlanByProductAndPlanId } from '~/lib/billing/ozer-plan-catalog';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,
   seedWorkspaceModulesForProfile,
   syncWorkspaceStateAfterAdminPlan,
 } from '~/lib/billing/sync-workspace-from-admin-grant';
+import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 
 import {
   AddAdminWorkspaceMemberSchema,
@@ -130,6 +132,70 @@ async function resolveUserIdByEmail(
   }
 }
 
+async function resolveOrCreateOwnerUserId(
+  admin: AdminClient,
+  email: string,
+): Promise<{ userId: string; created: boolean }> {
+  const existing = await resolveUserIdByEmail(admin, email);
+  if (existing) {
+    return { userId: existing, created: false };
+  }
+
+  const normalized = email.trim().toLowerCase();
+  const { data, error } = await admin.auth.admin.createUser({
+    email: normalized,
+    email_confirm: true,
+    user_metadata: {
+      name: normalized.split('@')[0] || normalized,
+    },
+  });
+
+  if (error || !data.user) {
+    const raced = await resolveUserIdByEmail(admin, normalized);
+    if (raced) {
+      return { userId: raced, created: false };
+    }
+
+    throw new Error(
+      error?.message ?? `Could not create an account for ${normalized}.`,
+    );
+  }
+
+  return { userId: data.user.id, created: true };
+}
+
+async function deleteProvisionedAuthUser(admin: AdminClient, userId: string) {
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    console.error(
+      '[admin-workspace] Failed to roll back provisioned owner:',
+      error.message,
+    );
+  }
+}
+
+/**
+ * Drop a workspace created for a brand-new owner, then the auth user.
+ * The user is kept if the workspace row cannot be removed, so it is not left ownerless.
+ */
+async function rollbackProvisionedWorkspace(
+  admin: AdminClient,
+  accountId: string,
+  userId: string,
+) {
+  const { error } = await admin.from('accounts').delete().eq('id', accountId);
+
+  if (error) {
+    console.error(
+      '[admin-workspace] Failed to roll back workspace:',
+      error.message,
+    );
+    return;
+  }
+
+  await deleteProvisionedAuthUser(admin, userId);
+}
+
 async function applyWorkspaceDefaults(
   admin: AdminClient,
   accountId: string,
@@ -228,15 +294,11 @@ function revalidateWorkspacePaths(accountId: string) {
 
 export const createAdminWorkspaceAction = enhanceAction(
   async (input) => {
-    const { user } = await requireSuperAdmin();
+    const { user, client } = await requireSuperAdmin();
     const admin = getSupabaseServerAdminClient();
 
-    const ownerUserId = await resolveUserIdByEmail(admin, input.ownerEmail);
-    if (!ownerUserId) {
-      throw new Error(
-        `No existing user found for ${input.ownerEmail}. Invite them from Users first, or pick an existing owner.`,
-      );
-    }
+    const owner = await resolveOrCreateOwnerUserId(admin, input.ownerEmail);
+    const ownerUserId = owner.userId;
 
     const businessMode =
       input.profile === 'work_design'
@@ -259,23 +321,66 @@ export const createAdminWorkspaceAction = enhanceAction(
     });
 
     if (error) {
+      if (owner.created) {
+        await deleteProvisionedAuthUser(admin, ownerUserId);
+      }
       throw new Error(error.message);
     }
 
     const created = account as { id?: string; slug?: string | null } | null;
     const accountId = created?.id;
     if (!accountId) {
+      if (owner.created) {
+        await deleteProvisionedAuthUser(admin, ownerUserId);
+      }
       throw new Error('Workspace was created but no id was returned.');
     }
 
-    await applyWorkspaceDefaults(
-      admin,
-      accountId,
-      input.profile,
-      businessMode,
-      user.id,
-      input.billingExempt,
-    );
+    const workspaceSlug = created?.slug ?? slug;
+    const workspaceName = input.name.trim();
+
+    try {
+      await applyWorkspaceDefaults(
+        admin,
+        accountId,
+        input.profile,
+        businessMode,
+        user.id,
+        input.billingExempt,
+      );
+    } catch (defaultsError) {
+      if (owner.created) {
+        await rollbackProvisionedWorkspace(admin, accountId, ownerUserId);
+      }
+      throw defaultsError;
+    }
+
+    let inviteEmailSent = false;
+    let inviteEmailError: string | undefined;
+
+    if (owner.created) {
+      const { data: profile } = await client
+        .from('accounts')
+        .select('name')
+        .eq('id', user.id)
+        .maybeSingle();
+      const inviterName = profile?.name?.trim() || user.email || 'Ozer';
+
+      try {
+        const invite = await createProvisionedWorkspaceOwnerInvite(admin, {
+          email: input.ownerEmail,
+          invitedBy: user.id,
+          inviterName,
+          accountId,
+          slug: workspaceSlug,
+          workspaceName,
+        });
+        inviteEmailSent = invite.emailSent;
+        inviteEmailError = invite.emailError;
+      } catch (inviteError) {
+        inviteEmailError = formatEmailDeliveryError(inviteError);
+      }
+    }
 
     await logAdminAction(admin, {
       actorUserId: user.id,
@@ -283,21 +388,29 @@ export const createAdminWorkspaceAction = enhanceAction(
       targetAccountId: accountId,
       metadata: {
         name: input.name,
-        slug: created?.slug ?? slug,
+        slug: workspaceSlug,
         profile: input.profile,
         businessMode: businessMode ?? null,
         billingExempt: input.billingExempt,
         ownerEmail: input.ownerEmail.toLowerCase(),
         ownerUserId,
+        ownerCreated: owner.created,
+        inviteEmailSent,
       },
     });
 
     revalidateWorkspacePaths(accountId);
+    if (owner.created) {
+      revalidatePath('/admin/users');
+    }
 
     return {
       success: true as const,
       accountId,
-      slug: created?.slug ?? slug,
+      slug: workspaceSlug,
+      ownerCreated: owner.created,
+      inviteEmailSent,
+      inviteEmailError,
     };
   },
   { schema: CreateAdminWorkspaceSchema },

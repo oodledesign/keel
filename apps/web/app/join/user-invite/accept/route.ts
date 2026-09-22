@@ -6,6 +6,7 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
+import { parseAdminUserInviteAccessConfig } from '~/lib/admin/user-invites.schema';
 import { loadAdminUserInviteByToken } from '~/lib/admin/user-invites.service';
 import { Database } from '~/lib/database.types';
 
@@ -49,10 +50,14 @@ export async function GET(request: NextRequest) {
       return redirectToError('Invitation has expired');
     }
 
-    const emailLinkType = await determineEmailLinkType(
-      adminClient,
-      invitation.email,
+    const accessConfig = parseAdminUserInviteAccessConfig(
+      invitation.access_config,
     );
+    // The owner auth row already exists. A magic link signs them in.
+    // `invite` would target a user who does not exist yet.
+    const emailLinkType = accessConfig.provisionedOwner?.slug
+      ? 'magiclink'
+      : await determineEmailLinkType(adminClient, invitation.email);
 
     const generateLinkResponse = await adminClient.auth.admin.generateLink({
       email: invitation.email,
@@ -81,7 +86,8 @@ export async function GET(request: NextRequest) {
     const joinUrl = new URL(pathsConfig.app.joinUserInvite, siteUrl);
     joinUrl.searchParams.set('invite_token', inviteToken);
 
-    if (emailLinkType === 'invite') {
+    // Provisioned owners still need the new-user password step.
+    if (emailLinkType === 'invite' || accessConfig.provisionedOwner?.slug) {
       joinUrl.searchParams.set('is_new_user', 'true');
     }
 
