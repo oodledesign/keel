@@ -47,20 +47,79 @@ REVOKE UPDATE (
 ) ON public.meeting_transcripts FROM authenticated;
 
 -- Recent Assistant syncs that saved a transcript and never produced a summary.
+-- Includes Dan’s oodle-design reproduction meeting regardless of age.
 UPDATE public.meeting_transcripts AS mt
 SET
   summary_status = 'pending',
   task_extraction_status = 'pending',
   post_sync_error = NULL,
   post_sync_updated_at = now()
-WHERE mt.source = 'desktop_recorder'
-  AND mt.proposal_id IS NULL
+WHERE mt.proposal_id IS NULL
   AND btrim(mt.content) <> ''
-  AND mt.created_at > now() - interval '14 days'
   AND mt.summary_status = 'idle'
   AND mt.task_extraction_status = 'idle'
   AND NOT EXISTS (
     SELECT 1
     FROM public.meeting_summaries AS ms
     WHERE ms.meeting_transcript_id = mt.id
+  )
+  AND (
+    mt.id = 'ae299629-d90a-4508-91cd-7b11f771de3e'
+    OR (
+      mt.source = 'desktop_recorder'
+      AND mt.created_at > now() - interval '14 days'
+    )
+  );
+
+-- Summary row exists but statuses never left idle (partial floating-promise run).
+UPDATE public.meeting_transcripts AS mt
+SET
+  summary_status = 'ready',
+  task_extraction_status = 'pending',
+  post_sync_error = NULL,
+  post_sync_updated_at = now()
+WHERE mt.proposal_id IS NULL
+  AND btrim(mt.content) <> ''
+  AND mt.summary_status = 'idle'
+  AND mt.task_extraction_status = 'idle'
+  AND EXISTS (
+    SELECT 1
+    FROM public.meeting_summaries AS ms
+    WHERE ms.meeting_transcript_id = mt.id
+      AND btrim(ms.summary_text) <> ''
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.meeting_action_items AS mai
+    WHERE mai.meeting_transcript_id = mt.id
+  )
+  AND (
+    mt.id = 'ae299629-d90a-4508-91cd-7b11f771de3e'
+    OR (
+      mt.source = 'desktop_recorder'
+      AND mt.created_at > now() - interval '14 days'
+    )
+  );
+
+-- Summary ready in status terms but tasks still idle (post-column partial runs).
+UPDATE public.meeting_transcripts AS mt
+SET
+  task_extraction_status = 'pending',
+  post_sync_error = NULL,
+  post_sync_updated_at = now()
+WHERE mt.proposal_id IS NULL
+  AND btrim(mt.content) <> ''
+  AND mt.summary_status = 'ready'
+  AND mt.task_extraction_status = 'idle'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.meeting_action_items AS mai
+    WHERE mai.meeting_transcript_id = mt.id
+  )
+  AND (
+    mt.id = 'ae299629-d90a-4508-91cd-7b11f771de3e'
+    OR (
+      mt.source = 'desktop_recorder'
+      AND mt.created_at > now() - interval '14 days'
+    )
   );

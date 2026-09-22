@@ -7,9 +7,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
+  MEETING_POST_SYNC_HEAL_WINDOW_MS,
   MEETING_POST_SYNC_KICK_DEBOUNCE_MS,
+  MEETING_POST_SYNC_REPRO_IDS,
   MEETING_POST_SYNC_STALE_MS,
   type MeetingPostSyncStatus,
+  nextQueuedMeetingPostSyncStatuses,
   parseMeetingPostSyncStatus,
   shouldScheduleMeetingPostSync,
 } from '~/lib/recorder/meeting-post-sync-status';
@@ -297,10 +300,12 @@ export async function ensureMeetingPostSyncQueued(input: {
 
   const currentSummary = parseMeetingPostSyncStatus(input.summaryStatus);
   const currentTasks = parseMeetingPostSyncStatus(input.taskExtractionStatus);
-  const summaryStatus: MeetingPostSyncStatus =
-    currentSummary === 'ready' ? 'ready' : 'pending';
-  const taskExtractionStatus: MeetingPostSyncStatus =
-    currentTasks === 'ready' ? 'ready' : 'pending';
+  const { summaryStatus, taskExtractionStatus } =
+    nextQueuedMeetingPostSyncStatuses({
+      summaryStatus: currentSummary,
+      taskExtractionStatus: currentTasks,
+      hasSummary: input.hasSummary,
+    });
   const postSyncUpdatedAt = new Date().toISOString();
   const admin = getSupabaseServerAdminClient();
   let claim = admin
@@ -331,6 +336,13 @@ export async function ensureMeetingPostSyncQueued(input: {
 
   if (!data?.id) return null;
 
+  console.info('[recorder] queued meeting post-sync', {
+    meetingTranscriptId: input.id,
+    summaryStatus,
+    taskExtractionStatus,
+    hasSummary: input.hasSummary,
+  });
+
   scheduleMeetingPostSync(input.id);
 
   return {
@@ -349,22 +361,49 @@ export async function sweepMeetingPostSync(limit = 8) {
   const staleBefore = new Date(
     Date.now() - MEETING_POST_SYNC_STALE_MS,
   ).toISOString();
+  const healAfter = new Date(
+    Date.now() - MEETING_POST_SYNC_HEAL_WINDOW_MS,
+  ).toISOString();
 
-  const { data, error } = await admin
-    .from('meeting_transcripts')
-    .select('id, summary_status, task_extraction_status, post_sync_updated_at')
-    .is('proposal_id', null)
-    .or(
-      'summary_status.in.(pending,processing),task_extraction_status.in.(pending,processing)',
-    )
-    .order('post_sync_updated_at', { ascending: true })
-    .limit(40);
+  const [{ data, error }, { data: idleRows, error: idleError }] =
+    await Promise.all([
+      admin
+        .from('meeting_transcripts')
+        .select(
+          'id, summary_status, task_extraction_status, post_sync_updated_at',
+        )
+        .is('proposal_id', null)
+        .or(
+          'summary_status.in.(pending,processing),task_extraction_status.in.(pending,processing)',
+        )
+        .order('post_sync_updated_at', { ascending: true })
+        .limit(40),
+      admin
+        .from('meeting_transcripts')
+        .select(
+          'id, source, content, created_at, summary_status, task_extraction_status, post_sync_updated_at',
+        )
+        .is('proposal_id', null)
+        .or(
+          'and(summary_status.eq.idle,task_extraction_status.eq.idle),and(summary_status.eq.ready,task_extraction_status.eq.idle)',
+        )
+        .or(
+          `created_at.gte.${healAfter},id.in.(${MEETING_POST_SYNC_REPRO_IDS.join(',')})`,
+        )
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
 
   if (error) {
     throw new Error(error.message);
   }
+  if (idleError) {
+    throw new Error(idleError.message);
+  }
 
   const ids: string[] = [];
+  let healedIdle = 0;
+
   for (const row of data ?? []) {
     if (ids.length >= limit) break;
     const summary = parseMeetingPostSyncStatus(row.summary_status);
@@ -390,12 +429,63 @@ export async function sweepMeetingPostSync(limit = 8) {
     }
   }
 
+  const idleCandidates = (idleRows ?? []).filter((row) => {
+    if (ids.includes(row.id)) return false;
+    return shouldScheduleMeetingPostSync({
+      id: row.id,
+      source: row.source ?? '',
+      content: row.content ?? '',
+      createdAt: row.created_at ?? new Date(0).toISOString(),
+      summaryStatus: row.summary_status,
+      taskExtractionStatus: row.task_extraction_status,
+      postSyncUpdatedAt: row.post_sync_updated_at,
+      hasSummary: false,
+    });
+  });
+
+  const idleSummaryIds = new Set<string>();
+  if (idleCandidates.length > 0) {
+    const { data: summaryRows } = await admin
+      .from('meeting_summaries')
+      .select('meeting_transcript_id, summary_text')
+      .in(
+        'meeting_transcript_id',
+        idleCandidates.map((row) => row.id),
+      );
+    for (const row of summaryRows ?? []) {
+      const id = (row as { meeting_transcript_id?: string })
+        .meeting_transcript_id;
+      const text = (row as { summary_text?: string | null }).summary_text;
+      if (id && text?.trim()) idleSummaryIds.add(id);
+    }
+  }
+
+  for (const row of idleCandidates) {
+    if (ids.length + healedIdle >= limit) break;
+    const queued = await ensureMeetingPostSyncQueued({
+      id: row.id,
+      source: row.source ?? '',
+      content: row.content ?? '',
+      createdAt: row.created_at ?? new Date(0).toISOString(),
+      summaryStatus: row.summary_status,
+      taskExtractionStatus: row.task_extraction_status,
+      postSyncUpdatedAt: row.post_sync_updated_at,
+      hasSummary: idleSummaryIds.has(row.id),
+    });
+    if (queued) {
+      healedIdle += 1;
+    }
+  }
+
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret || !siteBaseUrl()) {
     for (const id of ids) {
       await processMeetingPostSync(id);
     }
-    return { considered: ids.length, kicked: ids.length };
+    return {
+      considered: ids.length + healedIdle,
+      kicked: ids.length + healedIdle,
+    };
   }
 
   const results = await Promise.all(
@@ -403,7 +493,7 @@ export async function sweepMeetingPostSync(limit = 8) {
   );
 
   return {
-    considered: ids.length,
-    kicked: results.filter(Boolean).length,
+    considered: ids.length + healedIdle,
+    kicked: results.filter(Boolean).length + healedIdle,
   };
 }

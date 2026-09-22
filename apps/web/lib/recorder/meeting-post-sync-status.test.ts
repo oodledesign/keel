@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   MEETING_POST_SYNC_HEAL_WINDOW_MS,
   MEETING_POST_SYNC_KICK_DEBOUNCE_MS,
+  MEETING_POST_SYNC_REPRO_IDS,
   MEETING_POST_SYNC_STALE_MS,
   describeMeetingPostSync,
+  nextQueuedMeetingPostSyncStatuses,
   shouldScheduleMeetingPostSync,
 } from './meeting-post-sync-status';
 
@@ -97,12 +99,49 @@ describe('shouldScheduleMeetingPostSync', () => {
     expect(shouldScheduleMeetingPostSync(candidate(), now)).toBe(true);
   });
 
+  it('queues when a summary exists but task extraction never left idle', () => {
+    expect(
+      shouldScheduleMeetingPostSync(
+        candidate({ hasSummary: true, summaryStatus: 'idle' }),
+        now,
+      ),
+    ).toBe(true);
+    expect(
+      shouldScheduleMeetingPostSync(
+        candidate({
+          hasSummary: true,
+          summaryStatus: 'ready',
+          taskExtractionStatus: 'idle',
+        }),
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it('always queues Dan’s known repro meeting even outside the heal window', () => {
+    expect(
+      shouldScheduleMeetingPostSync(
+        candidate({
+          id: MEETING_POST_SYNC_REPRO_IDS[0],
+          source: 'desktop_recorder',
+          createdAt: new Date(
+            now - MEETING_POST_SYNC_HEAL_WINDOW_MS - 86_400_000,
+          ).toISOString(),
+        }),
+        now,
+      ),
+    ).toBe(true);
+  });
+
   it('does not queue paste meetings, survey captures, or empty transcripts', () => {
     expect(
       shouldScheduleMeetingPostSync(candidate({ source: 'paste' }), now),
     ).toBe(false);
     expect(
-      shouldScheduleMeetingPostSync(candidate({ proposalId: 'survey-1' }), now),
+      shouldScheduleMeetingPostSync(
+        candidate({ proposalId: 'survey-1' }),
+        now,
+      ),
     ).toBe(false);
     expect(
       shouldScheduleMeetingPostSync(candidate({ content: '   ' }), now),
@@ -194,5 +233,33 @@ describe('shouldScheduleMeetingPostSync', () => {
         now,
       ),
     ).toBe(false);
+  });
+});
+
+describe('nextQueuedMeetingPostSyncStatuses', () => {
+  it('keeps an existing summary ready and only queues task extraction', () => {
+    expect(
+      nextQueuedMeetingPostSyncStatuses({
+        summaryStatus: 'idle',
+        taskExtractionStatus: 'idle',
+        hasSummary: true,
+      }),
+    ).toEqual({
+      summaryStatus: 'ready',
+      taskExtractionStatus: 'pending',
+    });
+  });
+
+  it('queues both stages when nothing exists yet', () => {
+    expect(
+      nextQueuedMeetingPostSyncStatuses({
+        summaryStatus: 'idle',
+        taskExtractionStatus: 'idle',
+        hasSummary: false,
+      }),
+    ).toEqual({
+      summaryStatus: 'pending',
+      taskExtractionStatus: 'pending',
+    });
   });
 });

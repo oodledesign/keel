@@ -17,6 +17,14 @@ export const MEETING_POST_SYNC_STALE_MS = 10 * 60 * 1000;
 /** Heal Assistant syncs that landed before status tracking existed. */
 export const MEETING_POST_SYNC_HEAL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
+/**
+ * Known Assistant sync that landed without summary/tasks (Dan / oodle-design).
+ * Always eligible for heal until statuses leave idle.
+ */
+export const MEETING_POST_SYNC_REPRO_IDS = [
+  'ae299629-d90a-4508-91cd-7b11f771de3e',
+] as const;
+
 export type MeetingPostSyncNotice = {
   tone: 'progress' | 'error';
   message: string;
@@ -93,8 +101,15 @@ export function describeMeetingPostSync(input: {
   return { tone: 'progress', message: notice.message, detail: null };
 }
 
+function withinHealWindow(createdAt: string, now: number) {
+  const created = Date.parse(createdAt);
+  if (Number.isNaN(created)) return false;
+  return now - created <= MEETING_POST_SYNC_HEAL_WINDOW_MS;
+}
+
 export function shouldScheduleMeetingPostSync(
   input: {
+    id?: string;
     source: string;
     proposalId?: string | null;
     content: string;
@@ -107,18 +122,19 @@ export function shouldScheduleMeetingPostSync(
   now = Date.now(),
 ): boolean {
   if (input.proposalId) return false;
-  if (input.source !== 'desktop_recorder') return false;
   if (!input.content.trim()) return false;
+
+  const isRepro =
+    typeof input.id === 'string' &&
+    (MEETING_POST_SYNC_REPRO_IDS as readonly string[]).includes(input.id);
+
+  if (!isRepro && input.source !== 'desktop_recorder') return false;
 
   const summary = parseMeetingPostSyncStatus(input.summaryStatus);
   const tasks = parseMeetingPostSyncStatus(input.taskExtractionStatus);
 
   if (summary === 'failed' || tasks === 'failed') return false;
-  // Summary done but tasks never started (pre-status rows). Leave alone —
-  // manual regenerate / extract covers that edge case without re-running AI.
-  if (summary === 'ready' && (tasks === 'ready' || tasks === 'idle')) {
-    return false;
-  }
+  if (summary === 'ready' && tasks === 'ready') return false;
 
   const updatedAt = input.postSyncUpdatedAt
     ? Date.parse(input.postSyncUpdatedAt)
@@ -137,17 +153,34 @@ export function shouldScheduleMeetingPostSync(
     return false;
   }
 
+  // Summary ready but tasks still idle: extraction never ran after sync.
+  if (summary === 'ready' && tasks === 'idle') {
+    return isRepro || withinHealWindow(input.createdAt, now);
+  }
+
   if (summary === 'idle' && tasks === 'idle') {
-    if (input.hasSummary) return false;
-    const createdAt = Date.parse(input.createdAt);
-    if (
-      Number.isNaN(createdAt) ||
-      now - createdAt > MEETING_POST_SYNC_HEAL_WINDOW_MS
-    ) {
-      return false;
-    }
-    return true;
+    // Heal recent Assistant syncs (with or without a leftover summary row).
+    return isRepro || withinHealWindow(input.createdAt, now);
   }
 
   return pending || processing;
+}
+
+/** Next statuses when queueing a heal/kick for an open meeting. */
+export function nextQueuedMeetingPostSyncStatuses(input: {
+  summaryStatus: unknown;
+  taskExtractionStatus: unknown;
+  hasSummary: boolean;
+}): {
+  summaryStatus: MeetingPostSyncStatus;
+  taskExtractionStatus: MeetingPostSyncStatus;
+} {
+  const summary = parseMeetingPostSyncStatus(input.summaryStatus);
+  const tasks = parseMeetingPostSyncStatus(input.taskExtractionStatus);
+
+  return {
+    summaryStatus:
+      summary === 'ready' || input.hasSummary ? 'ready' : 'pending',
+    taskExtractionStatus: tasks === 'ready' ? 'ready' : 'pending',
+  };
 }
