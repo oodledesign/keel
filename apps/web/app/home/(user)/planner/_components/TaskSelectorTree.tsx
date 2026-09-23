@@ -270,7 +270,7 @@ export function TaskSelectorTree({
           </p>
         </div>
       ) : (
-        <div className="max-h-[min(60vh,640px)] touch-pan-y divide-y divide-white/8 overflow-y-auto overscroll-contain pr-1">
+        <div className="touch-pan-y divide-y divide-white/8 lg:max-h-[min(60dvh,640px)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           {filteredTree.map((workspace) => (
             <WorkspaceNode
               key={workspace.id}
