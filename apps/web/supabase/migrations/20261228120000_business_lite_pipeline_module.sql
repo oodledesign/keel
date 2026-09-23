@@ -92,6 +92,7 @@ CROSS JOIN (
     ('notes')
 ) AS keys(module_key)
 WHERE lower(coalesce(b.type, '')) = 'lite'
+  AND b.account_id IS NOT NULL
 ON CONFLICT (account_id, module_key) DO NOTHING;
 
 -- Pipeline was written disabled by plan sync before this change. Those rows
@@ -100,5 +101,6 @@ INSERT INTO public.account_module_settings (account_id, module_key, enabled)
 SELECT DISTINCT b.account_id, 'pipeline', true
 FROM public.businesses b
 WHERE lower(coalesce(b.type, '')) = 'lite'
+  AND b.account_id IS NOT NULL
 ON CONFLICT (account_id, module_key) DO UPDATE
 SET enabled = true;
