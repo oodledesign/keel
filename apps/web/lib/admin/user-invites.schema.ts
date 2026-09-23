@@ -42,6 +42,15 @@ export type AdminUserInviteAccessConfig = {
   personalAddons?: Array<'addon_email_assistant'>;
   /** Module key to open after invite is fulfilled (e.g. signatures). */
   landingModule?: string;
+  /**
+   * Workspace and owner already exist. Accepting only signs the owner in
+   * (password setup, then the workspace). Does not create another workspace.
+   */
+  provisionedOwner?: {
+    accountId: string;
+    slug: string;
+    workspaceName: string;
+  };
 };
 
 export const DEFAULT_WORKSPACE_NAMES: Record<
@@ -188,6 +197,12 @@ export function parseAdminUserInviteAccessConfig(
 export function summarizeAccessConfig(
   config: AdminUserInviteAccessConfig,
 ): string {
+  const provisionedName = config.provisionedOwner?.workspaceName?.trim();
+
+  if (provisionedName) {
+    return `Owner of ${provisionedName}`;
+  }
+
   if (config.personalOnly) {
     return 'Personal account (free tier)';
   }

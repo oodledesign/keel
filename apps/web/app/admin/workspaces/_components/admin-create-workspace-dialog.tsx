@@ -71,8 +71,9 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
         <AlertDialogHeader>
           <AlertDialogTitle>Create workspace</AlertDialogTitle>
           <AlertDialogDescription>
-            Create a team workspace for an existing user, optionally with
-            billing turned off.
+            Create a team workspace and assign an owner. If that email does not
+            have an Ozer account yet, we create one and email them an owner
+            invite.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -83,7 +84,19 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
               startTransition(async () => {
                 try {
                   const result = await createAdminWorkspaceAction(values);
-                  toast.success('Workspace created');
+                  if (result.ownerCreated && result.inviteEmailSent) {
+                    toast.success(
+                      `Workspace created. Owner invite sent to ${values.ownerEmail.trim()}`,
+                    );
+                  } else if (result.ownerCreated) {
+                    toast.success('Workspace created');
+                    toast.error(
+                      result.inviteEmailError ??
+                        'The owner account was created, but the invite email could not be sent. Resend it from Admin → Users.',
+                    );
+                  } else {
+                    toast.success('Workspace created');
+                  }
                   setOpen(false);
                   form.reset();
                   router.push(`/admin/workspaces/${result.accountId}`);
@@ -126,8 +139,8 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
                     />
                   </FormControl>
                   <FormDescription>
-                    Must already have an Ozer user account. They become the
-                    primary owner.
+                    They become the primary owner. A new email gets an Ozer
+                    account and an invitation to sign in as owner.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

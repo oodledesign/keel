@@ -68,6 +68,15 @@ export async function loadInvitePasswordSetupContext(input: {
 
   const config = parseAdminUserInviteAccessConfig(invite.access_config);
   const firstName = firstNameFrom(config.inviteeName) ?? fallbackFirstName;
+  const provisionedWorkspace = config.provisionedOwner?.workspaceName?.trim();
+
+  if (provisionedWorkspace) {
+    return {
+      firstName,
+      workspaceName: provisionedWorkspace,
+      hasWorkspaceInvite: true,
+    };
+  }
 
   if (config.personalOnly) {
     return {
