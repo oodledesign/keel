@@ -2,7 +2,13 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { Json } from '@kit/supabase/database';
+
 import { queueBrainIndexSource } from '~/lib/brain/sync';
+import {
+  cleanDictationTranscript,
+  cleanStoredSpeakerSegments,
+} from '~/lib/recorder/dictation-transcript-cleanup';
 import { extractAndPersistMeetingActionItems } from '~/lib/recorder/meeting-action-items';
 import type { MeetingPostSyncStatus } from '~/lib/recorder/meeting-post-sync-status';
 import {
@@ -31,10 +37,16 @@ function postSyncErrorMessage(error: unknown) {
   if (!trimmed) return 'Meeting processing failed';
 
   // Keep provider internals out of the meeting page.
-  if (/api[_-]?key|sk-[a-z0-9]|bearer\s+[a-z0-9]|authorization/i.test(trimmed)) {
+  if (
+    /api[_-]?key|sk-[a-z0-9]|bearer\s+[a-z0-9]|authorization/i.test(trimmed)
+  ) {
     return 'Meeting processing failed';
   }
-  if (/rate.?limit|overloaded|timeout|timed out|ECONNRESET|fetch failed/i.test(trimmed)) {
+  if (
+    /rate.?limit|overloaded|timeout|timed out|ECONNRESET|fetch failed/i.test(
+      trimmed,
+    )
+  ) {
     return 'The AI service was unavailable. Try again in a moment.';
   }
 
@@ -82,6 +94,62 @@ async function writeMeetingPostSyncStatus(
   }
 }
 
+/**
+ * Collapse obvious dictation repeats in the stored transcript before summary
+ * and task extraction. Unchanged meetings are left as stored.
+ */
+async function persistCleanedMeetingTranscript(
+  admin: SupabaseClient,
+  input: MeetingSummaryJobInput,
+): Promise<string> {
+  const content = cleanDictationTranscript(input.content);
+  let speakerSegments: unknown = null;
+  let segmentsChanged = false;
+
+  const { data, error } = await admin
+    .from('meeting_transcripts')
+    .select('speaker_segments')
+    .eq('id', input.meetingTranscriptId)
+    .eq('account_id', input.accountId)
+    .maybeSingle();
+
+  if (!error && data) {
+    const cleaned = cleanStoredSpeakerSegments(data.speaker_segments);
+    if (cleaned?.changed) {
+      speakerSegments = cleaned.segments;
+      segmentsChanged = true;
+    }
+  } else if (error) {
+    console.error('[recorder] dictation cleanup segment load failed', {
+      meetingTranscriptId: input.meetingTranscriptId,
+      error: error.message,
+    });
+  }
+
+  const contentChanged = content !== input.content;
+  if (contentChanged || segmentsChanged) {
+    const update: { content?: string; speaker_segments?: Json } = {};
+    if (contentChanged) update.content = content;
+    if (segmentsChanged) update.speaker_segments = speakerSegments as Json;
+
+    const { error: updateError } = await admin
+      .from('meeting_transcripts')
+      .update(update)
+      .eq('id', input.meetingTranscriptId)
+      .eq('account_id', input.accountId);
+
+    if (updateError) {
+      console.error('[recorder] dictation cleanup persist failed', {
+        meetingTranscriptId: input.meetingTranscriptId,
+        error: updateError.message,
+      });
+    }
+  }
+
+  if (!contentChanged) return input.content;
+  return content.trim() || input.content;
+}
+
 export async function generateAndPersistMeetingSummary(
   admin: SupabaseClient,
   input: MeetingSummaryJobInput,
@@ -90,6 +158,7 @@ export async function generateAndPersistMeetingSummary(
   const attendeeEmails = attendeeEmailsFromCalendarAttendees(
     input.calendarAttendees ?? [],
   );
+  const content = await persistCleanedMeetingTranscript(admin, input);
 
   let summaryText: string | null = null;
 
@@ -112,7 +181,7 @@ export async function generateAndPersistMeetingSummary(
       summaryText = await generateMeetingSummaryText(
         {
           title: input.title,
-          transcript: input.content,
+          transcript: content,
           meetingDate: input.meetingDate,
           attendees: input.calendarAttendees,
         },
@@ -156,7 +225,7 @@ export async function generateAndPersistMeetingSummary(
       accountId: input.accountId,
       createdByUserId: input.createdByUserId,
       title: input.title,
-      content: input.content,
+      content,
       summaryText,
       meetingDate: input.meetingDate,
       calendarAttendees: input.calendarAttendees,

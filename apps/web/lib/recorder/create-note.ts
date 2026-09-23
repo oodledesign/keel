@@ -6,6 +6,7 @@ import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { resolveClientListTitle } from '~/lib/clients/resolve-client-list-display';
+import { cleanDictationTranscript } from '~/lib/recorder/dictation-transcript-cleanup';
 import {
   RECORDER_NOTES_MAX_PAGE,
   type RecorderNotesClientFilter,
@@ -79,7 +80,7 @@ export async function createRecorderNote(params: {
   created_at: string | null;
   updated_at: string | null;
 }> {
-  const content = params.content.trim();
+  const content = cleanDictationTranscript(params.content).trim();
   if (!content) {
     throw new Error('Note content is required');
   }
@@ -116,13 +117,17 @@ export async function createRecorderNote(params: {
       .from('projects')
       .select('id')
       .eq('id', projectId)
+      .eq('account_id', accountId)
       .maybeSingle();
     if (projectError || !project) {
       throw new Error('Project not found');
     }
   }
 
-  const title = params.title?.trim() || firstLineTitle(content);
+  const explicitTitle = params.title?.trim()
+    ? cleanDictationTranscript(params.title).trim()
+    : '';
+  const title = explicitTitle || firstLineTitle(content);
   const category = params.category?.trim() || 'idea';
   const tags = (params.tags ?? [])
     .map((tag) => tag.trim())

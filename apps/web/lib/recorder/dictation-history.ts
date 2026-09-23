@@ -3,6 +3,7 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
+import { cleanDictationTranscript } from '~/lib/recorder/dictation-transcript-cleanup';
 
 const MAX_TEXT_BYTES = 32 * 1024;
 
@@ -22,7 +23,7 @@ export async function saveDictationHistory(params: {
   pasteMode?: boolean;
   createdAt?: string;
 }): Promise<{ id: string; created_at: string }> {
-  const trimmed = params.text.trim();
+  const trimmed = cleanDictationTranscript(params.text).trim();
   if (!trimmed) {
     throw new Error('Text is required.');
   }
