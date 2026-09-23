@@ -43,6 +43,7 @@ import { formatContactRoleLabel } from '~/lib/clients/contact-roles';
 import { formatUtcInTimezone } from '~/lib/invoices/zoned-local-datetime';
 
 import { getErrorMessage } from '../_lib/error-message';
+import { formatInvoiceMoney } from '../_lib/invoice-currency';
 import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
@@ -52,7 +53,6 @@ import {
   resolveInvoiceEmailField,
 } from '../_lib/invoice-smart-fields';
 import { PASS_TO_CLIENT_FEE_NOTE } from '../_lib/invoice-stripe-fee';
-import { formatPence } from '../_lib/invoice-totals';
 import {
   cancelScheduledInvoiceSend,
   getInvoicePortalLink,
@@ -1104,7 +1104,9 @@ export function InvoiceSendPanel({
               </p>
               <div className="my-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
                 <p className="font-medium">Invoice {invoiceNumber}</p>
-                <p className="mt-1">Total: {formatPence(totalPence)}</p>
+                <p className="mt-1">
+                  Total: {formatInvoiceMoney(totalPence, currency)}
+                </p>
                 <p className="mt-1 text-zinc-600">
                   Due date:{' '}
                   {dueAt ? new Date(dueAt).toLocaleDateString('en-GB') : '—'}
