@@ -50,6 +50,37 @@ describe('DEFAULT_INVOICE_EMAIL_SUBJECT', () => {
   });
 });
 
+describe('{{invoice.total}} currency', () => {
+  it('formats the total in the invoice currency', () => {
+    expect(
+      renderSmartFields('Total {{invoice.total}}', {
+        invoice: { total_pence: 19500, currency: 'cad' },
+      }),
+    ).toBe('Total CA$195.00');
+  });
+
+  it('keeps pound formatting for GBP invoices', () => {
+    expect(
+      renderSmartFields('Total {{invoice.total}}', {
+        invoice: { total_pence: 19500, currency: 'gbp' },
+      }),
+    ).toBe('Total £195.00');
+  });
+
+  it('formats USD and EUR from the invoice currency', () => {
+    expect(
+      renderSmartFields('{{invoice.total}}', {
+        invoice: { total_pence: 19500, currency: 'usd' },
+      }),
+    ).toBe('US$195.00');
+    expect(
+      renderSmartFields('{{invoice.total}}', {
+        invoice: { total_pence: 19500, currency: 'eur' },
+      }),
+    ).toBe('€195.00');
+  });
+});
+
 describe('invoice project name merge field', () => {
   it('exposes Project name in the insertable pills', () => {
     expect(

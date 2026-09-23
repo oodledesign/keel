@@ -1,3 +1,5 @@
+import { formatInvoiceMoney } from './invoice-currency';
+
 type SmartFieldContext = {
   client?: {
     first_name?: string | null;
@@ -28,13 +30,6 @@ type SmartFieldContext = {
   /** Linked delivery project name; empty when the invoice has no project. */
   projectName?: string | null;
 };
-
-function formatMoney(pence: number, currency = 'gbp') {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(pence / 100);
-}
 
 export function renderSmartFields(
   template: string,
@@ -75,7 +70,7 @@ export function renderSmartFields(
     '{{client.company}}': ctx.client?.company_name?.trim() || '',
     '{{client.email}}': ctx.client?.email?.trim() || '',
     '{{invoice.number}}': ctx.invoice?.invoice_number ?? '',
-    '{{invoice.total}}': formatMoney(
+    '{{invoice.total}}': formatInvoiceMoney(
       ctx.invoice?.total_pence ?? 0,
       ctx.invoice?.currency ?? 'gbp',
     ),
