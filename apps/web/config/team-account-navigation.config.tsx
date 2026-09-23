@@ -61,6 +61,8 @@ const getRoutes = (
   userFeatures?: {
     emailAssistantAvailable?: boolean;
     pipelineBoardName?: string;
+    /** Business Lite omits plan-excluded sidebar entries (planner, activity). */
+    businessLite?: boolean;
   },
 ) => {
   const access = getTeamAccountAccess(accessInput);
@@ -75,6 +77,7 @@ const getRoutes = (
       ms,
       navCounts,
       userFeatures?.emailAssistantAvailable,
+      userFeatures?.businessLite,
     )) {
       routes.push({
         label: section.label,
@@ -174,6 +177,7 @@ export function getTeamAccountSidebarConfig(
   userFeatures?: {
     emailAssistantAvailable?: boolean;
     pipelineBoardName?: string;
+    businessLite?: boolean;
   },
 ) {
   return NavigationConfigSchema.parse({

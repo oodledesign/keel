@@ -13,7 +13,7 @@ describe('buildWorkspaceSettingsNav', () => {
     const items = buildWorkspaceSettingsNav({
       accountSlug: 'oodle',
       workspaceProfile: 'work_design',
-      moduleSettings: { finances: true, tasks: true },
+      moduleSettings: { finances: true, tasks: true, jobs: true },
       access: ownerAccess,
     });
 
@@ -66,6 +66,23 @@ describe('buildWorkspaceSettingsNav', () => {
     });
 
     expect(items.map((item) => item.id)).toContain('sending-domain');
+  });
+
+  it('omits activity tracking and project statuses on Business Lite', () => {
+    const items = buildWorkspaceSettingsNav({
+      accountSlug: 'lite-studio',
+      workspaceProfile: 'work_design',
+      moduleSettings: { finances: false, tasks: true, jobs: false },
+      access: ownerAccess,
+      canConfigureSendingDomain: false,
+      businessLite: true,
+    });
+
+    const ids = items.map((item) => item.id);
+    expect(ids).not.toContain('activity');
+    expect(ids).not.toContain('project-statuses');
+    expect(ids).toContain('integrations');
+    expect(ids).toContain('payments');
   });
 
   it('omits sending domain when the workspace cannot configure one', () => {

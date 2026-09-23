@@ -30,6 +30,7 @@ import {
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import {
   type WorkspaceProfile,
+  isBusinessLiteType,
   spaceTypeFromProfile,
 } from '~/home/[account]/_lib/workspace-profile';
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
@@ -66,6 +67,7 @@ function navItemsForWorkspace(
   profile: WorkspaceProfile,
   access: TeamAccountAccess,
   moduleSettings: Record<string, boolean> | undefined,
+  businessLite = false,
 ) {
   const spaceType = spaceTypeFromProfile(profile);
   if (spaceType === 'property') {
@@ -77,7 +79,14 @@ function navItemsForWorkspace(
   if (spaceType === 'community') {
     return buildCommunitySpaceNavChildren(slug, access, moduleSettings);
   }
-  const workItems = buildWorkSpaceNavChildren(slug, access, moduleSettings);
+  const workItems = buildWorkSpaceNavChildren(
+    slug,
+    access,
+    moduleSettings,
+    undefined,
+    false,
+    businessLite,
+  );
   const appLinks = buildWorkAppLinks(slug, moduleSettings);
   return [...workItems, ...appLinks];
 }
@@ -88,8 +97,15 @@ function workspaceNavCatalogItems(
   profile: WorkspaceProfile,
   access: TeamAccountAccess,
   moduleSettings: Record<string, boolean> | undefined,
+  businessLite = false,
 ): ShortcutCatalogItem[] {
-  const nav = navItemsForWorkspace(slug, profile, access, moduleSettings);
+  const nav = navItemsForWorkspace(
+    slug,
+    profile,
+    access,
+    moduleSettings,
+    businessLite,
+  );
   const flat = flattenNavItems(
     nav as Array<{
       label: string;
@@ -140,6 +156,7 @@ async function catalogForWorkspaceSlug(
       workspace.workspaceProfile,
       access,
       workspace.moduleSettings,
+      isBusinessLiteType(workspace.businessType),
     );
 
     const dynamicItems = await buildDynamicShortcutCatalog({

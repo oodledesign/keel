@@ -76,6 +76,8 @@ export function buildWorkspaceSettingsNav(input: {
   access: TeamAccountAccess;
   /** Paid non-lite plans (Starter/Pro, commercial, property) and grants. Lite omits. */
   canConfigureSendingDomain?: boolean;
+  /** Business Lite does not include activity tracking. */
+  businessLite?: boolean;
 }): WorkspaceSettingsNavItem[] {
   const {
     accountSlug,
@@ -83,6 +85,7 @@ export function buildWorkspaceSettingsNav(input: {
     moduleSettings,
     access,
     canConfigureSendingDomain = true,
+    businessLite = false,
   } = input;
   const items: WorkspaceSettingsNavItem[] = [
     {
@@ -105,23 +108,27 @@ export function buildWorkspaceSettingsNav(input: {
       href: settingsPath(pathsConfig.app.accountFocusSettings, accountSlug),
       icon: 'calendar-off',
     },
-    {
+  ];
+
+  if (!businessLite) {
+    items.push({
       id: 'activity',
       label: 'Activity tracking',
       href: settingsPath(
         pathsConfig.app.accountActivityPrivacySettings,
         accountSlug,
       ),
-    },
-    {
-      id: 'integrations',
-      label: 'Integrations',
-      href: settingsPath(
-        pathsConfig.app.accountIntegrationsSettings,
-        accountSlug,
-      ),
-    },
-  ];
+    });
+  }
+
+  items.push({
+    id: 'integrations',
+    label: 'Integrations',
+    href: settingsPath(
+      pathsConfig.app.accountIntegrationsSettings,
+      accountSlug,
+    ),
+  });
 
   if (workspaceProfile === 'commercial_property') {
     appendBrandNavItems(items, accountSlug, canConfigureSendingDomain);
@@ -164,14 +171,16 @@ export function buildWorkspaceSettingsNav(input: {
       },
     );
 
-    items.push({
-      id: 'project-statuses',
-      label: 'Project statuses',
-      href: settingsPath(
-        pathsConfig.app.accountProjectStatusesSettings,
-        accountSlug,
-      ),
-    });
+    if (isWorkModuleEnabled(moduleSettings, 'jobs')) {
+      items.push({
+        id: 'project-statuses',
+        label: 'Project statuses',
+        href: settingsPath(
+          pathsConfig.app.accountProjectStatusesSettings,
+          accountSlug,
+        ),
+      });
+    }
 
     if (isWorkNavModuleEnabled(moduleSettings, 'finances')) {
       items.push({

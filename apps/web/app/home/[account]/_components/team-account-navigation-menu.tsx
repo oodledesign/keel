@@ -15,6 +15,7 @@ import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 
 // local imports
 import { TeamAccountWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { isBusinessLiteType } from '../_lib/workspace-profile';
 
 export function TeamAccountNavigationMenu(props: {
   workspace: TeamAccountWorkspace;
@@ -38,6 +39,7 @@ export function TeamAccountNavigationMenu(props: {
     {
       emailAssistantAvailable: props.emailAssistantAvailable,
       pipelineBoardName: props.pipelineBoardName,
+      businessLite: isBusinessLiteType(props.workspace.businessType),
     },
   ).routes.reduce<
     Array<{
