@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MOBILE_FLOATING_CHROME_ABOVE,
   MOBILE_FLOATING_CHROME_PB,
+  MOBILE_FLOATING_CHROME_SCROLL_PADDING,
   MOBILE_FLOATING_CHROME_SCROLL_PB,
   WORKSPACE_SHELL_PAGE_CLASS,
   WORKSPACE_SHELL_VIEWPORT_CLASS,
@@ -20,6 +21,9 @@ describe('mobile floating chrome tokens', () => {
   it('keeps scroll and popover clearance on the same inset', () => {
     expect(MOBILE_FLOATING_CHROME_SCROLL_PB).toBe(
       'pb-[calc(4.75rem+max(0.5rem,env(safe-area-inset-bottom)))]',
+    );
+    expect(MOBILE_FLOATING_CHROME_SCROLL_PADDING).toBe(
+      'scroll-pb-[calc(4.75rem+max(0.5rem,env(safe-area-inset-bottom)))] lg:scroll-pb-0',
     );
     expect(MOBILE_FLOATING_CHROME_ABOVE).toBe(
       'bottom-[calc(4.75rem+max(0.5rem,env(safe-area-inset-bottom))+0.5rem)]',

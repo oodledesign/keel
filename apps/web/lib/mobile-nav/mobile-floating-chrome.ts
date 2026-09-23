@@ -15,14 +15,19 @@ export const MOBILE_FLOATING_CHROME_PB =
 export const MOBILE_FLOATING_CHROME_SCROLL_PB =
   'pb-[calc(4.75rem+max(0.5rem,env(safe-area-inset-bottom)))]';
 
+/** Same clearance for keyboard focus scrolling inside the page scroller. */
+export const MOBILE_FLOATING_CHROME_SCROLL_PADDING =
+  'scroll-pb-[calc(4.75rem+max(0.5rem,env(safe-area-inset-bottom)))] lg:scroll-pb-0';
+
 /** Popovers anchored above the floating bottom bar. */
 export const MOBILE_FLOATING_CHROME_ABOVE =
   'bottom-[calc(4.75rem+max(0.5rem,env(safe-area-inset-bottom))+0.5rem)]';
 
 /**
  * Authenticated workspace viewport height. Mobile scroll-lock sets
- * `--workspace-visual-height` to the on-screen window so iOS cannot leave
- * a dead band under a short `100dvh` / `max-h-dvh` box.
+ * `--workspace-visual-height` to the on-screen window (`100vh` in an
+ * installed PWA, where `100dvh` / `innerHeight` omit the top safe area).
+ * A short box leaves a dead band under the floating nav.
  */
 export const WORKSPACE_VISUAL_VIEWPORT_H =
   'h-[var(--workspace-visual-height,100dvh)] max-h-[var(--workspace-visual-height,100dvh)]';

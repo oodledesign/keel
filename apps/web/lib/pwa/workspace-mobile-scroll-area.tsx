@@ -2,10 +2,15 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@kit/ui/utils';
 
-import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
+import {
+  MOBILE_FLOATING_CHROME_SCROLL_PADDING,
+  MOBILE_FLOATING_CHROME_SCROLL_PB,
+} from '~/lib/mobile-nav/mobile-floating-chrome';
 
-export const WORKSPACE_MOBILE_SCROLL_INNER_CLASS =
-  'min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]';
+export const WORKSPACE_MOBILE_SCROLL_INNER_CLASS = [
+  'min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]',
+  MOBILE_FLOATING_CHROME_SCROLL_PADDING,
+].join(' ');
 
 /**
  * Fill the scrollport so `flex-1 min-h-0 overflow-hidden` pages (boards)
