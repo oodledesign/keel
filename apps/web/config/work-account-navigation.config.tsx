@@ -189,6 +189,7 @@ function buildWorkNavItemsForKeys(
   moduleSettings?: Record<string, boolean>,
   navCounts?: WorkNavCounts,
   emailAssistantAvailable = false,
+  businessLite = false,
 ): Array<NavChild | NavCollapsible> {
   const ms = moduleSettings;
   const home = createPath(pathsConfig.app.accountHome, account);
@@ -286,7 +287,7 @@ function buildWorkNavItemsForKeys(
           }
         : null,
     activity: () =>
-      access.canViewDashboard
+      access.canViewDashboard && !businessLite
         ? {
             label: 'Activity',
             path: createPath(pathsConfig.app.accountActivity, account),
@@ -428,7 +429,13 @@ function buildWorkNavItemsForKeys(
     if (!factory) continue;
     const item = factory();
     if (item) items.push(item);
-    if (item && key === 'activity' && emailAssistantAvailable) {
+    // Email assistant is its own entitlement (Pro or a personal add-on).
+    // Keep it when Activity itself is hidden on Business Lite.
+    if (
+      key === 'activity' &&
+      emailAssistantAvailable &&
+      access.canViewDashboard
+    ) {
       const needsReplyCount = navCounts?.emailNeedsReplyCount ?? 0;
       items.push({
         label: 'Emails',
@@ -446,7 +453,7 @@ function buildWorkNavItemsForKeys(
           ) : undefined,
       });
     }
-    if (key === 'tasks') {
+    if (key === 'tasks' && !businessLite) {
       const plannerFactory = registry.planner;
       if (plannerFactory) {
         const planner = plannerFactory();
@@ -500,6 +507,7 @@ export function buildWorkSpaceNavChildren(
   moduleSettings?: Record<string, boolean>,
   navCounts?: WorkNavCounts,
   emailAssistantAvailable = false,
+  businessLite = false,
 ): Array<NavChild | NavCollapsible> {
   return buildWorkNavItemsForKeys(
     WORK_BUSINESS_MODULE_ORDER,
@@ -508,6 +516,7 @@ export function buildWorkSpaceNavChildren(
     moduleSettings,
     navCounts,
     emailAssistantAvailable,
+    businessLite,
   );
 }
 
@@ -518,6 +527,7 @@ export function buildWorkSpaceNavSections(
   moduleSettings?: Record<string, boolean>,
   navCounts?: WorkNavCounts,
   emailAssistantAvailable = false,
+  businessLite = false,
 ): WorkNavSection[] {
   return WORK_BUSINESS_NAV_SECTIONS.map((section) => ({
     label: section.label,
@@ -528,6 +538,7 @@ export function buildWorkSpaceNavSections(
       moduleSettings,
       navCounts,
       emailAssistantAvailable,
+      businessLite,
     ),
   })).filter((section) => section.children.length > 0);
 }

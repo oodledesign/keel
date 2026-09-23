@@ -35,6 +35,7 @@ const BUSINESS_LITE_MODULE_KEYS = [
   'invoices',
   'client_portal',
   'notes',
+  'pipeline',
 ] as const;
 
 const ADDON_MODULE_KEYS = [

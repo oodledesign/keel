@@ -42,6 +42,7 @@ export function TeamAccountLayoutSidebar(props: {
   navCounts?: WorkNavCounts;
   emailAssistantAvailable?: boolean;
   pipelineBoardName?: string;
+  businessLite?: boolean;
 }) {
   const config = getTeamAccountSidebarConfig(
     props.account,
@@ -52,6 +53,7 @@ export function TeamAccountLayoutSidebar(props: {
     {
       emailAssistantAvailable: props.emailAssistantAvailable,
       pipelineBoardName: props.pipelineBoardName,
+      businessLite: props.businessLite,
     },
   );
 

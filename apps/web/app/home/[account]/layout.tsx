@@ -51,7 +51,10 @@ import {
   loadTeamWorkspaceShellAdornments,
 } from './_lib/server/team-workspace-shell-adornments.loader';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
-import { spaceTypeFromProfile } from './_lib/workspace-profile';
+import {
+  isBusinessLiteType,
+  spaceTypeFromProfile,
+} from './_lib/workspace-profile';
 import { SopTrackerHost } from './sops/_components/sop-tracker-host';
 
 const EMPTY_SHELL_ADORNMENTS: TeamWorkspaceShellAdornments = {
@@ -196,6 +199,7 @@ async function SidebarLayout({
     ).values(),
   );
 
+  const businessLite = isBusinessLiteType(data.businessType);
   const shellProps = {
     account,
     accountId,
@@ -204,6 +208,7 @@ async function SidebarLayout({
     portals,
     moduleSettings: data.moduleSettings,
     workspaceProfile,
+    businessLite,
     accountAccess,
     layoutState,
     showNewMenu: access.canUseQuickCreate,
@@ -279,6 +284,7 @@ function TeamWorkspaceSidebarShell({
   portals = [],
   moduleSettings,
   workspaceProfile,
+  businessLite,
   accountAccess,
   navCounts,
   emailAssistantAvailable,
@@ -303,6 +309,7 @@ function TeamWorkspaceSidebarShell({
   workspaceProfile: React.ComponentProps<
     typeof TeamAccountLayoutSidebar
   >['workspaceProfile'];
+  businessLite: boolean;
   accountAccess: {
     permissions?: string[] | null;
     role?: string | null;
@@ -331,7 +338,7 @@ function TeamWorkspaceSidebarShell({
       moduleSettings,
       workspaceProfile,
       navCounts,
-      { emailAssistantAvailable, pipelineBoardName },
+      { emailAssistantAvailable, pipelineBoardName, businessLite },
     ),
   );
 
@@ -365,6 +372,7 @@ function TeamWorkspaceSidebarShell({
                 navCounts={navCounts}
                 emailAssistantAvailable={emailAssistantAvailable}
                 pipelineBoardName={pipelineBoardName}
+                businessLite={businessLite}
                 accountAccess={accountAccess}
               />
             </PageNavigation>
@@ -529,6 +537,7 @@ function HeaderLayoutShell({
       {
         emailAssistantAvailable: adornments.emailAssistantAvailable,
         pipelineBoardName: adornments.pipelineBoardName,
+        businessLite: isBusinessLiteType(data.businessType),
       },
     ),
   );

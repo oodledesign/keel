@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import { listActivityRulesAction } from '~/home/[account]/activity/_lib/server/activity-rules-actions';
 import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
@@ -12,6 +13,7 @@ import {
   getTeamAccountAccess,
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { isBusinessLiteType } from '../../_lib/workspace-profile';
 import { ActivityPrivacySettingsForm } from './_components/ActivityPrivacySettingsForm';
 import { ActivityRulesPanel } from './_components/ActivityRulesPanel';
 import { getActivityPrivacySettings } from './actions';
@@ -42,6 +44,10 @@ async function ActivityPrivacySettingsPage({
       company_role?: string | null;
     },
   );
+
+  if (isBusinessLiteType(workspace.businessType)) {
+    redirect(pathsConfig.app.accountSettings.replace('[account]', accountSlug));
+  }
 
   if (!access.canViewSettings) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
