@@ -26,7 +26,8 @@ export const TASK_STATUS_TONE = {
   unknown: 'unknown',
 } as const;
 
-export type TaskStatusTone = (typeof TASK_STATUS_TONE)[keyof typeof TASK_STATUS_TONE];
+export type TaskStatusTone =
+  (typeof TASK_STATUS_TONE)[keyof typeof TASK_STATUS_TONE];
 
 /** Soft pills — same language as campaign / listing chips (tinted, not neon). */
 export const TASK_STATUS_BADGE_CLASS: Record<TaskStatusTone, string> = {
@@ -38,7 +39,8 @@ export const TASK_STATUS_BADGE_CLASS: Record<TaskStatusTone, string> = {
   done: 'bg-[var(--ozer-sage-100)] text-[var(--ozer-plum-800)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-sage-500)_50%,transparent)] dark:bg-[color-mix(in_srgb,var(--ozer-sage-500)_18%,transparent)] dark:text-[var(--ozer-sage-300)]',
   cancelled:
     'bg-[color-mix(in_srgb,var(--ozer-text-muted)_18%,transparent)] text-[var(--workspace-shell-text-muted)] ring-1 ring-inset ring-[color:var(--workspace-shell-border)]',
-  blocked: 'bg-red-500/15 text-red-700 ring-1 ring-inset ring-red-500/25 dark:text-red-400',
+  blocked:
+    'bg-red-500/15 text-red-700 ring-1 ring-inset ring-red-500/25 dark:text-red-400',
   unknown:
     'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] ring-1 ring-inset ring-[color:var(--workspace-shell-border)]',
 };
@@ -93,6 +95,52 @@ export function taskStatusBadgeClass(
   label?: string | null,
 ): string {
   return TASK_STATUS_BADGE_CLASS[resolveTaskStatusTone(status, label)];
+}
+
+/** Done / completed project tasks stay in the list, with muted struck text. */
+export function isDoneTaskStatus(status: string | null | undefined): boolean {
+  return resolveTaskStatusTone(status) === 'done';
+}
+
+const RESTORABLE_TASK_STATUSES = [
+  'todo',
+  'in_progress',
+  'client_review',
+  'cancelled',
+] as const;
+
+export type RestorableTaskStatus = (typeof RESTORABLE_TASK_STATUSES)[number];
+
+/**
+ * Checkbox on: mark done and remember the previous status.
+ * Checkbox off: restore that status (so cancelled does not become to do).
+ */
+export function statusAfterDoneToggle(
+  currentStatus: string,
+  done: boolean,
+  rememberedStatus?: string | null,
+): {
+  status: 'done' | RestorableTaskStatus;
+  remember: string | null;
+} {
+  if (done) {
+    return {
+      status: 'done',
+      remember: isDoneTaskStatus(currentStatus) ? null : currentStatus,
+    };
+  }
+
+  if (
+    rememberedStatus &&
+    (RESTORABLE_TASK_STATUSES as readonly string[]).includes(rememberedStatus)
+  ) {
+    return {
+      status: rememberedStatus as RestorableTaskStatus,
+      remember: null,
+    };
+  }
+
+  return { status: 'todo', remember: null };
 }
 
 export function taskStatusDisplayLabel(

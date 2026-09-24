@@ -13,6 +13,13 @@ export const DEFAULT_DELIVERY_PHASES = [
   { name: 'Care', colour: ozerColors.muted },
 ] as const;
 
+export const PHASE_STATUSES = [
+  'not_started',
+  'in_progress',
+  'blocked',
+  'complete',
+] as const satisfies readonly PhaseStatus[];
+
 export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
   not_started: 'Not started',
   in_progress: 'In progress',

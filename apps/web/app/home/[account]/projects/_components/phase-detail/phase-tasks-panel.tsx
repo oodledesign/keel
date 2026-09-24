@@ -27,7 +27,10 @@ import { cn } from '@kit/ui/utils';
 
 import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
-import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
+import {
+  isDoneTaskStatus,
+  taskStatusBadgeClass,
+} from '~/lib/projects/task-status-badge';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
@@ -43,6 +46,10 @@ import {
   formatShortDate,
   toDateInputValue,
 } from '../job-project/job-project.constants';
+import {
+  ProjectTaskDoneCheckbox,
+  useTaskDoneStatusToggle,
+} from '../job-project/project-task-done-checkbox';
 
 const TASK_STATUSES = [
   'todo',
@@ -52,7 +59,7 @@ const TASK_STATUSES = [
   'cancelled',
 ] as const;
 
-const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export function PhaseTasksPanel({
   accountId,
@@ -72,9 +79,14 @@ export function PhaseTasksPanel({
   const [tasks, setTasks] = useState(initialTasks);
   const [pendingDelete, setPendingDelete] = useState<JobBoardTask | null>(null);
   const [, startTransition] = useTransition();
+  const toggleDoneStatus = useTaskDoneStatusToggle();
 
   const patchTask = useCallback(
-    (task: JobBoardTask, updates: Partial<JobBoardTask>) => {
+    (
+      task: JobBoardTask,
+      updates: Partial<JobBoardTask>,
+      onRevert?: () => void,
+    ) => {
       const optimistic = { ...task, ...updates };
       setTasks((prev) => prev.map((t) => (t.id === task.id ? optimistic : t)));
       startTransition(async () => {
@@ -88,9 +100,7 @@ export function PhaseTasksPanel({
             status: updates.status as
               | (typeof TASK_STATUSES)[number]
               | undefined,
-            priority: updates.priority as
-              | (typeof PRIORITIES)[number]
-              | undefined,
+            priority: updates.priority as TaskPriority | undefined,
             dueDate:
               updates.due_date === undefined
                 ? undefined
@@ -102,6 +112,7 @@ export function PhaseTasksPanel({
             prev.map((t) => (t.id === task.id ? (saved as JobBoardTask) : t)),
           );
         } catch (err) {
+          onRevert?.();
           toast.error(getErrorMessage(err));
           setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
         }
@@ -177,124 +188,188 @@ export function PhaseTasksPanel({
             No tasks yet.
           </p>
         )}
-        {rootTasks.map((task) => (
-          <div
-            key={task.id}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/40 p-2.5"
-          >
-            <div className="flex items-start gap-2">
-              <span
-                className={`mt-2 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.none}`}
-              />
-              {canEdit ? (
-                <Input
-                  defaultValue={task.title}
-                  className="h-8 flex-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
-                  onBlur={(e) => {
-                    const title = e.target.value.trim();
-                    if (title && title !== task.title)
-                      patchTask(task, { title });
-                  }}
+        {rootTasks.map((task) => {
+          const isDone = isDoneTaskStatus(task.status);
+          return (
+            <div
+              key={task.id}
+              className="rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/40 p-2.5"
+            >
+              <div className="flex items-start gap-2">
+                <ProjectTaskDoneCheckbox
+                  checked={isDone}
+                  disabled={!canEdit}
+                  title={task.title}
+                  onCheckedChange={
+                    canEdit
+                      ? (done) => {
+                          const change = toggleDoneStatus(
+                            task.id,
+                            task.status,
+                            done,
+                          );
+                          patchTask(
+                            task,
+                            { status: change.status },
+                            change.rollback,
+                          );
+                        }
+                      : undefined
+                  }
                 />
-              ) : (
-                <span className="flex-1 text-sm text-[var(--workspace-shell-text)]">
-                  {task.title}
-                </span>
-              )}
-              {canEdit ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
-                  aria-label={`Delete ${task.title}`}
-                  onClick={() => setPendingDelete(task)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              ) : null}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {canEdit ? (
-                <>
-                  <Select
-                    value={task.status}
-                    onValueChange={(status) => patchTask(task, { status })}
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        'h-7 w-[130px] border-0 text-xs font-medium shadow-none',
-                        taskStatusBadgeClass(task.status),
-                      )}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TASK_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {TASK_STATUS_LABELS[s]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <span
+                  className={`mt-2 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.none}`}
+                />
+                {canEdit ? (
                   <Input
-                    type="date"
-                    defaultValue={toDateInputValue(task.due_date)}
-                    className="h-7 w-[130px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)]"
+                    defaultValue={task.title}
+                    className={cn(
+                      'h-8 flex-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm',
+                      isDone
+                        ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                        : 'text-[var(--workspace-shell-text)]',
+                    )}
                     onBlur={(e) => {
-                      const val = e.target.value || null;
-                      if (val !== toDateInputValue(task.due_date)) {
-                        patchTask(task, { due_date: val });
-                      }
+                      const title = e.target.value.trim();
+                      if (title && title !== task.title)
+                        patchTask(task, { title });
                     }}
                   />
-                </>
-              ) : (
-                <span className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                  <TaskStatusBadge
-                    status={task.status}
-                    className="normal-case tracking-normal"
-                  />
-                  {formatShortDate(task.due_date)}
-                </span>
-              )}
-              <TaskDurationMeta minutes={task.duration_minutes} />
-            </div>
-            {childTasks(task.id).length > 0 ? (
-              <ul className="mt-2 space-y-1 border-t border-[color:var(--workspace-shell-border)]/60 pt-2">
-                {childTasks(task.id).map((subtask) => (
-                  <li
-                    key={subtask.id}
-                    className="flex items-center justify-between gap-2 pl-4 text-xs text-[var(--workspace-shell-text-muted)]"
+                ) : (
+                  <span
+                    className={cn(
+                      'flex-1 text-sm',
+                      isDone
+                        ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                        : 'text-[var(--workspace-shell-text)]',
+                    )}
                   >
-                    <span>
-                      {subtask.status === 'done' ? '✓ ' : '○ '}
-                      {subtask.title}
-                      {subtask.duration_minutes ? (
-                        <>
-                          {' · '}
-                          <TaskDurationMeta
-                            minutes={subtask.duration_minutes}
-                          />
-                        </>
-                      ) : null}
-                    </span>
-                    {canEdit ? (
-                      <button
-                        type="button"
-                        className="hover:text-red-400"
-                        aria-label={`Delete ${subtask.title}`}
-                        onClick={() => setPendingDelete(subtask)}
+                    {task.title}
+                  </span>
+                )}
+                {canEdit ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
+                    aria-label={`Delete ${task.title}`}
+                    onClick={() => setPendingDelete(task)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                ) : null}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {canEdit ? (
+                  <>
+                    <Select
+                      value={task.status}
+                      onValueChange={(status) => patchTask(task, { status })}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          'h-7 w-[130px] border-0 text-xs font-medium shadow-none',
+                          taskStatusBadgeClass(task.status),
+                        )}
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ))}
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TASK_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {TASK_STATUS_LABELS[s]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="date"
+                      defaultValue={toDateInputValue(task.due_date)}
+                      className="h-7 w-[130px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)]"
+                      onBlur={(e) => {
+                        const val = e.target.value || null;
+                        if (val !== toDateInputValue(task.due_date)) {
+                          patchTask(task, { due_date: val });
+                        }
+                      }}
+                    />
+                  </>
+                ) : (
+                  <span className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                    <TaskStatusBadge
+                      status={task.status}
+                      className="tracking-normal normal-case"
+                    />
+                    {formatShortDate(task.due_date)}
+                  </span>
+                )}
+                <TaskDurationMeta minutes={task.duration_minutes} />
+              </div>
+              {childTasks(task.id).length > 0 ? (
+                <ul className="mt-2 space-y-1 border-t border-[color:var(--workspace-shell-border)]/60 pt-2">
+                  {childTasks(task.id).map((subtask) => (
+                    <li
+                      key={subtask.id}
+                      className="flex items-center justify-between gap-2 pl-4 text-xs text-[var(--workspace-shell-text-muted)]"
+                    >
+                      <span className="inline-flex min-w-0 items-center gap-1.5">
+                        <ProjectTaskDoneCheckbox
+                          checked={isDoneTaskStatus(subtask.status)}
+                          disabled={!canEdit}
+                          title={subtask.title}
+                          onCheckedChange={
+                            canEdit
+                              ? (done) => {
+                                  const change = toggleDoneStatus(
+                                    subtask.id,
+                                    subtask.status,
+                                    done,
+                                  );
+                                  patchTask(
+                                    subtask,
+                                    { status: change.status },
+                                    change.rollback,
+                                  );
+                                }
+                              : undefined
+                          }
+                        />
+                        <span
+                          className={cn(
+                            'truncate',
+                            isDoneTaskStatus(subtask.status) &&
+                              'text-[var(--workspace-shell-text-muted)] line-through',
+                          )}
+                        >
+                          {subtask.title}
+                        </span>
+                        {subtask.duration_minutes ? (
+                          <>
+                            {' · '}
+                            <TaskDurationMeta
+                              minutes={subtask.duration_minutes}
+                            />
+                          </>
+                        ) : null}
+                      </span>
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          className="hover:text-red-400"
+                          aria-label={`Delete ${subtask.title}`}
+                          onClick={() => setPendingDelete(subtask)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
 
       {canEdit && (

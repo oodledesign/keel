@@ -40,6 +40,7 @@ import { getErrorMessage } from '../../_lib/error-message';
 import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
 import { deletePhase, updatePhase } from '../../_lib/server/server-actions';
 import {
+  PHASE_STATUSES,
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
   formatShortDate,
@@ -57,13 +58,6 @@ export type PhaseRecord = {
   due_date: string | null;
   completed_at: string | null;
 };
-
-const STATUS_OPTIONS: PhaseStatus[] = [
-  'not_started',
-  'in_progress',
-  'blocked',
-  'complete',
-];
 
 type PhaseDraft = {
   name: string;
@@ -313,7 +307,7 @@ export function PhaseMetaPanel({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIONS.map((s) => (
+                {PHASE_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
                     {PHASE_STATUS_LABELS[s]}
                   </SelectItem>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -37,35 +37,52 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
+import { isDoneTaskStatus } from '~/lib/projects/task-status-badge';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
   JobBoardResult,
   JobBoardTask,
   PhaseListItem,
+  PhaseStatus,
   PhaseTemplateListItem,
 } from '../../_lib/schema/project-phases.schema';
 import {
   createJobTask,
   deletePhase,
   moveTask,
+  updateJobTask,
+  updatePhase,
 } from '../../_lib/server/server-actions';
 import { AddProjectTaskForm } from './add-project-task-form';
 import { JobProjectTaskSheet } from './job-project-task-sheet';
 import {
+  PHASE_STATUSES,
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
   PRIORITY_DOT,
   UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
+import {
+  ProjectTaskDoneCheckbox,
+  useTaskDoneStatusToggle,
+} from './project-task-done-checkbox';
+
+/** Pointer travel before a press becomes a reorder instead of a click. */
+const TASK_DRAG_THRESHOLD_PX = 8;
 
 type MemberLookup = Map<
   string,
@@ -102,14 +119,14 @@ function TaskCard({
   memberLookup,
   contactLookup,
   isOverlay,
-  onOpen,
+  onToggleDone,
   subtasks = [],
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
   contactLookup: ContactLookup;
   isOverlay?: boolean;
-  onOpen?: () => void;
+  onToggleDone?: (task: JobBoardTask, done: boolean) => void;
   subtasks?: JobBoardTask[];
 }) {
   const assigneeLabel = resolveTaskAssigneeLabel(
@@ -118,6 +135,7 @@ function TaskCard({
     contactLookup,
   );
   const priorityKey = task.priority || 'none';
+  const isDone = isDoneTaskStatus(task.status);
   const linkCount = task.links?.length ?? 0;
   const attachedNoteCount = task.note_refs?.length ?? 0;
   const hasNotes = Boolean(task.notes?.trim());
@@ -128,62 +146,93 @@ function TaskCard({
     hasNotes ? 'Scratch' : null,
     linkCount > 0 ? `${linkCount} link${linkCount === 1 ? '' : 's'}` : null,
   ].filter(Boolean);
+  const metaClass = cn(
+    'text-[11px] text-[var(--workspace-shell-text-muted)]',
+    isDone && 'line-through',
+  );
 
   return (
     <div
-      role={onOpen ? 'button' : undefined}
-      tabIndex={onOpen ? 0 : undefined}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (!onOpen) return;
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
-      className={`rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80 p-3 shadow-sm transition-colors ${
-        isOverlay ? 'ring-2 ring-[var(--ozer-accent)]/40' : ''
-      } ${onOpen ? 'cursor-pointer hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-panel)]' : ''}`}
+      className={cn(
+        'rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80 p-3 shadow-sm transition-colors',
+        isOverlay && 'ring-2 ring-[var(--ozer-accent)]/40',
+        !isOverlay &&
+          'hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-panel)]',
+      )}
     >
       <div className="flex items-start gap-2">
+        <ProjectTaskDoneCheckbox
+          checked={isDone}
+          disabled={isOverlay}
+          title={task.title}
+          onCheckedChange={
+            onToggleDone ? (done) => onToggleDone(task, done) : undefined
+          }
+        />
         <span
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
           title={task.priority}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm leading-snug font-medium text-[var(--workspace-shell-text)]">
+          <p
+            className={cn(
+              'text-sm leading-snug font-medium',
+              isDone
+                ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                : 'text-[var(--workspace-shell-text)]',
+            )}
+          >
             {task.title}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <TaskStatusBadge status={task.status} />
             {task.due_date && (
-              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+              <span className={metaClass}>
                 {formatShortDate(task.due_date)}
               </span>
             )}
-            <TaskDurationMeta minutes={task.duration_minutes} />
+            <span className={cn(isDone && 'line-through')}>
+              <TaskDurationMeta minutes={task.duration_minutes} />
+            </span>
             {assigneeLabel ? (
-              <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
-                {assigneeLabel}
-              </span>
+              <span className={cn('truncate', metaClass)}>{assigneeLabel}</span>
             ) : null}
             {metaBits.length > 0 && (
-              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                {metaBits.join(' · ')}
-              </span>
+              <span className={metaClass}>{metaBits.join(' · ')}</span>
             )}
           </div>
           {subtasks.length > 0 ? (
             <ul className="mt-2 space-y-1 border-t border-[color:var(--workspace-shell-border)]/60 pt-2">
-              {subtasks.map((subtask) => (
-                <li
-                  key={subtask.id}
-                  className="truncate pl-1 text-[11px] text-[var(--workspace-shell-text-muted)]"
-                >
-                  {subtask.status === 'done' ? '✓ ' : '○ '}
-                  {subtask.title}
-                </li>
-              ))}
+              {subtasks.map((subtask) => {
+                const subtaskDone = isDoneTaskStatus(subtask.status);
+                return (
+                  <li
+                    key={subtask.id}
+                    className="flex items-center gap-1.5 pl-1 text-[11px]"
+                  >
+                    <ProjectTaskDoneCheckbox
+                      checked={subtaskDone}
+                      disabled={isOverlay}
+                      title={subtask.title}
+                      onCheckedChange={
+                        onToggleDone
+                          ? (done) => onToggleDone(subtask, done)
+                          : undefined
+                      }
+                    />
+                    <span
+                      className={cn(
+                        'truncate',
+                        subtaskDone
+                          ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                          : 'text-[var(--workspace-shell-text-muted)]',
+                      )}
+                    >
+                      {subtask.title}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
         </div>
@@ -198,6 +247,7 @@ function SortableTaskCard({
   contactLookup,
   disabled,
   onOpen,
+  onToggleDone,
   subtasks = [],
 }: {
   task: JobBoardTask;
@@ -205,6 +255,7 @@ function SortableTaskCard({
   contactLookup: ContactLookup;
   disabled: boolean;
   onOpen: () => void;
+  onToggleDone?: (task: JobBoardTask, done: boolean) => void;
   subtasks?: JobBoardTask[];
 }) {
   const {
@@ -215,40 +266,66 @@ function SortableTaskCard({
     transition,
     isDragging,
   } = useSortable({ id: task.id, disabled });
+  const origin = useRef<{ x: number; y: number } | null>(null);
 
   return (
     <div
       ref={setNodeRef}
+      data-test="project-task-row"
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.4 : 1,
       }}
-      className="touch-manipulation"
+      className={cn(
+        'touch-manipulation rounded-lg outline-none',
+        disabled ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
+      )}
+      {...attributes}
+      {...(disabled ? {} : listeners)}
+      role="group"
+      aria-label={task.title}
+      onPointerDown={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-task-row-action]')) return;
+        origin.current = { x: event.clientX, y: event.clientY };
+        if (!disabled) {
+          const startDrag = listeners?.onPointerDown as
+            | ((pointerEvent: React.PointerEvent<HTMLDivElement>) => void)
+            | undefined;
+          startDrag?.(event);
+        }
+      }}
+      onClick={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-task-row-action]')) return;
+        const start = origin.current;
+        origin.current = null;
+        if (start) {
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          if (dx * dx + dy * dy >= TASK_DRAG_THRESHOLD_PX ** 2) {
+            return;
+          }
+        }
+        onOpen();
+      }}
+      onKeyDown={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-task-row-action]')) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
     >
-      <div className="flex gap-1">
-        {!disabled && (
-          <button
-            type="button"
-            className="mt-3 shrink-0 cursor-grab text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)] active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-            aria-label="Drag task"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
-        )}
-        <div className="min-w-0 flex-1">
-          <TaskCard
-            task={task}
-            memberLookup={memberLookup}
-            contactLookup={contactLookup}
-            onOpen={onOpen}
-            subtasks={subtasks}
-          />
-        </div>
-      </div>
+      <TaskCard
+        task={task}
+        memberLookup={memberLookup}
+        contactLookup={contactLookup}
+        onToggleDone={disabled ? undefined : onToggleDone}
+        subtasks={subtasks}
+      />
     </div>
   );
 }
@@ -266,6 +343,8 @@ function PhaseColumn({
   onDeletePhase,
   deletingPhase,
   onOpenTask,
+  onToggleDone,
+  onSetPhaseStatus,
 }: {
   phase: PhaseListItem | null;
   tasks: JobBoardTask[];
@@ -286,6 +365,8 @@ function PhaseColumn({
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
   onOpenTask: (task: JobBoardTask) => void;
+  onToggleDone?: (task: JobBoardTask, done: boolean) => void;
+  onSetPhaseStatus?: (phaseId: string, status: PhaseStatus) => void;
 }) {
   const columnId = phase?.id ?? UNPHASED_KEY;
   const { setNodeRef, isOver } = useDroppable({
@@ -356,8 +437,34 @@ function PhaseColumn({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
                   >
+                    <DropdownMenuLabel className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+                      Status
+                    </DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={phase.status}
+                      onValueChange={(value) => {
+                        if (
+                          !(PHASE_STATUSES as readonly string[]).includes(value)
+                        ) {
+                          return;
+                        }
+                        onSetPhaseStatus?.(phase.id, value as PhaseStatus);
+                      }}
+                    >
+                      {PHASE_STATUSES.map((status) => (
+                        <DropdownMenuRadioItem
+                          key={status}
+                          value={status}
+                          className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                          data-test={`phase-status-${status}`}
+                        >
+                          {PHASE_STATUS_LABELS[status]}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="cursor-pointer text-red-700 focus:text-red-800"
                       onSelect={() => setDeleteOpen(true)}
@@ -423,6 +530,7 @@ function PhaseColumn({
               contactLookup={contactLookup}
               disabled={!canEditJobs}
               onOpen={() => onOpenTask(task)}
+              onToggleDone={onToggleDone}
               subtasks={subtasksByParent.get(task.id) ?? []}
             />
           ))}
@@ -461,6 +569,8 @@ function SortablePhaseColumn(props: {
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
   onOpenTask: (task: JobBoardTask) => void;
+  onToggleDone?: (task: JobBoardTask, done: boolean) => void;
+  onSetPhaseStatus?: (phaseId: string, status: PhaseStatus) => void;
 }) {
   return <PhaseColumn {...props} />;
 }
@@ -499,6 +609,7 @@ export function JobProjectBoard({
   const [addingTask, setAddingTask] = useState(false);
   const [deletingPhase, setDeletingPhase] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const toggleDoneStatus = useTaskDoneStatusToggle();
 
   const memberLookup = useMemo<MemberLookup>(() => {
     const map: MemberLookup = new Map();
@@ -525,7 +636,9 @@ export function JobProjectBoard({
   }, [board.contactAssignees]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: TASK_DRAG_THRESHOLD_PX },
+    }),
   );
 
   const phases = board.phases;
@@ -649,10 +762,8 @@ export function JobProjectBoard({
       accountSlug,
       allTasks,
       applyTasksByPhase,
-      board,
       canEditJobs,
       jobId,
-      onBoardChange,
       phases,
       startTransition,
       tasksByPhase,
@@ -759,6 +870,98 @@ export function JobProjectBoard({
     setTaskSheetOpen(true);
   }, []);
 
+  const handleToggleDone = useCallback(
+    (task: JobBoardTask, done: boolean) => {
+      const change = toggleDoneStatus(task.id, task.status, done);
+      const nextStatus = change.status;
+      if (task.status === nextStatus) return;
+
+      const previous = tasksByPhase;
+      const next: Record<string, JobBoardTask[]> = {};
+      for (const [key, list] of Object.entries(previous)) {
+        next[key] = list.map((item) =>
+          item.id === task.id ? { ...item, status: nextStatus } : item,
+        );
+      }
+      applyTasksByPhase(next);
+      setSelectedTask((current) =>
+        current?.id === task.id ? { ...current, status: nextStatus } : current,
+      );
+
+      startTransition(async () => {
+        try {
+          await updateJobTask({
+            accountId,
+            accountSlug,
+            jobId,
+            taskId: task.id,
+            status: nextStatus,
+          });
+        } catch (err) {
+          change.rollback();
+          toast.error(getErrorMessage(err));
+          applyTasksByPhase(previous);
+          setSelectedTask((current) =>
+            current?.id === task.id
+              ? { ...current, status: task.status }
+              : current,
+          );
+        }
+      });
+    },
+    [
+      accountId,
+      accountSlug,
+      applyTasksByPhase,
+      jobId,
+      startTransition,
+      tasksByPhase,
+      toggleDoneStatus,
+    ],
+  );
+
+  const handleSetPhaseStatus = useCallback(
+    (phaseId: string, status: PhaseStatus) => {
+      const current = board.phases.find((phase) => phase.id === phaseId);
+      if (!current || current.status === status) return;
+
+      const previousPhases = board.phases;
+      onBoardChange({
+        ...board,
+        phases: previousPhases.map((phase) =>
+          phase.id === phaseId
+            ? {
+                ...phase,
+                status,
+                completed_at:
+                  status === 'complete'
+                    ? new Date().toISOString()
+                    : phase.status === 'complete'
+                      ? null
+                      : phase.completed_at,
+              }
+            : phase,
+        ),
+      });
+
+      startTransition(async () => {
+        try {
+          await updatePhase({
+            accountId,
+            accountSlug,
+            jobId,
+            phaseId,
+            status,
+          });
+        } catch (err) {
+          toast.error(getErrorMessage(err));
+          onBoardChange({ ...board, phases: previousPhases });
+        }
+      });
+    },
+    [accountId, accountSlug, board, jobId, onBoardChange, startTransition],
+  );
+
   const handleTaskUpdated = useCallback(
     (updated: JobBoardTask) => {
       setSelectedTask(updated);
@@ -827,6 +1030,8 @@ export function JobProjectBoard({
               onDeletePhase={handleDeletePhase}
               deletingPhase={deletingPhase}
               onOpenTask={openTask}
+              onToggleDone={handleToggleDone}
+              onSetPhaseStatus={handleSetPhaseStatus}
             />
           ))}
           {unphasedTasks.length > 0 || canEditJobs ? (
@@ -841,6 +1046,7 @@ export function JobProjectBoard({
               onAddTask={handleAddTask}
               addingTask={addingTask}
               onOpenTask={openTask}
+              onToggleDone={handleToggleDone}
             />
           ) : null}
         </div>

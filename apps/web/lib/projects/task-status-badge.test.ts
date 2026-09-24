@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   TASK_STATUS_BADGE_CLASS,
+  isDoneTaskStatus,
   resolveTaskStatusTone,
+  statusAfterDoneToggle,
   taskStatusBadgeClass,
   taskStatusDisplayLabel,
 } from './task-status-badge';
@@ -51,6 +53,27 @@ describe('task status pills', () => {
     ] as const;
     const classes = tones.map((tone) => TASK_STATUS_BADGE_CLASS[tone]);
     expect(new Set(classes).size).toBe(tones.length);
+  });
+
+  it('treats done and completed as struck-through done tasks', () => {
+    expect(isDoneTaskStatus('done')).toBe(true);
+    expect(isDoneTaskStatus('completed')).toBe(true);
+    expect(isDoneTaskStatus('complete')).toBe(true);
+    expect(isDoneTaskStatus('todo')).toBe(false);
+    expect(isDoneTaskStatus('cancelled')).toBe(false);
+    expect(isDoneTaskStatus('in_progress')).toBe(false);
+  });
+
+  it('restores the previous status when a done checkbox is cleared', () => {
+    expect(statusAfterDoneToggle('cancelled', true).remember).toBe('cancelled');
+    expect(statusAfterDoneToggle('done', false, 'cancelled').status).toBe(
+      'cancelled',
+    );
+    expect(statusAfterDoneToggle('done', false, 'in_progress').status).toBe(
+      'in_progress',
+    );
+    expect(statusAfterDoneToggle('done', false, null).status).toBe('todo');
+    expect(statusAfterDoneToggle('in_progress', true).status).toBe('done');
   });
 
   it('labels known slugs and leaves custom labels intact', () => {
