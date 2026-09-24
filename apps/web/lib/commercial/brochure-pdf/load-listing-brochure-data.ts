@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -158,13 +160,16 @@ const LISTING_SELECT = [
 ].join(', ');
 
 /**
- * Authenticated brochure payload for PDF / editor (workspace RLS).
+ * Brochure payload for PDF / editor.
+ * Defaults to the workspace RLS client. Portal brochure downloads pass the
+ * admin client after the route has confirmed the listing is on market.
  */
 export async function loadListingBrochureData(
   listingId: string,
   accountId: string,
+  db?: SupabaseClient,
 ): Promise<PublicBrochureData | null> {
-  const client = getSupabaseServerClient();
+  const client = db ?? getSupabaseServerClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = getSupabaseServerAdminClient() as any;
 

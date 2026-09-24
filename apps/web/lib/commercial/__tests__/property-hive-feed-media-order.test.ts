@@ -114,24 +114,38 @@ describe('collectPropertyHiveFeedMedia', () => {
           sort_order: 1,
         }),
         media({
+          id: 'brochure',
+          media_type: 'brochure',
+          file_name: 'particulars.pdf',
+          mime_type: 'application/pdf',
+          sort_order: 3,
+        }),
+        media({
           id: 'floor-photo',
           media_type: 'floorplan',
           file_name: 'floor.jpg',
           mime_type: 'image/jpeg',
           sort_order: 2,
         }),
+        media({
+          id: 'brochure-image',
+          media_type: 'brochure',
+          file_name: 'particulars.jpg',
+          mime_type: 'image/jpeg',
+          sort_order: 4,
+        }),
       ],
       resolveUrl,
     );
 
-    expect(images.map((image) => image.name)).toEqual([
-      'floor.jpg',
-      'photo.jpg',
-    ]);
+    expect(images.map((image) => image.name)).toEqual(['photo.jpg']);
     expect(files.map((file) => ({ name: file.name, type: file.type }))).toEqual(
       [
         { name: 'plan.pdf', type: '2' },
         { name: 'epc.pdf', type: '3' },
+        { name: 'floor.jpg', type: '2' },
+        { name: 'particulars.pdf', type: '11' },
+        { name: 'particulars.jpg', type: '11' },
       ],
     );
   });

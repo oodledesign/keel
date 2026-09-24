@@ -22,6 +22,14 @@ import {
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import { renderPropertyHiveOzerListingFields } from '~/lib/commercial/property-hive-custom-fields';
 import {
+  type FeedBrochureDocumentRow,
+  buildOzerBrochureFeedFile,
+  ozerBrochureFeedVersion,
+  pickFeedBrochureDocument,
+  shouldPublishOzerBrochureToFeed,
+  withOzerBrochureFeedFile,
+} from '~/lib/commercial/property-hive-feed-brochures';
+import {
   type FeedActingAgentContact,
   type FeedActingAgentInput,
   type FeedCoAgentRow,
@@ -30,7 +38,11 @@ import {
   renderFeedJointAgentsXml,
   toFeedActingAgentContacts,
 } from '~/lib/commercial/property-hive-feed-contacts';
-import { collectPropertyHiveFeedMedia } from '~/lib/commercial/property-hive-feed-media';
+import {
+  type PropertyHiveFeedFile,
+  collectPropertyHiveFeedMedia,
+} from '~/lib/commercial/property-hive-feed-media';
+import { mapCommercialSectorToPropertyHiveTypes } from '~/lib/commercial/property-hive-feed-types';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 const FEED_TOKEN_META_KEY = 'xml_feed_token';
@@ -86,6 +98,7 @@ type ListingRow = {
   created_at: string;
   updated_at: string;
   account_branch_id?: string | null;
+  brochure_share_enabled?: boolean | null;
 };
 
 type UnitRow = {
@@ -370,6 +383,7 @@ function renderPropertyXml(
   signedByPath: Map<string, string> = new Map(),
   siteUrl: string | null = null,
   actingAgents: FeedActingAgentContact[] = [],
+  ozerBrochure: PropertyHiveFeedFile | null = null,
 ): string {
   const disposalType = (listing.disposal_type as DisposalType) ?? 'to_let';
   const includesToLet = disposalIncludesToLet(disposalType);
@@ -382,9 +396,11 @@ function renderPropertyXml(
   const points = keyPoints(listing.key_points);
   const propertyId = feedPropertyId(listing);
 
-  const { images, files } = collectPropertyHiveFeedMedia(media, (item) =>
+  const collected = collectPropertyHiveFeedMedia(media, (item) =>
     resolveMediaUrlFromMaps(item as MediaRow, signedByPath, siteUrl),
   );
+  const images = collected.images;
+  const files = withOzerBrochureFeedFile(collected.files, ozerBrochure);
 
   const showRent =
     includesToLet &&
@@ -484,8 +500,15 @@ function renderPropertyXml(
         .join('')}</key_selling_points>`
     : '<key_selling_points/>';
 
-  const typesXml = listing.sector
-    ? `<types><type>${escapeXml(listing.sector)}</type></types>`
+  // EACH uses this same Kato XML. Extra type names are exact-match candidates
+  // for Property Hive; importers skip names that are not already terms.
+  const propertyHiveTypes = mapCommercialSectorToPropertyHiveTypes(
+    listing.sector,
+  );
+  const typesXml = propertyHiveTypes.length
+    ? `<types>${propertyHiveTypes
+        .map((type) => `<type>${escapeXml(type)}</type>`)
+        .join('')}</types>`
     : '<types/>';
 
   const availXml = renderAvailabilities(disposalType);
@@ -928,6 +951,7 @@ export async function buildCommercialFeedXml(
     { data: units },
     { data: media },
     { data: coAgentRows },
+    { data: brochureRows, error: brochureError },
     actingAgentsByListing,
   ] = await Promise.all([
     client
@@ -952,8 +976,19 @@ export async function buildCommercialFeedXml(
       .eq('account_id', accountId)
       .in('listing_id', listingIds)
       .order('sort_order'),
+    client
+      .from('commercial_listing_brochures')
+      .select('listing_id, orientation, template_id, pages, updated_at')
+      .in('listing_id', listingIds),
     loadActingAgentsByListing(client, accountId, listingRows),
   ]);
+
+  if (brochureError) {
+    console.error(
+      '[property-hive-feed] brochure document load error:',
+      brochureError.message,
+    );
+  }
 
   const unitsByListing = new Map<string, UnitRow[]>();
   for (const unit of (units ?? []) as UnitRow[]) {
@@ -976,6 +1011,27 @@ export async function buildCommercialFeedXml(
     coAgentsByListing.set(row.listing_id, list);
   }
 
+  const brochuresByListing = new Map<string, FeedBrochureDocumentRow[]>();
+  if (!brochureError) {
+    for (const row of (brochureRows ?? []) as Array<{
+      listing_id: string;
+      orientation: string | null;
+      template_id: string | null;
+      pages: unknown;
+      updated_at: string | null;
+    }>) {
+      const list = brochuresByListing.get(row.listing_id) ?? [];
+      list.push({
+        listingId: row.listing_id,
+        orientation: row.orientation ?? 'portrait',
+        templateId: row.template_id ?? 'classic',
+        pages: row.pages,
+        updatedAt: row.updated_at ?? '',
+      });
+      brochuresByListing.set(row.listing_id, list);
+    }
+  }
+
   const allMedia = (media ?? []) as MediaRow[];
   const siteUrl = resolveSiteUrlForPublicMedia();
   const signedByPath = siteUrl
@@ -993,8 +1049,26 @@ export async function buildCommercialFeedXml(
     );
   }
 
-  const propertiesXml = listingRows.map((listing) =>
-    renderPropertyXml(
+  const propertiesXml = listingRows.map((listing) => {
+    const documents = brochuresByListing.get(listing.id) ?? [];
+    const saved = pickFeedBrochureDocument(documents);
+    const ozerBrochure =
+      siteUrl &&
+      shouldPublishOzerBrochureToFeed({
+        shareEnabled: Boolean(listing.brochure_share_enabled),
+        documents,
+      })
+        ? buildOzerBrochureFeedFile({
+            siteUrl,
+            listingId: listing.id,
+            version: ozerBrochureFeedVersion({
+              documentUpdatedAt: saved?.updatedAt ?? null,
+              listingUpdatedAt: listing.updated_at,
+            }),
+          })
+        : null;
+
+    return renderPropertyXml(
       listing,
       unitsByListing.get(listing.id) ?? [],
       mediaByListing.get(listing.id) ?? [],
@@ -1002,8 +1076,9 @@ export async function buildCommercialFeedXml(
       signedByPath,
       siteUrl,
       actingAgentsByListing.get(listing.id) ?? [],
-    ),
-  );
+      ozerBrochure,
+    );
+  });
 
   return {
     accountId,
