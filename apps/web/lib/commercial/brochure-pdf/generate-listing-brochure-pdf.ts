@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type {
   BrochureDisplayOptions,
   BrochureDocument,
@@ -18,12 +20,18 @@ export async function generateListingBrochurePdf(input: {
   templateId: BrochureTemplateId;
   document?: BrochureDocument | null;
   display?: Partial<BrochureDisplayOptions>;
+  /** Override the RLS client. Public feed downloads pass the admin client. */
+  client?: SupabaseClient;
 }): Promise<{
   bytes: Uint8Array;
   document: BrochureDocument;
   filename: string;
 }> {
-  const data = await loadListingBrochureData(input.listingId, input.accountId);
+  const data = await loadListingBrochureData(
+    input.listingId,
+    input.accountId,
+    input.client,
+  );
   if (!data) {
     throw new Error('Listing not found');
   }
