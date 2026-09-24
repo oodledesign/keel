@@ -5,6 +5,7 @@ import { useCallback, useMemo, useRef, useTransition } from 'react';
 import Link from 'next/link';
 
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
@@ -18,7 +19,9 @@ import { updatePhase } from '../../_lib/server/server-actions';
 import {
   PHASE_STATUS_LABELS,
   formatShortDate,
+  isPhaseComplete,
   parseDateKey,
+  phaseHeaderTitleClass,
 } from './job-project.constants';
 
 function addDays(d: Date, days: number) {
@@ -188,7 +191,10 @@ function PhaseBar({
       <Link
         href={phasePath(accountSlug, jobId, phase.id)}
         prefetch={false}
-        className="absolute top-full mt-1 truncate text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        className={cn(
+          'absolute top-full mt-1 truncate text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+          isPhaseComplete(phase.status) && 'line-through',
+        )}
         style={{
           left: `${Math.max(0, leftPct)}%`,
           maxWidth: `${Math.min(100 - leftPct, widthPct)}%`,
@@ -307,21 +313,34 @@ export function JobProjectTimeline({
                 <Link
                   href={phasePath(accountSlug, jobId, phase.id)}
                   prefetch={false}
-                  className="text-sm font-medium text-[var(--workspace-shell-text)] hover:underline"
+                  className={cn(
+                    'text-sm font-medium hover:underline',
+                    phaseHeaderTitleClass(phase.status),
+                  )}
                 >
                   {phase.name}
                 </Link>
-                <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                <p
+                  className={cn(
+                    'mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]',
+                    isPhaseComplete(phase.status) && 'line-through',
+                  )}
+                >
                   {formatShortDate(phase.start_date)} –{' '}
                   {formatShortDate(phase.due_date)}
                 </p>
-                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                <p
+                  className={cn(
+                    'text-[11px] text-[var(--workspace-shell-text-muted)]',
+                    isPhaseComplete(phase.status) && 'line-through',
+                  )}
+                >
                   {phase.progressPct}% complete
                 </p>
                 <TaskStatusBadge
                   status={phase.status}
                   label={PHASE_STATUS_LABELS[phase.status]}
-                  className="mt-1 normal-case tracking-normal"
+                  className="mt-1 tracking-normal normal-case"
                 />
               </div>
               <div className="relative rounded-lg bg-[var(--workspace-control-surface)]/30 px-1">

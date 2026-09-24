@@ -35,7 +35,10 @@ import { cn } from '@kit/ui/utils';
 import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
 import { projectPhaseHref } from '~/lib/projects/project-paths';
-import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
+import {
+  isDoneTaskStatus,
+  taskStatusBadgeClass,
+} from '~/lib/projects/task-status-badge';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
@@ -54,8 +57,14 @@ import {
   TASK_STATUS_LABELS,
   UNPHASED_KEY,
   formatShortDate,
+  isPhaseComplete,
+  phaseHeaderTitleClass,
   toDateInputValue,
 } from './job-project.constants';
+import {
+  ProjectTaskDoneCheckbox,
+  useTaskDoneStatusToggle,
+} from './project-task-done-checkbox';
 
 const TASK_STATUSES = [
   'todo',
@@ -92,9 +101,10 @@ function TaskRow({
 }) {
   const [, startTransition] = useTransition();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const toggleDoneStatus = useTaskDoneStatusToggle();
 
   const patch = useCallback(
-    (updates: Partial<JobBoardTask>) => {
+    (updates: Partial<JobBoardTask>, onRevert?: () => void) => {
       const optimistic = { ...task, ...updates };
       onTaskUpdated(optimistic);
       startTransition(async () => {
@@ -120,6 +130,7 @@ function TaskRow({
           });
           onTaskUpdated(saved as JobBoardTask);
         } catch (err) {
+          onRevert?.();
           toast.error(getErrorMessage(err));
           onTaskUpdated(task);
         }
@@ -127,6 +138,8 @@ function TaskRow({
     },
     [accountId, accountSlug, jobId, onTaskUpdated, startTransition, task],
   );
+
+  const isDone = isDoneTaskStatus(task.status);
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -149,20 +162,45 @@ function TaskRow({
   return (
     <div className="grid grid-cols-1 gap-2 border-b border-[color:var(--workspace-shell-border)]/80 py-3 sm:grid-cols-[1fr_140px_120px_100px_36px] sm:items-center sm:gap-3">
       <div className="flex min-w-0 items-center gap-2">
+        <ProjectTaskDoneCheckbox
+          checked={isDone}
+          disabled={!canEditJobs}
+          title={task.title}
+          onCheckedChange={
+            canEditJobs
+              ? (done) => {
+                  const change = toggleDoneStatus(task.id, task.status, done);
+                  patch({ status: change.status }, change.rollback);
+                }
+              : undefined
+          }
+        />
         <span
           className={`h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.none}`}
         />
         {canEditJobs ? (
           <Input
             defaultValue={task.title}
-            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]"
+            className={cn(
+              'h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm',
+              isDone
+                ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                : 'text-[var(--workspace-shell-text)]',
+            )}
             onBlur={(e) => {
               const title = e.target.value.trim();
               if (title && title !== task.title) patch({ title });
             }}
           />
         ) : (
-          <span className="truncate text-sm text-[var(--workspace-shell-text)]">
+          <span
+            className={cn(
+              'truncate text-sm',
+              isDone
+                ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                : 'text-[var(--workspace-shell-text)]',
+            )}
+          >
             {task.title}
           </span>
         )}
@@ -193,7 +231,7 @@ function TaskRow({
         ) : (
           <TaskStatusBadge
             status={task.status}
-            className="text-[11px] normal-case tracking-normal"
+            className="text-[11px] tracking-normal normal-case"
           />
         )}
       </div>
@@ -212,11 +250,18 @@ function TaskRow({
             }}
           />
         ) : (
-          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+          <span
+            className={cn(
+              'text-xs text-[var(--workspace-shell-text-muted)]',
+              isDone && 'line-through',
+            )}
+          >
             {formatShortDate(task.due_date)}
           </span>
         )}
-        <TaskDurationMeta minutes={task.duration_minutes} className="mt-1" />
+        <span className={cn(isDone && 'line-through')}>
+          <TaskDurationMeta minutes={task.duration_minutes} className="mt-1" />
+        </span>
       </div>
 
       <div>
@@ -237,7 +282,12 @@ function TaskRow({
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs text-[var(--workspace-shell-text-muted)] capitalize">
+          <span
+            className={cn(
+              'text-xs text-[var(--workspace-shell-text-muted)] capitalize',
+              isDone && 'line-through',
+            )}
+          >
             {task.priority}
           </span>
         )}
@@ -391,7 +441,10 @@ function PhaseGroup({
             <Link
               href={phasePath(accountSlug, jobId, phase.id)}
               prefetch={false}
-              className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:underline"
+              className={cn(
+                'text-sm font-semibold hover:underline',
+                phaseHeaderTitleClass(phase.status),
+              )}
               onClick={(e) => e.stopPropagation()}
             >
               {phase.name}
@@ -401,7 +454,12 @@ function PhaseGroup({
               Unassigned
             </span>
           )}
-          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+          <p
+            className={cn(
+              'mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]',
+              isPhaseComplete(phase?.status) && 'line-through',
+            )}
+          >
             {tasks.length} task{tasks.length !== 1 ? 's' : ''}
             {phase ? ` · ${phase.progressPct}% done` : ''}
           </p>

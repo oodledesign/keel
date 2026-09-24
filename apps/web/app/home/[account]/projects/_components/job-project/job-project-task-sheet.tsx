@@ -38,10 +38,13 @@ import { cn } from '@kit/ui/utils';
 
 import { TaskDurationFields } from '~/components/task-duration-fields';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
-import { TaskRetainerStamp } from '~/lib/retainers/task-retainer-stamp';
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
-import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
+import {
+  isDoneTaskStatus,
+  taskStatusBadgeClass,
+} from '~/lib/projects/task-status-badge';
+import { TaskRetainerStamp } from '~/lib/retainers/task-retainer-stamp';
 import { formatDurationMinutes } from '~/lib/tasks/task-duration';
 import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
 import {
@@ -348,7 +351,11 @@ export function JobProjectTaskSheet({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={!canEditJobs || pending}
-                className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
+                className={cn(
+                  'mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]',
+                  isDoneTaskStatus(status) &&
+                    'text-[var(--workspace-shell-text-muted)] line-through',
+                )}
               />
             </div>
 
@@ -438,9 +445,14 @@ export function JobProjectTaskSheet({
                     {subtasks.map((subtask) => (
                       <li
                         key={subtask.id}
-                        className="rounded-md border border-[color:var(--workspace-shell-border)]/80 px-2.5 py-1.5 text-sm text-[var(--workspace-shell-text)]"
+                        className={cn(
+                          'rounded-md border border-[color:var(--workspace-shell-border)]/80 px-2.5 py-1.5 text-sm',
+                          isDoneTaskStatus(subtask.status)
+                            ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                            : 'text-[var(--workspace-shell-text)]',
+                        )}
                       >
-                        {subtask.status === 'done' ? '✓ ' : ''}
+                        {isDoneTaskStatus(subtask.status) ? '✓ ' : ''}
                         {subtask.title}
                         {formatDurationMinutes(subtask.duration_minutes) ? (
                           <span className="ml-2 text-xs text-[var(--workspace-shell-text-muted)]">

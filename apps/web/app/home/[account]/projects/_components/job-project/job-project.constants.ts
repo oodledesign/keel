@@ -13,12 +13,34 @@ export const DEFAULT_DELIVERY_PHASES = [
   { name: 'Care', colour: ozerColors.muted },
 ] as const;
 
+export const PHASE_STATUSES = [
+  'not_started',
+  'in_progress',
+  'blocked',
+  'complete',
+] as const satisfies readonly PhaseStatus[];
+
 export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
   not_started: 'Not started',
   in_progress: 'In progress',
   blocked: 'Blocked',
   complete: 'Complete',
 };
+
+export function isPhaseComplete(
+  status: PhaseStatus | string | null | undefined,
+): boolean {
+  return status === 'complete';
+}
+
+/** Muted, struck title for a completed phase header. Status chips stay readable. */
+export function phaseHeaderTitleClass(
+  status: PhaseStatus | string | null | undefined,
+): string {
+  return isPhaseComplete(status)
+    ? 'text-[var(--workspace-shell-text-muted)] line-through'
+    : 'text-[var(--workspace-shell-text)]';
+}
 
 export const PHASE_STATUS_STYLES: Record<PhaseStatus, string> = {
   not_started: taskStatusBadgeClass('not_started'),

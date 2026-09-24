@@ -3,10 +3,15 @@
 import { useCallback, useMemo, useState, useTransition } from 'react';
 
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { TaskStatusBadge } from '~/components/projects/task-status-badge';
 import { TaskDurationMeta } from '~/components/task-duration-fields';
-import { taskStatusSelectClass } from '~/lib/projects/task-status-badge';
+import {
+  type RestorableTaskStatus,
+  isDoneTaskStatus,
+  taskStatusSelectClass,
+} from '~/lib/projects/task-status-badge';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
@@ -23,6 +28,10 @@ import {
   UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
+import {
+  ProjectTaskDoneCheckbox,
+  useTaskDoneStatusToggle,
+} from './project-task-done-checkbox';
 
 const STATUS_COLUMNS = [
   { key: 'todo', label: 'To do' },
@@ -101,6 +110,7 @@ function ProgressTaskCard({
   canEditJobs,
   onOpen,
   onStatusChange,
+  onToggleDone,
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
@@ -108,6 +118,7 @@ function ProgressTaskCard({
   canEditJobs: boolean;
   onOpen: () => void;
   onStatusChange: (status: ProgressStatus) => void;
+  onToggleDone?: (done: boolean) => void;
 }) {
   const assigneeLabel = resolveTaskAssigneeLabel(
     task,
@@ -116,6 +127,11 @@ function ProgressTaskCard({
   );
   const priorityKey = task.priority || 'none';
   const status = normalizeStatus(task.status);
+  const isDone = isDoneTaskStatus(task.status);
+  const metaClass = cn(
+    'text-[11px] text-[var(--workspace-shell-text-muted)]',
+    isDone && 'line-through',
+  );
   const linkCount = task.links?.length ?? 0;
   const attachedNoteCount = task.note_refs?.length ?? 0;
   const hasNotes = Boolean(task.notes?.trim());
@@ -129,24 +145,43 @@ function ProgressTaskCard({
 
   return (
     <div
-      role="button"
+      role="group"
+      aria-label={task.title}
       tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
+      onClick={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-task-row-action], select, button')) return;
+        onOpen();
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
           onOpen();
         }
       }}
       className="cursor-pointer rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80 p-3 shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-panel)]"
     >
       <div className="flex items-start gap-2">
+        <ProjectTaskDoneCheckbox
+          checked={isDone}
+          disabled={!canEditJobs}
+          title={task.title}
+          onCheckedChange={canEditJobs ? onToggleDone : undefined}
+        />
         <span
           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
           title={task.priority}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm leading-snug font-medium text-[var(--workspace-shell-text)]">
+          <p
+            className={cn(
+              'text-sm leading-snug font-medium',
+              isDone
+                ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                : 'text-[var(--workspace-shell-text)]',
+            )}
+          >
             {task.title}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -171,20 +206,18 @@ function ProgressTaskCard({
               <TaskStatusBadge status={status} />
             )}
             {task.due_date ? (
-              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+              <span className={metaClass}>
                 {formatShortDate(task.due_date)}
               </span>
             ) : null}
-            <TaskDurationMeta minutes={task.duration_minutes} />
+            <span className={cn(isDone && 'line-through')}>
+              <TaskDurationMeta minutes={task.duration_minutes} />
+            </span>
             {assigneeLabel ? (
-              <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
-                {assigneeLabel}
-              </span>
+              <span className={cn('truncate', metaClass)}>{assigneeLabel}</span>
             ) : null}
             {metaBits.length > 0 ? (
-              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                {metaBits.join(' · ')}
-              </span>
+              <span className={metaClass}>{metaBits.join(' · ')}</span>
             ) : null}
           </div>
         </div>
@@ -216,6 +249,7 @@ export function JobProjectProgressBoard({
   onBoardChange: (board: JobBoardResult) => void;
 }) {
   const [, startTransition] = useTransition();
+  const toggleDoneStatus = useTaskDoneStatusToggle();
   const [selectedTask, setSelectedTask] = useState<JobBoardTask | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
@@ -269,8 +303,15 @@ export function JobProjectProgressBoard({
     return map;
   }, [tasks]);
 
-  function moveTaskStatus(task: JobBoardTask, nextStatus: ProgressStatus) {
-    if (!canEditJobs || normalizeStatus(task.status) === nextStatus) return;
+  function moveTaskStatus(
+    task: JobBoardTask,
+    nextStatus: ProgressStatus | RestorableTaskStatus,
+    onRevert?: () => void,
+  ) {
+    if (!canEditJobs || task.status === nextStatus) {
+      onRevert?.();
+      return;
+    }
 
     const previous = board;
     onBoardChange(patchTaskStatus(board, task.id, nextStatus));
@@ -285,6 +326,7 @@ export function JobProjectProgressBoard({
           status: nextStatus,
         });
       } catch (error) {
+        onRevert?.();
         onBoardChange(previous);
         toast.error(getErrorMessage(error));
       }
@@ -420,6 +462,14 @@ export function JobProjectProgressBoard({
                         onStatusChange={(status) =>
                           moveTaskStatus(task, status)
                         }
+                        onToggleDone={(done) => {
+                          const change = toggleDoneStatus(
+                            task.id,
+                            task.status,
+                            done,
+                          );
+                          moveTaskStatus(task, change.status, change.rollback);
+                        }}
                       />
                       {task.phase_id && phaseNameById.get(task.phase_id) ? (
                         <p className="px-1 text-[10px] text-[var(--workspace-shell-text-muted)]">
