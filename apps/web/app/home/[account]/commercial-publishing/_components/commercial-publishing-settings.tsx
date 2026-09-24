@@ -37,6 +37,7 @@ import {
   rotateEachFeedAction,
   rotatePropertyHiveFeedAction,
   saveRightmoveWorkspaceBranchesAction,
+  saveWebsiteIndexNowKeyAction,
   saveWebsiteListingUrlTemplateAction,
   testPublishListingAction,
 } from '../_lib/server/server-actions';
@@ -132,6 +133,7 @@ export function CommercialPublishingSettings({
     initialSettings.propertyHive.listingUrlTemplate ?? '',
   );
   const [templatePending, startTemplateTransition] = useTransition();
+  const [indexNowPending, startIndexNowTransition] = useTransition();
   const [rmPending, startRmTransition] = useTransition();
   const [testPending, startTestTransition] = useTransition();
   const [feedPending, startFeedTransition] = useTransition();
@@ -317,6 +319,38 @@ export function CommercialPublishingSettings({
     }
   };
 
+  const indexNow = settings.propertyHive.indexNow;
+
+  const copyText = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error(`Could not copy ${label.toLowerCase()}`);
+    }
+  };
+
+  const saveIndexNowKey = (rotate: boolean) => {
+    startIndexNowTransition(async () => {
+      try {
+        const next = await saveWebsiteIndexNowKeyAction({
+          accountId,
+          rotate,
+        });
+        setSettings(next);
+        toast.success(
+          rotate ? 'IndexNow key replaced' : 'IndexNow key generated',
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not save the IndexNow key',
+        );
+      }
+    });
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:flex-row lg:items-start">
       <CommercialPublishingSectionNav tab={tab} onSelect={selectTab} />
@@ -456,6 +490,131 @@ export function CommercialPublishingSettings({
                       {templatePending ? 'Saving…' : 'Save template'}
                     </Button>
                   </div>
+                </div>
+
+                <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label>IndexNow</Label>
+                    <ConfiguredBadge configured={Boolean(indexNow.key)} />
+                  </div>
+                  <p className="text-xs text-[var(--workspace-shell-text)]/55">
+                    When a disposal is live on the website and Ozer has its
+                    public https URL, Ozer tells Bing and other IndexNow search
+                    engines about that page. Google is not notified. The same
+                    URL is sent once, then again only if the URL changes.
+                  </p>
+                  {indexNow.key ? (
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="indexnow-key">API key</Label>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Input
+                            id="indexnow-key"
+                            readOnly
+                            value={indexNow.key}
+                            className="font-mono text-xs"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="shrink-0 gap-1.5"
+                            onClick={() =>
+                              void copyText(indexNow.key ?? '', 'IndexNow key')
+                            }
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy key
+                          </Button>
+                        </div>
+                      </div>
+                      {indexNow.keyLocation ? (
+                        <div className="space-y-1">
+                          <Label htmlFor="indexnow-key-location">
+                            Key file URL
+                          </Label>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Input
+                              id="indexnow-key-location"
+                              readOnly
+                              value={indexNow.keyLocation}
+                              className="font-mono text-xs"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="shrink-0 gap-1.5"
+                              onClick={() =>
+                                void copyText(
+                                  indexNow.keyLocation ?? '',
+                                  'Key file URL',
+                                )
+                              }
+                            >
+                              <Copy className="h-4 w-4" />
+                              Copy URL
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-amber-200/90">
+                          Set an https public listing URL template above, or a
+                          Property Hive site URL, so Ozer knows which host must
+                          serve the key file.
+                        </p>
+                      )}
+                      <ol className="list-decimal space-y-1 pl-4 text-xs text-[var(--workspace-shell-text)]/55">
+                        <li>
+                          Create a text file named{' '}
+                          <code className="text-[11px]">
+                            {indexNow.key}.txt
+                          </code>
+                          . The file body is the key alone — one line, nothing
+                          else.
+                        </li>
+                        <li>
+                          Host it at the site root of the listing host
+                          {indexNow.host ? (
+                            <>
+                              {' '}
+                              (
+                              <code className="text-[11px]">
+                                https://{indexNow.host}/{indexNow.key}.txt
+                              </code>
+                              )
+                            </>
+                          ) : null}
+                          . On WordPress this is the web root (the same folder
+                          as wp-config.php), not a Property Hive page.
+                        </li>
+                        <li>
+                          Confirm the URL opens in a browser and shows only the
+                          key. IndexNow rejects submissions until that file is
+                          public.
+                        </li>
+                      </ol>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={indexNowPending}
+                        onClick={() => saveIndexNowKey(true)}
+                      >
+                        {indexNowPending ? 'Saving…' : 'Replace key'}
+                      </Button>
+                      <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                        Replacing the key stops pings until the new file is
+                        hosted and the old file can be removed.
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={indexNowPending}
+                      onClick={() => saveIndexNowKey(false)}
+                    >
+                      {indexNowPending ? 'Saving…' : 'Generate IndexNow key'}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

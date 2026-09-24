@@ -5228,6 +5228,7 @@ export type Database = {
           hide_price_from_marketing: boolean
           hide_rent_from_marketing: boolean
           id: string
+          indexnow_state: Json
           instructing_client_id: string | null
           instruction_nature: string | null
           insurance_type: string | null
@@ -5317,6 +5318,7 @@ export type Database = {
           hide_price_from_marketing?: boolean
           hide_rent_from_marketing?: boolean
           id?: string
+          indexnow_state?: Json
           instructing_client_id?: string | null
           instruction_nature?: string | null
           insurance_type?: string | null
@@ -5406,6 +5408,7 @@ export type Database = {
           hide_price_from_marketing?: boolean
           hide_rent_from_marketing?: boolean
           id?: string
+          indexnow_state?: Json
           instructing_client_id?: string | null
           instruction_nature?: string | null
           insurance_type?: string | null

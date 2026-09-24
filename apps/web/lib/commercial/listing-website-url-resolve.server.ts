@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { scheduleIndexNowForListing } from '~/lib/commercial/indexnow.server';
 import {
   LISTING_URL_TEMPLATE_META_KEY,
   type ListingWebsiteUrlFields,
@@ -69,7 +70,13 @@ async function persistListingWebsiteUrl(input: {
       error.message,
       input.listingId,
     );
+    return;
   }
+
+  scheduleIndexNowForListing({
+    accountId: input.accountId,
+    listingId: input.listingId,
+  });
 }
 
 export async function resolveLiveWordpressListingUrl(input: {

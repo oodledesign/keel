@@ -10,6 +10,10 @@ import {
   type ListingLetType,
   type ListingStatus,
 } from '~/lib/commercial/commercial-constants';
+import {
+  clearListingIndexNowSubmission,
+  scheduleIndexNowForListing,
+} from '~/lib/commercial/indexnow.server';
 import { recordListingEvent } from '~/lib/commercial/listing-events';
 import {
   listingNeedsFeedExternalId,
@@ -1126,7 +1130,7 @@ export async function setWebsiteListingFeedInclusion(input: {
 
   if (!enabled) {
     const existingToken = await getPropertyHiveFeedToken(accountId);
-    return recordPublication({
+    const publication = await recordPublication({
       accountId,
       listingId,
       portal: 'property_hive',
@@ -1144,6 +1148,8 @@ export async function setWebsiteListingFeedInclusion(input: {
         note: 'Excluded from website XML feed',
       },
     });
+    await clearListingIndexNowSubmission({ accountId, listingId });
+    return publication;
   }
 
   if (!onMarket) {
@@ -1185,6 +1191,7 @@ export async function setWebsiteListingFeedInclusion(input: {
     );
   }
 
+  scheduleIndexNowForListing({ accountId, listingId });
   return publication;
 }
 

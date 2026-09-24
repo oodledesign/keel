@@ -6,6 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { isBlockedLogoHostname } from '~/lib/clients/client-logo-icons';
+import { scheduleIndexNowForListing } from '~/lib/commercial/indexnow.server';
 import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 
 import {
@@ -519,6 +520,7 @@ export async function pushListingToPropertyHive(
       }
     }
 
+    scheduleIndexNowForListing({ accountId, listingId });
     return { externalId, externalUrl };
   } catch (err) {
     const message =

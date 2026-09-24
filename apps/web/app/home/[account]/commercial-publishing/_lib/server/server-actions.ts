@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { upsertWebsiteIndexNowKey } from '~/lib/commercial/indexnow.server';
 import {
   deleteLinkedInOrgConnection,
   upsertLinkedInOrgConnection,
@@ -58,11 +59,12 @@ import {
   RightmoveBulkJobStatusSchema,
   RotateEachFeedSchema,
   RotatePropertyHiveFeedSchema,
+  SaveBoardCompanySettingsSchema,
   SavePortalCredentialsSchema,
   SavePropertyHiveCredentialsSchema,
   SaveRightmoveWorkspaceBranchesSchema,
+  SaveWebsiteIndexNowKeySchema,
   SaveWebsiteListingUrlTemplateSchema,
-  SaveBoardCompanySettingsSchema,
   SelectLinkedInOrgSchema,
   SetEachListingFeedInclusionSchema,
   SetRightmoveListingInclusionSchema,
@@ -695,6 +697,17 @@ export const ensureWebsiteFeedReadyAction = enhanceAction(
     };
   },
   { schema: EnsureWebsiteFeedReadySchema },
+);
+
+export const saveWebsiteIndexNowKeyAction = enhanceAction(
+  async (input) => {
+    await upsertWebsiteIndexNowKey({
+      accountId: input.accountId,
+      rotate: input.rotate,
+    });
+    return loadCommercialPublishingSettings(input.accountId);
+  },
+  { schema: SaveWebsiteIndexNowKeySchema },
 );
 
 export const saveWebsiteListingUrlTemplateAction = enhanceAction(
