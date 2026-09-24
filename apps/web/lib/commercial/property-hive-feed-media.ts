@@ -1,4 +1,13 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
+
+/**
+ * PostgREST `max_rows` (`apps/web/supabase/config.toml`). A single `.select()`
+ * is silently truncated at this cap. `.range()` does not raise it, so feed
+ * media loads must page in chunks no larger than this.
+ */
+export const PUBLIC_FEED_LISTING_MEDIA_PAGE_SIZE = 1000;
 
 export type PropertyHiveFeedMediaInput = {
   id: string;
@@ -85,4 +94,44 @@ export function collectPropertyHiveFeedMedia(
   }
 
   return { images, files };
+}
+
+/**
+ * Load every non-private `commercial_listing_media` row for the feed listings.
+ *
+ * Property Hive and EACH share this query. PostgREST stops at
+ * `PUBLIC_FEED_LISTING_MEDIA_PAGE_SIZE` (default `max_rows` = 1000) and does
+ * not signal truncation. Bracketts on-market media is past that cap, so a
+ * one-shot select dropped later rows: Unit 17 (`881c760d-…`) kept photos 1–9
+ * and emitted empty `<files/>` even though its brochure and EPC were public.
+ * Page until a short page so those files and trailing gallery images are
+ * included. Sort matches gallery presentation order.
+ */
+export async function loadPublicFeedListingMedia<T>(
+  client: SupabaseClient,
+  listingIds: readonly string[],
+): Promise<T[]> {
+  if (listingIds.length === 0) return [];
+
+  const ids = [...listingIds];
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += PUBLIC_FEED_LISTING_MEDIA_PAGE_SIZE) {
+    const { data, error } = await client
+      .from('commercial_listing_media')
+      .select('*')
+      .in('listing_id', ids)
+      .eq('is_private', false)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + PUBLIC_FEED_LISTING_MEDIA_PAGE_SIZE - 1);
+
+    if (error) throw new Error(error.message);
+
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+
+    if (page.length < PUBLIC_FEED_LISTING_MEDIA_PAGE_SIZE) return rows;
+  }
 }
