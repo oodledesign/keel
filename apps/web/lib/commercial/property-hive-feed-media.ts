@@ -23,6 +23,8 @@ export type PropertyHiveFeedFile = {
 function feedFileType(mediaType: string): string {
   if (mediaType === 'floorplan') return '2';
   if (mediaType === 'epc') return '3';
+  // Kato file type 11 is a brochure / particulars PDF. Anything else that is
+  // not an image (including media_type brochure) uses that code.
   return '11';
 }
 

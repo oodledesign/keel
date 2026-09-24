@@ -31,6 +31,7 @@ import {
   toFeedActingAgentContacts,
 } from '~/lib/commercial/property-hive-feed-contacts';
 import { collectPropertyHiveFeedMedia } from '~/lib/commercial/property-hive-feed-media';
+import { mapCommercialSectorToPropertyHiveTypes } from '~/lib/commercial/property-hive-feed-types';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 const FEED_TOKEN_META_KEY = 'xml_feed_token';
@@ -484,8 +485,15 @@ function renderPropertyXml(
         .join('')}</key_selling_points>`
     : '<key_selling_points/>';
 
-  const typesXml = listing.sector
-    ? `<types><type>${escapeXml(listing.sector)}</type></types>`
+  // EACH uses this same Kato XML. Extra type names are exact-match candidates
+  // for Property Hive; importers skip names that are not already terms.
+  const propertyHiveTypes = mapCommercialSectorToPropertyHiveTypes(
+    listing.sector,
+  );
+  const typesXml = propertyHiveTypes.length
+    ? `<types>${propertyHiveTypes
+        .map((type) => `<type>${escapeXml(type)}</type>`)
+        .join('')}</types>`
     : '<types/>';
 
   const availXml = renderAvailabilities(disposalType);

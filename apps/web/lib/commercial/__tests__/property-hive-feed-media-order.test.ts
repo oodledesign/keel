@@ -114,6 +114,13 @@ describe('collectPropertyHiveFeedMedia', () => {
           sort_order: 1,
         }),
         media({
+          id: 'brochure',
+          media_type: 'brochure',
+          file_name: 'particulars.pdf',
+          mime_type: 'application/pdf',
+          sort_order: 3,
+        }),
+        media({
           id: 'floor-photo',
           media_type: 'floorplan',
           file_name: 'floor.jpg',
@@ -132,6 +139,7 @@ describe('collectPropertyHiveFeedMedia', () => {
       [
         { name: 'plan.pdf', type: '2' },
         { name: 'epc.pdf', type: '3' },
+        { name: 'particulars.pdf', type: '11' },
       ],
     );
   });
