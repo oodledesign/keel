@@ -41,6 +41,7 @@ import {
 import {
   type PropertyHiveFeedFile,
   collectPropertyHiveFeedMedia,
+  loadPublicFeedListingMedia,
 } from '~/lib/commercial/property-hive-feed-media';
 import { mapCommercialSectorToPropertyHiveTypes } from '~/lib/commercial/property-hive-feed-types';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -949,7 +950,7 @@ export async function buildCommercialFeedXml(
 
   const [
     { data: units },
-    { data: media },
+    media,
     { data: coAgentRows },
     { data: brochureRows, error: brochureError },
     actingAgentsByListing,
@@ -959,14 +960,7 @@ export async function buildCommercialFeedXml(
       .select('*')
       .in('listing_id', listingIds)
       .order('sort_order'),
-    client
-      .from('commercial_listing_media')
-      .select('*')
-      .in('listing_id', listingIds)
-      .eq('is_private', false)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-      .order('id', { ascending: true }),
+    loadPublicFeedListingMedia<MediaRow>(client, listingIds),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (client as any)
       .from('commercial_listing_co_agents')
@@ -998,7 +992,7 @@ export async function buildCommercialFeedXml(
   }
 
   const mediaByListing = new Map<string, MediaRow[]>();
-  for (const item of (media ?? []) as MediaRow[]) {
+  for (const item of media) {
     const list = mediaByListing.get(item.listing_id) ?? [];
     list.push(item);
     mediaByListing.set(item.listing_id, list);
@@ -1032,7 +1026,7 @@ export async function buildCommercialFeedXml(
     }
   }
 
-  const allMedia = (media ?? []) as MediaRow[];
+  const allMedia = media;
   const siteUrl = resolveSiteUrlForPublicMedia();
   const signedByPath = siteUrl
     ? new Map<string, string>()
