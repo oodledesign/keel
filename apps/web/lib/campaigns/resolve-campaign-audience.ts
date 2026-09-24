@@ -4,8 +4,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { randomBytes } from 'crypto';
 
-import { getLogger } from '@kit/shared/logger';
-
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
 import {
   type PublicMailingPreferenceResult,
@@ -26,6 +24,7 @@ import {
   parseAudienceListFilters,
 } from './campaign-audience-filters';
 import { loadListOptOutEmails } from './campaign-list-preferences';
+import { fetchAllPagedRows, fetchAllRowsInChunks } from './page-query';
 
 export type ResolvedCampaignRecipient = {
   email: string;
@@ -72,18 +71,19 @@ async function loadPreferenceMap(
   const map = new Map<string, PrefRow>();
   if (emails.length === 0) return map;
 
-  const { data, error } = await fromTable(
-    client,
-    'workspace_mailing_preferences',
-  )
-    .select('id, email, marketing_status, unsubscribe_token, client_id')
-    .eq('account_id', accountId)
-    .eq('purpose', 'workspace_mailing_list')
-    .in('email', emails);
+  const rows = await fetchAllRowsInChunks(emails, (chunk) =>
+    fetchAllPagedRows<PrefRow>(async (from, to) =>
+      fromTable(client, 'workspace_mailing_preferences')
+        .select('id, email, marketing_status, unsubscribe_token, client_id')
+        .eq('account_id', accountId)
+        .eq('purpose', 'workspace_mailing_list')
+        .in('email', [...chunk])
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+  );
 
-  if (error) throw new Error(error.message);
-
-  for (const row of (data ?? []) as PrefRow[]) {
+  for (const row of rows) {
     map.set(String(row.email).toLowerCase(), row);
   }
   return map;
@@ -124,28 +124,45 @@ function mergeRecipient(
   });
 }
 
+async function listClientRows(
+  client: SupabaseClient,
+  accountId: string,
+  clientIds?: string[],
+): Promise<Array<Record<string, unknown>>> {
+  const load = (ids?: string[]) =>
+    fetchAllPagedRows<Record<string, unknown>>(async (from, to) => {
+      let query = fromTable(client, 'clients')
+        .select(
+          'id, email, display_name, company_name, first_name, last_name, client_type, created_at',
+        )
+        .eq('account_id', accountId)
+        .not('email', 'is', null)
+        .is('archived_at', null)
+        .order('id', { ascending: true });
+
+      if (ids && ids.length > 0) {
+        query = query.in('id', ids);
+      }
+
+      return query.range(from, to);
+    });
+
+  if (!clientIds || clientIds.length === 0) {
+    return load();
+  }
+
+  return fetchAllRowsInChunks(clientIds, (chunk) => load([...chunk]));
+}
+
 async function listClientsWithEmail(
   client: SupabaseClient,
   accountId: string,
   clientIds?: string[],
 ): Promise<ListedPerson[]> {
-  let query = fromTable(client, 'clients')
-    .select(
-      'id, email, display_name, company_name, first_name, last_name, client_type, created_at',
-    )
-    .eq('account_id', accountId)
-    .not('email', 'is', null)
-    .is('archived_at', null);
-
-  if (clientIds && clientIds.length > 0) {
-    query = query.in('id', clientIds);
-  }
-
-  const { data, error } = await query.limit(5000);
-  if (error) throw new Error(error.message);
+  const data = await listClientRows(client, accountId, clientIds);
 
   const people: ListedPerson[] = [];
-  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+  for (const row of data) {
     const email = String(row.email ?? '')
       .trim()
       .toLowerCase();
@@ -167,35 +184,46 @@ async function listClientsWithEmail(
   return people;
 }
 
+async function listContactRows(
+  client: SupabaseClient,
+  accountId: string,
+  contactIds?: string[],
+): Promise<Array<Record<string, unknown>>> {
+  const load = (ids?: string[]) =>
+    fetchAllPagedRows<Record<string, unknown>>(async (from, to) => {
+      let query = fromTable(client, 'contacts')
+        .select(
+          'id, email, full_name, first_name, last_name, company_name, industry, created_at',
+        )
+        .eq('account_id', accountId)
+        .not('email', 'is', null)
+        .order('id', { ascending: true });
+
+      if (ids && ids.length > 0) {
+        query = query.in('id', ids);
+      }
+
+      return query.range(from, to);
+    });
+
+  if (!contactIds || contactIds.length === 0) {
+    return load();
+  }
+
+  return fetchAllRowsInChunks(contactIds, (chunk) => load([...chunk]));
+}
+
 async function listContactsWithEmail(
   client: SupabaseClient,
   accountId: string,
   contactIds?: string[],
 ): Promise<ListedPerson[]> {
-  let query = fromTable(client, 'contacts')
-    .select(
-      'id, email, full_name, first_name, last_name, company_name, industry, created_at',
-    )
-    .eq('account_id', accountId)
-    .not('email', 'is', null);
-
-  if (contactIds && contactIds.length > 0) {
-    query = query.in('id', contactIds);
-  }
-
-  const { data, error } = await query.limit(5000);
-  if (error) {
-    // Older workspaces may lack account_id on contacts; fail soft for estimate.
-    const logger = await getLogger();
-    logger.warn(
-      { name: 'campaigns.audience', error: error.message },
-      'List contacts failed',
-    );
-    return [];
-  }
+  // A failed page must fail the resolve. Returning [] here used to under-send
+  // a contacts audience with no error.
+  const data = await listContactRows(client, accountId, contactIds);
 
   const people: ListedPerson[] = [];
-  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+  for (const row of data) {
     const email = String(row.email ?? '')
       .trim()
       .toLowerCase();
@@ -242,21 +270,20 @@ async function listManualListContacts(
   accountId: string,
   listId: string,
 ): Promise<ListedPerson[]> {
-  const { data, error } = await fromTable(
-    client,
-    'campaign_audience_list_members',
-  )
-    .select(
-      'contact_id, contacts ( id, email, full_name, first_name, last_name, company_name, industry, created_at )',
-    )
-    .eq('account_id', accountId)
-    .eq('list_id', listId)
-    .limit(5000);
-
-  if (error) throw new Error(error.message);
+  const data = await fetchAllPagedRows<Record<string, unknown>>(
+    async (from, to) =>
+      fromTable(client, 'campaign_audience_list_members')
+        .select(
+          'contact_id, contacts ( id, email, full_name, first_name, last_name, company_name, industry, created_at )',
+        )
+        .eq('account_id', accountId)
+        .eq('list_id', listId)
+        .order('id', { ascending: true })
+        .range(from, to),
+  );
 
   const people: ListedPerson[] = [];
-  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+  for (const row of data) {
     const contact = (row.contacts ?? {}) as Record<string, unknown>;
     const email = String(contact.email ?? '')
       .trim()
@@ -289,26 +316,21 @@ async function loadContactCategoryMap(
   const map = new Map<string, { ids: string[]; names: string[] }>();
   if (contactIds.length === 0) return map;
 
-  const { data, error } = await fromTable(
-    client,
-    'campaign_contact_category_assignments',
-  )
-    .select(
-      'contact_id, category_id, campaign_contact_categories ( id, name, archived_at )',
-    )
-    .eq('account_id', accountId)
-    .in('contact_id', contactIds);
+  const data = await fetchAllRowsInChunks(contactIds, (chunk) =>
+    fetchAllPagedRows<Record<string, unknown>>(async (from, to) =>
+      fromTable(client, 'campaign_contact_category_assignments')
+        .select(
+          'contact_id, category_id, campaign_contact_categories ( id, name, archived_at )',
+        )
+        .eq('account_id', accountId)
+        .in('contact_id', [...chunk])
+        .order('contact_id', { ascending: true })
+        .order('category_id', { ascending: true })
+        .range(from, to),
+    ),
+  );
 
-  if (error) {
-    const logger = await getLogger();
-    logger.warn(
-      { name: 'campaigns.audience', error: error.message },
-      'List contact categories failed',
-    );
-    return map;
-  }
-
-  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+  for (const row of data) {
     const category = (row.campaign_contact_categories ?? {}) as Record<
       string,
       unknown

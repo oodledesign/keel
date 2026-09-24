@@ -79,7 +79,11 @@ import type {
   EmailCampaignRecipient,
   EmailCampaignStatus,
 } from './campaign.types';
-import { resolveCampaignAudience } from './resolve-campaign-audience';
+import { fetchAllPagedRows } from './page-query';
+import {
+  type ResolvedCampaignRecipient,
+  resolveCampaignAudience,
+} from './resolve-campaign-audience';
 
 export type {
   EmailCampaign,
@@ -91,6 +95,13 @@ export type {
 const WORKSPACE_EMAIL_CAMPAIGNS = 'workspace_email_campaigns';
 const WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS =
   'workspace_email_campaign_recipients';
+
+/**
+ * Rows per recipient insert. A single PostgREST insert of ~30k rows fails on
+ * payload size or statement timeout before any mail goes out. A few hundred
+ * to ~1k stays under that limit.
+ */
+export const CAMPAIGN_RECIPIENT_INSERT_BATCH = 500;
 
 /** Hub / picker rows — skip compiled html_body (often large). */
 const CAMPAIGN_LIST_COLUMNS = [
@@ -134,6 +145,71 @@ const CAMPAIGN_LIST_COLUMNS = [
 function fromTable(client: SupabaseClient, table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (client as any).from(table);
+}
+
+/**
+ * Delete recipient rows for one campaign in batches. Used to drop a partial
+ * or stale snapshot before credits are debited.
+ */
+async function deleteCampaignRecipientSnapshot(
+  client: SupabaseClient,
+  accountId: string,
+  campaignId: string,
+) {
+  for (;;) {
+    const { data, error } = await fromTable(
+      client,
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
+    )
+      .select('id')
+      .eq('campaign_id', campaignId)
+      .eq('account_id', accountId)
+      .order('id', { ascending: true })
+      .limit(CAMPAIGN_RECIPIENT_INSERT_BATCH);
+
+    if (error) throw new Error(error.message);
+
+    const ids = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+    if (ids.length === 0) return;
+
+    const { error: deleteError } = await fromTable(
+      client,
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
+    )
+      .delete()
+      .in('id', ids)
+      .eq('account_id', accountId);
+
+    if (deleteError) throw new Error(deleteError.message);
+    if (ids.length < CAMPAIGN_RECIPIENT_INSERT_BATCH) return;
+  }
+}
+
+async function listSnapshotEmails(
+  client: SupabaseClient,
+  accountId: string,
+  campaignId: string,
+): Promise<string[]> {
+  const rows = await fetchAllPagedRows<{ email: string }>(async (from, to) =>
+    fromTable(client, WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS)
+      .select('email')
+      .eq('campaign_id', campaignId)
+      .eq('account_id', accountId)
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
+
+  return rows.map((row) => row.email);
+}
+
+function sameRecipientSnapshot(
+  existingEmails: readonly string[],
+  recipients: readonly ResolvedCampaignRecipient[],
+) {
+  if (existingEmails.length !== recipients.length) return false;
+  const wanted = new Set(recipients.map((recipient) => recipient.email));
+  if (wanted.size !== existingEmails.length) return false;
+  return existingEmails.every((email) => wanted.has(email));
 }
 
 function mapCampaign(row: Record<string, unknown>): EmailCampaign {
@@ -905,34 +981,38 @@ class CampaignsService {
       throw new Error('This campaign is already being processed');
     }
 
-    const rows = recipients.map((recipient) => ({
-      campaign_id: campaign.id,
-      account_id: input.accountId,
-      preference_id: recipient.preferenceId,
-      client_id: recipient.clientId,
-      email: recipient.email,
-      display_name: recipient.displayName,
-      unsubscribe_token: recipient.unsubscribeToken,
-      status: 'pending',
-      ab_variant: campaign.abEnabled
-        ? assignCampaignAbVariant(
-            campaign.id,
-            recipient.email,
-            campaign.abSplitPercent,
-          )
-        : null,
-    }));
-
-    const { error: insertError } = await fromTable(
+    // Debit runs only after the snapshot matches this audience. If debit
+    // fails, the campaign returns to draft with those rows still in place.
+    // A retry debits that snapshot when the emails still match. A same-sized
+    // but different audience replaces the rows before debit.
+    const existingEmails = await listSnapshotEmails(
       this.client,
-      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
-    ).insert(rows);
+      input.accountId,
+      campaign.id,
+    );
 
-    if (insertError) {
-      await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
-        .update({ status: 'failed', last_error: insertError.message })
-        .eq('id', campaign.id);
-      throw new Error(insertError.message);
+    if (!sameRecipientSnapshot(existingEmails, recipients)) {
+      if (existingEmails.length > 0) {
+        try {
+          await deleteCampaignRecipientSnapshot(
+            this.client,
+            input.accountId,
+            campaign.id,
+          );
+        } catch (deleteError) {
+          const message =
+            deleteError instanceof Error
+              ? deleteError.message
+              : 'Could not replace a partial recipient snapshot';
+          await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+            .update({ status: 'failed', last_error: message })
+            .eq('id', campaign.id)
+            .eq('account_id', input.accountId);
+          throw new Error(message);
+        }
+      }
+
+      await this.insertRecipientSnapshot(input.accountId, campaign, recipients);
     }
 
     try {
@@ -962,7 +1042,8 @@ class CampaignsService {
               ? quota.message
               : 'Could not debit send units',
         })
-        .eq('id', campaign.id);
+        .eq('id', campaign.id)
+        .eq('account_id', input.accountId);
       throw quota;
     }
 
@@ -973,6 +1054,76 @@ class CampaignsService {
     });
   }
 
+  private async insertRecipientSnapshot(
+    accountId: string,
+    campaign: EmailCampaign,
+    recipients: ResolvedCampaignRecipient[],
+  ) {
+    const rows = recipients.map((recipient) => ({
+      campaign_id: campaign.id,
+      account_id: accountId,
+      preference_id: recipient.preferenceId,
+      client_id: recipient.clientId,
+      email: recipient.email,
+      display_name: recipient.displayName,
+      unsubscribe_token: recipient.unsubscribeToken,
+      status: 'pending',
+      ab_variant: campaign.abEnabled
+        ? assignCampaignAbVariant(
+            campaign.id,
+            recipient.email,
+            campaign.abSplitPercent,
+          )
+        : null,
+    }));
+
+    for (
+      let offset = 0;
+      offset < rows.length;
+      offset += CAMPAIGN_RECIPIENT_INSERT_BATCH
+    ) {
+      const batch = rows.slice(
+        offset,
+        offset + CAMPAIGN_RECIPIENT_INSERT_BATCH,
+      );
+      const { error: insertError } = await fromTable(
+        this.client,
+        WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
+      ).insert(batch);
+
+      if (insertError) {
+        // Credits are debited only after every batch lands. Mark failed
+        // before deleting so a cron tick cannot send the partial snapshot.
+        await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+          .update({ status: 'failed', last_error: insertError.message })
+          .eq('id', campaign.id)
+          .eq('account_id', accountId);
+
+        try {
+          await deleteCampaignRecipientSnapshot(
+            this.client,
+            accountId,
+            campaign.id,
+          );
+        } catch (deleteError) {
+          const rollback =
+            deleteError instanceof Error
+              ? deleteError.message
+              : 'Could not roll back partial recipients';
+          await fromTable(this.client, WORKSPACE_EMAIL_CAMPAIGNS)
+            .update({
+              status: 'failed',
+              last_error: `${insertError.message} (snapshot rollback: ${rollback})`,
+            })
+            .eq('id', campaign.id)
+            .eq('account_id', accountId);
+        }
+
+        throw new Error(insertError.message);
+      }
+    }
+  }
+
   async processPending(input: {
     accountId: string;
     campaignId: string;
@@ -981,6 +1132,26 @@ class CampaignsService {
     const campaign = await this.get(input.accountId, input.campaignId);
     if (campaign.status !== 'sending') {
       return { campaign, remaining: 0 };
+    }
+
+    // startSend claims `sending` before the snapshot finishes. A cron tick
+    // must not mail (or mark sent) until every recipient row is in place.
+    const { count: snapshotCount, error: snapshotError } = await fromTable(
+      this.client,
+      WORKSPACE_EMAIL_CAMPAIGN_RECIPIENTS,
+    )
+      .select('id', { count: 'exact', head: true })
+      .eq('campaign_id', campaign.id)
+      .eq('account_id', input.accountId);
+
+    if (snapshotError) throw new Error(snapshotError.message);
+
+    const inserted = snapshotCount ?? 0;
+    if (campaign.audienceCount > 0 && inserted < campaign.audienceCount) {
+      return {
+        campaign,
+        remaining: campaign.audienceCount - inserted,
+      };
     }
 
     const brand = await loadAccountBrandResolved(input.accountId);
