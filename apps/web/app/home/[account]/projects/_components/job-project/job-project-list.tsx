@@ -57,6 +57,8 @@ import {
   TASK_STATUS_LABELS,
   UNPHASED_KEY,
   formatShortDate,
+  isPhaseComplete,
+  phaseHeaderTitleClass,
   toDateInputValue,
 } from './job-project.constants';
 import {
@@ -439,7 +441,10 @@ function PhaseGroup({
             <Link
               href={phasePath(accountSlug, jobId, phase.id)}
               prefetch={false}
-              className="text-sm font-semibold text-[var(--workspace-shell-text)] hover:underline"
+              className={cn(
+                'text-sm font-semibold hover:underline',
+                phaseHeaderTitleClass(phase.status),
+              )}
               onClick={(e) => e.stopPropagation()}
             >
               {phase.name}
@@ -449,7 +454,12 @@ function PhaseGroup({
               Unassigned
             </span>
           )}
-          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+          <p
+            className={cn(
+              'mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]',
+              isPhaseComplete(phase?.status) && 'line-through',
+            )}
+          >
             {tasks.length} task{tasks.length !== 1 ? 's' : ''}
             {phase ? ` · ${phase.progressPct}% done` : ''}
           </p>

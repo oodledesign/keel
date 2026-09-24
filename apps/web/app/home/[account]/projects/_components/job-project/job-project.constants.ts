@@ -27,6 +27,21 @@ export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
   complete: 'Complete',
 };
 
+export function isPhaseComplete(
+  status: PhaseStatus | string | null | undefined,
+): boolean {
+  return status === 'complete';
+}
+
+/** Muted, struck title for a completed phase header. Status chips stay readable. */
+export function phaseHeaderTitleClass(
+  status: PhaseStatus | string | null | undefined,
+): string {
+  return isPhaseComplete(status)
+    ? 'text-[var(--workspace-shell-text-muted)] line-through'
+    : 'text-[var(--workspace-shell-text)]';
+}
+
 export const PHASE_STATUS_STYLES: Record<PhaseStatus, string> = {
   not_started: taskStatusBadgeClass('not_started'),
   in_progress: taskStatusBadgeClass('in_progress'),

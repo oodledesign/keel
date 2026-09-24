@@ -75,6 +75,8 @@ import {
   PRIORITY_DOT,
   UNPHASED_KEY,
   formatShortDate,
+  isPhaseComplete,
+  phaseHeaderTitleClass,
 } from './job-project.constants';
 import {
   ProjectTaskDoneCheckbox,
@@ -404,7 +406,12 @@ function PhaseColumn({
               className="group block min-w-0 flex-1"
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)] group-hover:underline">
+                <h3
+                  className={cn(
+                    'text-sm font-semibold group-hover:underline',
+                    phaseHeaderTitleClass(phase.status),
+                  )}
+                >
                   {phase.name}
                 </h3>
                 <span
@@ -415,7 +422,12 @@ function PhaseColumn({
                   {PHASE_STATUS_LABELS[phase.status]}
                 </span>
               </div>
-              <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
+              <p
+                className={cn(
+                  'mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]',
+                  isPhaseComplete(phase.status) && 'line-through',
+                )}
+              >
                 Due {formatShortDate(phase.due_date)} · {phase.progressPct}%
                 done
               </p>

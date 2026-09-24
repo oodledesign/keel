@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { projectDetailHref } from '~/lib/projects/project-paths';
 
@@ -44,6 +45,7 @@ import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
   formatShortDate,
+  phaseHeaderTitleClass,
   toDateInputValue,
 } from '../job-project/job-project.constants';
 
@@ -181,10 +183,18 @@ export function PhaseMetaPanel({
               onChange={(e) =>
                 setDraft((prev) => ({ ...prev, name: e.target.value }))
               }
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-lg font-semibold text-[var(--workspace-shell-text)]"
+              className={cn(
+                'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-lg font-semibold',
+                phaseHeaderTitleClass(draft.status),
+              )}
             />
           ) : (
-            <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+            <h1
+              className={cn(
+                'text-xl font-semibold',
+                phaseHeaderTitleClass(phase.status),
+              )}
+            >
               {phase.name}
             </h1>
           )}
