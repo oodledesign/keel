@@ -96,6 +96,11 @@ export const EnsureWebsiteFeedReadySchema = z.object({
   listingId: z.string().uuid(),
 });
 
+export const SaveWebsiteIndexNowKeySchema = AccountIdSchema.extend({
+  /** Replace an existing key. The client must host the new `{key}.txt`. */
+  rotate: z.boolean().optional(),
+});
+
 export const SaveWebsiteListingUrlTemplateSchema = AccountIdSchema.extend({
   listingUrlTemplate: z
     .string()

@@ -20,6 +20,10 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
 import {
+  clearListingIndexNowSubmission,
+  scheduleIndexNowForListing,
+} from '~/lib/commercial/indexnow.server';
+import {
   type ListingEventType,
   recordListingEvent,
 } from '~/lib/commercial/listing-events';
@@ -1931,6 +1935,12 @@ export function createListingsService(client: SupabaseClient) {
           listingId: listing.id,
         });
       }
+      if (listing.status === 'marketing' || listing.status === 'under_offer') {
+        scheduleIndexNowForListing({
+          accountId: input.accountId,
+          listingId: listing.id,
+        });
+      }
       return listing;
     },
 
@@ -2060,6 +2070,31 @@ export function createListingsService(client: SupabaseClient) {
           accountId,
           listingId,
         });
+      }
+      const leftWebsiteMarket =
+        Boolean(input.status) &&
+        input.status !== 'marketing' &&
+        input.status !== 'under_offer' &&
+        (existing.status === 'marketing' || existing.status === 'under_offer');
+      const nextWebsiteUrl =
+        input.websiteUrl === undefined
+          ? undefined
+          : input.websiteUrl?.trim() || null;
+      const clearedWebsiteUrl =
+        nextWebsiteUrl === null && Boolean(existing.websiteUrl?.trim());
+      const websiteUrlChanged =
+        nextWebsiteUrl !== undefined &&
+        nextWebsiteUrl !== (existing.websiteUrl?.trim() || null);
+      const statusChanged =
+        Boolean(input.status) && input.status !== existing.status;
+      if (leftWebsiteMarket || clearedWebsiteUrl) {
+        await clearListingIndexNowSubmission({ accountId, listingId });
+      }
+      if (
+        (websiteUrlChanged || statusChanged) &&
+        (listing.status === 'marketing' || listing.status === 'under_offer')
+      ) {
+        scheduleIndexNowForListing({ accountId, listingId });
       }
       return listing;
     },

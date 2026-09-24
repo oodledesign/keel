@@ -7,6 +7,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadAccountBranches } from '~/lib/brand/account-branches';
+import {
+  INDEXNOW_KEY_META_KEY,
+  indexNowKeyLocation,
+  isValidIndexNowKey,
+  resolveIndexNowWebsiteHost,
+} from '~/lib/commercial/indexnow';
 import { loadLinkedInOrgConnection } from '~/lib/commercial/linkedin-publishing/connections';
 import { isLinkedInAppConfigured } from '~/lib/commercial/linkedin-publishing/env';
 import { verifyPendingLinkedInOrgs } from '~/lib/commercial/linkedin-publishing/oauth-state';
@@ -50,6 +56,15 @@ export type CommercialPublishingSettings = {
     feedEnabled: boolean;
     /** e.g. https://www.bracketts.co.uk/property/{slug}/ for XML-only sites */
     listingUrlTemplate: string | null;
+    /**
+     * Public IndexNow ownership key. The client must host `{key}.txt`
+     * at the listing host root before pings succeed.
+     */
+    indexNow: {
+      key: string | null;
+      host: string | null;
+      keyLocation: string | null;
+    };
   };
   rightmove: {
     /** Platform OAuth client credentials present in env. */
@@ -129,6 +144,19 @@ export async function loadCommercialPublishingSettings(
     phMetadata.listing_url_template.trim()
       ? phMetadata.listing_url_template.trim()
       : null;
+  const indexNowKeyRaw = phMetadata[INDEXNOW_KEY_META_KEY];
+  const indexNowKey =
+    typeof indexNowKeyRaw === 'string' && isValidIndexNowKey(indexNowKeyRaw)
+      ? indexNowKeyRaw.trim()
+      : null;
+  const indexNowHost = resolveIndexNowWebsiteHost({
+    listingUrlTemplate,
+    siteUrl: (ph?.site_url as string | undefined) ?? null,
+  });
+  const indexNowKeyFile =
+    indexNowKey && indexNowHost
+      ? indexNowKeyLocation(indexNowHost, indexNowKey)
+      : null;
 
   const oauthConfigured = isRightmoveOAuthConfigured();
   const workspaceBranches: RightmoveWorkspaceBranch[] = branches.map(
@@ -162,6 +190,11 @@ export async function loadCommercialPublishingSettings(
       feedUrl,
       feedEnabled,
       listingUrlTemplate,
+      indexNow: {
+        key: indexNowKey,
+        host: indexNowHost,
+        keyLocation: indexNowKeyFile,
+      },
     },
     rightmove: {
       oauthConfigured,
