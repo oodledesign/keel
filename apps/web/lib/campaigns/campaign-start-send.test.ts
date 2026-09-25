@@ -407,17 +407,20 @@ describe('CampaignsService.processPending incomplete snapshot', () => {
       },
     };
 
-    await expect(
-      createCampaignsService(client as never).processPending({
+    const result = await createCampaignsService(client as never).processPending(
+      {
         accountId: ACCOUNT_ID,
         campaignId: CAMPAIGN_ID,
-      }),
-    ).resolves.toEqual({
-      campaign: expect.objectContaining({
+      },
+    );
+
+    expect(result.remaining).toBe(600);
+    expect(result.lockAcquired).toBe(false);
+    expect(result.campaign).toEqual(
+      expect.objectContaining({
         status: 'sending',
         audienceCount: 1000,
       }),
-      remaining: 600,
-    });
+    );
   });
 });

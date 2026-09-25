@@ -3,6 +3,8 @@ import 'server-only';
 import { createSesMailer } from '@kit/ses';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 
+import { isSesThrottleError } from '~/lib/campaigns/campaign-send-worker';
+
 export async function sendCampaignEmailViaSes(input: {
   to: string;
   from: string;
@@ -16,10 +18,16 @@ export async function sendCampaignEmailViaSes(input: {
   metadata?: Record<string, unknown>;
   /** Defaults to "campaign". Use "campaign_test" for free test sends. */
   emailType?: string;
+  /**
+   * Bulk campaign sends skip the stored HTML body. The platform log row is
+   * still written; copying the full document per recipient dominates at 30k.
+   */
+  storeHtml?: boolean;
 }): Promise<{ messageId: string | null }> {
   let status: 'sent' | 'failed' = 'sent';
   let errorMessage: string | null = null;
   let messageId: string | null = null;
+  let throttled = false;
 
   try {
     const mailer = createSesMailer();
@@ -41,25 +49,30 @@ export async function sendCampaignEmailViaSes(input: {
         ? result.messageId
         : null;
   } catch (error) {
-    status = 'failed';
-    errorMessage = error instanceof Error ? error.message : String(error);
+    throttled = isSesThrottleError(error);
+    if (!throttled) {
+      status = 'failed';
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
     throw error;
   } finally {
-    await insertPlatformEmailLog({
-      emailType: input.emailType ?? 'campaign',
-      accountId: input.accountId ?? null,
-      recipientEmail: input.to,
-      senderEmail: input.from,
-      subject: input.subject,
-      status,
-      errorMessage,
-      metadata: {
-        provider: 'ses',
-        ses_message_id: messageId,
-        ...(input.metadata ?? {}),
-      },
-      htmlBody: input.html,
-    });
+    if (!throttled) {
+      await insertPlatformEmailLog({
+        emailType: input.emailType ?? 'campaign',
+        accountId: input.accountId ?? null,
+        recipientEmail: input.to,
+        senderEmail: input.from,
+        subject: input.subject,
+        status,
+        errorMessage,
+        metadata: {
+          provider: 'ses',
+          ses_message_id: messageId,
+          ...(input.metadata ?? {}),
+        },
+        htmlBody: input.storeHtml === false ? null : input.html,
+      });
+    }
   }
 
   return { messageId };

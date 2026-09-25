@@ -109,6 +109,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
   const [
     campaign,
     recipients,
+    recipientTotal,
     brand,
     sendingDomain,
     publishedForms,
@@ -117,6 +118,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
   ] = await Promise.all([
     service.get(accountId, campaignId),
     service.listRecipients(accountId, campaignId),
+    service.countRecipients(accountId, campaignId),
     loadAccountBrandResolved(accountId),
     loadAccountSendingDomain(admin, accountId),
     listPublishedFormsForCampaigns(accountId),
@@ -143,7 +145,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
       accountId,
       contactsUsed: audienceOptions.subscriberCount,
     }),
-    loadCampaignAnalyticsBundle(admin, campaign, recipients),
+    loadCampaignAnalyticsBundle(admin, campaign),
   ]);
 
   const seriesService = createCampaignSeriesService(client);
@@ -182,6 +184,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
     seriesAnySending,
     hasRsvpForm: Boolean(linkedForm?.isRsvp),
     recipients,
+    recipientTotal,
     subscriberCount: audienceOptions.subscriberCount,
     audienceCount,
     audienceOptions,
