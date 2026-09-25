@@ -15,6 +15,8 @@ export type CampaignSendProgressSnapshot = {
   skippedCount: number;
   processedCount: number;
   remainingCount: number;
+  /** Seconds to clear the queue at the configured send rate. Null when idle. */
+  estimatedSecondsRemaining: number | null;
   lastError: string | null;
 };
 
@@ -29,6 +31,7 @@ export function buildCampaignSendProgress(input: {
   failedCount: number;
   skippedCount: number;
   lastError: string | null;
+  ratePerSecond?: number | null;
   recipientCounts?: CampaignRecipientStatusCounts | null;
 }): CampaignSendProgressSnapshot {
   const live = input.recipientCounts;
@@ -44,6 +47,12 @@ export function buildCampaignSendProgress(input: {
     processedCount + remainingCount,
   );
 
+  const rate = input.ratePerSecond ?? 0;
+  const estimatedSecondsRemaining =
+    input.status === 'sending' && remainingCount > 0 && rate > 0
+      ? Math.ceil(remainingCount / rate)
+      : null;
+
   return {
     status: input.status,
     audienceCount,
@@ -52,8 +61,18 @@ export function buildCampaignSendProgress(input: {
     skippedCount,
     processedCount,
     remainingCount,
+    estimatedSecondsRemaining,
     lastError: input.lastError,
   };
+}
+
+export function formatCampaignSendTimeRemaining(
+  seconds: number | null | undefined,
+): string | null {
+  if (seconds == null || seconds <= 0) return null;
+  if (seconds < 60) return 'under a minute left';
+  const minutes = Math.ceil(seconds / 60);
+  return minutes === 1 ? 'about 1 min left' : `about ${minutes} min left`;
 }
 
 export function campaignSendProgressPercent(

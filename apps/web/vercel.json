@@ -102,7 +102,7 @@
     },
     {
       "path": "/api/cron/email-campaigns-send",
-      "schedule": "*/5 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/dynamics-contact-sync",
