@@ -15,6 +15,7 @@
     ".": "./src/index.ts",
     "./slots": "./src/slots/compute-available-slots.ts",
     "./google": "./src/google/index.ts",
+    "./polls": "./src/polls/index.ts",
     "./calendar-provider": "./src/calendar-provider.ts",
     "./conferencing": "./src/conferencing/index.ts"
   },

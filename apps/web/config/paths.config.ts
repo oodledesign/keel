@@ -114,6 +114,9 @@ const PathsSchema = z.object({
     accountSchedulingPage: z.string().min(1),
     accountSchedulingAvailability: z.string().min(1),
     accountSchedulingBookings: z.string().min(1),
+    accountSchedulingPolls: z.string().min(1),
+    accountSchedulingPollNew: z.string().min(1),
+    accountSchedulingPoll: z.string().min(1),
     accountSchedulingNotifications: z.string().min(1),
     accountSchedulingAccounts: z.string().min(1),
     accountTasks: z.string().min(1),
@@ -264,6 +267,7 @@ const PathsSchema = z.object({
     bookPage: z.string().min(1),
     bookEvent: z.string().min(1),
     bookManage: z.string().min(1),
+    pollVote: z.string().min(1),
   }),
 });
 
@@ -379,6 +383,9 @@ const pathsConfig = PathsSchema.parse({
     accountSchedulingPage: `/app/[account]/scheduling/pages/[pageId]`,
     accountSchedulingAvailability: `/app/[account]/scheduling/availability`,
     accountSchedulingBookings: `/app/[account]/scheduling/bookings`,
+    accountSchedulingPolls: `/app/[account]/scheduling/polls`,
+    accountSchedulingPollNew: `/app/[account]/scheduling/polls/new`,
+    accountSchedulingPoll: `/app/[account]/scheduling/polls/[pollId]`,
     accountSchedulingNotifications: `/app/[account]/scheduling/notifications`,
     accountSchedulingAccounts: `/app/[account]/scheduling/accounts`,
     accountTasks: `/app/[account]/tasks`,
@@ -532,6 +539,7 @@ const pathsConfig = PathsSchema.parse({
     bookPage: '/book/[pageSlug]',
     bookEvent: '/book/[pageSlug]/[eventSlug]',
     bookManage: '/book/manage/[managementToken]',
+    pollVote: '/poll/[token]',
   },
 } satisfies z.infer<typeof PathsSchema>);
 
