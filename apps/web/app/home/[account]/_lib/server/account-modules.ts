@@ -39,6 +39,7 @@ export type AccountModuleKey =
   | 'memories'
   | 'listings'
   | 'requirements'
+  | 'tracker'
   | 'viewings'
   | 'leases'
   | 'reports'

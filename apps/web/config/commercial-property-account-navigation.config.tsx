@@ -10,6 +10,7 @@ import {
   LineChart,
   ListChecks,
   Mail,
+  Radar,
   ScrollText,
   Settings,
   StickyNote,
@@ -122,6 +123,15 @@ export function buildCommercialPropertySpaceNavChildren(
             path: `${createPath(pathsConfig.app.accountPipeline, account)}?view=requirements`,
             Icon: <ClipboardList className={iconClasses} />,
             tourId: 'nav-requirements',
+          }
+        : null,
+    tracker: () =>
+      access.canViewDashboard && isEnabled(ms, 'tracker')
+        ? {
+            label: 'Tracker',
+            path: createPath(pathsConfig.app.accountTracker, account),
+            Icon: <Radar className={iconClasses} />,
+            tourId: 'nav-tracker',
           }
         : null,
     circulation: () =>

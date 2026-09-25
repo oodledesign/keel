@@ -140,6 +140,7 @@ export const COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER = [
   'clients',
   'properties',
   'requirements',
+  'tracker',
   'viewings',
   'proposals',
   'leases',
