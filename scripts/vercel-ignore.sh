@@ -76,7 +76,9 @@ CHANGED_FILES=""
 if [[ -n "${VERCEL_IGNORE_FILES:-}" ]]; then
   CHANGED_FILES="$VERCEL_IGNORE_FILES"
 else
-  COMPARE_FROM="HEAD^"
+  # A push can contain several commits and Vercel only builds the tip, so diff
+  # against this project's last successful deploy, not just the parent commit.
+  COMPARE_FROM="${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}"
   COMPARE_TO="HEAD"
   if [[ -n "${VERCEL_IGNORE_COMPARE:-}" ]]; then
     # shellcheck disable=SC2086
