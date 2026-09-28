@@ -20,6 +20,7 @@ import {
   ImagePlus,
   Loader2,
   MinusCircle,
+  Trash2,
 } from 'lucide-react';
 
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
@@ -27,6 +28,7 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import pathsConfig from '~/config/paths.config';
 import {
   getWorkspaceDocDownloadUrlAction,
   listProposalDocsAction,
@@ -34,6 +36,7 @@ import {
 } from '~/home/[account]/_lib/workspace-content/docs-actions';
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
+import { CONDITION_RATINGS } from '~/lib/building-surveyor/condition-rating';
 import {
   SURVEY_PHRASE_DRAG_MIME,
   parsePhraseDrag,
@@ -44,7 +47,6 @@ import {
 } from '~/lib/building-surveyor/survey-desk-review';
 import {
   workspaceBtnPrimaryMd,
-  workspaceLinkAccent,
   workspacePanelCard,
   workspaceText,
   workspaceTextMuted,
@@ -54,10 +56,12 @@ import type { SurveyObservation } from '../_lib/schema/survey-capture.schema';
 import {
   autoCaptionSurveyPhotosAction,
   createSurveyObservationAction,
+  deleteSurveyObservationAction,
   reorderSurveyPhotosAction,
   updateSurveyObservationAction,
   updateSurveyPhotoCurationAction,
 } from '../_lib/server/survey-capture-actions';
+import { surveyPath } from '../_lib/survey-display';
 import { SurveyPhrasePanel } from './survey-phrase-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
@@ -77,29 +81,34 @@ function reviewHref(
   proposalId: string,
   sectionKey: string,
 ) {
-  return `/home/${accountSlug}/surveys/${proposalId}/review/${sectionKey}`;
+  return surveyPath(
+    pathsConfig.app.accountSurveyReviewSection,
+    accountSlug,
+    proposalId,
+    sectionKey,
+  );
 }
 
 export function SurveyDeskReviewClient({
   accountSlug,
   accountId,
   proposalId,
-  proposalTitle,
   canEdit,
   clientId,
   sections,
   currentKey,
   observations: initialObservations,
+  phraseBankCount,
 }: {
   accountSlug: string;
   accountId: string;
   proposalId: string;
-  proposalTitle: string;
   canEdit: boolean;
   clientId?: string | null;
   sections: DeskReviewSection[];
   currentKey: string;
   observations: SurveyObservation[];
+  phraseBankCount: number;
 }) {
   const router = useRouter();
   const supabase = useSupabase();
@@ -122,6 +131,13 @@ export function SurveyDeskReviewClient({
     () => observations.filter((item) => item.sectionKey === currentKey),
     [observations, currentKey],
   );
+  const notedKeys = useMemo(
+    () => new Set(observations.map((item) => item.sectionKey)),
+    [observations],
+  );
+  const sectionsWithNotes = sections.filter((item) =>
+    notedKeys.has(item.key),
+  ).length;
   const sectionPhotos = useMemo(
     () =>
       photos
@@ -218,7 +234,90 @@ export function SurveyDeskReviewClient({
         setObservations((prev) =>
           prev.map((row) => (row.id === next.id ? next : row)),
         );
-        toast.success('Section notes saved');
+        toast.success('Note saved');
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+      }
+    });
+  };
+
+  const updateRating = (
+    observation: SurveyObservation,
+    conditionRating: SurveyObservation['conditionRating'],
+  ) => {
+    setObservations((prev) =>
+      prev.map((row) =>
+        row.id === observation.id ? { ...row, conditionRating } : row,
+      ),
+    );
+    startTransition(async () => {
+      try {
+        await updateSurveyObservationAction({
+          accountId,
+          accountSlug,
+          proposalId,
+          observationId: observation.id,
+          conditionRating,
+        });
+      } catch (error) {
+        setObservations((prev) =>
+          prev.map((row) => (row.id === observation.id ? observation : row)),
+        );
+        toast.error(getErrorMessage(error));
+      }
+    });
+  };
+
+  const moveObservation = (
+    observation: SurveyObservation,
+    sectionKey: string,
+  ) => {
+    if (sectionKey === observation.sectionKey) return;
+    const target = sections.find((item) => item.key === sectionKey);
+    setObservations((prev) =>
+      prev.map((row) =>
+        row.id === observation.id ? { ...row, sectionKey } : row,
+      ),
+    );
+    startTransition(async () => {
+      try {
+        await updateSurveyObservationAction({
+          accountId,
+          accountSlug,
+          proposalId,
+          observationId: observation.id,
+          sectionKey,
+        });
+        toast.success(`Note moved to ${target?.label ?? 'another section'}`, {
+          action: {
+            label: 'Go there',
+            onClick: () =>
+              router.push(reviewHref(accountSlug, proposalId, sectionKey)),
+          },
+        });
+      } catch (error) {
+        setObservations((prev) =>
+          prev.map((row) => (row.id === observation.id ? observation : row)),
+        );
+        toast.error(getErrorMessage(error));
+      }
+    });
+  };
+
+  const deleteObservation = (observation: SurveyObservation) => {
+    if (!window.confirm('Delete this note?')) return;
+    startTransition(async () => {
+      try {
+        await deleteSurveyObservationAction({
+          accountId,
+          accountSlug,
+          proposalId,
+          observationId: observation.id,
+        });
+        setObservations((prev) =>
+          prev.filter((row) => row.id !== observation.id),
+        );
+        toast.success('Note deleted');
       } catch (error) {
         toast.error(getErrorMessage(error));
       }
@@ -262,7 +361,7 @@ export function SurveyDeskReviewClient({
         });
         setObservations((prev) => [...prev, created]);
         setNewBody('');
-        toast.success('Section notes added');
+        toast.success('Note added');
       } catch (error) {
         toast.error(getErrorMessage(error));
       }
@@ -401,22 +500,12 @@ export function SurveyDeskReviewClient({
 
   return (
     <div className="flex min-h-[70vh] flex-col gap-4 lg:flex-row">
-      <aside className="w-full shrink-0 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] lg:w-[15rem]">
+      <aside className="w-full shrink-0 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] lg:sticky lg:top-4 lg:w-[15rem] lg:self-start">
         <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <p
-            className={`text-xs tracking-wide uppercase ${workspaceTextMuted}`}
-          >
-            Desk review
+          <p className={`text-sm font-semibold ${workspaceText}`}>Sections</p>
+          <p className={`mt-0.5 text-xs ${workspaceTextMuted}`}>
+            {sectionsWithNotes} of {sections.length} have notes
           </p>
-          <p className={`mt-1 text-sm font-semibold ${workspaceText}`}>
-            {proposalTitle}
-          </p>
-          <Link
-            href={`/home/${accountSlug}/surveys/${proposalId}`}
-            className={`mt-2 inline-block text-xs ${workspaceLinkAccent}`}
-          >
-            Back to survey hub
-          </Link>
         </div>
         <nav className="max-h-[70vh] overflow-y-auto py-2">
           {groupedNav.map((group) => (
@@ -442,7 +531,15 @@ export function SurveyDeskReviewClient({
                         <span className="w-6 shrink-0 text-xs tabular-nums opacity-70">
                           {item.index}
                         </span>
-                        <span className="min-w-0 truncate">{item.label}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {item.label}
+                        </span>
+                        {notedKeys.has(item.key) ? (
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ozer-accent)]"
+                            aria-label="Has notes"
+                          />
+                        ) : null}
                       </Link>
                     </li>
                   );
@@ -466,8 +563,8 @@ export function SurveyDeskReviewClient({
               {current.label}
             </h2>
             <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-              Cleaned notes first, then photographs. Captions never overwrite
-              what you have already written.
+              Check the notes and photographs for this section. Drag phrases in
+              from the phrase book.
             </p>
           </div>
           <div className="flex gap-2">
@@ -524,40 +621,24 @@ export function SurveyDeskReviewClient({
             insertPhraseBlock(payload.body, payload.defaultRating);
           }}
         >
-          <h3 className={`text-sm font-semibold ${workspaceText}`}>
-            AI-cleaned text
-          </h3>
+          <h3 className={`text-sm font-semibold ${workspaceText}`}>Notes</h3>
           <p className={`text-xs ${workspaceTextMuted}`}>
-            Filler is stripped after sync. Edit freely — this is the working
-            note for the report.
+            Cleaned-up site notes for this section. They feed the draft report.
           </p>
-          {sectionObservations.length === 0 ? (
-            <div className="space-y-2">
-              <Textarea
-                value={newBody}
-                onChange={(event) => setNewBody(event.target.value)}
-                placeholder="No notes on this section yet."
-                className="min-h-32"
-                disabled={!canEdit}
-              />
-              {canEdit ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  className={workspaceBtnPrimaryMd}
-                  disabled={pending || !newBody.trim()}
-                  onClick={addObservation}
-                >
-                  Add notes
-                </Button>
-              ) : null}
-            </div>
-          ) : (
-            <ul className="space-y-4">
+          {sectionObservations.length === 0 && !canEdit ? (
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              No notes on this section yet.
+            </p>
+          ) : null}
+          {sectionObservations.length > 0 ? (
+            <ul className="space-y-3">
               {sectionObservations.map((item) => {
                 const draft = drafts[item.id] ?? item.body;
                 return (
-                  <li key={item.id} className="space-y-2">
+                  <li
+                    key={item.id}
+                    className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3"
+                  >
                     <Textarea
                       value={draft}
                       onChange={(event) =>
@@ -566,7 +647,7 @@ export function SurveyDeskReviewClient({
                           [item.id]: event.target.value,
                         }))
                       }
-                      className="min-h-32"
+                      className="min-h-28"
                       disabled={!canEdit}
                     />
                     {item.sourceBody && item.sourceBody !== item.body ? (
@@ -580,21 +661,100 @@ export function SurveyDeskReviewClient({
                       </details>
                     ) : null}
                     {canEdit ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={pending || draft.trim() === item.body}
-                        onClick={() => saveObservation(item, draft.trim())}
-                      >
-                        Save notes
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          aria-label="Condition rating"
+                          value={item.conditionRating ?? ''}
+                          onChange={(event) =>
+                            updateRating(
+                              item,
+                              (event.target.value ||
+                                null) as SurveyObservation['conditionRating'],
+                            )
+                          }
+                          className="h-8 rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 text-xs"
+                        >
+                          <option value="">No rating</option>
+                          {CONDITION_RATINGS.map((rating) => (
+                            <option key={rating} value={rating}>
+                              Rating {rating}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          aria-label="Move to section"
+                          value={item.sectionKey}
+                          onChange={(event) =>
+                            moveObservation(item, event.target.value)
+                          }
+                          className="h-8 max-w-56 rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 text-xs"
+                        >
+                          {sections.map((section) => (
+                            <option key={section.key} value={section.key}>
+                              {section.key === item.sectionKey
+                                ? 'Move to section…'
+                                : `${section.index} ${section.label}`}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="ml-auto flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-red-500 hover:text-red-400"
+                            aria-label="Delete note"
+                            disabled={pending}
+                            onClick={() => deleteObservation(item)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8"
+                            disabled={pending || draft.trim() === item.body}
+                            onClick={() => saveObservation(item, draft.trim())}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : item.conditionRating ? (
+                      <p className={`text-xs ${workspaceTextMuted}`}>
+                        Rating {item.conditionRating}
+                      </p>
                     ) : null}
                   </li>
                 );
               })}
             </ul>
-          )}
+          ) : null}
+          {canEdit ? (
+            <div className="space-y-2">
+              <Textarea
+                value={newBody}
+                onChange={(event) => setNewBody(event.target.value)}
+                placeholder={
+                  sectionObservations.length === 0
+                    ? 'No notes on this section yet. Type one here…'
+                    : 'Add another note…'
+                }
+                className="min-h-24"
+                data-test="survey-review-new-note"
+              />
+              <Button
+                type="button"
+                size="sm"
+                className={workspaceBtnPrimaryMd}
+                disabled={pending || !newBody.trim()}
+                onClick={addObservation}
+              >
+                Add note
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <div className={`${workspacePanelCard} space-y-3 p-4 sm:p-5`}>
@@ -752,6 +912,11 @@ export function SurveyDeskReviewClient({
         ricsCode={current.ricsCode}
         canEdit={canEdit}
         onInsert={insertPhraseBlock}
+        phraseBankCount={phraseBankCount}
+        importHref={pathsConfig.app.accountSurveyPhrasesSettings.replace(
+          '[account]',
+          accountSlug,
+        )}
       />
     </div>
   );

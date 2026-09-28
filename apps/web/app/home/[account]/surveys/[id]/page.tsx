@@ -1,16 +1,19 @@
 import { notFound } from 'next/navigation';
 
-import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 import { loadProposalsPageData } from '../../proposals/_lib/server/proposals-page.loader';
 import { getProposal } from '../../proposals/_lib/server/server-actions';
 import { SurveyHubContent } from '../_components/survey-hub-content';
+import {
+  SurveyGenerateDraftButton,
+  SurveyWorkspaceHeader,
+} from '../_components/survey-workspace-header';
 import { loadSurveyHubExtras } from '../_lib/server/survey-hub.loader';
+import { surveyClientName } from '../_lib/survey-display';
 
 interface SurveyHubPageProps {
   params: Promise<{ account: string; id: string }>;
@@ -18,6 +21,31 @@ interface SurveyHubPageProps {
 
 export const generateMetadata = async () => {
   return { title: 'Survey' };
+};
+
+type SurveyProposal = {
+  id: string;
+  title?: string | null;
+  status: string;
+  kind?: string | null;
+  content_html?: string | null;
+  recipient_name?: string | null;
+  client_id?: string | null;
+  deal_id?: string | null;
+  client?: {
+    id: string;
+    display_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    company_name?: string | null;
+  } | null;
+  deal?: {
+    id: string;
+    name?: string | null;
+    contact_name?: string | null;
+    company_name?: string | null;
+    stage?: string | null;
+  } | null;
 };
 
 async function SurveyHubPage({ params }: SurveyHubPageProps) {
@@ -34,28 +62,28 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
   if (!id) notFound();
   if (!canViewProposals) notFound();
 
-  let proposal: Awaited<ReturnType<typeof getProposal>>;
+  let proposal: SurveyProposal | null;
   try {
-    proposal = await getProposal({ accountId, proposalId: id });
+    proposal = (await getProposal({
+      accountId,
+      proposalId: id,
+    })) as SurveyProposal | null;
   } catch {
     notFound();
   }
   if (!proposal) notFound();
-
-  const kind = (proposal as { kind?: string }).kind;
-  if (kind && kind !== 'survey_report') {
+  if (proposal.kind && proposal.kind !== 'survey_report') {
     notFound();
   }
 
   const extras = await loadSurveyHubExtras({
     accountId,
     proposalId: id,
-    clientId: (proposal as { client_id?: string | null }).client_id,
-    dealId: (proposal as { deal_id?: string | null }).deal_id,
+    clientId: proposal.client_id,
+    dealId: proposal.deal_id,
   });
 
-  const title =
-    (proposal as { title?: string | null }).title?.trim() || 'Building survey';
+  const title = proposal.title?.trim() || 'Building survey';
   const accountName =
     (workspace.account as { name?: string | null }).name?.trim() || accountSlug;
   const senderName =
@@ -67,52 +95,36 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
     'Team member';
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        title={title}
-        description={<AppBreadcrumbs values={{ [id]: title }} />}
-        account={accountSlug}
-      />
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] md:px-6 md:py-6 md:pb-6">
+      <div className="flex w-full flex-col gap-5">
+        <SurveyWorkspaceHeader
+          accountSlug={accountSlug}
+          proposalId={id}
+          title={title}
+          clientName={surveyClientName(proposal)}
+          status={proposal.status}
+          actions={
+            canEditProposals ? (
+              <SurveyGenerateDraftButton
+                accountSlug={accountSlug}
+                accountId={accountId}
+                proposalId={id}
+                accountName={accountName}
+                surveyorName={senderName}
+                disabled={
+                  extras.observations.length === 0 &&
+                  extras.transcripts.length === 0
+                }
+              />
+            ) : null
+          }
+        />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] md:px-6 md:py-6 md:pb-6">
         <SurveyHubContent
           accountSlug={accountSlug}
           accountId={accountId}
-          accountName={accountName}
-          senderName={senderName}
           canEdit={canEditProposals}
-          proposal={
-            proposal as {
-              id: string;
-              title?: string | null;
-              status: string;
-              content_html?: string | null;
-              recipient_name?: string | null;
-              client_id?: string | null;
-              deal_id?: string | null;
-              survey_type?: string | null;
-              client?: {
-                id: string;
-                display_name?: string | null;
-                first_name?: string | null;
-                last_name?: string | null;
-                company_name?: string | null;
-                email?: string | null;
-                address_line_1?: string | null;
-                address_line_2?: string | null;
-                city?: string | null;
-                postcode?: string | null;
-              } | null;
-              deal?: {
-                id: string;
-                name?: string | null;
-                contact_name?: string | null;
-                company_name?: string | null;
-                stage?: string | null;
-              } | null;
-              updated_at?: string | null;
-            }
-          }
+          proposal={proposal}
           observations={extras.observations}
           transcripts={extras.transcripts}
           photoShare={extras.photoShare}
@@ -125,8 +137,8 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
           flood={extras.flood}
           surveyLevel={extras.surveyLevel}
         />
-      </PageBody>
-    </>
+      </div>
+    </PageBody>
   );
 }
 

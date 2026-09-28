@@ -169,17 +169,17 @@ class SurveyPhrasesService {
     const user = await this.ensureEditor(input.accountId);
     const buffer = Buffer.from(input.fileBase64, 'base64');
     if (buffer.length < 32) {
-      throw new Error('That file is too small to be a GoReport export');
+      throw new Error('That file is too small to be a phrase spreadsheet');
     }
 
     if (buffer.length > 5_000_000) {
-      throw new Error('That GoReport export is too large to import');
+      throw new Error('That spreadsheet is too large to import (5 MB max)');
     }
 
     const parsed = parseGoreportXlsx(buffer);
     if (parsed.phrases.length === 0) {
       throw new Error(
-        'No predefined responses found. Use a GoReport Predefined Responses xlsx.',
+        'No phrases found. Use an .xlsx file with Title, Text, and Path columns.',
       );
     }
 

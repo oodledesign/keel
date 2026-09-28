@@ -232,7 +232,7 @@ class SurveyPrepService {
       address: input.address,
       postcode: input.postcode,
       uprn: input.uprn,
-      suggest: true,
+      suggest: input.suggestEpc ?? true,
     });
 
     if (input.titleFromAddress) {

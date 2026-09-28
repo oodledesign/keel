@@ -108,6 +108,15 @@ export const DEFAULT_PROPOSAL_EMAIL_SIGNATURE = `Best regards,
 {{your.firstName}} {{your.lastName}}
 {{account.name}}`;
 
+export const DEFAULT_SURVEY_EMAIL_SUBJECT =
+  'Your survey report from {{account.name}}';
+
+export const DEFAULT_SURVEY_EMAIL_BODY = `Hello {{client.firstName}},
+
+Your survey report is ready. You can read it and download a copy from the link below.
+
+Let me know if you have any questions.`;
+
 export const DEFAULT_CONTRACT_EMAIL_SUBJECT =
   'Your agreement from {{account.name}}';
 

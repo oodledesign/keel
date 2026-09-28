@@ -234,11 +234,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   if (spaceType === 'building-surveyor') {
     return (
       <>
-        <TeamAccountLayoutPageHeader
-          account={account}
-          title={accountLabel}
-          description="Pipeline, meetings, and building survey reports."
-        />
+        <TeamAccountLayoutPageHeader account={account} title={accountLabel} />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           <Suspense fallback={null}></Suspense>
           <Suspense fallback={<BusinessDashboardSkeleton />}>

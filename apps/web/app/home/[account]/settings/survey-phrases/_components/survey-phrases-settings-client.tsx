@@ -73,7 +73,7 @@ export function SurveyPhrasesSettingsClient({
       setBanks((prev) => [result.bank, ...prev]);
       setName('');
       toast.success(
-        `Imported ${result.imported} phrases from ${result.fieldCount} GoReport fields.`,
+        `Imported ${result.imported} phrases across ${result.fieldCount} fields.`,
       );
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -90,10 +90,10 @@ export function SurveyPhrasesSettingsClient({
           Phrase banks
         </h2>
         <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-          Import a GoReport-style spreadsheet with Title, Text, and Path columns
-          (including ||placeholders||). Map to RICS codes such as F3. Choose
-          Firm phrase book (workspace) or My phrase book (personal). Phrases
-          stay on this workspace and are never seeded for other tenants.
+          Import a spreadsheet (.xlsx) with Title, Text, and Path columns
+          (including ||placeholders||). Paths map phrases to RICS codes such as
+          F3. Choose Firm phrase book (shared with the workspace) or My phrase
+          book (just you). Phrases stay on this workspace.
         </p>
 
         {canEdit ? (
@@ -156,7 +156,7 @@ export function SurveyPhrasesSettingsClient({
               ) : (
                 <Upload className="mr-2 h-4 w-4" />
               )}
-              Import GoReport xlsx
+              Import spreadsheet (.xlsx)
             </Button>
           </div>
         ) : (

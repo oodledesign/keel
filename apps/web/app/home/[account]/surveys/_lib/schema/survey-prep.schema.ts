@@ -14,6 +14,7 @@ export const ConfirmSurveyAddressSchema = SurveyAccountSchema.extend({
   latitude: optionalLatitude,
   longitude: optionalLongitude,
   titleFromAddress: z.boolean().optional(),
+  suggestEpc: z.boolean().optional(),
 });
 
 export const PullSurveyFloodSchema = SurveyAccountSchema.extend({

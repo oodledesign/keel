@@ -1,23 +1,8 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
-
-import { Quote } from 'lucide-react';
-
 import { Button } from '@kit/ui/button';
-import { Input } from '@kit/ui/input';
-import { toast } from '@kit/ui/sonner';
 
-import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
-import {
-  type PhraseToken,
-  parsePhraseTokens,
-  resolvePhraseBody,
-} from '~/lib/building-surveyor/phrase-tokens';
-import { workspaceTextMuted } from '~/lib/workspace-ui';
-
-import type { SurveyPhrase } from '../_lib/schema/survey-phrases.schema';
-import { listSurveyPhrasesAction } from '../_lib/server/survey-phrase-actions';
+import type { PhraseToken } from '~/lib/building-surveyor/phrase-tokens';
 
 export function PhraseResolver({
   tokens,
@@ -96,134 +81,6 @@ export function PhraseResolver({
       >
         Insert
       </Button>
-    </div>
-  );
-}
-
-export function SurveyPhraseInsert({
-  accountId,
-  ricsCode,
-  sectionKey,
-  onInsert,
-}: {
-  accountId: string;
-  ricsCode?: string | null;
-  sectionKey: string;
-  onInsert: (body: string, defaultRating?: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const [phrases, setPhrases] = useState<SurveyPhrase[]>([]);
-  const [selected, setSelected] = useState<SurveyPhrase | null>(null);
-  const [answers, setAnswers] = useState<string[]>([]);
-  const [pending, startTransition] = useTransition();
-
-  const loadPhrases = (nextQuery = query) => {
-    startTransition(async () => {
-      try {
-        const rows = await listSurveyPhrasesAction({
-          accountId,
-          ricsCode: ricsCode ?? undefined,
-          sectionKey: ricsCode ? undefined : sectionKey,
-          query: nextQuery.trim() || undefined,
-        });
-        setPhrases(rows);
-      } catch (error) {
-        toast.error(getErrorMessage(error));
-      }
-    });
-  };
-
-  const tokens = useMemo(
-    () => (selected ? parsePhraseTokens(selected.body) : []),
-    [selected],
-  );
-
-  return (
-    <div>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-7 px-2 text-xs"
-        onClick={() => {
-          const next = !open;
-          setOpen(next);
-          setSelected(null);
-          if (next) loadPhrases();
-        }}
-      >
-        <Quote className="mr-1 h-3.5 w-3.5" />
-        Insert phrase
-      </Button>
-
-      {open ? (
-        <div className="mt-2 space-y-2 rounded-md border border-[color:var(--workspace-shell-border)] p-2">
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onBlur={() => loadPhrases()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                loadPhrases();
-              }
-            }}
-            placeholder="Search phrases…"
-            className="h-8 text-xs"
-          />
-          {pending ? (
-            <p className={`text-xs ${workspaceTextMuted}`}>Loading…</p>
-          ) : phrases.length === 0 ? (
-            <p className={`text-xs ${workspaceTextMuted}`}>
-              No phrases for this section yet. Import a GoReport bank in
-              settings.
-            </p>
-          ) : (
-            <ul className="max-h-40 space-y-1 overflow-auto">
-              {phrases.map((phrase) => (
-                <li key={phrase.id}>
-                  <button
-                    type="button"
-                    className="w-full rounded px-2 py-1 text-left text-xs hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                    onClick={() => {
-                      setSelected(phrase);
-                      setAnswers(
-                        parsePhraseTokens(phrase.body)
-                          .filter((token) => token.type !== 'text')
-                          .map((token) =>
-                            token.type === 'choice' &&
-                            token.defaultIndex !== null
-                              ? (token.options[token.defaultIndex] ?? '')
-                              : '',
-                          ),
-                      );
-                    }}
-                  >
-                    {phrase.title}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {selected ? (
-            <PhraseResolver
-              tokens={tokens}
-              answers={answers}
-              onAnswer={setAnswers}
-              onInsert={() => {
-                onInsert(
-                  resolvePhraseBody(selected.body, answers),
-                  selected.defaultRating,
-                );
-                setOpen(false);
-                setSelected(null);
-              }}
-            />
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

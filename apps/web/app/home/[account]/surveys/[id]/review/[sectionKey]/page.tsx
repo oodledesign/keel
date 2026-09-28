@@ -1,35 +1,58 @@
 import { notFound, redirect } from 'next/navigation';
 
-import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
 import {
   deskReviewSectionByKey,
   deskReviewSections,
 } from '~/lib/building-surveyor/survey-desk-review';
 
-import { TeamAccountLayoutPageHeader } from '../../../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
 import { loadProposalsPageData } from '../../../../proposals/_lib/server/proposals-page.loader';
 import { getProposal } from '../../../../proposals/_lib/server/server-actions';
 import { SurveyDeskReviewClient } from '../../../_components/survey-desk-review-client';
+import {
+  SurveyGenerateDraftButton,
+  SurveyWorkspaceHeader,
+} from '../../../_components/survey-workspace-header';
 import { loadSurveyHubExtras } from '../../../_lib/server/survey-hub.loader';
+import { surveyClientName, surveyPath } from '../../../_lib/survey-display';
 
-interface DeskReviewSectionPageProps {
+interface ContentReviewSectionPageProps {
   params: Promise<{ account: string; id: string; sectionKey: string }>;
 }
 
-export const generateMetadata = async ({
-  params,
-}: DeskReviewSectionPageProps) => {
-  const { sectionKey } = await params;
-  const section = deskReviewSectionByKey(sectionKey);
-  return { title: section ? `${section.ricsCode} desk review` : 'Desk review' };
+type SurveyProposal = {
+  title?: string | null;
+  status: string;
+  kind?: string | null;
+  recipient_name?: string | null;
+  client_id?: string | null;
+  deal_id?: string | null;
+  client?: {
+    display_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+  } | null;
+  deal?: { contact_name?: string | null } | null;
 };
 
-async function DeskReviewSectionPage({ params }: DeskReviewSectionPageProps) {
+export const generateMetadata = async ({
+  params,
+}: ContentReviewSectionPageProps) => {
+  const { sectionKey } = await params;
+  const section = deskReviewSectionByKey(sectionKey);
+  return {
+    title: section ? `${section.ricsCode} content review` : 'Content review',
+  };
+};
+
+async function ContentReviewSectionPage({
+  params,
+}: ContentReviewSectionPageProps) {
   const { account: accountSlug, id, sectionKey } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['building-surveyor']);
@@ -37,25 +60,27 @@ async function DeskReviewSectionPage({ params }: DeskReviewSectionPageProps) {
     notFound();
   }
 
-  const { accountId, canViewProposals, canEditProposals } =
+  const { accountId, canViewProposals, canEditProposals, user } =
     await loadProposalsPageData(accountSlug);
   if (!id || !canViewProposals) notFound();
 
-  let proposal: Awaited<ReturnType<typeof getProposal>>;
+  let proposal: SurveyProposal | null;
   try {
-    proposal = await getProposal({ accountId, proposalId: id });
+    proposal = (await getProposal({
+      accountId,
+      proposalId: id,
+    })) as SurveyProposal | null;
   } catch {
     notFound();
   }
   if (!proposal) notFound();
-  const kind = (proposal as { kind?: string }).kind;
-  if (kind && kind !== 'survey_report') notFound();
+  if (proposal.kind && proposal.kind !== 'survey_report') notFound();
 
   const extras = await loadSurveyHubExtras({
     accountId,
     proposalId: id,
-    clientId: (proposal as { client_id?: string | null }).client_id,
-    dealId: (proposal as { deal_id?: string | null }).deal_id,
+    clientId: proposal.client_id,
+    dealId: proposal.deal_id,
   });
 
   const photoCountByKey = new Map<string, number>();
@@ -74,37 +99,69 @@ async function DeskReviewSectionPage({ params }: DeskReviewSectionPageProps) {
   if (!sections.some((item) => item.key === sectionKey)) {
     const fallback = sections[0]?.key;
     if (fallback) {
-      redirect(`/home/${accountSlug}/surveys/${id}/review/${fallback}`);
+      redirect(
+        surveyPath(
+          pathsConfig.app.accountSurveyReviewSection,
+          accountSlug,
+          id,
+          fallback,
+        ),
+      );
     }
     notFound();
   }
 
-  const title =
-    (proposal as { title?: string | null }).title?.trim() || 'Building survey';
+  const title = proposal.title?.trim() || 'Building survey';
+  const accountName =
+    (workspace.account as { name?: string | null }).name?.trim() || accountSlug;
+  const senderName =
+    [user.user_metadata?.first_name, user.user_metadata?.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    user.email ||
+    'Team member';
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        title={`${title} · desk review`}
-        description={<AppBreadcrumbs values={{ [id]: title }} />}
-        account={accountSlug}
-      />
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] md:px-6 md:py-6 md:pb-6">
+      <div className="flex w-full flex-col gap-5">
+        <SurveyWorkspaceHeader
+          accountSlug={accountSlug}
+          proposalId={id}
+          title={title}
+          clientName={surveyClientName(proposal)}
+          status={proposal.status}
+          actions={
+            canEditProposals ? (
+              <SurveyGenerateDraftButton
+                accountSlug={accountSlug}
+                accountId={accountId}
+                proposalId={id}
+                accountName={accountName}
+                surveyorName={senderName}
+                disabled={
+                  extras.observations.length === 0 &&
+                  extras.transcripts.length === 0
+                }
+              />
+            ) : null
+          }
+        />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] md:px-6 md:py-6 md:pb-6">
         <SurveyDeskReviewClient
           accountSlug={accountSlug}
           accountId={accountId}
           proposalId={id}
-          proposalTitle={title}
           canEdit={canEditProposals}
-          clientId={(proposal as { client_id?: string | null }).client_id}
+          clientId={proposal.client_id}
           sections={sections}
           currentKey={sectionKey}
           observations={extras.observations}
+          phraseBankCount={extras.phraseBankCount}
         />
-      </PageBody>
-    </>
+      </div>
+    </PageBody>
   );
 }
 
-export default DeskReviewSectionPage;
+export default ContentReviewSectionPage;

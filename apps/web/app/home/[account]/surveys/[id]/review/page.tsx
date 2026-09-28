@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 
+import pathsConfig from '~/config/paths.config';
 import {
   deskReviewSections,
   firstDeskReviewSectionKey,
@@ -11,13 +12,14 @@ import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard
 import { loadProposalsPageData } from '../../../proposals/_lib/server/proposals-page.loader';
 import { getProposal } from '../../../proposals/_lib/server/server-actions';
 import { loadSurveyHubExtras } from '../../_lib/server/survey-hub.loader';
+import { surveyPath } from '../../_lib/survey-display';
 
 interface DeskReviewIndexProps {
   params: Promise<{ account: string; id: string }>;
 }
 
 export const generateMetadata = async () => {
-  return { title: 'Desk review' };
+  return { title: 'Content review' };
 };
 
 async function DeskReviewIndexPage({ params }: DeskReviewIndexProps) {
@@ -63,7 +65,14 @@ async function DeskReviewIndexPage({ params }: DeskReviewIndexProps) {
   });
   const sectionKey = firstDeskReviewSectionKey(sections);
 
-  redirect(`/home/${accountSlug}/surveys/${id}/review/${sectionKey}`);
+  redirect(
+    surveyPath(
+      pathsConfig.app.accountSurveyReviewSection,
+      accountSlug,
+      id,
+      sectionKey,
+    ),
+  );
 }
 
 export default DeskReviewIndexPage;

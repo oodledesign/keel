@@ -9,6 +9,8 @@ import {
   useTransition,
 } from 'react';
 
+import Link from 'next/link';
+
 import { Quote } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -25,7 +27,11 @@ import {
   parsePhraseTokens,
   resolvePhraseBody,
 } from '~/lib/building-surveyor/phrase-tokens';
-import { workspaceText, workspaceTextMuted } from '~/lib/workspace-ui';
+import {
+  workspaceLinkAccent,
+  workspaceText,
+  workspaceTextMuted,
+} from '~/lib/workspace-ui';
 
 import type { SurveyPhrase } from '../_lib/schema/survey-phrases.schema';
 import { listSurveyPhrasesAction } from '../_lib/server/survey-phrase-actions';
@@ -40,12 +46,16 @@ export function SurveyPhrasePanel({
   ricsCode,
   canEdit = true,
   onInsert,
+  importHref,
+  phraseBankCount,
 }: {
   accountId: string;
   sectionKey: string;
   ricsCode?: string | null;
   canEdit?: boolean;
   onInsert: (body: string, defaultRating?: string | null) => void;
+  importHref?: string;
+  phraseBankCount?: number;
 }) {
   const [query, setQuery] = useState('');
   const [sectionFilter, setSectionFilter] = useState<SectionFilter>('current');
@@ -178,8 +188,20 @@ export function SurveyPhrasePanel({
           <p className={`text-xs ${workspaceTextMuted}`}>Loading…</p>
         ) : phrases.length === 0 ? (
           <p className={`text-xs ${workspaceTextMuted}`}>
-            No phrases yet. Import a GoReport spreadsheet (Title, Text, Path)
-            under Settings → Phrase banks.
+            {phraseBankCount === 0
+              ? 'No phrases yet. '
+              : query.trim()
+                ? 'No phrases match your search. '
+                : 'No phrases for this section yet. '}
+            {importHref ? (
+              <Link
+                href={importHref}
+                className={workspaceLinkAccent}
+                data-test="survey-phrase-import-link"
+              >
+                Import a spreadsheet
+              </Link>
+            ) : null}
           </p>
         ) : (
           <ul className="space-y-3">

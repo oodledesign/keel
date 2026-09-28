@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
-import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
-
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import {
   getDefaultAccountPath,
@@ -14,6 +12,7 @@ import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader'
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { ProposalsPageContent } from '../proposals/_components/proposals-page-content';
 import { loadProposalsPageData } from '../proposals/_lib/server/proposals-page.loader';
+import { loadSurveyDealOptions } from './_lib/server/survey-deal-options.loader';
 
 interface SurveysPageProps {
   params: Promise<{ account: string }>;
@@ -60,7 +59,7 @@ async function SurveysPage({ params }: SurveysPageProps) {
     user,
   } = await loadProposalsPageData(accountSlug);
 
-  const pipeline = await loadPipelineDataForAccount(accountId);
+  const deals = await loadSurveyDealOptions(accountId);
   const accountName =
     (workspace.account as { name?: string | null }).name?.trim() || accountSlug;
   const senderName =
@@ -73,11 +72,7 @@ async function SurveysPage({ params }: SurveysPageProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        title="Surveys"
-        description="Capture site notes and photos, group them into RICS sections, then draft the report"
-        account={accountSlug}
-      />
+      <TeamAccountLayoutPageHeader title="Surveys" account={accountSlug} />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
         <ProposalsPageContent
@@ -89,12 +84,7 @@ async function SurveysPage({ params }: SurveysPageProps) {
           canEditProposals={canEditProposals}
           canManageProposalStatus={canManageProposalStatus}
           documentKind="survey_report"
-          deals={pipeline.deals.map((d) => ({
-            id: d.id,
-            contactName: d.contactName,
-            companyName: d.companyName,
-            value: d.value,
-          }))}
+          deals={deals}
         />
       </PageBody>
     </>

@@ -14,11 +14,14 @@ import { Textarea } from '@kit/ui/textarea';
 import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import type { ProposalDocumentKind } from '~/lib/building-surveyor/document-kind';
 
 import {
   DEFAULT_PROPOSAL_EMAIL_BODY,
   DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
   DEFAULT_PROPOSAL_EMAIL_SUBJECT,
+  DEFAULT_SURVEY_EMAIL_BODY,
+  DEFAULT_SURVEY_EMAIL_SUBJECT,
   PROPOSAL_SMART_FIELD_PILLS,
 } from '../_lib/doc-smart-fields';
 import { getErrorMessage } from '../_lib/error-message';
@@ -39,6 +42,7 @@ export function ProposalSendPanel({
   initialSignature,
   onSent,
   onClose,
+  documentKind = 'proposal',
 }: {
   accountId: string;
   proposalId: string;
@@ -51,12 +55,21 @@ export function ProposalSendPanel({
   initialSignature?: string | null;
   onSent: () => void;
   onClose: () => void;
+  documentKind?: ProposalDocumentKind;
 }) {
+  const isSurvey = documentKind === 'survey_report';
+  const noun = isSurvey ? 'report' : 'proposal';
   const [email, setEmail] = useState(defaultEmail);
   const [subject, setSubject] = useState(
-    initialSubject ?? DEFAULT_PROPOSAL_EMAIL_SUBJECT,
+    initialSubject ||
+      (isSurvey
+        ? DEFAULT_SURVEY_EMAIL_SUBJECT
+        : DEFAULT_PROPOSAL_EMAIL_SUBJECT),
   );
-  const [body, setBody] = useState(initialBody ?? DEFAULT_PROPOSAL_EMAIL_BODY);
+  const [body, setBody] = useState(
+    initialBody ||
+      (isSurvey ? DEFAULT_SURVEY_EMAIL_BODY : DEFAULT_PROPOSAL_EMAIL_BODY),
+  );
   const [signature, setSignature] = useState(
     initialSignature ?? DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
   );
@@ -98,7 +111,13 @@ export function ProposalSendPanel({
         email_signature: signature,
         send_test_to_self: testOnly,
       });
-      toast.success(testOnly ? 'Test email sent' : 'Proposal sent');
+      toast.success(
+        testOnly
+          ? 'Test email sent to you'
+          : isSurvey
+            ? 'Report sent'
+            : 'Proposal sent',
+      );
       if (!testOnly) {
         setConfirmOpen(false);
         onSent();
@@ -228,7 +247,7 @@ export function ProposalSendPanel({
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Send proposal
+              Send {noun}
             </Button>
             <Button
               variant="outline"
@@ -242,8 +261,9 @@ export function ProposalSendPanel({
 
         <TabsContent value="link" className="mt-4 space-y-4">
           <p className="text-muted-foreground text-sm">
-            Share this link with your client to review, comment, and approve the
-            proposal.
+            {isSurvey
+              ? 'Share this link with your client to read and download the report.'
+              : 'Share this link with your client to review, comment, and approve the proposal.'}
           </p>
           <Button
             variant="outline"
@@ -293,7 +313,7 @@ export function ProposalSendPanel({
         onOpenChange={setTemplateOpen}
         kind="proposal_email"
         accountId={accountId}
-        title="Use proposal email template"
+        title={`Use ${noun} email template`}
         onSelect={(template) => {
           if (template.subject) setSubject(template.subject);
           if (template.bodyText) setBody(template.bodyText);
@@ -304,7 +324,7 @@ export function ProposalSendPanel({
       <ConfirmSendEmailDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Send this proposal?"
+        title={`Send this ${noun}?`}
         documentLabel={proposalTitle}
         recipients={email.trim() ? [email.trim()] : []}
         subject={subject}
