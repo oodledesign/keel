@@ -70,6 +70,8 @@ type Props = {
   /** Caption cues in source (original recording) time. */
   captions?: CaptionCue[];
   playerRef?: React.Ref<TimelinePlaybackPlayerHandle>;
+  /** The browser can't decode the master (e.g. HEVC in Firefox). */
+  onUnsupported?: () => void;
 };
 
 const CONTROLS_IDLE_HIDE_MS = 2500;
@@ -499,11 +501,25 @@ export function TimelinePlaybackPlayer(props: Props) {
           playsInline
           crossOrigin="anonymous"
           autoPlay={props.autoPlay ?? controls?.autoplay}
+          onError={(event) => {
+            const code = event.currentTarget.error?.code;
+            if (
+              code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED ||
+              code === MediaError.MEDIA_ERR_DECODE
+            ) {
+              props.onUnsupported?.();
+            }
+          }}
           onLoadedMetadata={(event) => {
+            const video = event.currentTarget;
+            // Some browsers load an undecodable video track as audio-only.
+            if (video.videoWidth === 0 && video.videoHeight === 0) {
+              props.onUnsupported?.();
+              return;
+            }
             setReady(true);
             updateFrameBox();
             applySpeed(speed);
-            const video = event.currentTarget;
             if (
               keepRanges.length > 0 &&
               !isTimeKept(keepRanges, video.currentTime * 1000)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import {
   VideoChaptersList,
@@ -24,6 +24,7 @@ type Props = {
   video: VideoRow;
   config: VideoPlayerConfigValues;
   useTimelinePlayer: boolean;
+  streamMatchesPublishedEdit: boolean;
   chapters: VideoChapter[];
   publishedAt: string | null;
   transcriptPlainText: string | null;
@@ -43,6 +44,14 @@ export function PublicWatchClient(props: Props) {
   const timelineRef = useRef<PublicTimelineWatchPlayerHandle>(null);
   const bunnyRef = useRef<SeekableBunnyEmbedHandle>(null);
   const playerAnchorRef = useRef<HTMLDivElement>(null);
+  const [masterUnsupported, setMasterUnsupported] = useState(false);
+  const onMasterUnsupported = useCallback(() => setMasterUnsupported(true), []);
+
+  const playTimeline = props.useTimelinePlayer && !masterUnsupported;
+  const timelineUnplayable =
+    props.useTimelinePlayer &&
+    masterUnsupported &&
+    !props.streamMatchesPublishedEdit;
 
   const onSeek = useCallback(
     (ms: number) => {
@@ -50,13 +59,13 @@ export function PublicWatchClient(props: Props) {
         behavior: 'smooth',
         block: 'center',
       });
-      if (props.useTimelinePlayer) {
+      if (playTimeline) {
         timelineRef.current?.seekToPlaybackMs(ms);
       } else {
         bunnyRef.current?.seekToPlaybackMs(ms);
       }
     },
-    [props.useTimelinePlayer],
+    [playTimeline],
   );
 
   const publishedLabel = formatPublishedAt(props.publishedAt);
@@ -97,13 +106,22 @@ export function PublicWatchClient(props: Props) {
         className="mx-auto w-full min-w-0 overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10"
         style={{ maxWidth: viewportFitMaxWidth(props.aspectRatio) }}
       >
-        {props.useTimelinePlayer ? (
+        {playTimeline ? (
           <PublicTimelineWatchPlayer
             ref={timelineRef}
             token={props.video.public_share_token!}
             aspectRatio={props.aspectRatio}
             config={props.config}
+            onUnsupported={onMasterUnsupported}
           />
+        ) : timelineUnplayable ? (
+          <div
+            className="flex w-full items-center justify-center bg-black/60 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80"
+            style={{ aspectRatio: props.aspectRatio }}
+          >
+            This browser can&apos;t play this video yet. Try again shortly, or
+            open it in Safari or Chrome.
+          </div>
         ) : props.embedReady ? (
           <SeekableBunnyEmbed
             ref={bunnyRef}

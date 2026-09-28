@@ -81,12 +81,44 @@ export async function upsertVideoMaster(input: {
   return data;
 }
 
+type KeepRangeInput = { startMs: number; endMs: number };
+
+function buildInitialTimeline(
+  durationMs: number,
+  clicks: VideoClickEvent[],
+  initialKeepRange?: KeepRangeInput | null,
+): VideoEditTimeline {
+  const timeline = createDefaultTimeline(durationMs, clicks);
+
+  if (initialKeepRange && timeline.sourceDurationMs > 0) {
+    const startMs = Math.max(0, Math.round(initialKeepRange.startMs));
+    const endMs = Math.min(
+      timeline.sourceDurationMs,
+      Math.round(initialKeepRange.endMs),
+    );
+    if (endMs > startMs) {
+      timeline.keepRanges = [{ startMs, endMs }];
+    }
+  }
+
+  return timeline;
+}
+
+/** Revision 1 = created from upload metadata; any save or publish bumps it. */
+function isUntouchedProject(project: { revision?: number | null }) {
+  return Number(project.revision ?? 0) <= 1;
+}
+
 export async function ensureEditProject(input: {
   client: SupabaseClient;
   videoId: string;
   accountId: string;
   durationMs?: number | null;
   clicks?: VideoClickEvent[];
+  /** Pre-upload trim (source ms) so the editor starts from what Stream received. */
+  initialKeepRange?: KeepRangeInput | null;
+  /** Rebuild the timeline from these inputs when nobody has edited it yet. */
+  resetIfUntouched?: boolean;
   userId?: string | null;
 }) {
   const { data: existing } = await input.client
@@ -94,6 +126,27 @@ export async function ensureEditProject(input: {
     .select('*')
     .eq('video_id', input.videoId)
     .maybeSingle();
+
+  if (existing && input.resetIfUntouched && isUntouchedProject(existing)) {
+    const timeline = buildInitialTimeline(
+      input.durationMs ?? 0,
+      input.clicks ?? [],
+      input.initialKeepRange,
+    );
+    const { data, error } = await input.client
+      .from('video_edit_projects')
+      .update({
+        timeline,
+        updated_by: input.userId ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { project: data, timeline };
+  }
 
   if (existing) {
     const existingTimeline =
@@ -113,9 +166,10 @@ export async function ensureEditProject(input: {
     };
   }
 
-  const timeline = createDefaultTimeline(
+  const timeline = buildInitialTimeline(
     input.durationMs ?? 0,
     input.clicks ?? [],
+    input.initialKeepRange,
   );
 
   const { data, error } = await input.client
@@ -138,6 +192,53 @@ export async function ensureEditProject(input: {
     .eq('id', input.videoId);
 
   return { project: data, timeline };
+}
+
+/**
+ * A master imported from Stream is the recorder's trimmed export, not the full
+ * source the initial timeline was built against. Shift an untouched timeline
+ * so time 0 is the trim start; edited projects are left alone.
+ */
+export async function rebaseUntouchedTimelineToImportedMaster(input: {
+  client: SupabaseClient;
+  videoId: string;
+  importedDurationMs: number;
+}) {
+  const { data: project } = await input.client
+    .from('video_edit_projects')
+    .select('id, revision, timeline')
+    .eq('video_id', input.videoId)
+    .maybeSingle();
+
+  if (
+    !project ||
+    !isUntouchedProject(project) ||
+    input.importedDurationMs <= 0
+  ) {
+    return;
+  }
+
+  const current = normalizeTimeline(project.timeline, input.importedDurationMs);
+  const offsetMs = current.keepRanges[0]?.startMs ?? 0;
+  if (offsetMs === 0 && current.sourceDurationMs === input.importedDurationMs) {
+    return;
+  }
+  const clicks = current.clicks
+    .map((click) => ({ ...click, tMs: click.tMs - offsetMs }))
+    .filter((click) => click.tMs >= 0 && click.tMs <= input.importedDurationMs);
+
+  const timeline: VideoEditTimeline = {
+    ...createDefaultTimeline(input.importedDurationMs, clicks),
+    clickStyle: current.clickStyle,
+    audio: current.audio,
+  };
+
+  const { error } = await input.client
+    .from('video_edit_projects')
+    .update({ timeline, updated_at: new Date().toISOString() })
+    .eq('id', project.id);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function saveEditTimeline(input: {

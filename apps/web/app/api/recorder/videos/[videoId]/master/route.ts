@@ -31,6 +31,9 @@ const BodySchema = z.object({
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
   durationMs: z.number().int().nonnegative().optional(),
+  /** Recorder trim applied to the Stream upload; the master stays untrimmed. */
+  trimStartMs: z.number().int().nonnegative().optional(),
+  trimEndMs: z.number().int().positive().optional(),
   sha256: z.string().optional(),
   clicks: z
     .array(
@@ -89,6 +92,23 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(
       { error: parsed.error.flatten() },
       { status: 400 },
+    );
+  }
+
+  const { data: editProject } = await admin
+    .from('video_edit_projects')
+    .select('revision')
+    .eq('video_id', videoId)
+    .maybeSingle();
+
+  // Edits are keyed to the current master's timing; swapping it would misalign them.
+  if (Number(editProject?.revision ?? 0) > 1) {
+    return NextResponse.json(
+      {
+        error:
+          'This video has already been edited in Ozer, so its master can no longer be replaced.',
+      },
+      { status: 409 },
     );
   }
 
@@ -172,12 +192,21 @@ export async function POST(request: Request, context: RouteContext) {
       });
   }
 
+  const { trimStartMs, trimEndMs } = parsed.data;
   await ensureEditProject({
     client: admin,
     videoId,
     accountId,
     durationMs: durationMs ?? 0,
     clicks,
+    initialKeepRange:
+      trimStartMs != null || trimEndMs != null
+        ? {
+            startMs: trimStartMs ?? 0,
+            endMs: trimEndMs ?? durationMs ?? 0,
+          }
+        : null,
+    resetIfUntouched: true,
     userId: auth.user_id,
   });
 

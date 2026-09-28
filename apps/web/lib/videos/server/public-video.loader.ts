@@ -21,6 +21,8 @@ export type PublicVideoPageData = {
   config: VideoPlayerConfigValues;
   /** Prefer player-composed master + published timeline (instant edits). */
   useTimelinePlayer: boolean;
+  /** Stream already holds the published edit, so it can stand in for the master. */
+  streamMatchesPublishedEdit: boolean;
   chapters: VideoChapter[];
   publishedAt: string | null;
   transcriptPlainText: string | null;
@@ -89,6 +91,10 @@ export const loadPublicVideoByToken = cache(
       video.published_timeline &&
       Number(video.published_revision ?? 0) > 0,
     );
+    const streamMatchesPublishedEdit =
+      Number(video.published_revision ?? 0) > 0 &&
+      Number(video.baked_revision ?? 0) ===
+        Number(video.published_revision ?? 0);
 
     const { data: transcript } = await admin
       .from('video_transcripts')
@@ -109,6 +115,7 @@ export const loadPublicVideoByToken = cache(
       },
       config: resolved.config,
       useTimelinePlayer,
+      streamMatchesPublishedEdit,
       chapters: normalizeVideoChapters(video.chapters),
       publishedAt:
         (video.published_at as string | null | undefined) ??

@@ -7,6 +7,7 @@ import {
   VIDEO_MASTERS_BUCKET,
   ensureEditProject,
   masterStoragePath,
+  rebaseUntouchedTimelineToImportedMaster,
   upsertVideoMaster,
 } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
@@ -24,19 +25,24 @@ type RouteContext = {
 };
 
 /**
- * Prefer low/mid MP4s — enough for edit + Whisper, and more likely to fit
- * under Supabase's global storage file-size limit (often 50MB if unset).
+ * The imported master is what the public watch page and the edit bake render
+ * from, so take the sharpest MP4 rendition that fits under the size cap.
  */
 const RESOLUTION_PREFERENCE = [
-  '240p',
-  '360p',
-  '480p',
-  '720p',
+  '2160p',
+  '1440p',
   '1080p',
+  '720p',
+  '480p',
+  '360p',
+  '240p',
 ] as const;
 
-/** Soft cap for server-side import. Override with VIDEO_MASTER_IMPORT_MAX_BYTES. */
-const DEFAULT_MAX_IMPORT_BYTES = 45 * 1024 * 1024;
+/**
+ * Soft cap for server-side import (the file is buffered in memory).
+ * Override with VIDEO_MASTER_IMPORT_MAX_BYTES.
+ */
+const DEFAULT_MAX_IMPORT_BYTES = 300 * 1024 * 1024;
 
 function maxImportBytes() {
   const raw = process.env.VIDEO_MASTER_IMPORT_MAX_BYTES?.trim();
@@ -75,7 +81,7 @@ function playUrlCandidates(
   ];
 
   if (ordered.length === 0) {
-    ordered.push('360p', '480p', '240p', '720p');
+    ordered.push('720p', '480p', '360p', '240p');
   }
 
   // Never fall back to /original here — originals are often hundreds of MB
@@ -115,6 +121,22 @@ async function probeContentLength(url: string): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+/** Bunny names renditions by their short side (e.g. 1440×900 → 720p is 1152×720). */
+function renditionDimensions(
+  playUrl: string,
+  sourceWidth: number | null,
+  sourceHeight: number | null,
+): { width: number | null; height: number | null } {
+  const label = /play_(\d+)p\.mp4$/.exec(playUrl)?.[1];
+  if (!label || !sourceWidth || !sourceHeight) {
+    return { width: sourceWidth || null, height: sourceHeight || null };
+  }
+  const shortSide = Math.min(sourceWidth, sourceHeight);
+  const scale = Math.min(1, Number(label) / shortSide);
+  const even = (value: number) => Math.round((value * scale) / 2) * 2;
+  return { width: even(sourceWidth), height: even(sourceHeight) };
 }
 
 function formatMb(bytes: number) {
@@ -214,20 +236,17 @@ export async function POST(_request: Request, context: RouteContext) {
       probed.push({ url, size: await probeContentLength(url) });
     }
 
-    const underCap = probed
-      .filter((row) => row.size == null || row.size <= sizeCap)
-      .sort((a, b) => {
-        // Prefer known smaller files; unknowns keep original preference order.
-        if (a.size == null && b.size == null) return 0;
-        if (a.size == null) return 1;
-        if (b.size == null) return -1;
-        return a.size - b.size;
-      });
+    // Highest quality first among known sizes; unknown sizes go last because the
+    // body is buffered in memory before the cap can be checked.
+    const underCap = [
+      ...probed.filter((row) => row.size != null && row.size <= sizeCap),
+      ...probed.filter((row) => row.size == null),
+    ];
 
     const tryOrder =
       underCap.length > 0
         ? underCap.map((row) => row.url)
-        : candidates.slice(0, 1);
+        : candidates.slice(-1);
 
     let mediaRes: Response | null = null;
     let playUrl: string | null = null;
@@ -302,6 +321,12 @@ export async function POST(_request: Request, context: RouteContext) {
           ? Number(video.duration_seconds) * 1000
           : null;
 
+    const dimensions = renditionDimensions(
+      playUrl,
+      bunnyVideo.width,
+      bunnyVideo.height,
+    );
+
     await upsertVideoMaster({
       client: access.client,
       videoId,
@@ -309,8 +334,8 @@ export async function POST(_request: Request, context: RouteContext) {
       storagePath: path,
       contentType: 'video/mp4',
       byteSize: bytes.byteLength,
-      width: bunnyVideo.width,
-      height: bunnyVideo.height,
+      width: dimensions.width,
+      height: dimensions.height,
       durationMs,
     });
 
@@ -321,6 +346,14 @@ export async function POST(_request: Request, context: RouteContext) {
       durationMs: durationMs ?? 0,
       userId: access.user?.id,
     });
+
+    if (durationMs) {
+      await rebaseUntouchedTimelineToImportedMaster({
+        client: access.client,
+        videoId,
+        importedDurationMs: durationMs,
+      });
+    }
 
     return NextResponse.json({
       ok: true,

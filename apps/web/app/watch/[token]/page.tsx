@@ -54,6 +54,7 @@ export default async function PublicWatchPage({
     video,
     config,
     useTimelinePlayer,
+    streamMatchesPublishedEdit,
     chapters,
     publishedAt,
     transcriptPlainText,
@@ -69,6 +70,7 @@ export default async function PublicWatchPage({
           video={video}
           config={config}
           useTimelinePlayer={useTimelinePlayer}
+          streamMatchesPublishedEdit={streamMatchesPublishedEdit}
           chapters={chapters}
           publishedAt={publishedAt}
           transcriptPlainText={transcriptPlainText}

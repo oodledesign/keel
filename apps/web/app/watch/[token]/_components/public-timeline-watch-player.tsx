@@ -32,6 +32,7 @@ type Props = {
   token: string;
   aspectRatio: string;
   config: VideoPlayerConfigValues;
+  onUnsupported?: () => void;
 };
 
 export type PublicTimelineWatchPlayerHandle = {
@@ -119,6 +120,7 @@ export const PublicTimelineWatchPlayer = forwardRef<
         timeline={media.timeline}
         controls={props.config}
         captions={media.captions}
+        onUnsupported={props.onUnsupported}
         className="absolute inset-0"
       />
     </div>
