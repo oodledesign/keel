@@ -80,6 +80,12 @@ else
   # against this project's last successful deploy, not just the parent commit.
   COMPARE_FROM="${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}"
   COMPARE_TO="HEAD"
+  # Vercel clones shallowly; an old last-deploy SHA is often absent. Falling back
+  # to the parent commit keeps unrelated pushes from building rarely-deployed apps.
+  if ! git rev-parse --verify --quiet "${COMPARE_FROM}^{commit}" >/dev/null; then
+    echo "[vercel-ignore] ${COMPARE_FROM} not in clone; comparing HEAD^ instead"
+    COMPARE_FROM="HEAD^"
+  fi
   if [[ -n "${VERCEL_IGNORE_COMPARE:-}" ]]; then
     # shellcheck disable=SC2086
     set -- $VERCEL_IGNORE_COMPARE
@@ -114,6 +120,7 @@ WEB_SKIP_ONLY=(
   "apps/docs/"
   "apps/sites/"
   "apps/ios/"
+  "scripts/vercel-ignore.sh"
 )
 
 # Shared workspace / install inputs that affect every Vercel app.
