@@ -1,9 +1,7 @@
-import { Card, CardContent } from '@kit/ui/card';
 import { cn } from '@kit/ui/utils';
 
 import type { WipRunningTotals } from '~/lib/commercial/wip-running-totals';
 import { WIP_STAGE_COLOURS } from '~/lib/commercial/wip-stage-colours';
-import { workspacePanelCard } from '~/lib/workspace-ui';
 
 function formatGbp(value: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -36,7 +34,6 @@ const METRICS = [
     // Navy / --ozer-info — same swatch as Potential columns, used here as
     // combined emphasis rather than the early-funnel stage meaning.
     colour: WIP_STAGE_COLOURS.potential,
-    emphasize: true,
   },
 ];
 
@@ -52,41 +49,30 @@ export function WipRunningTotalsCards({
       role="group"
       aria-label="WIP running totals"
       data-test="wip-running-totals"
-      className={cn(
-        'grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-3',
-        className,
-      )}
+      className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}
     >
       {METRICS.map((metric) => (
-        <Card
+        <div
           key={metric.key}
           data-test={metric.testId}
-          className={cn(workspacePanelCard, 'overflow-hidden py-0')}
+          title={metric.hint}
+          className="inline-flex items-baseline gap-1.5 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] py-1 pr-3 pl-2.5"
           style={{
-            borderTopWidth: 3,
-            borderTopColor: metric.colour.bar,
-            background: metric.colour.tint,
+            borderLeftWidth: 3,
+            borderLeftColor: metric.colour.bar,
           }}
         >
-          <CardContent className="px-3 py-2">
-            <p
-              className="text-[10px] font-semibold tracking-wide uppercase"
-              style={{ color: metric.colour.label }}
-            >
-              {metric.label}
-            </p>
-            <p
-              className={cn(
-                'mt-0.5 font-semibold tracking-tight tabular-nums',
-                metric.emphasize ? 'text-lg' : 'text-base',
-              )}
-              style={{ color: metric.colour.label }}
-            >
-              {formatGbp(totals[metric.key])}
-            </p>
-            <span className="sr-only">{metric.hint}</span>
-          </CardContent>
-        </Card>
+          <span
+            className="text-xs font-medium"
+            style={{ color: metric.colour.label }}
+          >
+            {metric.label}:
+          </span>
+          <span className="text-sm font-semibold tracking-tight text-[var(--workspace-shell-text)] tabular-nums">
+            {formatGbp(totals[metric.key])}
+          </span>
+          <span className="sr-only">{metric.hint}</span>
+        </div>
       ))}
     </div>
   );

@@ -1323,7 +1323,7 @@ export function CommercialWipBoard({
 
       <div
         className={`flex shrink-0 flex-wrap items-center gap-2 px-4 md:px-6 lg:px-8 ${
-          fullscreen ? '' : 'pt-1'
+          fullscreen ? 'py-3' : 'py-2'
         }`}
       >
         <WipRunningTotalsCards totals={wipTotals} />

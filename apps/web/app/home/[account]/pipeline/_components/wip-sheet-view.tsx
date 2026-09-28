@@ -4,6 +4,8 @@ import { type KeyboardEvent, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
+import { Search } from 'lucide-react';
+
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
@@ -41,7 +43,61 @@ type Props = {
 };
 
 const cellInputClass =
-  'h-8 w-full min-w-[6rem] rounded-md border border-transparent bg-transparent px-2 text-sm text-[var(--workspace-shell-text)] outline-none transition-colors hover:border-[color:var(--workspace-shell-border)] focus:border-[var(--ozer-accent)]/50 focus:bg-[var(--workspace-shell-sidebar-accent)]/30';
+  'h-8 w-full min-w-[6rem] rounded-md border border-transparent bg-transparent px-2 text-sm text-[var(--workspace-shell-text)] outline-none transition-colors placeholder:text-[var(--workspace-shell-text)]/25 hover:border-[color:var(--workspace-shell-border)] focus:border-[var(--ozer-accent)]/50 focus:bg-[var(--workspace-shell-sidebar-accent)]/30';
+
+function matchesSheetQuery(
+  query: string,
+  fields: Array<string | number | null | undefined>,
+) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return fields.some(
+    (field) => field != null && String(field).toLowerCase().includes(q),
+  );
+}
+
+function SheetSectionHeader({
+  title,
+  count,
+  totalCount,
+  query,
+  placeholder,
+  onQueryChange,
+}: {
+  title: string;
+  count: number;
+  totalCount: number;
+  query: string;
+  placeholder: string;
+  onQueryChange: (next: string) => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
+      <h3 className="shrink-0 text-sm font-semibold text-[var(--workspace-shell-text)]">
+        {title}
+      </h3>
+      <label className="relative w-full max-w-xs">
+        <span className="sr-only">{placeholder}</span>
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text)]/40"
+        />
+        <input
+          type="search"
+          value={query}
+          placeholder={placeholder}
+          onChange={(e) => onQueryChange(e.target.value)}
+          className="h-8 w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pr-2 pl-8 text-sm text-[var(--workspace-shell-text)] outline-none placeholder:text-[var(--workspace-shell-text)]/35 focus:border-[var(--ozer-accent)]/50"
+        />
+      </label>
+      <span
+        className={`ml-auto shrink-0 text-xs tabular-nums ${workspaceTextMuted}`}
+      >
+        {query.trim() ? `${count} of ${totalCount}` : totalCount}
+      </span>
+    </div>
+  );
+}
 
 const selectClass =
   'h-8 w-full min-w-[7rem] rounded-md border border-transparent bg-transparent px-1.5 text-sm text-[var(--workspace-shell-text)] outline-none hover:border-[color:var(--workspace-shell-border)] focus:border-[var(--ozer-accent)]/50 focus:bg-[var(--workspace-shell-sidebar-accent)]/30';
@@ -61,11 +117,17 @@ function formatDate(iso: string) {
 }
 
 function parseOptionalNumber(raw: string): number | null {
-  const t = raw.trim().replace(/,/g, '');
+  const t = raw.trim().replace(/[£,\s]/g, '');
   if (!t) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }
+
+const gbpFormatter = new Intl.NumberFormat('en-GB', {
+  style: 'currency',
+  currency: 'GBP',
+  maximumFractionDigits: 0,
+});
 
 function SheetTextCell({
   value,
@@ -127,6 +189,8 @@ export function WipSheetView({
   onEditInstruction,
 }: Props) {
   const [, startTransition] = useTransition();
+  const [requirementQuery, setRequirementQuery] = useState('');
+  const [instructionQuery, setInstructionQuery] = useState('');
 
   const listingById = useMemo(() => {
     const map = new Map<string, PipelineListingOption>();
@@ -156,6 +220,45 @@ export function WipSheetView({
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
         ),
     [requirements],
+  );
+
+  const visibleRequirements = useMemo(
+    () =>
+      sortedRequirements.filter((row) =>
+        matchesSheetQuery(requirementQuery, [
+          row.companyName,
+          row.contactName,
+          row.contactPhone,
+          row.contactEmail,
+          row.sector,
+          row.locationText,
+          row.notes,
+          REQUIREMENT_STATUS_LABELS[row.stage],
+        ]),
+      ),
+    [sortedRequirements, requirementQuery],
+  );
+
+  const visibleDeals = useMemo(
+    () =>
+      activeDeals.filter((deal) => {
+        const listingName = deal.commercialListingId
+          ? listingById.get(deal.commercialListingId)?.name
+          : null;
+        const stageLabel = instructionStages.find(
+          (stage) => stage.key === normalizeCommercialPipelineStage(deal.stage),
+        )?.label;
+        return matchesSheetQuery(instructionQuery, [
+          deal.projectName,
+          deal.companyName,
+          deal.contactName,
+          listingName,
+          deal.nextAction,
+          deal.description,
+          stageLabel,
+        ]);
+      }),
+    [activeDeals, instructionQuery, listingById, instructionStages],
   );
 
   const showInstructions = view === 'instructions' || view === 'both';
@@ -214,19 +317,14 @@ export function WipSheetView({
             showInstructions ? 'max-h-[45vh] shrink-0' : 'flex-1'
           }`}
         >
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Requirements sheet
-              </h3>
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                Edit like a spreadsheet — changes save when you leave a cell
-              </p>
-            </div>
-            <span className={`text-xs tabular-nums ${workspaceTextMuted}`}>
-              {sortedRequirements.length}
-            </span>
-          </div>
+          <SheetSectionHeader
+            title="Requirements"
+            count={visibleRequirements.length}
+            totalCount={sortedRequirements.length}
+            query={requirementQuery}
+            placeholder="Search requirements…"
+            onQueryChange={setRequirementQuery}
+          />
           <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-max min-w-full border-collapse text-sm">
               <thead>
@@ -247,17 +345,19 @@ export function WipSheetView({
                 </tr>
               </thead>
               <tbody>
-                {sortedRequirements.length === 0 ? (
+                {visibleRequirements.length === 0 ? (
                   <tr>
                     <td
                       colSpan={13}
                       className={`px-3 py-8 text-center text-sm ${workspaceTextMuted}`}
                     >
-                      No requirements yet — add one to start tracking briefs.
+                      {sortedRequirements.length === 0
+                        ? 'No requirements yet — add one to start tracking briefs.'
+                        : 'No requirements match your search.'}
                     </td>
                   </tr>
                 ) : (
-                  sortedRequirements.map((row) => {
+                  visibleRequirements.map((row) => {
                     const stageColour = wipStageColour(row.stage);
                     return (
                       <tr
@@ -486,19 +586,14 @@ export function WipSheetView({
 
       {showInstructions ? (
         <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Instructions sheet
-              </h3>
-              <p className={`text-xs ${workspaceTextMuted}`}>
-                Landlord mandates — edit inline, open a row for full detail
-              </p>
-            </div>
-            <span className={`text-xs tabular-nums ${workspaceTextMuted}`}>
-              {activeDeals.length}
-            </span>
-          </div>
+          <SheetSectionHeader
+            title="Instructions"
+            count={visibleDeals.length}
+            totalCount={activeDeals.length}
+            query={instructionQuery}
+            placeholder="Search instructions…"
+            onQueryChange={setInstructionQuery}
+          />
           <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-max min-w-full border-collapse text-sm">
               <thead>
@@ -515,17 +610,19 @@ export function WipSheetView({
                 </tr>
               </thead>
               <tbody>
-                {activeDeals.length === 0 ? (
+                {visibleDeals.length === 0 ? (
                   <tr>
                     <td
                       colSpan={9}
                       className={`px-3 py-8 text-center text-sm ${workspaceTextMuted}`}
                     >
-                      No active instructions.
+                      {activeDeals.length === 0
+                        ? 'No active instructions.'
+                        : 'No instructions match your search.'}
                     </td>
                   </tr>
                 ) : (
-                  activeDeals.map((deal) => {
+                  visibleDeals.map((deal) => {
                     const listing = deal.commercialListingId
                       ? listingById.get(deal.commercialListingId)
                       : null;
@@ -599,8 +696,10 @@ export function WipSheetView({
                         </td>
                         <td className={tdClass}>
                           <SheetTextCell
-                            value={deal.value ? String(deal.value) : ''}
-                            placeholder="0"
+                            value={
+                              deal.value ? gbpFormatter.format(deal.value) : ''
+                            }
+                            placeholder="£-"
                             className="min-w-[6rem] tabular-nums"
                             onCommit={(next) => {
                               const value = parseOptionalNumber(next) ?? 0;
