@@ -2,6 +2,7 @@ export {
   CIRCULATION_PURPOSE,
   CONSENT_COPY_VERSION,
   buildCirculationEmailHtml,
+  buildCirculationUnsubscribeUrls,
   createCirculationUnsubscribeToken,
   createCommercialCirculationService,
   decodeCirculationUnsubscribeToken,
@@ -34,8 +35,14 @@ export { scheduleCirculationOnListingPublished } from './trigger-on-publish';
 export {
   listingBecameLiveForCirculation,
   matchDigestFingerprint,
-  shouldSkipSameDigest,
 } from './digest-fingerprint';
+export {
+  hasUnsentListing,
+  isWithinMinGap,
+  minGapCutoff,
+  orderByLeastRecentlyCirculated,
+  pickListingsForEmail,
+} from './circulation-selection';
 export { buildCirculationDigestEmailHtml } from './circulation-email';
 export {
   isCirculationAutoEligible,

@@ -15,3 +15,13 @@ export const CirculationRunSchema = z.object({
   accountId: z.string().uuid(),
   dryRun: z.boolean().optional(),
 });
+
+export const CirculationMinGapSchema = z.object({
+  accountId: z.string().uuid(),
+  minGapDays: z.number().int().min(0).max(60),
+});
+
+export const CirculationDismissUnsubscribeReviewSchema = z.object({
+  accountId: z.string().uuid(),
+  email: z.string().email(),
+});

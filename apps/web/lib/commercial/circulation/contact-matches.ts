@@ -43,6 +43,8 @@ export type ContactMatchListing = {
   coverImageUrl: string | null;
   brochureShareToken: string | null;
   autoCirculate: boolean;
+  /** This contact's requirements that match the listing at or above minScore. */
+  requirementIds: string[];
 };
 
 export type ContactMatchRow = {
@@ -54,9 +56,34 @@ export type ContactMatchRow = {
   autoSendEnabled: boolean;
   lastDigestFingerprint: string | null;
   lastDigestSentAt: string | null;
+  lastCirculatedAt: string | null;
   publicAccessToken: string | null;
   listings: ContactMatchListing[];
 };
+
+const LISTING_ROW_CAP = 500;
+const REQUIREMENT_ROW_CAP = 3000;
+const PAGE_SIZE = 1000;
+
+async function fetchCappedPages<T>(
+  fetchPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+  cap: number,
+): Promise<T[]> {
+  const rows: T[] = [];
+  while (rows.length < cap) {
+    const from = rows.length;
+    const to = Math.min(from + PAGE_SIZE, cap) - 1;
+    const { data, error } = await fetchPage(from, to);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+    if (page.length < to - from + 1) break;
+  }
+  return rows;
+}
 
 type ListingRow = {
   id: string;
@@ -323,39 +350,50 @@ export async function listContactMatches(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = client as any;
 
-  const listingQuery = db
-    .from('commercial_listings')
-    .select(LISTING_SELECT)
-    .eq('account_id', input.accountId)
-    .in('status', [...ACTIVE_LISTING_STATUSES_FOR_MATCH])
-    .order('updated_at', { ascending: false })
-    .limit(250);
+  const [listings, reqRows] = await Promise.all([
+    fetchCappedPages<ListingRow>(
+      (from, to) =>
+        db
+          .from('commercial_listings')
+          .select(LISTING_SELECT)
+          .eq('account_id', input.accountId)
+          .in('status', [...ACTIVE_LISTING_STATUSES_FOR_MATCH])
+          .order('updated_at', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, to),
+      LISTING_ROW_CAP,
+    ),
+    // Requirements never sent details first, so a cap drops recently
+    // contacted ones rather than silently starving older active searches.
+    fetchCappedPages<RequirementRow>(
+      (from, to) =>
+        db
+          .from('commercial_requirements')
+          .select(REQUIREMENT_SELECT)
+          .eq('account_id', input.accountId)
+          .not('contact_email', 'is', null)
+          .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
+          .order('details_sent', { ascending: true, nullsFirst: true })
+          .order('updated_at', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, to),
+      REQUIREMENT_ROW_CAP,
+    ),
+  ]);
 
-  const requirementQuery = db
-    .from('commercial_requirements')
-    .select(REQUIREMENT_SELECT)
-    .eq('account_id', input.accountId)
-    .not('contact_email', 'is', null)
-    .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
-    .order('updated_at', { ascending: false })
-    .limit(250);
-
-  const [
-    { data: listingRows, error: listingError },
-    { data: reqRows, error: reqError },
-  ] = await Promise.all([listingQuery, requirementQuery]);
-
-  if (listingError) throw new Error(listingError.message);
-  if (reqError) throw new Error(reqError.message);
-
-  const listings = (listingRows ?? []) as ListingRow[];
-  if (listings.length >= 250) {
+  if (listings.length >= LISTING_ROW_CAP) {
     console.warn(
-      '[circulation] listing match set hit the 250-row cap',
+      `[circulation] listing match set hit the ${LISTING_ROW_CAP}-row cap`,
       input.accountId,
     );
   }
-  const requirements = ((reqRows ?? []) as RequirementRow[]).filter((row) => {
+  if (reqRows.length >= REQUIREMENT_ROW_CAP) {
+    console.warn(
+      `[circulation] requirement match set hit the ${REQUIREMENT_ROW_CAP}-row cap`,
+      input.accountId,
+    );
+  }
+  const requirements = reqRows.filter((row) => {
     const email = normalizeCirculationEmail(String(row.contact_email ?? ''));
     if (!email) return false;
     if (input.email && email !== normalizeCirculationEmail(input.email)) {
@@ -374,11 +412,9 @@ export async function listContactMatches(
     ),
   ];
 
-  const circulation = createCommercialCirculationService(client);
-  const [statuses, preferenceRows] = await Promise.all([
-    circulation.getPreferenceStatuses(input.accountId, emails),
-    circulation.listPreferences(input.accountId, emails),
-  ]);
+  const preferenceRows = await createCommercialCirculationService(
+    client,
+  ).listPreferences(input.accountId, emails);
 
   const byEmail = new Map<string, ContactMatchRow>();
 
@@ -387,7 +423,8 @@ export async function listContactMatches(
     if (!email) continue;
     const reqSnap = asRequirementSnapshot(req);
     const preference = preferenceRows.get(email);
-    const consentStatus = statuses.get(email) ?? 'unknown';
+    const consentStatus: CirculationConsentStatus =
+      preference?.marketingStatus ?? 'unknown';
 
     let row = byEmail.get(email);
     if (!row) {
@@ -400,6 +437,7 @@ export async function listContactMatches(
         autoSendEnabled: preference?.autoSendEnabled ?? true,
         lastDigestFingerprint: preference?.lastDigestFingerprint ?? null,
         lastDigestSentAt: preference?.lastDigestSentAt ?? null,
+        lastCirculatedAt: preference?.lastCirculatedAt ?? null,
         publicAccessToken: preference?.publicAccessToken ?? null,
         listings: [],
       };
@@ -425,6 +463,9 @@ export async function listContactMatches(
         (item) => item.listingId === listing.id,
       );
       if (existing) {
+        if (!existing.requirementIds.includes(req.id)) {
+          existing.requirementIds.push(req.id);
+        }
         if (result.score > existing.score) {
           existing.score = result.score;
           existing.reasons = result.reasons;
@@ -459,6 +500,7 @@ export async function listContactMatches(
         coverImageUrl: null,
         brochureShareToken: listing.brochure_share_token,
         autoCirculate: Boolean(listing.auto_circulate_matches),
+        requirementIds: [req.id],
       });
     }
   }

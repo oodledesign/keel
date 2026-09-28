@@ -6,6 +6,7 @@ import { Copy, Mail } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
+import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
@@ -14,9 +15,11 @@ import type { CirculationUsageSnapshot } from '~/lib/commercial/circulation/circ
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
+  dismissCirculationUnsubscribeReview,
   runCirculationDigest,
   setCirculationAutoSend,
   setCirculationContactAutoSend,
+  setCirculationMinGap,
 } from '../_lib/server/circulation-workspace-actions';
 
 export type CirculationWorkspaceContact = {
@@ -25,8 +28,16 @@ export type CirculationWorkspaceContact = {
   companyName: string | null;
   consentStatus: 'subscribed' | 'unsubscribed' | 'suppressed' | 'unknown';
   autoSendEnabled: boolean;
-  lastDigestSentAt: string | null;
+  lastCirculatedAt: string | null;
   matchCount: number;
+  publicAccessToken: string | null;
+};
+
+export type CirculationSuspectedUnsubscribe = {
+  email: string;
+  unsubscribedAt: string;
+  sentAt: string;
+  secondsAfterSend: number;
   publicAccessToken: string | null;
 };
 
@@ -68,8 +79,10 @@ type Props = {
   fromEmail: string | null;
   fromName: string;
   initialAutoSendEnabled: boolean;
+  initialMinGapDays: number;
   initialContacts: CirculationWorkspaceContact[];
   initialSends: CirculationWorkspaceSend[];
+  suspectedUnsubscribes: CirculationSuspectedUnsubscribe[];
   usage?: CirculationUsageSnapshot;
 };
 
@@ -114,17 +127,76 @@ export function CirculationWorkspaceClient({
   fromEmail,
   fromName,
   initialAutoSendEnabled,
+  initialMinGapDays,
   initialContacts,
   initialSends,
+  suspectedUnsubscribes,
   usage,
 }: Props) {
   const [autoSend, setAutoSend] = useState(initialAutoSendEnabled);
+  const [minGapDays, setMinGapDays] = useState(initialMinGapDays);
+  const [minGapDraft, setMinGapDraft] = useState(String(initialMinGapDays));
   const [contacts, setContacts] = useState(initialContacts);
   const [sends] = useState(initialSends);
+  const [suspects, setSuspects] = useState(suspectedUnsubscribes);
   const [autoPending, startAutoTransition] = useTransition();
+  const [gapPending, startGapTransition] = useTransition();
   const [runPending, startRunTransition] = useTransition();
   const [contactPending, startContactTransition] = useTransition();
+  const [reviewPending, startReviewTransition] = useTransition();
   const origin = useBrowserOrigin();
+
+  function saveMinGap() {
+    const parsed = Number.parseInt(minGapDraft, 10);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 60) {
+      setMinGapDraft(String(minGapDays));
+      toast.error('Enter a gap between 0 and 60 days');
+      return;
+    }
+    if (parsed === minGapDays) return;
+
+    const previous = minGapDays;
+    setMinGapDays(parsed);
+    setMinGapDraft(String(parsed));
+    startGapTransition(async () => {
+      try {
+        await setCirculationMinGap({ accountId, minGapDays: parsed });
+        toast.success(
+          parsed === 0
+            ? 'No minimum gap between automatic emails'
+            : `At most one automatic email every ${parsed} day${parsed === 1 ? '' : 's'}`,
+        );
+      } catch (error) {
+        setMinGapDays(previous);
+        setMinGapDraft(String(previous));
+        toast.error(
+          error instanceof Error ? error.message : 'Could not update the gap',
+        );
+      }
+    });
+  }
+
+  function dismissSuspect(email: string) {
+    const previous = suspects;
+    setSuspects((current) => current.filter((row) => row.email !== email));
+    startReviewTransition(async () => {
+      try {
+        await dismissCirculationUnsubscribeReview({ accountId, email });
+      } catch (error) {
+        setSuspects(previous);
+        toast.error(
+          error instanceof Error ? error.message : 'Could not dismiss',
+        );
+      }
+    });
+  }
+
+  function copyResubscribeLink(token: string) {
+    const url = publicMatchesHref(token, origin || window.location.origin);
+    void copyTextToClipboard(url)
+      .then(() => toast.success('Preferences link copied'))
+      .catch(() => toast.error('Could not copy link'));
+  }
 
   const subscribedCount = useMemo(
     () => contacts.filter((c) => c.consentStatus === 'subscribed').length,
@@ -187,10 +259,13 @@ export function CirculationWorkspaceClient({
     startRunTransition(async () => {
       try {
         const result = await runCirculationDigest({ accountId, dryRun });
+        const nothingNew = result.nothingNew
+          ? ` · ${result.nothingNew} with nothing new`
+          : '';
         toast.success(
           dryRun
-            ? `Dry run: ${result.dryRunEligible} would be emailed`
-            : `Sent ${result.mailed} digest${result.mailed === 1 ? '' : 's'}`,
+            ? `Dry run: ${result.dryRunEligible} would be emailed${nothingNew}`
+            : `Sent ${result.mailed} digest${result.mailed === 1 ? '' : 's'}${nothingNew}`,
         );
         window.location.reload();
       } catch (error) {
@@ -235,9 +310,10 @@ export function CirculationWorkspaceClient({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            When a disposal goes live, each matching person gets one email of
-            every property that currently fits them — sent as {agencyName}, not
-            Ozer. The daily cron is a safety net if a publish is missed.
+            When a disposal goes live, matching people get one email leading
+            with properties they haven&apos;t been sent yet — sent as{' '}
+            {agencyName}, not Ozer. Nobody is emailed unless something is new.
+            The daily run catches anyone held back by the gap below.
           </p>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
             <div>
@@ -255,6 +331,38 @@ export function CirculationWorkspaceClient({
               onCheckedChange={toggleGlobal}
               data-test="circulation-auto-send-switch"
             />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
+            <div>
+              <p className="text-sm text-[var(--workspace-shell-text)]">
+                Minimum gap between automatic emails
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Per contact. &quot;Send now&quot; ignores the gap but still only
+                emails people with something new.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={60}
+                value={minGapDraft}
+                disabled={gapPending}
+                onChange={(event) => setMinGapDraft(event.target.value)}
+                onBlur={saveMinGap}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                }}
+                className="h-8 w-16 text-right tabular-nums"
+                aria-label="Minimum days between automatic emails"
+                data-test="circulation-min-gap-input"
+              />
+              <span className="text-sm text-[var(--workspace-shell-text-muted)]">
+                days
+              </span>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -282,6 +390,71 @@ export function CirculationWorkspaceClient({
           ) : null}
         </CardContent>
       </Card>
+
+      {suspects.length > 0 ? (
+        <Card
+          className={workspacePanelCard}
+          data-test="circulation-suspected-unsubscribes"
+        >
+          <CardHeader>
+            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+              Unsubscribes to review
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
+              These people were unsubscribed seconds after an email arrived and
+              never engaged with any other email. That usually means a
+              company&apos;s link scanner opened the old unsubscribe link, not
+              the person. They stay unsubscribed. If you think it was a scanner,
+              send them their preferences link so they can resubscribe
+              themselves.
+            </p>
+            <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
+              {suspects.map((suspect) => (
+                <li
+                  key={suspect.email}
+                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {suspect.email}
+                    </p>
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Unsubscribed {suspect.secondsAfterSend}s after the email
+                      sent · {formatWhen(suspect.unsubscribedAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {suspect.publicAccessToken ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          copyResubscribeLink(suspect.publicAccessToken!)
+                        }
+                      >
+                        <Copy className="mr-1.5 h-3 w-3" />
+                        Copy preferences link
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={reviewPending}
+                      onClick={() => dismissSuspect(suspect.email)}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className={workspacePanelCard}>
         <CardHeader>
@@ -321,7 +494,7 @@ export function CirculationWorkspaceClient({
                         {contact.email}
                         {contact.companyName ? ` · ${contact.companyName}` : ''}
                         {` · ${contact.matchCount} match${contact.matchCount === 1 ? '' : 'es'}`}
-                        {` · Last sent ${formatWhen(contact.lastDigestSentAt)}`}
+                        {` · Last sent ${formatWhen(contact.lastCirculatedAt)}`}
                         {` · ${statusLabel(contact)}`}
                       </p>
                       {contact.publicAccessToken ? (

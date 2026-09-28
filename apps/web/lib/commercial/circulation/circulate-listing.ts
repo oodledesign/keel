@@ -6,6 +6,7 @@ import {
   type AccountBrandResolved,
   loadAccountBrandResolved,
 } from '~/lib/brand/account-brand';
+import { recordCirculationDelivery } from '~/lib/commercial/circulation/circulation-delivery';
 import {
   type CirculationConsentStatus,
   isCirculationAutoEligible,
@@ -17,7 +18,7 @@ import {
   buildCirculationEmailHtml,
 } from '~/lib/commercial/circulation/circulation-email';
 import {
-  createCirculationUnsubscribeToken,
+  buildCirculationUnsubscribeUrls,
   createCommercialCirculationService,
   sendCirculationEmailViaSes,
 } from '~/lib/commercial/circulation/circulation.service';
@@ -728,16 +729,13 @@ export async function circulateListing(
       continue;
     }
 
-    const unsubToken = createCirculationUnsubscribeToken({
-      accountId: input.accountId,
-      email,
-    });
-    const unsubscribeUrl = new URL(
-      `/unsubscribe/circulation?token=${encodeURIComponent(unsubToken)}`,
-      input.siteUrl,
-    ).toString();
-
     try {
+      const { pageUrl: unsubscribeUrl, oneClickUrl } =
+        buildCirculationUnsubscribeUrls({
+          accountId: input.accountId,
+          email,
+          siteUrl: input.siteUrl,
+        });
       const publicToken = await circulation.ensurePublicAccessToken(
         input.accountId,
         email,
@@ -779,7 +777,7 @@ export async function circulateListing(
         replyTo,
         subject,
         html,
-        listUnsubscribeUrl: unsubscribeUrl,
+        listUnsubscribeUrl: oneClickUrl,
         accountId: input.accountId,
         sesTenant: resolved.sesTenantName ?? undefined,
         sesConfigurationSet: resolved.sesConfigurationSet ?? undefined,
@@ -800,24 +798,15 @@ export async function circulateListing(
         ses_message_id: messageId,
       });
 
-      await client
-        .from('commercial_requirements')
-        .update({ details_sent: true })
-        .eq('id', requirementId)
-        .eq('account_id', input.accountId);
-
-      // Upsert interest schedule row
-      await db.from('commercial_matches').upsert(
-        {
-          account_id: input.accountId,
-          listing_id: input.listingId,
-          requirement_id: requirementId,
-          status: 'new',
-          notes: 'Created from circulation send',
-          created_by: input.sentBy,
-        },
-        { onConflict: 'listing_id,requirement_id', ignoreDuplicates: true },
-      );
+      await recordCirculationDelivery(client, {
+        accountId: input.accountId,
+        email,
+        sendId,
+        listingIds: [input.listingId],
+        matchPairs: [{ listingId: input.listingId, requirementId }],
+        sentBy: input.sentBy,
+        matchNotes: 'Created from circulation send',
+      });
     } catch (err) {
       failed += 1;
       await db.from('commercial_circulation_recipients').insert({

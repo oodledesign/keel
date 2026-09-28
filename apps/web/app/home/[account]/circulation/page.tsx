@@ -43,6 +43,8 @@ async function CirculationPage({ params }: CirculationPageProps) {
           fromEmail={data.fromEmail}
           fromName={data.fromName}
           initialAutoSendEnabled={data.autoSendEnabled}
+          initialMinGapDays={data.minGapDays}
+          suspectedUnsubscribes={data.suspectedUnsubscribes}
           initialContacts={data.contacts}
           initialSends={data.sends}
           usage={data.usage}

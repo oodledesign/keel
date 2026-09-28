@@ -11,6 +11,8 @@ import { createCommercialCirculationService } from '~/lib/commercial/circulation
 import {
   CirculationAutoSendSchema,
   CirculationContactAutoSendSchema,
+  CirculationDismissUnsubscribeReviewSchema,
+  CirculationMinGapSchema,
   CirculationRunSchema,
 } from '../schemas/circulation-workspace.schema';
 
@@ -34,6 +36,30 @@ export const setCirculationAutoSend = enhanceAction(
     return result;
   },
   { schema: CirculationAutoSendSchema },
+);
+
+export const setCirculationMinGap = enhanceAction(
+  async (input) => {
+    await requireActor(input.accountId);
+    const result = await createCommercialCirculationService(
+      getClient(),
+    ).setMinGapDays(input.accountId, input.minGapDays);
+    revalidatePath('/home', 'layout');
+    return result;
+  },
+  { schema: CirculationMinGapSchema },
+);
+
+export const dismissCirculationUnsubscribeReview = enhanceAction(
+  async (input) => {
+    await requireActor(input.accountId);
+    await createCommercialCirculationService(
+      getClient(),
+    ).dismissUnsubscribeReview(input.accountId, input.email);
+    revalidatePath('/home', 'layout');
+    return { ok: true };
+  },
+  { schema: CirculationDismissUnsubscribeReviewSchema },
 );
 
 export const setCirculationContactAutoSend = enhanceAction(

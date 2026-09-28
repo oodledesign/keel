@@ -15,18 +15,26 @@ export async function loadCirculationWorkspaceData(
   const circulation = createCommercialCirculationService(client);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() ?? null;
 
-  const [settings, contacts, sends, identity] = await Promise.all([
-    circulation.getOrCreateSettings(accountId),
-    listContactMatches(client, {
-      accountId,
-      siteUrl,
-    }),
-    listAccountCirculationSends(client, {
-      accountId,
-      limit: 25,
-    }),
-    resolveCirculationIdentity(client, accountId),
-  ]);
+  const [settings, contacts, sends, identity, suspectedUnsubscribes] =
+    await Promise.all([
+      circulation.getOrCreateSettings(accountId),
+      listContactMatches(client, {
+        accountId,
+        siteUrl,
+      }),
+      listAccountCirculationSends(client, {
+        accountId,
+        limit: 25,
+      }),
+      resolveCirculationIdentity(client, accountId),
+      circulation.listSuspectedScannerUnsubscribes(accountId).catch((err) => {
+        console.error(
+          '[circulation] suspected unsubscribes',
+          err instanceof Error ? err.message : err,
+        );
+        return [];
+      }),
+    ]);
 
   await Promise.all(
     contacts.map(async (contact) => {
@@ -42,6 +50,8 @@ export async function loadCirculationWorkspaceData(
 
   return {
     autoSendEnabled: settings.auto_send_enabled,
+    minGapDays: settings.min_gap_days,
+    suspectedUnsubscribes,
     fromEmail: identity.fromEmail,
     fromName: identity.fromName,
     agencyName: identity.agencyName,
@@ -57,7 +67,7 @@ export async function loadCirculationWorkspaceData(
       companyName: contact.companyName,
       consentStatus: contact.consentStatus,
       autoSendEnabled: contact.autoSendEnabled,
-      lastDigestSentAt: contact.lastDigestSentAt,
+      lastCirculatedAt: contact.lastCirculatedAt ?? contact.lastDigestSentAt,
       matchCount: contact.listings.length,
       publicAccessToken: contact.publicAccessToken,
     })),

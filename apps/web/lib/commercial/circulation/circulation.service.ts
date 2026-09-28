@@ -16,12 +16,68 @@ const PURPOSE = 'matching_disposals' as const;
 const CONSENT_COPY_VERSION = 'v1';
 
 export type MarketingStatus = 'subscribed' | 'unsubscribed' | 'suppressed';
+export type UnsubscribeSource =
+  | 'one_click'
+  | 'confirm_page'
+  | 'preferences_page';
+
+export type CirculationSettings = {
+  account_id: string;
+  auto_send_enabled: boolean;
+  min_gap_days: number;
+};
+
+export const DEFAULT_CIRCULATION_MIN_GAP_DAYS = 5;
+
+/** Unsubscribes this soon after a send, with no other engagement, look like link scanners. */
+const SCANNER_UNSUBSCRIBE_WINDOW_MS = 2 * 60 * 1000;
+
+export type SuspectedScannerUnsubscribe = {
+  email: string;
+  unsubscribedAt: string;
+  sentAt: string;
+  secondsAfterSend: number;
+  publicAccessToken: string | null;
+};
 export type LawfulBasis =
   | 'website_requirement_form'
   | 'imported_historical'
   | 'manual_opt_in'
   | 'legitimate_interests'
   | 'other';
+
+export type CirculationPreferenceRow = {
+  email: string;
+  marketingStatus: MarketingStatus;
+  autoSendEnabled: boolean;
+  lastDigestFingerprint: string | null;
+  lastDigestSentAt: string | null;
+  lastCirculatedAt: string | null;
+  publicAccessToken: string | null;
+};
+
+/** Keeps `.in('email', …)` filters well under PostgREST URL limits. */
+const EMAIL_IN_CHUNK = 150;
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function toCirculationSettings(row: {
+  account_id: string;
+  auto_send_enabled?: boolean | null;
+  min_gap_days?: number | null;
+}): CirculationSettings {
+  return {
+    account_id: row.account_id,
+    auto_send_enabled: row.auto_send_enabled !== false,
+    min_gap_days: row.min_gap_days ?? DEFAULT_CIRCULATION_MIN_GAP_DAYS,
+  };
+}
 
 function normalizeEmail(email: string): string {
   return normalizeCirculationEmail(email);
@@ -82,6 +138,37 @@ export function decodeCirculationUnsubscribeToken(token: string): {
   } catch {
     return null;
   }
+}
+
+export const CIRCULATION_UNSUBSCRIBE_PAGE_PATH = '/unsubscribe/circulation';
+export const CIRCULATION_ONE_CLICK_UNSUBSCRIBE_PATH =
+  '/api/circulation/unsubscribe';
+
+/**
+ * pageUrl is the in-body link (GET shows a confirm button, no side effects).
+ * oneClickUrl is the List-Unsubscribe header target (RFC 8058 POST).
+ */
+export function buildCirculationUnsubscribeUrls(input: {
+  accountId: string;
+  email: string;
+  siteUrl: string;
+}): { pageUrl: string; oneClickUrl: string } {
+  const token = encodeURIComponent(
+    createCirculationUnsubscribeToken({
+      accountId: input.accountId,
+      email: input.email,
+    }),
+  );
+  return {
+    pageUrl: new URL(
+      `${CIRCULATION_UNSUBSCRIBE_PAGE_PATH}?token=${token}`,
+      input.siteUrl,
+    ).toString(),
+    oneClickUrl: new URL(
+      `${CIRCULATION_ONE_CLICK_UNSUBSCRIBE_PATH}?token=${token}`,
+      input.siteUrl,
+    ).toString(),
+  };
 }
 
 export function createCommercialCirculationService(client: SupabaseClient) {
@@ -159,23 +246,75 @@ class CommercialCirculationService {
     return data as Record<string, unknown>;
   }
 
-  async unsubscribe(accountId: string, email: string) {
+  /**
+   * Idempotent. Creates an unsubscribed row when none exists, because manual
+   * sends can reach contacts with no preference row yet.
+   */
+  async unsubscribe(
+    accountId: string,
+    email: string,
+    options?: { source?: UnsubscribeSource },
+  ) {
     const normalized = normalizeEmail(email);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
 
-    const { error } = await db
+    const { data: existing, error: loadError } = await db
       .from('commercial_marketing_preferences')
-      .update({
-        marketing_status: 'unsubscribed',
-        unsubscribed_at: new Date().toISOString(),
-      })
+      .select('id, marketing_status')
       .eq('account_id', accountId)
       .eq('email', normalized)
       .eq('purpose', PURPOSE)
-      .neq('marketing_status', 'suppressed');
+      .maybeSingle();
 
-    if (error) throw new Error(error.message);
+    if (loadError) throw new Error(loadError.message);
+
+    if (existing) {
+      if (
+        existing.marketing_status === 'suppressed' ||
+        existing.marketing_status === 'unsubscribed'
+      ) {
+        return;
+      }
+
+      const { error } = await db
+        .from('commercial_marketing_preferences')
+        .update({
+          marketing_status: 'unsubscribed',
+          unsubscribed_at: new Date().toISOString(),
+          unsubscribe_source: options?.source ?? null,
+          unsubscribe_reviewed_at: null,
+        })
+        .eq('id', existing.id);
+
+      if (error) throw new Error(error.message);
+      return;
+    }
+
+    const { error } = await db.from('commercial_marketing_preferences').insert({
+      account_id: accountId,
+      email: normalized,
+      purpose: PURPOSE,
+      marketing_status: 'unsubscribed',
+      lawful_basis: 'other',
+      unsubscribed_at: new Date().toISOString(),
+      unsubscribe_source: options?.source ?? null,
+    });
+
+    if (error && error.code !== '23505') throw new Error(error.message);
+  }
+
+  async getMarketingStatus(
+    accountId: string,
+    email: string,
+  ): Promise<MarketingStatus | null> {
+    const statuses = await this.getPreferenceStatuses(accountId, [email]);
+    const status = statuses.get(normalizeEmail(email));
+    return status === 'subscribed' ||
+      status === 'unsubscribed' ||
+      status === 'suppressed'
+      ? status
+      : null;
   }
 
   /**
@@ -206,6 +345,8 @@ class CommercialCirculationService {
     const patch: Record<string, unknown> = {
       marketing_status: 'subscribed',
       unsubscribed_at: null,
+      unsubscribe_source: null,
+      unsubscribe_reviewed_at: null,
       consented_at: new Date().toISOString(),
     };
     if (options?.consentSource) {
@@ -235,19 +376,20 @@ class CommercialCirculationService {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
-    const { data, error } = await db
-      .from('commercial_marketing_preferences')
-      .select('email, marketing_status')
-      .eq('account_id', accountId)
-      .eq('purpose', PURPOSE)
-      .in('email', normalized);
+    const rows: Array<{ email: string; marketing_status: string }> = [];
+    for (const chunk of chunkArray(normalized, EMAIL_IN_CHUNK)) {
+      const { data, error } = await db
+        .from('commercial_marketing_preferences')
+        .select('email, marketing_status')
+        .eq('account_id', accountId)
+        .eq('purpose', PURPOSE)
+        .in('email', chunk);
 
-    if (error) throw new Error(error.message);
+      if (error) throw new Error(error.message);
+      rows.push(...(data ?? []));
+    }
 
-    for (const row of (data ?? []) as Array<{
-      email: string;
-      marketing_status: string;
-    }>) {
+    for (const row of rows) {
       const status = row.marketing_status;
       if (
         status === 'subscribed' ||
@@ -276,58 +418,47 @@ class CommercialCirculationService {
   async listPreferences(
     accountId: string,
     emails?: string[],
-  ): Promise<
-    Map<
-      string,
-      {
-        email: string;
-        marketingStatus: MarketingStatus;
-        autoSendEnabled: boolean;
-        lastDigestFingerprint: string | null;
-        lastDigestSentAt: string | null;
-        publicAccessToken: string | null;
-      }
-    >
-  > {
+  ): Promise<Map<string, CirculationPreferenceRow>> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
-    let query = db
-      .from('commercial_marketing_preferences')
-      .select(
-        'email, marketing_status, auto_send_enabled, last_digest_fingerprint, last_digest_sent_at, public_access_token',
-      )
-      .eq('account_id', accountId)
-      .eq('purpose', PURPOSE);
+    const select =
+      'email, marketing_status, auto_send_enabled, last_digest_fingerprint, last_digest_sent_at, last_circulated_at, public_access_token';
 
-    if (emails && emails.length > 0) {
-      query = query.in('email', [
-        ...new Set(emails.map(normalizeEmail).filter(Boolean)),
-      ]);
-    }
+    const baseQuery = () =>
+      db
+        .from('commercial_marketing_preferences')
+        .select(select)
+        .eq('account_id', accountId)
+        .eq('purpose', PURPOSE);
 
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-
-    const map = new Map<
-      string,
-      {
-        email: string;
-        marketingStatus: MarketingStatus;
-        autoSendEnabled: boolean;
-        lastDigestFingerprint: string | null;
-        lastDigestSentAt: string | null;
-        publicAccessToken: string | null;
-      }
-    >();
-
-    for (const row of (data ?? []) as Array<{
+    const rows: Array<{
       email: string;
       marketing_status: string;
       auto_send_enabled?: boolean | null;
       last_digest_fingerprint?: string | null;
       last_digest_sent_at?: string | null;
+      last_circulated_at?: string | null;
       public_access_token?: string | null;
-    }>) {
+    }> = [];
+
+    if (emails && emails.length > 0) {
+      const normalized = [
+        ...new Set(emails.map(normalizeEmail).filter(Boolean)),
+      ];
+      for (const chunk of chunkArray(normalized, EMAIL_IN_CHUNK)) {
+        const { data, error } = await baseQuery().in('email', chunk);
+        if (error) throw new Error(error.message);
+        rows.push(...(data ?? []));
+      }
+    } else {
+      const { data, error } = await baseQuery();
+      if (error) throw new Error(error.message);
+      rows.push(...(data ?? []));
+    }
+
+    const map = new Map<string, CirculationPreferenceRow>();
+
+    for (const row of rows) {
       const status = row.marketing_status;
       if (
         status !== 'subscribed' &&
@@ -343,6 +474,7 @@ class CommercialCirculationService {
         autoSendEnabled: row.auto_send_enabled !== false,
         lastDigestFingerprint: row.last_digest_fingerprint ?? null,
         lastDigestSentAt: row.last_digest_sent_at ?? null,
+        lastCirculatedAt: row.last_circulated_at ?? null,
         publicAccessToken: row.public_access_token ?? null,
       });
     }
@@ -350,7 +482,7 @@ class CommercialCirculationService {
     return map;
   }
 
-  async getOrCreateSettings(accountId: string) {
+  async getOrCreateSettings(accountId: string): Promise<CirculationSettings> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
     const { data: existing, error } = await db
@@ -360,9 +492,7 @@ class CommercialCirculationService {
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (existing) {
-      return existing as { account_id: string; auto_send_enabled: boolean };
-    }
+    if (existing) return toCirculationSettings(existing);
 
     const { data, error: insertError } = await db
       .from('commercial_circulation_settings')
@@ -371,22 +501,151 @@ class CommercialCirculationService {
       .single();
 
     if (insertError) throw new Error(insertError.message);
-    return data as { account_id: string; auto_send_enabled: boolean };
+    return toCirculationSettings(data);
   }
 
-  async setAutoSendEnabled(accountId: string, enabled: boolean) {
+  async setAutoSendEnabled(
+    accountId: string,
+    enabled: boolean,
+  ): Promise<CirculationSettings> {
+    return this.updateSettings(accountId, { auto_send_enabled: enabled });
+  }
+
+  async setMinGapDays(
+    accountId: string,
+    minGapDays: number,
+  ): Promise<CirculationSettings> {
+    return this.updateSettings(accountId, { min_gap_days: minGapDays });
+  }
+
+  private async updateSettings(
+    accountId: string,
+    patch: Partial<Omit<CirculationSettings, 'account_id'>>,
+  ): Promise<CirculationSettings> {
     await this.getOrCreateSettings(accountId);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
     const { data, error } = await db
       .from('commercial_circulation_settings')
-      .update({ auto_send_enabled: enabled })
+      .update(patch)
       .eq('account_id', accountId)
       .select('*')
       .single();
 
     if (error) throw new Error(error.message);
-    return data as { account_id: string; auto_send_enabled: boolean };
+    return toCirculationSettings(data);
+  }
+
+  /**
+   * Legacy link unsubscribes (GET, before confirm-first) that landed within
+   * seconds of a send, from contacts with no engagement on any other email.
+   */
+  async listSuspectedScannerUnsubscribes(
+    accountId: string,
+  ): Promise<SuspectedScannerUnsubscribe[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { data: prefs, error } = await db
+      .from('commercial_marketing_preferences')
+      .select('email, unsubscribed_at, public_access_token')
+      .eq('account_id', accountId)
+      .eq('purpose', PURPOSE)
+      .eq('marketing_status', 'unsubscribed')
+      .is('unsubscribe_source', null)
+      .is('unsubscribe_reviewed_at', null)
+      .not('unsubscribed_at', 'is', null)
+      .order('unsubscribed_at', { ascending: false })
+      .limit(500);
+
+    if (error) throw new Error(error.message);
+
+    const prefRows = (prefs ?? []) as Array<{
+      email: string;
+      unsubscribed_at: string;
+      public_access_token: string | null;
+    }>;
+    if (prefRows.length === 0) return [];
+
+    const recipients: Array<{
+      id: string;
+      email: string;
+      created_at: string;
+      open_count: number | null;
+      click_count: number | null;
+    }> = [];
+    for (const chunk of chunkArray(
+      prefRows.map((row) => normalizeEmail(row.email)),
+      EMAIL_IN_CHUNK,
+    )) {
+      const { data, error: recipientError } = await db
+        .from('commercial_circulation_recipients')
+        .select('id, email, created_at, open_count, click_count')
+        .eq('account_id', accountId)
+        .eq('status', 'sent')
+        .in('email', chunk);
+      if (recipientError) throw new Error(recipientError.message);
+      recipients.push(...(data ?? []));
+    }
+
+    const byEmail = new Map<string, typeof recipients>();
+    for (const row of recipients) {
+      const email = normalizeEmail(row.email);
+      const list = byEmail.get(email) ?? [];
+      list.push(row);
+      byEmail.set(email, list);
+    }
+
+    const flagged: SuspectedScannerUnsubscribe[] = [];
+    for (const pref of prefRows) {
+      const email = normalizeEmail(pref.email);
+      const unsubscribedMs = Date.parse(pref.unsubscribed_at);
+      const sends = byEmail.get(email) ?? [];
+
+      const trigger = sends
+        .filter((row) => {
+          const sentMs = Date.parse(row.created_at);
+          return (
+            sentMs <= unsubscribedMs &&
+            unsubscribedMs - sentMs <= SCANNER_UNSUBSCRIBE_WINDOW_MS
+          );
+        })
+        .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+      if (!trigger) continue;
+
+      const engagedElsewhere = sends.some(
+        (row) =>
+          row.id !== trigger.id &&
+          ((row.open_count ?? 0) > 0 || (row.click_count ?? 0) > 0),
+      );
+      if (engagedElsewhere) continue;
+
+      flagged.push({
+        email,
+        unsubscribedAt: pref.unsubscribed_at,
+        sentAt: trigger.created_at,
+        secondsAfterSend: Math.max(
+          0,
+          Math.round((unsubscribedMs - Date.parse(trigger.created_at)) / 1000),
+        ),
+        publicAccessToken: pref.public_access_token,
+      });
+    }
+
+    return flagged;
+  }
+
+  async dismissUnsubscribeReview(accountId: string, email: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { error } = await db
+      .from('commercial_marketing_preferences')
+      .update({ unsubscribe_reviewed_at: new Date().toISOString() })
+      .eq('account_id', accountId)
+      .eq('email', normalizeEmail(email))
+      .eq('purpose', PURPOSE)
+      .eq('marketing_status', 'unsubscribed');
+
+    if (error) throw new Error(error.message);
   }
 
   /**
@@ -506,22 +765,38 @@ class CommercialCirculationService {
     return (data?.public_access_token as string | undefined) ?? token;
   }
 
-  async recordDigestSent(input: {
+  /**
+   * Atomically claims a contact for one send. False when another run holds a
+   * fresh claim, or (when notCirculatedSince is set) they were emailed since.
+   */
+  async claimContactForSend(input: {
     accountId: string;
     email: string;
-    fingerprint: string;
-  }) {
-    const email = normalizeEmail(input.email);
+    notCirculatedSince?: Date | null;
+  }): Promise<boolean> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const { data, error } = await db.rpc(
+      'claim_commercial_circulation_contact',
+      {
+        p_account_id: input.accountId,
+        p_email: normalizeEmail(input.email),
+        p_not_circulated_since: input.notCirculatedSince?.toISOString() ?? null,
+      },
+    );
+
+    if (error) throw new Error(error.message);
+    return data === true;
+  }
+
+  async releaseContactClaim(accountId: string, email: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
     const { error } = await db
       .from('commercial_marketing_preferences')
-      .update({
-        last_digest_fingerprint: input.fingerprint,
-        last_digest_sent_at: new Date().toISOString(),
-      })
-      .eq('account_id', input.accountId)
-      .eq('email', email)
+      .update({ circulation_claimed_at: null })
+      .eq('account_id', accountId)
+      .eq('email', normalizeEmail(email))
       .eq('purpose', PURPOSE);
 
     if (error) throw new Error(error.message);
@@ -566,7 +841,9 @@ class CommercialCirculationService {
     const db = this.client as any;
 
     if (input.unsubscribed) {
-      await this.unsubscribe(input.accountId, email);
+      await this.unsubscribe(input.accountId, email, {
+        source: 'preferences_page',
+      });
     } else if (input.unsubscribed === false) {
       await this.resubscribe(input.accountId, email);
     }

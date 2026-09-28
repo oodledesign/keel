@@ -26,13 +26,19 @@ async function loadCirculationAccountIds(
     throw new Error(error.message);
   }
 
-  return [
+  const accountIds = [
     ...new Set(
       ((data ?? []) as AccountRow[])
         .map((row) => row.account_id)
         .filter(Boolean),
     ),
-  ].slice(0, MAX_ACCOUNTS);
+  ];
+  if (accountIds.length > MAX_ACCOUNTS) {
+    console.warn(
+      `[circulation] ${accountIds.length - MAX_ACCOUNTS} account(s) skipped by the ${MAX_ACCOUNTS}-account cron cap`,
+    );
+  }
+  return accountIds.slice(0, MAX_ACCOUNTS);
 }
 
 export async function runCommercialAutoCirculation(
@@ -82,6 +88,7 @@ export async function runCommercialAutoCirculation(
         autoEligibility: true,
         requireAutoCirculateListing: !options?.triggerListingId,
         triggerListingId: options?.triggerListingId ?? null,
+        minGapDays: settings.min_gap_days,
       });
       mailed += result.mailed;
       skipped += result.skipped;

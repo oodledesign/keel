@@ -7,23 +7,33 @@ import {
   resolveCirculationIdentity,
 } from '~/lib/commercial/circulation/circulate-listing';
 import {
+  loadSentListingIds,
+  recordCirculationDelivery,
+  releaseCirculationClaimQuietly,
+} from '~/lib/commercial/circulation/circulation-delivery';
+import {
   type CirculationEmailBrand,
   buildCirculationDigestEmailHtml,
 } from '~/lib/commercial/circulation/circulation-email';
 import {
-  createCirculationUnsubscribeToken,
+  hasUnsentListing,
+  isWithinMinGap,
+  minGapCutoff,
+  orderByLeastRecentlyCirculated,
+  pickListingsForEmail,
+} from '~/lib/commercial/circulation/circulation-selection';
+import {
+  buildCirculationUnsubscribeUrls,
   createCommercialCirculationService,
   sendCirculationEmailViaSes,
 } from '~/lib/commercial/circulation/circulation.service';
 import {
+  type ContactMatchListing,
   type ContactMatchRow,
   isContactAutoMailEligible,
   listContactMatches,
 } from '~/lib/commercial/circulation/contact-matches';
-import {
-  matchDigestFingerprint,
-  shouldSkipSameDigest,
-} from '~/lib/commercial/circulation/digest-fingerprint';
+import { matchDigestFingerprint } from '~/lib/commercial/circulation/digest-fingerprint';
 
 const MAX_CONTACTS_PER_RUN = 80;
 const MAX_LISTINGS_PER_EMAIL = 12;
@@ -35,6 +45,17 @@ export type DigestMailoutResult = {
   failed: number;
   dryRunEligible: number;
   contactsConsidered: number;
+  /** Eligible contacts with nothing new since their last email. */
+  nothingNew: number;
+  /** Contacts with new matches held back by the workspace minimum gap. */
+  withinGap: number;
+  /** Contacts with new matches left for the next run by the per-run cap. */
+  deferred: number;
+};
+
+type PlannedDigest = {
+  contact: ContactMatchRow;
+  listings: ContactMatchListing[];
 };
 
 function toEmailBrand(
@@ -57,6 +78,11 @@ function digestSubject(agencyName: string, count: number): string {
   return `${count} matching opportunities from ${agencyName}`;
 }
 
+/**
+ * The one send path for match emails (go-live trigger, daily cron, manual
+ * "Send now"). Only contacts with at least one listing they have not been
+ * shown get an email; auto sends also respect the workspace minimum gap.
+ */
 export async function circulateContactDigests(
   client: SupabaseClient,
   input: {
@@ -67,16 +93,20 @@ export async function circulateContactDigests(
     sendTrigger?: CirculationSendTrigger;
     /** Restrict to contacts who match this listing; email still lists all their fits. */
     triggerListingId?: string | null;
-    /** Auto runs only include contacts who match at least one auto-circulate listing. */
+    /** Auto runs need a new match on at least one auto-circulate listing. */
     requireAutoCirculateListing?: boolean;
-    /** Auto runs skip unsubscribed / paused / same-set. Manual workspace run uses this too. */
+    /** Skip contacts who are not subscribed or have paused auto-send. */
     autoEligibility?: boolean;
+    /** Minimum days since the contact's last email. Auto sends only. */
+    minGapDays?: number;
   },
 ): Promise<DigestMailoutResult> {
   const sendTrigger: CirculationSendTrigger = input.dryRun
     ? 'dry_run'
     : (input.sendTrigger ?? 'manual');
   const autoEligibility = input.autoEligibility ?? sendTrigger === 'auto';
+  const minGapDays = sendTrigger === 'auto' ? (input.minGapDays ?? 0) : 0;
+  const now = new Date();
 
   const identity = await resolveCirculationIdentity(client, input.accountId);
   const fromEmail = identity.fromEmail;
@@ -92,31 +122,80 @@ export async function circulateContactDigests(
     requireListingId: input.triggerListingId ?? undefined,
   });
 
-  const eligible = contacts
-    .filter((row) => {
-      if (input.requireAutoCirculateListing) {
-        return row.listings.some((listing) => listing.autoCirculate);
-      }
-      return true;
-    })
-    .filter((row) => (autoEligibility ? isContactAutoMailEligible(row) : true))
-    .slice(0, MAX_CONTACTS_PER_RUN);
+  const eligible = contacts.filter((row) =>
+    autoEligibility ? isContactAutoMailEligible(row) : true,
+  );
+  const sentByEmail = await loadSentListingIds(
+    client,
+    input.accountId,
+    eligible.map((row) => row.email),
+  );
 
-  if (eligible.length === 0) {
+  let nothingNew = 0;
+  let withinGap = 0;
+  const ready: ContactMatchRow[] = [];
+  for (const contact of eligible) {
+    const sent = sentByEmail.get(contact.email) ?? new Set<string>();
+    if (
+      !hasUnsentListing(contact.listings, sent, {
+        requireAutoCirculate: input.requireAutoCirculateListing,
+      })
+    ) {
+      nothingNew += 1;
+      continue;
+    }
+    if (isWithinMinGap(contact.lastCirculatedAt, minGapDays, now)) {
+      withinGap += 1;
+      continue;
+    }
+    ready.push(contact);
+  }
+
+  const ordered = orderByLeastRecentlyCirculated(ready);
+  const deferred = Math.max(0, ordered.length - MAX_CONTACTS_PER_RUN);
+  if (deferred > 0) {
+    console.warn(
+      `[circulation] ${deferred} contact(s) with new matches deferred by the ${MAX_CONTACTS_PER_RUN}-per-run cap`,
+      input.accountId,
+    );
+  }
+
+  const planned: PlannedDigest[] = ordered
+    .slice(0, MAX_CONTACTS_PER_RUN)
+    .map((contact) => ({
+      contact,
+      listings: pickListingsForEmail(
+        contact.listings,
+        sentByEmail.get(contact.email) ?? new Set<string>(),
+        MAX_LISTINGS_PER_EMAIL,
+        input.triggerListingId,
+      ),
+    }));
+
+  const summary = {
+    contactsConsidered: contacts.length,
+    nothingNew,
+    withinGap,
+    deferred,
+  };
+
+  if (planned.length === 0) {
     return {
       sendId: null,
       mailed: 0,
       skipped: contacts.length,
       failed: 0,
       dryRunEligible: 0,
-      contactsConsidered: contacts.length,
+      ...summary,
     };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = client as any;
   const listingIds = [
-    ...new Set(eligible.flatMap((row) => row.listings.map((l) => l.listingId))),
+    ...new Set(
+      planned.flatMap((plan) => plan.listings.map((l) => l.listingId)),
+    ),
   ];
   const subject = `Matching opportunities from ${identity.agencyName}`;
   const fromName = identity.fromName;
@@ -148,17 +227,18 @@ export async function circulateContactDigests(
   const sendId = sendRow.id as string;
 
   const circulation = createCommercialCirculationService(client);
+  const gapCutoff = minGapCutoff(minGapDays, now);
   let mailed = 0;
-  let skipped = 0;
+  let skipped = contacts.length - planned.length;
   let failed = 0;
   let dryRunEligible = 0;
 
-  for (const contact of eligible) {
+  for (const plan of planned) {
     const result = await sendOneDigest({
       client,
       db,
       circulation,
-      contact,
+      plan,
       accountId: input.accountId,
       sendId,
       siteUrl: input.siteUrl,
@@ -168,6 +248,9 @@ export async function circulateContactDigests(
       emailBrand,
       dryRun: Boolean(input.dryRun),
       triggerListingId: input.triggerListingId ?? null,
+      sentBy: input.sentBy ?? null,
+      gapCutoff,
+      requireAutoCirculate: Boolean(input.requireAutoCirculateListing),
       sesTenant: identity.sesTenantName,
       sesConfigurationSet: identity.sesConfigurationSet,
     });
@@ -214,7 +297,7 @@ export async function circulateContactDigests(
     skipped,
     failed,
     dryRunEligible,
-    contactsConsidered: contacts.length,
+    ...summary,
   };
 }
 
@@ -223,7 +306,7 @@ async function sendOneDigest(input: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
   circulation: ReturnType<typeof createCommercialCirculationService>;
-  contact: ContactMatchRow;
+  plan: PlannedDigest;
   accountId: string;
   sendId: string;
   siteUrl: string;
@@ -233,6 +316,9 @@ async function sendOneDigest(input: {
   emailBrand: CirculationEmailBrand;
   dryRun: boolean;
   triggerListingId: string | null;
+  sentBy: string | null;
+  gapCutoff: Date | null;
+  requireAutoCirculate: boolean;
   sesTenant: string | null;
   sesConfigurationSet: string | null;
 }): Promise<{
@@ -241,142 +327,150 @@ async function sendOneDigest(input: {
   failed: number;
   dryRunEligible: number;
 }> {
-  const { contact, accountId, sendId } = input;
-  const listings = contact.listings.slice(0, MAX_LISTINGS_PER_EMAIL);
-  const subject = digestSubject(input.agencyName, listings.length);
-  const fingerprint = matchDigestFingerprint(
-    listings.map((listing) => listing.listingId),
-  );
+  const { plan, accountId, sendId } = input;
+  const { contact } = plan;
+  let listings = plan.listings;
   const requirementId = contact.requirementIds[0] ?? null;
 
-  if (
-    shouldSkipSameDigest({
-      lastFingerprint: contact.lastDigestFingerprint,
-      lastSentAt: contact.lastDigestSentAt,
-      nextFingerprint: fingerprint,
-    })
-  ) {
-    await input.db.from('commercial_circulation_recipients').insert({
+  const logRecipient = (
+    row:
+      | { status: 'skipped'; skip_reason: string }
+      | { status: 'sent'; ses_message_id: string | null }
+      | { status: 'failed'; error_message: string },
+  ) =>
+    input.db.from('commercial_circulation_recipients').insert({
       send_id: sendId,
       account_id: accountId,
       requirement_id: requirementId,
       email: contact.email,
-      status: 'skipped',
-      skip_reason: 'same_set',
+      ...row,
     });
-    return { mailed: 0, skipped: 1, failed: 0, dryRunEligible: 0 };
-  }
 
-  const unsubToken = createCirculationUnsubscribeToken({
-    accountId,
-    email: contact.email,
-  });
-  const unsubscribeUrl = new URL(
-    `/unsubscribe/circulation?token=${encodeURIComponent(unsubToken)}`,
-    input.siteUrl,
-  ).toString();
-
-  const publicToken =
-    contact.publicAccessToken ??
-    (await input.circulation.ensurePublicAccessToken(accountId, contact.email));
-  const manageUrl = publicToken
-    ? new URL(`/share/matches/${publicToken}`, input.siteUrl).toString()
-    : null;
-
-  const html = buildCirculationDigestEmailHtml({
-    brand: input.emailBrand,
-    listings: listings.map((listing) => ({
-      name: listing.name,
-      summary: listing.summary,
-      address: listing.address,
-      viewUrl: listing.viewUrl,
-      viewUrlLabel: listing.viewUrlLabel,
-      coverImageUrl: listing.coverImageUrl,
-      sizeLabel: listing.sizeLabel,
-      disposalTypeLabel: listing.disposalTypeLabel,
-    })),
-    unsubscribeUrl,
-    manageUrl,
-    contactName: contact.contactName,
-  });
-
-  if (input.dryRun) {
-    await input.db.from('commercial_circulation_recipients').insert({
-      send_id: sendId,
-      account_id: accountId,
-      requirement_id: requirementId,
+  if (!input.dryRun) {
+    const claimed = await input.circulation.claimContactForSend({
+      accountId,
       email: contact.email,
-      status: 'skipped',
-      skip_reason: 'dry_run',
+      notCirculatedSince: input.gapCutoff,
     });
-    return { mailed: 0, skipped: 1, failed: 0, dryRunEligible: 1 };
+    if (!claimed) {
+      await logRecipient({ status: 'skipped', skip_reason: 'claimed' });
+      return { mailed: 0, skipped: 1, failed: 0, dryRunEligible: 0 };
+    }
+
+    // Another run may have emailed this contact between planning and claiming.
+    const fresh =
+      (await loadSentListingIds(input.client, accountId, [contact.email])).get(
+        contact.email,
+      ) ?? new Set<string>();
+    if (
+      !hasUnsentListing(contact.listings, fresh, {
+        requireAutoCirculate: input.requireAutoCirculate,
+      })
+    ) {
+      await releaseCirculationClaimQuietly(
+        input.client,
+        accountId,
+        contact.email,
+      );
+      return { mailed: 0, skipped: 1, failed: 0, dryRunEligible: 0 };
+    }
+    listings = pickListingsForEmail(
+      contact.listings,
+      fresh,
+      MAX_LISTINGS_PER_EMAIL,
+      input.triggerListingId,
+    );
   }
+
+  const shownIds = listings.map((listing) => listing.listingId);
+  const subject = digestSubject(input.agencyName, listings.length);
 
   try {
+    const { pageUrl, oneClickUrl } = buildCirculationUnsubscribeUrls({
+      accountId,
+      email: contact.email,
+      siteUrl: input.siteUrl,
+    });
+
+    const publicToken =
+      contact.publicAccessToken ??
+      (await input.circulation.ensurePublicAccessToken(
+        accountId,
+        contact.email,
+      ));
+    const manageUrl = publicToken
+      ? new URL(`/share/matches/${publicToken}`, input.siteUrl).toString()
+      : null;
+
+    const html = buildCirculationDigestEmailHtml({
+      brand: input.emailBrand,
+      listings: listings.map((listing) => ({
+        name: listing.name,
+        summary: listing.summary,
+        address: listing.address,
+        viewUrl: listing.viewUrl,
+        viewUrlLabel: listing.viewUrlLabel,
+        coverImageUrl: listing.coverImageUrl,
+        sizeLabel: listing.sizeLabel,
+        disposalTypeLabel: listing.disposalTypeLabel,
+      })),
+      unsubscribeUrl: pageUrl,
+      manageUrl,
+      contactName: contact.contactName,
+    });
+
+    if (input.dryRun) {
+      await logRecipient({ status: 'skipped', skip_reason: 'dry_run' });
+      return { mailed: 0, skipped: 1, failed: 0, dryRunEligible: 1 };
+    }
+
     const { messageId } = await sendCirculationEmailViaSes({
       to: contact.email,
       from: input.fromHeader,
       replyTo: input.replyTo,
       subject,
       html,
-      listUnsubscribeUrl: unsubscribeUrl,
+      listUnsubscribeUrl: oneClickUrl,
       accountId,
       sesTenant: input.sesTenant ?? undefined,
       sesConfigurationSet: input.sesConfigurationSet ?? undefined,
       metadata: {
         send_id: sendId,
         send_kind: 'digest',
-        listing_ids: listings.map((listing) => listing.listingId),
+        listing_ids: shownIds,
         trigger_listing_id: input.triggerListingId,
         requirement_ids: contact.requirementIds,
       },
     });
 
-    await input.db.from('commercial_circulation_recipients').insert({
-      send_id: sendId,
-      account_id: accountId,
-      requirement_id: requirementId,
-      email: contact.email,
-      status: 'sent',
-      ses_message_id: messageId,
-    });
+    await logRecipient({ status: 'sent', ses_message_id: messageId });
 
-    await input.circulation.recordDigestSent({
+    await recordCirculationDelivery(input.client, {
       accountId,
       email: contact.email,
-      fingerprint,
+      sendId,
+      listingIds: shownIds,
+      matchPairs: listings.flatMap((listing) =>
+        listing.requirementIds.map((reqId) => ({
+          listingId: listing.listingId,
+          requirementId: reqId,
+        })),
+      ),
+      sentBy: input.sentBy,
+      matchNotes: 'Created from match digest',
+      digestFingerprint: matchDigestFingerprint(shownIds),
     });
-
-    for (const reqId of contact.requirementIds) {
-      await input.client
-        .from('commercial_requirements')
-        .update({ details_sent: true })
-        .eq('id', reqId)
-        .eq('account_id', accountId);
-    }
-
-    if (input.triggerListingId) {
-      for (const reqId of contact.requirementIds) {
-        await input.db.from('commercial_matches').upsert(
-          {
-            account_id: accountId,
-            listing_id: input.triggerListingId,
-            requirement_id: reqId,
-            status: 'new',
-            notes: 'Created from match digest',
-          },
-          { onConflict: 'listing_id,requirement_id', ignoreDuplicates: true },
-        );
-      }
-    }
 
     return { mailed: 1, skipped: 0, failed: 0, dryRunEligible: 0 };
   } catch (err) {
-    await input.db.from('commercial_circulation_recipients').insert({
-      send_id: sendId,
-      account_id: accountId,
-      requirement_id: requirementId,
-      email: contact.email,
+    if (!input.dryRun) {
+      await releaseCirculationClaimQuietly(
+        input.client,
+        accountId,
+        contact.email,
+      );
+    }
+    await logRecipient({
       status: 'failed',
       error_message: err instanceof Error ? err.message : 'Send failed',
     });
