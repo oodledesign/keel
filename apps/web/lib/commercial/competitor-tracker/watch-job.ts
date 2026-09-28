@@ -2,10 +2,12 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { normalizeCompetitorCategory } from './constants';
+import {
+  type CompetitorCategory,
+  normalizeCompetitorCategory,
+} from './constants';
 import {
   type CompetitorAreaWatch,
-  type CompetitorCategory,
   type CompetitorListing,
   createCompetitorTrackerService,
 } from './service';

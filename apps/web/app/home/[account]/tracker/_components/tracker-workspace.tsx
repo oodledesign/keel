@@ -479,6 +479,9 @@ export function TrackerWorkspace({
           towns,
           postcodePrefixes: prefixes,
           categories: watchCategories,
+          enabled: true,
+          notifyOnNew: true,
+          notifyOnPriceChange: true,
         });
         setWatches((prev) =>
           [...prev, watch].sort((a, b) => a.name.localeCompare(b.name)),
@@ -773,11 +776,7 @@ export function TrackerWorkspace({
                         value={row.name}
                         className="min-w-[12rem] font-medium"
                         onCommit={(name) =>
-                          patchListing(
-                            row.id,
-                            { name },
-                            { accountId, listingId: row.id, name },
-                          )
+                          patchListing(row.id, { name }, { name })
                         }
                       />
                     </td>
@@ -791,8 +790,6 @@ export function TrackerWorkspace({
                             row.id,
                             { locationText, town: locationText || null },
                             {
-                              accountId,
-                              listingId: row.id,
                               locationText,
                               town: locationText || null,
                             },
@@ -815,11 +812,7 @@ export function TrackerWorkspace({
                             : null;
                           const sizeSqft =
                             n != null && Number.isFinite(n) ? n : null;
-                          patchListing(
-                            row.id,
-                            { sizeSqft },
-                            { accountId, listingId: row.id, sizeSqft },
-                          );
+                          patchListing(row.id, { sizeSqft }, { sizeSqft });
                         }}
                       />
                     </td>
@@ -830,11 +823,7 @@ export function TrackerWorkspace({
                         className="w-28"
                         onCommit={(raw) => {
                           const pricePence = parsePriceToPence(raw);
-                          patchListing(
-                            row.id,
-                            { pricePence },
-                            { accountId, listingId: row.id, pricePence },
-                          );
+                          patchListing(row.id, { pricePence }, { pricePence });
                         }}
                       />
                     </td>
@@ -845,11 +834,7 @@ export function TrackerWorkspace({
                         onChange={(e) => {
                           const tenure = (e.target.value ||
                             null) as CompetitorTenure | null;
-                          patchListing(
-                            row.id,
-                            { tenure },
-                            { accountId, listingId: row.id, tenure },
-                          );
+                          patchListing(row.id, { tenure }, { tenure });
                         }}
                       >
                         <option value="">—</option>
@@ -870,8 +855,6 @@ export function TrackerWorkspace({
                             row.id,
                             { competitorAgent: competitorAgent || null },
                             {
-                              accountId,
-                              listingId: row.id,
                               competitorAgent: competitorAgent || null,
                             },
                           )
@@ -884,11 +867,7 @@ export function TrackerWorkspace({
                         value={row.category}
                         onChange={(e) => {
                           const category = e.target.value as CompetitorCategory;
-                          patchListing(
-                            row.id,
-                            { category },
-                            { accountId, listingId: row.id, category },
-                          );
+                          patchListing(row.id, { category }, { category });
                         }}
                       >
                         {COMPETITOR_CATEGORIES.map((key) => (
@@ -904,11 +883,7 @@ export function TrackerWorkspace({
                         value={row.status}
                         onChange={(e) => {
                           const status = e.target.value as CompetitorStatus;
-                          patchListing(
-                            row.id,
-                            { status },
-                            { accountId, listingId: row.id, status },
-                          );
+                          patchListing(row.id, { status }, { status });
                         }}
                       >
                         {COMPETITOR_STATUSES.map((key) => (
@@ -943,8 +918,6 @@ export function TrackerWorkspace({
                             row.id,
                             { notes: notes || null },
                             {
-                              accountId,
-                              listingId: row.id,
                               notes: notes || null,
                             },
                           )
