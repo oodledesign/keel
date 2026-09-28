@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { normalizeTimeline } from '~/lib/videos/edit-timeline';
+import {
+  buildCaptionCues,
+  transcriptHasRealTimings,
+} from '~/lib/videos/captions';
+import {
+  type VideoTranscriptWord,
+  normalizeTimeline,
+} from '~/lib/videos/edit-timeline';
 import { createSignedMasterUrl } from '~/lib/videos/server/video-edit.service';
 
 export const runtime = 'nodejs';
@@ -83,6 +90,20 @@ export async function GET(_request: Request, context: RouteContext) {
     (video.duration_seconds != null
       ? Number(video.duration_seconds) * 1000
       : 0);
+  const timeline = normalizeTimeline(video.published_timeline, durationMs);
+
+  const { data: transcript } = await admin
+    .from('video_transcripts')
+    .select('words, provider, status')
+    .eq('video_id', video.id)
+    .maybeSingle();
+
+  const words = (transcript?.words ?? []) as VideoTranscriptWord[];
+  const captions =
+    transcript?.status === 'ready' &&
+    transcriptHasRealTimings(transcript.provider as string | null, words)
+      ? buildCaptionCues(words, timeline.keepRanges)
+      : [];
 
   return NextResponse.json({
     ok: true,
@@ -92,6 +113,7 @@ export async function GET(_request: Request, context: RouteContext) {
     systemUrl,
     expiresIn,
     publishedRevision: video.published_revision ?? 0,
-    timeline: normalizeTimeline(video.published_timeline, durationMs),
+    timeline,
+    captions,
   });
 }

@@ -4,7 +4,7 @@ import { type ReactNode, useRef, useState } from 'react';
 
 import Link from 'next/link';
 
-import { Upload } from 'lucide-react';
+import { Captions, Upload } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -143,6 +143,8 @@ export function PlayerConfigEditor(props: {
     label: string,
   ) => Promise<void>;
   uploadingCaption: boolean;
+  onSyncTranscriptCaptions?: () => Promise<void>;
+  syncingCaptions?: boolean;
 }) {
   const { config } = props;
   const [presetOpen, setPresetOpen] = useState(false);
@@ -490,6 +492,24 @@ export function PlayerConfigEditor(props: {
                 </SelectContent>
               </Select>
             </ConfigRow>
+            {props.onSyncTranscriptCaptions ? (
+              <ConfigRow
+                label="From transcript"
+                description="Generate captions from the editor transcript, timed to the published cut"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={props.syncingCaptions}
+                  onClick={() => void props.onSyncTranscriptCaptions?.()}
+                >
+                  <Captions className="h-3.5 w-3.5" />
+                  {props.syncingCaptions ? 'Generating…' : 'Generate'}
+                </Button>
+              </ConfigRow>
+            ) : null}
             <ConfigRow
               label="Upload SRT"
               description="Upload a caption file for this video"

@@ -1,9 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 
 import { z } from 'zod';
 
 import { createBunnyStreamClient } from '@kit/bunny';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  bunnyCaptionKeepRanges,
+  syncTranscriptCaptionsToBunny,
+} from '~/lib/videos/server/sync-bunny-captions';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 import {
   getBunnyCdnHostname,
@@ -118,6 +123,31 @@ export async function POST(request: Request, context: RouteContext) {
         err instanceof Error ? err.message : err,
       );
     }
+  }
+
+  const captionTiming = bunnyCaptionKeepRanges({
+    ...video,
+    baked_revision: editRevision,
+  });
+  if (captionTiming.ok) {
+    const admin = getSupabaseServerAdminClient();
+    after(async () => {
+      try {
+        await syncTranscriptCaptionsToBunny({
+          client: admin,
+          videoId,
+          accountId: video.account_id as string,
+          bunnyLibraryId: libraryId,
+          bunnyVideoId: parsed.data.bunnyVideoId,
+          keepRanges: captionTiming.keepRanges,
+        });
+      } catch (err) {
+        console.warn(
+          '[videos/edit/republish] caption sync:',
+          err instanceof Error ? err.message : err,
+        );
+      }
+    });
   }
 
   return NextResponse.json({

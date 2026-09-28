@@ -69,6 +69,7 @@ export function PlayerConfigPageClient(props: {
   const [saving, setSaving] = useState(false);
   const [savingTitle, setSavingTitle] = useState(false);
   const [uploadingCaption, setUploadingCaption] = useState(false);
+  const [syncingCaptions, setSyncingCaptions] = useState(false);
 
   const handleSeek = useCallback((ms: number) => {
     previewAnchorRef.current?.scrollIntoView({
@@ -202,6 +203,25 @@ export function PlayerConfigPageClient(props: {
     }
   };
 
+  const handleSyncTranscriptCaptions = async () => {
+    setSyncingCaptions(true);
+    try {
+      const res = await fetch(
+        `/api/videos/${props.video.id}/captions/sync-transcript`,
+        { method: 'POST' },
+      );
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message ?? 'Sync failed');
+
+      setCaptions(json.data.captions);
+      toast.success('Captions generated from transcript');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setSyncingCaptions(false);
+    }
+  };
+
   const videosPath = pathsConfig.app.accountVideos.replace(
     '[account]',
     props.accountSlug,
@@ -315,6 +335,8 @@ export function PlayerConfigPageClient(props: {
             onSavePreset={handleSavePreset}
             onUploadCaption={handleUploadCaption}
             uploadingCaption={uploadingCaption}
+            onSyncTranscriptCaptions={handleSyncTranscriptCaptions}
+            syncingCaptions={syncingCaptions}
           />
 
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">

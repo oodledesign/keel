@@ -341,26 +341,38 @@ export class BunnyStreamClient {
       file: Blob;
     },
   ): Promise<void> {
-    const form = new FormData();
-    form.append('file', input.file, `${input.srclang}.srt`);
-    form.append('srclang', input.srclang);
-    form.append('label', input.label);
+    const bytes = new Uint8Array(await input.file.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    const captionsFile = btoa(binary);
 
     const response = await fetch(
-      `${STREAM_API_BASE}/library/${libraryId}/videos/${videoId}/captions`,
+      `${STREAM_API_BASE}/library/${libraryId}/videos/${videoId}/captions/${encodeURIComponent(input.srclang)}`,
       {
         method: 'POST',
         headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
           AccessKey: this.apiKey,
         },
-        body: form,
+        body: JSON.stringify({ label: input.label, captionsFile }),
       },
     );
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
+    type CaptionUploadStatus = { success?: boolean; message?: string | null };
+    const body = await response.text().catch(() => '');
+    let parsed: CaptionUploadStatus | null;
+    try {
+      parsed = body ? (JSON.parse(body) as CaptionUploadStatus) : null;
+    } catch {
+      parsed = null;
+    }
+
+    if (!response.ok || parsed?.success === false) {
       throw new Error(
-        `Bunny Stream caption upload ${response.status}: ${body || response.statusText}`,
+        `Bunny Stream caption upload ${response.status}: ${parsed?.message || body || response.statusText}`,
       );
     }
   }

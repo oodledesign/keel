@@ -32,6 +32,13 @@ type Props = {
   embedReady: boolean;
 };
 
+/** Widest the player can be while its full height still fits in the viewport. */
+function viewportFitMaxWidth(aspectRatio: string): string {
+  const [w, h] = aspectRatio.split('/').map(Number);
+  if (!w || !h) return '100%';
+  return `calc((100svh - 7rem) * ${w} / ${h})`;
+}
+
 export function PublicWatchClient(props: Props) {
   const timelineRef = useRef<PublicTimelineWatchPlayerHandle>(null);
   const bunnyRef = useRef<SeekableBunnyEmbedHandle>(null);
@@ -86,65 +93,63 @@ export function PublicWatchClient(props: Props) {
       </header>
 
       <div
-        className={
-          hasSideMeta
-            ? 'grid items-start gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] lg:gap-8'
-            : 'grid gap-5'
-        }
+        ref={playerAnchorRef}
+        className="mx-auto w-full min-w-0 overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10"
+        style={{ maxWidth: viewportFitMaxWidth(props.aspectRatio) }}
       >
-        {hasSideMeta ? (
-          <aside className="order-2 flex min-w-0 flex-col gap-4 lg:order-1">
-            <VideoSummaryCard summary={props.summary} variant="public" />
-            <VideoChaptersList
-              chapters={props.chapters}
-              onSeek={onSeek}
-              variant="public"
-            />
-          </aside>
-        ) : null}
-
-        <div
-          ref={playerAnchorRef}
-          className={`order-1 min-w-0 overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10 lg:order-2 ${
-            hasSideMeta ? '' : 'mx-auto w-full'
-          }`}
-        >
-          {props.useTimelinePlayer ? (
-            <PublicTimelineWatchPlayer
-              ref={timelineRef}
-              token={props.video.public_share_token!}
-              aspectRatio={props.aspectRatio}
-            />
-          ) : props.embedReady ? (
-            <SeekableBunnyEmbed
-              ref={bunnyRef}
-              libraryId={props.video.bunny_library_id}
-              bunnyVideoId={props.video.bunny_video_id}
-              config={props.config}
-              title={props.video.title}
-            />
-          ) : (
-            <div
-              className="relative flex w-full items-center justify-center bg-black/60"
-              style={{ aspectRatio: props.aspectRatio }}
-            >
-              {props.video.thumbnail_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={props.video.thumbnail_url}
-                  alt={props.video.title}
-                  className="absolute inset-0 h-full w-full object-cover opacity-40"
-                />
-              ) : null}
-              <p className="relative z-10 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80">
-                {props.video.status === 'failed'
-                  ? 'This video failed to process.'
-                  : 'This video is still processing. Check back soon.'}
-              </p>
-            </div>
-          )}
-        </div>
+        {props.useTimelinePlayer ? (
+          <PublicTimelineWatchPlayer
+            ref={timelineRef}
+            token={props.video.public_share_token!}
+            aspectRatio={props.aspectRatio}
+            config={props.config}
+          />
+        ) : props.embedReady ? (
+          <SeekableBunnyEmbed
+            ref={bunnyRef}
+            libraryId={props.video.bunny_library_id}
+            bunnyVideoId={props.video.bunny_video_id}
+            config={props.config}
+            title={props.video.title}
+          />
+        ) : (
+          <div
+            className="relative flex w-full items-center justify-center bg-black/60"
+            style={{ aspectRatio: props.aspectRatio }}
+          >
+            {props.video.thumbnail_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={props.video.thumbnail_url}
+                alt={props.video.title}
+                className="absolute inset-0 h-full w-full object-cover opacity-40"
+              />
+            ) : null}
+            <p className="relative z-10 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80">
+              {props.video.status === 'failed'
+                ? 'This video failed to process.'
+                : 'This video is still processing. Check back soon.'}
+            </p>
+          </div>
+        )}
       </div>
+
+      {hasSideMeta ? (
+        <div
+          className={
+            hasSummary && hasChapters
+              ? 'mt-5 grid items-start gap-5 lg:mt-8 lg:grid-cols-2 lg:gap-8'
+              : 'mt-5 grid gap-5 lg:mt-8'
+          }
+        >
+          <VideoSummaryCard summary={props.summary} variant="public" />
+          <VideoChaptersList
+            chapters={props.chapters}
+            onSeek={onSeek}
+            variant="public"
+          />
+        </div>
+      ) : null}
 
       <div className="mt-5 lg:mt-8">
         <VideoTranscriptCard

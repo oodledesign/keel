@@ -234,6 +234,26 @@ export function sourceMsToEditedMs(
   return null;
 }
 
+/**
+ * Like sourceMsToEditedMs, but times inside deleted gaps snap to the edited
+ * position of the next kept range (or the end), so a playhead never falls off
+ * the edited timeline.
+ */
+export function sourceMsToEditedMsClamped(
+  keepRanges: VideoKeepRange[],
+  sourceMs: number,
+): number {
+  let edited = 0;
+  for (const range of keepRanges) {
+    if (sourceMs < range.startMs) return edited;
+    if (sourceMs <= range.endMs) {
+      return edited + (sourceMs - range.startMs);
+    }
+    edited += range.endMs - range.startMs;
+  }
+  return edited;
+}
+
 /** Inverse of sourceMsToEditedMs for seeking the master file from playback time. */
 export function editedMsToSourceMs(
   keepRanges: VideoKeepRange[],

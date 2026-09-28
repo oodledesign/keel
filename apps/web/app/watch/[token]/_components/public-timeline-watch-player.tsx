@@ -12,22 +12,26 @@ import {
   TimelinePlaybackPlayer,
   type TimelinePlaybackPlayerHandle,
 } from '~/components/videos/timeline-playback-player';
+import type { CaptionCue } from '~/lib/videos/captions';
 import {
   type VideoEditTimeline,
   editedMsToSourceMs,
   normalizeTimeline,
 } from '~/lib/videos/edit-timeline';
+import type { VideoPlayerConfigValues } from '~/lib/videos/player-config-types';
 
 type MediaPayload = {
   masterUrl: string;
   micUrl: string | null;
   systemUrl: string | null;
   timeline: VideoEditTimeline;
+  captions: CaptionCue[];
 };
 
 type Props = {
   token: string;
   aspectRatio: string;
+  config: VideoPlayerConfigValues;
 };
 
 export type PublicTimelineWatchPlayerHandle = {
@@ -71,6 +75,9 @@ export const PublicTimelineWatchPlayer = forwardRef<
           micUrl: (json.micUrl as string | null) ?? null,
           systemUrl: (json.systemUrl as string | null) ?? null,
           timeline: normalizeTimeline(json.timeline),
+          captions: Array.isArray(json.captions)
+            ? (json.captions as CaptionCue[])
+            : [],
         });
       })
       .catch((err) => {
@@ -110,6 +117,8 @@ export const PublicTimelineWatchPlayer = forwardRef<
         micUrl={media.micUrl}
         systemUrl={media.systemUrl}
         timeline={media.timeline}
+        controls={props.config}
+        captions={media.captions}
         className="absolute inset-0"
       />
     </div>
