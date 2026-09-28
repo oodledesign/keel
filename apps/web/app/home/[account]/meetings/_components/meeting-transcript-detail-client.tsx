@@ -166,6 +166,7 @@ type Props = {
   currentUserEmail?: string | null;
   canEdit: boolean;
   assignmentOptions: TaskAssignmentOption[];
+  siteVisits?: boolean;
 };
 
 const panelClassName =
@@ -252,7 +253,11 @@ export function MeetingTranscriptDetailClient({
   currentUserEmail = null,
   canEdit,
   assignmentOptions,
+  siteVisits = false,
 }: Props) {
+  const noun = siteVisits
+    ? { one: 'site visit', One: 'Site visit', many: 'site visits' }
+    : { one: 'meeting', One: 'Meeting', many: 'meetings' };
   const router = useRouter();
   const [title, setTitle] = useState(transcript.title);
   const [meetingDate, setMeetingDate] = useState(
@@ -480,10 +485,10 @@ export function MeetingTranscriptDetailClient({
           accountId,
           accountSlug,
           transcriptId: transcript.id,
-          title: title.trim() || 'Meeting transcript',
+          title: title.trim() || `${noun.One} transcript`,
           meetingDate: meetingDate || null,
         });
-        toast.success('Meeting updated');
+        toast.success(`${noun.One} updated`);
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Update failed');
@@ -526,7 +531,7 @@ export function MeetingTranscriptDetailClient({
           accountSlug,
           transcriptId: transcript.id,
         });
-        toast.success('Meeting deleted');
+        toast.success(`${noun.One} deleted`);
         router.push(meetingsPath);
         router.refresh();
       } catch (error) {
@@ -672,8 +677,8 @@ export function MeetingTranscriptDetailClient({
         });
         toast.success(
           isRegenerate
-            ? 'Meeting summary regenerated'
-            : 'Meeting summary generated',
+            ? `${noun.One} summary regenerated`
+            : `${noun.One} summary generated`,
         );
         router.refresh();
       } catch (error) {
@@ -701,8 +706,8 @@ export function MeetingTranscriptDetailClient({
         setShareShowTasks(result.publicShareShowTasks);
         toast.success(
           result.publicShareEnabled
-            ? 'Public meeting link enabled'
-            : 'Public meeting link disabled',
+            ? `Public ${noun.one} link enabled`
+            : `Public ${noun.one} link disabled`,
         );
         if (result.publicShareEnabled && result.publicShareToken) {
           openEmailNotesDialog(true);
@@ -767,7 +772,7 @@ export function MeetingTranscriptDetailClient({
         toast.error(
           error instanceof Error
             ? error.message
-            : 'Could not send meeting notes',
+            : `Could not send ${noun.one} notes`,
         );
       }
     });
@@ -815,8 +820,8 @@ export function MeetingTranscriptDetailClient({
         setPortalVisible(result.portalVisible);
         toast.success(
           result.portalVisible
-            ? 'Meeting shared to client portal'
-            : 'Meeting hidden from client portal',
+            ? `${noun.One} shared to client portal`
+            : `${noun.One} hidden from client portal`,
         );
         router.refresh();
       } catch (error) {
@@ -857,7 +862,7 @@ export function MeetingTranscriptDetailClient({
         className="inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
       >
         <ChevronLeft className="h-4 w-4" />
-        All meetings
+        All {noun.many}
       </Link>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
@@ -1241,7 +1246,7 @@ export function MeetingTranscriptDetailClient({
                     <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                       {transcript.taskExtractionStatus === 'ready'
                         ? 'No clear action items found in this transcript. Extract manually if something was missed.'
-                        : 'No saved tasks from this meeting yet. Extract and save tasks to see them here.'}
+                        : `No saved tasks from this ${noun.one} yet. Extract and save tasks to see them here.`}
                     </p>
                     {canEdit ? (
                       <Button
@@ -1282,7 +1287,7 @@ export function MeetingTranscriptDetailClient({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-                      aria-label="Meeting actions"
+                      aria-label={`${noun.One} actions`}
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
@@ -1556,8 +1561,8 @@ export function MeetingTranscriptDetailClient({
               </div>
               <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 {clientId
-                  ? 'When on, the linked client can open this meeting from their portal — summary, transcript, participants, and accepted tasks.'
-                  : 'Link a client to this meeting to share it in their portal.'}
+                  ? `When on, the linked client can open this ${noun.one} from their portal — summary, transcript, participants, and accepted tasks.`
+                  : `Link a client to this ${noun.one} to share it in their portal.`}
               </p>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <Label
@@ -1586,8 +1591,8 @@ export function MeetingTranscriptDetailClient({
               </div>
               <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 {pendingReviewTasks.length === 1
-                  ? '1 suggested task from this meeting is waiting for review.'
-                  : `${pendingReviewTasks.length} suggested tasks from this meeting are waiting for review.`}
+                  ? `1 suggested task from this ${noun.one} is waiting for review.`
+                  : `${pendingReviewTasks.length} suggested tasks from this ${noun.one} are waiting for review.`}
               </p>
               <Button
                 type="button"
@@ -1763,9 +1768,9 @@ export function MeetingTranscriptDetailClient({
       <Dialog open={emailNotesOpen} onOpenChange={setEmailNotesOpen}>
         <DialogContent className="max-w-lg overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
-            <DialogTitle>Email meeting notes</DialogTitle>
+            <DialogTitle>Email {noun.one} notes</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-              Send the public meeting page link to call participants. They can
+              Send the public {noun.one} page link to the participants. They can
               open the summary, transcript, and tasks without signing in.
             </DialogDescription>
           </DialogHeader>

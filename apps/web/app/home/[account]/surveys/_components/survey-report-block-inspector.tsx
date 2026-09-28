@@ -2,6 +2,8 @@
 
 import { type ReactNode, useCallback, useState } from 'react';
 
+import Link from 'next/link';
+
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Textarea } from '@kit/ui/textarea';
@@ -10,7 +12,11 @@ import { getWorkspaceDocDownloadUrlAction } from '~/home/[account]/_lib/workspac
 import { CampaignTextBlockEditor } from '~/home/[account]/email-campaigns/_components/campaign-text-block-editor';
 import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
 import type { SurveyReportBlock } from '~/lib/building-surveyor/survey-report-document';
-import { workspaceText, workspaceTextMuted } from '~/lib/workspace-ui';
+import {
+  workspaceLinkAccent,
+  workspaceText,
+  workspaceTextMuted,
+} from '~/lib/workspace-ui';
 
 type CuratedPhoto = {
   id: string;
@@ -24,12 +30,14 @@ export function SurveyReportBlockInspector({
   block,
   accountId,
   photos,
+  photosHref,
   disabled,
   onChange,
 }: {
   block: SurveyReportBlock | null;
   accountId: string;
   photos: CuratedPhoto[];
+  photosHref?: string;
   disabled?: boolean;
   onChange: (patch: Partial<SurveyReportBlock>) => void;
 }) {
@@ -95,6 +103,7 @@ export function SurveyReportBlockInspector({
           block={block}
           accountId={accountId}
           photos={photos}
+          photosHref={photosHref}
           disabled={disabled}
           onChange={onChange}
         />
@@ -113,12 +122,14 @@ function ImageFields({
   block,
   accountId,
   photos,
+  photosHref,
   disabled,
   onChange,
 }: {
   block: Extract<SurveyReportBlock, { type: 'image' }>;
   accountId: string;
   photos: CuratedPhoto[];
+  photosHref?: string;
   disabled?: boolean;
   onChange: (patch: Partial<SurveyReportBlock>) => void;
 }) {
@@ -202,7 +213,16 @@ function ImageFields({
         </div>
       ) : (
         <p className={`text-xs ${workspaceTextMuted}`}>
-          Curate photos on the survey hub to place them in this report.
+          No curated photos yet.{' '}
+          {photosHref ? (
+            <Link
+              href={photosHref}
+              className={workspaceLinkAccent}
+              data-test="survey-builder-photos-link"
+            >
+              Upload and curate photos
+            </Link>
+          ) : null}
         </p>
       )}
     </div>

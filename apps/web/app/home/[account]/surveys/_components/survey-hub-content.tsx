@@ -6,12 +6,16 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
-  CheckCircle2,
-  Circle,
+  Check,
+  FileText,
   ImagePlus,
   Loader2,
+  type LucideIcon,
+  MapPin,
   Mic,
+  NotebookPen,
   Plus,
+  Zap,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -22,6 +26,13 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { SurveyPhotosPanel } from '~/home/[account]/proposals/_components/survey-photos-panel';
@@ -52,7 +63,9 @@ import {
   setSurveyPhotoShareAction,
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
+import type { SurveyDealOption } from '../_lib/server/survey-deal-options.loader';
 import { surveyClientName, surveyPath } from '../_lib/survey-display';
+import { SurveyClientLinkCard } from './survey-client-link-card';
 import { SurveyLevelSetting } from './survey-level-setting';
 import { SurveyPropertyPanel } from './survey-property-panel';
 
@@ -72,7 +85,7 @@ type DealInfo = {
   stage?: string | null;
 };
 
-const OVERVIEW_TABS = ['property', 'setup', 'meetings', 'photos'] as const;
+const OVERVIEW_TABS = ['property', 'setup', 'visits', 'photos'] as const;
 type OverviewTab = (typeof OVERVIEW_TABS)[number];
 
 function isOverviewTab(value: string | null): value is OverviewTab {
@@ -98,6 +111,8 @@ export function SurveyHubContent({
   epcConfigured,
   flood,
   surveyLevel: initialSurveyLevel,
+  deals,
+  canEditClient,
 }: {
   accountSlug: string;
   accountId: string;
@@ -122,6 +137,8 @@ export function SurveyHubContent({
   epcConfigured: boolean;
   flood: SurveyFloodRecord;
   surveyLevel: SurveyLevel;
+  deals: SurveyDealOption[];
+  canEditClient: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -169,7 +186,6 @@ export function SurveyHubContent({
     proposal.content_html?.replace(/<[^>]+>/g, '').trim(),
   );
   const clientName = surveyClientName(proposal);
-  const enquiryStage = proposal.deal?.stage?.replaceAll('_', ' ') || null;
 
   const changeTab = (next: string) => {
     if (!isOverviewTab(next)) return;
@@ -189,7 +205,7 @@ export function SurveyHubContent({
     if (!canEdit) return;
     const content = pasteContent.trim();
     if (content.length < 20) {
-      toast.error('Paste a longer site meeting so it can be grouped.');
+      toast.error('Paste a longer site visit transcript so it can be grouped.');
       return;
     }
 
@@ -199,7 +215,7 @@ export function SurveyHubContent({
         accountId,
         accountSlug,
         proposalId: proposal.id,
-        title: pasteTitle.trim() || 'Site meeting',
+        title: pasteTitle.trim() || 'Site visit',
         content,
       });
       setTranscripts((prev) => [result.transcript, ...prev]);
@@ -234,6 +250,7 @@ export function SurveyHubContent({
     key: string;
     label: string;
     done: boolean;
+    icon: LucideIcon;
     onClick?: () => void;
     href?: string;
   }> = [
@@ -241,12 +258,14 @@ export function SurveyHubContent({
       key: 'address',
       label: lookup.address ? 'Address added' : 'Add the address',
       done: Boolean(lookup.address || lookup.postcode),
+      icon: MapPin,
       onClick: () => changeTab('property'),
     },
     {
       key: 'epc',
       label: attachedEpc ? 'EPC attached' : 'Pull the EPC',
       done: Boolean(attachedEpc),
+      icon: Zap,
       onClick: () => changeTab('property'),
     },
     {
@@ -256,80 +275,99 @@ export function SurveyHubContent({
           ? `${noteCount} note${noteCount === 1 ? '' : 's'} in ${noteSectionCount} section${noteSectionCount === 1 ? '' : 's'}`
           : 'Add site notes',
       done: noteCount > 0,
+      icon: NotebookPen,
       href: contentHref,
     },
     {
       key: 'draft',
       label: hasDraft ? 'Draft generated' : 'Generate the draft',
       done: hasDraft,
+      icon: FileText,
       href: builderHref,
     },
   ];
+  const doneCount = readiness.filter((item) => item.done).length;
 
   return (
     <div className="flex w-full flex-col gap-5">
-      <ol
-        className="flex flex-wrap gap-2"
-        aria-label="Survey progress"
-        data-test="survey-readiness"
-      >
-        {readiness.map((item) => {
-          const content = (
-            <>
-              {item.done ? (
-                <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent)]" />
-              ) : (
-                <Circle className={`h-4 w-4 ${workspaceTextMuted}`} />
-              )}
-              <span
-                className={
-                  item.done
-                    ? 'text-[var(--workspace-shell-text)]'
-                    : workspaceTextMuted
-                }
-              >
-                {item.label}
-              </span>
-            </>
-          );
-          const className =
-            'inline-flex h-9 items-center gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 text-sm transition-colors hover:border-[var(--ozer-accent)]/35';
-          return (
-            <li key={item.key}>
-              {item.href ? (
-                <Link href={item.href} className={className}>
-                  {content}
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  className={className}
-                  onClick={item.onClick}
-                >
-                  {content}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-
       <Tabs value={tab} onValueChange={changeTab}>
-        <TabsList className="mb-5 h-11 w-full justify-start overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs sm:w-auto">
-          <TabsTrigger value="property" className={tabTriggerClass}>
-            Property
-          </TabsTrigger>
-          <TabsTrigger value="setup" className={tabTriggerClass}>
-            Survey setup
-          </TabsTrigger>
-          <TabsTrigger value="meetings" className={tabTriggerClass}>
-            Site meetings
-            {transcripts.length > 0 ? ` (${transcripts.length})` : ''}
-          </TabsTrigger>
-          <TabsTrigger value="photos" className={tabTriggerClass}>
-            Photos and sharing
-          </TabsTrigger>
-        </TabsList>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <TabsList className="h-11 w-full justify-start overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs sm:w-auto">
+            <TabsTrigger value="property" className={tabTriggerClass}>
+              Property
+            </TabsTrigger>
+            <TabsTrigger value="setup" className={tabTriggerClass}>
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="visits" className={tabTriggerClass}>
+              Site visits
+              {transcripts.length > 0 ? ` (${transcripts.length})` : ''}
+            </TabsTrigger>
+            <TabsTrigger value="photos" className={tabTriggerClass}>
+              Photos and sharing
+            </TabsTrigger>
+          </TabsList>
+
+          <TooltipProvider delayDuration={150}>
+            <div
+              className="flex items-center gap-3"
+              data-test="survey-readiness"
+            >
+              <span className={`text-xs font-medium ${workspaceTextMuted}`}>
+                Progress {doneCount}/{readiness.length}
+              </span>
+              <ol className="flex items-center gap-1.5" aria-label="Progress">
+                {readiness.map((item) => {
+                  const Icon = item.icon;
+                  const className = cn(
+                    'relative flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-150 hover:scale-105 active:scale-95',
+                    item.done
+                      ? 'border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                      : 'border-dashed border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] opacity-60 hover:opacity-100',
+                  );
+                  const content = (
+                    <>
+                      <Icon className="h-3.5 w-3.5" />
+                      {item.done ? (
+                        <span className="absolute -right-0.5 -bottom-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-white)]">
+                          <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                        </span>
+                      ) : null}
+                      <span className="sr-only">{item.label}</span>
+                    </>
+                  );
+                  return (
+                    <li key={item.key}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {item.href ? (
+                            <Link
+                              href={item.href}
+                              className={className}
+                              data-test={`survey-readiness-${item.key}`}
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              className={className}
+                              onClick={item.onClick}
+                              data-test={`survey-readiness-${item.key}`}
+                            >
+                              {content}
+                            </button>
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent>{item.label}</TooltipContent>
+                      </Tooltip>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </TooltipProvider>
+        </div>
 
         <TabsContent value="property" className="mt-0">
           <SurveyPropertyPanel
@@ -352,7 +390,7 @@ export function SurveyHubContent({
             <Card className={workspacePanelCard}>
               <CardContent className="space-y-5 p-4 sm:p-5">
                 <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  Report setup
+                  Report settings
                 </h3>
                 <SurveyLevelSetting
                   accountId={accountId}
@@ -425,44 +463,31 @@ export function SurveyHubContent({
               </CardContent>
             </Card>
 
-            <Card className={workspacePanelCard}>
-              <CardContent className="p-4 sm:p-5">
-                <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  Client and enquiry
-                </h3>
-                <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className={`text-xs ${workspaceTextMuted}`}>Client</dt>
-                    <dd className="mt-1 text-sm text-[var(--workspace-shell-text)]">
-                      {clientName ?? 'No client linked'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className={`text-xs ${workspaceTextMuted}`}>
-                      Enquiry stage
-                    </dt>
-                    <dd className="mt-1 text-sm text-[var(--workspace-shell-text)] capitalize">
-                      {enquiryStage ?? 'Not linked to the pipeline'}
-                    </dd>
-                  </div>
-                </dl>
-              </CardContent>
-            </Card>
+            <SurveyClientLinkCard
+              accountId={accountId}
+              accountSlug={accountSlug}
+              proposalId={proposal.id}
+              canEdit={canEditClient}
+              clientId={proposal.client_id ?? null}
+              clientName={clientName}
+              deal={proposal.deal ?? null}
+              deals={deals}
+            />
           </div>
         </TabsContent>
 
-        <TabsContent value="meetings" className="mt-0">
+        <TabsContent value="visits" className="mt-0">
           <Card className={workspacePanelCard}>
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                    Site meetings
+                    Site visits
                   </h3>
                   <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                    Paste a walkthrough transcript. We save it against this
-                    survey and sort it into notes by RICS section, ready for
-                    Content review.
+                    Paste the transcript from your site visit. We save it
+                    against this survey and sort it into notes by RICS section,
+                    ready for Content review.
                   </p>
                 </div>
                 <Mic className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`} />
@@ -474,12 +499,12 @@ export function SurveyHubContent({
                     <Input
                       value={pasteTitle}
                       onChange={(event) => setPasteTitle(event.target.value)}
-                      placeholder="Meeting title (optional)"
+                      placeholder="Visit title (optional)"
                     />
                     <Textarea
                       value={pasteContent}
                       onChange={(event) => setPasteContent(event.target.value)}
-                      placeholder="Paste the site meeting here…"
+                      placeholder="Paste the site visit transcript here…"
                       className="min-h-40"
                     />
                     <Button
@@ -493,14 +518,14 @@ export function SurveyHubContent({
                       ) : (
                         <Plus className="mr-2 h-4 w-4" />
                       )}
-                      Add meeting
+                      Add visit
                     </Button>
                   </div>
                 ) : null}
 
                 {transcripts.length === 0 ? (
                   <p className={`text-sm ${workspaceTextMuted}`}>
-                    No meetings on this survey yet.
+                    No site visits on this survey yet.
                   </p>
                 ) : (
                   <ul className="divide-y divide-[color:var(--workspace-shell-border)]">

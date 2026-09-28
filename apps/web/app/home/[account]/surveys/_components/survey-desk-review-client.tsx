@@ -10,7 +10,7 @@ import {
 } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import {
   ChevronDown,
@@ -25,8 +25,10 @@ import {
 
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
+import { Skeleton } from '@kit/ui/skeleton';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -96,7 +98,7 @@ export function SurveyDeskReviewClient({
   canEdit,
   clientId,
   sections,
-  currentKey,
+  currentKey: initialKey,
   observations: initialObservations,
   phraseBankCount,
 }: {
@@ -110,9 +112,11 @@ export function SurveyDeskReviewClient({
   observations: SurveyObservation[];
   phraseBankCount: number;
 }) {
-  const router = useRouter();
+  const pathname = usePathname();
   const supabase = useSupabase();
   const inputRef = useRef<HTMLInputElement>(null);
+  const contentTopRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const captionedKey = useRef<string | null>(null);
   const [observations, setObservations] = useState(initialObservations);
   const [photos, setPhotos] = useState<DeskReviewPhoto[]>([]);
@@ -122,7 +126,37 @@ export function SurveyDeskReviewClient({
   const [captioning, setCaptioning] = useState(false);
   const [pending, startTransition] = useTransition();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [newBody, setNewBody] = useState('');
+  const [newBodies, setNewBodies] = useState<Record<string, string>>({});
+
+  const pathKey = pathname.split('/').filter(Boolean).pop() ?? '';
+  const currentKey = sections.some((item) => item.key === pathKey)
+    ? pathKey
+    : initialKey;
+  const newBody = newBodies[currentKey] ?? '';
+  const setNewBody = (value: string) =>
+    setNewBodies((prev) => ({ ...prev, [currentKey]: value }));
+
+  const goToSection = useCallback(
+    (sectionKey: string) => {
+      if (sectionKey === currentKey) return;
+      window.history.pushState(
+        null,
+        '',
+        reviewHref(accountSlug, proposalId, sectionKey),
+      );
+      requestAnimationFrame(() => {
+        headingRef.current?.focus({ preventScroll: true });
+        const top = contentTopRef.current?.getBoundingClientRect().top ?? 0;
+        if (top < 0) {
+          contentTopRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        }
+      });
+    },
+    [accountSlug, currentKey, proposalId],
+  );
 
   const current =
     sections.find((item) => item.key === currentKey) ?? sections[0] ?? null;
@@ -291,8 +325,7 @@ export function SurveyDeskReviewClient({
         toast.success(`Note moved to ${target?.label ?? 'another section'}`, {
           action: {
             label: 'Go there',
-            onClick: () =>
-              router.push(reviewHref(accountSlug, proposalId, sectionKey)),
+            onClick: () => goToSection(sectionKey),
           },
         });
       } catch (error) {
@@ -522,11 +555,25 @@ export function SurveyDeskReviewClient({
                     <li key={item.key}>
                       <Link
                         href={reviewHref(accountSlug, proposalId, item.key)}
-                        className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+                        aria-current={active ? 'page' : undefined}
+                        onClick={(event) => {
+                          if (
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.shiftKey ||
+                            event.button !== 0
+                          ) {
+                            return;
+                          }
+                          event.preventDefault();
+                          goToSection(item.key);
+                        }}
+                        className={cn(
+                          'flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-all duration-150 active:scale-[0.98]',
                           active
                             ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
-                            : workspaceText
-                        }`}
+                            : `${workspaceText} hover:bg-[var(--workspace-shell-panel-hover)]`,
+                        )}
                       >
                         <span className="w-6 shrink-0 text-xs tabular-nums opacity-70">
                           {item.index}
@@ -550,33 +597,30 @@ export function SurveyDeskReviewClient({
         </nav>
       </aside>
 
-      <section className="min-w-0 flex-1 space-y-5">
+      <section
+        ref={contentTopRef}
+        key={current.key}
+        className="animate-in fade-in slide-in-from-bottom-1 min-w-0 flex-1 scroll-mt-4 space-y-5 duration-200"
+      >
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2
-              className={`flex items-center gap-2 text-xl font-semibold ${workspaceText}`}
-            >
-              <SurveySectionHeadingIcon
-                sectionKey={current.key}
-                className="h-5 w-5 shrink-0"
-              />
-              {current.label}
-            </h2>
-            <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-              Check the notes and photographs for this section. Drag phrases in
-              from the phrase book.
-            </p>
-          </div>
+          <h2
+            ref={headingRef}
+            tabIndex={-1}
+            className={`flex items-center gap-2 text-xl font-semibold ${workspaceText}`}
+          >
+            <SurveySectionHeadingIcon
+              sectionKey={current.key}
+              className="h-5 w-5 shrink-0"
+            />
+            {current.label}
+          </h2>
           <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
               variant="outline"
               disabled={!previous}
-              onClick={() =>
-                previous &&
-                router.push(reviewHref(accountSlug, proposalId, previous.key))
-              }
+              onClick={() => previous && goToSection(previous.key)}
             >
               <ChevronLeft className="mr-1 h-4 w-4" />
               Previous
@@ -586,10 +630,7 @@ export function SurveyDeskReviewClient({
               size="sm"
               variant="outline"
               disabled={!next}
-              onClick={() =>
-                next &&
-                router.push(reviewHref(accountSlug, proposalId, next.key))
-              }
+              onClick={() => next && goToSection(next.key)}
             >
               Next
               <ChevronRight className="ml-1 h-4 w-4" />
@@ -622,9 +663,6 @@ export function SurveyDeskReviewClient({
           }}
         >
           <h3 className={`text-sm font-semibold ${workspaceText}`}>Notes</h3>
-          <p className={`text-xs ${workspaceTextMuted}`}>
-            Cleaned-up site notes for this section. They feed the draft report.
-          </p>
           {sectionObservations.length === 0 && !canEdit ? (
             <p className={`text-sm ${workspaceTextMuted}`}>
               No notes on this section yet.
@@ -758,18 +796,21 @@ export function SurveyDeskReviewClient({
         </div>
 
         <div className={`${workspacePanelCard} space-y-3 p-4 sm:p-5`}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className={`text-sm font-semibold ${workspaceText}`}>
-                Photographs
-              </h3>
-              <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                Shown below the notes, not interleaved. Empty captions are
-                filled once; your wording is kept.
-                {captioning ? ' Writing captions…' : ''}
-              </p>
-            </div>
-            {canEdit && current.allowsPhotos ? (
+          <div className="flex items-center justify-between gap-3">
+            <h3
+              className={`flex items-center gap-2 text-sm font-semibold ${workspaceText}`}
+            >
+              Photographs
+              {captioning ? (
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-normal ${workspaceTextMuted}`}
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Writing captions…
+                </span>
+              ) : null}
+            </h3>
+            {canEdit ? (
               <Button
                 type="button"
                 size="sm"
@@ -796,11 +837,20 @@ export function SurveyDeskReviewClient({
           />
 
           {loadingPhotos ? (
-            <p className={`text-sm ${workspaceTextMuted}`}>Loading photos…</p>
-          ) : !current.allowsPhotos ? (
-            <p className={`text-sm ${workspaceTextMuted}`}>
-              This field does not take site photographs.
-            </p>
+            <div className="space-y-3" aria-label="Loading photos">
+              {[0, 1].map((index) => (
+                <div
+                  key={index}
+                  className="grid gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3 sm:grid-cols-[10rem_minmax(0,1fr)]"
+                >
+                  <Skeleton className="h-36 rounded-lg bg-[var(--workspace-shell-sidebar-accent)]" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-40 bg-[var(--workspace-shell-sidebar-accent)]" />
+                    <Skeleton className="h-16 w-full bg-[var(--workspace-shell-sidebar-accent)]" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : sectionPhotos.length === 0 ? (
             <p className={`text-sm ${workspaceTextMuted}`}>
               No photographs on this section yet.
@@ -883,7 +933,7 @@ export function SurveyDeskReviewClient({
             </ul>
           )}
 
-          {canEdit && current.allowsPhotos && archivePhotos.length > 0 ? (
+          {canEdit && archivePhotos.length > 0 ? (
             <div className="border-t border-[color:var(--workspace-shell-border)] pt-3">
               <p className={`text-xs ${workspaceTextMuted}`}>
                 Add from the survey archive

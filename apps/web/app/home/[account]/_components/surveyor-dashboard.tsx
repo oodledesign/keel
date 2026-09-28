@@ -89,7 +89,7 @@ export function SurveyorDashboard({
           <Button asChild variant="outline" className="h-9 rounded-xl">
             <Link href={`${meetingsHref}?create=1`}>
               <Mic className="mr-2 h-4 w-4" />
-              Add meeting
+              Add site visit
             </Link>
           </Button>
           {canCreateSurvey ? (
@@ -121,7 +121,7 @@ export function SurveyorDashboard({
             {recentSurveys.length === 0 ? (
               <p className={`mt-4 text-sm ${workspaceTextMuted}`}>
                 No survey reports yet. Create one from a pipeline item or add a
-                site meeting to draft the RICS headings.
+                site visit to draft the RICS headings.
               </p>
             ) : (
               <ul className="mt-4 divide-y divide-[color:var(--workspace-shell-border)]">
@@ -233,8 +233,8 @@ export function SurveyorDashboard({
         />
         <QuickLink
           href={`${meetingsHref}?create=1`}
-          label="Add meeting"
-          description="Paste or record a site meeting"
+          label="Add site visit"
+          description="Paste or record a site visit"
           icon={Mic}
         />
         <QuickLink

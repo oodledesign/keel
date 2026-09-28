@@ -535,9 +535,7 @@ class SurveyCaptureService {
       ]);
 
     if (observations.length === 0 && transcripts.length === 0) {
-      throw new Error(
-        'Add a site meeting or observation before drafting the report',
-      );
+      throw new Error('Add a site visit or a note before drafting the report');
     }
 
     const photoUrls = await signSurveyPhotoUrls(

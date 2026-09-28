@@ -20,6 +20,7 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import pathsConfig from '~/config/paths.config';
 import { ProposalEditAiAssist } from '~/home/[account]/proposals/_components/proposal-edit-ai-assist';
 import { ProposalRowMenu } from '~/home/[account]/proposals/_components/proposal-row-menu';
 import { ProposalSendPanel } from '~/home/[account]/proposals/_components/proposal-send-panel';
@@ -46,7 +47,8 @@ import {
 } from '~/lib/workspace-ui';
 
 import { checkSurveyPublishGapsAction } from '../_lib/server/survey-capture-actions';
-import { surveyClientName } from '../_lib/survey-display';
+import { surveyClientName, surveyPath } from '../_lib/survey-display';
+import { SurveyBuilderSidebarSection } from './survey-builder-sidebar-section';
 import { SurveyReportBodyEditor } from './survey-report-body-editor';
 import { SurveyWorkspaceHeader } from './survey-workspace-header';
 
@@ -146,6 +148,7 @@ export function SurveyReportBuilder({
       '',
   );
   const [privateNote, setPrivateNote] = useState(proposal.private_note ?? '');
+  const [photosVersion, setPhotosVersion] = useState(0);
 
   const dirtyFingerprint = useMemo(
     () => ({ reportDocument, recipientName, recipientEmail, privateNote }),
@@ -160,6 +163,11 @@ export function SurveyReportBuilder({
   const displayRecipientName = recipientName.trim() || clientName || '';
   const title = proposal.title?.trim() || 'Building survey';
   const pdfHref = `/api/proposals/pdf?proposalId=${proposal.id}`;
+  const photosHref = `${surveyPath(
+    pathsConfig.app.accountSurveyDetail,
+    accountSlug,
+    proposal.id,
+  )}?tab=photos`;
 
   const save = useCallback(
     async ({ quiet = false }: { quiet?: boolean } = {}) => {
@@ -512,42 +520,50 @@ export function SurveyReportBuilder({
             </section>
           ) : null}
 
-          <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
-            <SurveyReportBodyEditor
-              document={reportDocument}
-              accountId={accountId}
-              proposalId={proposal.id}
-              disabled={!canModify}
-              onChange={setReportDocument}
-            />
-
-            <aside className="space-y-4">
-              <SurveyPhotosPanel
-                accountId={accountId}
-                accountSlug={accountSlug}
-                proposalId={proposal.id}
-                clientId={proposal.client_id}
-                canEdit={canModify}
-              />
-
-              <section className={`${workspacePanelCard} p-4`}>
-                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  Private note
-                </h2>
-                <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
-                  Only your team sees this. It is not shown to the client.
-                </p>
-                <Textarea
-                  value={privateNote}
-                  onChange={(e) => setPrivateNote(e.target.value)}
-                  disabled={!canModify}
-                  rows={4}
-                  placeholder="Internal notes about this report"
-                  className={`mt-3 ${controlInput}`}
-                />
-              </section>
-            </aside>
-          </div>
+          <SurveyReportBodyEditor
+            document={reportDocument}
+            accountId={accountId}
+            proposalId={proposal.id}
+            disabled={!canModify}
+            onChange={setReportDocument}
+            photosHref={photosHref}
+            photosVersion={photosVersion}
+            sidebar={
+              <>
+                <SurveyBuilderSidebarSection
+                  title="Photo library"
+                  testId="survey-builder-photos"
+                >
+                  <SurveyPhotosPanel
+                    accountId={accountId}
+                    accountSlug={accountSlug}
+                    proposalId={proposal.id}
+                    clientId={proposal.client_id}
+                    canEdit={canModify}
+                    embedded
+                    onChange={() => setPhotosVersion((value) => value + 1)}
+                  />
+                </SurveyBuilderSidebarSection>
+                <SurveyBuilderSidebarSection
+                  title="Private note"
+                  meta={privateNote.trim() ? 'Added' : undefined}
+                  testId="survey-builder-private-note"
+                >
+                  <p className={`text-xs ${workspaceTextMuted}`}>
+                    Only your team sees this.
+                  </p>
+                  <Textarea
+                    value={privateNote}
+                    onChange={(e) => setPrivateNote(e.target.value)}
+                    disabled={!canModify}
+                    rows={4}
+                    placeholder="Internal notes about this report"
+                    className={`mt-2 text-sm ${controlInput}`}
+                  />
+                </SurveyBuilderSidebarSection>
+              </>
+            }
+          />
         </>
       )}
     </div>

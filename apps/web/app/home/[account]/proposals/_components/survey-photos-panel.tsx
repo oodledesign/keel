@@ -16,6 +16,7 @@ import {
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
+import { Skeleton } from '@kit/ui/skeleton';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
@@ -54,6 +55,8 @@ export function SurveyPhotosPanel({
   clientId,
   canEdit,
   layout = 'compact',
+  embedded = false,
+  onChange,
 }: {
   accountId: string;
   accountSlug: string;
@@ -61,6 +64,8 @@ export function SurveyPhotosPanel({
   clientId?: string | null;
   canEdit: boolean;
   layout?: 'compact' | 'library';
+  embedded?: boolean;
+  onChange?: () => void;
 }) {
   const supabase = useSupabase();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -134,6 +139,7 @@ export function SurveyPhotosPanel({
           : `${files.length} photos uploaded`,
       );
       await loadPhotos();
+      onChange?.();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Could not upload photos',
@@ -164,6 +170,7 @@ export function SurveyPhotosPanel({
             : photo,
         ),
       );
+      onChange?.();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Could not pin photo',
@@ -185,6 +192,7 @@ export function SurveyPhotosPanel({
           photo.id === docId ? { ...photo, caption } : photo,
         ),
       );
+      onChange?.();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Could not save caption',
@@ -222,6 +230,7 @@ export function SurveyPhotosPanel({
         sectionKey,
         orderedDocIds: ordered.map((item) => item.id),
       });
+      onChange?.();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Could not reorder photos',
@@ -240,6 +249,7 @@ export function SurveyPhotosPanel({
         proposalId,
       });
       await loadPhotos();
+      onChange?.();
       toast.success(
         result.source === 'ai'
           ? `Proposed ${result.curatedCount} curated photo${
@@ -268,6 +278,7 @@ export function SurveyPhotosPanel({
         proposalId,
       });
       setPhotos((prev) => prev.filter((photo) => photo.id !== docId));
+      onChange?.();
       toast.success('Photo removed');
     } catch (error) {
       toast.error(
@@ -280,25 +291,52 @@ export function SurveyPhotosPanel({
     (photo) => photo.photoRole === 'curated' || photo.pinnedSectionKey,
   ).length;
   const listClassName =
-    layout === 'library' ? 'mt-3 grid gap-3 sm:grid-cols-2' : 'mt-3 space-y-3';
+    layout === 'library' && !embedded
+      ? 'mt-3 grid gap-3 sm:grid-cols-2'
+      : 'mt-3 space-y-3';
 
   return (
-    <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Photo library
-          </h2>
-          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-            Full archive stays on the survey. Propose 3–4 photos per section
-            that has report text; captions are grounded in those observations.
-            {photos.length > 0
-              ? ` ${photos.length} in library${curatedCount ? `, ${curatedCount} curated` : ''}.`
-              : ''}
-          </p>
-        </div>
+    <section
+      className={
+        embedded
+          ? ''
+          : 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4'
+      }
+    >
+      <div
+        className={
+          embedded ? 'space-y-2' : 'flex items-start justify-between gap-3'
+        }
+      >
+        {embedded ? (
+          photos.length > 0 ? (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {photos.length} in library
+              {curatedCount ? `, ${curatedCount} curated` : ''}
+            </p>
+          ) : null
+        ) : (
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Photo library
+            </h2>
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              Full archive stays on the survey. Propose 3–4 photos per section
+              that has report text; captions are grounded in those observations.
+              {photos.length > 0
+                ? ` ${photos.length} in library${curatedCount ? `, ${curatedCount} curated` : ''}.`
+                : ''}
+            </p>
+          </div>
+        )}
         {canEdit ? (
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <div
+            className={
+              embedded
+                ? 'flex gap-2 [&>button]:flex-1'
+                : 'flex shrink-0 flex-col gap-2 sm:flex-row'
+            }
+          >
             <Button
               type="button"
               size="sm"
@@ -341,9 +379,14 @@ export function SurveyPhotosPanel({
       />
 
       {loading ? (
-        <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-          Loading photos…
-        </p>
+        <div className={listClassName} aria-label="Loading photos">
+          {[0, 1].map((index) => (
+            <Skeleton
+              key={index}
+              className="h-20 w-full rounded-lg bg-[var(--workspace-shell-sidebar-accent)]"
+            />
+          ))}
+        </div>
       ) : photos.length === 0 ? (
         <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
           No photos yet. Upload site photos here — they reuse the same files

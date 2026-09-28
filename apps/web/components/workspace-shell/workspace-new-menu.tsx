@@ -493,7 +493,7 @@ function getTeamItems(
       },
       {
         key: 'transcript',
-        label: 'Add meeting',
+        label: 'Add site visit',
         icon: FileText,
         href: `${accountPath(account, pathsConfig.app.accountMeetings)}?create=1`,
       },

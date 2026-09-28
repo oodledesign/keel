@@ -90,7 +90,7 @@ export function buildBuildingSurveyorSpaceNavChildren(
     meetings: () =>
       access.canViewClients && isEnabled(ms, 'clients')
         ? {
-            label: 'Meetings',
+            label: 'Site visits',
             path: createPath(pathsConfig.app.accountMeetings, account),
             Icon: <Mic className={iconClasses} />,
           }

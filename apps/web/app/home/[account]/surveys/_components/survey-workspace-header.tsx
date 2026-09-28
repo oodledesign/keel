@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { ArrowLeft, FileText, Loader2 } from 'lucide-react';
@@ -50,7 +50,7 @@ export function SurveyWorkspaceHeader({
   const tabs: Array<{ key: SurveyTab; label: string; href: string }> = [
     {
       key: 'overview',
-      label: 'Overview',
+      label: 'Setup',
       href: surveyPath(
         pathsConfig.app.accountSurveyDetail,
         accountSlug,
@@ -114,18 +114,26 @@ export function SurveyWorkspaceHeader({
             aria-current={active === tab.key ? 'page' : undefined}
             data-test={`survey-tab-${tab.key}`}
             className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+              '-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap transition-all duration-150 active:scale-[0.98]',
               active === tab.key
                 ? 'border-[var(--ozer-accent)] text-[var(--workspace-shell-text)]'
                 : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
           >
             {tab.label}
+            <TabPendingIndicator />
           </Link>
         ))}
       </nav>
     </header>
   );
+}
+
+function TabPendingIndicator() {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <Loader2 className="h-3 w-3 animate-spin opacity-70" aria-hidden />
+  ) : null;
 }
 
 export function SurveyGenerateDraftButton({
@@ -186,7 +194,7 @@ export function SurveyGenerateDraftButton({
       type="button"
       className={workspaceBtnPrimaryMd}
       disabled={disabled || generating}
-      title={disabled ? 'Add notes or a site meeting first' : undefined}
+      title={disabled ? 'Add notes or a site visit first' : undefined}
       onClick={() => void handleGenerate()}
     >
       {generating ? (

@@ -12,6 +12,7 @@ import {
 import { isWorkNavModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import { spaceTypeFromProfile } from '../../_lib/workspace-profile';
 import { MeetingTranscriptDetailClient } from '../_components/meeting-transcript-detail-client';
 import { loadMeetingTranscriptPageData } from '../_lib/server/meetings-page.loader';
 
@@ -82,6 +83,10 @@ async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
           currentUserEmail={data.currentUserEmail}
           canEdit={data.canEdit}
           assignmentOptions={assignmentOptions}
+          siteVisits={
+            spaceTypeFromProfile(workspace.workspaceProfile) ===
+            'building-surveyor'
+          }
         />
       </PageBody>
     </>

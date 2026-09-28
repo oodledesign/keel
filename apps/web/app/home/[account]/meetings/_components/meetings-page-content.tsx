@@ -83,6 +83,21 @@ type Props = {
   upcomingMeetings: UpcomingMeetingRow[];
   clients: ClientOption[];
   canEdit: boolean;
+  siteVisits?: boolean;
+};
+
+const MEETING_NOUNS = {
+  one: 'meeting',
+  One: 'Meeting',
+  many: 'meetings',
+  Many: 'Meetings',
+};
+
+const SITE_VISIT_NOUNS = {
+  one: 'site visit',
+  One: 'Site visit',
+  many: 'site visits',
+  Many: 'Site visits',
 };
 
 function formatUpcomingWhen(iso: string) {
@@ -102,7 +117,9 @@ export function MeetingsPageContent({
   upcomingMeetings,
   clients,
   canEdit,
+  siteVisits = false,
 }: Props) {
+  const noun = siteVisits ? SITE_VISIT_NOUNS : MEETING_NOUNS;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState(initialTranscripts);
@@ -187,12 +204,12 @@ export function MeetingsPageContent({
           accountSlug,
           clientId,
           jobId: jobId || undefined,
-          title: title.trim() || 'Meeting transcript',
+          title: title.trim() || `${noun.One} transcript`,
           content: content.trim(),
           meetingDate: meetingDate || null,
           source: 'paste',
         });
-        toast.success('Meeting saved');
+        toast.success(`${noun.One} saved`);
         resetForm();
         router.push(meetingDetailPath(created.id));
         router.refresh();
@@ -257,11 +274,11 @@ export function MeetingsPageContent({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl min-w-0">
           <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
-            Meetings
+            {noun.Many}
           </h1>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            All meeting transcripts across clients. Open a meeting to read the
-            full transcript and extract tasks with AI.
+            All {noun.one} transcripts across clients. Open a {noun.one} to read
+            the full transcript and extract tasks with AI.
           </p>
         </div>
         {canEdit ? (
@@ -282,7 +299,7 @@ export function MeetingsPageContent({
                   className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Add meeting
+                  Add {noun.one}
                   <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-80" />
                 </Button>
               </DropdownMenuTrigger>
@@ -295,7 +312,7 @@ export function MeetingsPageContent({
                   onSelect={() => setCreateMeetingOpen(true)}
                 >
                   <CalendarPlus className="h-4 w-4 text-[var(--ozer-accent)]" />
-                  Add upcoming meeting
+                  Add upcoming {noun.one}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer gap-2"
@@ -305,7 +322,7 @@ export function MeetingsPageContent({
                   }}
                 >
                   <FileText className="h-4 w-4 text-[var(--ozer-accent)]" />
-                  Add past meeting
+                  Add past {noun.one}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -326,7 +343,7 @@ export function MeetingsPageContent({
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-              Past meeting
+              Past {noun.one}
             </h3>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -349,7 +366,7 @@ export function MeetingsPageContent({
               </Select>
             </div>
             <div>
-              <Label htmlFor="meeting-date">Meeting date</Label>
+              <Label htmlFor="meeting-date">{noun.One} date</Label>
               <Input
                 id="meeting-date"
                 type="date"
@@ -365,7 +382,9 @@ export function MeetingsPageContent({
               id="meeting-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Discovery call"
+              placeholder={
+                siteVisits ? 'Initial walkthrough' : 'Discovery call'
+              }
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
           </div>
@@ -387,7 +406,7 @@ export function MeetingsPageContent({
               ) : (
                 <PlusCircle className="mr-2 h-4 w-4" />
               )}
-              Save meeting
+              Save {noun.one}
             </Button>
             <label className="inline-flex cursor-pointer items-center">
               <input
@@ -416,11 +435,11 @@ export function MeetingsPageContent({
             <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center">
               <Mic className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
               <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                No meetings yet.
+                No {noun.many} yet.
               </p>
               {canEdit ? (
                 <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  Add a meeting from here or a client page.
+                  Add a {noun.one} from here or a client page.
                 </p>
               ) : null}
             </div>
@@ -502,14 +521,14 @@ export function MeetingsPageContent({
                             disabled={pending}
                           >
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Meeting actions</span>
+                            <span className="sr-only">{noun.One} actions</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
                             <Link href={meetingDetailPath(row.id)}>
                               <Eye className="mr-2 h-4 w-4" />
-                              View meeting
+                              View {noun.one}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -540,19 +559,19 @@ export function MeetingsPageContent({
           )}
 
           <p className="pt-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            Tip: you can also add meetings from a client&apos;s Meetings tab —
-            they appear here automatically.
+            Tip: you can also add {noun.many} from a client&apos;s page — they
+            appear here automatically.
           </p>
         </div>
 
         <aside className="w-full shrink-0 lg:w-64 xl:w-72">
           <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
             <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-              Upcoming meetings
+              Upcoming {noun.many}
             </h2>
             {upcomingRows.length === 0 ? (
               <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
-                No upcoming meetings.
+                No upcoming {noun.many}.
               </p>
             ) : (
               <ul className="mt-3 space-y-3">

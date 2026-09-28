@@ -12,6 +12,7 @@ import {
   SurveyGenerateDraftButton,
   SurveyWorkspaceHeader,
 } from '../_components/survey-workspace-header';
+import { loadSurveyDealOptions } from '../_lib/server/survey-deal-options.loader';
 import { loadSurveyHubExtras } from '../_lib/server/survey-hub.loader';
 import { surveyClientName } from '../_lib/survey-display';
 
@@ -20,7 +21,7 @@ interface SurveyHubPageProps {
 }
 
 export const generateMetadata = async () => {
-  return { title: 'Survey' };
+  return { title: 'Survey setup' };
 };
 
 type SurveyProposal = {
@@ -76,12 +77,15 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
     notFound();
   }
 
-  const extras = await loadSurveyHubExtras({
-    accountId,
-    proposalId: id,
-    clientId: proposal.client_id,
-    dealId: proposal.deal_id,
-  });
+  const [extras, deals] = await Promise.all([
+    loadSurveyHubExtras({
+      accountId,
+      proposalId: id,
+      clientId: proposal.client_id,
+      dealId: proposal.deal_id,
+    }),
+    canEditProposals ? loadSurveyDealOptions(accountId) : Promise.resolve([]),
+  ]);
 
   const title = proposal.title?.trim() || 'Building survey';
   const accountName =
@@ -136,6 +140,8 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
           epcConfigured={extras.epcConfigured}
           flood={extras.flood}
           surveyLevel={extras.surveyLevel}
+          deals={deals}
+          canEditClient={canEditProposals && proposal.status === 'draft'}
         />
       </div>
     </PageBody>

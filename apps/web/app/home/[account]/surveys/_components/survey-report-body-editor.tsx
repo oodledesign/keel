@@ -32,6 +32,7 @@ import {
   getWorkspaceDocDownloadUrlAction,
   listProposalDocsAction,
 } from '~/home/[account]/_lib/workspace-content/docs-actions';
+import { sanitizeSurveyReportHtml } from '~/lib/building-surveyor/compile-survey-report-document';
 import {
   SURVEY_REPORT_BLOCK_LIBRARY,
   type SurveyReportBlock,
@@ -43,14 +44,10 @@ import {
   removeSurveyReportBlock,
   reorderSurveyReportBlocks,
 } from '~/lib/building-surveyor/survey-report-document';
-import { sanitizeSurveyReportHtml } from '~/lib/building-surveyor/compile-survey-report-document';
 import { RICH_TEXT_LIST_CLASS } from '~/lib/rich-text-html';
-import {
-  workspacePanelCard,
-  workspaceText,
-  workspaceTextMuted,
-} from '~/lib/workspace-ui';
+import { workspacePanelCard, workspaceText } from '~/lib/workspace-ui';
 
+import { SurveyBuilderSidebarSection } from './survey-builder-sidebar-section';
 import { SurveyReportBlockInspector } from './survey-report-block-inspector';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
@@ -75,12 +72,18 @@ export function SurveyReportBodyEditor({
   proposalId,
   disabled,
   onChange,
+  sidebar,
+  photosHref,
+  photosVersion = 0,
 }: {
   document: SurveyReportDocument;
   accountId: string;
   proposalId: string;
   disabled?: boolean;
   onChange: (document: SurveyReportDocument) => void;
+  sidebar?: ReactNode;
+  photosHref?: string;
+  photosVersion?: number;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(
     document.blocks[0]?.id ?? null,
@@ -129,7 +132,7 @@ export function SurveyReportBodyEditor({
     return () => {
       cancelled = true;
     };
-  }, [accountId, proposalId]);
+  }, [accountId, proposalId, photosVersion]);
 
   function commit(next: SurveyReportDocument) {
     onChange(next);
@@ -144,17 +147,13 @@ export function SurveyReportBodyEditor({
   }
 
   return (
-    <div className="space-y-3">
-      <p className={`text-sm ${workspaceTextMuted}`}>
-        Build the report from stacked text and image blocks. AI draft fills
-        these sections and places curated photos with captions.
-      </p>
-
-      <div className="grid gap-3 xl:grid-cols-[150px_minmax(0,1fr)_260px]">
-        <aside className={`${workspacePanelCard} p-2`}>
-          <p className={`mb-2 px-1 text-xs font-medium ${workspaceTextMuted}`}>
-            Blocks
-          </p>
+    <div className="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_260px]">
+      <aside className="space-y-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto">
+        <SurveyBuilderSidebarSection
+          title="Blocks"
+          defaultOpen
+          testId="survey-builder-blocks"
+        >
           <div className="grid grid-cols-2 gap-1 xl:grid-cols-1">
             {SURVEY_REPORT_BLOCK_LIBRARY.map((item) => {
               const Icon = BLOCK_ICONS[item.type];
@@ -165,7 +164,7 @@ export function SurveyReportBodyEditor({
                   disabled={disabled}
                   onClick={() => addBlock(item.type)}
                   className={cn(
-                    'flex items-center gap-2 rounded-lg px-2 py-2 text-left text-sm',
+                    'flex items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-all duration-150 active:scale-[0.98]',
                     workspaceText,
                     'hover:bg-[var(--workspace-shell-panel-hover)] disabled:opacity-50',
                   )}
@@ -176,109 +175,108 @@ export function SurveyReportBodyEditor({
               );
             })}
           </div>
-        </aside>
+        </SurveyBuilderSidebarSection>
+        {sidebar}
+      </aside>
 
-        <div className="overflow-auto rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-6">
-          <div className="mx-auto max-w-[680px] overflow-hidden bg-white text-[var(--ozer-text-on-light)] shadow-sm">
-            {document.blocks.length === 0 ? (
-              <p className="px-6 py-12 text-center text-sm text-[var(--ozer-text-muted)]">
-                Add a heading or generate a draft to start the report.
-              </p>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(event: DragEndEvent) => {
-                  if (disabled) return;
-                  const overId = event.over?.id;
-                  if (!overId || event.active.id === overId) return;
-                  commit(
-                    reorderSurveyReportBlocks(
-                      document,
-                      String(event.active.id),
-                      String(overId),
-                    ),
-                  );
-                }}
+      <div className="overflow-auto rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-6">
+        <div className="mx-auto max-w-[680px] overflow-hidden bg-white text-[var(--ozer-text-on-light)] shadow-sm">
+          {document.blocks.length === 0 ? (
+            <p className="px-6 py-12 text-center text-sm text-[var(--ozer-text-muted)]">
+              Add a heading or generate a draft to start the report.
+            </p>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event: DragEndEvent) => {
+                if (disabled) return;
+                const overId = event.over?.id;
+                if (!overId || event.active.id === overId) return;
+                commit(
+                  reorderSurveyReportBlocks(
+                    document,
+                    String(event.active.id),
+                    String(overId),
+                  ),
+                );
+              }}
+            >
+              <SortableContext
+                items={document.blocks.map((block) => block.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={document.blocks.map((block) => block.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {document.blocks.map((block, index) => (
-                    <SortableCanvasBlock
-                      key={block.id}
-                      block={
-                        block.type === 'image' &&
-                        block.documentId &&
-                        previewUrls[block.documentId]
-                          ? {
-                              ...block,
-                              src: previewUrls[block.documentId] ?? block.src,
-                            }
-                          : block
-                      }
-                      selected={block.id === selectedId}
-                      disabled={disabled}
-                      canMoveUp={index > 0}
-                      canMoveDown={index < document.blocks.length - 1}
-                      onSelect={() => setSelectedId(block.id)}
-                      onMove={(direction) =>
-                        commit(
-                          moveSurveyReportBlock(document, block.id, direction),
-                        )
-                      }
-                      onDuplicate={() => {
-                        const next = duplicateSurveyReportBlock(
-                          document,
-                          block.id,
-                        );
-                        commit(next);
-                        const clone = next.blocks[index + 1];
-                        if (clone) setSelectedId(clone.id);
-                      }}
-                      onDelete={() => {
-                        const next = removeSurveyReportBlock(
-                          document,
-                          block.id,
-                        );
-                        commit(next);
-                        setSelectedId(
-                          next.blocks[Math.max(0, index - 1)]?.id ?? null,
-                        );
-                      }}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            )}
-          </div>
+                {document.blocks.map((block, index) => (
+                  <SortableCanvasBlock
+                    key={block.id}
+                    block={
+                      block.type === 'image' &&
+                      block.documentId &&
+                      previewUrls[block.documentId]
+                        ? {
+                            ...block,
+                            src: previewUrls[block.documentId] ?? block.src,
+                          }
+                        : block
+                    }
+                    selected={block.id === selectedId}
+                    disabled={disabled}
+                    canMoveUp={index > 0}
+                    canMoveDown={index < document.blocks.length - 1}
+                    onSelect={() => setSelectedId(block.id)}
+                    onMove={(direction) =>
+                      commit(
+                        moveSurveyReportBlock(document, block.id, direction),
+                      )
+                    }
+                    onDuplicate={() => {
+                      const next = duplicateSurveyReportBlock(
+                        document,
+                        block.id,
+                      );
+                      commit(next);
+                      const clone = next.blocks[index + 1];
+                      if (clone) setSelectedId(clone.id);
+                    }}
+                    onDelete={() => {
+                      const next = removeSurveyReportBlock(document, block.id);
+                      commit(next);
+                      setSelectedId(
+                        next.blocks[Math.max(0, index - 1)]?.id ?? null,
+                      );
+                    }}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
         </div>
-
-        <aside className={`${workspacePanelCard} space-y-3 p-4`}>
-          <SurveyReportBlockInspector
-            block={selected ?? null}
-            accountId={accountId}
-            photos={photos}
-            disabled={disabled}
-            onChange={(patch) => {
-              if (!selected) return;
-              commit({
-                ...document,
-                blocks: document.blocks.map((block) =>
-                  block.id === selected.id
-                    ? ({
-                        ...block,
-                        ...patch,
-                        type: block.type,
-                      } as SurveyReportBlock)
-                    : block,
-                ),
-              });
-            }}
-          />
-        </aside>
       </div>
+
+      <aside className={`${workspacePanelCard} space-y-3 p-4`}>
+        <SurveyReportBlockInspector
+          block={selected ?? null}
+          accountId={accountId}
+          photos={photos}
+          photosHref={photosHref}
+          disabled={disabled}
+          onChange={(patch) => {
+            if (!selected) return;
+            commit({
+              ...document,
+              blocks: document.blocks.map((block) =>
+                block.id === selected.id
+                  ? ({
+                      ...block,
+                      ...patch,
+                      type: block.type,
+                    } as SurveyReportBlock)
+                  : block,
+              ),
+            });
+          }}
+        />
+      </aside>
     </div>
   );
 }

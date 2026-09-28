@@ -15,6 +15,7 @@ import { Quote } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
+import { Skeleton } from '@kit/ui/skeleton';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
@@ -185,7 +186,14 @@ export function SurveyPhrasePanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {pending ? (
-          <p className={`text-xs ${workspaceTextMuted}`}>Loading…</p>
+          <div className="space-y-2" aria-label="Loading phrases">
+            {[0, 1, 2, 3].map((index) => (
+              <Skeleton
+                key={index}
+                className="h-14 w-full rounded-lg bg-[var(--workspace-shell-sidebar-accent)]"
+              />
+            ))}
+          </div>
         ) : phrases.length === 0 ? (
           <p className={`text-xs ${workspaceTextMuted}`}>
             {phraseBankCount === 0
