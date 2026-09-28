@@ -1,0 +1,93 @@
+---
+title: Tracker
+description: Track competitor industrial, retail and development stock, with area watches for new and re-priced listings
+---
+
+import { Callout } from 'nextra/components';
+
+# Tracker
+
+**Tracker** is a shared sheet of competitor properties your desk is keeping an eye on. It is separate from your own **Disposals** and **WIP**, so market-watch stock never mixes with instructions.
+
+Open **Tracker** in the commercial sidebar (`/app/[account]/tracker`). Each row records the property, location, size, price or rent, tenure, competitor agent, category (Industrial, Retail, Development), status, source link and notes.
+
+## Add competitor listings
+
+There are three ways to get stock into the sheet.
+
+### Add listing
+
+Choose **Add listing** and fill in the form. Only the property name is required.
+
+### Paste URL
+
+For a Rightmove or agent listing page:
+
+1. Choose **Paste URL**, paste the link and select **Fetch**.
+2. Ozer reads what it can from the page and pre-fills the form, with a confidence level and warnings for anything it could not find.
+3. Check every field, correct anything wrong, then select **Save listing**.
+
+Page reading is assisted entry, not a guarantee — always review before saving. Pasting a link you have already saved updates that listing instead of creating a duplicate.
+
+### Import CSV
+
+Choose **Import CSV** and paste your spreadsheet, including the header row.
+
+- A name column is required (headed `name`, `property`, `address` or `title`).
+- Other columns are recognised by header: location / area / town, postcode, size / sqft, price / rent / asking, agent / competitor / agency, category / type / sector, status, tenure, url / link / rightmove, notes / comment.
+- Prices can be written as `125000`, `£125,000`, `125k` or `1.2m`.
+- Category understands words like `ind`, `high street` and `land`; anything unrecognised becomes Industrial.
+- Status understands `UO` (under offer) and `let`, `sold` or `completed` (let / sold).
+
+Example:
+
+```csv
+name,location,postcode,size,price,agent,category,url
+Unit 4 Estate,Tunbridge Wells,TN2 3EY,5000,125000,Competitor & Co,industrial,https://www.rightmove.co.uk/...
+```
+
+<Callout type="warning">
+  Include a URL column if you will re-import the same sheet. Rows with a link
+  update the existing listing; rows without one are always added as new, so a
+  repeat import would create duplicates.
+</Callout>
+
+## Work with the sheet
+
+- **Edit in place** — click a cell (name, location, size, price, agent, notes…), type, then click away to save. **Edit** at the end of a row opens the full form.
+- **Price changes are recorded** — changing a price stamps when it changed, which area watches use for alerts.
+- **Keep status current** — move rows to **Under offer**, **Let / sold** or **Withdrawn** as the market moves.
+- **Archive** — the bin icon hides a listing without deleting it.
+- **Filter** — search name, location or notes, or filter by agent, category and status. The count at the top right shows how many rows match.
+
+## Area watches
+
+An area watch flags competitor listings in a patch you care about.
+
+1. Choose **Area watch** and give it a name, for example _Tunbridge Wells industrial_.
+2. Add **towns** (comma-separated) — matched against each listing's location and name.
+3. Add **postcode prefixes**, for example `TN1, TN2, ME`.
+4. Tick the categories to include, then create the watch.
+
+Your watches appear in a panel above the sheet:
+
+- Watches run **hourly**, or straight away with **Check now**.
+- A property added in a watched area shows **New competitor: …**; a changed price shows **Price changed: …**. Each property is flagged once per event.
+- The checkbox pauses or resumes a watch; the bin icon deletes it.
+- **Mark read** clears unread alerts.
+
+<Callout>
+  Watches only match properties already in Tracker (added by hand, pasted URL
+  or CSV). They do not search Rightmove for new stock. Alerts appear in the
+  Tracker panel only — not by email or in the main notifications bell.
+</Callout>
+
+## Suggested weekly routine
+
+1. Paste in new competitor listings you have spotted, or import the week's CSV.
+2. Update prices and statuses on anything that has moved.
+3. Review the area watches panel for new and re-priced stock in your patches.
+
+## Who can use it
+
+Everyone in the workspace can view Tracker. Owners, admins, staff and members with disposal edit permission can add, edit and archive listings and manage area watches.

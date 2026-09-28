@@ -13,6 +13,7 @@ const meta: MetaRecord = {
   disposals: 'Disposals',
   'wip-pipeline': 'WIP pipeline',
   requirements: 'Requirements',
+  tracker: 'Tracker',
   circulation: 'Circulation',
   contacts: 'Contacts',
   viewings: 'Viewings',

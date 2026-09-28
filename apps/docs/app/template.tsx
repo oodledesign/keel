@@ -8,8 +8,6 @@ import { getPageMap } from 'nextra/page-map';
 
 import { workspaceFromPathname } from '../lib/workspaces';
 
-import type { ComponentProps } from 'react';
-
 const footer = (
   <Footer>
     <a href="https://www.ozer.so" target="_blank" rel="noopener noreferrer">
@@ -82,13 +80,10 @@ export default async function DocsTemplate({
       feedback={{ content: null }}
       sidebar={{ defaultMenuCollapseLevel: 1 }}
       darkMode
-      nextThemes={
-        {
-          defaultTheme: 'light',
-          enableSystem: false,
-          storageKey: 'ozer-docs-theme',
-        } as ComponentProps<typeof Layout>['nextThemes']
-      }
+      nextThemes={{
+        defaultTheme: 'light',
+        storageKey: 'ozer-docs-theme',
+      }}
     >
       {children}
     </Layout>
