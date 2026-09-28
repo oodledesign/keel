@@ -1,10 +1,20 @@
+import { after } from 'next/server';
 import { NextResponse } from 'next/server';
+
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { z } from 'zod';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import type { VideoTranscriptWord } from '~/lib/videos/edit-timeline';
+import {
+  bunnyCaptionKeepRanges,
+  syncTranscriptCaptionsToBunny,
+} from '~/lib/videos/server/sync-bunny-captions';
 import { createSignedMasterUrl } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
+import { replaceTranscriptWords } from '~/lib/videos/transcript-edit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -135,17 +145,132 @@ export async function POST(request: Request, context: RouteContext) {
   });
 }
 
+const EditSchema = z
+  .object({
+    fromIndex: z.number().int().nonnegative(),
+    toIndex: z.number().int().nonnegative(),
+    text: z.string().trim().min(1).max(1000),
+    /** The selection as the client saw it, so a stale transcript isn't edited by index. */
+    expectedText: z.string().max(5000),
+  })
+  .refine((v) => v.toIndex >= v.fromIndex, {
+    message: 'toIndex must be >= fromIndex',
+  });
+
+/** Correct the text of a run of words, keeping their timings. */
+export async function PATCH(request: Request, context: RouteContext) {
+  const { videoId } = await context.params;
+  const access = await requireVideoById(videoId);
+  if (access.error === 'UNAUTHORIZED') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (access.error === 'NOT_FOUND' || access.error === 'FORBIDDEN') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const parsed = EditSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const { data: current } = await access.client
+    .from('video_transcripts')
+    .select('plain_text, words, provider, status')
+    .eq('video_id', videoId)
+    .maybeSingle();
+
+  const words = (current?.words ?? []) as VideoTranscriptWord[];
+  if (!current || words.length === 0) {
+    return NextResponse.json(
+      { error: 'No transcript to edit' },
+      { status: 404 },
+    );
+  }
+  if (parsed.data.toIndex >= words.length) {
+    return NextResponse.json(
+      { error: 'Selection is outside the transcript' },
+      { status: 400 },
+    );
+  }
+  const currentText = words
+    .slice(parsed.data.fromIndex, parsed.data.toIndex + 1)
+    .map((w) => w.text.trim())
+    .join(' ');
+  if (currentText !== parsed.data.expectedText.trim()) {
+    return NextResponse.json(
+      {
+        error:
+          'The transcript changed since you loaded it. Refresh and try again.',
+      },
+      { status: 409 },
+    );
+  }
+
+  const edited = replaceTranscriptWords({
+    words,
+    plainText: String(current.plain_text ?? ''),
+    fromIndex: parsed.data.fromIndex,
+    toIndex: parsed.data.toIndex,
+    text: parsed.data.text,
+  });
+
+  const { data, error } = await access.client
+    .from('video_transcripts')
+    .update({
+      words: edited.words,
+      plain_text: edited.plainText,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('video_id', videoId)
+    .select('plain_text, words, provider, status')
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const video = access.video!;
+  const captionTiming = bunnyCaptionKeepRanges(video);
+  // Only refresh Stream captions once it holds the published edit, where timing is known.
+  if (
+    captionTiming.ok &&
+    Number(video.baked_revision ?? 0) > 0 &&
+    video.bunny_library_id &&
+    video.bunny_video_id
+  ) {
+    const admin = getSupabaseServerAdminClient();
+    after(async () => {
+      try {
+        await syncTranscriptCaptionsToBunny({
+          client: admin,
+          videoId,
+          accountId: video.account_id as string,
+          bunnyLibraryId: String(video.bunny_library_id),
+          bunnyVideoId: String(video.bunny_video_id),
+          keepRanges: captionTiming.keepRanges,
+        });
+      } catch (err) {
+        console.warn('[videos/edit/transcript] caption sync failed:', err);
+      }
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    transcript: {
+      plainText: data.plain_text,
+      words: data.words,
+      status: data.status,
+      provider: data.provider,
+    },
+  });
+}
+
 async function transcribeMaster(
-  client: {
-    from: (t: string) => {
-      select: (c: string) => {
-        eq: (
-          a: string,
-          b: string,
-        ) => { maybeSingle: () => Promise<{ data: unknown }> };
-      };
-    };
-  },
+  client: SupabaseClient,
   videoId: string,
 ): Promise<
   | {

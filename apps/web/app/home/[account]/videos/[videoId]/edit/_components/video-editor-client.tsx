@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Loader2,
   Pause,
+  Pencil,
   Play,
   RotateCcw,
   Scissors,
@@ -36,6 +37,7 @@ import {
   AlertDialogTitle,
 } from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { cn } from '@kit/ui/utils';
@@ -113,6 +115,11 @@ export function VideoEditorClient(props: Props) {
   const [playheadMs, setPlayheadMs] = useState(0);
   const [transcript, setTranscript] = useState(props.initialTranscript);
   const [selectedWordIndexes, setSelectedWordIndexes] = useState<number[]>([]);
+  const [editingTranscriptText, setEditingTranscriptText] = useState<
+    string | null
+  >(null);
+  const [savingTranscriptText, setSavingTranscriptText] = useState(false);
+  const savingTranscriptTextRef = useRef(false);
   const [isPending, startTransition] = useTransition();
   const [publishing, setPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState<string | null>(null);
@@ -529,6 +536,62 @@ export function VideoEditorClient(props: Props) {
         toast.error(getErrorMessage(err));
       }
     });
+  }
+
+  const selectionIsContiguous =
+    selectedWordIndexes.length > 0 &&
+    selectedWordIndexes[selectedWordIndexes.length - 1]! -
+      selectedWordIndexes[0]! +
+      1 ===
+      selectedWordIndexes.length;
+
+  function startEditingTranscriptText() {
+    if (!transcript || !selectionIsContiguous) return;
+    setEditingTranscriptText(
+      selectedWordIndexes
+        .map((i) => transcript.words[i]?.text.trim() ?? '')
+        .join(' '),
+    );
+  }
+
+  async function saveTranscriptText() {
+    const text = editingTranscriptText?.trim();
+    if (!text || !transcript || !selectionIsContiguous) return;
+    if (savingTranscriptTextRef.current) return;
+    savingTranscriptTextRef.current = true;
+    setSavingTranscriptText(true);
+    try {
+      const res = await fetch(`/api/videos/${props.videoId}/edit/transcript`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromIndex: selectedWordIndexes[0],
+          toIndex: selectedWordIndexes[selectedWordIndexes.length - 1],
+          text,
+          expectedText: selectedWordIndexes
+            .map((i) => transcript.words[i]?.text.trim() ?? '')
+            .join(' '),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(
+          typeof json.error === 'string' ? json.error : 'Could not save text',
+        );
+      }
+      setTranscript({
+        plainText: json.transcript.plainText,
+        words: json.transcript.words,
+      });
+      setEditingTranscriptText(null);
+      setSelectedWordIndexes([]);
+      toast.success('Transcript updated');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      savingTranscriptTextRef.current = false;
+      setSavingTranscriptText(false);
+    }
   }
 
   function cutSelectedWords() {
@@ -1478,6 +1541,7 @@ export function VideoEditorClient(props: Props) {
                             : 'hover:bg-[var(--workspace-shell-sidebar-accent)]',
                         )}
                         onClick={(e) => {
+                          setEditingTranscriptText(null);
                           setPlayheadMs(w.startMs);
                           if (videoRef.current) {
                             videoRef.current.currentTime = w.startMs / 1000;
@@ -1502,15 +1566,69 @@ export function VideoEditorClient(props: Props) {
                     );
                   })}
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="mt-3"
-                  disabled={selectedWordIndexes.length === 0}
-                  onClick={cutSelectedWords}
-                >
-                  Remove selected words from video
-                </Button>
+                {editingTranscriptText !== null ? (
+                  <form
+                    className="mt-3 flex flex-col gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void saveTranscriptText();
+                    }}
+                  >
+                    <Input
+                      autoFocus
+                      aria-label="Corrected transcript text"
+                      value={editingTranscriptText}
+                      onChange={(e) => setEditingTranscriptText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setEditingTranscriptText(null);
+                      }}
+                      className="bg-[var(--workspace-shell-canvas)]"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={
+                          savingTranscriptText || !editingTranscriptText.trim()
+                        }
+                      >
+                        {savingTranscriptText ? (
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        ) : null}
+                        Save text
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingTranscriptText(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={selectedWordIndexes.length === 0}
+                      onClick={cutSelectedWords}
+                    >
+                      Remove selected words from video
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!selectionIsContiguous}
+                      onClick={startEditingTranscriptText}
+                    >
+                      <Pencil className="mr-1.5 h-4 w-4" />
+                      Edit text
+                    </Button>
+                  </div>
+                )}
               </>
             ) : (
               <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
