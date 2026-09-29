@@ -16,7 +16,10 @@ export type LooseQuery = {
   select: (columns?: string) => LooseQuery;
   insert: (values: unknown) => LooseQuery;
   update: (values: Record<string, unknown>) => LooseQuery;
-  upsert: (values: unknown) => LooseQuery;
+  upsert: (
+    values: unknown,
+    options?: { onConflict?: string; ignoreDuplicates?: boolean },
+  ) => LooseQuery;
   delete: () => LooseQuery;
   eq: (column: string, value: unknown) => LooseQuery;
   is: (column: string, value: null) => LooseQuery;

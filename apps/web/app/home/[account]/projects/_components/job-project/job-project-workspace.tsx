@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 import {
   Columns3,
+  Frame,
   GanttChart,
   LayoutTemplate,
   List,
@@ -64,7 +66,17 @@ import { JobProjectProgressBoard } from './job-project-progress-board';
 import { JobProjectTimeline } from './job-project-timeline';
 import { ProjectAiGenerateDialog } from './project-ai-generate-dialog';
 
-type ViewMode = 'board' | 'timeline' | 'list';
+const JobProjectCanvas = dynamic(
+  () => import('./job-project-canvas').then((mod) => mod.JobProjectCanvas),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[calc(100vh-15rem)] min-h-[560px] animate-pulse rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40" />
+    ),
+  },
+);
+
+type ViewMode = 'board' | 'timeline' | 'list' | 'canvas';
 type BoardMode = 'phase' | 'progress';
 
 type JobSummary = {
@@ -91,7 +103,7 @@ export function JobProjectWorkspace({
   job,
   client,
   canEditJobs,
-  isContractorView: _isContractorView,
+  isContractorView,
   onAssignmentsChange,
 }: {
   accountSlug: string;
@@ -172,6 +184,21 @@ export function JobProjectWorkspace({
   useEffect(() => {
     void loadBoard();
   }, [loadBoard]);
+
+  /** Background refresh for live views — keeps the current view mounted. */
+  const refreshBoardSilently = useCallback(async () => {
+    try {
+      const nextBoard = (await listJobBoard({
+        accountId,
+        accountSlug,
+        jobId,
+      })) as JobBoardResult;
+      setBoard(nextBoard);
+      setMembers(nextBoard.members ?? []);
+    } catch {
+      // Keep showing the last good board; the next change retries.
+    }
+  }, [accountId, accountSlug, jobId]);
 
   useEffect(() => {
     if (!canEditJobs || boardLoading || !board || board.phases.length > 0) {
@@ -300,6 +327,7 @@ export function JobProjectWorkspace({
       { key: 'board', label: 'Board', icon: Columns3 },
       { key: 'timeline', label: 'Timeline', icon: GanttChart },
       { key: 'list', label: 'List', icon: List },
+      { key: 'canvas', label: 'Canvas', icon: Frame },
     ];
 
   return (
@@ -431,7 +459,9 @@ export function JobProjectWorkspace({
 
       <div
         className={
-          view === 'board' ? 'flex flex-1 flex-col' : 'flex-1 overflow-auto'
+          view === 'board' || view === 'canvas'
+            ? 'flex flex-1 flex-col'
+            : 'flex-1 overflow-auto'
         }
       >
         {boardLoading ? (
@@ -484,6 +514,17 @@ export function JobProjectWorkspace({
                 board={board}
                 canEditJobs={canEditJobs}
                 onBoardChange={setBoard}
+              />
+            )}
+            {view === 'canvas' && (
+              <JobProjectCanvas
+                accountSlug={accountSlug}
+                accountId={accountId}
+                jobId={jobId}
+                board={board}
+                canEdit={canEditJobs && !isContractorView}
+                onBoardChange={setBoard}
+                onRefreshBoard={refreshBoardSilently}
               />
             )}
           </>
