@@ -9,6 +9,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { confirmSurveyGapCheckWithAi } from '~/lib/ai/survey-gap-check';
 import { deskReviewSections } from '~/lib/building-surveyor/survey-desk-review';
+import { parseSurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
 import {
   buildSurveyGapCheck,
   mergeSurveyGapFlags,
@@ -25,6 +26,7 @@ import {
   DeleteSurveyStyleExampleSchema,
   GenerateSurveyDraftSchema,
   ProposeSurveyPhotoCurationSchema,
+  RebuildSurveyReportSchema,
   ReorderSurveyPhotosSchema,
   SetSurveyPhotoShareSchema,
   UpdateSurveyObservationSchema,
@@ -233,6 +235,8 @@ export const deleteSurveyStyleExampleAction = enhanceAction(
   { schema: DeleteSurveyStyleExampleSchema },
 );
 
+const ELEMENT_CODE_RE = /^[D-G]\d+$/;
+
 export const checkSurveyPublishGapsAction = enhanceAction(
   async (data) => {
     const service = getService();
@@ -253,12 +257,33 @@ export const checkSurveyPublishGapsAction = enhanceAction(
       photoCountByKey.set(key, (photoCountByKey.get(key) ?? 0) + 1);
     }
 
+    const ratedKeys = new Set(
+      observations
+        .filter((row) => row.conditionRating)
+        .flatMap((row) =>
+          row.ricsCode ? [row.sectionKey, row.ricsCode] : [row.sectionKey],
+        ),
+    );
+    for (const block of parseSurveyReportDocument(survey.body_document)
+      ?.blocks ?? []) {
+      if (block.type !== 'heading' || !block.conditionRating) continue;
+      if (block.sectionKey) ratedKeys.add(block.sectionKey);
+      if (block.ricsCode) ratedKeys.add(block.ricsCode);
+    }
     const sections = deskReviewSections(
       survey.survey_level ?? survey.survey_type,
       {
         noteKeys,
         photoCountByKey,
       },
+    ).map((section) =>
+      ELEMENT_CODE_RE.test(section.ricsCode) && section.hasNotes
+        ? {
+            ...section,
+            rated:
+              ratedKeys.has(section.key) || ratedKeys.has(section.ricsCode),
+          }
+        : section,
     );
     const deterministic = buildSurveyGapCheck(sections);
     let flags = deterministic.flags;
@@ -305,4 +330,22 @@ export const generateSurveyDraftAction = enhanceAction(
     return result;
   },
   { schema: GenerateSurveyDraftSchema },
+);
+
+export const rebuildSurveyReportAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'rebuild-survey-report',
+        userId: user.id,
+        proposalId: data.proposalId,
+      },
+      'Rebuilding survey report from template',
+    );
+    const result = await getService().rebuildFromTemplate(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: RebuildSurveyReportSchema },
 );

@@ -72,6 +72,10 @@ const config = {
   outputFileTracingIncludes: {
     '/(marketing)/**': ['./content/**/*'],
     '/blog/**': ['./content/**/*'],
+    '/api/proposals/pdf': [
+      './lib/building-surveyor/fonts/*.ttf',
+      './public/brand/rics-*.png',
+    ],
   },
   redirects: getRedirects,
   rewrites: getRewrites,

@@ -12,7 +12,11 @@ import {
   isSafeHttpUrl,
   parseSurveyReportDocument,
 } from '~/lib/building-surveyor/survey-report-document';
-import { buildSurveyReportPdf } from '~/lib/building-surveyor/survey-report-pdf';
+import {
+  type SurveyPdfFonts,
+  type SurveyPdfImage,
+  buildSurveyReportPdf,
+} from '~/lib/building-surveyor/survey-report-pdf';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 
 type ProposalForPdf = {
@@ -32,6 +36,13 @@ type ProposalForPdf = {
   survey_report_label?: string | null;
   survey_property_address?: string | null;
   report_date?: string | null;
+  inspection_date?: string | null;
+  surveyor_name?: string | null;
+  surveyor_rics_number?: string | null;
+  draft?: boolean;
+  survey_fonts?: SurveyPdfFonts | null;
+  rics_logo?: SurveyPdfImage | null;
+  survey_assets?: Record<string, SurveyPdfImage | null>;
   imageBytesById?: Record<string, Uint8Array>;
   client?: {
     display_name?: string | null;
@@ -248,8 +259,15 @@ export async function buildProposalPdf(
       reportDate: proposal.report_date
         ? formatDate(proposal.report_date)
         : null,
+      inspectionDate: proposal.inspection_date,
+      surveyorName: proposal.surveyor_name,
+      surveyorRicsNumber: proposal.surveyor_rics_number,
       surveyLevel: proposal.survey_level,
       reportLabel: proposal.survey_report_label,
+      fonts: proposal.survey_fonts,
+      ricsLogo: proposal.rics_logo,
+      assets: proposal.survey_assets,
+      draft: proposal.draft ?? proposal.status === 'draft',
     });
   }
 

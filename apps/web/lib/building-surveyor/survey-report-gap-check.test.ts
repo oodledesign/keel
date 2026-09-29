@@ -134,4 +134,31 @@ describe('mergeSurveyGapFlags', () => {
     );
     expect(merged).toHaveLength(2);
   });
+
+  it('flags rated elements with findings but no condition rating', () => {
+    const result = buildSurveyGapCheck([
+      {
+        key: 'roof_coverings',
+        ricsCode: 'D2',
+        label: 'D2 Roof coverings',
+        allowsPhotos: false,
+        hasNotes: true,
+        photoCount: 0,
+        rated: false,
+      },
+      {
+        key: 'main_walls',
+        ricsCode: 'D4',
+        label: 'D4 Main walls',
+        allowsPhotos: false,
+        hasNotes: true,
+        photoCount: 0,
+        rated: true,
+      },
+    ]);
+    expect(result.missingRatingCount).toBe(1);
+    expect(result.flags).toEqual([
+      expect.objectContaining({ kind: 'missing_rating', ricsCode: 'D2' }),
+    ]);
+  });
 });

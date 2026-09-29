@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -12,10 +18,22 @@ import {
   LockKeyhole,
   Mail,
   Pencil,
+  RefreshCw,
   Send,
   X,
 } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -48,7 +66,10 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
-import { checkSurveyPublishGapsAction } from '../_lib/server/survey-capture-actions';
+import {
+  checkSurveyPublishGapsAction,
+  rebuildSurveyReportAction,
+} from '../_lib/server/survey-capture-actions';
 import { surveyClientName, surveyPath } from '../_lib/survey-display';
 import { SurveyBuilderSidebarSection } from './survey-builder-sidebar-section';
 import { SurveyReportBodyEditor } from './survey-report-body-editor';
@@ -129,6 +150,8 @@ export function SurveyReportBuilder({
   const [showSendPanel, setShowSendPanel] = useState(false);
   const [editingRecipient, setEditingRecipient] = useState(false);
   const [gapPending, startGapCheck] = useTransition();
+  const [rebuilding, startRebuild] = useTransition();
+  const [rebuilt, setRebuilt] = useState(false);
   const [gapResult, setGapResult] = useState<
     (SurveyGapCheckResult & { source?: string; usedAi: boolean }) | null
   >(null);
@@ -160,6 +183,12 @@ export function SurveyReportBuilder({
     enabled: canModify,
   });
   useUnsavedChangesWarning(isDirty);
+
+  useEffect(() => {
+    if (!rebuilt) return;
+    markClean();
+    setRebuilt(false);
+  }, [rebuilt, markClean]);
 
   const clientName = surveyClientName(proposal);
   const displayRecipientName = recipientName.trim() || clientName || '';
@@ -248,8 +277,67 @@ export function SurveyReportBuilder({
     });
   };
 
+  const rebuildFromTemplate = () => {
+    startRebuild(async () => {
+      try {
+        const result = await rebuildSurveyReportAction({
+          accountId,
+          accountSlug,
+          proposalId: proposal.id,
+          accountName,
+          surveyorName: senderName || accountName || 'Surveyor',
+        });
+        setReportDocument(result.document);
+        setRebuilt(true);
+        toast.success('Report rebuilt from the template');
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+      }
+    });
+  };
+
   const headerActions = (
     <>
+      {canModify ? (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              className={outlineBtn}
+              disabled={saving || rebuilding}
+              data-test="survey-builder-rebuild"
+            >
+              {rebuilding ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Rebuild from template
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Rebuild from template?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This lays the report out again using your template, notes,
+                ratings, pinned photos and report details. Text you wrote in
+                each section is kept; generated tables, headings and standard
+                wording are refreshed. Unsaved changes are discarded.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={rebuildFromTemplate}
+                data-test="survey-builder-rebuild-confirm"
+              >
+                Rebuild
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
       {canModify ? (
         <ProposalEditAiAssist
           accountSlug={accountSlug}

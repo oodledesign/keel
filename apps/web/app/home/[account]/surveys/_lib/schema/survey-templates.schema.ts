@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { SURVEY_TEMPLATE_SLOT_TYPES } from '~/lib/building-surveyor/survey-template';
+
 export const SurveySystemTemplateKeySchema = z.enum([
   'rics_hss_l3',
   'rics_hss_l2',
@@ -25,6 +27,7 @@ export const UpdateSurveyTemplateSchema = z.object({
       footerLabel: z.string().max(200).optional(),
       logoUrl: z.string().max(2_000).optional(),
       coverHeroUrl: z.string().max(2_000).optional(),
+      showRicsLogo: z.boolean().optional(),
     })
     .optional(),
   surveyorDefaults: z.record(z.string(), z.string()).optional(),
@@ -41,10 +44,15 @@ export const UpdateSurveyTemplateSchema = z.object({
         slots: z
           .array(
             z.object({
-              type: z.enum(['merge', 'content', 'photos', 'rating', 'table']),
+              type: z.enum(SURVEY_TEMPLATE_SLOT_TYPES),
               path: z.string().max(80),
             }),
           )
+          .optional(),
+        showWhen: z.enum(['flat', 'house']).optional(),
+        levels: z
+          .array(z.union([z.literal(2), z.literal(3)]))
+          .max(2)
           .optional(),
       }),
     )

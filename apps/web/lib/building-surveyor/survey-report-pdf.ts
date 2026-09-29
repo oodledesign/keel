@@ -1,3 +1,4 @@
+import fontkit from '@pdf-lib/fontkit';
 import {
   PDFDocument,
   type PDFFont,
@@ -16,6 +17,12 @@ import {
 } from 'pdf-lib';
 
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
+import {
+  type PdfOutlineEntry,
+  addInternalLink,
+  addUriLink,
+  buildOutline,
+} from '~/lib/pdf/pdf-links';
 
 import {
   CONDITION_RATING_COLORS,
@@ -28,6 +35,13 @@ import type {
 
 export type SurveyPdfImage = { bytes: Uint8Array; kind: 'png' | 'jpg' };
 
+export type SurveyPdfFonts = {
+  regular: Uint8Array;
+  bold: Uint8Array;
+  italic: Uint8Array;
+  boldItalic: Uint8Array;
+};
+
 export type SurveyReportPdfInput = {
   title: string;
   document: SurveyReportDocument;
@@ -39,10 +53,20 @@ export type SurveyReportPdfInput = {
   propertyAddress?: string | null;
   clientName?: string | null;
   reportDate?: string | null;
+  inspectionDate?: string | null;
+  surveyorName?: string | null;
+  surveyorRicsNumber?: string | null;
   /** RICS Home Survey level; drives the cover kicker and numeral. */
   surveyLevel?: 2 | 3 | null;
   /** Running footer label, e.g. "RICS Home Survey - Level 3". */
   reportLabel?: string | null;
+  /** Unicode font files; Helvetica with ASCII fallbacks is used without them. */
+  fonts?: SurveyPdfFonts | null;
+  /** Shown top right on the cover and every divider when provided. */
+  ricsLogo?: SurveyPdfImage | null;
+  /** Static artwork referenced by `<figure data-asset="…">` in report HTML. */
+  assets?: Record<string, SurveyPdfImage | null | undefined>;
+  draft?: boolean;
 };
 
 const PAGE_W = 595.28;
@@ -52,16 +76,23 @@ const RIGHT = PAGE_W - 50;
 const CONTENT_W = RIGHT - LEFT;
 const TOP = 72;
 const BOTTOM = 84;
-const BOX_PAD = 10;
 const CONTENTS_PER_PAGE = 18;
 const BODY_SIZE = 10;
 const BODY_LEADING = 14;
+const IMAGE_CONCURRENCY = 6;
 const ELEMENT_CODE_RE = /^[A-Z]\d+$/;
 const DIVIDER_TITLE_RE = /^([A-Z])\s+(.+)$/;
+const SECTION_PREFIX_RE = /^[A-Z]\s*[·\-–]\s*/;
+const URL_RE = /\b(https?:\/\/[^\s<>"')]+|www\.[^\s<>"')]+)/gi;
+const RULE_LINE_RE = /^[\s.\-_–—=·•*]{4,}$/;
+const SUBHEADING_RE = /(\s[-–—]|:)$/;
+const HYPHEN_BULLET_RE = /^\s*[-•*–]\s+/;
 
 type HeadingBlock = Extract<SurveyReportBlock, { type: 'heading' }>;
 type ImageBlock = Extract<SurveyReportBlock, { type: 'image' }>;
 type PageKind = 'cover' | 'contents' | 'divider' | 'content';
+type FontStyle = 'regular' | 'bold' | 'italic' | 'boldItalic';
+type BadgeRating = ConditionRating | 'R';
 
 type Palette = {
   brand: RGB;
@@ -72,36 +103,93 @@ type Palette = {
   rule: RGB;
   border: RGB;
   headerFill: RGB;
+  panel: RGB;
+  danger: RGB;
   white: RGB;
 };
 
-type Ctx = {
-  doc: PDFDocument;
-  font: PDFFont;
-  bold: PDFFont;
-  boldItalic: PDFFont;
-  palette: Palette;
-  logo: PDFImage | null;
-  pages: Array<{ page: PDFPage; kind: PageKind }>;
-  page: PDFPage | null;
-  onContent: boolean;
-  y: number;
-  box: { top: number } | null;
-  pendingTab: { letter: string; title: string } | null;
-  sectionTitle: string | null;
-  contents: Array<{ label: string; pageIndex: number }>;
+export type PdfRun = {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  href?: string;
 };
 
-type TextItem =
-  | { kind: 'para'; text: string; bold?: boolean; bullet?: boolean }
-  | { kind: 'table'; header: string[] | null; rows: string[][] }
-  | { kind: 'fields'; rows: Array<[string, string]> };
+type ParaItem = {
+  kind: 'para';
+  text: string;
+  runs: PdfRun[];
+  bold: boolean;
+  bullet: boolean;
+};
 
-const RATING_GROUPS: Array<{
+type TableVariant =
+  | 'generic'
+  | 'accommodation'
+  | 'documents'
+  | 'repairs'
+  | 'qualifications';
+
+type TextItem =
+  | ParaItem
+  | { kind: 'rule' }
+  | {
+      kind: 'table';
+      header: string[] | null;
+      rows: string[][];
+      variant: TableVariant;
+    }
+  | { kind: 'fields'; rows: Array<[string, string]> }
+  | { kind: 'field'; label: string; items: TextItem[] }
+  | { kind: 'callout'; variant: string; title: string; items: TextItem[] }
+  | {
+      kind: 'checklist';
+      title: string;
+      note: string | null;
+      options: Array<{ label: string; checked: boolean }>;
+    }
+  | { kind: 'documents'; title: string; intro: TextItem[]; rows: string[][] }
+  | { kind: 'diagram'; asset: string };
+
+type PageEntry = { page: PDFPage; kind: PageKind; marker: string | null };
+
+type SectionEntry = {
+  label: string;
+  pageIndex: number;
+  children: Array<{ label: string; pageIndex: number }>;
+};
+
+type TextStyle = { size: number; leading: number; color: RGB };
+
+type Ctx = {
+  doc: PDFDocument;
+  fonts: Record<FontStyle, PDFFont>;
+  unicode: boolean;
+  palette: Palette;
+  logo: PDFImage | null;
+  ricsLogo: PDFImage | null;
+  assets: Map<string, PDFImage | null>;
+  pages: PageEntry[];
+  page: PDFPage | null;
+  /** True while the current page accepts flowing content. */
+  flowing: boolean;
+  y: number;
+  frame: { x: number; width: number };
+  style: TextStyle;
+  pendingTab: { letter: string; title: string } | null;
+  sectionLetter: string;
+  sectionTitle: string | null;
+  subsection: string | null;
+  contents: SectionEntry[];
+};
+
+type RatingGroup = {
   rating: ConditionRating;
   title: string;
   description: string;
-}> = [
+};
+
+const RATING_GROUPS: RatingGroup[] = [
   {
     rating: '3',
     title: 'Elements that require urgent attention',
@@ -132,6 +220,9 @@ const RATING_GROUPS: Array<{
     description: 'These elements do not apply to this property.',
   },
 ];
+
+const DEFAULT_RATING_INTRO =
+  "To determine the condition of the property, we assess the main parts (the 'elements') of the building, garage and some outside areas. These elements are rated on the urgency of maintenance needed, ranging from 'very urgent' to 'no issues recorded'.";
 
 const MERGE_FIELD_LABELS: Record<string, string> = {
   'client.name': "Client's name",
@@ -180,6 +271,8 @@ function buildPalette(brandColor: string | null | undefined): Palette {
     rule: rgb(0.8, 0.8, 0.82),
     border: rgb(0.74, 0.74, 0.77),
     headerFill: rgb(0.91, 0.91, 0.92),
+    panel: rgb(0.93, 0.93, 0.94),
+    danger: hexToRgb(CONDITION_RATING_COLORS['3'], rgb(0.78, 0.16, 0.16)),
     white,
   };
 }
@@ -191,8 +284,11 @@ function decodeEntities(text: string): string {
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&#x27;|&apos;/gi, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) =>
+      String.fromCodePoint(Number.parseInt(code, 16)),
+    )
     .replace(/&#(\d+);/g, (_, code: string) =>
-      String.fromCharCode(Number(code)),
+      String.fromCodePoint(Number(code)),
     )
     .replace(/&amp;/gi, '&');
 }
@@ -203,30 +299,153 @@ function htmlInlineText(html: string): string {
     .trim();
 }
 
-function paragraphItems(html: string): TextItem[] {
-  const marked = html
-    .replace(
-      /<p\b[^>]*>\s*<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>\s*<\/p>/gi,
-      '\n\uE000$2\n',
-    )
-    .replace(/<li\b[^>]*>/gi, '\n\uE001')
-    .replace(/<h[1-6]\b[^>]*>/gi, '\n\uE000')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li|h[1-6]|ul|ol|blockquote)>/gi, '\n');
+function attr(tag: string, name: string): string | null {
+  const match = new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`, 'i').exec(tag);
+  return match ? decodeEntities(match[1]!) : null;
+}
 
-  const items: TextItem[] = [];
-  for (const raw of decodeEntities(marked.replace(/<[^>]+>/g, '')).split(
-    '\n',
-  )) {
-    const bold = raw.startsWith('\uE000');
-    const bullet = raw.startsWith('\uE001');
-    const text = raw
-      .replace(/^[\uE000\uE001]/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!text) continue;
-    items.push({ kind: 'para', text, bold, bullet });
+function safeHref(href: string | null): string | undefined {
+  if (!href) return undefined;
+  if (/^(https?:|mailto:|tel:)/i.test(href)) return href;
+  if (/^www\./i.test(href)) return `https://${href}`;
+  return undefined;
+}
+
+function linkifyRuns(runs: PdfRun[]): PdfRun[] {
+  const result: PdfRun[] = [];
+  for (const run of runs) {
+    if (run.href) {
+      result.push(run);
+      continue;
+    }
+    let cursor = 0;
+    for (const match of run.text.matchAll(URL_RE)) {
+      const start = match.index ?? 0;
+      const url = match[0].replace(/[.,;:]+$/, '');
+      if (start > cursor) {
+        result.push({ ...run, text: run.text.slice(cursor, start) });
+      }
+      result.push({ ...run, text: url, href: safeHref(url) });
+      cursor = start + url.length;
+    }
+    if (cursor < run.text.length) {
+      result.push({ ...run, text: run.text.slice(cursor) });
+    }
   }
+  return result;
+}
+
+function finishParagraph(
+  runs: PdfRun[],
+  flags: { bullet: boolean; heading: boolean },
+): TextItem | null {
+  const collapsed = runs
+    .map((run) => ({ ...run, text: run.text.replace(/\s+/g, ' ') }))
+    .filter((run) => run.text.length > 0);
+  if (collapsed.length === 0) return null;
+  collapsed[0]!.text = collapsed[0]!.text.trimStart();
+  collapsed[collapsed.length - 1]!.text =
+    collapsed[collapsed.length - 1]!.text.trimEnd();
+
+  let text = collapsed.map((run) => run.text).join('');
+  if (!text.trim()) return null;
+  if (RULE_LINE_RE.test(text)) return { kind: 'rule' };
+
+  let bullet = flags.bullet;
+  if (!bullet && HYPHEN_BULLET_RE.test(text)) {
+    bullet = true;
+    collapsed[0]!.text = collapsed[0]!.text.replace(HYPHEN_BULLET_RE, '');
+    text = collapsed.map((run) => run.text).join('');
+  }
+
+  const words = text.split(' ').length;
+  const subheading =
+    !bullet && !flags.heading && words <= 8 && SUBHEADING_RE.test(text);
+  const finalRuns = linkifyRuns(
+    collapsed
+      .filter((run) => run.text.length > 0)
+      .map((run) =>
+        flags.heading || subheading ? { ...run, bold: true } : run,
+      ),
+  );
+  return {
+    kind: 'para',
+    text,
+    runs: finalRuns,
+    bold: finalRuns.every((run) => run.bold),
+    bullet,
+  };
+}
+
+const BLOCK_TAGS = new Set([
+  'p',
+  'div',
+  'blockquote',
+  'ul',
+  'ol',
+  'section',
+  'aside',
+  'figure',
+  'figcaption',
+  'table',
+  'tr',
+  'br',
+  'hr',
+]);
+
+/** Paragraphs with inline bold, italic and link runs. */
+function flowItems(html: string): TextItem[] {
+  const items: TextItem[] = [];
+  let runs: PdfRun[] = [];
+  let flags = { bullet: false, heading: false };
+  let bold = 0;
+  let italic = 0;
+  let href: string | undefined;
+
+  const flush = () => {
+    const item = finishParagraph(runs, flags);
+    if (item) items.push(item);
+    runs = [];
+    flags = { bullet: false, heading: false };
+  };
+
+  for (const token of html.matchAll(
+    /<(\/?)([a-zA-Z0-9]+)\b([^>]*)>|([^<]+)/g,
+  )) {
+    const [, closing, rawName, tagAttrs, rawText] = token;
+    if (rawText !== undefined) {
+      const segments = decodeEntities(rawText).split('\n');
+      segments.forEach((segment, index) => {
+        if (index > 0) flush();
+        runs.push({
+          text: segment,
+          bold: bold > 0 || flags.heading,
+          italic: italic > 0,
+          href,
+        });
+      });
+      continue;
+    }
+    const name = rawName!.toLowerCase();
+    const isClosing = closing === '/';
+    if (BLOCK_TAGS.has(name)) {
+      flush();
+      if (name === 'hr') items.push({ kind: 'rule' });
+    } else if (name === 'li') {
+      flush();
+      if (!isClosing) flags.bullet = true;
+    } else if (/^h[1-6]$/.test(name)) {
+      flush();
+      if (!isClosing) flags.heading = true;
+    } else if (name === 'strong' || name === 'b') {
+      bold = Math.max(0, bold + (isClosing ? -1 : 1));
+    } else if (name === 'em' || name === 'i') {
+      italic = Math.max(0, italic + (isClosing ? -1 : 1));
+    } else if (name === 'a') {
+      href = isClosing ? undefined : safeHref(attr(tagAttrs ?? '', 'href'));
+    }
+  }
+  flush();
   return items;
 }
 
@@ -246,47 +465,148 @@ function tableRows(html: string): { cells: string[]; header: boolean }[] {
   return rows;
 }
 
-/** Splits report HTML into paragraphs, tables and label/value field lists. */
+function tableItem(attrs: string, inner: string): TextItem | null {
+  const className = attr(attrs, 'class') ?? '';
+  if (className.includes('survey-rating-unrated')) return null;
+  const rows = tableRows(inner);
+  if (rows.length === 0) return null;
+
+  if (className.includes('survey-merge-fields')) {
+    return {
+      kind: 'fields',
+      rows: rows.map(({ cells }) => [
+        MERGE_FIELD_LABELS[cells[0] ?? ''] ?? cells[0] ?? '',
+        cells[1] ?? '',
+      ]),
+    };
+  }
+
+  const variant: TableVariant = className.includes('survey-accommodation')
+    ? 'accommodation'
+    : className.includes('survey-documents-table')
+      ? 'documents'
+      : className.includes('survey-repairs-table')
+        ? 'repairs'
+        : className.includes('survey-qualifications')
+          ? 'qualifications'
+          : 'generic';
+  const [first, ...rest] = rows;
+  return {
+    kind: 'table',
+    header: first!.header ? first!.cells : null,
+    rows: first!.header
+      ? rest.map((row) => row.cells)
+      : rows.map((row) => row.cells),
+    variant,
+  };
+}
+
+function splitTitle(inner: string): { title: string; body: string } {
+  const match = /^\s*<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/i.exec(inner);
+  if (!match) return { title: '', body: inner };
+  return {
+    title: htmlInlineText(match[1]!),
+    body: inner.slice(match[0].length),
+  };
+}
+
+const STRUCTURED_RE =
+  /<aside\b([^>]*)>([\s\S]*?)<\/aside>|<section\b([^>]*class="survey-field"[^>]*)>([\s\S]*?)<\/section>|<div\b([^>]*class="survey-checklist"[^>]*)>([\s\S]*?)<\/div>|<div\b([^>]*class="survey-documents"[^>]*)>([\s\S]*?)<\/div>|<figure\b([^>]*)>([\s\S]*?)<\/figure>|<table\b([^>]*)>([\s\S]*?)<\/table>/gi;
+
+/**
+ * Splits report HTML into paragraphs, tables, label/value fields, callout
+ * panels, service checklists, the documents table and diagram figures.
+ */
 export function surveyHtmlToPdfItems(html: string): TextItem[] {
   const items: TextItem[] = [];
   let cursor = 0;
-  for (const match of html.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/gi)) {
-    items.push(...paragraphItems(html.slice(cursor, match.index)));
+  for (const match of html.matchAll(STRUCTURED_RE)) {
+    items.push(...flowItems(html.slice(cursor, match.index)));
     cursor = (match.index ?? 0) + match[0].length;
-    const rows = tableRows(match[2]!);
-    if (rows.length === 0) continue;
+    const [
+      ,
+      asideAttrs,
+      asideInner,
+      fieldAttrs,
+      fieldInner,
+      checklistAttrs,
+      checklistInner,
+      documentsAttrs,
+      documentsInner,
+      figureAttrs,
+      figureInner,
+      tableAttrs,
+      tableInner,
+    ] = match;
 
-    if (/survey-merge-fields/.test(match[1] ?? '')) {
+    if (asideAttrs !== undefined) {
+      const { title, body } = splitTitle(asideInner!);
       items.push({
-        kind: 'fields',
-        rows: rows.map(({ cells }) => [
-          MERGE_FIELD_LABELS[cells[0] ?? ''] ?? cells[0] ?? '',
-          cells[1] ?? '',
-        ]),
+        kind: 'callout',
+        variant: attr(asideAttrs, 'data-variant') ?? 'important',
+        title,
+        items: surveyHtmlToPdfItems(body),
       });
-      continue;
+    } else if (fieldAttrs !== undefined) {
+      const { title, body } = splitTitle(fieldInner!);
+      const value = surveyHtmlToPdfItems(body);
+      items.push({
+        kind: 'field',
+        label: title,
+        items: value.length > 0 ? value : flowItems('<p>n/a</p>'),
+      });
+    } else if (checklistAttrs !== undefined) {
+      const { title, body } = splitTitle(checklistInner!);
+      const note = /<p\b[^>]*>([\s\S]*?)<\/p>/i.exec(body);
+      items.push({
+        kind: 'checklist',
+        title,
+        note: note ? htmlInlineText(note[1]!) : null,
+        options: Array.from(
+          body.matchAll(/<li\b([^>]*)>([\s\S]*?)<\/li>/gi),
+          (option) => ({
+            label: htmlInlineText(option[2]!).replace(/^[☒☐✓✔x]\s*/i, ''),
+            checked: attr(option[1]!, 'data-checked') === 'true',
+          }),
+        ),
+      });
+    } else if (documentsAttrs !== undefined) {
+      const { title, body } = splitTitle(documentsInner!);
+      const table = /<table\b([^>]*)>([\s\S]*?)<\/table>/i.exec(body);
+      const parsed = table ? tableItem(table[1]!, table[2]!) : null;
+      items.push({
+        kind: 'documents',
+        title: title.replace(/^R\s+/, ''),
+        intro: flowItems(table ? body.slice(0, table.index) : body),
+        rows: parsed?.kind === 'table' ? parsed.rows : [],
+      });
+    } else if (figureAttrs !== undefined) {
+      const asset = attr(figureAttrs, 'data-asset');
+      if (asset) items.push({ kind: 'diagram', asset });
+      else items.push(...flowItems(figureInner!));
+    } else if (tableAttrs !== undefined) {
+      const item = tableItem(tableAttrs, tableInner!);
+      if (item) items.push(item);
     }
-
-    const [first, ...rest] = rows;
-    items.push({
-      kind: 'table',
-      header: first!.header ? first!.cells : null,
-      rows: first!.header
-        ? rest.map((row) => row.cells)
-        : rows.map((row) => row.cells),
-    });
   }
-  items.push(...paragraphItems(html.slice(cursor)));
+  items.push(...flowItems(html.slice(cursor)));
   return items;
 }
 
+function clean(ctx: Ctx, text: string): string {
+  if (!ctx.unicode) return sanitizePdfText(text);
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\u0000-\u001F\u007F]/g, ' ');
+}
+
 function wrap(
+  ctx: Ctx,
   text: string,
   font: PDFFont,
   size: number,
   maxWidth: number,
 ): string[] {
-  const words = sanitizePdfText(text).replace(/\s+/g, ' ').trim().split(' ');
+  const words = clean(ctx, text).replace(/\s+/g, ' ').trim().split(' ');
   const lines: string[] = [];
   let line = '';
   for (const word of words) {
@@ -316,6 +636,141 @@ function wrap(
   return lines;
 }
 
+type LaidWord = {
+  text: string;
+  style: FontStyle;
+  href?: string;
+  width: number;
+  spaceBefore: boolean;
+};
+
+function runStyle(run: PdfRun): FontStyle {
+  if (run.bold && run.italic) return 'boldItalic';
+  if (run.bold) return 'bold';
+  if (run.italic) return 'italic';
+  return 'regular';
+}
+
+function layoutRuns(
+  ctx: Ctx,
+  runs: PdfRun[],
+  size: number,
+  maxWidth: number,
+): LaidWord[][] {
+  const words: LaidWord[] = [];
+  let pendingSpace = false;
+  for (const run of runs) {
+    const style = runStyle(run);
+    const font = ctx.fonts[style];
+    for (const part of clean(ctx, run.text).split(/(\s+)/)) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) {
+        pendingSpace = words.length > 0;
+        continue;
+      }
+      const pieces: string[] = [];
+      if (font.widthOfTextAtSize(part, size) <= maxWidth) {
+        pieces.push(part);
+      } else {
+        let chunk = '';
+        for (const char of part) {
+          if (font.widthOfTextAtSize(chunk + char, size) > maxWidth && chunk) {
+            pieces.push(chunk);
+            chunk = char;
+          } else {
+            chunk += char;
+          }
+        }
+        if (chunk) pieces.push(chunk);
+      }
+      pieces.forEach((piece, index) => {
+        words.push({
+          text: piece,
+          style,
+          href: run.href,
+          width: font.widthOfTextAtSize(piece, size),
+          spaceBefore: index === 0 && pendingSpace,
+        });
+      });
+      pendingSpace = false;
+    }
+  }
+
+  const lines: LaidWord[][] = [];
+  let line: LaidWord[] = [];
+  let width = 0;
+  for (const word of words) {
+    const space =
+      line.length > 0 && word.spaceBefore
+        ? ctx.fonts[word.style].widthOfTextAtSize(' ', size)
+        : 0;
+    if (line.length > 0 && width + space + word.width > maxWidth) {
+      lines.push(line);
+      line = [{ ...word, spaceBefore: false }];
+      width = word.width;
+      continue;
+    }
+    line.push(line.length === 0 ? { ...word, spaceBefore: false } : word);
+    width += space + word.width;
+  }
+  if (line.length > 0) lines.push(line);
+  return lines;
+}
+
+function drawLaidLine(
+  ctx: Ctx,
+  page: PDFPage,
+  line: LaidWord[],
+  options: { x: number; baseline: number; size: number; color: RGB },
+) {
+  let x = options.x;
+  let index = 0;
+  while (index < line.length) {
+    const first = line[index]!;
+    let text = first.text;
+    let next = index + 1;
+    while (
+      next < line.length &&
+      line[next]!.style === first.style &&
+      line[next]!.href === first.href
+    ) {
+      text += `${line[next]!.spaceBefore ? ' ' : ''}${line[next]!.text}`;
+      next += 1;
+    }
+    const font = ctx.fonts[first.style];
+    if (first.spaceBefore) x += font.widthOfTextAtSize(' ', options.size);
+    const width = font.widthOfTextAtSize(text, options.size);
+    const color = first.href ? ctx.palette.brand : options.color;
+    page.drawText(text, {
+      x,
+      y: options.baseline,
+      size: options.size,
+      font,
+      color,
+    });
+    if (first.href) {
+      page.drawLine({
+        start: { x, y: options.baseline - 1.5 },
+        end: { x: x + width, y: options.baseline - 1.5 },
+        thickness: 0.5,
+        color,
+      });
+      addUriLink(
+        page,
+        {
+          x,
+          y: options.baseline - 3,
+          width,
+          height: options.size + 3,
+        },
+        first.href,
+      );
+    }
+    x += width;
+    index = next;
+  }
+}
+
 function headingText(block: HeadingBlock): string {
   return htmlInlineText(block.text);
 }
@@ -328,7 +783,8 @@ function isElementHeading(block: HeadingBlock): boolean {
 
 function isRatingSummaryHtml(html: string): boolean {
   return (
-    html.includes('survey-rating-badge') ||
+    /data-rating="(?:1|2|3|NI|NA)"/.test(html) ||
+    html.includes('survey-rating-unrated') ||
     html.includes('No condition ratings recorded yet')
   );
 }
@@ -390,29 +846,27 @@ function orderForPrint(blocks: SurveyReportBlock[]): SurveyReportBlock[] {
   return result;
 }
 
+function sectionMarker(ctx: Ctx): string | null {
+  const title = ctx.subsection ?? ctx.sectionTitle;
+  if (!title) return null;
+  return ctx.sectionLetter ? `${ctx.sectionLetter}  ${title}` : title;
+}
+
 function addPage(ctx: Ctx, kind: PageKind): PDFPage {
   const page = ctx.doc.addPage([PAGE_W, PAGE_H]);
-  ctx.pages.push({ page, kind });
+  ctx.pages.push({
+    page,
+    kind,
+    marker: kind === 'content' ? sectionMarker(ctx) : null,
+  });
   ctx.page = page;
-  ctx.onContent = kind === 'content';
+  ctx.flowing = kind === 'content';
   return page;
 }
 
 function currentPage(ctx: Ctx): PDFPage {
   if (!ctx.page) throw new Error('No page');
   return ctx.page;
-}
-
-function drawBoxSegment(ctx: Ctx, bottom: number) {
-  if (!ctx.box) return;
-  currentPage(ctx).drawRectangle({
-    x: LEFT,
-    y: bottom,
-    width: CONTENT_W,
-    height: ctx.box.top - bottom,
-    borderColor: ctx.palette.border,
-    borderWidth: 0.7,
-  });
 }
 
 function startContentPage(ctx: Ctx) {
@@ -425,135 +879,153 @@ function startContentPage(ctx: Ctx) {
 }
 
 function ensure(ctx: Ctx, needed: number) {
-  if (ctx.onContent && ctx.y - needed >= BOTTOM) return;
-  if (ctx.onContent && ctx.box) drawBoxSegment(ctx, BOTTOM - 6);
+  if (ctx.flowing && ctx.y - needed >= BOTTOM) return;
   startContentPage(ctx);
-  if (ctx.box) {
-    ctx.box.top = ctx.y;
-    ctx.y -= BOX_PAD;
-  }
 }
 
-function textX(ctx: Ctx): number {
-  return ctx.box ? LEFT + BOX_PAD : LEFT;
-}
-
-function textWidth(ctx: Ctx): number {
-  return ctx.box ? CONTENT_W - BOX_PAD * 2 : CONTENT_W;
-}
-
-function drawTextLine(
-  ctx: Ctx,
-  text: string,
-  options: {
-    x: number;
-    size: number;
-    font: PDFFont;
-    color?: RGB;
-    leading: number;
-  },
-) {
-  ensure(ctx, options.leading);
-  currentPage(ctx).drawText(text, {
-    x: options.x,
-    y: ctx.y - options.size * 0.85,
-    size: options.size,
-    font: options.font,
-    color: options.color ?? ctx.palette.ink,
-  });
-  ctx.y -= options.leading;
-}
-
-function drawParagraph(ctx: Ctx, item: Extract<TextItem, { kind: 'para' }>) {
+function drawParagraph(ctx: Ctx, item: ParaItem) {
+  const { size, leading, color } = ctx.style;
   const indent = item.bullet ? 16 : 0;
-  const font = item.bold ? ctx.bold : ctx.font;
-  const lines = wrap(item.text, font, BODY_SIZE, textWidth(ctx) - indent);
+  const lines = layoutRuns(ctx, item.runs, size, ctx.frame.width - indent);
   lines.forEach((line, index) => {
-    ensure(ctx, BODY_LEADING);
+    ensure(ctx, leading);
+    const page = currentPage(ctx);
     if (item.bullet && index === 0) {
-      currentPage(ctx).drawCircle({
-        x: textX(ctx) + 4,
-        y: ctx.y - BODY_SIZE * 0.5,
+      page.drawCircle({
+        x: ctx.frame.x + 4,
+        y: ctx.y - size * 0.5,
         size: 1.6,
-        color: ctx.palette.ink,
+        color,
       });
     }
-    drawTextLine(ctx, line, {
-      x: textX(ctx) + indent,
-      size: BODY_SIZE,
-      font,
-      leading: BODY_LEADING,
+    drawLaidLine(ctx, page, line, {
+      x: ctx.frame.x + indent,
+      baseline: ctx.y - size * 0.85,
+      size,
+      color,
     });
+    ctx.y -= leading;
   });
   ctx.y -= item.bullet ? 3 : 7;
 }
 
-function openBox(ctx: Ctx) {
-  ensure(ctx, BOX_PAD * 2 + BODY_LEADING * 2);
-  ctx.box = { top: ctx.y };
-  ctx.y -= BOX_PAD;
+function paragraphHeight(ctx: Ctx, item: ParaItem, width: number): number {
+  const lines = layoutRuns(
+    ctx,
+    item.runs,
+    ctx.style.size,
+    width - (item.bullet ? 16 : 0),
+  );
+  return lines.length * ctx.style.leading + (item.bullet ? 3 : 7);
 }
 
-function closeBox(ctx: Ctx, after = 16) {
-  ctx.y -= BOX_PAD - 7;
-  drawBoxSegment(ctx, ctx.y);
-  ctx.box = null;
-  ctx.y -= after;
+function drawRule(ctx: Ctx) {
+  ensure(ctx, 16);
+  currentPage(ctx).drawLine({
+    start: { x: ctx.frame.x, y: ctx.y - 6 },
+    end: { x: ctx.frame.x + ctx.frame.width, y: ctx.y - 6 },
+    thickness: 0.6,
+    color: ctx.palette.rule,
+  });
+  ctx.y -= 16;
 }
+
+type TableOptions = {
+  size?: number;
+  headerFill?: RGB;
+  headerColor?: RGB;
+  rowHeaderFill?: RGB;
+  align?: 'left' | 'center';
+};
 
 function drawTable(
   ctx: Ctx,
   columns: number[],
   header: string[] | null,
   rows: string[][],
+  options: TableOptions = {},
 ) {
-  const size = 9.5;
-  const leading = 12.5;
-  const pad = 7;
-  const x0 = textX(ctx);
+  const baseSize = options.size ?? 9.5;
+  const pad = baseSize < 9 ? 4 : 7;
+  const x0 = ctx.frame.x;
+  const headerSize = header
+    ? Math.min(
+        baseSize,
+        ...columns.flatMap((width, index) =>
+          clean(ctx, header[index] ?? '')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(
+              (word) =>
+                ((width - pad * 2) /
+                  ctx.fonts.bold.widthOfTextAtSize(word, baseSize)) *
+                baseSize,
+            ),
+        ),
+      )
+    : baseSize;
 
-  const measure = (cells: string[], font: PDFFont) => {
+  const measure = (cells: string[], font: PDFFont, isHeader: boolean) => {
+    const size = isHeader ? headerSize : baseSize;
     const wrapped = columns.map((width, index) =>
-      wrap(cells[index] ?? '', font, size, width - pad * 2),
+      wrap(ctx, cells[index] ?? '', font, size, width - pad * 2),
     );
     const height =
-      Math.max(1, ...wrapped.map((lines) => lines.length)) * leading + pad * 2;
-    return { wrapped, height };
+      Math.max(1, ...wrapped.map((lines) => lines.length)) * size * 1.3 +
+      pad * 2;
+    return { wrapped, height, size };
   };
 
   const drawRow = (cells: string[], isHeader: boolean) => {
-    const font = isHeader ? ctx.bold : ctx.font;
-    const { wrapped, height } = measure(cells, font);
     const pageBefore = ctx.page;
-    ensure(ctx, height);
+    const probe = measure(
+      cells,
+      isHeader ? ctx.fonts.bold : ctx.fonts.regular,
+      isHeader,
+    );
+    ensure(ctx, probe.height);
     if (!isHeader && header && ctx.page !== pageBefore) {
       drawRow(header, true);
-      ensure(ctx, height);
+      ensure(ctx, probe.height);
     }
     const page = currentPage(ctx);
     let x = x0;
     columns.forEach((width, index) => {
+      const rowHeader = !isHeader && index === 0 && options.rowHeaderFill;
+      const font = isHeader || rowHeader ? ctx.fonts.bold : ctx.fonts.regular;
+      const { wrapped, height, size } = measure(cells, font, isHeader);
+      const leading = size * 1.3;
+      const lines = wrapped[index]!;
       page.drawRectangle({
         x,
-        y: ctx.y - height,
+        y: ctx.y - probe.height,
         width,
-        height,
-        color: isHeader ? ctx.palette.headerFill : undefined,
+        height: Math.max(height, probe.height),
+        color: isHeader
+          ? (options.headerFill ?? ctx.palette.headerFill)
+          : rowHeader
+            ? options.rowHeaderFill
+            : undefined,
         borderColor: ctx.palette.border,
         borderWidth: 0.6,
       });
-      wrapped[index]!.forEach((line, lineIndex) => {
+      const centred =
+        options.align === 'center' && !(index === 0 && options.rowHeaderFill);
+      lines.forEach((line, lineIndex) => {
+        const lineWidth = font.widthOfTextAtSize(line, size);
         page.drawText(line, {
-          x: x + pad,
+          x: centred ? x + (width - lineWidth) / 2 : x + pad,
           y: ctx.y - pad - size * 0.85 - lineIndex * leading,
           size,
           font,
-          color: ctx.palette.ink,
+          color: isHeader
+            ? (options.headerColor ?? ctx.palette.ink)
+            : ctx.palette.ink,
         });
       });
       x += width;
     });
-    ctx.y -= height;
+    ctx.y -= probe.height;
   };
 
   if (header) drawRow(header, true);
@@ -561,35 +1033,309 @@ function drawTable(
   ctx.y -= 14;
 }
 
+function drawVariantTable(
+  ctx: Ctx,
+  item: Extract<TextItem, { kind: 'table' }>,
+) {
+  const width = ctx.frame.width;
+  const count = Math.max(
+    item.header?.length ?? 0,
+    ...item.rows.map((row) => row.length),
+  );
+  if (count === 0) return;
+
+  if (item.variant === 'accommodation') {
+    const first = 70;
+    const rest = (width - first) / Math.max(1, count - 1);
+    drawTable(
+      ctx,
+      [first, ...Array.from({ length: count - 1 }, () => rest)],
+      item.header,
+      item.rows,
+      {
+        size: 8,
+        headerFill: ctx.palette.brand,
+        headerColor: ctx.palette.white,
+        rowHeaderFill: ctx.palette.headerFill,
+        align: 'center',
+      },
+    );
+    return;
+  }
+  if (item.variant === 'documents') {
+    drawTable(ctx, [56, width - 136, 80], item.header, item.rows);
+    return;
+  }
+  if (item.variant === 'repairs') {
+    drawTable(ctx, [width - 140, 140], item.header, item.rows);
+    return;
+  }
+  if (item.variant === 'qualifications') {
+    drawTable(
+      ctx,
+      [60, (width - 60) / 2, (width - 60) / 2],
+      item.header,
+      item.rows,
+    );
+    return;
+  }
+  drawTable(
+    ctx,
+    Array.from({ length: count }, () => width / count),
+    item.header,
+    item.rows,
+  );
+}
+
+function drawFieldLabel(ctx: Ctx, label: string) {
+  ensure(ctx, BODY_LEADING * 3);
+  drawParagraph(ctx, {
+    kind: 'para',
+    text: label,
+    runs: [{ text: label, bold: true }],
+    bold: true,
+    bullet: false,
+  });
+  ctx.y += 3;
+}
+
 function drawFields(ctx: Ctx, rows: Array<[string, string]>) {
   for (const [label, value] of rows) {
-    ensure(ctx, BODY_LEADING * 3 + BOX_PAD * 2);
-    drawParagraph(ctx, { kind: 'para', text: label, bold: true });
-    openBox(ctx);
-    drawParagraph(ctx, { kind: 'para', text: value || '-' });
-    closeBox(ctx, 12);
+    drawFieldLabel(ctx, label);
+    const text = value || 'n/a';
+    drawParagraph(ctx, {
+      kind: 'para',
+      text,
+      runs: linkifyRuns([{ text }]),
+      bold: false,
+      bullet: false,
+    });
+    ctx.y -= 4;
   }
+}
+
+function measureItems(ctx: Ctx, items: TextItem[], width: number): number {
+  let height = 0;
+  for (const item of items) {
+    if (item.kind === 'para') height += paragraphHeight(ctx, item, width);
+    else if (item.kind === 'rule') height += 16;
+    else height += 40;
+  }
+  return height;
+}
+
+function drawCallout(ctx: Ctx, item: Extract<TextItem, { kind: 'callout' }>) {
+  const pad = 14;
+  const outer = { ...ctx.frame };
+  const inner = { x: outer.x + pad, width: outer.width - pad * 2 };
+  const bodyHeight = measureItems(ctx, item.items, inner.width);
+  const height = pad + 24 + bodyHeight + pad - 7;
+  const capacity = PAGE_H - TOP - BOTTOM - 60;
+  const panelled = height <= capacity;
+
+  ensure(ctx, panelled ? height + 8 : 60);
+  const page = currentPage(ctx);
+  const top = ctx.y;
+  if (panelled) {
+    page.drawRectangle({
+      x: outer.x,
+      y: top - height,
+      width: outer.width,
+      height,
+      color: ctx.palette.panel,
+    });
+  }
+  const badgeColor =
+    item.variant === 'warning' ? ctx.palette.danger : ctx.palette.brand;
+  const badgeY = top - pad - 8;
+  page.drawCircle({
+    x: inner.x + 8,
+    y: badgeY,
+    size: 8,
+    color: badgeColor,
+  });
+  page.drawText('!', {
+    x: inner.x + 8 - ctx.fonts.bold.widthOfTextAtSize('!', 10) / 2,
+    y: badgeY - 3.5,
+    size: 10,
+    font: ctx.fonts.bold,
+    color: ctx.palette.white,
+  });
+  if (item.title) {
+    page.drawText(clean(ctx, item.title), {
+      x: inner.x + 24,
+      y: badgeY - 4,
+      size: 11,
+      font: ctx.fonts.bold,
+      color: badgeColor,
+    });
+  }
+  ctx.y = top - pad - 24;
+  ctx.frame = inner;
+  drawTextItems(ctx, item.items);
+  ctx.frame = outer;
+  ctx.y = panelled ? Math.min(ctx.y, top - height) - 14 : ctx.y - 8;
+}
+
+function drawChecklist(
+  ctx: Ctx,
+  item: Extract<TextItem, { kind: 'checklist' }>,
+) {
+  if (item.title) drawFieldLabel(ctx, item.title);
+  if (item.note) {
+    drawParagraph(ctx, {
+      kind: 'para',
+      text: item.note,
+      runs: [{ text: item.note }],
+      bold: false,
+      bullet: false,
+    });
+    ctx.y += 2;
+  }
+  const perRow = 4;
+  const box = 18;
+  const columnWidth = ctx.frame.width / perRow;
+  for (let index = 0; index < item.options.length; index += perRow) {
+    ensure(ctx, box + 10);
+    const page = currentPage(ctx);
+    item.options.slice(index, index + perRow).forEach((option, column) => {
+      const x = ctx.frame.x + column * columnWidth;
+      page.drawRectangle({
+        x,
+        y: ctx.y - box,
+        width: box,
+        height: box,
+        color: option.checked ? ctx.palette.brand : ctx.palette.white,
+        borderColor: ctx.palette.border,
+        borderWidth: 0.8,
+      });
+      page.drawText(clean(ctx, option.label), {
+        x: x + box + 8,
+        y: ctx.y - box / 2 - BODY_SIZE * 0.35,
+        size: 9.5,
+        font: ctx.fonts.regular,
+        color: ctx.palette.ink,
+      });
+    });
+    ctx.y -= box + 8;
+  }
+  ctx.y -= 8;
+}
+
+function drawGroupHeader(
+  ctx: Ctx,
+  rating: BadgeRating,
+  title: string,
+  description: string,
+) {
+  const descLines = wrap(
+    ctx,
+    description,
+    ctx.fonts.regular,
+    9.5,
+    CONTENT_W - 50,
+  );
+  const introHeight = Math.max(38, 16 + descLines.length * 12.5) + 12;
+  ensure(ctx, introHeight + 60);
+  const page = currentPage(ctx);
+  const top = ctx.y;
+  drawRatingBadge(ctx, page, rating, LEFT + 18, top - 19, 17);
+  page.drawText(clean(ctx, title), {
+    x: LEFT + 50,
+    y: top - 11,
+    size: 11,
+    font: ctx.fonts.bold,
+    color: ctx.palette.brand,
+  });
+  descLines.forEach((line, index) => {
+    page.drawText(line, {
+      x: LEFT + 50,
+      y: top - 26 - index * 12.5,
+      size: 9.5,
+      font: ctx.fonts.regular,
+      color: ctx.palette.ink,
+    });
+  });
+  ctx.y = top - introHeight;
+}
+
+function drawDocuments(
+  ctx: Ctx,
+  item: Extract<TextItem, { kind: 'documents' }>,
+) {
+  if (item.rows.length === 0) return;
+  const description = item.intro
+    .map((entry) => (entry.kind === 'para' ? entry.text : ''))
+    .join(' ')
+    .trim();
+  drawGroupHeader(
+    ctx,
+    'R',
+    item.title ||
+      'Documents we may suggest you request before you sign contracts',
+    description,
+  );
+  drawTable(
+    ctx,
+    [56, CONTENT_W - 136, 80],
+    ['Element no.', 'Document name', 'Received'],
+    item.rows,
+  );
+  ctx.y -= 6;
+}
+
+function drawDiagram(ctx: Ctx, asset: string) {
+  const image = ctx.assets.get(asset);
+  if (!image) return;
+  const maxHeight = PAGE_H - TOP - BOTTOM - 120;
+  const scale = Math.min(
+    ctx.frame.width / image.width,
+    maxHeight / image.height,
+  );
+  const width = image.width * scale;
+  const height = image.height * scale;
+  ensure(ctx, height + 12);
+  currentPage(ctx).drawImage(image, {
+    x: ctx.frame.x + (ctx.frame.width - width) / 2,
+    y: ctx.y - height,
+    width,
+    height,
+  });
+  ctx.y -= height + 16;
 }
 
 function drawTextItems(ctx: Ctx, items: TextItem[]) {
   for (const item of items) {
-    if (item.kind === 'para') {
-      drawParagraph(ctx, item);
-    } else if (item.kind === 'fields') {
-      drawFields(ctx, item.rows);
-    } else {
-      const count = Math.max(
-        item.header?.length ?? 0,
-        ...item.rows.map((row) => row.length),
-      );
-      if (count === 0) continue;
-      const width = textWidth(ctx) / count;
-      drawTable(
-        ctx,
-        Array.from({ length: count }, () => width),
-        item.header,
-        item.rows,
-      );
+    switch (item.kind) {
+      case 'para':
+        drawParagraph(ctx, item);
+        break;
+      case 'rule':
+        drawRule(ctx);
+        break;
+      case 'fields':
+        drawFields(ctx, item.rows);
+        break;
+      case 'field':
+        drawFieldLabel(ctx, item.label);
+        drawTextItems(ctx, item.items);
+        ctx.y -= 4;
+        break;
+      case 'callout':
+        drawCallout(ctx, item);
+        break;
+      case 'checklist':
+        drawChecklist(ctx, item);
+        break;
+      case 'documents':
+        drawDocuments(ctx, item);
+        break;
+      case 'diagram':
+        drawDiagram(ctx, item.asset);
+        break;
+      case 'table':
+        drawVariantTable(ctx, item);
+        break;
     }
   }
 }
@@ -597,14 +1343,16 @@ function drawTextItems(ctx: Ctx, items: TextItem[]) {
 function drawRatingBadge(
   ctx: Ctx,
   page: PDFPage,
-  rating: ConditionRating,
+  rating: BadgeRating,
   cx: number,
   cy: number,
   radius: number,
 ) {
   const numeric = rating === '1' || rating === '2' || rating === '3';
-  const size = numeric ? radius * 1.05 : radius * 0.78;
-  const width = ctx.bold.widthOfTextAtSize(rating, size);
+  const size = numeric || rating === 'R' ? radius * 1.05 : radius * 0.78;
+  const bold = ctx.fonts.bold;
+  const width = bold.widthOfTextAtSize(rating, size);
+  const outline = rating === 'R' ? ctx.palette.danger : ctx.palette.ink;
   if (numeric) {
     page.drawCircle({
       x: cx,
@@ -618,7 +1366,7 @@ function drawRatingBadge(
       y: cy,
       size: radius,
       color: ctx.palette.white,
-      borderColor: ctx.palette.ink,
+      borderColor: outline,
       borderWidth: Math.max(0.8, radius / 10),
     });
   }
@@ -626,8 +1374,8 @@ function drawRatingBadge(
     x: cx - width / 2,
     y: cy - size * 0.36,
     size,
-    font: ctx.bold,
-    color: numeric ? ctx.palette.white : ctx.palette.ink,
+    font: bold,
+    color: numeric ? ctx.palette.white : outline,
   });
 }
 
@@ -635,6 +1383,7 @@ function drawSectionTab(ctx: Ctx, tab: { letter: string; title: string }) {
   const page = currentPage(ctx);
   const tabTop = PAGE_H - 86;
   const tabHeight = 58;
+  const bold = ctx.fonts.bold;
   if (tab.letter) {
     page.drawRectangle({
       x: 0,
@@ -644,23 +1393,23 @@ function drawSectionTab(ctx: Ctx, tab: { letter: string; title: string }) {
       color: ctx.palette.brandTint,
     });
     const size = 44;
-    const width = ctx.bold.widthOfTextAtSize(tab.letter, size);
+    const width = bold.widthOfTextAtSize(tab.letter, size);
     page.drawText(tab.letter, {
       x: (67 - width) / 2,
       y: tabTop - tabHeight + 13,
       size,
-      font: ctx.bold,
+      font: bold,
       color: ctx.palette.white,
     });
   }
-  const lines = wrap(tab.title, ctx.bold, 20, CONTENT_W);
+  const lines = wrap(ctx, tab.title, bold, 20, CONTENT_W);
   let baseline = tabTop - 38;
   for (const line of lines) {
     page.drawText(line, {
       x: LEFT,
       y: baseline,
       size: 20,
-      font: ctx.bold,
+      font: bold,
       color: ctx.palette.brand,
     });
     baseline -= 24;
@@ -668,7 +1417,7 @@ function drawSectionTab(ctx: Ctx, tab: { letter: string; title: string }) {
   ctx.y = baseline + 6;
 }
 
-function drawSubsectionBar(ctx: Ctx, text: string) {
+function drawSubsectionBar(ctx: Ctx, label: string) {
   const height = 22;
   ensure(ctx, height + 60);
   const page = currentPage(ctx);
@@ -679,16 +1428,27 @@ function drawSubsectionBar(ctx: Ctx, text: string) {
     height,
     color: ctx.palette.brand,
   });
-  const label = text.replace(/^[A-Z]\s*[·\-–]\s*/, '');
-  const line = wrap(label, ctx.bold, 11, CONTENT_W - 20)[0] ?? '';
+  const line = wrap(ctx, label, ctx.fonts.bold, 11, CONTENT_W - 20)[0] ?? '';
   page.drawText(line, {
     x: LEFT + 10,
     y: ctx.y - height + 7,
     size: 11,
-    font: ctx.bold,
+    font: ctx.fonts.bold,
     color: ctx.palette.white,
   });
   ctx.y -= height + 10;
+}
+
+/** Sub-sections of a lettered section (C) start a page with their own tab. */
+function startSubsection(ctx: Ctx, label: string) {
+  ctx.subsection = label;
+  ctx.contents.at(-1)?.children.push({ label, pageIndex: ctx.pages.length });
+  if (ctx.pendingTab) {
+    ctx.pendingTab.title = label;
+    return;
+  }
+  ctx.pendingTab = { letter: ctx.sectionLetter, title: label };
+  startContentPage(ctx);
 }
 
 function drawElementHeading(ctx: Ctx, block: HeadingBlock) {
@@ -699,21 +1459,25 @@ function drawElementHeading(ctx: Ctx, block: HeadingBlock) {
     ELEMENT_CODE_RE.test(code) && !text.startsWith(code)
       ? `${code} ${text}`
       : text;
-  const lines = wrap(label, ctx.bold, size, CONTENT_W - 32);
+  const lines = wrap(ctx, label, ctx.fonts.bold, size, CONTENT_W - 32);
   ensure(ctx, lines.length * 15 + 70);
+  ctx.contents
+    .at(-1)
+    ?.children.push({ label, pageIndex: ctx.pages.length - 1 });
+  const page = currentPage(ctx);
   const top = ctx.y;
   for (const line of lines) {
-    drawTextLine(ctx, line, { x: LEFT, size, font: ctx.bold, leading: 15 });
+    page.drawText(line, {
+      x: LEFT,
+      y: ctx.y - size * 0.85,
+      size,
+      font: ctx.fonts.bold,
+      color: ctx.palette.ink,
+    });
+    ctx.y -= 15;
   }
   if (block.conditionRating) {
-    drawRatingBadge(
-      ctx,
-      currentPage(ctx),
-      block.conditionRating,
-      RIGHT - 9,
-      top - 5,
-      8.5,
-    );
+    drawRatingBadge(ctx, page, block.conditionRating, RIGHT - 9, top - 5, 8.5);
   }
   ctx.y -= 6;
 }
@@ -728,22 +1492,41 @@ function elementNameAndCode(block: HeadingBlock): {
   return { code, name: name.replace(/^[·\-\s]+/, '') };
 }
 
-function drawRatingSummary(ctx: Ctx, blocks: SurveyReportBlock[]) {
+const RATING_GROUPS_START_RE =
+  /<h3\b[^>]*>\s*(?:Condition rating|Not yet rated)|<p>No condition ratings recorded yet/i;
+
+function drawRatingSummary(
+  ctx: Ctx,
+  blocks: SurveyReportBlock[],
+  html: string,
+) {
+  const start = RATING_GROUPS_START_RE.exec(html);
+  const intro = surveyHtmlToPdfItems(
+    start ? html.slice(0, start.index) : html,
+  ).filter((item) => item.kind === 'para' || item.kind === 'documents');
+  if (!intro.some((item) => item.kind === 'para')) {
+    intro.unshift({
+      kind: 'para',
+      text: DEFAULT_RATING_INTRO,
+      runs: [{ text: DEFAULT_RATING_INTRO }],
+      bold: false,
+      bullet: false,
+    });
+  }
+  drawTextItems(ctx, intro);
+  ctx.y -= 6;
+
   const elements = blocks.filter(
     (block): block is HeadingBlock =>
       block.type === 'heading' && Boolean(block.conditionRating),
   );
-
-  drawParagraph(ctx, {
-    kind: 'para',
-    text: "To determine the condition of the property, we assess the main parts (the 'elements') of the building, garage and some outside areas. These elements are rated on the urgency of maintenance needed, ranging from 'very urgent' to 'no issues recorded'.",
-  });
-  ctx.y -= 6;
-
   if (elements.length === 0) {
     drawParagraph(ctx, {
       kind: 'para',
       text: 'No condition ratings recorded yet.',
+      runs: [{ text: 'No condition ratings recorded yet.' }],
+      bold: false,
+      bullet: false,
     });
     return;
   }
@@ -753,31 +1536,7 @@ function drawRatingSummary(ctx: Ctx, blocks: SurveyReportBlock[]) {
       (block) => block.conditionRating === group.rating,
     );
     if (items.length === 0) continue;
-
-    const descLines = wrap(group.description, ctx.font, 9.5, CONTENT_W - 50);
-    const introHeight = Math.max(38, 16 + descLines.length * 12.5) + 12;
-    ensure(ctx, introHeight + 60);
-    const page = currentPage(ctx);
-    const top = ctx.y;
-    drawRatingBadge(ctx, page, group.rating, LEFT + 18, top - 19, 17);
-    page.drawText(sanitizePdfText(group.title), {
-      x: LEFT + 50,
-      y: top - 11,
-      size: 11,
-      font: ctx.bold,
-      color: ctx.palette.brand,
-    });
-    descLines.forEach((line, index) => {
-      page.drawText(line, {
-        x: LEFT + 50,
-        y: top - 26 - index * 12.5,
-        size: 9.5,
-        font: ctx.font,
-        color: ctx.palette.ink,
-      });
-    });
-    ctx.y = top - introHeight;
-
+    drawGroupHeader(ctx, group.rating, group.title, group.description);
     drawTable(
       ctx,
       [92, 190, CONTENT_W - 282],
@@ -791,6 +1550,34 @@ function drawRatingSummary(ctx: Ctx, blocks: SurveyReportBlock[]) {
   }
 }
 
+function drawCaption(
+  ctx: Ctx,
+  page: PDFPage,
+  lines: string[],
+  centreX: number,
+  top: number,
+) {
+  const size = 9;
+  lines.forEach((line, index) => {
+    const width = ctx.fonts.boldItalic.widthOfTextAtSize(line, size);
+    page.drawText(line, {
+      x: centreX - width / 2,
+      y: top - index * 11.5,
+      size,
+      font: ctx.fonts.boldItalic,
+      color: ctx.palette.ink,
+    });
+  });
+}
+
+function captionFor(block: ImageBlock): string {
+  return (block.caption || block.alt || '').trim();
+}
+
+/**
+ * Landscape shots print full width, one under another; portrait and square
+ * shots sit two to a row.
+ */
 function drawImages(
   ctx: Ctx,
   run: ImageBlock[],
@@ -802,81 +1589,99 @@ function drawImages(
       (entry): entry is { block: ImageBlock; image: PDFImage } =>
         entry.image !== null,
     );
-
-  const captionSize = 9;
   const captionLeading = 11.5;
+  const isLandscape = (image: PDFImage) => image.width / image.height >= 1.25;
 
-  for (let index = 0; index < embedded.length; index += 2) {
-    const row = embedded.slice(index, index + 2);
-    const gap = 16;
-    const cellWidth = row.length === 2 ? (CONTENT_W - gap) / 2 : 300;
-    const maxHeight = row.length === 2 ? 210 : 300;
-    const laid = row.map(({ block, image }) => {
+  let index = 0;
+  while (index < embedded.length) {
+    const current = embedded[index]!;
+    const next = embedded[index + 1];
+
+    if (isLandscape(current.image) || !next || isLandscape(next.image)) {
+      const maxWidth = isLandscape(current.image) ? CONTENT_W : 300;
       const scale = Math.min(
-        cellWidth / image.width,
-        maxHeight / image.height,
+        maxWidth / current.image.width,
+        320 / current.image.height,
         1.6,
       );
-      const caption = (block.caption || block.alt || '').trim();
+      const width = current.image.width * scale;
+      const height = current.image.height * scale;
+      const caption = captionFor(current.block);
+      const lines = caption
+        ? wrap(ctx, caption, ctx.fonts.boldItalic, 9, CONTENT_W)
+        : [];
+      ensure(ctx, height + lines.length * captionLeading + 14);
+      const page = currentPage(ctx);
+      page.drawImage(current.image, {
+        x: LEFT + (CONTENT_W - width) / 2,
+        y: ctx.y - height,
+        width,
+        height,
+      });
+      drawCaption(ctx, page, lines, LEFT + CONTENT_W / 2, ctx.y - height - 13);
+      ctx.y -= height + lines.length * captionLeading + 22;
+      index += 1;
+      continue;
+    }
+
+    const gap = 16;
+    const cellWidth = (CONTENT_W - gap) / 2;
+    const laid = [current, next].map(({ block, image }) => {
+      const scale = Math.min(cellWidth / image.width, 240 / image.height, 1.6);
+      const caption = captionFor(block);
       return {
         image,
         width: image.width * scale,
         height: image.height * scale,
-        captionLines: caption
-          ? wrap(caption, ctx.boldItalic, captionSize, cellWidth)
+        lines: caption
+          ? wrap(ctx, caption, ctx.fonts.boldItalic, 9, cellWidth)
           : [],
       };
     });
+    const imageHeight = Math.max(...laid.map((item) => item.height));
     const rowHeight =
-      Math.max(...laid.map((item) => item.height)) +
-      Math.max(...laid.map((item) => item.captionLines.length)) *
-        captionLeading +
+      imageHeight +
+      Math.max(...laid.map((item) => item.lines.length)) * captionLeading +
       10;
     ensure(ctx, rowHeight);
     const page = currentPage(ctx);
-    const imageBottom = ctx.y - Math.max(...laid.map((item) => item.height));
-
+    const imageBottom = ctx.y - imageHeight;
     laid.forEach((item, cellIndex) => {
-      const cellX =
-        row.length === 2
-          ? LEFT + cellIndex * (cellWidth + gap)
-          : LEFT + (CONTENT_W - cellWidth) / 2;
+      const cellX = LEFT + cellIndex * (cellWidth + gap);
       page.drawImage(item.image, {
         x: cellX + (cellWidth - item.width) / 2,
-        y: imageBottom + (Math.max(...laid.map((l) => l.height)) - item.height),
+        y: imageBottom + (imageHeight - item.height),
         width: item.width,
         height: item.height,
       });
-      item.captionLines.forEach((line, lineIndex) => {
-        const width = ctx.boldItalic.widthOfTextAtSize(line, captionSize);
-        page.drawText(line, {
-          x: cellX + (cellWidth - width) / 2,
-          y: imageBottom - 13 - lineIndex * captionLeading,
-          size: captionSize,
-          font: ctx.boldItalic,
-          color: ctx.palette.ink,
-        });
-      });
+      drawCaption(
+        ctx,
+        page,
+        item.lines,
+        cellX + cellWidth / 2,
+        imageBottom - 13,
+      );
     });
     ctx.y -= rowHeight + 10;
+    index += 2;
   }
 }
 
-function drawLogo(
-  ctx: Ctx,
+function drawImageInBox(
   page: PDFPage,
+  image: PDFImage | null,
   box: { x: number; top: number; maxWidth: number; maxHeight: number },
   align: 'left' | 'right',
 ) {
-  if (!ctx.logo) return;
+  if (!image) return;
   const scale = Math.min(
-    box.maxWidth / ctx.logo.width,
-    box.maxHeight / ctx.logo.height,
+    box.maxWidth / image.width,
+    box.maxHeight / image.height,
     1,
   );
-  const width = ctx.logo.width * scale;
-  const height = ctx.logo.height * scale;
-  page.drawImage(ctx.logo, {
+  const width = image.width * scale;
+  const height = image.height * scale;
+  page.drawImage(image, {
     x: align === 'left' ? box.x : box.x - width,
     y: box.top - height,
     width,
@@ -888,8 +1693,16 @@ function drawDividerPage(ctx: Ctx, title: string, blurbHtml: string | null) {
   const match = DIVIDER_TITLE_RE.exec(title);
   const letter = match?.[1] ?? '';
   const name = match?.[2] ?? title;
+  ctx.sectionLetter = letter;
+  ctx.sectionTitle = name;
+  ctx.subsection = null;
+  ctx.pendingTab = null;
   const page = addPage(ctx, 'divider');
-  ctx.contents.push({ label: title, pageIndex: ctx.pages.length - 1 });
+  ctx.contents.push({
+    label: title,
+    pageIndex: ctx.pages.length - 1,
+    children: [],
+  });
 
   page.drawRectangle({
     x: PAGE_W - 220,
@@ -898,55 +1711,64 @@ function drawDividerPage(ctx: Ctx, title: string, blurbHtml: string | null) {
     height: 28,
     color: ctx.palette.brand,
   });
-  drawLogo(
-    ctx,
-    page,
-    { x: RIGHT, top: PAGE_H - 100, maxWidth: 130, maxHeight: 44 },
-    'right',
-  );
+  if (ctx.ricsLogo) {
+    drawImageInBox(
+      page,
+      ctx.ricsLogo,
+      { x: RIGHT, top: PAGE_H - 100, maxWidth: 120, maxHeight: 44 },
+      'right',
+    );
+    drawImageInBox(
+      page,
+      ctx.logo,
+      { x: RIGHT, top: 110, maxWidth: 120, maxHeight: 40 },
+      'right',
+    );
+  } else {
+    drawImageInBox(
+      page,
+      ctx.logo,
+      { x: RIGHT, top: PAGE_H - 100, maxWidth: 130, maxHeight: 44 },
+      'right',
+    );
+  }
 
+  const bold = ctx.fonts.bold;
   if (letter) {
     page.drawText(letter, {
       x: LEFT - 4,
       y: PAGE_H - 280,
       size: 120,
-      font: ctx.bold,
+      font: bold,
       color: ctx.palette.brand,
     });
   }
 
   let baseline = PAGE_H - 352;
-  for (const line of wrap(name, ctx.bold, 24, CONTENT_W)) {
+  for (const line of wrap(ctx, name, bold, 24, CONTENT_W)) {
     page.drawText(line, {
       x: LEFT,
       y: baseline,
       size: 24,
-      font: ctx.bold,
+      font: bold,
       color: ctx.palette.brand,
     });
     baseline -= 28;
   }
 
   if (blurbHtml) {
-    baseline -= 4;
-    for (const item of paragraphItems(blurbHtml)) {
-      if (item.kind !== 'para') continue;
-      for (const line of wrap(item.text, ctx.font, 11, CONTENT_W)) {
-        page.drawText(line, {
-          x: LEFT,
-          y: baseline,
-          size: 11,
-          font: ctx.font,
-          color: ctx.palette.brand,
-        });
-        baseline -= 15;
-      }
-      baseline -= 6;
-    }
+    ctx.flowing = true;
+    ctx.y = baseline - 4 + 11;
+    ctx.style = { size: 11, leading: 15, color: ctx.palette.brand };
+    drawTextItems(ctx, surveyHtmlToPdfItems(blurbHtml));
+    ctx.style = {
+      size: BODY_SIZE,
+      leading: BODY_LEADING,
+      color: ctx.palette.ink,
+    };
   }
-
+  ctx.flowing = false;
   ctx.pendingTab = { letter, title: name };
-  ctx.sectionTitle = name;
 }
 
 function drawCover(
@@ -955,7 +1777,7 @@ function drawCover(
   hero: PDFImage | null,
 ) {
   const page = addPage(ctx, 'cover');
-  const { palette } = ctx;
+  const { palette, fonts } = ctx;
 
   page.drawRectangle({
     x: PAGE_W - 220,
@@ -964,11 +1786,17 @@ function drawCover(
     height: 30,
     color: palette.brand,
   });
-  drawLogo(
-    ctx,
+  drawImageInBox(
     page,
+    ctx.logo,
     { x: 40, top: PAGE_H - 42, maxWidth: 160, maxHeight: 60 },
     'left',
+  );
+  drawImageInBox(
+    page,
+    ctx.ricsLogo,
+    { x: RIGHT, top: PAGE_H - 46, maxWidth: 120, maxHeight: 44 },
+    'right',
   );
 
   const heroBox = { x: 0, y: PAGE_H - 720, width: 397, height: 587 };
@@ -1010,67 +1838,72 @@ function drawCover(
   const kicker = input.surveyLevel
     ? `LEVEL ${input.surveyLevel === 3 ? 'THREE' : 'TWO'}`
     : (input.reportLabel ?? 'Building survey').toUpperCase();
-  page.drawText(sanitizePdfText(kicker), {
+  page.drawText(clean(ctx, input.draft ? `${kicker}  ·  DRAFT` : kicker), {
     x: textLeft,
     y: baseline,
     size: 12,
-    font: ctx.font,
+    font: fonts.regular,
     color: palette.white,
   });
   baseline -= 34;
 
-  for (const line of wrap('Your survey report', ctx.bold, 28, textMax)) {
+  for (const line of wrap(ctx, 'Your survey report', fonts.bold, 28, textMax)) {
     page.drawText(line, {
       x: textLeft,
       y: baseline,
       size: 28,
-      font: ctx.bold,
+      font: fonts.bold,
       color: palette.white,
     });
     baseline -= 33;
   }
-  baseline -= 14;
+  baseline -= 12;
 
   const numeralSize = 140;
   const numeralTop = panel.y + 26 + numeralSize * 0.72;
   const fields: Array<[string, string | null | undefined]> = [
     ['Property address', input.propertyAddress || input.title],
     ["Client's name", input.clientName],
-    ['Report date', input.reportDate],
-    ['Prepared by', input.brandName],
+    ['Inspection date', input.inspectionDate],
+    ["Surveyor's RICS number", input.surveyorRicsNumber],
+    ['Prepared by', input.surveyorName || input.brandName],
   ];
   for (const [label, value] of fields) {
     if (!value?.trim()) continue;
+    if (baseline < panel.y + 30) break;
     page.drawText(label, {
       x: textLeft,
       y: baseline,
       size: 9.5,
-      font: ctx.bold,
+      font: fonts.bold,
       color: palette.white,
     });
-    baseline -= 17;
+    baseline -= 15;
     const width =
       input.surveyLevel && baseline < numeralTop + 12 ? textMax - 96 : textMax;
-    for (const line of wrap(value, ctx.font, 9.5, width).slice(0, 4)) {
+    for (const line of wrap(ctx, value, fonts.regular, 9.5, width).slice(
+      0,
+      3,
+    )) {
       page.drawText(line, {
         x: textLeft,
         y: baseline,
         size: 9.5,
-        font: ctx.font,
+        font: fonts.regular,
         color: palette.white,
       });
       baseline -= 12.5;
     }
-    baseline -= 10;
+    baseline -= 9;
   }
 
   if (input.surveyLevel) {
     const numeral = String(input.surveyLevel);
     page.drawText(numeral, {
-      x: PAGE_W - 30 - ctx.font.widthOfTextAtSize(numeral, numeralSize),
+      x: PAGE_W - 30 - fonts.regular.widthOfTextAtSize(numeral, numeralSize),
       y: panel.y + 26,
       size: numeralSize,
-      font: ctx.font,
+      font: fonts.regular,
       color: palette.white,
     });
   }
@@ -1079,15 +1912,15 @@ function drawCover(
 function drawContentsPage(
   ctx: Ctx,
   page: PDFPage,
-  entries: Ctx['contents'],
+  entries: SectionEntry[],
   footnote: string | null,
 ) {
-  const { palette } = ctx;
+  const { palette, fonts } = ctx;
   page.drawText('Contents', {
     x: 92,
     y: PAGE_H - 150,
     size: 24,
-    font: ctx.bold,
+    font: fonts.bold,
     color: palette.brand,
   });
 
@@ -1103,10 +1936,11 @@ function drawContentsPage(
 
   for (const entry of entries) {
     const pageLabel = String(entry.pageIndex + 1);
-    const pageWidth = ctx.bold.widthOfTextAtSize(pageLabel, 10);
+    const pageWidth = fonts.bold.widthOfTextAtSize(pageLabel, 10);
     const lines = wrap(
+      ctx,
       entry.label,
-      ctx.bold,
+      fonts.bold,
       10,
       tableRight - tableLeft - pageWidth - 16,
     );
@@ -1116,7 +1950,7 @@ function drawContentsPage(
         x: tableLeft,
         y: y - 15 - index * 13,
         size: 10,
-        font: ctx.bold,
+        font: fonts.bold,
         color: palette.ink,
       });
     });
@@ -1124,9 +1958,22 @@ function drawContentsPage(
       x: tableRight - pageWidth,
       y: y - 15 - (lines.length - 1) * 13,
       size: 10,
-      font: ctx.bold,
+      font: fonts.bold,
       color: palette.ink,
     });
+    const target = ctx.pages[entry.pageIndex]?.page;
+    if (target) {
+      addInternalLink(
+        page,
+        {
+          x: tableLeft,
+          y: y - rowHeight,
+          width: tableRight - tableLeft,
+          height: rowHeight,
+        },
+        target,
+      );
+    }
     y -= rowHeight;
     page.drawLine({
       start: { x: tableLeft, y },
@@ -1138,12 +1985,18 @@ function drawContentsPage(
 
   if (footnote) {
     let baseline = 118;
-    for (const line of wrap(footnote, ctx.font, 8.5, PAGE_W - 92 * 2)) {
+    for (const line of wrap(
+      ctx,
+      footnote,
+      fonts.regular,
+      8.5,
+      PAGE_W - 92 * 2,
+    )) {
       page.drawText(line, {
         x: 92,
         y: baseline,
         size: 8.5,
-        font: ctx.font,
+        font: fonts.regular,
         color: palette.ink,
       });
       baseline -= 11;
@@ -1151,37 +2004,132 @@ function drawContentsPage(
   }
 }
 
-function drawFooters(ctx: Ctx, label: string) {
-  ctx.pages.forEach(({ page, kind }, index) => {
+function drawBackToContents(ctx: Ctx, contentsPage: PDFPage | undefined) {
+  if (!contentsPage) return;
+  const { fonts, palette } = ctx;
+  ctx.pages.forEach(({ page, kind }) => {
+    if (kind !== 'divider') return;
+    const label = 'Contents';
+    const size = 9;
+    const width = fonts.bold.widthOfTextAtSize(label, size);
+    const x = RIGHT - width;
+    const y = PAGE_H - 74;
+    page.drawText(label, {
+      x,
+      y,
+      size,
+      font: fonts.bold,
+      color: palette.white,
+    });
+    addInternalLink(
+      page,
+      { x: x - 6, y: y - 6, width: width + 12, height: size + 12 },
+      contentsPage,
+    );
+  });
+}
+
+function drawFooters(
+  ctx: Ctx,
+  label: string,
+  contentsPage: PDFPage | undefined,
+  draft: boolean,
+) {
+  const { fonts, palette } = ctx;
+  const text = clean(ctx, label);
+  const size = 9;
+  const labelWidth = fonts.regular.widthOfTextAtSize(text, size);
+  ctx.pages.forEach(({ page, kind, marker }, index) => {
     if (kind === 'cover' || kind === 'divider') return;
     page.drawLine({
       start: { x: 0, y: 58 },
       end: { x: LEFT - 9, y: 58 },
       thickness: 0.9,
-      color: ctx.palette.muted,
+      color: palette.muted,
     });
     page.drawLine({
       start: { x: LEFT + 3, y: 57 },
       end: { x: PAGE_W, y: 57 },
       thickness: 0.6,
-      color: ctx.palette.rule,
+      color: palette.rule,
     });
-    page.drawText(sanitizePdfText(label), {
+    page.drawText(text, {
       x: LEFT + 3,
       y: 34,
-      size: 9,
-      font: ctx.font,
-      color: ctx.palette.muted,
+      size,
+      font: fonts.regular,
+      color: palette.muted,
     });
+    if (contentsPage && kind !== 'contents') {
+      addInternalLink(
+        page,
+        { x: LEFT, y: 28, width: labelWidth + 6, height: size + 10 },
+        contentsPage,
+      );
+    }
+    let x = LEFT + 3 + labelWidth + 18;
+    if (marker) {
+      const markerText = clean(ctx, marker);
+      const markerLine =
+        wrap(ctx, markerText, fonts.bold, size, RIGHT - x - 80)[0] ?? '';
+      page.drawText(markerLine, {
+        x,
+        y: 34,
+        size,
+        font: fonts.bold,
+        color: palette.brand,
+      });
+      x += fonts.bold.widthOfTextAtSize(markerLine, size) + 14;
+    }
+    if (draft) {
+      const draftWidth = fonts.bold.widthOfTextAtSize('DRAFT', 8);
+      const draftX = RIGHT - 44 - draftWidth;
+      page.drawRectangle({
+        x: draftX - 5,
+        y: 30,
+        width: draftWidth + 10,
+        height: 14,
+        borderColor: palette.danger,
+        borderWidth: 0.8,
+      });
+      page.drawText('DRAFT', {
+        x: draftX,
+        y: 34,
+        size: 8,
+        font: fonts.bold,
+        color: palette.danger,
+      });
+    }
     const pageLabel = String(index + 1);
     page.drawText(pageLabel, {
-      x: RIGHT - ctx.font.widthOfTextAtSize(pageLabel, 9),
+      x: RIGHT - fonts.regular.widthOfTextAtSize(pageLabel, size),
       y: 34,
-      size: 9,
-      font: ctx.font,
-      color: ctx.palette.muted,
+      size,
+      font: fonts.regular,
+      color: palette.muted,
     });
   });
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (next < items.length) {
+        const index = next;
+        next += 1;
+        results[index] = await task(items[index]!);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
 }
 
 async function resolveImages(
@@ -1189,47 +2137,113 @@ async function resolveImages(
   blocks: SurveyReportBlock[],
   input: SurveyReportPdfInput,
 ): Promise<Map<string, PDFImage | null>> {
+  const imageBlocks = blocks.filter(
+    (block): block is ImageBlock => block.type === 'image',
+  );
+  const sources = await mapWithConcurrency(
+    imageBlocks,
+    IMAGE_CONCURRENCY,
+    async (block): Promise<SurveyPdfImage | null> => {
+      const key = block.documentId ?? block.src;
+      const stored = key ? input.imageBytesById?.[key] : undefined;
+      if (stored) return { bytes: stored, kind: detectImageKind(stored) };
+      if (block.src && input.loadImage) return input.loadImage(block.src);
+      return null;
+    },
+  );
   const images = new Map<string, PDFImage | null>();
-  for (const block of blocks) {
-    if (block.type !== 'image') continue;
-    const key = block.documentId ?? block.src;
-    const stored = key ? input.imageBytesById?.[key] : undefined;
-    const source = stored
-      ? { bytes: stored, kind: detectImageKind(stored) }
-      : block.src && input.loadImage
-        ? await input.loadImage(block.src)
-        : null;
-    images.set(block.id, source ? await embedImage(doc, source) : null);
+  for (let index = 0; index < imageBlocks.length; index += 1) {
+    const source = sources[index];
+    images.set(
+      imageBlocks[index]!.id,
+      source ? await embedImage(doc, source) : null,
+    );
   }
   return images;
 }
 
+async function embedFonts(
+  doc: PDFDocument,
+  fonts: SurveyPdfFonts | null | undefined,
+): Promise<{ fonts: Record<FontStyle, PDFFont>; unicode: boolean }> {
+  if (fonts) {
+    try {
+      doc.registerFontkit(fontkit);
+      const [regular, bold, italic, boldItalic] = await Promise.all([
+        doc.embedFont(fonts.regular, { subset: true }),
+        doc.embedFont(fonts.bold, { subset: true }),
+        doc.embedFont(fonts.italic, { subset: true }),
+        doc.embedFont(fonts.boldItalic, { subset: true }),
+      ]);
+      return {
+        fonts: { regular, bold, italic, boldItalic },
+        unicode: true,
+      };
+    } catch {
+      // Fall through to the standard fonts.
+    }
+  }
+  const [regular, bold, italic, boldItalic] = await Promise.all([
+    doc.embedFont(StandardFonts.Helvetica),
+    doc.embedFont(StandardFonts.HelveticaBold),
+    doc.embedFont(StandardFonts.HelveticaOblique),
+    doc.embedFont(StandardFonts.HelveticaBoldOblique),
+  ]);
+  return { fonts: { regular, bold, italic, boldItalic }, unicode: false };
+}
+
+function plainText(items: TextItem[]): string {
+  return items
+    .map((item) => (item.kind === 'para' ? item.text : ''))
+    .join(' ')
+    .trim();
+}
+
 /**
- * Renders a survey report in the RICS Home Survey layout: cover, contents,
- * lettered section dividers, boxed element findings with condition-rating
- * badges, rating summary tables and a running footer with page numbers.
+ * Renders a survey report in the RICS Home Survey layout: cover, linked
+ * contents, lettered section dividers, element findings with condition-rating
+ * badges, rating summary tables, a running footer with the section marker and
+ * page numbers, and a bookmark outline.
  */
 export async function buildSurveyReportPdf(
   input: SurveyReportPdfInput,
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  doc.setTitle(sanitizePdfText(input.title || 'Survey report'));
-  if (input.brandName) doc.setAuthor(sanitizePdfText(input.brandName));
+  const embedded = await embedFonts(doc, input.fonts);
+  const title = input.title || 'Survey report';
+  doc.setTitle(embedded.unicode ? title : sanitizePdfText(title));
+  if (input.brandName) {
+    doc.setAuthor(
+      embedded.unicode ? input.brandName : sanitizePdfText(input.brandName),
+    );
+  }
+
+  const palette = buildPalette(input.brandColor);
+  const assetEntries = await Promise.all(
+    Object.entries(input.assets ?? {}).map(
+      async ([key, image]) =>
+        [key, image ? await embedImage(doc, image) : null] as const,
+    ),
+  );
 
   const ctx: Ctx = {
     doc,
-    font: await doc.embedFont(StandardFonts.Helvetica),
-    bold: await doc.embedFont(StandardFonts.HelveticaBold),
-    boldItalic: await doc.embedFont(StandardFonts.HelveticaBoldOblique),
-    palette: buildPalette(input.brandColor),
+    fonts: embedded.fonts,
+    unicode: embedded.unicode,
+    palette,
     logo: input.logo ? await embedImage(doc, input.logo) : null,
+    ricsLogo: input.ricsLogo ? await embedImage(doc, input.ricsLogo) : null,
+    assets: new Map(assetEntries),
     pages: [],
     page: null,
-    onContent: false,
+    flowing: false,
     y: 0,
-    box: null,
+    frame: { x: LEFT, width: CONTENT_W },
+    style: { size: BODY_SIZE, leading: BODY_LEADING, color: palette.ink },
     pendingTab: null,
+    sectionLetter: '',
     sectionTitle: null,
+    subsection: null,
     contents: [],
   };
 
@@ -1254,10 +2268,8 @@ export async function buildSurveyReportPdf(
     const next = blocks[1];
     if (next?.type === 'text') {
       contentsFootnote =
-        paragraphItems(next.html.replace(/<ol\b[\s\S]*?<\/ol>/gi, ''))
-          .map((item) => (item.kind === 'para' ? item.text : ''))
-          .join(' ')
-          .trim() || null;
+        plainText(flowItems(next.html.replace(/<ol\b[\s\S]*?<\/ol>/gi, ''))) ||
+        null;
       blocks = blocks.slice(2);
     } else {
       blocks = blocks.slice(1);
@@ -1281,13 +2293,11 @@ export async function buildSurveyReportPdf(
     () => addPage(ctx, 'contents'),
   );
 
-  let boxNextText = false;
   for (let index = 0; index < blocks.length; index += 1) {
     const block = blocks[index]!;
 
     if (block.type === 'heading') {
       const text = headingText(block);
-      boxNextText = false;
       if (!text) continue;
       if (block.level === 1) {
         const next = blocks[index + 1];
@@ -1298,7 +2308,11 @@ export async function buildSurveyReportPdf(
       }
       if (isElementHeading(block)) {
         drawElementHeading(ctx, block);
-        boxNextText = true;
+        continue;
+      }
+      const label = text.replace(SECTION_PREFIX_RE, '');
+      if (block.role === 'subsection') {
+        startSubsection(ctx, label);
         continue;
       }
       const next = blocks[index + 1];
@@ -1309,40 +2323,27 @@ export async function buildSurveyReportPdf(
         blocks[index + 2]?.type !== 'image';
       if (isEmpty || next === undefined || next.type === 'heading') continue;
       if (
-        text.toLowerCase() !== ctx.sectionTitle?.toLowerCase() ||
-        ctx.onContent
+        label.toLowerCase() === ctx.sectionTitle?.toLowerCase() ||
+        label.toLowerCase() === ctx.subsection?.toLowerCase()
       ) {
-        drawSubsectionBar(ctx, text);
+        continue;
       }
-      boxNextText = true;
+      drawSubsectionBar(ctx, label);
       continue;
     }
 
     if (block.type === 'text') {
       if (isRatingSummaryHtml(block.html)) {
-        drawRatingSummary(ctx, blocks);
-        boxNextText = false;
+        drawRatingSummary(ctx, blocks, block.html);
         continue;
       }
       const items = surveyHtmlToPdfItems(block.html);
-      if (items.length === 0) {
-        boxNextText = false;
-        continue;
-      }
-      if (boxNextText && items.every((item) => item.kind === 'para')) {
-        openBox(ctx);
-        drawTextItems(ctx, items);
-        closeBox(ctx);
-      } else {
-        ensure(ctx, BODY_LEADING * 2);
-        drawTextItems(ctx, items);
-        ctx.y -= 6;
-      }
-      boxNextText = false;
+      if (items.length === 0) continue;
+      ensure(ctx, BODY_LEADING * 2);
+      drawTextItems(ctx, items);
+      ctx.y -= 6;
       continue;
     }
-
-    boxNextText = false;
 
     if (block.type === 'image') {
       let end = index;
@@ -1352,14 +2353,7 @@ export async function buildSurveyReportPdf(
       continue;
     }
 
-    ensure(ctx, 20);
-    currentPage(ctx).drawLine({
-      start: { x: LEFT, y: ctx.y - 6 },
-      end: { x: RIGHT, y: ctx.y - 6 },
-      thickness: 0.6,
-      color: ctx.palette.rule,
-    });
-    ctx.y -= 18;
+    drawRule(ctx);
   }
 
   contentsPages.forEach((page, pageIndex) => {
@@ -1374,11 +2368,31 @@ export async function buildSurveyReportPdf(
     );
   });
 
+  const contentsPage = contentsPages[0];
+  drawBackToContents(ctx, contentsPage);
   drawFooters(
     ctx,
     input.reportLabel ||
       (input.brandName ? `${input.brandName} survey report` : 'Survey report'),
+    contentsPage,
+    Boolean(input.draft),
   );
+
+  const outline: PdfOutlineEntry[] = [];
+  if (contentsPage) outline.push({ title: 'Contents', page: contentsPage });
+  for (const section of ctx.contents) {
+    const page = ctx.pages[section.pageIndex]?.page;
+    if (!page) continue;
+    outline.push({
+      title: section.label,
+      page,
+      children: section.children.flatMap((child) => {
+        const childPage = ctx.pages[child.pageIndex]?.page;
+        return childPage ? [{ title: child.label, page: childPage }] : [];
+      }),
+    });
+  }
+  buildOutline(doc, outline);
 
   return doc.save();
 }

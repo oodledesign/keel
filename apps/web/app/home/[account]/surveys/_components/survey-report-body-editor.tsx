@@ -35,6 +35,10 @@ import {
 } from '~/home/[account]/_lib/workspace-content/docs-actions';
 import { sanitizeSurveyReportHtml } from '~/lib/building-surveyor/compile-survey-report-document';
 import {
+  CONDITION_RATING_COLORS,
+  CONDITION_RATING_LABELS,
+} from '~/lib/building-surveyor/condition-rating';
+import {
   SURVEY_REPORT_BLOCK_LIBRARY,
   type SurveyReportBlock,
   type SurveyReportDocument,
@@ -417,6 +421,18 @@ function CanvasBlockPreview({ block }: { block: SurveyReportBlock }) {
           ) : (
             <h2 className="text-lg font-semibold">{block.text || 'Heading'}</h2>
           )}
+          {block.conditionRating ? (
+            <span
+              className="ml-auto inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold text-white"
+              style={{
+                backgroundColor: CONDITION_RATING_COLORS[block.conditionRating],
+              }}
+              title={CONDITION_RATING_LABELS[block.conditionRating]}
+              data-test="survey-canvas-rating-badge"
+            >
+              {block.conditionRating}
+            </span>
+          ) : null}
         </div>
       );
     }

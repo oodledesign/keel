@@ -30,7 +30,18 @@ import {
   ricsCodeForSectionKey,
 } from '~/lib/building-surveyor/report-sections';
 import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
-import type { SurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
+import {
+  EMPTY_SURVEYOR_PROFILE,
+  SURVEYOR_PROFILE_SELECT,
+  SURVEY_REPORT_DETAILS_SELECT,
+  formatReportDate,
+  mapSurveyReportDetails,
+  mapSurveyorProfileRow,
+} from '~/lib/building-surveyor/survey-report-details';
+import {
+  type SurveyReportDocument,
+  parseSurveyReportDocument,
+} from '~/lib/building-surveyor/survey-report-document';
 import { surveySectionByKey } from '~/lib/building-surveyor/survey-section-catalogue';
 import {
   type BuildingSurveyTypeKey,
@@ -47,6 +58,7 @@ import type {
   DeleteSurveyObservationInput,
   GenerateSurveyDraftInput,
   ProposeSurveyPhotoCurationInput,
+  RebuildSurveyReportInput,
   ReorderSurveyPhotosInput,
   SetSurveyPhotoShareInput,
   SurveyLibraryPhoto,
@@ -625,28 +637,12 @@ class SurveyCaptureService {
         )
       : result.document;
 
-    const template = await createSurveyTemplatesService(
-      this.client,
-    ).resolveForSurvey({
+    const assembled = await this.assembleReport({
       accountId: input.accountId,
-      surveyType: normalizeBuildingSurveyType(survey.survey_type),
-      templateId: survey.survey_template_id,
-    });
-
-    const assembled = assembleSurveyReportFromTemplate({
-      template,
-      merge: mergeValuesFromSurvey({
-        propertyAddress: survey.title,
-        clientName: survey.recipient_name,
-        surveyorName: input.surveyorName,
-        companyName: input.accountName,
-      }),
-      observations: observations.map((item) => ({
-        sectionKey: item.sectionKey,
-        ricsCode: item.ricsCode,
-        body: item.body,
-        conditionRating: item.conditionRating,
-      })),
+      survey,
+      surveyorName: input.surveyorName,
+      accountName: input.accountName,
+      observations,
       photos: photos.map((photo) => ({
         sectionKey: photo.sectionKey,
         title: photo.title,
@@ -678,6 +674,144 @@ class SurveyCaptureService {
         (survey.survey_type as BuildingSurveyTypeKey | null) ??
         DEFAULT_BUILDING_SURVEY_TYPE,
     };
+  }
+
+  /**
+   * Builds the report from the survey's template, notes, photos and report
+   * details. Shared by draft generation and "Rebuild from template".
+   */
+  private async assembleReport(input: {
+    accountId: string;
+    survey: SurveyRow;
+    surveyorName?: string | null;
+    accountName?: string | null;
+    observations: SurveyObservation[];
+    photos: Array<{
+      sectionKey: string;
+      title: string;
+      caption?: string | null;
+      documentId?: string;
+      url?: string | null;
+    }>;
+    sectionHtml: Record<string, string>;
+  }): Promise<SurveyReportDocument> {
+    const { data: user } = await requireUser(this.client);
+    const [template, detailsResult, profileResult] = await Promise.all([
+      createSurveyTemplatesService(this.client).resolveForSurvey({
+        accountId: input.accountId,
+        surveyType: normalizeBuildingSurveyType(input.survey.survey_type),
+        templateId: input.survey.survey_template_id,
+      }),
+      this.db
+        .from('proposals')
+        .select(SURVEY_REPORT_DETAILS_SELECT)
+        .eq('id', input.survey.id)
+        .eq('account_id', input.accountId)
+        .maybeSingle(),
+      user
+        ? this.db
+            .from('surveyor_profiles')
+            .select(SURVEYOR_PROFILE_SELECT)
+            .eq('account_id', input.accountId)
+            .eq('user_id', user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+    const details = mapSurveyReportDetails(
+      (detailsResult.data ?? {}) as Record<string, unknown>,
+    );
+    const profile = profileResult.data
+      ? mapSurveyorProfileRow(profileResult.data as Record<string, unknown>)
+      : EMPTY_SURVEYOR_PROFILE;
+    const address = [
+      input.survey.survey_property_address?.trim(),
+      input.survey.survey_property_postcode?.trim(),
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    return assembleSurveyReportFromTemplate({
+      template,
+      merge: mergeValuesFromSurvey({
+        propertyAddress: address || input.survey.title,
+        clientName: input.survey.recipient_name,
+        inspectionDate: formatReportDate(details.inspectionDate),
+        producedDate: formatReportDate(new Date().toISOString()),
+        reportReference: details.reportReference,
+        termsReceivedDate: formatReportDate(details.termsReceivedDate),
+        surveyorName: profile.displayName || input.surveyorName,
+        surveyorRicsNumber: profile.ricsNumber,
+        surveyorPhone: profile.phone,
+        surveyorEmail: profile.email,
+        surveyorWebsite: profile.website,
+        surveyorAddress: profile.address,
+        companyName: input.accountName,
+      }),
+      observations: input.observations.map((item) => ({
+        sectionKey: item.sectionKey,
+        ricsCode: item.ricsCode,
+        body: item.body,
+        conditionRating: item.conditionRating,
+      })),
+      photos: input.photos,
+      sectionHtml: input.sectionHtml,
+      structured: {
+        accommodation: details.accommodation,
+        services: details.services,
+        qualifications: profile.qualifications,
+      },
+    });
+  }
+
+  async rebuildFromTemplate(input: RebuildSurveyReportInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const survey = await this.getSurvey(input.accountId, input.proposalId);
+    if (survey.status !== 'draft') {
+      throw new Error('Sent or finalised surveys can no longer be rebuilt');
+    }
+
+    const [observations, photos] = await Promise.all([
+      this.listObservations(input.accountId, input.proposalId),
+      this.listPinnedPhotos(input.accountId, input.proposalId),
+    ]);
+    const photoUrls = await signSurveyPhotoUrls(
+      getSupabaseServerAdminClient(),
+      photos.map((photo) => ({
+        id: photo.documentId,
+        filePath: photo.filePath,
+        storagePath: photo.storagePath,
+        storageBucket: photo.storageBucket,
+      })),
+    );
+    const existing = parseSurveyReportDocument(survey.body_document);
+
+    const assembled = await this.assembleReport({
+      accountId: input.accountId,
+      survey,
+      surveyorName: input.surveyorName,
+      accountName: input.accountName,
+      observations,
+      photos: photos.map((photo) => ({
+        sectionKey: photo.sectionKey,
+        title: photo.title,
+        caption: photo.caption,
+        documentId: photo.documentId,
+        url: photoUrls[photo.documentId] ?? null,
+      })),
+      sectionHtml: existing ? editableSectionHtml(existing) : {},
+    });
+    const contentHtml = compileSurveyReportDocument(assembled);
+
+    const { error } = await this.db
+      .from('proposals')
+      .update({ content_html: contentHtml, body_document: assembled })
+      .eq('id', input.proposalId)
+      .eq('account_id', input.accountId)
+      .eq('kind', 'survey_report');
+    if (error) this.throwErr(error);
+
+    return { document: assembled, contentHtml };
   }
 
   async proposePhotoCuration(input: ProposeSurveyPhotoCurationInput) {
@@ -962,4 +1096,30 @@ function sectionHtmlFromDocument(
     }
   }
   return result;
+}
+
+const GENERATED_SECTION_KEYS = new Set([
+  'repairs_summary',
+  'documents_suggested',
+  'declaration',
+  'what_to_do_now',
+  'rics_description',
+  'typical_house_diagram',
+]);
+
+/**
+ * Section text the surveyor may have edited in the builder, keyed by section.
+ * Generated blocks (tables, callouts, field lists) are rebuilt from data.
+ */
+function editableSectionHtml(
+  document: SurveyReportDocument,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(sectionHtmlFromDocument(document)).filter(
+      ([key, html]) =>
+        !GENERATED_SECTION_KEYS.has(key) &&
+        !/class="survey-/.test(html) &&
+        html.replace(/<[^>]+>/g, '').trim().length > 0,
+    ),
+  );
 }

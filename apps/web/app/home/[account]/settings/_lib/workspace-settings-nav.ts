@@ -250,6 +250,14 @@ export function buildWorkspaceSettingsNav(input: {
         accountSlug,
       ),
     });
+    items.push({
+      id: 'surveyor-profile',
+      label: 'Surveyor profile',
+      href: settingsPath(
+        pathsConfig.app.accountSurveyorProfileSettings,
+        accountSlug,
+      ),
+    });
 
     if (canConfigureSendingDomain) {
       items.push({

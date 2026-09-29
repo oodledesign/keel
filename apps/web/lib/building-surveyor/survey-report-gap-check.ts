@@ -6,6 +6,7 @@ export const SURVEY_GAP_KINDS = [
   'empty_section',
   'photos_without_text',
   'text_without_photos',
+  'missing_rating',
 ] as const;
 
 export type SurveyGapKind = (typeof SURVEY_GAP_KINDS)[number];
@@ -17,6 +18,8 @@ export type SurveyGapSectionInput = {
   allowsPhotos: boolean;
   hasNotes: boolean;
   photoCount: number;
+  /** Set for condition-rated elements (D1, E2…); omitted for other sections. */
+  rated?: boolean;
 };
 
 export type SurveyGapFlag = {
@@ -33,6 +36,7 @@ export type SurveyGapCheckResult = {
   emptySectionCount: number;
   photosWithoutTextCount: number;
   textWithoutPhotosCount: number;
+  missingRatingCount: number;
 };
 
 function flag(
@@ -65,6 +69,15 @@ export function buildSurveyGapCheck(
         ),
       );
       continue;
+    }
+    if (section.rated === false) {
+      flags.push(
+        flag(
+          'missing_rating',
+          section,
+          `${section.label} has findings but no condition rating.`,
+        ),
+      );
     }
     if (!section.hasNotes && hasPhotos) {
       flags.push(
@@ -101,6 +114,9 @@ export function summariseGapFlags(
   const textWithoutPhotosCount = flags.filter(
     (item) => item.kind === 'text_without_photos',
   ).length;
+  const missingRatingCount = flags.filter(
+    (item) => item.kind === 'missing_rating',
+  ).length;
 
   return {
     flags: [...flags],
@@ -108,15 +124,12 @@ export function summariseGapFlags(
     emptySectionCount,
     photosWithoutTextCount,
     textWithoutPhotosCount,
+    missingRatingCount,
   };
 }
 
 function isGapKind(value: unknown): value is SurveyGapKind {
-  return (
-    value === 'empty_section' ||
-    value === 'photos_without_text' ||
-    value === 'text_without_photos'
-  );
+  return SURVEY_GAP_KINDS.includes(value as SurveyGapKind);
 }
 
 /**

@@ -4,12 +4,20 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import {
-  buildProposalPdf,
-  fetchImageBytes,
-} from '~/home/[account]/proposals/_lib/server/proposal-pdf';
+import { buildProposalPdf } from '~/home/[account]/proposals/_lib/server/proposal-pdf';
+import { createSurveyTemplatesService } from '~/home/[account]/surveys/_lib/server/survey-templates.service';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import {
+  loadSurveyPdfArt,
+  loadSurveyPdfFonts,
+  normalizeSurveyPhoto,
+} from '~/lib/building-surveyor/survey-pdf-assets.server';
 import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
+import {
+  SURVEYOR_PROFILE_SELECT,
+  formatReportDate,
+  mapSurveyorProfileRow,
+} from '~/lib/building-surveyor/survey-report-details';
 import {
   isSafeHttpUrl,
   parseSurveyReportDocument,
@@ -17,8 +25,13 @@ import {
 import {
   buildingSurveyTypeLabel,
   isSurveyLevel,
+  normalizeBuildingSurveyType,
   surveyLevelFromType,
 } from '~/lib/building-surveyor/survey-types';
+
+export const maxDuration = 60;
+
+const PHOTO_FETCH_CONCURRENCY = 6;
 
 function surveyReportMeta(proposal: Record<string, unknown>) {
   const surveyType = (proposal.survey_type as string | null) ?? null;
@@ -44,6 +57,55 @@ function surveyReportMeta(proposal: Record<string, unknown>) {
       (proposal.sent_at as string | null) ??
       (proposal.updated_at as string | null) ??
       null,
+    inspection_date:
+      formatReportDate(
+        (proposal.survey_inspection_date as string | null) ?? null,
+      ) || null,
+    draft: proposal.status === 'draft',
+  };
+}
+
+async function surveyReportExtras(
+  proposal: Record<string, unknown>,
+  accountId: string,
+) {
+  const admin = getSupabaseServerAdminClient();
+  // surveyor_profiles may lag generated Database types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = admin as any;
+  const createdBy = (proposal.created_by as string | null) ?? null;
+  const [template, profileResult, fonts, art] = await Promise.all([
+    createSurveyTemplatesService(admin)
+      .resolveForSurvey({
+        accountId,
+        surveyType: normalizeBuildingSurveyType(
+          (proposal.survey_type as string | null) ?? null,
+        ),
+        templateId: (proposal.survey_template_id as string | null) ?? null,
+      })
+      .catch(() => null),
+    createdBy
+      ? db
+          .from('surveyor_profiles')
+          .select(SURVEYOR_PROFILE_SELECT)
+          .eq('account_id', accountId)
+          .eq('user_id', createdBy)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    loadSurveyPdfFonts(),
+    loadSurveyPdfArt(),
+  ]);
+  const profile = profileResult.data
+    ? mapSurveyorProfileRow(profileResult.data)
+    : null;
+  const showRicsLogo = template?.brand?.showRicsLogo !== false;
+
+  return {
+    surveyor_name: profile?.displayName || null,
+    surveyor_rics_number: profile?.ricsNumber || null,
+    survey_fonts: fonts,
+    rics_logo: showRicsLogo ? art.ricsLogo : null,
+    survey_assets: { 'typical-house': art.typicalHouse },
   };
 }
 
@@ -78,9 +140,12 @@ async function buildPayload(
     kind === 'survey_report'
       ? parseSurveyReportDocument(proposal.body_document)
       : null;
-  const imageBytesById = document
-    ? await loadSurveyImageBytes(accountId, document)
-    : {};
+  const [imageBytesById, extras] = await Promise.all([
+    document ? loadSurveyImageBytes(accountId, document) : {},
+    kind === 'survey_report'
+      ? surveyReportExtras(proposal, accountId)
+      : Promise.resolve(null),
+  ]);
 
   return {
     title: (proposal.title as string) ?? 'Proposal',
@@ -96,6 +161,7 @@ async function buildPayload(
     brand_logo_url: brand.logo_url,
     brand_primary_color: brand.primary_color,
     ...(kind === 'survey_report' ? surveyReportMeta(proposal) : {}),
+    ...(extras ?? {}),
     imageBytesById,
     client: clientRow ?? null,
   };
@@ -141,20 +207,42 @@ async function loadSurveyImageBytes(
   const signed = await signSurveyPhotoUrls(admin, sources);
   const bytes: Record<string, Uint8Array> = {};
 
-  await Promise.all(
-    imageBlocks.map(async (block) => {
-      if (block.type !== 'image') return;
+  const queue = [...imageBlocks];
+  const worker = async () => {
+    for (let block = queue.shift(); block; block = queue.shift()) {
+      if (block.type !== 'image') continue;
       const url =
         (block.documentId ? signed[block.documentId] : null) ?? block.src;
-      if (!url || !isSafeHttpUrl(url)) return;
-      const image = await fetchImageBytes(url);
-      if (!image) return;
+      if (!url || !isSafeHttpUrl(url)) continue;
+      const image = await fetchPhoto(url);
+      if (!image) continue;
       if (block.documentId) bytes[block.documentId] = image.bytes;
       bytes[block.src] = image.bytes;
-    }),
+    }
+  };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(PHOTO_FETCH_CONCURRENCY, queue.length) },
+      worker,
+    ),
   );
 
   return bytes;
+}
+
+async function fetchPhoto(url: string) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const raw = new Uint8Array(await response.arrayBuffer());
+    const normalized = await normalizeSurveyPhoto(raw);
+    if (normalized) return normalized;
+    const isPng = raw[0] === 0x89 && raw[1] === 0x50;
+    const isJpg = raw[0] === 0xff && raw[1] === 0xd8;
+    return isPng || isJpg ? { bytes: raw } : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

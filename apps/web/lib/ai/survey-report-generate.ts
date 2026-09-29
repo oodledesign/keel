@@ -68,6 +68,8 @@ Rules:
 - Do not add Go Report or RICS Pro Forms branding.
 - Do not wrap output in markdown fences.
 - Include standard RICS Home Survey boilerplate only under "rics_description".
+- Under "documents_suggested", list one document per <li> that the client's legal adviser should obtain (for example an electrical installation condition report where wiring is rated 2 or 3, boiler or oil tank certificates, a drainage test report, building control or FENSA certificates for replaced roofs or windows). Omit the section when nothing applies.
+- Under "repairs_summary", list one repair per <li>, adding " - £x" cost guidance only when the transcript gives a figure.
 - Do not invent photograph references. Curated photos are placed by the app after each section.
 - When style guidance is provided, match that surveyor's phrasing, sentence length, and recommendation tone. Do not copy property facts from the style examples.`;
 

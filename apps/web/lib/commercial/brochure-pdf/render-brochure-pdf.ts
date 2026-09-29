@@ -5,7 +5,6 @@ import {
   type PDFFont,
   type PDFImage,
   type PDFPage,
-  PDFString,
   type RGB,
   StandardFonts,
   clip,
@@ -46,6 +45,7 @@ import {
   resolveBrochurePlateLogo,
 } from '~/lib/commercial/public-brochure.shared';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
+import { addUriLink } from '~/lib/pdf/pdf-links';
 import {
   supabaseStorageObjectPath,
   toSupabasePublicStorageUrl,
@@ -542,25 +542,6 @@ function drawKeyPointList(
   return y;
 }
 
-function addLinkAnnotation(
-  page: PDFPage,
-  box: { x: number; y: number; width: number; height: number },
-  url: string,
-) {
-  const annot = page.doc.context.obj({
-    Type: 'Annot',
-    Subtype: 'Link',
-    Rect: [box.x, box.y, box.x + box.width, box.y + box.height],
-    Border: [0, 0, 0],
-    A: {
-      Type: 'Action',
-      S: 'URI',
-      URI: PDFString.of(url),
-    },
-  });
-  page.node.addAnnot(page.doc.context.register(annot));
-}
-
 function drawLinkButtons(
   page: PDFPage,
   ctx: RenderCtx,
@@ -598,7 +579,7 @@ function drawLinkButtons(
       font: ctx.fontBold,
       color: opts.text,
     });
-    addLinkAnnotation(page, { x, y: opts.y, width, height }, button.url);
+    addUriLink(page, { x, y: opts.y, width, height }, button.url);
     x += width + gap;
   }
 }

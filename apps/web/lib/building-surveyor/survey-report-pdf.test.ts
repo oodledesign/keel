@@ -1,4 +1,13 @@
-import { PDFDocument } from 'pdf-lib';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFNumber,
+  PDFRef,
+} from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -22,7 +31,7 @@ describe('surveyHtmlToPdfItems', () => {
     const items = surveyHtmlToPdfItems(
       '<p>Intro</p><ul><li>First</li></ul><table class="survey-merge-fields"><tr><th>client.name</th><td>Jane Doe</td></tr></table><table><tr><th>Room</th><th>Floor</th></tr><tr><td>Kitchen</td><td>Ground</td></tr></table>',
     );
-    expect(items).toEqual([
+    expect(items).toMatchObject([
       { kind: 'para', text: 'Intro', bold: false, bullet: false },
       { kind: 'para', text: 'First', bold: false, bullet: true },
       { kind: 'fields', rows: [["Client's name", 'Jane Doe']] },
@@ -30,7 +39,87 @@ describe('surveyHtmlToPdfItems', () => {
         kind: 'table',
         header: ['Room', 'Floor'],
         rows: [['Kitchen', 'Ground']],
+        variant: 'generic',
       },
+    ]);
+  });
+
+  it('turns dot lines into rules, "Label -" lines into bold sub-headings and hyphen lines into bullets', () => {
+    const items = surveyHtmlToPdfItems(
+      '<p>Left elevation -\n- Stepped cracking to render\n..........\nRight elevation:</p>',
+    );
+    expect(items).toMatchObject([
+      { kind: 'para', text: 'Left elevation -', bold: true },
+      { kind: 'para', text: 'Stepped cracking to render', bullet: true },
+      { kind: 'rule' },
+      { kind: 'para', text: 'Right elevation:', bold: true },
+    ]);
+  });
+
+  it('keeps inline bold, italic and link runs and links bare URLs', () => {
+    const [item] = surveyHtmlToPdfItems(
+      '<p>See <strong>Terms</strong> and <em>notes</em> at <a href="https://rics.org/x">RICS</a> or www.gov.uk.</p>',
+    );
+    expect(item).toMatchObject({ kind: 'para' });
+    const runs = item?.kind === 'para' ? item.runs : [];
+    expect(runs).toContainEqual(
+      expect.objectContaining({ text: 'Terms', bold: true }),
+    );
+    expect(runs).toContainEqual(
+      expect.objectContaining({ text: 'notes', italic: true }),
+    );
+    expect(runs).toContainEqual(
+      expect.objectContaining({ text: 'RICS', href: 'https://rics.org/x' }),
+    );
+    expect(runs).toContainEqual(
+      expect.objectContaining({
+        text: 'www.gov.uk',
+        href: 'https://www.gov.uk',
+      }),
+    );
+  });
+
+  it('parses callouts, fields, checklists, documents, accommodation and diagrams', () => {
+    const items = surveyHtmlToPdfItems(
+      [
+        '<aside class="survey-callout" data-variant="reminder"><h4>Reminder</h4><p>Read the terms.</p></aside>',
+        '<section class="survey-field"><h4>Weather</h4></section>',
+        '<div class="survey-checklist"><h4>Main services</h4><p>A marked box shows presence.</p><ul><li data-checked="true">☒ Gas</li><li data-checked="false">☐ Water</li></ul></div>',
+        '<div class="survey-documents"><h3><span class="survey-rating-badge" data-rating="R">R</span> Documents we may suggest you request before you sign contracts</h3><p>Check these.</p><table class="survey-documents-table"><thead><tr><th>Element no.</th><th>Document name</th><th>Received</th></tr></thead><tbody><tr><td>1</td><td>EICR</td><td></td></tr></tbody></table></div>',
+        '<table class="survey-accommodation"><thead><tr><th></th><th>Living</th></tr></thead><tbody><tr><th>Ground</th><td>2</td></tr></tbody></table>',
+        '<table class="survey-rating-unrated"><tbody><tr><td>D1</td></tr></tbody></table>',
+        '<figure class="survey-diagram" data-asset="typical-house"><img src="/brand/rics-typical-house.png" alt="" /></figure>',
+      ].join(''),
+    );
+    expect(items).toMatchObject([
+      {
+        kind: 'callout',
+        variant: 'reminder',
+        title: 'Reminder',
+        items: [{ kind: 'para', text: 'Read the terms.' }],
+      },
+      { kind: 'field', label: 'Weather', items: [{ text: 'n/a' }] },
+      {
+        kind: 'checklist',
+        title: 'Main services',
+        note: 'A marked box shows presence.',
+        options: [
+          { label: 'Gas', checked: true },
+          { label: 'Water', checked: false },
+        ],
+      },
+      {
+        kind: 'documents',
+        title: 'Documents we may suggest you request before you sign contracts',
+        rows: [['1', 'EICR', '']],
+      },
+      {
+        kind: 'table',
+        variant: 'accommodation',
+        header: ['', 'Living'],
+        rows: [['Ground', '2']],
+      },
+      { kind: 'diagram', asset: 'typical-house' },
     ]);
   });
 });
@@ -66,6 +155,76 @@ describe('buildSurveyReportPdf', () => {
     expect(sections).toBeGreaterThan(10);
     expect(pdf.getPageCount()).toBeGreaterThan(2 + sections);
     expect(pdf.getTitle()).toBe('106 Hadlow Road');
+  });
+
+  it('links each contents row to its divider page and writes an outline', async () => {
+    const document = assembleSurveyReportFromTemplate({
+      template: RICS_HSS_L3_TEMPLATE,
+      merge: mergeValuesFromSurvey({ clientName: 'Jane Doe' }),
+      observations: [
+        {
+          sectionKey: 'chimney_stacks',
+          ricsCode: 'D1',
+          body: 'Pointing is weathered.',
+          conditionRating: '2',
+        },
+      ],
+    });
+    const sectionTitles = document.blocks.flatMap((block) =>
+      block.type === 'heading' &&
+      block.level === 1 &&
+      /^[A-Z] /.test(block.text)
+        ? [block.text]
+        : [],
+    );
+
+    const pdf = await PDFDocument.load(
+      await buildSurveyReportPdf({ title: 'Report', document, surveyLevel: 3 }),
+    );
+    const pages = pdf.getPages();
+    const contents = pages[1]!;
+    const annots = contents.node.Annots();
+    const targets = (annots?.asArray() ?? []).flatMap((ref) => {
+      const annot = pdf.context.lookup(ref, PDFDict);
+      const dest = annot.lookupMaybe(PDFName.of('Dest'), PDFArray);
+      const target = dest?.get(0);
+      return target instanceof PDFRef ? [target] : [];
+    });
+
+    expect(targets).toHaveLength(sectionTitles.length);
+    const firstTarget = pages.findIndex((page) => page.ref === targets[0]);
+    expect(firstTarget).toBeGreaterThan(1);
+
+    const outlines = pdf.catalog.lookup(PDFName.of('Outlines'), PDFDict);
+    const count = outlines.lookup(PDFName.of('Count'), PDFNumber).asNumber();
+    expect(count).toBe(sectionTitles.length + 1);
+  });
+
+  it('embeds Noto Sans so typographic characters survive', async () => {
+    const fontDir = path.join(__dirname, 'fonts');
+    const read = (name: string) =>
+      new Uint8Array(readFileSync(path.join(fontDir, name)));
+    const document = documentFromObservations([
+      {
+        sectionKey: 'windows',
+        body: 'The owner’s sashes – stiff • “ageing”.',
+      },
+    ]);
+
+    const bytes = await buildSurveyReportPdf({
+      title: 'Owner’s report',
+      document,
+      fonts: {
+        regular: read('NotoSans-Regular.ttf'),
+        bold: read('NotoSans-Bold.ttf'),
+        italic: read('NotoSans-Italic.ttf'),
+        boldItalic: read('NotoSans-BoldItalic.ttf'),
+      },
+      draft: true,
+    });
+
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getTitle()).toBe('Owner’s report');
   });
 });
 

@@ -64,10 +64,13 @@ import {
   updateSurveyTypeAction,
 } from '../_lib/server/survey-capture-actions';
 import type { SurveyDealOption } from '../_lib/server/survey-deal-options.loader';
+import type { SurveyReportDetails } from '../_lib/server/survey-report-details.service';
 import { surveyClientName, surveyPath } from '../_lib/survey-display';
+import { SurveyAccommodationCard } from './survey-accommodation-card';
 import { SurveyClientLinkCard } from './survey-client-link-card';
 import { SurveyLevelSetting } from './survey-level-setting';
 import { SurveyPropertyPanel } from './survey-property-panel';
+import { SurveyReportDetailsCard } from './survey-report-details-card';
 
 type ClientInfo = {
   id: string;
@@ -111,6 +114,8 @@ export function SurveyHubContent({
   epcConfigured,
   flood,
   surveyLevel: initialSurveyLevel,
+  reportDetails,
+  canEditDetails,
   deals,
   canEditClient,
 }: {
@@ -137,6 +142,8 @@ export function SurveyHubContent({
   epcConfigured: boolean;
   flood: SurveyFloodRecord;
   surveyLevel: SurveyLevel;
+  reportDetails: SurveyReportDetails;
+  canEditDetails: boolean;
   deals: SurveyDealOption[];
   canEditClient: boolean;
 }) {
@@ -383,6 +390,16 @@ export function SurveyHubContent({
             onAttachedEpcChange={setAttachedEpc}
             flood={flood}
           />
+          <div className="mt-5">
+            <SurveyAccommodationCard
+              accountId={accountId}
+              accountSlug={accountSlug}
+              proposalId={proposal.id}
+              canEdit={canEditDetails}
+              accommodation={reportDetails.accommodation}
+              services={reportDetails.services}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="setup" className="mt-0">
@@ -462,6 +479,14 @@ export function SurveyHubContent({
                 </div>
               </CardContent>
             </Card>
+
+            <SurveyReportDetailsCard
+              accountId={accountId}
+              accountSlug={accountSlug}
+              proposalId={proposal.id}
+              canEdit={canEditDetails}
+              details={reportDetails}
+            />
 
             <SurveyClientLinkCard
               accountId={accountId}

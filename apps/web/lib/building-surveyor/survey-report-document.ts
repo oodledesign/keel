@@ -37,6 +37,8 @@ export type SurveyReportBlock =
       sectionKey?: string;
       ricsCode?: string;
       conditionRating?: ConditionRating;
+      /** Sub-section heading inside a lettered section (drives the PDF footer). */
+      role?: 'subsection';
     }
   | {
       id: string;
@@ -71,6 +73,7 @@ export const SurveyReportBlockSchema = z.discriminatedUnion('type', [
     sectionKey: z.string().max(80).optional(),
     ricsCode: z.string().max(40).optional(),
     conditionRating: z.enum(['1', '2', '3', 'NA', 'NI']).optional(),
+    role: z.literal('subsection').optional(),
   }),
   z.object({
     id: z.string().min(1).max(80),

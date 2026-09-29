@@ -69,6 +69,7 @@ async function WorkspaceSettingsLayout({
               'survey-style': 'Survey style',
               'survey-templates': 'Survey templates',
               'survey-phrases': 'Phrase banks',
+              'surveyor-profile': 'Surveyor profile',
             }}
           />
         }

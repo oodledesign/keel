@@ -140,6 +140,8 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
           epcConfigured={extras.epcConfigured}
           flood={extras.flood}
           surveyLevel={extras.surveyLevel}
+          reportDetails={extras.reportDetails}
+          canEditDetails={canEditProposals && extras.isDraft}
           deals={deals}
           canEditClient={canEditProposals && proposal.status === 'draft'}
         />

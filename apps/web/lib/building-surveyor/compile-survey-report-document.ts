@@ -1,5 +1,6 @@
 import { isSafeHttpUrl } from '~/lib/campaigns/campaign-document';
 
+import { surveySectionAnchorId } from './assemble-survey-template';
 import { CONDITION_RATING_COLORS } from './condition-rating';
 import {
   SURVEY_REPORT_DOCUMENT_MARKER,
@@ -27,12 +28,19 @@ function renderSurveyBlock(block: SurveyReportBlock): string {
       const ricsAttr = block.ricsCode
         ? ` data-rics="${escapeAttr(block.ricsCode)}"`
         : '';
+      const anchor =
+        block.level === 1
+          ? surveySectionAnchorId(block.text)
+          : block.ricsCode && /^[A-Z]\d+$/.test(block.ricsCode)
+            ? `element-${block.ricsCode.toLowerCase()}`
+            : null;
+      const idAttr = anchor ? ` id="${escapeAttr(anchor)}"` : '';
       const rating = block.conditionRating;
       const ratingAttr = rating ? ` data-rating="${escapeAttr(rating)}"` : '';
       const badge = rating
         ? ` <span class="survey-rating-badge" data-rating="${escapeAttr(rating)}" style="display:inline-block;width:1.35em;height:1.35em;line-height:1.35em;border-radius:999px;background:${CONDITION_RATING_COLORS[rating]};color:#fff;text-align:center;font-size:0.8em">${escapeHtml(rating)}</span>`
         : '';
-      return `<${tag}${sectionAttr}${ricsAttr}${ratingAttr}>${escapeHtml(block.text)}${badge}</${tag}>`;
+      return `<${tag}${idAttr}${sectionAttr}${ricsAttr}${ratingAttr}>${escapeHtml(block.text)}${badge}</${tag}>`;
     }
     case 'text':
       return sanitizeSurveyReportHtml(block.html);

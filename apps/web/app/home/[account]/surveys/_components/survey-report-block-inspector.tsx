@@ -10,6 +10,10 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { getWorkspaceDocDownloadUrlAction } from '~/home/[account]/_lib/workspace-content/docs-actions';
 import { CampaignTextBlockEditor } from '~/home/[account]/email-campaigns/_components/campaign-text-block-editor';
+import {
+  CONDITION_RATING_LABELS,
+  type ConditionRating,
+} from '~/lib/building-surveyor/condition-rating';
 import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
 import type { SurveyReportBlock } from '~/lib/building-surveyor/survey-report-document';
 import {
@@ -17,6 +21,19 @@ import {
   workspaceText,
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
+
+const RATING_ORDER: ConditionRating[] = ['3', '2', '1', 'NI', 'NA'];
+const ELEMENT_CODE_RE = /^[D-G]\d+$/;
+
+function isRatedElement(
+  block: Extract<SurveyReportBlock, { type: 'heading' }>,
+): boolean {
+  if (block.ricsCode && ELEMENT_CODE_RE.test(block.ricsCode)) return true;
+  const section = BUILDING_SURVEY_SECTIONS.find(
+    (item) => item.key === block.sectionKey,
+  );
+  return Boolean(section && ELEMENT_CODE_RE.test(section.ricsCode));
+}
 
 type CuratedPhoto = {
   id: string;
@@ -87,6 +104,35 @@ export function SurveyReportBlockInspector({
               ))}
             </select>
           </Field>
+          {isRatedElement(block) ? (
+            <Field label="Condition rating">
+              <select
+                value={block.conditionRating ?? ''}
+                disabled={disabled}
+                data-test="survey-inspector-condition-rating"
+                onChange={(event) =>
+                  onChange({
+                    conditionRating:
+                      (event.target.value as ConditionRating) || undefined,
+                  })
+                }
+                className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5 text-sm"
+              >
+                <option value="">Not rated</option>
+                {RATING_ORDER.map((rating) => (
+                  <option key={rating} value={rating}>
+                    {rating} · {CONDITION_RATING_LABELS[rating]}
+                  </option>
+                ))}
+              </select>
+              {block.conditionRating === 'NI' ? (
+                <p className={`mt-1.5 text-xs ${workspaceTextMuted}`}>
+                  Say why it was not inspected in the text below, for example no
+                  safe access or covered by stored items.
+                </p>
+              ) : null}
+            </Field>
+          ) : null}
         </>
       ) : null}
 

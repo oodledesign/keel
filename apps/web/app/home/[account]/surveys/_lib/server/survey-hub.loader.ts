@@ -9,6 +9,7 @@ import { surveyLevelFromType } from '~/lib/building-surveyor/survey-types';
 import { createSurveyCaptureService } from './survey-capture.service';
 import { createSurveyEpcService } from './survey-epc.service';
 import { createSurveyPhrasesService } from './survey-phrases.service';
+import { createSurveyReportDetailsService } from './survey-report-details.service';
 import { createSurveyTemplatesService } from './survey-templates.service';
 
 export async function loadSurveyHubExtras(input: {
@@ -31,6 +32,7 @@ export async function loadSurveyHubExtras(input: {
     banks,
     attachedEpc,
     propertyLookup,
+    reportDetails,
   ] = await Promise.all([
     service.listObservations(input.accountId, input.proposalId),
     service.listLinkedTranscripts(
@@ -45,6 +47,10 @@ export async function loadSurveyHubExtras(input: {
     createSurveyPhrasesService(client).listBanks(input.accountId),
     epcService.getAttached(input.accountId, input.proposalId),
     epcService.getLookup(input.accountId, input.proposalId),
+    createSurveyReportDetailsService(client).getDetails(
+      input.accountId,
+      input.proposalId,
+    ),
   ]);
 
   const survey = await service.getSurvey(input.accountId, input.proposalId);
@@ -67,6 +73,8 @@ export async function loadSurveyHubExtras(input: {
     propertyLookup,
     epcConfigured: isGovUkEpcConfigured(),
     flood: mapSurveyFloodRow(survey),
+    reportDetails,
+    isDraft: survey.status === 'draft',
     surveyLevel:
       row.survey_level === 2 || row.survey_level === 3
         ? row.survey_level

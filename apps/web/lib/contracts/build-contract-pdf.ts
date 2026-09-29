@@ -2,7 +2,6 @@ import {
   PDFDocument,
   type PDFFont,
   type PDFPage,
-  PDFString,
   StandardFonts,
   rgb,
 } from 'pdf-lib';
@@ -13,6 +12,7 @@ import {
   htmlToBlocks,
 } from '~/lib/contracts/html-blocks';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
+import { addUriLink } from '~/lib/pdf/pdf-links';
 
 export type ContractPdfPaymentItem = { label: string; percent: number };
 
@@ -218,25 +218,6 @@ function wrapRuns(
   return lines.length > 0 ? lines : [[]];
 }
 
-function addLinkAnnotation(
-  page: PDFPage,
-  box: { x: number; y: number; width: number; height: number },
-  url: string,
-) {
-  const annot = page.doc.context.obj({
-    Type: 'Annot',
-    Subtype: 'Link',
-    Rect: [box.x, box.y, box.x + box.width, box.y + box.height],
-    Border: [0, 0, 0],
-    A: {
-      Type: 'Action',
-      S: 'URI',
-      URI: PDFString.of(url),
-    },
-  });
-  page.node.addAnnot(page.doc.context.register(annot));
-}
-
 export function contractPdfFilename(title: string | null | undefined): string {
   const slug = (title?.trim() || 'agreement')
     .replace(/[^a-z0-9]+/gi, '-')
@@ -340,7 +321,7 @@ export async function buildContractPdf(
           });
         }
         if (piece.run.href) {
-          addLinkAnnotation(
+          addUriLink(
             page,
             {
               x: cursorX,

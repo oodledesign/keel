@@ -67,6 +67,9 @@ import { surveyPath } from '../_lib/survey-display';
 import { SurveyPhrasePanel } from './survey-phrase-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
+const NI_REASON_RE =
+  /\b(access|unable|could not|couldn't|not possible|obscured|covered|locked|hidden|because|due to|unsafe|safe)\b/i;
+
 type DeskReviewPhoto = {
   id: string;
   title: string;
@@ -762,6 +765,18 @@ export function SurveyDeskReviewClient({
                     ) : item.conditionRating ? (
                       <p className={`text-xs ${workspaceTextMuted}`}>
                         Rating {item.conditionRating}
+                      </p>
+                    ) : null}
+                    {canEdit &&
+                    item.conditionRating === 'NI' &&
+                    !NI_REASON_RE.test(draft) ? (
+                      <p
+                        className="text-xs text-amber-600 dark:text-amber-400"
+                        data-test="survey-ni-reason-prompt"
+                      >
+                        Not inspected: add why (for example no safe access,
+                        locked, or covered by stored items). RICS reports should
+                        explain every element that was not inspected.
                       </p>
                     ) : null}
                   </li>
