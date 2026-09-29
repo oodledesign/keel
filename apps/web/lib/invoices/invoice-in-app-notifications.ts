@@ -48,11 +48,14 @@ export async function notifyInvoicePaidInApp(params: {
   totalPence: number;
   currency: string;
   paymentMethod: 'stripe' | 'cash' | 'bank_transfer';
+  topupCredits?: number | null;
 }) {
   const amount = formatWorkspaceMoney(params.totalPence, params.currency);
   const method = paymentMethodLabel(params.paymentMethod);
 
-  const body = `Invoice ${params.invoiceNumber} paid (${amount}) by ${params.clientName} via ${method}`;
+  const body = params.topupCredits
+    ? `Credit top-up paid: ${params.topupCredits} credits (${amount}) by ${params.clientName} via ${method} · ${params.invoiceNumber}`
+    : `Invoice ${params.invoiceNumber} paid (${amount}) by ${params.clientName} via ${method}`;
 
   await createInAppNotification({
     accountId: params.accountId,

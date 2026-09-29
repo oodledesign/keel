@@ -21,6 +21,7 @@ export type LooseQuery = {
   eq: (column: string, value: unknown) => LooseQuery;
   is: (column: string, value: null) => LooseQuery;
   in: (column: string, values: readonly unknown[]) => LooseQuery;
+  gt: (column: string, value: unknown) => LooseQuery;
   gte: (column: string, value: unknown) => LooseQuery;
   lt: (column: string, value: unknown) => LooseQuery;
   not: (column: string, operator: string, value: unknown) => LooseQuery;
@@ -29,6 +30,7 @@ export type LooseQuery = {
     options?: { ascending?: boolean; nullsFirst?: boolean },
   ) => LooseQuery;
   limit: (count: number) => LooseQuery;
+  range: (from: number, to: number) => LooseQuery;
   maybeSingle: () => Promise<LooseQueryResult<Record<string, unknown> | null>>;
   single: () => Promise<LooseQueryResult<Record<string, unknown> | null>>;
   then: Promise<LooseQueryResult<Record<string, unknown>[] | null>>['then'];
