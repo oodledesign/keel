@@ -23,12 +23,20 @@ describe('computeWipStageForecasts', () => {
       fee: 10_000,
     });
     expect(wipStageForecast(forecasts, 'completed')).toEqual({
+      count: 0,
+      fee: 0,
+    });
+    expect(wipStageForecast(forecasts, 'completed_exchanged')).toEqual({
       count: 1,
       fee: 2_500,
     });
     expect(wipStageForecast(forecasts, 'under_offer')).toEqual({
-      count: 2,
-      fee: 4_250,
+      count: 1,
+      fee: 4_000,
+    });
+    expect(wipStageForecast(forecasts, 'under_offer_negotiating')).toEqual({
+      count: 1,
+      fee: 250,
     });
     expect(wipStageForecast(forecasts, 'negotiating')).toEqual({
       count: 1,

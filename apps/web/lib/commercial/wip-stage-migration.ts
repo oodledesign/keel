@@ -28,30 +28,14 @@ export function commercialInstructionHasBilledSignal(
 }
 
 /**
- * One-time remap of a stored instruction stage onto the ladder.
- * Mirrors the commercial-property UPDATE in the stage-ladder migration.
- * - completed_exchanged → billed when a billed signal is present, else completed
- * - under_offer_negotiating → under_offer
- * - management work sitting in current/potential → managed
- * - other legacy keys follow COMMERCIAL_PIPELINE_LEGACY_STAGE_MAP
+ * Stored instruction stages are left for Bracketts to file by hand.
+ * Combined keys (`completed_exchanged`, `under_offer_negotiating`) and
+ * management work still sitting in current/potential are not rewritten.
+ * Older Kato aliases still follow the legacy map.
+ * `commercialInstructionHasBilledSignal` is the heuristic we chose not to run.
  */
 export function remapStoredCommercialInstructionStage(
   input: CommercialInstructionStageSource,
 ): string {
-  const stage = input.stage;
-
-  if (stage === 'under_offer_negotiating') return 'under_offer';
-
-  if (stage === 'completed_exchanged') {
-    return commercialInstructionHasBilledSignal(input) ? 'billed' : 'completed';
-  }
-
-  if (
-    input.workType === 'management' &&
-    (stage === 'current' || stage === 'potential')
-  ) {
-    return 'managed';
-  }
-
-  return String(normalizeCommercialPipelineStage(stage));
+  return String(normalizeCommercialPipelineStage(input.stage));
 }

@@ -1,15 +1,12 @@
 -- Split commercial WIP instruction stages into Abbey's ladder and add
 -- per-instruction AML done tracking.
 --
--- Dan: apply this on production manually. It only rewrites deals on
--- commercial-property accounts.
+-- Dan: apply this on production manually. It does not rewrite deal stages.
+-- Bracketts move existing instructions onto Billed, Completed, Under offer,
+-- Negotiating, and Managed themselves. New columns start empty.
 --
--- Stage mapping (mirrors apps/web/lib/commercial/wip-stage-migration.ts):
---   under_offer_negotiating -> under_offer
---   completed_exchanged     -> billed when name/notes/hots_notes/next_action
---                              contains the word "billed"; otherwise completed
---   work_type = management and stage in (current, potential) -> managed
--- Legacy keys stay valid so older clients still read. The app maps them.
+-- Legacy keys stay valid so older rows still read. Combined keys
+-- (under_offer_negotiating, completed_exchanged) stay on their own columns.
 
 ALTER TABLE public.pipeline_deals
   ADD COLUMN IF NOT EXISTS aml_done boolean NOT NULL DEFAULT false;
@@ -52,7 +49,7 @@ ALTER TABLE public.pipeline_deals
         'potential',
         'managed',
         'fallen_through',
-        -- Previous combined WIP keys (readable; app + this migration remap them)
+        -- Previous combined WIP keys (left in place for the team to move)
         'under_offer_negotiating',
         'completed_exchanged',
         -- Building Surveyor
@@ -79,35 +76,7 @@ ALTER TABLE public.pipeline_deals
 COMMENT ON CONSTRAINT pipeline_deals_stage_check ON public.pipeline_deals IS
   'Work CRM + commercial WIP ladder + building-surveyor stages (legacy keys kept).';
 
--- Remap combined stages and management-in-current onto the ladder.
--- Order matches remapStoredCommercialInstructionStage.
-UPDATE public.pipeline_deals AS d
-SET
-  stage = CASE
-    WHEN d.stage = 'under_offer_negotiating' THEN 'under_offer'
-    WHEN d.stage = 'completed_exchanged'
-      AND (
-        COALESCE(d.name, '') ~* '(^|[^[:alnum:]])billed([^[:alnum:]]|$)'
-        OR COALESCE(d.notes, '') ~* '(^|[^[:alnum:]])billed([^[:alnum:]]|$)'
-        OR COALESCE(d.hots_notes, '') ~* '(^|[^[:alnum:]])billed([^[:alnum:]]|$)'
-        OR COALESCE(d.next_action, '') ~* '(^|[^[:alnum:]])billed([^[:alnum:]]|$)'
-      ) THEN 'billed'
-    WHEN d.stage = 'completed_exchanged' THEN 'completed'
-    WHEN d.work_type = 'management'
-      AND d.stage IN ('current', 'potential') THEN 'managed'
-    ELSE d.stage
-  END,
-  updated_at = now()
-FROM public.accounts AS a
-WHERE d.account_id = a.id
-  AND a.space_type = 'commercial-property'
-  AND (
-    d.stage IN ('under_offer_negotiating', 'completed_exchanged')
-    OR (
-      d.work_type = 'management'
-      AND d.stage IN ('current', 'potential')
-    )
-  );
+-- Existing commercial-property deals are not updated. Staff drag them.
 
 -- Rebuild board columns in ladder order. Keep a custom label or hidden
 -- flag when the key still exists; new keys use the default label.

@@ -74,7 +74,6 @@ import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/p
 import {
   moveDealToStage,
   reorderPipelineDeals,
-  updateDeal,
 } from '~/home/(user)/pipeline/actions';
 import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
@@ -96,6 +95,7 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import {
   type PipelineStageConfigItem,
+  commercialPipelineStageLabel,
   isCommercialTerminalStage,
   isCommercialWonStage,
   normalizeCommercialPipelineStage,
@@ -134,7 +134,6 @@ import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
-import { WipAmlToggle } from './wip-aml-toggle';
 import { WipLadderView } from './wip-ladder-view';
 import { WipNeedsAttentionStrip } from './wip-needs-attention-strip';
 import { WipRecentUpdatesStrip } from './wip-recent-updates-strip';
@@ -500,6 +499,24 @@ export function CommercialWipBoard({
     }));
   }, [stageConfig, instructionStages]);
 
+  const editInstructionStages = useMemo(() => {
+    if (!dealToEdit) return selectableInstructionStages;
+    if (
+      selectableInstructionStages.some(
+        (stage) => stage.key === dealToEdit.stage,
+      )
+    ) {
+      return selectableInstructionStages;
+    }
+    return [
+      {
+        key: dealToEdit.stage,
+        label: commercialPipelineStageLabel(dealToEdit.stage),
+      },
+      ...selectableInstructionStages,
+    ];
+  }, [dealToEdit, selectableInstructionStages]);
+
   const columns = useMemo(() => {
     if (view === 'instructions') {
       return instructionStages.map((stage) => ({
@@ -557,10 +574,9 @@ export function CommercialWipBoard({
     for (const [key, list] of map) {
       list.sort((a, b) => {
         if (a.kind === 'instruction' && b.kind === 'instruction') {
-          return (
-            (a.deal.boardPosition ?? 0) - (b.deal.boardPosition ?? 0) ||
-            a.deal.id.localeCompare(b.deal.id)
-          );
+          const aPos = a.deal.ladderPosition ?? a.deal.boardPosition ?? 0;
+          const bPos = b.deal.ladderPosition ?? b.deal.boardPosition ?? 0;
+          return aPos - bPos || a.deal.id.localeCompare(b.deal.id);
         }
         if (a.kind === 'requirement' && b.kind === 'requirement') {
           return a.requirement.id.localeCompare(b.requirement.id);
@@ -601,10 +617,14 @@ export function CommercialWipBoard({
       const current = deals.find((deal) => deal.id === dealId);
       if (!current) return;
 
+      const position =
+        typeof boardPosition === 'number' ? boardPosition : undefined;
       const updated = {
         ...current,
         stage: nextStage,
-        ...(typeof boardPosition === 'number' ? { boardPosition } : {}),
+        ...(typeof position === 'number'
+          ? { boardPosition: position, ladderPosition: position }
+          : {}),
       };
       setDeals((prev) =>
         prev.map((deal) => (deal.id === dealId ? updated : deal)),
@@ -614,7 +634,8 @@ export function CommercialWipBoard({
         try {
           const result = await moveDealToStage(dealId, nextStage, {
             accountSlug,
-            boardPosition,
+            boardPosition: position,
+            ladderPosition: position,
           });
           if (!result.success) {
             setDeals((prev) =>
@@ -624,6 +645,7 @@ export function CommercialWipBoard({
                       ...deal,
                       stage: previousStage,
                       boardPosition: current.boardPosition,
+                      ladderPosition: current.ladderPosition,
                     }
                   : deal,
               ),
@@ -642,6 +664,7 @@ export function CommercialWipBoard({
                     ...deal,
                     stage: previousStage,
                     boardPosition: current.boardPosition,
+                    ladderPosition: current.ladderPosition,
                   }
                 : deal,
             ),
@@ -663,14 +686,23 @@ export function CommercialWipBoard({
         orderedIds.map((id, index) => [id, index + 1]),
       );
       const previous = new Map(
-        deals.map((deal) => [deal.id, deal.boardPosition] as const),
+        deals.map(
+          (deal) =>
+            [
+              deal.id,
+              {
+                boardPosition: deal.boardPosition,
+                ladderPosition: deal.ladderPosition,
+              },
+            ] as const,
+        ),
       );
 
       setDeals((prev) =>
         prev.map((deal) => {
           const nextPos = positionById.get(deal.id);
           return typeof nextPos === 'number'
-            ? { ...deal, boardPosition: nextPos }
+            ? { ...deal, boardPosition: nextPos, ladderPosition: nextPos }
             : deal;
         }),
       );
@@ -681,24 +713,37 @@ export function CommercialWipBoard({
             orderedIds.map((id, index) => ({
               id,
               boardPosition: index + 1,
+              ladderPosition: index + 1,
             })),
             { accountSlug },
           );
           if (!result.success) {
             setDeals((prev) =>
-              prev.map((deal) => ({
-                ...deal,
-                boardPosition: previous.get(deal.id) ?? deal.boardPosition,
-              })),
+              prev.map((deal) => {
+                const prior = previous.get(deal.id);
+                return prior
+                  ? {
+                      ...deal,
+                      boardPosition: prior.boardPosition,
+                      ladderPosition: prior.ladderPosition,
+                    }
+                  : deal;
+              }),
             );
             toast.error(result.error ?? 'Could not reorder instructions');
           }
         } catch (error) {
           setDeals((prev) =>
-            prev.map((deal) => ({
-              ...deal,
-              boardPosition: previous.get(deal.id) ?? deal.boardPosition,
-            })),
+            prev.map((deal) => {
+              const prior = previous.get(deal.id);
+              return prior
+                ? {
+                    ...deal,
+                    boardPosition: prior.boardPosition,
+                    ladderPosition: prior.ladderPosition,
+                  }
+                : deal;
+            }),
           );
           toast.error(
             error instanceof Error
@@ -990,53 +1035,6 @@ export function CommercialWipBoard({
     [deals],
   );
 
-  const toggleInstructionAml = useCallback(
-    (deal: PipelineDeal, next: boolean) => {
-      const previous = {
-        amlDone: deal.amlDone,
-        amlDoneAt: deal.amlDoneAt,
-        amlDoneBy: deal.amlDoneBy,
-      };
-      setDeals((prev) =>
-        prev.map((item) =>
-          item.id === deal.id
-            ? {
-                ...item,
-                amlDone: next,
-                amlDoneAt: next ? new Date().toISOString() : null,
-                amlDoneBy: next ? item.amlDoneBy : null,
-              }
-            : item,
-        ),
-      );
-      startTransition(async () => {
-        try {
-          const result = await updateDeal(deal.id, {
-            amlDone: next,
-            accountSlug,
-          });
-          if (!result.success) {
-            setDeals((prev) =>
-              prev.map((item) =>
-                item.id === deal.id ? { ...item, ...previous } : item,
-              ),
-            );
-            toast.error(result.error ?? 'Could not update AML');
-          }
-        } catch (error) {
-          setDeals((prev) =>
-            prev.map((item) =>
-              item.id === deal.id ? { ...item, ...previous } : item,
-            ),
-          );
-          toast.error(
-            error instanceof Error ? error.message : 'Could not update AML',
-          );
-        }
-      });
-    },
-    [accountSlug],
-  );
   const ladderDealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
   const allLadderExpanded =
     ladderDealIds.length > 0 &&
@@ -1332,7 +1330,7 @@ export function CommercialWipBoard({
         accountSlug={accountSlug}
         accountId={accountId}
         initialClients={initialClients}
-        stages={selectableInstructionStages}
+        stages={editInstructionStages}
         listings={listings}
         commercial
         onRequestCreateDisposal={
@@ -1407,7 +1405,11 @@ export function CommercialWipBoard({
           view={view}
           deals={deals}
           requirements={filteredRequirements}
-          instructionStages={selectableInstructionStages}
+          instructionStages={instructionStages.map((stage) => ({
+            key: stage.key,
+            label: stage.label,
+          }))}
+          selectableStages={selectableInstructionStages}
           listings={listings}
           onDealsChange={setDeals}
           onRequirementsChange={setRequirements}
@@ -1431,6 +1433,7 @@ export function CommercialWipBoard({
             key: stage.key,
             label: stage.label,
           }))}
+          selectableStages={selectableInstructionStages}
           deskActivity={deskActivity}
           latestCareByDealId={latestCareByDealId}
           listings={listings}
@@ -1486,7 +1489,6 @@ export function CommercialWipBoard({
                     accountSlug={accountSlug}
                     listingById={listingById}
                     latestCareByDealId={latestCareByDealId}
-                    onToggleAml={toggleInstructionAml}
                     onEditInstruction={(deal) => {
                       setDealToEdit(deal);
                       setEditDealOpen(true);
@@ -1514,7 +1516,6 @@ export function CommercialWipBoard({
                     : null
                 }
                 onEdit={() => {}}
-                onToggleAml={() => {}}
                 overlay
               />
             ) : null}
@@ -1611,7 +1612,6 @@ function StageColumn({
   accountSlug,
   listingById,
   latestCareByDealId,
-  onToggleAml,
   onEditInstruction,
   onEditRequirement,
 }: {
@@ -1622,7 +1622,6 @@ function StageColumn({
   accountSlug: string;
   listingById: Map<string, PipelineListingOption>;
   latestCareByDealId: Record<string, string>;
-  onToggleAml: (deal: PipelineDeal, next: boolean) => void;
   onEditInstruction: (deal: PipelineDeal) => void;
   onEditRequirement: (requirement: CommercialRequirement) => void;
 }) {
@@ -1704,7 +1703,6 @@ function StageColumn({
                   }
                   lastContactAt={latestCareByDealId[card.deal.id] ?? null}
                   onEdit={() => onEditInstruction(card.deal)}
-                  onToggleAml={(next) => onToggleAml(card.deal, next)}
                 />
               ) : (
                 <RequirementCard
@@ -1727,7 +1725,6 @@ function InstructionCard({
   listing,
   lastContactAt = null,
   onEdit,
-  onToggleAml,
   overlay = false,
 }: {
   deal: PipelineDeal;
@@ -1735,7 +1732,6 @@ function InstructionCard({
   listing?: PipelineListingOption | null;
   lastContactAt?: string | null;
   onEdit: () => void;
-  onToggleAml?: (next: boolean) => void;
   overlay?: boolean;
 }) {
   // DragOverlay must not call useSortable with the same id as the source card —
@@ -1748,7 +1744,6 @@ function InstructionCard({
         listing={listing}
         lastContactAt={lastContactAt}
         onEdit={onEdit}
-        onToggleAml={onToggleAml}
         overlay
       />
     );
@@ -1761,7 +1756,6 @@ function InstructionCard({
       listing={listing}
       lastContactAt={lastContactAt}
       onEdit={onEdit}
-      onToggleAml={onToggleAml}
     />
   );
 }
@@ -1772,14 +1766,12 @@ function SortableInstructionCard({
   listing,
   lastContactAt = null,
   onEdit,
-  onToggleAml,
 }: {
   deal: PipelineDeal;
   accountSlug: string;
   listing?: PipelineListingOption | null;
   lastContactAt?: string | null;
   onEdit: () => void;
-  onToggleAml?: (next: boolean) => void;
 }) {
   const id = cardCompositeId('instruction', deal.id);
   const {
@@ -1798,7 +1790,6 @@ function SortableInstructionCard({
       listing={listing}
       lastContactAt={lastContactAt}
       onEdit={onEdit}
-      onToggleAml={onToggleAml}
       ref={setNodeRef}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -1816,7 +1807,6 @@ const InstructionCardBody = ({
   listing,
   lastContactAt = null,
   onEdit,
-  onToggleAml,
   overlay = false,
   ref,
   style,
@@ -1827,7 +1817,6 @@ const InstructionCardBody = ({
   listing?: PipelineListingOption | null;
   lastContactAt?: string | null;
   onEdit: () => void;
-  onToggleAml?: (next: boolean) => void;
   overlay?: boolean;
   ref?: Ref<HTMLDivElement>;
   style?: CSSProperties;
@@ -1930,13 +1919,6 @@ const InstructionCardBody = ({
           ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {onToggleAml ? (
-            <WipAmlToggle
-              done={deal.amlDone}
-              doneAt={deal.amlDoneAt}
-              onToggle={onToggleAml}
-            />
-          ) : null}
           <button
             type="button"
             onClick={(e) => {

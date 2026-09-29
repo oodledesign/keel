@@ -74,6 +74,7 @@ type Props = {
   accountSlug: string;
   deals: PipelineDeal[];
   stages: StageColumn[];
+  selectableStages?: StageColumn[];
   deskActivity: WipDeskActivityItem[];
   latestCareByDealId?: Record<string, string>;
   listings?: PipelineListingOption[];
@@ -122,6 +123,7 @@ export function WipLadderView({
   accountSlug,
   deals,
   stages,
+  selectableStages,
   deskActivity,
   latestCareByDealId = {},
   listings = [],
@@ -183,7 +185,16 @@ export function WipLadderView({
   const persistLadderOrder = useCallback(
     (_stageKey: string, orderedIds: string[]) => {
       const previous = new Map(
-        deals.map((deal) => [deal.id, deal.ladderPosition] as const),
+        deals.map(
+          (deal) =>
+            [
+              deal.id,
+              {
+                ladderPosition: deal.ladderPosition,
+                boardPosition: deal.boardPosition,
+              },
+            ] as const,
+        ),
       );
       const positionById = new Map(
         orderedIds.map((id, index) => [id, index + 1]),
@@ -193,7 +204,7 @@ export function WipLadderView({
         prev.map((deal) => {
           const nextPos = positionById.get(deal.id);
           return typeof nextPos === 'number'
-            ? { ...deal, ladderPosition: nextPos }
+            ? { ...deal, ladderPosition: nextPos, boardPosition: nextPos }
             : deal;
         }),
       );
@@ -204,24 +215,37 @@ export function WipLadderView({
             orderedIds.map((id, index) => ({
               id,
               ladderPosition: index + 1,
+              boardPosition: index + 1,
             })),
             { accountSlug },
           );
           if (!result.success) {
             onDealsChange((prev) =>
-              prev.map((deal) => ({
-                ...deal,
-                ladderPosition: previous.get(deal.id) ?? deal.ladderPosition,
-              })),
+              prev.map((deal) => {
+                const prior = previous.get(deal.id);
+                return prior
+                  ? {
+                      ...deal,
+                      ladderPosition: prior.ladderPosition,
+                      boardPosition: prior.boardPosition,
+                    }
+                  : deal;
+              }),
             );
             toast.error(result.error ?? 'Could not reorder ladder');
           }
         } catch (error) {
           onDealsChange((prev) =>
-            prev.map((deal) => ({
-              ...deal,
-              ladderPosition: previous.get(deal.id) ?? deal.ladderPosition,
-            })),
+            prev.map((deal) => {
+              const prior = previous.get(deal.id);
+              return prior
+                ? {
+                    ...deal,
+                    ladderPosition: prior.ladderPosition,
+                    boardPosition: prior.boardPosition,
+                  }
+                : deal;
+            }),
           );
           toast.error(
             error instanceof Error ? error.message : 'Could not reorder ladder',
@@ -259,10 +283,23 @@ export function WipLadderView({
     [expandedIds, onExpandedIdsChange],
   );
 
+  const stageChoices = selectableStages ?? stages;
+
   const changeStage = (deal: PipelineDeal, nextStage: string) => {
     if (nextStage === deal.stage) return;
     const previousStage = deal.stage;
-    const updated = { ...deal, stage: nextStage };
+    const position =
+      deals.filter(
+        (item) =>
+          item.id !== deal.id &&
+          normalizeCommercialPipelineStage(item.stage) === nextStage,
+      ).length + 1;
+    const updated = {
+      ...deal,
+      stage: nextStage,
+      ladderPosition: position,
+      boardPosition: position,
+    };
     onDealsChange((prev) =>
       prev.map((item) => (item.id === deal.id ? updated : item)),
     );
@@ -271,11 +308,20 @@ export function WipLadderView({
       try {
         const result = await moveDealToStage(deal.id, nextStage, {
           accountSlug,
+          boardPosition: position,
+          ladderPosition: position,
         });
         if (!result.success) {
           onDealsChange((prev) =>
             prev.map((item) =>
-              item.id === deal.id ? { ...item, stage: previousStage } : item,
+              item.id === deal.id
+                ? {
+                    ...item,
+                    stage: previousStage,
+                    ladderPosition: deal.ladderPosition,
+                    boardPosition: deal.boardPosition,
+                  }
+                : item,
             ),
           );
           toast.error(result.error ?? 'Could not update stage');
@@ -287,7 +333,14 @@ export function WipLadderView({
       } catch (error) {
         onDealsChange((prev) =>
           prev.map((item) =>
-            item.id === deal.id ? { ...item, stage: previousStage } : item,
+            item.id === deal.id
+              ? {
+                  ...item,
+                  stage: previousStage,
+                  ladderPosition: deal.ladderPosition,
+                  boardPosition: deal.boardPosition,
+                }
+              : item,
           ),
         );
         toast.error(
@@ -403,7 +456,11 @@ export function WipLadderView({
                           lastContactIso={lastContactIso}
                           accountSlug={accountSlug}
                           accountId={accountId}
-                          stages={stages}
+                          stages={stageOptionsForDeal(
+                            deal,
+                            stageChoices,
+                            stages,
+                          )}
                           onToggle={() => toggleExpanded(deal.id)}
                           onChangeStage={(next) => changeStage(deal, next)}
                           onToggleAml={(next) => {
@@ -474,6 +531,18 @@ export function WipLadderView({
       })}
     </div>
   );
+}
+
+function stageOptionsForDeal(
+  deal: PipelineDeal,
+  selectable: StageColumn[],
+  allStages: StageColumn[],
+): StageColumn[] {
+  const current = String(normalizeCommercialPipelineStage(deal.stage));
+  if (selectable.some((stage) => stage.key === current)) return selectable;
+  const currentLabel =
+    allStages.find((stage) => stage.key === current)?.label ?? current;
+  return [{ key: current, label: currentLabel }, ...selectable];
 }
 
 function LadderSortableRow({
@@ -584,6 +653,12 @@ function LadderSortableRow({
             <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
               {oneLiner ? (
                 <>
+                  {latest?.createdAt ? (
+                    <span className="font-medium text-[var(--workspace-shell-text)]">
+                      {formatTimelineDate(latest.createdAt)}
+                      {' · '}
+                    </span>
+                  ) : null}
                   {oneLiner}
                   {latest?.assignedTo ? (
                     <span>

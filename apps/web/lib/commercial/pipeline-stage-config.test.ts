@@ -27,10 +27,10 @@ describe('pipeline-stage-config', () => {
     expect(normalizeCommercialPipelineStage('viewing')).toBe('current');
     expect(normalizeCommercialPipelineStage('signed')).toBe('completed');
     expect(normalizeCommercialPipelineStage('completed_exchanged')).toBe(
-      'completed',
+      'completed_exchanged',
     );
     expect(normalizeCommercialPipelineStage('under_offer_negotiating')).toBe(
-      'under_offer',
+      'under_offer_negotiating',
     );
     expect(normalizeCommercialPipelineStage('discounted')).toBe(
       'fallen_through',
@@ -64,5 +64,27 @@ describe('pipeline-stage-config', () => {
     expect(
       board.find((stage) => stage.key === 'fallen_through')?.forceVisible,
     ).toBe(true);
+  });
+
+  it('shows combined stages above fallen through until they are moved', () => {
+    const board = resolveCommercialPipelineBoardStages({
+      dealStages: ['completed_exchanged', 'under_offer_negotiating'],
+    });
+    const keys = board.map((stage) => stage.key);
+
+    expect(keys.indexOf('completed_exchanged')).toBeGreaterThan(-1);
+    expect(keys.indexOf('under_offer_negotiating')).toBeGreaterThan(-1);
+    expect(keys.indexOf('completed_exchanged')).toBeLessThan(
+      keys.indexOf('fallen_through'),
+    );
+    expect(keys.indexOf('under_offer_negotiating')).toBeLessThan(
+      keys.indexOf('fallen_through'),
+    );
+    expect(
+      board.find((stage) => stage.key === 'completed_exchanged')?.label,
+    ).toBe('Completed / exchanged');
+    expect(
+      board.find((stage) => stage.key === 'under_offer_negotiating')?.label,
+    ).toBe('Under offer / negotiating');
   });
 });

@@ -20,19 +20,31 @@ const METRICS = [
     colour: WIP_STAGE_COLOURS.billed,
   },
   {
+    key: 'completed' as const,
+    label: 'Completed',
+    testId: 'wip-running-total-completed',
+    hint: 'Completed but not yet billed',
+    colour: WIP_STAGE_COLOURS.completed,
+  },
+  {
     key: 'underOffer' as const,
     label: 'Under offer',
     testId: 'wip-running-total-under-offer',
-    hint: 'Fees in Under offer and Negotiating',
+    hint: 'Fees in Under offer. Negotiating is not included',
     colour: WIP_STAGE_COLOURS.under_offer,
+  },
+  {
+    key: 'managed' as const,
+    label: 'Managed',
+    testId: 'wip-running-total-managed',
+    hint: 'Annual management fees',
+    colour: WIP_STAGE_COLOURS.managed,
   },
   {
     key: 'total' as const,
     label: 'Total',
     testId: 'wip-running-total-combined',
-    hint: 'Billed plus under offer',
-    // Navy / --ozer-info — same swatch as Potential columns, used here as
-    // combined emphasis rather than the early-funnel stage meaning.
+    hint: 'Billed, completed, under offer, and managed',
     colour: WIP_STAGE_COLOURS.potential,
   },
 ];

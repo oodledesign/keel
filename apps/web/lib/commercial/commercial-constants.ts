@@ -535,11 +535,9 @@ export const COMMERCIAL_PIPELINE_LEGACY_STAGE_MAP: Record<
   viewing: 'current',
   idle: 'potential',
   discounted: 'fallen_through',
-  // Combined WIP keys (split into the ladder). Billed vs completed is a
-  // one-time data migration when a billed signal is present; reads of the
-  // old combined key land on Completed.
-  under_offer_negotiating: 'under_offer',
-  completed_exchanged: 'completed',
+  // Combined WIP keys stay on their own columns until Bracketts move them.
+  // Do not fold under_offer_negotiating into Under offer, or
+  // completed_exchanged into Completed / Billed.
   signed: 'completed',
   // Older commercial keys that are not themselves ladder stages
   offer: 'under_offer',
@@ -547,6 +545,16 @@ export const COMMERCIAL_PIPELINE_LEGACY_STAGE_MAP: Record<
   solicitors: 'under_offer',
   fell_through: 'fallen_through',
 };
+
+/**
+ * Combined instruction stages that stay visible until the team files them
+ * onto the ladder. Not canonical stages, and not rewritten on read.
+ */
+export const COMMERCIAL_PIPELINE_UNFILED_STAGE_LABELS: Record<string, string> =
+  {
+    under_offer_negotiating: 'Under offer / negotiating',
+    completed_exchanged: 'Completed / exchanged',
+  };
 
 export const DEFAULT_PIPELINE_BOARD_STAGES = [
   { key: 'lead', label: 'Lead' },

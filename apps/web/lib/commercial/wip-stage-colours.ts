@@ -76,6 +76,10 @@ export function wipStageColour(stageKey: string): StageColour {
     return REQUIREMENT_STAGE_COLOURS[stageKey as RequirementStatus];
   }
 
+  if (stageKey === 'completed_exchanged') {
+    return WIP_STAGE_COLOURS.completed;
+  }
+
   const normalized = normalizeCommercialPipelineStage(stageKey);
   return (
     WIP_STAGE_COLOURS[normalized as CommercialPipelineStage] ??

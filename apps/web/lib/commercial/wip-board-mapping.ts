@@ -62,6 +62,10 @@ export function toSharedStatus(
   stage: string,
 ): WipSharedStatus {
   if (kind === 'instruction') {
+    // Combined columns stay on the instruction ladder, but the Both view
+    // still needs a shared home so they do not fall into New.
+    if (stage === 'under_offer_negotiating') return 'under_offer';
+    if (stage === 'completed_exchanged') return 'closed';
     const normalized = normalizeCommercialPipelineStage(stage);
     if (normalized === 'potential') return 'new';
     if (normalized === 'current') return 'active';

@@ -4,6 +4,7 @@ import {
   COMMERCIAL_PIPELINE_LOST_STAGE,
   COMMERCIAL_PIPELINE_STAGES,
   COMMERCIAL_PIPELINE_STAGE_LABELS,
+  COMMERCIAL_PIPELINE_UNFILED_STAGE_LABELS,
   COMMERCIAL_PIPELINE_WON_STAGE,
   type CommercialPipelineStage,
 } from './commercial-constants';
@@ -128,19 +129,27 @@ export function resolveCommercialPipelineBoardStages(input: {
     }
   }
 
-  // Orphan legacy/custom keys that still have deals.
+  // Combined stages the team still has to file. Keep Fallen through last.
+  const unfiled: PipelineStageBoardItem[] = [];
   for (const stage of occupied) {
     if (board.some((item) => item.key === stage)) continue;
-    const label =
-      (isCommercialPipelineStage(stage)
-        ? COMMERCIAL_PIPELINE_STAGE_LABELS[stage]
-        : undefined) ?? stage;
-    board.push({
+    unfiled.push({
       key: stage,
-      label,
+      label: commercialPipelineStageLabel(stage),
       hidden: false,
       forceVisible: true,
     });
+  }
+
+  if (unfiled.length > 0) {
+    const fallenIndex = board.findIndex(
+      (item) => item.key === COMMERCIAL_PIPELINE_LOST_STAGE,
+    );
+    if (fallenIndex >= 0) {
+      board.splice(fallenIndex, 0, ...unfiled);
+    } else {
+      board.push(...unfiled);
+    }
   }
 
   return board;
@@ -156,10 +165,13 @@ export function commercialPipelineStageLabel(
   if (isCommercialPipelineStage(normalized)) {
     return COMMERCIAL_PIPELINE_STAGE_LABELS[normalized];
   }
-  return key;
+  return COMMERCIAL_PIPELINE_UNFILED_STAGE_LABELS[key] ?? key;
 }
 
 export function isCommercialWonStage(stage: string): boolean {
+  // Combined completed/exchanged stays a closed stage until someone moves it,
+  // so it does not flood the active desk.
+  if (stage === 'completed_exchanged' || stage === 'billed') return true;
   const normalized = normalizeCommercialPipelineStage(stage);
   return (
     normalized === 'billed' || normalized === COMMERCIAL_PIPELINE_WON_STAGE

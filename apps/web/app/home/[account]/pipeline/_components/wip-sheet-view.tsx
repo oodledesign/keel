@@ -11,7 +11,7 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import type { PipelineDeal } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
-import { updateDeal } from '~/home/(user)/pipeline/actions';
+import { moveDealToStage, updateDeal } from '~/home/(user)/pipeline/actions';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import { updateRequirement } from '~/home/[account]/requirements/_lib/server/server-actions';
 import {
@@ -40,6 +40,7 @@ type Props = {
   deals: PipelineDeal[];
   requirements: CommercialRequirement[];
   instructionStages: Array<{ key: string; label: string }>;
+  selectableStages?: Array<{ key: string; label: string }>;
   listings?: PipelineListingOption[];
   onDealsChange: (next: PipelineDeal[]) => void;
   onRequirementsChange: (next: CommercialRequirement[]) => void;
@@ -112,6 +113,18 @@ const thClass =
 
 const tdClass =
   'border-b border-[color:var(--workspace-shell-border)]/70 px-1.5 py-1 align-middle';
+
+function sheetStageOptions(
+  deal: PipelineDeal,
+  selectable: Array<{ key: string; label: string }>,
+  allStages: Array<{ key: string; label: string }>,
+) {
+  const current = String(normalizeCommercialPipelineStage(deal.stage));
+  if (selectable.some((stage) => stage.key === current)) return selectable;
+  const currentLabel =
+    allStages.find((stage) => stage.key === current)?.label ?? current;
+  return [{ key: current, label: currentLabel }, ...selectable];
+}
 
 function formatDate(iso: string) {
   try {
@@ -187,6 +200,7 @@ export function WipSheetView({
   deals,
   requirements,
   instructionStages,
+  selectableStages,
   listings = [],
   onDealsChange,
   onRequirementsChange,
@@ -633,11 +647,19 @@ export function WipSheetView({
                   </tr>
                 ) : (
                   instructionStages.flatMap((stage) => {
-                    const stageDeals = visibleDeals.filter(
-                      (deal) =>
-                        normalizeCommercialPipelineStage(deal.stage) ===
-                        stage.key,
-                    );
+                    const stageDeals = visibleDeals
+                      .filter(
+                        (deal) =>
+                          normalizeCommercialPipelineStage(deal.stage) ===
+                          stage.key,
+                      )
+                      .slice()
+                      .sort(
+                        (a, b) =>
+                          (a.ladderPosition ?? a.boardPosition ?? 0) -
+                            (b.ladderPosition ?? b.boardPosition ?? 0) ||
+                          a.id.localeCompare(b.id),
+                      );
                     if (instructionQuery.trim() && stageDeals.length === 0) {
                       return [];
                     }
@@ -786,10 +808,67 @@ export function WipSheetView({
                                 )}
                                 onChange={(e) => {
                                   const stage = e.target.value;
-                                  patchDeal(deal.id, { stage }, { stage });
+                                  const current = String(
+                                    normalizeCommercialPipelineStage(
+                                      deal.stage,
+                                    ),
+                                  );
+                                  if (stage === current) return;
+                                  const position =
+                                    deals.filter(
+                                      (item) =>
+                                        item.id !== deal.id &&
+                                        normalizeCommercialPipelineStage(
+                                          item.stage,
+                                        ) === stage,
+                                    ).length + 1;
+                                  const previous = deals;
+                                  onDealsChange(
+                                    deals.map((item) =>
+                                      item.id === deal.id
+                                        ? {
+                                            ...item,
+                                            stage,
+                                            ladderPosition: position,
+                                            boardPosition: position,
+                                          }
+                                        : item,
+                                    ),
+                                  );
+                                  startTransition(async () => {
+                                    try {
+                                      const result = await moveDealToStage(
+                                        deal.id,
+                                        stage,
+                                        {
+                                          accountSlug,
+                                          boardPosition: position,
+                                          ladderPosition: position,
+                                        },
+                                      );
+                                      if (!result.success) {
+                                        onDealsChange(previous);
+                                        toast.error(
+                                          result.error ??
+                                            'Could not update stage',
+                                        );
+                                      }
+                                    } catch (error) {
+                                      onDealsChange(previous);
+                                      toast.error(
+                                        error instanceof Error
+                                          ? error.message
+                                          : 'Could not update stage',
+                                      );
+                                    }
+                                  });
                                 }}
                               >
-                                {instructionStages.map((stageOption) => (
+                                {sheetStageOptions(
+                                  deal,
+                                  selectableStages ?? instructionStages,
+                                  instructionStages,
+                                ).map((stageOption) => (
                                   <option
                                     key={stageOption.key}
                                     value={stageOption.key}

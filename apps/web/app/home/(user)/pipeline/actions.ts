@@ -48,7 +48,11 @@ function revalidatePipelinePaths(accountSlug?: string | null) {
 export async function moveDealToStage(
   dealId: string,
   newStage: string,
-  options?: { accountSlug?: string | null; boardPosition?: number },
+  options?: {
+    accountSlug?: string | null;
+    boardPosition?: number;
+    ladderPosition?: number;
+  },
 ) {
   try {
     const client = getSupabaseServerClient();
@@ -92,6 +96,9 @@ export async function moveDealToStage(
     const updates: Record<string, unknown> = { stage: newStage };
     if (typeof options?.boardPosition === 'number') {
       updates.board_position = options.boardPosition;
+    }
+    if (typeof options?.ladderPosition === 'number') {
+      updates.ladder_position = options.ladderPosition;
     }
     if (
       newStage === 'billed' ||

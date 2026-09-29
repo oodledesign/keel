@@ -7,27 +7,27 @@ import {
 } from './wip-stage-migration';
 
 describe('commercial instruction stage migration', () => {
-  it('sends completed_exchanged to completed unless a billed word is present', () => {
+  it('leaves combined stages for the team to move, even when notes say billed', () => {
     expect(
       remapStoredCommercialInstructionStage({
         stage: 'completed_exchanged',
         notes: 'Exchanged and completed',
       }),
-    ).toBe('completed');
+    ).toBe('completed_exchanged');
 
     expect(
       remapStoredCommercialInstructionStage({
         stage: 'completed_exchanged',
         notes: '18.06 DT billed',
       }),
-    ).toBe('billed');
+    ).toBe('completed_exchanged');
 
     expect(
       remapStoredCommercialInstructionStage({
         stage: 'completed_exchanged',
         name: 'Agency billed — Poundland',
       }),
-    ).toBe('billed');
+    ).toBe('completed_exchanged');
   });
 
   it('does not treat billing-adjacent words as a billed signal', () => {
@@ -43,27 +43,27 @@ describe('commercial instruction stage migration', () => {
     ).toBe(true);
   });
 
-  it('splits under offer / negotiating onto under offer', () => {
+  it('leaves the combined under-offer column for the team to split', () => {
     expect(
       remapStoredCommercialInstructionStage({
         stage: 'under_offer_negotiating',
       }),
-    ).toBe('under_offer');
+    ).toBe('under_offer_negotiating');
   });
 
-  it('moves management instructions that are still current or potential onto managed', () => {
+  it('leaves management instructions in current or potential', () => {
     expect(
       remapStoredCommercialInstructionStage({
         stage: 'current',
         workType: 'management',
       }),
-    ).toBe('managed');
+    ).toBe('current');
     expect(
       remapStoredCommercialInstructionStage({
         stage: 'potential',
         workType: 'management',
       }),
-    ).toBe('managed');
+    ).toBe('potential');
     expect(
       remapStoredCommercialInstructionStage({
         stage: 'under_offer',
@@ -72,13 +72,13 @@ describe('commercial instruction stage migration', () => {
     ).toBe('under_offer');
   });
 
-  it('keeps legacy aliases pointing at the split ladder', () => {
+  it('keeps older Kato aliases, and leaves combined keys alone', () => {
     expect(normalizeCommercialPipelineStage('signed')).toBe('completed');
     expect(normalizeCommercialPipelineStage('completed_exchanged')).toBe(
-      'completed',
+      'completed_exchanged',
     );
     expect(normalizeCommercialPipelineStage('under_offer_negotiating')).toBe(
-      'under_offer',
+      'under_offer_negotiating',
     );
     expect(normalizeCommercialPipelineStage('offer')).toBe('under_offer');
     expect(normalizeCommercialPipelineStage('hots')).toBe('under_offer');

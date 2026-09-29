@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { computeWipInstructionTotals } from './wip-running-totals';
 
 describe('computeWipInstructionTotals', () => {
-  it('sums billed-stage fees and under-offer plus negotiating', () => {
+  it('sums billed, completed, under offer, and managed only', () => {
     expect(
       computeWipInstructionTotals([
         { stage: 'billed', value: 10_000 },
@@ -13,14 +13,17 @@ describe('computeWipInstructionTotals', () => {
         { stage: 'under_offer', value: 4_000 },
         { stage: 'negotiating', value: 250 },
         { stage: 'under_offer_negotiating', value: 100 },
+        { stage: 'managed', value: 2_000 },
         { stage: 'current', value: 9_999 },
         { stage: 'fallen_through', value: 800 },
         { stage: 'billed', value: null },
       ]),
     ).toEqual({
       billed: 10_000,
-      underOffer: 4_350,
-      total: 14_350,
+      completed: 9_400,
+      underOffer: 4_000,
+      managed: 2_000,
+      total: 25_400,
     });
   });
 
@@ -30,6 +33,12 @@ describe('computeWipInstructionTotals', () => {
         { stage: 'billed' },
         { stage: 'negotiating', value: Number.NaN },
       ]),
-    ).toEqual({ billed: 0, underOffer: 0, total: 0 });
+    ).toEqual({
+      billed: 0,
+      completed: 0,
+      underOffer: 0,
+      managed: 0,
+      total: 0,
+    });
   });
 });
