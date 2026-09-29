@@ -12,10 +12,11 @@ import { toast } from '@kit/ui/sonner';
 import { compressListingImageFile } from '~/lib/commercial/compress-listing-image';
 import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
 import {
-  LISTING_MEDIA_PREVIEW_TRANSFORM,
   encodeStorageSignedUrl,
-  listingMediaSupportsPreviewTransform,
+  listingMediaDerivativePath,
+  listingMediaDisplayPath,
 } from '~/lib/commercial/listing-media-public-url';
+import { uploadListingImageDerivatives } from '~/lib/commercial/upload-listing-image-derivatives';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialListingMedia } from '../_lib/server/listings.service';
@@ -46,33 +47,14 @@ function safeFileName(name: string) {
 }
 
 async function signPrivateMediaUrl(
-  path: string,
-  mimeType: string | null,
+  media: CommercialListingMedia,
 ): Promise<string | null> {
-  const client = getSupabaseBrowserClient();
-  const usePreview = listingMediaSupportsPreviewTransform(mimeType);
-  const { data, error } = await client.storage
-    .from('commercial-listing-media')
-    .createSignedUrl(
-      path,
-      3600,
-      usePreview ? { transform: LISTING_MEDIA_PREVIEW_TRANSFORM } : undefined,
-    );
-
-  if (!error && data?.signedUrl) {
-    return encodeStorageSignedUrl(data.signedUrl);
-  }
-
-  if (usePreview) {
-    const fallback = await client.storage
-      .from('commercial-listing-media')
-      .createSignedUrl(path, 3600);
-    return fallback.data?.signedUrl
-      ? encodeStorageSignedUrl(fallback.data.signedUrl)
-      : null;
-  }
-
-  return null;
+  const path = listingMediaDisplayPath(media, 'gallery');
+  if (!path) return null;
+  const { data } = await getSupabaseBrowserClient()
+    .storage.from('commercial-listing-media')
+    .createSignedUrl(path, 3600);
+  return data?.signedUrl ? encodeStorageSignedUrl(data.signedUrl) : null;
 }
 
 function PrivateUploadCard({
@@ -144,6 +126,11 @@ function PrivateUploadCard({
           if (uploadError) throw new Error(uploadError.message);
           uploadedPaths.push(path);
 
+          const derivatives = await uploadListingImageDerivatives(
+            client,
+            path,
+            prepared,
+          );
           const created = await createListingMedia({
             accountId,
             listingId,
@@ -151,13 +138,14 @@ function PrivateUploadCard({
               ? 'image'
               : 'other',
             storagePath: path,
+            ...derivatives,
             fileName: file.name,
             mimeType: prepared.type || file.type || null,
             sortOrder: media.length + uploaded.length,
             isPrivate: true,
             isCover: false,
           });
-          const url = await signPrivateMediaUrl(path, created.mimeType);
+          const url = await signPrivateMediaUrl(created);
           uploaded.push({ ...created, url });
         }
 
@@ -168,7 +156,13 @@ function PrivateUploadCard({
             : `${uploaded.length} private files uploaded`,
         );
       } catch (err) {
-        const orphaned = uploadedPaths.slice(uploaded.length);
+        const orphaned = uploadedPaths
+          .slice(uploaded.length)
+          .flatMap((path) => [
+            path,
+            listingMediaDerivativePath(path, 'thumb'),
+            listingMediaDerivativePath(path, 'preview'),
+          ]);
         if (orphaned.length > 0) {
           await client.storage
             .from('commercial-listing-media')

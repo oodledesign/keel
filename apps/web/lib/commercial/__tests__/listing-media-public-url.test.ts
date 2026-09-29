@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  LISTING_MEDIA_LIST_TRANSFORM,
-  LISTING_MEDIA_PREVIEW_TRANSFORM,
+  LISTING_MEDIA_DERIVATIVES,
   RIGHTMOVE_MEDIA_URL_MAX_LENGTH,
   buildCommercialListingMediaPublicUrl,
   commercialListingMediaFileName,
   commercialListingMediaVersion,
-  listingMediaSignedUrlTransform,
-  listingMediaTransformFor,
+  listingMediaDerivativePath,
+  listingMediaDisplayPath,
+  listingMediaSupportsDerivatives,
   pickListingCoverMedia,
   withRightmoveMediaCacheBust,
 } from '../listing-media-public-url';
@@ -63,37 +63,59 @@ describe('withRightmoveMediaCacheBust', () => {
   });
 });
 
-describe('listingMediaTransformFor', () => {
-  it('uses the small list transform for card/list covers', () => {
-    expect(listingMediaTransformFor('list')).toEqual(
-      LISTING_MEDIA_LIST_TRANSFORM,
-    );
-    expect(LISTING_MEDIA_LIST_TRANSFORM.width).toBeLessThanOrEqual(400);
-    expect(LISTING_MEDIA_LIST_TRANSFORM.height).toBeLessThanOrEqual(400);
-    expect(LISTING_MEDIA_LIST_TRANSFORM.quality).toBe(70);
+describe('listingMediaDerivativePath', () => {
+  it('stores copies next to the original', () => {
+    expect(
+      listingMediaDerivativePath('acct/listing/uuid-main.png', 'thumb'),
+    ).toBe('acct/listing/uuid-main.png.thumb.jpg');
+    expect(
+      listingMediaDerivativePath('acct/listing/uuid-main.png', 'preview'),
+    ).toBe('acct/listing/uuid-main.png.preview.jpg');
   });
 
-  it('keeps the large gallery transform for detail previews', () => {
-    expect(listingMediaTransformFor('gallery')).toEqual(
-      LISTING_MEDIA_PREVIEW_TRANSFORM,
+  it('keeps thumbs smaller than previews', () => {
+    expect(LISTING_MEDIA_DERIVATIVES.thumb.maxLongEdge).toBeLessThan(
+      LISTING_MEDIA_DERIVATIVES.preview.maxLongEdge,
     );
-    expect(LISTING_MEDIA_PREVIEW_TRANSFORM.width).toBe(1600);
-    expect(LISTING_MEDIA_PREVIEW_TRANSFORM.height).toBe(1600);
   });
 });
 
-describe('listingMediaSignedUrlTransform', () => {
-  it('returns the list size for jpeg covers and skips non-images', () => {
-    expect(listingMediaSignedUrlTransform('image/jpeg', 'list')).toEqual(
-      LISTING_MEDIA_LIST_TRANSFORM,
-    );
-    expect(listingMediaSignedUrlTransform('image/png', 'gallery')).toEqual(
-      LISTING_MEDIA_PREVIEW_TRANSFORM,
-    );
+describe('listingMediaDisplayPath', () => {
+  const full = {
+    storagePath: 'a/b/original.jpg',
+    thumbPath: 'a/b/original.jpg.thumb.jpg',
+    previewPath: 'a/b/original.jpg.preview.jpg',
+  };
+
+  it('uses the thumb for lists and the preview for galleries', () => {
+    expect(listingMediaDisplayPath(full, 'list')).toBe(full.thumbPath);
+    expect(listingMediaDisplayPath(full, 'gallery')).toBe(full.previewPath);
+  });
+
+  it('falls back to the original when copies are missing', () => {
+    const bare = { storagePath: 'a/b/original.jpg' };
+    expect(listingMediaDisplayPath(bare, 'list')).toBe(bare.storagePath);
+    expect(listingMediaDisplayPath(bare, 'gallery')).toBe(bare.storagePath);
     expect(
-      listingMediaSignedUrlTransform('application/pdf', 'list'),
-    ).toBeUndefined();
-    expect(listingMediaSignedUrlTransform(null, 'gallery')).toBeUndefined();
+      listingMediaDisplayPath(
+        { ...bare, previewPath: full.previewPath },
+        'list',
+      ),
+    ).toBe(full.previewPath);
+  });
+
+  it('returns null for external-only media', () => {
+    expect(listingMediaDisplayPath({ storagePath: null }, 'list')).toBeNull();
+  });
+});
+
+describe('listingMediaSupportsDerivatives', () => {
+  it('covers photos and skips gifs and documents', () => {
+    expect(listingMediaSupportsDerivatives('image/jpeg')).toBe(true);
+    expect(listingMediaSupportsDerivatives('image/png')).toBe(true);
+    expect(listingMediaSupportsDerivatives('image/gif')).toBe(false);
+    expect(listingMediaSupportsDerivatives('application/pdf')).toBe(false);
+    expect(listingMediaSupportsDerivatives(null)).toBe(false);
   });
 });
 

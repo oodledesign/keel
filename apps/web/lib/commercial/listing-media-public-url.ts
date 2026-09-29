@@ -184,41 +184,26 @@ export function encodeStorageSignedUrl(url: string): string {
 
 export type ListingMediaPreviewSize = 'list' | 'gallery';
 
-export type ListingMediaTransform = {
-  width: number;
-  height: number;
-  resize: 'cover' | 'contain' | 'fill';
-  quality: number;
-};
-
-/** Gallery / lightbox preview — large but still transformed. */
-export const LISTING_MEDIA_PREVIEW_TRANSFORM: ListingMediaTransform = {
-  width: 1600,
-  height: 1600,
-  resize: 'contain',
-  quality: 75,
-};
+export type ListingMediaDerivativeKind = 'thumb' | 'preview';
 
 /**
- * Disposals list / card thumbs. ~400px is enough for card covers and table
- * chips; the previous 1600×1600 preview was far too large for this surface.
- *
- * Requires Supabase Image Transformations on the project. If signing with a
- * transform fails (`requested path is invalid`), callers should fail soft and
- * fall back to an untransformed signed URL rather than the public proxy.
+ * Pre-sized JPEG copies stored next to each original photo. Supabase Image
+ * Transformations bill per origin image, so display surfaces use these
+ * instead; the original stays untouched for portals, brochures and LinkedIn.
  */
-export const LISTING_MEDIA_LIST_TRANSFORM: ListingMediaTransform = {
-  width: 400,
-  height: 400,
-  resize: 'cover',
-  quality: 70,
+export const LISTING_MEDIA_DERIVATIVES: Record<
+  ListingMediaDerivativeKind,
+  { maxLongEdge: number; quality: number }
+> = {
+  thumb: { maxLongEdge: 800, quality: 0.75 },
+  preview: { maxLongEdge: 1600, quality: 0.8 },
 };
 
 /** List covers stay valid longer so the browser can cache across navigations. */
 export const LISTING_MEDIA_LIST_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
 export const LISTING_MEDIA_GALLERY_SIGNED_URL_TTL_SECONDS = 60 * 60;
 
-export function listingMediaSupportsPreviewTransform(
+export function listingMediaSupportsDerivatives(
   mimeType: string | null | undefined,
 ): boolean {
   const value = (mimeType ?? '').toLowerCase().split(';')[0]?.trim() ?? '';
@@ -230,12 +215,31 @@ export function listingMediaSupportsPreviewTransform(
   );
 }
 
-export function listingMediaTransformFor(
+export function listingMediaDerivativePath(
+  storagePath: string,
+  kind: ListingMediaDerivativeKind,
+): string {
+  return `${storagePath}.${kind}.jpg`;
+}
+
+/** Storage object to show for a surface, falling back to the original. */
+export function listingMediaDisplayPath(
+  item: {
+    storagePath: string | null;
+    thumbPath?: string | null;
+    previewPath?: string | null;
+  },
   size: ListingMediaPreviewSize,
-): ListingMediaTransform {
-  return size === 'list'
-    ? LISTING_MEDIA_LIST_TRANSFORM
-    : LISTING_MEDIA_PREVIEW_TRANSFORM;
+): string | null {
+  const candidates =
+    size === 'list'
+      ? [item.thumbPath, item.previewPath, item.storagePath]
+      : [item.previewPath, item.storagePath];
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value) return value;
+  }
+  return null;
 }
 
 export function listingMediaSignedUrlTtlSeconds(
@@ -244,15 +248,6 @@ export function listingMediaSignedUrlTtlSeconds(
   return size === 'list'
     ? LISTING_MEDIA_LIST_SIGNED_URL_TTL_SECONDS
     : LISTING_MEDIA_GALLERY_SIGNED_URL_TTL_SECONDS;
-}
-
-/** Transform options for `createSignedUrl(s)`, or undefined when not an image. */
-export function listingMediaSignedUrlTransform(
-  mimeType: string | null | undefined,
-  size: ListingMediaPreviewSize,
-): ListingMediaTransform | undefined {
-  if (!listingMediaSupportsPreviewTransform(mimeType)) return undefined;
-  return listingMediaTransformFor(size);
 }
 
 /** Prefer an explicit cover, otherwise the first image in sort order. */

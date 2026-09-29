@@ -4,12 +4,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { randomUUID } from 'node:crypto';
 
+import { storeListingImageDerivatives } from '~/lib/commercial/listing-media-derivatives.server';
 import {
   extensionFromMime,
   extensionFromUrlOrName,
   mimeFromExtension,
 } from '~/lib/commercial/listing-media-extension';
 import { safeMediaFileName } from '~/lib/commercial/listing-media-filename';
+import { listingMediaSupportsDerivatives } from '~/lib/commercial/listing-media-public-url';
 
 export const COMMERCIAL_LISTING_MEDIA_BUCKET = 'commercial-listing-media';
 export const EXTERNAL_MEDIA_MAX_BYTES = 50 * 1024 * 1024;
@@ -215,6 +217,23 @@ export async function migrateExternalListingMediaRow(
       throw new Error(uploadError.message);
     }
 
+    let derivatives: { thumbPath: string; previewPath: string } | null = null;
+    if (listingMediaSupportsDerivatives(mime)) {
+      try {
+        derivatives = await storeListingImageDerivatives(
+          client,
+          storagePath,
+          downloaded.bytes,
+        );
+      } catch (error) {
+        console.warn(
+          '[media-migrate] derivatives failed',
+          row.id,
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
+
     const { error: updateError } = await client
       .from('commercial_listing_media')
       .update({
@@ -222,6 +241,8 @@ export async function migrateExternalListingMediaRow(
         external_url: null,
         mime_type: row.mime_type || mime,
         file_name: row.file_name || fileName,
+        thumb_path: derivatives?.thumbPath ?? null,
+        preview_path: derivatives?.previewPath ?? null,
       })
       .eq('id', row.id)
       .eq('account_id', row.account_id)
@@ -231,7 +252,13 @@ export async function migrateExternalListingMediaRow(
       // Best-effort cleanup of orphaned upload
       await client.storage
         .from(COMMERCIAL_LISTING_MEDIA_BUCKET)
-        .remove([storagePath]);
+        .remove(
+          [
+            storagePath,
+            derivatives?.thumbPath,
+            derivatives?.previewPath,
+          ].filter((path): path is string => Boolean(path)),
+        );
       throw new Error(updateError.message);
     }
 
