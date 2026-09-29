@@ -122,3 +122,47 @@ describe('buildCirculationDigestEmailHtml', () => {
     expect(html).toContain('https://cdn.example.com/unit-4.jpg');
   });
 });
+
+describe('digest re-notify badge', () => {
+  const html = buildCirculationDigestEmailHtml({
+    brand,
+    listings: [
+      {
+        name: 'Unit 4, Medway Park',
+        summary: 'Warehouse to let.',
+        address: 'Medway Park, Maidstone',
+        badge: 'Price reduced',
+      },
+      {
+        name: '12 High Street',
+        summary: 'Retail unit.',
+        address: 'Maidstone',
+        badge: '<script>x</script>',
+      },
+      {
+        name: '3 Mill Lane',
+        summary: 'Office.',
+        address: 'Maidstone',
+      },
+    ],
+    unsubscribeUrl: 'https://app.example.com/unsubscribe/circulation?token=abc',
+  });
+
+  it('labels a re-sent listing with why it is back', () => {
+    expect(html).toContain('Price reduced');
+  });
+
+  it('escapes the badge text', () => {
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('shows no badge on listings that are simply new', () => {
+    const plain = buildCirculationDigestEmailHtml({
+      brand,
+      listings: [{ name: '3 Mill Lane', summary: 'Office.', address: 'x' }],
+      unsubscribeUrl: 'https://app.example.com/u',
+    });
+    expect(plain).not.toContain('border-radius:999px');
+  });
+});

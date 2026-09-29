@@ -44,6 +44,8 @@ async function CirculationPage({ params }: CirculationPageProps) {
           fromName={data.fromName}
           initialAutoSendEnabled={data.autoSendEnabled}
           initialMinGapDays={data.minGapDays}
+          initialRematchOnPriceDrop={data.rematchOnPriceDrop}
+          initialRematchOnRelist={data.rematchOnRelist}
           suspectedUnsubscribes={data.suspectedUnsubscribes}
           initialContacts={data.contacts}
           initialSends={data.sends}

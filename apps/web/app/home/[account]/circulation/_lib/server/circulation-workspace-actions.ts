@@ -13,6 +13,7 @@ import {
   CirculationContactAutoSendSchema,
   CirculationDismissUnsubscribeReviewSchema,
   CirculationMinGapSchema,
+  CirculationRematchSchema,
   CirculationRunSchema,
 } from '../schemas/circulation-workspace.schema';
 
@@ -48,6 +49,21 @@ export const setCirculationMinGap = enhanceAction(
     return result;
   },
   { schema: CirculationMinGapSchema },
+);
+
+export const setCirculationRematch = enhanceAction(
+  async (input) => {
+    await requireActor(input.accountId);
+    const result = await createCommercialCirculationService(
+      getClient(),
+    ).setRematchOptions(input.accountId, {
+      onPriceDrop: input.onPriceDrop,
+      onRelist: input.onRelist,
+    });
+    revalidatePath('/home', 'layout');
+    return result;
+  },
+  { schema: CirculationRematchSchema },
 );
 
 export const dismissCirculationUnsubscribeReview = enhanceAction(

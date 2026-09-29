@@ -21,6 +21,19 @@ export const CirculationMinGapSchema = z.object({
   minGapDays: z.number().int().min(0).max(60),
 });
 
+export const CirculationRematchSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    onPriceDrop: z.boolean().optional(),
+    onRelist: z.boolean().optional(),
+  })
+  .refine(
+    (value) => value.onPriceDrop !== undefined || value.onRelist !== undefined,
+    {
+      message: 'Choose a setting to change',
+    },
+  );
+
 export const CirculationDismissUnsubscribeReviewSchema = z.object({
   accountId: z.string().uuid(),
   email: z.string().email(),

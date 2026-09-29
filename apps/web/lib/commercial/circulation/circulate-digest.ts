@@ -7,7 +7,7 @@ import {
   resolveCirculationIdentity,
 } from '~/lib/commercial/circulation/circulate-listing';
 import {
-  loadSentListingIds,
+  loadSentListingState,
   recordCirculationDelivery,
   releaseCirculationClaimQuietly,
 } from '~/lib/commercial/circulation/circulation-delivery';
@@ -15,6 +15,11 @@ import {
   type CirculationEmailBrand,
   buildCirculationDigestEmailHtml,
 } from '~/lib/commercial/circulation/circulation-email';
+import {
+  CHANGE_KIND_LABELS,
+  type ListingChange,
+  activeListingChanges,
+} from '~/lib/commercial/circulation/circulation-rematch';
 import {
   hasUnsentListing,
   isWithinMinGap,
@@ -56,6 +61,8 @@ export type DigestMailoutResult = {
 type PlannedDigest = {
   contact: ContactMatchRow;
   listings: ContactMatchListing[];
+  /** Listings this contact was sent before they changed (re-notify). */
+  changedSince: ReadonlySet<string>;
 };
 
 function toEmailBrand(
@@ -73,7 +80,14 @@ function toEmailBrand(
   };
 }
 
-function digestSubject(agencyName: string, count: number): string {
+function digestSubject(
+  agencyName: string,
+  count: number,
+  singleListingBadge: string | null,
+): string {
+  if (count === 1 && singleListingBadge) {
+    return `${singleListingBadge} — matching opportunity from ${agencyName}`;
+  }
   if (count === 1) return `Matching opportunity from ${agencyName}`;
   return `${count} matching opportunities from ${agencyName}`;
 }
@@ -125,17 +139,42 @@ export async function circulateContactDigests(
   const eligible = contacts.filter((row) =>
     autoEligibility ? isContactAutoMailEligible(row) : true,
   );
-  const sentByEmail = await loadSentListingIds(
+
+  // Workspace-opt-in: a listing that changed since a contact was sent it
+  // counts as new for them again. Nothing changes while both toggles are off.
+  const settings = await createCommercialCirculationService(
+    client,
+  ).getOrCreateSettings(input.accountId);
+  const activeChanges = activeListingChanges(
+    [
+      ...new Map(
+        eligible
+          .flatMap((row) => row.listings)
+          .map((listing) => [listing.listingId, listing] as const),
+      ).values(),
+    ].map((listing) => ({
+      listingId: listing.listingId,
+      changes: listing.changes,
+    })),
+    {
+      onPriceDrop: settings.rematch_on_price_drop,
+      onRelist: settings.rematch_on_relist,
+    },
+    now,
+  );
+
+  const sentByEmail = await loadSentListingState(
     client,
     input.accountId,
     eligible.map((row) => row.email),
+    activeChanges,
   );
 
   let nothingNew = 0;
   let withinGap = 0;
   const ready: ContactMatchRow[] = [];
   for (const contact of eligible) {
-    const sent = sentByEmail.get(contact.email) ?? new Set<string>();
+    const sent = sentByEmail.get(contact.email)?.sent ?? new Set<string>();
     if (
       !hasUnsentListing(contact.listings, sent, {
         requireAutoCirculate: input.requireAutoCirculateListing,
@@ -166,10 +205,12 @@ export async function circulateContactDigests(
       contact,
       listings: pickListingsForEmail(
         contact.listings,
-        sentByEmail.get(contact.email) ?? new Set<string>(),
+        sentByEmail.get(contact.email)?.sent ?? new Set<string>(),
         MAX_LISTINGS_PER_EMAIL,
         input.triggerListingId,
       ),
+      changedSince:
+        sentByEmail.get(contact.email)?.changedSince ?? new Set<string>(),
     }));
 
   const summary = {
@@ -239,6 +280,7 @@ export async function circulateContactDigests(
       db,
       circulation,
       plan,
+      activeChanges,
       accountId: input.accountId,
       sendId,
       siteUrl: input.siteUrl,
@@ -307,6 +349,7 @@ async function sendOneDigest(input: {
   db: any;
   circulation: ReturnType<typeof createCommercialCirculationService>;
   plan: PlannedDigest;
+  activeChanges: ReadonlyMap<string, ListingChange>;
   accountId: string;
   sendId: string;
   siteUrl: string;
@@ -330,6 +373,7 @@ async function sendOneDigest(input: {
   const { plan, accountId, sendId } = input;
   const { contact } = plan;
   let listings = plan.listings;
+  let changedSince = plan.changedSince;
   const requirementId = contact.requirementIds[0] ?? null;
 
   const logRecipient = (
@@ -358,10 +402,16 @@ async function sendOneDigest(input: {
     }
 
     // Another run may have emailed this contact between planning and claiming.
-    const fresh =
-      (await loadSentListingIds(input.client, accountId, [contact.email])).get(
-        contact.email,
-      ) ?? new Set<string>();
+    const freshState = (
+      await loadSentListingState(
+        input.client,
+        accountId,
+        [contact.email],
+        input.activeChanges,
+      )
+    ).get(contact.email);
+    const fresh = freshState?.sent ?? new Set<string>();
+    changedSince = freshState?.changedSince ?? new Set<string>();
     if (
       !hasUnsentListing(contact.listings, fresh, {
         requireAutoCirculate: input.requireAutoCirculate,
@@ -383,7 +433,16 @@ async function sendOneDigest(input: {
   }
 
   const shownIds = listings.map((listing) => listing.listingId);
-  const subject = digestSubject(input.agencyName, listings.length);
+  const changeLabelFor = (listingId: string): string | null => {
+    if (!changedSince.has(listingId)) return null;
+    const change = input.activeChanges.get(listingId);
+    return change ? CHANGE_KIND_LABELS[change.kind] : null;
+  };
+  const subject = digestSubject(
+    input.agencyName,
+    listings.length,
+    listings.length === 1 ? changeLabelFor(listings[0]!.listingId) : null,
+  );
 
   try {
     const { pageUrl, oneClickUrl } = buildCirculationUnsubscribeUrls({
@@ -413,6 +472,7 @@ async function sendOneDigest(input: {
         coverImageUrl: listing.coverImageUrl,
         sizeLabel: listing.sizeLabel,
         disposalTypeLabel: listing.disposalTypeLabel,
+        badge: changeLabelFor(listing.listingId),
       })),
       unsubscribeUrl: pageUrl,
       manageUrl,

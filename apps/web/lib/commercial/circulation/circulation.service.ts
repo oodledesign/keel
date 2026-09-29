@@ -25,6 +25,8 @@ export type CirculationSettings = {
   account_id: string;
   auto_send_enabled: boolean;
   min_gap_days: number;
+  rematch_on_price_drop: boolean;
+  rematch_on_relist: boolean;
 };
 
 export const DEFAULT_CIRCULATION_MIN_GAP_DAYS = 5;
@@ -52,9 +54,12 @@ export type CirculationPreferenceRow = {
   autoSendEnabled: boolean;
   lastDigestFingerprint: string | null;
   lastDigestSentAt: string | null;
-  lastCirculatedAt: string | null;
   publicAccessToken: string | null;
 };
+
+/** Send-state lives apart from consent, so it exists for contacts with no preference row. */
+export const CIRCULATION_CONTACT_STATE_TABLE =
+  'commercial_circulation_contact_state';
 
 /** Keeps `.in('email', …)` filters well under PostgREST URL limits. */
 const EMAIL_IN_CHUNK = 150;
@@ -71,11 +76,15 @@ function toCirculationSettings(row: {
   account_id: string;
   auto_send_enabled?: boolean | null;
   min_gap_days?: number | null;
+  rematch_on_price_drop?: boolean | null;
+  rematch_on_relist?: boolean | null;
 }): CirculationSettings {
   return {
     account_id: row.account_id,
     auto_send_enabled: row.auto_send_enabled !== false,
     min_gap_days: row.min_gap_days ?? DEFAULT_CIRCULATION_MIN_GAP_DAYS,
+    rematch_on_price_drop: row.rematch_on_price_drop === true,
+    rematch_on_relist: row.rematch_on_relist === true,
   };
 }
 
@@ -422,7 +431,7 @@ class CommercialCirculationService {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
     const select =
-      'email, marketing_status, auto_send_enabled, last_digest_fingerprint, last_digest_sent_at, last_circulated_at, public_access_token';
+      'email, marketing_status, auto_send_enabled, last_digest_fingerprint, last_digest_sent_at, public_access_token';
 
     const baseQuery = () =>
       db
@@ -437,7 +446,6 @@ class CommercialCirculationService {
       auto_send_enabled?: boolean | null;
       last_digest_fingerprint?: string | null;
       last_digest_sent_at?: string | null;
-      last_circulated_at?: string | null;
       public_access_token?: string | null;
     }> = [];
 
@@ -474,9 +482,38 @@ class CommercialCirculationService {
         autoSendEnabled: row.auto_send_enabled !== false,
         lastDigestFingerprint: row.last_digest_fingerprint ?? null,
         lastDigestSentAt: row.last_digest_sent_at ?? null,
-        lastCirculatedAt: row.last_circulated_at ?? null,
         publicAccessToken: row.public_access_token ?? null,
       });
+    }
+
+    return map;
+  }
+
+  /** When each contact was last emailed. Contacts never emailed are absent. */
+  async listLastCirculatedAt(
+    accountId: string,
+    emails: string[],
+  ): Promise<Map<string, string>> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = this.client as any;
+    const normalized = [...new Set(emails.map(normalizeEmail).filter(Boolean))];
+    const map = new Map<string, string>();
+
+    for (const chunk of chunkArray(normalized, EMAIL_IN_CHUNK)) {
+      const { data, error } = await db
+        .from(CIRCULATION_CONTACT_STATE_TABLE)
+        .select('email, last_circulated_at')
+        .eq('account_id', accountId)
+        .in('email', chunk)
+        .not('last_circulated_at', 'is', null);
+
+      if (error) throw new Error(error.message);
+      for (const row of (data ?? []) as Array<{
+        email: string;
+        last_circulated_at: string;
+      }>) {
+        map.set(normalizeEmail(row.email), row.last_circulated_at);
+      }
     }
 
     return map;
@@ -516,6 +553,20 @@ class CommercialCirculationService {
     minGapDays: number,
   ): Promise<CirculationSettings> {
     return this.updateSettings(accountId, { min_gap_days: minGapDays });
+  }
+
+  async setRematchOptions(
+    accountId: string,
+    options: { onPriceDrop?: boolean; onRelist?: boolean },
+  ): Promise<CirculationSettings> {
+    return this.updateSettings(accountId, {
+      ...(options.onPriceDrop !== undefined
+        ? { rematch_on_price_drop: options.onPriceDrop }
+        : {}),
+      ...(options.onRelist !== undefined
+        ? { rematch_on_relist: options.onRelist }
+        : {}),
+    });
   }
 
   private async updateSettings(
@@ -793,11 +844,13 @@ class CommercialCirculationService {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
     const { error } = await db
-      .from('commercial_marketing_preferences')
-      .update({ circulation_claimed_at: null })
+      .from(CIRCULATION_CONTACT_STATE_TABLE)
+      .update({
+        circulation_claimed_at: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('account_id', accountId)
-      .eq('email', normalizeEmail(email))
-      .eq('purpose', PURPOSE);
+      .eq('email', normalizeEmail(email));
 
     if (error) throw new Error(error.message);
   }

@@ -8,6 +8,7 @@ import {
   isCirculationBlocked,
   normalizeCirculationEmail,
 } from '~/lib/commercial/circulation/circulation-eligibility';
+import type { ListingChange } from '~/lib/commercial/circulation/circulation-rematch';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
 import { DISPOSAL_TYPE_LABELS } from '~/lib/commercial/commercial-constants';
 import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
@@ -43,6 +44,8 @@ export type ContactMatchListing = {
   coverImageUrl: string | null;
   brochureShareToken: string | null;
   autoCirculate: boolean;
+  /** Price drop / relist stamps on the listing, if any. */
+  changes: ListingChange[];
   /** This contact's requirements that match the listing at or above minScore. */
   requirementIds: string[];
 };
@@ -109,6 +112,8 @@ type ListingRow = {
   brochure_share_enabled: boolean | null;
   auto_circulate_matches: boolean | null;
   website_url: string | null;
+  price_dropped_at: string | null;
+  relisted_at: string | null;
 };
 
 type RequirementRow = {
@@ -177,6 +182,22 @@ function asRequirementSnapshot(row: RequirementRow): MatchRequirementSnapshot {
     stage: row.stage ?? 'new',
     updatedAt: row.updated_at ?? new Date().toISOString(),
   };
+}
+
+/**
+ * Changes worth re-notifying about. Not for a listing that is under offer:
+ * "Price reduced" on a property that is already spoken for would mislead.
+ */
+function listingChanges(row: ListingRow): ListingChange[] {
+  if (row.status === 'under_offer') return [];
+  const changes: ListingChange[] = [];
+  if (row.price_dropped_at) {
+    changes.push({ kind: 'price_drop', changedAt: row.price_dropped_at });
+  }
+  if (row.relisted_at) {
+    changes.push({ kind: 'relisted', changedAt: row.relisted_at });
+  }
+  return changes;
 }
 
 function formatAddress(row: ListingRow): string {
@@ -313,6 +334,8 @@ const LISTING_SELECT = [
   'brochure_share_enabled',
   'auto_circulate_matches',
   'website_url',
+  'price_dropped_at',
+  'relisted_at',
 ].join(', ');
 
 const REQUIREMENT_SELECT = [
@@ -412,9 +435,11 @@ export async function listContactMatches(
     ),
   ];
 
-  const preferenceRows = await createCommercialCirculationService(
-    client,
-  ).listPreferences(input.accountId, emails);
+  const circulation = createCommercialCirculationService(client);
+  const [preferenceRows, lastCirculatedByEmail] = await Promise.all([
+    circulation.listPreferences(input.accountId, emails),
+    circulation.listLastCirculatedAt(input.accountId, emails),
+  ]);
 
   const byEmail = new Map<string, ContactMatchRow>();
 
@@ -437,7 +462,7 @@ export async function listContactMatches(
         autoSendEnabled: preference?.autoSendEnabled ?? true,
         lastDigestFingerprint: preference?.lastDigestFingerprint ?? null,
         lastDigestSentAt: preference?.lastDigestSentAt ?? null,
-        lastCirculatedAt: preference?.lastCirculatedAt ?? null,
+        lastCirculatedAt: lastCirculatedByEmail.get(email) ?? null,
         publicAccessToken: preference?.publicAccessToken ?? null,
         listings: [],
       };
@@ -500,6 +525,7 @@ export async function listContactMatches(
         coverImageUrl: null,
         brochureShareToken: listing.brochure_share_token,
         autoCirculate: Boolean(listing.auto_circulate_matches),
+        changes: listingChanges(listing),
         requirementIds: [req.id],
       });
     }
